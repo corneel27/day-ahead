@@ -2,3 +2,5 @@
 /log/
 /.idea/
 /__pycache__/
+options.json
+secrets.json
