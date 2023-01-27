@@ -39,7 +39,6 @@
     "last invoice" : "01-09-2022",
     "tax refund" : "True"
   },
-
   "boiler": {
     "entity actual temp.": "sensor.boiler_gemeten",
     "entity setpoint": "sensor.boiler_ingesteld",
