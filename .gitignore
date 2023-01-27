@@ -1,4 +1,7 @@
-/images/
-/log/
-/.idea/
-/__pycache__/
+images/*
+log/*
+.idea/
+__pycache__/
+secrets.json
+options.json
+CODEOWNER
