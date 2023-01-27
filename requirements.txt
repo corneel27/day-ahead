@@ -1,0 +1,12 @@
+pandas~=1.5.2
+pytz~=2022.7
+requests~=2.28.1
+matplotlib~=3.6.2
+numpy~=1.24.1
+mysql~=0.0.3
+mysql-connector-python~=8.0.31
+hassapi~=0.1.1
+mip~=1.14.2
+python-dateutil~=2.8.2
+nordpool~=0.3.3
+entsoe-py
