@@ -56,8 +56,11 @@ class DayAheadOpt(hass.Hass):
         self.heating_options = self.config.get(["heating"])
         self.tasks = self.config.get(["scheduler"])
 
-    def get_meteo(self, show_graph: bool = False):
+    def get_meteo_data(self, show_graph: bool = False):
         self.meteo.get_meteo_data(show_graph)
+
+    def get_day_ahead_prices(self):
+        self.prices.get_prices()
 
     def get_consumption(self, start, until=dt.datetime.now()):
         grid_sensors = ['sensor.grid_consumption_low', 'sensor.grid_consumption_high', 'sensor.grid_production_low',
