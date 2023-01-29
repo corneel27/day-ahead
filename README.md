@@ -36,7 +36,7 @@ Het geheel kan grafisch worden weergegeven:
 ![optimalisering](./images/optimum1300.png "optimlisering")
 
 Of in tabelvorm:
-''''
+````
          uur  accu_in  accu_out     soc  verbr   prod prod_n  basis   boil     ev     pv  kos_v  kos_p  k_p_n  b_temp
                   kWh       kWh       %    kWh    kWh    kWh    kWh    kWh    kWh    kWh    eur    eur    eur      oC
 0      13.00     0.00      0.00   19.00   0.00   0.36   0.00   0.59   0.00   0.00   0.95   0.00  -0.11  -0.00   46.50
@@ -74,7 +74,7 @@ Of in tabelvorm:
 32     21.00     0.00      0.00   18.00   0.62   0.00   0.00   0.62   0.00   0.00   0.00   0.21  -0.00  -0.00   45.36
 33     22.00     0.00      0.26   17.00   0.29   0.00   0.00   0.55   0.00   0.00   0.00   0.10  -0.00  -0.00   44.96
 34     23.00     0.00      0.00   17.00   0.55   0.00   0.00   0.55   0.00   0.00   0.00   0.18  -0.00  -0.00   44.56
-''''
+````
 ---
 
 ### Vereisten
