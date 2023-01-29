@@ -38,6 +38,7 @@ Het geheel kan grafisch worden weergegeven:
 Of in tabelvorm:
          uur  accu_in  accu_out     soc  verbr   prod prod_n  basis   boil     ev     pv  kos_v  kos_p  k_p_n  b_temp
                   kWh       kWh       %    kWh    kWh    kWh    kWh    kWh    kWh    kWh    eur    eur    eur      oC
+
 0      13.00     0.00      0.00   19.00   0.00   0.36   0.00   0.59   0.00   0.00   0.95   0.00  -0.11  -0.00   46.50
 1      14.00     0.00      0.00   19.00   0.30   0.00   0.00   1.13   0.00   0.00   0.83   0.09  -0.00  -0.00   46.10
 2      15.00     0.00      0.00   19.00   0.42   0.00   0.00   0.93   0.00   0.00   0.51   0.13  -0.00  -0.00   45.70
