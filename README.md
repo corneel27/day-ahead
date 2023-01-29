@@ -35,7 +35,7 @@ variabelen worden berekend. Dit zijn:
 Het geheel kan grafisch worden weergegeven:
 ![optimalisering](./images/optimum1300.png "optimlisering")
 
-Of in tabelvorm:
+Of in tabelvorm: <br>
          uur  accu_in  accu_out     soc  verbr   prod prod_n  basis   boil     ev     pv  kos_v  kos_p  k_p_n  b_temp
                   kWh       kWh       %    kWh    kWh    kWh    kWh    kWh    kWh    kWh    eur    eur    eur      oC
 
