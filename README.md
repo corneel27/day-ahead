@@ -126,7 +126,7 @@ Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
     INDEX \`variabel\` (\`variabel\`) USING BTREE, <br/>
     INDEX \`time\` (\`time\`) USING BTREE ) COLLATE='utf8mb4_unicode_ci' <br/>
     ENGINE=InnoDB <br/>
-    AUTO_INCREMENT=1`;<br/>
+    AUTO_INCREMENT=1;<br/>
    * De inhoud van values bouw je zelf op met het ophalen van de diverse gegevens  
 ---
 ## Programma starten
