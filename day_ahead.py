@@ -82,7 +82,7 @@ class DayAheadOpt(hass.Hass):
             production = 0
 
 
-        #rom home assistant
+        #from home assistant database
         '''
         grid_sensors = ['sensor.grid_consumption_low', 'sensor.grid_consumption_high', 'sensor.grid_production_low',
                         'sensor.grid_production_high']
