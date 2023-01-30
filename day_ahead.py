@@ -62,7 +62,28 @@ class DayAheadOpt(hass.Hass):
     def get_day_ahead_prices(self):
         self.prices.get_prices()
 
-    def get_consumption(self, start, until=dt.datetime.now()):
+    def get_consumption(self, start: datetime.datetime, until=dt.datetime.now()):
+        #from da database
+        sql = (
+            "SELECT SUM(t1.`value`) as consumed, SUM(t2.`value`) as produced "
+            "FROM `values` AS t1, `values` AS t2, `variabel`AS v1, `variabel` AS v2 "
+            "WHERE (t1.`time`= t2.`time`) "
+            "AND (v1.`code` ='cons')AND (v2.`code` = 'prod') "
+            "AND (v1.id = t1.variabel) AND (v2.id = t2.variabel) "
+            "AND t1.`time` >= UNIX_TIMESTAMP('" + start.strftime('%Y-%m-%d') + "') "
+            "AND t1.`time` < UNIX_TIMESTAMP('" + until.strftime('%Y-%m-%d') + "');"
+        )
+        data = self.db_da.run_select_query(sql)
+        if len(data.index) == 1:
+            consumption = data['consumed'][0]
+            production = data['produced'][0]
+        else:
+            consumption = 0
+            production = 0
+
+
+        #rom home assistant
+        '''
         grid_sensors = ['sensor.grid_consumption_low', 'sensor.grid_consumption_high', 'sensor.grid_production_low',
                         'sensor.grid_production_high']
         today = dt.datetime.utcnow().date()
@@ -97,10 +118,11 @@ class DayAheadOpt(hass.Hass):
                     consumption = consumption + value
                 elif 'production' in sensor:
                     production = production + value
-
+        '''
         result = {"consumption" : consumption, "production": production}
-        print (result)
-        return (result)
+
+        print(result)
+        return result
 
     def get_tibber_data(self):
         def get_datetime_from_str(s):
