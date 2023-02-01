@@ -4,4 +4,4 @@ log/*
 __pycache__/
 secrets.json
 options.json
-CODEOWNERs
+CODEOWNERS
