@@ -2,6 +2,6 @@ images/*
 log/*
 .idea/
 __pycache__/
-secrets.json
-options.json
-CODEOWNERS
+data/secrets.json
+CODEOWNER
+/webserver/*
