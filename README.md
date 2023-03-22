@@ -33,7 +33,7 @@ variabelen worden berekend. Dit zijn:
 * uurvakken waarin de elektrische auto moet worden geladen
 
 Het geheel kan grafisch worden weergegeven:
-![optimalisering](./data/images/optimum1255.png "optimalisering")
+![optimalisering](./images/optimum2300.png "optimalisering")
 
 Of in tabelvorm:
 ````
