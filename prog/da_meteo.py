@@ -16,7 +16,7 @@ class Meteo:
         self.meteoserver_key = config.get(["meteoserver-key"])
         self.latitude = config.get(["latitude"])
         self.longitude = config.get(["longitude"])
-        self.solar_options = config.get(["solar"])
+        self.solar = config.get(["solar"])
 
     @staticmethod
     def makerefmoment(moment):
@@ -112,7 +112,7 @@ class Meteo:
             q_tot = radiation
         else:
             sun_pos = self.sun_position(utc_time)
-            dir_rad_factor = min(2, self.direct_radiation_factor(h_col, a_col, sun_pos['h'], sun_pos['A']))
+            dir_rad_factor = min(2.0, self.direct_radiation_factor(h_col, a_col, sun_pos['h'], sun_pos['A']))
 
             q_oz = self.get_dif_rad_factor(utc_time)  # maximale straling op horz.vlak
 
@@ -139,10 +139,10 @@ class Meteo:
         """
         # tilt: helling tov plat vlak in graden
         # orientation: orientatie oost = -90, zuid = 0, west = 90 in graden
-        tilt = self.solar_options["tilt"]
+        tilt = self.solar[0]["tilt"]
         tilt = min(90, max(0, tilt))
         hcol = math.radians(tilt)
-        orientation = self.solar_options["orientation"]
+        orientation = self.solar[0]["orientation"]
         acol = math.radians(orientation)
         global_rad['solar_rad'] = ''  # new column empty
         global_rad = global_rad.reset_index()  # make sure indexes pair with number of rows
@@ -182,7 +182,7 @@ class Meteo:
         # print(df_db)
 
         self.db_da.savedata(df_db)
-        graphs.make_graph_meteo(df1, file="images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
+        graphs.make_graph_meteo(df1, file="../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
                                 show=show_graph)
 
         '''
@@ -239,11 +239,12 @@ class Meteo:
         self.db_da.savedata(df_db)
         '''
 
-    def calc_graaddagen(self, date:datetime.datetime = None) -> float:
+    def calc_graaddagen(self, date : datetime.datetime = None, weighted : bool = False) -> float:
         """
         berekend gewogen met temperatuur grens van 16 oC
         :param date: de datum waarvoor de berekening wordt gevraagd
         als None: vandaag
+        :param weighted : boolean, berekenen met (true) of zonder (false) weegfactor
         :return: berekende gewogen graaddagen
         """
         if date==None:
@@ -258,14 +259,36 @@ class Meteo:
             )
         data = self.db_da.run_select_query(sql_avg_temp)
         avg_temp = float(data['avg_temp'].values[0])
+        weight_factor = 1
+        if weighted:
+            mon = date.month
+            if mon <= 2 or mon >= 11:
+                weight_factor = 1.1
+            elif mon >= 4 or mon <= 9:
+                weight_factor = 0.9
         if avg_temp >= 16:
             result = 0
         else:
-            result = 16 - avg_temp
-            mon = date.month
-            if mon<=2 or mon>=11:
-                result = result * 1.1
-            elif mon>=4 or mon<=9:
-                result = result * 0.9
+            result = weight_factor * (16 - avg_temp)
         return result
+
+    def calc_solar_rad(self, solar_opt:dict, utc_time:int, global_rad:float)->float:
+        '''
+        :param solar_opt: definitie van paneel met
+            tilt: helling tov plat vlak in graden, 0 = vlak (horizontaal), 90 = verticaal
+            orienation: orientatie oost = -90, zuid = 0, west = 90 in graden
+        :param utc_time: utc tijd in seconden
+        :param global_rad: globale straling in J/cm2
+        :return: alle straling op paneel J/cm2
+        '''
+        # tilt:
+        # orientation: orientatie oost = -90, zuid = 0, west = 90 in graden
+        tilt = solar_opt["tilt"]
+        tilt = min(90, max(0, tilt))
+        hcol = math.radians(tilt)
+        orientation = solar_opt["orientation"]
+        acol = math.radians(orientation)
+        radiation = global_rad
+        q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
+        return q_tot
 

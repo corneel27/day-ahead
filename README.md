@@ -33,7 +33,7 @@ variabelen worden berekend. Dit zijn:
 * uurvakken waarin de elektrische auto moet worden geladen
 
 Het geheel kan grafisch worden weergegeven:
-![optimalisering](./images/optimum1300.png "optimlisering")
+![optimalisering](./images/optimum1300.png "optimalisering")
 
 Of in tabelvorm:
 ````
@@ -152,7 +152,7 @@ berekent de besparing tov een reguliere leverancier berekent de besparing zonder
   
  Het bestand options.json bevat alle instellingen voor het programma day_ahead.py. 
 Opmerking: alle instellingen die beginnen met "!secret" staan komen in het bestand `secrets.json`te staan  met de key die hier achter !secret staat  
-**homeassitant**
+**homeassistant**
  * url : de url waar de api van je home assistant bereikbaar is  
  * token: om de api te kunnen aanroepen is er  een token nodig.  
                Deze kun je genereren in je Home Assistant website
@@ -161,7 +161,7 @@ Opmerking: alle instellingen die beginnen met "!secret" staan komen in het besta
 	Deze key genereer je op de site van entsoe en heb je nodig om daar de energieprijzen van de volgende op te halen.
     Je genereert deze key (token) als volgt: 
  * Website: https://transparency.entsoe.eu      
- * Registreer je als   gebruiker 
+ * Registreer je als gebruiker 
  * Klik op "My Account Settings"  
  *  Klik op "Generate a new token"
 
@@ -180,10 +180,11 @@ Opmerking: alle instellingen die beginnen met "!secret" staan komen in het besta
  * password: wachtwoord
  
 **meteoserver-key**: de meteodata worden opgehaald bij meteoserver  
-    ook hiervoor heb je een key nodig . Je genereert deze key (token) als volgt: 
+    Ook hiervoor heb je een key nodig. <br>
+    Je genereert deze key (token) als volgt: 
  * website: https://meteoserver.nl/login.php 
  * registreer je als gebruiker 
- * daarna klik je op Account, tabje "API Beheer" en je ziet je key staan
+ * daarna klik je op Account, tabje "API Beheer" en je ziet je key staan<br>
 Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er maar 4 per dag = max 124 per maand
 
 **prices**  
@@ -192,19 +193,27 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    ex btw, kaal, euro per kWh
  * regular low: idem het "lage" tarief, ex btw, kaal , euro per kWh
      switch to low: tijdstop waarop je omschakelt naar "laag tarief" (meestal 23 uur)
-  * energy taxes delivery: energiebelasting oplevering ex btw, euro per kWh  
-           2022 : 0.06729,  
-           2023 : 0.12599  
+  * energy taxes delivery: energiebelasting op verbruik ex btw, euro per kWh  
+           2022-01-01 : 0.06729,  
+           2023-01-01 : 0.12599  
    * energy taxes redelivery: energiebelasting op teruglevering ex btw, euro per kWh  
-           2022: 0.06729,  
-           2023: 0.12599  
+           2022-01-01: 0.06729,  
+           2023-01-01: 0.12599  
     * cost supplier delivery : opslag leverancier euro per kWh, ex btw  
-     * cost supplier redelivery:  opslag leverancier voor teruglevering per kWh, ex btw  
-      * vat:    btw in %  
-         "2022": 9,  
-         "2023": 21  
-      * last invoice:  datum laatste jaarfactuur en/of de begindatum van je contractjaar
-     * tax refund: kun je alles salderen of is je teruglevering hoger dan je verbruik  ( True of False) 
+        bijv voor Tibber:
+        * 2022-01-01: 0.002
+        * 2023-03-01: 0.018
+   * cost supplier redelivery:  opslag leverancier voor teruglevering per kWh, ex btw  
+        bijv voor Tibber:
+        * 2022-01-01: 0.002
+        * 2023-03-01: 0.018
+   * vat:    btw in %  
+      * 2022-01-01: 21
+      * 2022-07-01: 9
+      * 2023-01-01: 21,  
+   
+   * last invoice: datum laatste jaarfactuur en/of de begindatum van je contractjaar (formaat "yyyy-mm-dd")
+   * tax refund: kun je alles salderen of is je teruglevering hoger dan je verbruik  (True of False) 
 
 **boiler**  instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
@@ -219,8 +228,13 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * activate service: naam van de service van deze entiteit  
 
 **heating**:  dit onderdeel is nog in ontwikkeling  
-   * entity adjust heating curve: entiteit waarmee de stooklijn kan worden verschoven  
-   * adjustment factor: 
+   * entity adjust heating curve: entiteit waarmee de stooklijn kan worden verschoven
+   * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
+      da prijs 10% afwijkt van het daggemiddelde
+   * stages : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop
+     * max_power: het maximum elektrische vermogen van de betreffende schijf in W
+     * cop: de cop van de wp behorende bij deze schijf. Dus een cop van 7 met een vermogen van 225 W 
+        betekent een thermisch vermogen van 7 x 225 = 1575 W
 
 **battery**: de gegevens en de instellingen van de accu
    * entity actual level: entiteit die de actuele soc van de accu presenteert  
@@ -230,20 +244,29 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * optimal lower level: onderste soc limiet voor langere tijd  
    * max charge power: maximaal laad vermogen in kW  
    * max discharge power: maximaal ontlaadvermogen in kW  
-   * minimum power: minimaal laad/ontlaadvermogen  
-   * charge efficiency: efficientie van het laden (factor van 1)  
-   * discharge efficiency : efficientie van het ontladen (factor van 1)  
+   * minimum power: minimaal laad/ontlaadvermogen
+   * ac_to_dc efficiency: efficiency van de inverter bij omzetten van ac naar dc (factor van 1)
+   * dc_to_ac efficiency: efficiency van de omvormer bij omzetten van dc naar ac (factor van 1)
+   * dc_to_bat efficiency: efficiency van het laden van de batterij vanuit dc (factor van 1)
+   * bat_to_dc efficiency: efficiency van het ontladen van de batterij naar dc (factor van 1)
    * cycle cost : afschrijfkosten (in euro) van het laden of ontladen van 1 kWh  
-   * entity set power feedin": entiteit waarje het te laden / ontladen vermogen inzet  
-   * entity set operating mode": entiteit waarmee je het ess aan/uit zet  
-   * entity stop victron": entiteit waarmee je datum/tijd opgeeft wanneer het ess moet stoppen  
-   * entity balance switch": entiteit waarmee je de victron op "balanceren" zet  
+   * entity set power feedin: entiteit waar je het te laden / ontladen vermogen inzet  
+   * entity set operating mode: entiteit waarmee je het ess aan/uit zet  
+   * entity stop victron: entiteit waarmee je datum/tijd opgeeft wanneer het ess moet stoppen  
+   * entity balance switch: entiteit waarmee je de victron op "balanceren" zet (overrult set power feedin)
+   * solar lijst van pv installaties die direct invoeden op je batterij (mppt)<br>
+     Per pv installatie geef je de volgende gegevens op:
+       * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
+       * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
+       * capacity: capaciteit in kWp  
+       * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2  
  
-**solar** de data van je zonnepanelen.
-   * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
-   * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
-   * capacity: capaciteit in kWp  
-   * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2  
+**solar** lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie<br>
+     Per pv installatie geef je de volgende gegevens op:
+       * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
+       * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
+       * capacity: capaciteit in kWp  
+       * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2  
  
 **electric vehicle** dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect . Andere  auto's graag in overleg toevoegen.
    * capacity: capaciteit accu in kWh,  
@@ -257,8 +280,8 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * charge switch:  entiteit waarmee het laden aan/uit kan worden gezet 
 
  **tibber** 
- * api url" : url van de api van tibber  
- * api_token" : het token van de api van tibber  
+ * api url : url van de api van tibber  
+ * api_token : het token van de api van tibber  
   Deze vraag je als volgt op:  
    * log in met je account op https://developer.tibber.com/explorer  
    * de token staat boven onder de balk  

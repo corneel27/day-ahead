@@ -5,11 +5,11 @@ class Config:
 
     def __init__(self, file_name):
         if file_name is None:
-            file_json = open("/data/options.json")
+            file_json = open(file_name)
         else:
             file_json = open(file_name)
         self.options = json.load(file_json)
-        secrets_json = open("secrets.json")
+        secrets_json = open("../data/secrets.json")
         self.secrets = json.load(secrets_json)
 
     def get (self, keys, options = None):

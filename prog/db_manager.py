@@ -31,6 +31,7 @@ class DBmanagerObj(object):
         self.password = db_password
         self.port = db_port
         self.unix_socket = unix_socket
+        self.charset = charset
 
         # Other class variables
         self.dbON = False    # Will switch to True when the db is connected.
@@ -39,6 +40,7 @@ class DBmanagerObj(object):
         # Cursor of the database
         self._c = None
 
+    def connect(self):
         # Try connection
         try:
             if self.unix_socket:
@@ -54,7 +56,7 @@ class DBmanagerObj(object):
             else:
                 self._conn = mysql.connector.connect(host=self.server,
                                 user=self.user, passwd=self.password,
-                                db=self.dbname, charset=charset, auth_plugin='mysql_native_password')
+                                db=self.dbname, charset=self.charset, auth_plugin='mysql_native_password')
             self._c = self._conn.cursor()
             print('MySQL database connection successful. Default database:', self.dbname)
             self.dbON = True
@@ -63,7 +65,10 @@ class DBmanagerObj(object):
             print("---- Error connecting to the database")
 
         return
-        
+
+    def disconnect(self):
+        self.__del__()
+
     def __del__(self):
         """
         When destroying the object, it is necessary to commit changes
@@ -71,11 +76,12 @@ class DBmanagerObj(object):
         """
 
         try:
+            self._c.close()
             if self._conn.is_connected():
                 self._conn.commit()
                 self._conn.close()
         except:
-            print("---- Error closing database")
+            pass #print("---- Error closing database")
 
         return
 
@@ -142,20 +148,17 @@ class DBmanagerObj(object):
         """
         Returns a list with the names of all tables in the database
         """
-
-        # The specific command depends on whether we are using mysql or sqlite
-        if self.connector == 'mysql':
-            sqlcmd = ("SELECT table_name FROM INFORMATION_SCHEMA.TABLES " +
-                      "WHERE table_schema='" + self.dbname + "'")
-        else:
-            sqlcmd = "SELECT name FROM sqlite_master WHERE type='table'"
-
+        sqlcmd = ("SELECT table_name FROM INFORMATION_SCHEMA.TABLES " +
+                  "WHERE table_schema='" + self.dbname + "'")
         self._c.execute(sqlcmd)
         tbnames = [el[0] for el in self._c.fetchall()]
-
         return tbnames
 
- 
+    def getColumnNames(self, table_name):
+        sql = "SHOW `columns` FROM `"+table_name+"`;"
+        self._c.execute(sql)
+        col_names = [el[0] for el in self._c.fetchall()]
+        return col_names
 
     def setField(self, tablename, keyflds, valueflds, values):
         """
@@ -215,14 +218,9 @@ class DBmanagerObj(object):
                     values = list(map(circ_left_shift, values))
 
                 sqlcmd = 'UPDATE ' + tablename + ' SET '
-                if self.connector == 'mysql':
-                    sqlcmd += ', '.join([el+'=%s' for el in valueflds])
-                    sqlcmd += ' WHERE ' 
-                    sqlcmd += 'AND '.join([el+'=%s' for el in keyflds])   
-                else:
-                    sqlcmd += ', '.join([el+'=?' for el in valueflds])
-                    sqlcmd += ' WHERE ' 
-                    sqlcmd += 'AND '.join([el+'=?' for el in keyflds])
+                sqlcmd += ', '.join([el+'=%s' for el in valueflds])
+                sqlcmd += ' WHERE '
+                sqlcmd += 'AND '.join([el+'=%s' for el in keyflds])
                 self._c.executemany(sqlcmd, values)
 
                 # Commit changes
@@ -248,7 +246,7 @@ class DBmanagerObj(object):
           index
         Args:
             tablename:  Table that will be modified
-            keyfld:     string with the column name that will be used as key
+            keyflds:     string with the column name that will be used as key
                         (e.g. 'REFERENCIA')
             df:         Dataframe that we wish to save in table tablename
             robust:     If False, verifications are skipped

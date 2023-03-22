@@ -10,3 +10,6 @@ mip~=1.14.2
 python-dateutil~=2.8.2
 nordpool~=0.3.3
 entsoe-py
+beautifulsoup4~=4.11.1
+sqlalchemy~=2.0.6
+mariadb
