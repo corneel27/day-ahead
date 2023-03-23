@@ -217,13 +217,15 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * activate service: naam van de service van deze entiteit  
 
 **heating**:  dit onderdeel is nog in ontwikkeling  
-   * entity adjust heating curve: entiteit waarmee de stooklijn kan worden verschoven
-   * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
-      da prijs 10% afwijkt van het daggemiddelde
+   * degree days factor: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
+     zet deze op 0 als je geen wp hebt
    * stages : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop
      * max_power: het maximum elektrische vermogen van de betreffende schijf in W
      * cop: de cop van de wp behorende bij deze schijf. Dus een cop van 7 met een vermogen van 225 W 
         betekent een thermisch vermogen van 7 x 225 = 1575 W
+   * entity adjust heating curve: entiteit waarmee de stooklijn kan worden verschoven
+   * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
+      da prijs 10% afwijkt van het daggemiddelde
 
 **battery**: de gegevens en de instellingen van de accu
    * entity actual level: entiteit die de actuele soc van de accu presenteert  

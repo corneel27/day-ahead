@@ -566,7 +566,7 @@ class DayAheadOpt(hass.Hass):
             degree_days += self.meteo.calc_graaddagen(date=datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1), datetime.datetime.min.time()))
         print("Graaddagen: ", degree_days)
 
-        degree_days_factor = 3.6  # heat factor kWh th / K.day
+        degree_days_factor = self.heating_options["degree days factor"]  #3.6  heat factor kWh th / K.day
         heat_produced = float(self.get_state("sensor.daily_heat_production_heating").state)
         heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)# heet needed
         stages = self.heating_options["stages"]
