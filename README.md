@@ -284,7 +284,7 @@ stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe y
  * api_token : het token van de api van tibber  
   Deze vraag je als volgt op:  
    * log in met je account op https://developer.tibber.com/explorer  
-   * de token staat boven onder de balk  
+   * de token staat boven onder de balk 
  
  **scheduler** taken planner. 
  Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
