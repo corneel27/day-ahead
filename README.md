@@ -251,15 +251,24 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
        * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
        * capacity: capaciteit in kWp  
        * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2  
- 
-**solar** lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie<br>
+        Deze bereken je als volgt: <br>
+         * Een eerste schatting van de jaarlijkse opbrengst van je panelen is : Wp x 0,85.
+Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. <br>
+         * De gemiddelde direct opvallende straling gesommeerd over een jaar is "ongeveer" 400.000 J/cm2.<br>
+         * Als jouw "geschatte" jaaropbrengst van je panelen stelt op 5000 kWh dan wordt de yield:
+5000 / 400.000 = 0,0125 kWh/J/cm2<br>
+         * Zo kun je voor iedere pv installatie een eerste schatting maken.<br>
+         * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
+stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50  <br>
+           
+**solar** lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie< br>
      Per pv installatie geef je de volgende gegevens op:
-       * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
-       * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
-       * capacity: capaciteit in kWp  
-       * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2  
+* tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
+* orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
+* capacity: capaciteit in kWp  
+* yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2 (zie hierboven)  
  
-**electric vehicle** dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect . Andere  auto's graag in overleg toevoegen.
+**electric vehicle** dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. Andere auto's graag in overleg toevoegen.
    * capacity: capaciteit accu in kWh,  
    * entity position: entiteit die aangeeft of de auto "thuis" (home) is  
    * entity max amperage: entiteit die het max aantal amperes aangeeft waarmee kan worden geladen  

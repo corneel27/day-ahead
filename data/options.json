@@ -94,7 +94,7 @@
      "entity balance switch": "input_boolean.balanceer_grid",
      "solar": [
         { "name" : "tuinkamer",
-          "tilt": 35,
+          "tilt": 45,
           "orientation": 5,
           "capacity": 4.2,
           "yield": 0.000
