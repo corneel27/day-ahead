@@ -280,7 +280,7 @@ stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe y
 **electric vehicle** dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. 
     Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege lijst of een of meer auto's
    * name: de naam van de auto (komt straks terug in rapportages)
-   * capacity: capaciteit accu in kWh,  
+   * capacity: capaciteit accu in kWh,   
    * entity position: entiteit die aangeeft of de auto "thuis" (home) is  
    * entity max amperage: entiteit die het max aantal amperes aangeeft waarmee kan worden geladen  
    * entity actual level: entiteit die aangeeft hoe ver de auto is geladen (in %)  
