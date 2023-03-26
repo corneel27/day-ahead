@@ -127,9 +127,18 @@ De volgende parameters kunnen worden gebruikt:
 *   **debug**  
   alleen van toepassing in combinatie met het onderdeel "calc" (zie hierna), voert wel de berekening uit maar zet de berekende resultaten niet door naar de apparaten  
 *   **prices**  
-  haalt de day ahead prijzen op nordpool en/of entsoe  
+  haalt de day ahead prijzen op nordpool, entsoe of easyenergy. Deze bron stel je in via options.json (prices).<br>
+  Je kunt dit commando uitbreiden met een of twee extra datum-parameters: een start- en een eind datum. Laat je de tweede parameters achterwege dan wordt morgen als einddatum gekozen.
+  Je kunt deze faciliteit gebruiken om een prijshistorie in de database op te bouwen.<br>
+  Format: `jjjj-mm-dd` <br>
+  Deze functionaliteit werkt alleen bij de bron easyenergy!<br>
+  Voorbeeld ` python day_ahead.py prices 2022-09-01 [2023-03-01]`
+    
 *    **tibber**  
   haalt de verbruiks- en productiegegevens op bij tibber  
+  Dit commando kan met een extra parameter worden gestart namelijk een datum. In dat geval worden de verbruiksdata opgehaald vanaf de ingegeven datum. <br>
+  Format: `jjjj-mm-dd` <br>
+  Voorbeeld: `python da_ahead.py tibber 2023-02-01`
 *    **calc**  
   voert de "optimaliseringsberekening" uit:  
 haalt alle data (prijzen, meteo) op uit de database  

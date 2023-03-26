@@ -3,6 +3,7 @@ import datetime
 import bisect
 import math
 import json
+import sys
 import pandas as pd
 from day_ahead import DayAheadOpt
 from requests import post
@@ -72,21 +73,25 @@ def get_tibber_data(day_ahead_opt: DayAheadOpt):
         "Authorization": "Bearer " + day_ahead_opt.tibber_options["api_token"],
         "content-type": "application/json",
     }
-    now_ts = latest_ts = math.ceil(datetime.datetime.now().timestamp()/3600)*3600
-    for cat in ['cons', 'prod']:
-        sql_latest_ts = (
-            "SELECT t1.time, from_unixtime(t1.`time`) 'begin', t1.value "
-            "FROM `values` t1, `variabel` v1 "
-            "WHERE v1.`code` = '"+cat+"' and v1.id = t1.variabel and 1 <> "
-            "(SELECT COUNT( *) "
-            "FROM `values` t2, `variabel` v2 "
-            "WHERE v2.`code` = '"+cat+"' AND v2.id = t2.variabel AND t1.time + 3600 = t2.time);")
-        data = day_ahead_opt.db_da.run_select_query(sql_latest_ts)
-        if len(data.index) == 0:
-            latest = datetime.datetime.strptime(day_ahead_opt.prices_options["last invoice"], "%Y-%m-%d")
-        else:
-            latest = data['time'].values[0]
-        latest_ts = min(latest_ts, latest)
+    now_ts = latest_ts = math.ceil(datetime.datetime.now().timestamp() / 3600) * 3600
+    if len(sys.argv) > 2:
+        arg_s = sys.argv[2]
+        latest_ts = datetime.datetime.strptime(arg_s, "%Y-%m-%d").timestamp()
+    else:
+        for cat in ['cons', 'prod']:
+            sql_latest_ts = (
+                "SELECT t1.time, from_unixtime(t1.`time`) 'begin', t1.value "
+                "FROM `values` t1, `variabel` v1 "
+                "WHERE v1.`code` = '"+cat+"' and v1.id = t1.variabel and 1 <> "
+                "(SELECT COUNT( *) "
+                "FROM `values` t2, `variabel` v2 "
+                "WHERE v2.`code` = '"+cat+"' AND v2.id = t2.variabel AND t1.time + 3600 = t2.time);")
+            data = day_ahead_opt.db_da.run_select_query(sql_latest_ts)
+            if len(data.index) == 0:
+                latest = datetime.datetime.strptime(day_ahead_opt.prices_options["last invoice"], "%Y-%m-%d")
+            else:
+                latest = data['time'].values[0]
+            latest_ts = min(latest_ts, latest)
     count = math.ceil((now_ts - latest_ts)/3600)
     print("Tibber data present tot en met:", str(datetime.datetime.fromtimestamp(latest_ts)))
     if count < 24:

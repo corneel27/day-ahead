@@ -3,6 +3,7 @@ import pandas as pd
 from db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
 import datetime
+import sys
 from requests import get
 from nordpool.elspot import Prices
 import pytz
@@ -15,22 +16,35 @@ class DA_Prices:
 
     def get_prices(self, source):
         now = datetime.datetime.now()
-        start = pd.Timestamp(year=now.year, month=now.month, day=now.day, tz='CET')
-        if now.hour < 12:
-            end = start + datetime.timedelta(days=1)
+        #start
+        if len(sys.argv) > 2:
+            arg_s = sys.argv[2]
+            start = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
         else:
-            end = start + datetime.timedelta(days=2)
+            start = pd.Timestamp(year=now.year, month=now.month, day=now.day, tz='CET')
+        #end
+        if len(sys.argv) > 3:
+            arg_s = sys.argv[3]
+            end = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
+        else:
+            if now.hour < 12:
+                end = start + datetime.timedelta(days=1)
+            else:
+                end = start + datetime.timedelta(days=2)
 
-        present = self.db_da.get_time_latest_record("da")
-        if present != None:
-            tz = pytz.timezone("CET")
-            present = tz.normalize(tz.localize(present))
-            if present >= (end - datetime.timedelta(hours=1)):
-                print('Day ahead data already present')
-                return
+        if len(sys.argv) <= 2:
+            present = self.db_da.get_time_latest_record("da")
+            if present != None:
+                tz = pytz.timezone("CET")
+                present = tz.normalize(tz.localize(present))
+                if present >= (end - datetime.timedelta(hours=1)):
+                    print('Day ahead data already present')
+                    return
 
         # day-ahead market prices (€/MWh)
         if source.lower() == "entsoe":
+            start = pd.Timestamp(year=start.year, month=start.month, day=start.day, tz='CET')
+            end = pd.Timestamp(year=end.year, month=end.month, day=end.day, tz='CET')
             api_key = self.config.get(["prices", "entsoe-api-key"])
             client = EntsoePandasClient(api_key = api_key)
             da_prices = pd.DataFrame()
