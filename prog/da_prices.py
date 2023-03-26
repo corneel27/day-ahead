@@ -3,15 +3,17 @@ import pandas as pd
 from db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
 import datetime
+from requests import get
 from nordpool.elspot import Prices
 import pytz
+import json
 
 class DA_Prices:
     def __init__(self, config: Config, db_da: DBmanagerObj):
         self.config = config
         self.db_da = db_da
 
-    def get_prices(self):
+    def get_prices(self, source):
         now = datetime.datetime.now()
         start = pd.Timestamp(year=now.year, month=now.month, day=now.day, tz='CET')
         if now.hour < 12:
@@ -20,30 +22,33 @@ class DA_Prices:
             end = start + datetime.timedelta(days=2)
 
         present = self.db_da.get_time_latest_record("da")
-        tz = pytz.timezone("CET")
-        present = tz.normalize(tz.localize(present))
-        if present >= (end - datetime.timedelta(hours=1)):
-            print('Day ahead data already present')
-            return
+        if present != None:
+            tz = pytz.timezone("CET")
+            present = tz.normalize(tz.localize(present))
+            if present >= (end - datetime.timedelta(hours=1)):
+                print('Day ahead data already present')
+                return
 
         # day-ahead market prices (€/MWh)
-        client = EntsoePandasClient(api_key=self.config.get(["entsoe-api-key"]))
-        da_prices = pd.DataFrame()
-        last_time = 0
-        try:
-            da_prices = client.query_day_ahead_prices('NL', start=start, end=end)
-        except Exception as e:
-            print(f"Geen data van Entsoe: tussen {start} en {end}")
-        if len(da_prices.index) > 0:
-            df_db = pd.DataFrame(columns=['time', 'code', 'value'])
-            da_prices = da_prices.reset_index()  # make sure indexes pair with number of rows
-            for row in da_prices.itertuples():
-                last_time = int(datetime.datetime.timestamp(row[1]))
-                df_db.loc[df_db.shape[0]] = [str(last_time), 'da', row[2] / 1000]
-            print(df_db)
-            self.db_da.savedata(df_db)
+        if source.lower() == "entsoe":
+            api_key = self.config.get(["prices", "entsoe-api-key"])
+            client = EntsoePandasClient(api_key = api_key)
+            da_prices = pd.DataFrame()
+            last_time = 0
+            try:
+                da_prices = client.query_day_ahead_prices('NL', start=start, end=end)
+            except Exception as e:
+                print(f"Geen data van Entsoe: tussen {start} en {end}")
+            if len(da_prices.index) > 0:
+                df_db = pd.DataFrame(columns=['time', 'code', 'value'])
+                da_prices = da_prices.reset_index()  # make sure indexes pair with number of rows
+                for row in da_prices.itertuples():
+                    last_time = int(datetime.datetime.timestamp(row[1]))
+                    df_db.loc[df_db.shape[0]] = [str(last_time), 'da', row[2] / 1000]
+                print(df_db)
+                self.db_da.savedata(df_db, debug=self.debug)
 
-        if last_time < (end.to_pydatetime().timestamp() - 7200):
+        if source.lower() == "nordpool":
             # ophalen bij Nordpool
             prices_spot = Prices()
             hourly_prices_spot = prices_spot.hourly(areas=['NL'])
@@ -58,7 +63,7 @@ class DA_Prices:
             print(df_db)
             self.db_da.savedata(df_db)
 
-        '''
+        if source.lower() == "easyenergy":
             # ophalen bij EasyEnergy
             # 2022-06-25T00:00:00
             startstr = start.strftime('%Y-%m-%dT%H:%M:%S')
@@ -78,5 +83,5 @@ class DA_Prices:
     
             # print (df_db)
             self.db_da.savedata(df_db)
-        '''
+
 

@@ -2,7 +2,6 @@
     "url": "http://192.168.178.36:8123/",
     "token": "!secret ha_api_token"
   },
-  "entsoe-api-key": "!secret entsoe-api-key",
   "database da": {
     "server": "192.168.178.36",
     "database": "day_ahead",
@@ -19,6 +18,8 @@
   },
   "meteoserver-key": "!secret meteoserver-key",
   "prices": {
+    "source day ahead" : "nordpool",
+    "entsoe-api-key": "!secret entsoe-api-key",
     "regular high" : 0.50,
     "regular low" : 0.40,
     "switch to low": 23,
@@ -47,6 +48,7 @@
     "tax refund" : "True"
   },
   "boiler": {
+    "boiler present": "True",
     "entity actual temp.": "sensor.boiler_gemeten",
     "entity setpoint": "sensor.boiler_ingesteld",
     "entity hysterese": "sensor.hysterese_hot_water",
@@ -115,7 +117,9 @@
       "capacity": 1.8,
       "yield": 0.005
     }],
-  "electric vehicle" : {
+  "electric vehicle" : [
+    {
+    "name": "Golf GTE",
     "capacity": 6.3,
     "entity position": "device_tracker.wvwzzzauzfw117301_position",
     "entity max amperage": "sensor.wvwzzzauzfw117301_charger_max_ampere",
@@ -126,7 +130,8 @@
       "entity ready time": "input_datetime.tijdstip_klaar_met_laden"
     },
     "charge switch": "switch.wvwzzzauzfw117301_charging"
-  },
+    }
+  ],
   "tibber" : {
     "api url" : "https://api.tibber.com/v1-beta/gql",
     "api_token" : "!secret tibber_api_token"

@@ -326,7 +326,13 @@ class DBmanagerObj(object):
             code = dfrow['code']
             time = dfrow['time']
             value = dfrow['value']
+            if not (type(value) == int or type(value) == float):
+                continue
+            if value == float('inf'):
+                continue
             query = "SELECT `id` FROM `variabel` where code = '" + code + "';"
+            if debug:
+                print(query)
             self._c.execute(query)
             rows = self._c.fetchall()
             if len(rows) == 1:
@@ -334,12 +340,16 @@ class DBmanagerObj(object):
                 variabel_id = rows[0][0]
             query = "SELECT `values`.`id` FROM `values` WHERE " \
                     "`values`.`variabel` = "+str(variabel_id)+" and `time` = '" + time + "';"
+            if debug:
+                print(query)
             self._c.execute(query)
             rows = self._c.fetchall()
             if len(rows)== 1 :
                 #record is present
                 id =  rows[0][0]
                 query = 'UPDATE `values` SET `value` = %s WHERE id= %s;'
+                if debug:
+                    print(query)
                 self._c.execute(query, (value, id))
                 self._conn.commit()
             else:

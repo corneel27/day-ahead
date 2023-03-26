@@ -69,7 +69,7 @@ class DayAheadOpt(hass.Hass):
 
     def get_day_ahead_prices(self):
         self.db_da.connect()
-        self.prices.get_prices()
+        self.prices.get_prices(self.prices_options["source day ahead"])
         self.db_da.disconnect()
 
     def get_consumption(self, start: datetime.datetime, until=dt.datetime.now()):
@@ -154,7 +154,6 @@ class DayAheadOpt(hass.Hass):
 
         self.db_da.connect()
 
-        # global boiler_temp
         now_dt = int(dt.datetime.now().timestamp())
 
         offset = 0  # offset in uren
@@ -399,111 +398,133 @@ class DayAheadOpt(hass.Hass):
         #####################################
         #             boiler                #
         #####################################
-        boiler_act_temp = float(
-            self.get_state(self.boiler_options["entity actual temp."]).state)  # 50 huidige boilertemp ophalen uit ha
-        boiler_setpoint = float(self.get_state(self.boiler_options["entity setpoint"]).state)
-        boiler_hysterese = float(self.get_state(self.boiler_options["entity hysterese"]).state)
-        boiler_cooling = self.boiler_options["cooling rate"]  # 0.4 #K/uur instelbaar
-        boiler_bovengrens = self.boiler_options[
-            "heating allowed below"]  # 45 # oC instelbaar daaronder kan worden verwarmd
-        boiler_ondergrens = boiler_setpoint - boiler_hysterese  # 41 #C instelbaar daaronder moet worden verwarmd
-        vol = self.boiler_options["volume"]  # liter
-        spec_heat_boiler = vol * 4.2 + 100 * 0.5  # kJ/K
-        cop_boiler = self.boiler_options["cop"]
-        power = self.boiler_options["elec. power"]  # W
-
-        # tijdstip index waarop boiler kan worden verwarmd
-        boiler_start = int(max(0, min(23, int((boiler_act_temp - boiler_bovengrens) / boiler_cooling))))
-
-        # tijdstip index waarop boiler nog aan kan
-        boiler_end = int(
-            min(U - 1, max(0, int((boiler_act_temp - boiler_ondergrens) / boiler_cooling))))  # (41-40)/0.4=2.5
-
         boiler_on = [model.add_var(var_type=BINARY) for u in range(U)]
-        boiler_temp = [
-            model.add_var(var_type=CONTINUOUS, lb=boiler_setpoint - boiler_hysterese - 5, ub=boiler_setpoint + 10)
-            for u in range(U + 1)]  # end temp boiler
-
-        if boiler_start > boiler_end:  # geen boiler opwarming in deze periode
+        self.boiler_present = self.boiler_options["boiler present"].lower() == "true"
+        if not self.boiler_present:
+            boiler_temp = [
+                model.add_var(var_type=CONTINUOUS, lb=20, ub=20) for u in range(U + 1)]  # end temp boiler
             c_b = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]  # consumption boiler
-            model += xsum(boiler_on[j] for j in range(U)[boiler_start:boiler_end + 1]) == 0
-            print("boiler: geen opwarming")
-            boiler_end_temp = boiler_act_temp - boiler_cooling * (U)
-            print("boiler eind temperatuur: ", boiler_end_temp)
-            for u in range(U):
-                # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
-                model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling
+            model += xsum(boiler_on[j] for j in range(U)) == 0
+            print("Geen boiler aanwezig")
         else:
-            print("boiler: ", uur[boiler_start], uur[boiler_end])
-            needed_elec = [0.0 for u in range(U)]
-            needed_time = [0 for u in range(U)]
-            # spec heat in kJ/K vol in liter * 4,2 J/liter + 100 kg * 0,5 J/kg
-            for u in range(boiler_start, boiler_end + 1):
-                needed_heat = max(0.0, float(spec_heat_boiler * (
-                        boiler_setpoint - (boiler_act_temp - 3 - boiler_cooling * (u - boiler_start))) / 3600))  # kWh
-                needed_elec[u] = 0.9  # needed_heat / cop_boiler  # kWh
-                needed_time[u] = needed_elec[u] * 1000 / power  # hour
+            boiler_act_temp = float(
+                self.get_state(self.boiler_options["entity actual temp."]).state)  # 50 huidige boilertemp ophalen uit ha
+            boiler_setpoint = float(self.get_state(self.boiler_options["entity setpoint"]).state)
+            boiler_hysterese = float(self.get_state(self.boiler_options["entity hysterese"]).state)
+            boiler_cooling = self.boiler_options["cooling rate"]  # 0.4 #K/uur instelbaar
+            boiler_bovengrens = self.boiler_options[
+                "heating allowed below"]  # 45 # oC instelbaar daaronder kan worden verwarmd
+            boiler_ondergrens = boiler_setpoint - boiler_hysterese  # 41 #C instelbaar daaronder moet worden verwarmd
+            vol = self.boiler_options["volume"]  # liter
+            spec_heat_boiler = vol * 4.2 + 100 * 0.5  # kJ/K
+            cop_boiler = self.boiler_options["cop"]
+            power = self.boiler_options["elec. power"]  # W
 
-            c_b = [model.add_var(var_type=CONTINUOUS, lb=0, ub=needed_elec[u]) for u in range(U)]  # consumption boiler
-            for u in range(U):
-                model += c_b[u] == boiler_on[u] * needed_elec[u]
-                if u < boiler_start:
-                    model += boiler_on[u] == 0
-                elif u > boiler_end:
-                    model += boiler_on[u] == 0
-            model += xsum(boiler_on[j] for j in range(U)[boiler_start:boiler_end + 1]) == 1
-            model += boiler_temp[0] == boiler_act_temp
-            for u in range(U):
-                # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
-                model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling + c_b[
-                    u] * cop_boiler * 3600 / spec_heat_boiler
+            # tijdstip index waarop boiler kan worden verwarmd
+            boiler_start = int(max(0, min(23, int((boiler_act_temp - boiler_bovengrens) / boiler_cooling))))
+
+            # tijdstip index waarop boiler nog aan kan
+            boiler_end = int(
+                min(U - 1, max(0, int((boiler_act_temp - boiler_ondergrens) / boiler_cooling))))  # (41-40)/0.4=2.5
+
+
+            boiler_temp = [
+                model.add_var(var_type=CONTINUOUS, lb=boiler_setpoint - boiler_hysterese - 5, ub=boiler_setpoint + 10)
+                for u in range(U + 1)]  # end temp boiler
+
+            if boiler_start > boiler_end:  # geen boiler opwarming in deze periode
+                c_b = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]  # consumption boiler
+                model += xsum(boiler_on[j] for j in range(U)[boiler_start:boiler_end + 1]) == 0
+                print("boiler: geen opwarming")
+                boiler_end_temp = boiler_act_temp - boiler_cooling * (U)
+                print("boiler eind temperatuur: ", boiler_end_temp)
+                for u in range(U):
+                    # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
+                    model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling
+            else:
+                print("boiler: ", uur[boiler_start], uur[boiler_end])
+                needed_elec = [0.0 for u in range(U)]
+                needed_time = [0 for u in range(U)]
+                # spec heat in kJ/K vol in liter * 4,2 J/liter + 100 kg * 0,5 J/kg
+                for u in range(boiler_start, boiler_end + 1):
+                    needed_heat = max(0.0, float(spec_heat_boiler * (
+                            boiler_setpoint - (boiler_act_temp - 3 - boiler_cooling * (u - boiler_start))) / 3600))  # kWh
+                    needed_elec[u] = 0.9  # needed_heat / cop_boiler  # kWh
+                    needed_time[u] = needed_elec[u] * 1000 / power  # hour
+
+                c_b = [model.add_var(var_type=CONTINUOUS, lb=0, ub=needed_elec[u]) for u in range(U)]  # cons. boiler
+                for u in range(U):
+                    model += c_b[u] == boiler_on[u] * needed_elec[u]
+                    if u < boiler_start:
+                        model += boiler_on[u] == 0
+                    elif u > boiler_end:
+                        model += boiler_on[u] == 0
+                model += xsum(boiler_on[j] for j in range(U)[boiler_start:boiler_end + 1]) == 1
+                model += boiler_temp[0] == boiler_act_temp
+                for u in range(U):
+                    # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
+                    model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling + c_b[
+                        u] * cop_boiler * 3600 / spec_heat_boiler
 
         ################################################
-        # electric vehicle
+        # electric vehicles
         ################################################
-        ev_capacity = self.ev_options["capacity"]
-        # plugged = self.get_state(self.ev_options["entity plugged in"]).state
-        ev_plugged_in = self.get_state(self.ev_options["entity plugged in"]).state == "on"
-        ev_position = self.get_state(self.ev_options["entity position"]).state
-        actual_soc = float(self.get_state(self.ev_options["entity actual level"]).state)
-        wished_level = float(self.get_state(self.ev_options["charge scheduler"]["entity set level"]).state)
-        ready_str = self.get_state(self.ev_options["charge scheduler"]["entity ready time"]).state
-        ready = dt.datetime.strptime(ready_str, '%H:%M:%S')
-        now_dt = dt.datetime.now()
-        ready = dt.datetime(now_dt.year, now_dt.month, now_dt.day, ready.hour, ready.minute)
-        if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
-            ready = ready + dt.timedelta(days=1)
-        max_ampere = float(self.get_state(self.ev_options["entity max amperage"]).state)
-        max_power = max_ampere * 230 / 1000  # vermogen in kW
-        energy_needed = ev_capacity * (wished_level - actual_soc) / 100  # in kWh
-        time_needed = energy_needed / max_power  # aantal uren bijv 1,5
-        start = ready - dt.timedelta(hours=time_needed)
-        ready_index = U
-        if ev_plugged_in and (ev_position == "home") and (wished_level > actual_soc) and (
-                (tijd[U - 1] + dt.timedelta(hours=1)) >= ready):
-            for u in range(U):
-                if (tijd[u] + dt.timedelta(hours=1)) >= ready:
-                    ready_index = u
-                    break
+        EV = len(self.ev_options)
+        actual_soc = []
+        wished_level = []
+        ready_u = []
+        hours_needed = []
+        max_power = []
+        energy_needed = []
+        for e in range(EV):
+            ev_capacity = self.ev_options[e]["capacity"]
+            # plugged = self.get_state(self.ev_options["entity plugged in"]).state
+            ev_plugged_in = self.get_state(self.ev_options[e]["entity plugged in"]).state == "on"
+            ev_position = self.get_state(self.ev_options[e]["entity position"]).state
+            actual_soc.append(float(self.get_state(self.ev_options[e]["entity actual level"]).state))
+            wished_level.append(float(self.get_state(self.ev_options[e]["charge scheduler"]["entity set level"]).state))
+            ready_str = self.get_state(self.ev_options[e]["charge scheduler"]["entity ready time"]).state
+            ready = dt.datetime.strptime(ready_str, '%H:%M:%S')
+            now_dt = dt.datetime.now()
+            ready = dt.datetime(now_dt.year, now_dt.month, now_dt.day, ready.hour, ready.minute)
+            if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
+                ready = ready + dt.timedelta(days=1)
+            max_ampere = float(self.get_state(self.ev_options[e]["entity max amperage"]).state)
+            max_power.append(max_ampere * 230 / 1000) # vermogen in kW
+            energy_needed.append(ev_capacity * (wished_level[e] - actual_soc[e]) / 100)  # in kWh
+            time_needed = energy_needed[e] / max_power[e]  # aantal uren bijv 1,5
+            hours_needed.append(math.ceil(time_needed))  # hele uren
+            start = ready - dt.timedelta(hours=time_needed)
+            ready_index = U
+            if ev_plugged_in and (ev_position == "home") and (wished_level[e] > actual_soc[e]) and (
+                    (tijd[U - 1] + dt.timedelta(hours=1)) >= ready):
+                for u in range(U):
+                    if (tijd[u] + dt.timedelta(hours=1)) >= ready:
+                        ready_index = u
+                        break
+                print(self.ev_options[e]["name"]+" klaar om: ", (1 + uur[ready_index]), "uur")  # ready index =laatste uur waarin wordt geladen
+            ready_u.append(ready_index)
 
-            print("ev klaar om: ", (1 + uur[ready_index]), "uur")  # ready index =laatste uur waarin wordt geladen
-            hours_needed = math.ceil(time_needed)  # hele uren
-            charger_on = [model.add_var(var_type=BINARY) for u in range(U)]
-            c_ev = [model.add_var(var_type=CONTINUOUS, lb=0, ub=max_power * hour_fraction[u]) for u in
-                    range(U)]  # consumption charger
-            max_beschikbaar = 0
-            for u in range(ready_index + 1):
-                model += c_ev[u] <= charger_on[u] * hour_fraction[u] * max_power
-                max_beschikbaar += hour_fraction[u] * max_power
-            for u in range(ready_index + 1, U):
-                model += charger_on[u] == 0
-                model += c_ev[u] == 0
-            model += xsum(charger_on[j] for j in range(ready_index + 1)) == hours_needed
-            model += xsum(c_ev[u] for u in range(ready_index + 1)) == min(max_beschikbaar, energy_needed)
-        else:
-            c_ev = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]
-            for u in range(U):
-                model += c_ev[u] == 0
+        charger_on = [[model.add_var(var_type=BINARY) for u in range(U)] for e in range(EV)]
+
+        c_ev = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_power[e] * hour_fraction[u])
+                 for u in range(U)] for e in range(EV)]  # consumption charger
+
+        for e in range(EV):
+            if energy_needed[e]>0:
+                max_beschikbaar = 0
+                for u in range(ready_u[e] + 1):
+                    model += c_ev[e][u] <= charger_on[e][u] * hour_fraction[u] * max_power[e]
+                    max_beschikbaar += hour_fraction[u] * max_power[e]
+                for u in range(ready_u[e] + 1, U):
+                    model += charger_on[e][u] == 0
+                    model += c_ev[e][u] == 0
+                model += xsum(charger_on[e][j] for j in range(ready_u[e] + 1)) == hours_needed[e]
+                model += xsum(c_ev[e][u] for u in range(ready_u[e] + 1)) == min(max_beschikbaar, energy_needed[e])
+            else:
+                model += xsum(c_ev[e][u] for u in range(U)) == 0
+                for u in range(U):
+                    model += c_ev[e][u] == 0
 
         # total consumption per hour: base_load plus accuload
         # inkoop + pv + accu_out = teruglevering + base_cons + accu_in + boiler + ev + ruimteverwarming
@@ -602,7 +623,7 @@ class DayAheadOpt(hass.Hass):
         for u in range(U):
             model += c_l[u] == c_t_total[u] + b_l[u] + \
                      xsum(ac_to_dc[b][u]/eff_ac_to_dc[b] - dc_to_ac[b][u]*eff_dc_to_ac[b]  for b in range(B)) + \
-                     c_b[u] + c_ev[u] + c_hp[u] - pv[u]
+                     c_b[u] + xsum(c_ev[e][u] for e in range(EV))  + c_hp[u] - pv[u]
 
         # kosten optimalisering
         model.objective = minimize(
@@ -629,8 +650,14 @@ class DayAheadOpt(hass.Hass):
             sum_old_cons = 0
             org_l = []
             org_t = []
+            c_ev_sum = []
             for u in range(U):
-                netto = b_l[u] + c_b[u].x + c_hp[u].x + c_ev[u].x - pv[u]
+                ev_sum = 0
+                for e in range(EV):
+                    ev_sum += c_ev[e][u].x
+                c_ev_sum.append(ev_sum)
+            for u in range(U):
+                netto = b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] - pv[u]
                 sum_old_cons += netto
                 if netto >= 0:
                     old_cost_gc += netto * p_grl[u]
@@ -659,9 +686,10 @@ class DayAheadOpt(hass.Hass):
             print("Niet geoptimaliseerd, kosten met reguliere tarieven: {:6.2f}".format(old_cost_gc))
             print("Niet geoptimaliseerd, kosten met day ahead tarieven: {:6.2f}".format(old_cost_da))
             print("Geoptimaliseerd, kosten met day ahead tarieven: {:6.2f}".format(float(model.objective_value)))
-            print("Waarde boiler om 23 uur: {:6.2f}".format(
-                (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (spec_heat_boiler / (3600 * cop_boiler))),
-                " kWh")
+            if self.boiler_present:
+                print("Waarde boiler om 23 uur: {:6.2f}".format(
+                    (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (spec_heat_boiler / (3600 * cop_boiler))),
+                    " kWh")
 
             sys.stdout.write('\n optimale kosten %g found: %s\n'
                              % (float(model.objective_value), U))
@@ -708,7 +736,7 @@ class DayAheadOpt(hass.Hass):
                 accu_out_sum.append(dc_to_ac_sum)
                 row = [uur[u], ac_to_dc_sum, dc_to_ac_sum]
                 row = row + [c_l[u].x, c_t_w_tax[u].x, c_t_no_tax[u].x, b_l[u],
-                            c_b[u].x, c_hp[u].x, c_ev[u].x, pv[u], c_l[u].x * pl[u], -c_t_total[u].x * pt[u],
+                            c_b[u].x, c_hp[u].x, c_ev_sum[u], pv[u], c_l[u].x * pl[u], -c_t_total[u].x * pt[u],
                             -c_t_no_tax[u].x * pt_notax[u], boiler_temp[u + 1].x]
                 d_f.loc[d_f.shape[0]] = row
                 '''
@@ -735,12 +763,12 @@ class DayAheadOpt(hass.Hass):
                 battery multiplus feedin from grid = accu_in[0].x - accu_out[0].x
                 '''
                 # boiler
-                # print(self.boiler_options["activate service"], ' ', self.boiler_options["activate entity"])
-                if float(c_b[0].x) > 0.0:
-                    self.call_service(self.boiler_options["activate service"],
-                                      entity_id=self.boiler_options["activate entity"])
-                    # "input_button.hw_trigger")
-                    print("boiler opwarmen geactiveerd")
+                if self.boiler_present:
+                    if float(c_b[0].x) > 0.0:
+                        self.call_service(self.boiler_options["activate service"],
+                                          entity_id=self.boiler_options["activate entity"])
+                        # "input_button.hw_trigger")
+                        print("boiler opwarmen geactiveerd")
 
                 # ev
                 if ev_position == "home" and ev_plugged_in:
@@ -826,7 +854,7 @@ class DayAheadOpt(hass.Hass):
                 base_n.append(-b_l[u])
                 boiler_n.append(- c_b[u].x)
                 heatpump_n.append(-c_hp[u].x)
-                ev_n.append(-c_ev[u].x)
+                ev_n.append(-c_ev_sum[u])
                 pv_p.append(pv[u])
                 accu_in_sum =0
                 accu_out_sum = 0
@@ -845,7 +873,8 @@ class DayAheadOpt(hass.Hass):
             axis[0].bar(ind, np.array(org_l), label='Levering', color='#00bfff')
             axis[0].bar(ind, np.array(pv_p), bottom=np.array(org_l), label='PV', color='green')
             axis[0].bar(ind, np.array(base_n), label="Overig verbr.", color='#f1a603')
-            axis[0].bar(ind, np.array(boiler_n), bottom=np.array(base_n), label="Boiler", color='#e39ff6')
+            if self.boiler_present:
+                axis[0].bar(ind, np.array(boiler_n), bottom=np.array(base_n), label="Boiler", color='#e39ff6')
             axis[0].bar(ind, np.array(heatpump_n), bottom=np.array(base_n), label="WP", color='#a32cc4')
             axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
                         color='#fefbbd')
@@ -866,7 +895,8 @@ class DayAheadOpt(hass.Hass):
 
             # axis[1].bar(ind, np.array(cons_n), label="Verbruik", color = 'yellow')
             axis[1].bar(ind, np.array(base_n), label="Overig verbr.", color='#f1a603')
-            axis[1].bar(ind, np.array(boiler_n), bottom=np.array(base_n), label="Boiler", color='#e39ff6')
+            if self.boiler_present:
+                axis[1].bar(ind, np.array(boiler_n), bottom=np.array(base_n), label="Boiler", color='#e39ff6')
             axis[1].bar(ind, np.array(heatpump_n), bottom=np.array(base_n), label="WP", color='#a32cc4')
             axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
                         color='#fefbbd')

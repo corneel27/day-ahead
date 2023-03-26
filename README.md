@@ -146,14 +146,6 @@ Opmerking: alle instellingen die beginnen met "!secret" staan komen in het besta
  * token: om de api te kunnen aanroepen is er  een token nodig.  
                Deze kun je genereren in je Home Assistant website
 
-**entsoe-api-key**  
-	Deze key genereer je op de site van entsoe en heb je nodig om daar de energieprijzen van de volgende op te halen.
-    Je genereert deze key (token) als volgt: 
- * Website: https://transparency.entsoe.eu      
- * Registreer je als gebruiker 
- * Klik op "My Account Settings"  
- *  Klik op "Generate a new token"
-
 **database da**:  de database voor het day ahead programma  
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
@@ -177,6 +169,20 @@ Opmerking: alle instellingen die beginnen met "!secret" staan komen in het besta
 Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er maar 4 per dag = max 124 per maand
 
 **prices**  
+ * source day ahead: waar wil je je day ahead prijzen vandaan halen. Je hebt de keuze uit drie bronnen:
+   * nordpool
+   * entsoe
+   * easyenergy<br>
+
+    Als je kiest voor **entsoe** dan moet je hieronder een api key invullen.
+ * entsoe-api-key*  
+	Deze key genereer je op de site van entsoe en heb je nodig om daar de energieprijzen van de volgende op te halen.
+    Je genereert deze key (token) als volgt: 
+ * Website: https://transparency.entsoe.eu      
+ * Registreer je als gebruiker 
+ * Klik op "My Account Settings"  
+ * Klik op "Generate a new token"
+
 
  * regular high: het hoge tarief van een "reguliere" oude leverancier,
    ex btw, kaal, euro per kWh
@@ -205,10 +211,11 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * tax refund: kun je alles salderen of is je teruglevering hoger dan je verbruik  (True of False) 
 
 **boiler**  instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
+   * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd.
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
    * entity setpoint: entiteit die de ingestelde boilertemp. presenteert  
    * entity hysterese: entiteit die de gehanteerde hysterese voor de boiler presenteert  
-   * cop: cop van de boiler  bijv 3: met 1 kWh elektriciteit wordt 3 kWh warm water gemaakt (een elektrische boiler heeft een cop = 1)
+   * cop: cop van de boiler bijv 3: met 1 kWh elektriciteit wordt 3 kWh warm water gemaakt (een elektrische boiler heeft een cop = 1)
    * cooling rate: gemiddelde afkoelsnelheid van de boiler in K/uur  
    * volume: inhoud van de boiler in liter  
    * heating allowed below: temperatuurgrens in °C  waaronder de boiler mag worden opgewarmd  
@@ -227,7 +234,9 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
       da prijs 10% afwijkt van het daggemiddelde
 
-**battery**: de gegevens en de instellingen van de accu
+**battery**: de gegevens en de instellingen van geen, een of meer accu's
+Je kunt de accu instellingen herhalen als je meer dan een accu hebt, of je laat de lijst leeg (geen accu)
+   * name: de naam van de accu (komt terug in rapportages)
    * entity actual level: entiteit die de actuele soc van de accu presenteert  
    * capacity: capaciteit van de accu in kWh  
    * lower limit: onderste soc limiet (tijdelijk)  
@@ -268,7 +277,9 @@ stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe y
 * capacity: capaciteit in kWp  
 * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2 (zie hierboven)  
  
-**electric vehicle** dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. Andere auto's graag in overleg toevoegen.
+**electric vehicle** dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. 
+    Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege lijst of een of meer auto's
+   * name: de naam van de auto (komt straks terug in rapportages)
    * capacity: capaciteit accu in kWh,  
    * entity position: entiteit die aangeeft of de auto "thuis" (home) is  
    * entity max amperage: entiteit die het max aantal amperes aangeeft waarmee kan worden geladen  
