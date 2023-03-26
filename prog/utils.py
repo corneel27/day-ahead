@@ -82,7 +82,10 @@ def get_tibber_data(day_ahead_opt: DayAheadOpt):
             "FROM `values` t2, `variabel` v2 "
             "WHERE v2.`code` = '"+cat+"' AND v2.id = t2.variabel AND t1.time + 3600 = t2.time);")
         data = day_ahead_opt.db_da.run_select_query(sql_latest_ts)
-        latest = data['time'].values[0]
+        if len(data.index) == 0:
+            latest = datetime.datetime.strptime(day_ahead_opt.prices_options["last invoice"], "%Y-%m-%d")
+        else:
+            latest = data['time'].values[0]
         latest_ts = min(latest_ts, latest)
     count = math.ceil((now_ts - latest_ts)/3600)
     print("Tibber data present tot en met:", str(datetime.datetime.fromtimestamp(latest_ts)))
