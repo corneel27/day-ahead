@@ -61,6 +61,7 @@
     "activate entity": "input_button.hw_trigger"
   },
   "heating": {
+    "heater present" : "True",
     "degree days factor" : 3.6,
     "stages": [
         {"max_power":  225, "cop": 7.1},

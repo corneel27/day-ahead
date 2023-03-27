@@ -235,6 +235,7 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * activate service: naam van de service van deze entiteit  
 
 **heating**:  dit onderdeel is nog in ontwikkeling  
+   * heater present : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd.
    * degree days factor: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
      zet deze op 0 als je geen wp hebt
    * stages : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop

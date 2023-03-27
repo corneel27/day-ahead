@@ -582,41 +582,45 @@ class DayAheadOpt(hass.Hass):
 
 
         #heatpump
-        degree_days = self.meteo.calc_graaddagen()
-        if U>24:
-            degree_days += self.meteo.calc_graaddagen(date=datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1), datetime.datetime.min.time()))
-        print("Graaddagen: ", degree_days)
+        self.heater_present = self.heating_options["heater present"].lower() == "true"
+        if not self.heater_present:
+            c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]  # elektriciteitsverbruik in kWh/h
+        else:
+            degree_days = self.meteo.calc_graaddagen()
+            if U>24:
+                degree_days += self.meteo.calc_graaddagen(date=datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1), datetime.datetime.min.time()))
+            print("Graaddagen: ", degree_days)
 
-        degree_days_factor = self.heating_options["degree days factor"]  #3.6  heat factor kWh th / K.day
-        heat_produced = float(self.get_state("sensor.daily_heat_production_heating").state)
-        heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)# heet needed
-        stages = self.heating_options["stages"]
-        S = len(stages)
-        c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for u in range(U)]  # elektriciteitsverbruik in kWh/h
-        p_hp = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=stages[s]["max_power"]) for u in range(U)] for s in range(S)]
+            degree_days_factor = self.heating_options["degree days factor"]  #3.6  heat factor kWh th / K.day
+            heat_produced = float(self.get_state("sensor.daily_heat_production_heating").state)
+            heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)# heet needed
+            stages = self.heating_options["stages"]
+            S = len(stages)
+            c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for u in range(U)]  # elektriciteitsverbruik in kWh/h
+            p_hp = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=stages[s]["max_power"]) for u in range(U)] for s in range(S)]
 
-        # schijven aan/uit, iedere schijf kan maar een keer in een uur
-        hp_on = [[model.add_var(var_type=BINARY) for u in range(U)] for s in range(S)]
+            # schijven aan/uit, iedere schijf kan maar een keer in een uur
+            hp_on = [[model.add_var(var_type=BINARY) for u in range(U)] for s in range(S)]
 
-        # verbruik per uur
-        for u in range(U):
-            # verbruik in kWh is totaal vermogen in W/1000
-            model += c_hp[u] == (xsum(p_hp[s][u] for s in range(S))) / 1000
-            #kosten
-            #model += k_hp[u] == c_hp[u] * pl[u]  # kosten = verbruik x tarief
+            # verbruik per uur
+            for u in range(U):
+                # verbruik in kWh is totaal vermogen in W/1000
+                model += c_hp[u] == (xsum(p_hp[s][u] for s in range(S))) / 1000
+                #kosten
+                #model += k_hp[u] == c_hp[u] * pl[u]  # kosten = verbruik x tarief
 
-        # geproduceerde warmte per uur
-        h_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10000) for u in range(U)]
+            # geproduceerde warmte per uur
+            h_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10000) for u in range(U)]
 
-        #beschikbaar vermogen x aan/uit, want p_hpx[u] X hpx_on[u] kan niet
-        for u in range(U):
-            for s in range(S):
-                model += p_hp[s][u] <= stages[s]["max_power"] * hp_on[s][u]
-            #ieder uur maar een aan
-            model += (xsum(hp_on[s][u] for s in range(S))) + boiler_on[u] == 1
-            # geprod. warmte = vermogen in W * COP schijf /1000 in kWh
-            model += h_hp[u] == xsum ( (p_hp[s][u] * stages[s]["cop"]/1000)  for s in range (S)) * hour_fraction[u]
-        model += xsum(h_hp[u] for u in range(U)) == heat_needed  # som van alle warmte == benodigde warmte
+            #beschikbaar vermogen x aan/uit, want p_hpx[u] X hpx_on[u] kan niet
+            for u in range(U):
+                for s in range(S):
+                    model += p_hp[s][u] <= stages[s]["max_power"] * hp_on[s][u]
+                #ieder uur maar een aan
+                model += (xsum(hp_on[s][u] for s in range(S))) + boiler_on[u] == 1
+                # geprod. warmte = vermogen in W * COP schijf /1000 in kWh
+                model += h_hp[u] == xsum ( (p_hp[s][u] * stages[s]["cop"]/1000)  for s in range (S)) * hour_fraction[u]
+            model += xsum(h_hp[u] for u in range(U)) == heat_needed  # som van alle warmte == benodigde warmte
 
 
         #alle verbruiken in de totaal balans
@@ -693,15 +697,16 @@ class DayAheadOpt(hass.Hass):
 
             sys.stdout.write('\n optimale kosten %g found: %s\n'
                              % (float(model.objective_value), U))
-            print("\nInzet warmtepomp")
-            print("u     tar     p0     p1     p2     p3     p4     p5     p6     p7   heat   cons")
-            for u in range(U):
-                print("{:2.0f}".format(uur[u]), "{:6.4f}".format(pl[u]), "{:6.0f}".format(p_hp[0][u].x), "{:6.0f}".format(p_hp[1][u].x),
-                      "{:6.0f}".format(p_hp[2][u].x),
-                      "{:6.0f}".format(p_hp[3][u].x), "{:6.0f}".format(p_hp[4][u].x), "{:6.0f}".format(p_hp[5][u].x),
-                      "{:6.0f}".format(p_hp[6][u].x), "{:6.0f}".format(p_hp[7][u].x), "{:6.2f}".format(h_hp[u].x),
-                      "{:6.2f}".format(c_hp[u].x))
-            print("\n")
+            if self.heater_present:
+                print("\nInzet warmtepomp")
+                print("u     tar     p0     p1     p2     p3     p4     p5     p6     p7   heat   cons")
+                for u in range(U):
+                    print("{:2.0f}".format(uur[u]), "{:6.4f}".format(pl[u]), "{:6.0f}".format(p_hp[0][u].x), "{:6.0f}".format(p_hp[1][u].x),
+                          "{:6.0f}".format(p_hp[2][u].x),
+                          "{:6.0f}".format(p_hp[3][u].x), "{:6.0f}".format(p_hp[4][u].x), "{:6.0f}".format(p_hp[5][u].x),
+                          "{:6.0f}".format(p_hp[6][u].x), "{:6.0f}".format(p_hp[7][u].x), "{:6.2f}".format(h_hp[u].x),
+                          "{:6.2f}".format(c_hp[u].x))
+                print("\n")
 
             #overzicht per accu:
             pd.options.display.float_format = '{:6.2f}'.format
@@ -875,7 +880,8 @@ class DayAheadOpt(hass.Hass):
             axis[0].bar(ind, np.array(base_n), label="Overig verbr.", color='#f1a603')
             if self.boiler_present:
                 axis[0].bar(ind, np.array(boiler_n), bottom=np.array(base_n), label="Boiler", color='#e39ff6')
-            axis[0].bar(ind, np.array(heatpump_n), bottom=np.array(base_n), label="WP", color='#a32cc4')
+            if self.heater_present:
+                axis[0].bar(ind, np.array(heatpump_n), bottom=np.array(base_n), label="WP", color='#a32cc4')
             axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
                         color='#fefbbd')
             axis[0].bar(ind, np.array(org_t), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
@@ -897,7 +903,8 @@ class DayAheadOpt(hass.Hass):
             axis[1].bar(ind, np.array(base_n), label="Overig verbr.", color='#f1a603')
             if self.boiler_present:
                 axis[1].bar(ind, np.array(boiler_n), bottom=np.array(base_n), label="Boiler", color='#e39ff6')
-            axis[1].bar(ind, np.array(heatpump_n), bottom=np.array(base_n), label="WP", color='#a32cc4')
+            if self.heater_present:
+                axis[1].bar(ind, np.array(heatpump_n), bottom=np.array(base_n), label="WP", color='#a32cc4')
             axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
                         color='#fefbbd')
             axis[1].bar(ind, np.array(c_t_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
