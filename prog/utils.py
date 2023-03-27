@@ -88,7 +88,7 @@ def get_tibber_data(day_ahead_opt: DayAheadOpt):
                 "WHERE v2.`code` = '"+cat+"' AND v2.id = t2.variabel AND t1.time + 3600 = t2.time);")
             data = day_ahead_opt.db_da.run_select_query(sql_latest_ts)
             if len(data.index) == 0:
-                latest = datetime.datetime.strptime(day_ahead_opt.prices_options["last invoice"], "%Y-%m-%d")
+                latest = datetime.datetime.strptime(day_ahead_opt.prices_options["last invoice"], "%Y-%m-%d").timestamp()
             else:
                 latest = data['time'].values[0]
             latest_ts = min(latest_ts, latest)

@@ -143,8 +143,10 @@ De volgende parameters kunnen worden gebruikt:
   voert de "optimaliseringsberekening" uit:  
 haalt alle data (prijzen, meteo) op uit de database  
 berekent de optimale inzet van de accu, boiler en ev  
-berekent de besparing tov een reguliere leverancier berekent de besparing zonder optimalisering met alleen day ahead presenteert een tabel met alle geprognoticeerde uurdata presenteert een grafiek met alle geprognoticeerde uurdata*     scheduler:  
- hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd  
+berekent de besparing tov een reguliere leverancier berekent de besparing zonder optimalisering met alleen day ahead presenteert een tabel met alle geprognoticeerde uurdata presenteert een grafiek met alle geprognoticeerde uurdata
+* **scheduler**  
+ Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd.<br>
+ Dit wordt ook bereikt door het programma zonder parameter op te starten.
 ---
 ### Instellingen  
   

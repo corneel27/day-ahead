@@ -17,6 +17,7 @@ class Meteo:
         self.latitude = config.get(["latitude"])
         self.longitude = config.get(["longitude"])
         self.solar = config.get(["solar"])
+        self.bat = config.get(["battery"])
 
     @staticmethod
     def makerefmoment(moment):
@@ -139,10 +140,22 @@ class Meteo:
         """
         # tilt: helling tov plat vlak in graden
         # orientation: orientatie oost = -90, zuid = 0, west = 90 in graden
-        tilt = self.solar[0]["tilt"]
+        # zoek de eerste de beste pv installatie op
+        solar = None
+        if len(self.solar) > 0:
+            solar = self.solar[0]
+        else:
+            for b in range(self.bat):
+                if len(self.bat[b].solar) > 0:
+                    solar = self.bat[b].solar[0]
+        if solar != None:
+            tilt = solar["tilt"]
+            orientation = solar["orientation"]
+        else:
+            tilt = 45
+            orientation = 0
         tilt = min(90, max(0, tilt))
         hcol = math.radians(tilt)
-        orientation = self.solar[0]["orientation"]
         acol = math.radians(orientation)
         global_rad['solar_rad'] = ''  # new column empty
         global_rad = global_rad.reset_index()  # make sure indexes pair with number of rows
