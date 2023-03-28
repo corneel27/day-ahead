@@ -476,6 +476,7 @@ class DayAheadOpt(hass.Hass):
         hours_needed = []
         max_power = []
         energy_needed = []
+        now_dt = dt.datetime.now()
         for e in range(EV):
             ev_capacity = self.ev_options[e]["capacity"]
             # plugged = self.get_state(self.ev_options["entity plugged in"]).state
@@ -485,7 +486,6 @@ class DayAheadOpt(hass.Hass):
             wished_level.append(float(self.get_state(self.ev_options[e]["charge scheduler"]["entity set level"]).state))
             ready_str = self.get_state(self.ev_options[e]["charge scheduler"]["entity ready time"]).state
             ready = dt.datetime.strptime(ready_str, '%H:%M:%S')
-            now_dt = dt.datetime.now()
             ready = dt.datetime(now_dt.year, now_dt.month, now_dt.day, ready.hour, ready.minute)
             if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
                 ready = ready + dt.timedelta(days=1)
