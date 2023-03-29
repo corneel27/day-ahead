@@ -77,10 +77,10 @@
     "adjustment factor": 0.04
   },
   "battery": [
-    {"name" : "accu1",
+    {"name" : "Accu1",
      "entity actual level": "sensor.ess_battery_soc",
      "capacity": 28,
-     "upper limit": 95,
+     "upper limit": 98,
      "lower limit": 21,
      "optimal lower level": 21,
      "max charge power": 4.5,
@@ -96,12 +96,12 @@
      "entity stop victron": "input_datetime.stop_victron",
      "entity balance switch": "input_boolean.balanceer_grid",
      "solar": [
-        { "name" : "tuinkamer",
-          "tilt": 45,
-          "orientation": 5,
-          "capacity": 4.2,
-          "yield": 0.000
-        }
+       {"name": "tuinkamer",
+        "tilt": 45,
+        "orientation": 5,
+        "capacity": 1.8,
+        "yield": 0.000
+       }
      ]
     }
   ],

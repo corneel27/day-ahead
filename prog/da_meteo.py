@@ -245,7 +245,7 @@ class Meteo:
 
         print(df_db)
 
-#        graphs.make_graph_meteo(df_db, file="images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
+#        graphs.make_graph_meteo(df_db, file="../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
 #                                show=show_graph)
         del df_db["time_str"]
         print(df_db)
