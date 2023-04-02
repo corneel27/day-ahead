@@ -47,6 +47,12 @@
     "last invoice" : "2022-09-01",
     "tax refund" : "True"
   },
+  "strategy": {
+    "minimize cost" : "False",
+    "minimize delivery": "False",
+    "combine minimize cost delivery": "True",
+    "cost marge combination": 1
+  },
   "boiler": {
     "boiler present": "True",
     "entity actual temp.": "sensor.boiler_gemeten",
@@ -83,6 +89,8 @@
      "upper limit": 98,
      "lower limit": 21,
      "optimal lower level": 21,
+     "entity min soc end opt": "input_number.min_soc_einde_opt",
+     "entity max soc end opt": "input_number.max_soc_einde_opt",
      "max charge power": 4.5,
      "max discharge power": 4.5,
      "minimum power" : 1000,

@@ -14,8 +14,9 @@ met de naam "mixed-integer lineair programming". Meer daarover kun je lezen op d
 website die ook het algoritme en allerlei bijbehorende hulpmiddelen aanbiedt:
 https://python-mip.com/
 
-Deze implementatie berekent een optimale inzet van je accu, boiler en ev, waarbij wordt 
-gestreefd naar minimalisering van je kosten. Daarvoor worden de volgende zaken berekend:
+Deze implementatie berekent een optimale inzet van je accu, boiler en ev, waarbij naar keuze wordt 
+gestreefd naar minimalisering van je kosten, naar minimalisering van je inkoop (nul op de meter) of 
+een combinatie van beide. Daarvoor worden de volgende zaken berekend:
 * uit de prognose van het weer (globale straling) per uur wordt een voorspelling berekend van de productie van je 
 zonnepanelen
 * met de tarieven van je dynamische leverancier (incl. opslag, belastingen en btw) worden per uur de kosten 
@@ -23,8 +24,8 @@ en opbrengsten van het verbruik cq teruglevering berekend
 * m.b.v. de karakteristieken van je accu worden per uur het laad- cq ontlaadvermogen berekend
 * wanneer moet je elektrische auto worden geladen
 
-Dit resulteert (in de mip-module) in ca tweehonderd vergelijkingen met twee variabelen(onbekenden). 
-Door minimalisering van de kosten kan met behulp van het algoritme de meest optimale setting van al deze 
+Dit resulteert (in de mip-module) in enkele honderden vergelijkingen en idem dito variabelen(onbekenden). 
+Aan de hand van de gekozen strategie kan met behulp van het algoritme de meest optimale setting van al deze 
 variabelen worden berekend. Dit zijn:
 * per uur verbruik en kosten op de inkoopmeter
 * per uur teruglevering en opbrengst op de inkoopmeter
@@ -124,9 +125,9 @@ Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc:
   
 Start je het programma zonder parameters dan worden de databases "geopend" en dan wacht het programma tot een opdracht uit  de takenplannen (zie hieronder) moet worden uitgevoerd.   
 De volgende parameters kunnen worden gebruikt:  
-*   **debug**  
+**debug**  
   alleen van toepassing in combinatie met het onderdeel "calc" (zie hierna), voert wel de berekening uit maar zet de berekende resultaten niet door naar de apparaten  
-*   **prices**  
+**prices**  
   haalt de day ahead prijzen op nordpool, entsoe of easyenergy. Deze bron stel je in via options.json (prices).<br>
   Je kunt dit commando uitbreiden met een of twee extra datum-parameters: een start- en een eind datum. Laat je de tweede parameters achterwege dan wordt morgen als einddatum gekozen.
   Je kunt deze faciliteit gebruiken om een prijshistorie in de database op te bouwen.<br>
@@ -134,17 +135,22 @@ De volgende parameters kunnen worden gebruikt:
   Deze functionaliteit werkt alleen bij de bron easyenergy!<br>
   Voorbeeld ` python day_ahead.py prices 2022-09-01 [2023-03-01]`
     
-*    **tibber**  
+**tibber**  
   haalt de verbruiks- en productiegegevens op bij tibber  
   Dit commando kan met een extra parameter worden gestart namelijk een datum. In dat geval worden de verbruiksdata opgehaald vanaf de ingegeven datum. <br>
   Format: `jjjj-mm-dd` <br>
   Voorbeeld: `python da_ahead.py tibber 2023-02-01`
-*    **calc**  
-  voert de "optimaliseringsberekening" uit:  
-haalt alle data (prijzen, meteo) op uit de database  
-berekent de optimale inzet van de accu, boiler en ev  
-berekent de besparing tov een reguliere leverancier berekent de besparing zonder optimalisering met alleen day ahead presenteert een tabel met alle geprognoticeerde uurdata presenteert een grafiek met alle geprognoticeerde uurdata
-* **scheduler**  
+**calc**  
+  voert de "optimaliseringsberekening" uit: 
+* haalt alle data (prijzen, meteo) op uit de database <br> 
+* berekent de optimale inzet van de accu, boiler, warmtepomp en ev <br> 
+* berekent de besparing tov een reguliere leverancier <br>
+* berekent de besparing zonder optimalisering met alleen dynamische prijzen<br>
+* berekent de besparing met optimalisering met dynamische prijzen <br>
+* presenteert een tabel met alle geprognoticeerde uurdata <br>
+* presenteert een grafiek met alle geprognoticeerde uurdata
+
+**scheduler**  
  Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd.<br>
  Dit wordt ook bereikt door het programma zonder parameter op te starten.
 ---
@@ -221,6 +227,21 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * last invoice: datum laatste jaarfactuur en/of de begindatum van je contractjaar (formaat "yyyy-mm-dd")
    * tax refund: kun je alles salderen of is je teruglevering hoger dan je verbruik  (True of False) 
 
+**strategy** het programma kent drie strategieën die je kunt inzetten om het voor jou optimale energieverbruik
+en teruglevering te realiseren.<br>
+Je kiest er één uit door daar **True** achter in te vullen.
+De drie strategieën zijn:
+  * minimize cost: True/False<br>
+    Als je deze kiest worden je accu en je verbruiken zo ingezet dat deze leiden tot de laagste 
+    kosten (= hoogste opbrengst)
+  * minimize delivery: True/False<br>
+    Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter"
+  * combine minimize cost delivery: True/False<br>
+    Hiermee worden de twee bovenstaande strategieën gecombineerd tot een nieuwe hybride strategie, 
+    waarbij enerzijds wordt gestreefd naar lage kosten maar ook naar "nul op de meter".
+    Er is een parameter die je moet invullen om in deze strategie tot een oplossing te komen:
+  * cost marge combination: dit is het "verlies" dat je maximaal accepteert om tot een "nul op de meter"-oplossing te komen.
+
 **boiler**  instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd.
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
@@ -254,6 +275,13 @@ Je kunt de accu instellingen herhalen als je meer dan een accu hebt, of je laat 
    * lower limit: onderste soc limiet (tijdelijk)  
    * upper limit: bovenste soc limiet  
    * optimal lower level: onderste soc limiet voor langere tijd  
+   * entity min soc end opt: entity in home assistant (input_number), waarmee je de 
+     minimale soc in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben 
+   * entity max soc end opt: entity in home assistant (input_number), waarmee je de
+     maximale soc in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben <br>
+     **opmerking:** met deze twee instellingen kunt u bereiken dat de accu aan het eind "leeg" of "vol" is. Een lage accu 
+     kan zinvol zijn als je de dag(en) na de berekening veel goedkope stroom en/of veel pv productie verwacht. Een volle batterij 
+     kan zinvol zijn als je juist dure stroom en/of weinig eigen pv-productie verwacht. 
    * max charge power: maximaal laad vermogen in kW  
    * max discharge power: maximaal ontlaadvermogen in kW  
    * minimum power: minimaal laad/ontlaadvermogen
