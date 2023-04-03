@@ -353,7 +353,7 @@ class DayAheadOpt(hass.Hass):
             eff_bat_to_dc.append(float(self.battery_options[b]["bat_to_dc efficiency"]))  # fractie van 1
 
             max_ac_to_dc.append(float(self.battery_options[b]["max charge power"]))
-            max_dc_to_ac.append(float(self.battery_options[b]["max discharge power"]))
+            max_dc_to_ac.append(float(self.battery_options[b]["max discharge power"]) * eff_dc_to_ac[b])
 
             # state of charge
             # start soc

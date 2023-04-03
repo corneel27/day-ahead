@@ -48,9 +48,9 @@
     "tax refund" : "True"
   },
   "strategy": {
-    "minimize cost" : "False",
+    "minimize cost" : "True",
     "minimize delivery": "False",
-    "combine minimize cost delivery": "True",
+    "combine minimize cost delivery": "False",
     "cost marge combination": 1
   },
   "boiler": {
