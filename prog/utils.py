@@ -3,6 +3,7 @@ import datetime
 import bisect
 import math
 import json
+import os
 import sys
 import pandas as pd
 from day_ahead import DayAheadOpt
@@ -74,10 +75,15 @@ def get_tibber_data(day_ahead_opt: DayAheadOpt):
         "content-type": "application/json",
     }
     now_ts = latest_ts = math.ceil(datetime.datetime.now().timestamp() / 3600) * 3600
+    arg_dt = None
     if len(sys.argv) > 2:
         arg_s = sys.argv[2]
-        latest_ts = datetime.datetime.strptime(arg_s, "%Y-%m-%d").timestamp()
-    else:
+        try:
+            arg_dt = datetime.datetime.strptime(arg_s, "%Y-%m-%d").timestamp()
+            latest_ts = arg_dt
+        except:
+            pass
+    if (len(sys.argv) <= 2) or (arg_dt == None):
         for cat in ['cons', 'prod']:
             sql_latest_ts = (
                 "SELECT t1.time, from_unixtime(t1.`time`) 'begin', t1.value "
@@ -171,3 +177,9 @@ def calc_heatpump_usage
         for u in range(U):
             usage.append(250+ (pl[u]-pl_min) * energy_cost)
 '''
+
+def make_data_path():
+    if os.path.lexists("../data"):
+        return
+    else:
+        os.symlink("/addons/test_da/data", "../data")

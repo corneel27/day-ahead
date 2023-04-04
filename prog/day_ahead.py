@@ -17,6 +17,7 @@ from db_manager import DBmanagerObj
 class DayAheadOpt(hass.Hass):
 
     def __init__(self, file_name=None):
+        make_data_path()
         self.debug = False
         self.config = Config(file_name)
         self.hassurl = self.config.get(['homeassistant', 'url'])
@@ -352,8 +353,8 @@ class DayAheadOpt(hass.Hass):
             eff_dc_to_bat.append(float(self.battery_options[b]["dc_to_bat efficiency"]))  # fractie van 1
             eff_bat_to_dc.append(float(self.battery_options[b]["bat_to_dc efficiency"]))  # fractie van 1
 
-            max_ac_to_dc.append(float(self.battery_options[b]["max charge power"]))
-            max_dc_to_ac.append(float(self.battery_options[b]["max discharge power"]) * eff_dc_to_ac[b])
+            max_ac_to_dc.append(float(self.battery_options[b]["max charge power"]) * eff_ac_to_dc[b])
+            max_dc_to_ac.append(float(self.battery_options[b]["max discharge power"]) / eff_dc_to_ac[b])
 
             # state of charge
             # start soc
@@ -853,7 +854,8 @@ class DayAheadOpt(hass.Hass):
 
                 # battery
                 for b in range(B):
-                    netto_vermogen = int(1000 * ((ac_to_dc[b][0].x - dc_to_ac[b][0].x) / hour_fraction[0]))
+                    #vermogen aan ac kant
+                    netto_vermogen = int(1000 * ((ac_to_dc[b][0].x / eff_ac_to_dc[b] - dc_to_ac[b][0].x * eff_dc_to_ac[b]) / hour_fraction[0]))
                     minimum_power = self.battery_options[b]["minimum power"]
                     if abs(netto_vermogen) <= 20:
                         netto_vermogen = 0
