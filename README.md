@@ -227,6 +227,29 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * last invoice: datum laatste jaarfactuur en/of de begindatum van je contractjaar (formaat "yyyy-mm-dd")
    * tax refund: kun je alles salderen of is je teruglevering hoger dan je verbruik  (True of False) 
 
+**baseload** Hier vul je voor de 24 uren van een etmaal het basisverbruik van je woning in.
+Deze bepaal je als volgt:<br>
+* neem voor een voldoende lange periode (minimaal een maand) de geregistreerde energiehoeveelheden per uur op de volgende onderdelen:
+* inkoop van je aansluiting op het netwerk: inkoop 
+* teruglevering van je aansluiting op het netwerk: teruglevering
+* het verbruik van je warmtepomp: wp
+* het verbruik van je boiler: boiler
+* het totale verbruik van je elektrische auto('s): ev
+* de totale productie van je zonnepanelen: pv
+als in deze periode ook je batterij al gedraaid heeft:
+* de energie naar je batterij: accu_in
+* de energie uit je batterij: accu_uit
+* de basislast voor ieder uur reken je uit met de volgende formule:<br>
+* basislast = inkoop - teruglevering - wp - boiler - ev + pv - accu_in + accu_uit
+* de resultaten zet je samen met het begintijdstip van ieder uur in een spreadsheet<br>
+  dat ziet er dan als volgt uit:<br>
+  ![img_1.png](images/img_1.png)
+* daarnaast begin je een nieuwe tabel met in de eerste kolom de getallen 0, 1 tot en met 23
+* in de tweede kolom bereken je met "averageif" (of in libreoffice "gemiddelde.als") het gemiddelde van de baseloadkolom voor het uur 0, 1 enz. 
+  Dat ziet er dan als volgt uit:<br>
+  ![img_2.png](images/img_2.png)
+* de 24 getallen uit de tweede kolom vul je in in de lijst.
+
 **strategy** het programma kent drie strategieën die je kunt inzetten om het voor jou optimale energieverbruik
 en teruglevering te realiseren.<br>
 Je kiest er één uit door daar **True** achter in te vullen.

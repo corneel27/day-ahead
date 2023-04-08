@@ -58,6 +58,7 @@ class DayAheadOpt(hass.Hass):
         self.ev_options = self.config.get(["electric vehicle"])
         self.heating_options = self.config.get(["heating"])
         self.tasks = self.config.get(["scheduler"])
+        self.base_cons = self.config.get(["baseload"])
 
     def get_meteo_data(self, show_graph: bool = False):
         self.db_da.connect()
@@ -237,17 +238,9 @@ class DayAheadOpt(hass.Hass):
             pl_avg.append(p_avg)
 
         # base load
-        base_cons = []
-        with open('verbruik.csv', newline='') as csvfile:
-            verbruikreader = csv.reader(csvfile, delimiter=';')
-            i = 0
-            for row in verbruikreader:
-                if (i > 0) and (i <= 24):
-                    base_cons.append(float(row[6].replace(',', '.')))
-                i += 1
-        pprint(base_cons)  # basislast van 0 tot 23 uur
+        pprint(self.base_cons)  # basislast van 0 tot 23 uur
 
-        # omwerken naar de goede lengte
+
         # 0.015 kWh/J/cm2 productie van mijn panelen per J/cm2
         pv_yield = []
         solar_num = len(self.solar)
@@ -270,7 +263,7 @@ class DayAheadOpt(hass.Hass):
             hour = int(dtime.hour)
             uur.append(hour)
             tijd.append(dtime)
-            b_l.append(base_cons[hour])
+            b_l.append(self.base_cons[hour])
             global_rad.append(row.glob_rad)
             pv_total = 0
             for s in range(solar_num):
