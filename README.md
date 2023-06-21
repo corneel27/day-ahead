@@ -139,7 +139,7 @@ De volgende parameters kunnen worden gebruikt:
   haalt de verbruiks- en productiegegevens op bij tibber  
   Dit commando kan met een extra parameter worden gestart namelijk een datum. In dat geval worden de verbruiksdata opgehaald vanaf de ingegeven datum. <br>
   Format: `jjjj-mm-dd` <br>
-  Voorbeeld: `python da_ahead.py tibber 2023-02-01`
+  Voorbeeld: `python day_ahead.py tibber 2023-02-01`
 **calc**  
   voert de "optimaliseringsberekening" uit: 
 * haalt alle data (prijzen, meteo) op uit de database <br> 
