@@ -50,7 +50,7 @@ class DBmanagerObj(object):
                                 #unix_socket=unix_socket, charset=charset)
             elif self.port:
                 self._conn = mysql.connector.connect(host=self.server,
-                                user=self.user, passwd=self.password,
+                                user=self.user, passwd=self.password, port=self.port,
                                 db=self.dbname, auth_plugin='mysql_native_password')
                                 #port=self.port, charset=charset)
             else:
@@ -61,9 +61,9 @@ class DBmanagerObj(object):
             print('MySQL database connection successful. Default database:', self.dbname)
             self.dbON = True
             #self._conn.set_character_set('utf8')
-        except:
+        except Exception as e:
             print("---- Error connecting to the database")
-
+            raise e
         return
 
     def disconnect(self):
@@ -389,8 +389,13 @@ class DBmanagerObj(object):
 
     def run_select_query(self, sql):
         self._conn.commit()
-        return pd.read_sql(sql, con=self._conn,
-                           coerce_float=False)
+        self._c.execute(sql)
+        rows = self._c.fetchall()
+        columns = [i[0] for i in self._c.description]
+        df = pd.DataFrame(columns=columns)
+        for row in rows:
+            df.loc[df.shape[0]] = [value for value in row]
+        return df
 
     def run_sql(self, sql):
         self._conn.commit()

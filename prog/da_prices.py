@@ -60,7 +60,7 @@ class DA_Prices:
                     last_time = int(datetime.datetime.timestamp(row[1]))
                     df_db.loc[df_db.shape[0]] = [str(last_time), 'da', row[2] / 1000]
                 print(df_db)
-                self.db_da.savedata(df_db, debug=self.debug)
+                self.db_da.savedata(df_db)
 
         if source.lower() == "nordpool":
             # ophalen bij Nordpool

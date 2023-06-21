@@ -5,3 +5,4 @@ __pycache__/
 data/secrets.json
 CODEOWNER
 /webserver/*
+/data/options.json

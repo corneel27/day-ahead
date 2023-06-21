@@ -128,7 +128,7 @@ De volgende parameters kunnen worden gebruikt:
 **debug**  
   alleen van toepassing in combinatie met het onderdeel "calc" (zie hierna), voert wel de berekening uit maar zet de berekende resultaten niet door naar de apparaten  
 **prices**  
-  haalt de day ahead prijzen op nordpool, entsoe of easyenergy. Deze bron stel je in via options.json (prices).<br>
+  Het programmam haalt de day ahead prijzen op bij een van de volgende bronnen: nordpool, entsoe of easyenergy. Deze bron stel je in via options.json (prices).<br>
   Je kunt dit commando uitbreiden met een of twee extra datum-parameters: een start- en een eind datum. Laat je de tweede parameters achterwege dan wordt morgen als einddatum gekozen.
   Je kunt deze faciliteit gebruiken om een prijshistorie in de database op te bouwen.<br>
   Format: `jjjj-mm-dd` <br>
@@ -139,7 +139,7 @@ De volgende parameters kunnen worden gebruikt:
   haalt de verbruiks- en productiegegevens op bij tibber  
   Dit commando kan met een extra parameter worden gestart namelijk een datum. In dat geval worden de verbruiksdata opgehaald vanaf de ingegeven datum. <br>
   Format: `jjjj-mm-dd` <br>
-  Voorbeeld: `python da_ahead.py tibber 2023-02-01`
+  Voorbeeld: `python day_ahead.py tibber 2023-02-01`
 **calc**  
   voert de "optimaliseringsberekening" uit: 
 * haalt alle data (prijzen, meteo) op uit de database <br> 
@@ -195,11 +195,17 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
  * entsoe-api-key*  
 	Deze key genereer je op de site van entsoe en heb je nodig om daar de energieprijzen van de volgende op te halen.
     Je genereert deze key (token) als volgt: 
- * Website: https://transparency.entsoe.eu      
- * Registreer je als gebruiker 
- * Klik op "My Account Settings"  
- * Klik op "Generate a new token"
-
+   * Website: https://transparency.entsoe.eu      
+   * Registreer je als gebruiker 
+   * Vraag via een email naar transparency@entsoe.eu met “Restful API access” als onderwerp. 
+     Vermeld het email adres waarmee je je hebt geregistreerd in de body van de email. 
+     De ENTSO-E Helpdesk doet haar uiterste besto binnen 3 werkdagen te reageren.
+   * Na ontvangst van een positieve reactie:
+   * Log in
+   * Klik op "My Account Settings"  
+   * Klik op "Generate a new token"
+   * Meer info: https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html
+   Hoofdstuk 2 Authentication and Authorisation<br><br>
 
  * regular high: het hoge tarief van een "reguliere" oude leverancier,
    ex btw, kaal, euro per kWh

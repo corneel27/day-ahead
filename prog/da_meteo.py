@@ -2,10 +2,13 @@ import math
 from requests import get
 import json
 import pandas as pd
+
 from db_manager import DBmanagerObj
 import graphs
 import datetime
 
+#import os, sys
+#sys.path.append(os.path.abspath("../dalib"))
 from da_config import Config
 
 
@@ -145,7 +148,7 @@ class Meteo:
         if len(self.solar) > 0:
             solar = self.solar[0]
         else:
-            for b in range(self.bat):
+            for b in range(len(self.bat)):
                 if len(self.bat[b]["solar"]) > 0:
                     solar = self.bat[b]["solar"][0]
         if solar != None:
@@ -186,12 +189,16 @@ class Meteo:
         df1 = df[['tijd', 'tijd_nl', 'gr', 'temp', 'solar_rad']]
         print(df1)
 
+        count =  0
         df_db = pd.DataFrame(columns=['time', 'code', 'value'])
         df1 = df1.reset_index()  # make sure indexes pair with number of rows
         for row in df1.itertuples():
             df_db.loc[df_db.shape[0]] = [row.tijd, 'gr', float(row.gr)]
             df_db.loc[df_db.shape[0]] = [row.tijd, 'temp', float(row.temp)]
             df_db.loc[df_db.shape[0]] = [row.tijd, 'solar_rad', float(row.solar_rad)]
+            count += 1
+            if count >= 48:
+                break
         # print(df_db)
 
         self.db_da.savedata(df_db)

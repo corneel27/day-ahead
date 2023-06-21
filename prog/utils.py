@@ -6,7 +6,7 @@ import json
 import os
 import sys
 import pandas as pd
-from day_ahead import DayAheadOpt
+#from day_ahead import DayAheadOpt
 from requests import post
 
 
@@ -64,14 +64,26 @@ def get_value_from_dict(dag: str, options: dict) -> float:
     return result
 
 
-def get_tibber_data(day_ahead_opt: DayAheadOpt):
+def get_tibber_data():
+    from da_config import Config
+    from db_manager import DBmanagerObj
     def get_datetime_from_str(s):
         result = datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f%z")  # "2022-09-01T01:00:00.000+02:00"
         return result
-
-    url = day_ahead_opt.tibber_options["api url"]
+    config = Config("../data/options.json")
+    tibber_options = config.get(["tibber"])
+    url = tibber_options["api url"]
+    db_da_name = config.get(['database da', "database"])
+    db_da_server = config.get(['database da', "server"])
+    db_da_port = int(config.get(['database da', "port"]))
+    db_da_user = config.get(['database da', "username"])
+    db_da_password = config.get(['database da', "password"])
+    db_da = DBmanagerObj(db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
+                              db_user=db_da_user, db_password=db_da_password)
+    db_da.connect()
+    prices_options = config.get(["prices"])
     headers = {
-        "Authorization": "Bearer " + day_ahead_opt.tibber_options["api_token"],
+        "Authorization": "Bearer " + tibber_options["api_token"],
         "content-type": "application/json",
     }
     now_ts = latest_ts = math.ceil(datetime.datetime.now().timestamp() / 3600) * 3600
@@ -92,17 +104,17 @@ def get_tibber_data(day_ahead_opt: DayAheadOpt):
                 "(SELECT COUNT( *) "
                 "FROM `values` t2, `variabel` v2 "
                 "WHERE v2.`code` = '"+cat+"' AND v2.id = t2.variabel AND t1.time + 3600 = t2.time);")
-            data = day_ahead_opt.db_da.run_select_query(sql_latest_ts)
+            data = db_da.run_select_query(sql_latest_ts)
             if len(data.index) == 0:
-                latest = datetime.datetime.strptime(day_ahead_opt.prices_options["last invoice"], "%Y-%m-%d").timestamp()
+                latest = datetime.datetime.strptime(prices_options["last invoice"], "%Y-%m-%d").timestamp()
             else:
                 latest = data['time'].values[0]
             latest_ts = min(latest_ts, latest)
     count = math.ceil((now_ts - latest_ts)/3600)
     print("Tibber data present tot en met:", str(datetime.datetime.fromtimestamp(latest_ts)))
-    if count < 24:
-        print("Er worden geen data opgehaald")
-        return
+#    if count < 24:
+#        print("Er worden geen data opgehaald")
+#        return
     query = '{ ' \
             '"query": ' \
             ' "{ ' \
@@ -130,27 +142,36 @@ def get_tibber_data(day_ahead_opt: DayAheadOpt):
     # print(query)
     resp = post(url, headers=headers, data=query)
     tibber_dict = json.loads(resp.text)
-    if day_ahead_opt.debug:
-        print(tibber_dict)
     production_nodes = tibber_dict['data']['viewer']['homes'][0]['production']['nodes']
     consumption_nodes = tibber_dict['data']['viewer']['homes'][0]['consumption']['nodes']
     tibber_df = pd.DataFrame(columns=['time', 'code', 'value'])
-    code = "prod"
     for node in production_nodes:
+        time_stamp = str(int(get_datetime_from_str(node['from']).timestamp()))
         if not(node["production"] is None):
-            time_stamp = str(int(get_datetime_from_str(node['from']).timestamp()))
+            code = "prod"
             value = float(node["production"])
             print(node, time_stamp, value)
             tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
-    code = "cons"
+        if not (node["profit"] is None):
+            code = 'profit'
+            value = float(node["profit"])
+            #print(node, time_stamp, value)
+            tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
     for node in consumption_nodes:
+        time_stamp = str(int(get_datetime_from_str(node['from']).timestamp()))
         if not (node["consumption"] is None):
-            time_str = str(int(get_datetime_from_str(node['from']).timestamp()))
+            code = "cons"
             value = float(node["consumption"])
-            print(node, time_str, value)
-            tibber_df.loc[tibber_df.shape[0]] = [time_str, code, value]
+            print(node, time_stamp, value)
+            tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
+        if not (node["cost"] is None):
+            code = "cost"
+            value = float(node["cost"])
+            #print(node, time_stamp, value)
+            tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
     print(tibber_df)
-    day_ahead_opt.db_da.savedata(tibber_df)
+    db_da.savedata(tibber_df)
+    db_da.disconnect()
 
 '''
 def calc_heatpump_usage
@@ -182,4 +203,4 @@ def make_data_path():
     if os.path.lexists("../data"):
         return
     else:
-        os.symlink("/addons/test_da/data", "../data")
+        os.symlink("/addons/day_ahead_dev/data", "../data")
