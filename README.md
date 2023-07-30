@@ -72,7 +72,7 @@ Of in tabelvorm:
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.8 of hoger. <br/>
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
-`pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool`
+`pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask`
   
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
@@ -161,8 +161,10 @@ De volgende parameters kunnen worden gebruikt:
 ---
 ### Instellingen  
   
- Het bestand options.json bevat alle instellingen voor het programma day_ahead.py. 
-Opmerking: alle instellingen die beginnen met "!secret" staan komen in het bestand `secrets.json`te staan  met de key die hier achter !secret staat  
+Het bestand options.json bevat alle instellingen voor het programma day_ahead.py. 
+Opmerking: alle instellingen die beginnen met "!secret" staan in het 
+bestand `secrets.json` met de key die hier achter !secret staat <br>
+
 **homeassistant**
  * url : de url waar de api van je home assistant bereikbaar is  
  * token: om de api te kunnen aanroepen is er  een token nodig.  
@@ -261,7 +263,7 @@ als in deze periode ook je batterij al gedraaid heeft:
   ![img_2.png](images/img_2.png)
 * de 24 getallen uit de tweede kolom vul je in in de lijst.
 
-**grahical backend**<br/>
+**graphical backend**<br/>
 Het programma draait op een groot aantal operating systemen en architecturen, Voor het presenteren en opslaan van grafieken
 maakt het programma gebruik van de bibliotheek **matplotlib**. Die probeert de correcte backend (canvas) te detecteren,
 maar dat wil niet altijd lukken. Je kunt met deze instelling de voor jou goed werkende backend selecteren en instellen.
@@ -287,7 +289,8 @@ De drie strategieën zijn:
   * cost marge combination: dit is het "verlies" dat je maximaal accepteert om tot een "nul op de meter"-oplossing te komen.
 
 **boiler**  instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
-   * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd.
+   * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd en rekent het 
+programma ook geen optimale inzet van de boiler uit.
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
    * entity setpoint: entiteit die de ingestelde boilertemp. presenteert  
    * entity hysterese: entiteit die de gehanteerde hysterese voor de boiler presenteert  
@@ -300,7 +303,8 @@ De drie strategieën zijn:
    * activate service: naam van de service van deze entiteit  
 
 **heating**:  dit onderdeel is nog in ontwikkeling  
-   * heater present : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd.
+   * heater present : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd en wordt
+er ook geen optimale inzet van je warmtepomp berekend.
    * degree days factor: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
      zet deze op 0 als je geen wp hebt
    * stages : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop
@@ -326,8 +330,17 @@ Je kunt de accu instellingen herhalen als je meer dan een accu hebt, of je laat 
      **opmerking:** met deze twee instellingen kunt u bereiken dat de accu aan het eind "leeg" of "vol" is. Een lage accu 
      kan zinvol zijn als je de dag(en) na de berekening veel goedkope stroom en/of veel pv productie verwacht. Een volle batterij 
      kan zinvol zijn als je juist dure stroom en/of weinig eigen pv-productie verwacht. 
-   * max charge power: maximaal laad vermogen in kW  
-   * max discharge power: maximaal ontlaadvermogen in kW  
+   * charge stages: hier vul je een zelf te kiezen aantal stappen of schijven in voor het laden via de omvormer.
+    Per schijf vul je in: 
+     * power: het maximale vermogen van de schijf (het minimale vermogen van de schijf is het maximale vermogen van de vorige schijf)
+     * efficiency: de efficiency (het rendement) voor deze schijf als een factor 
+     * van 1. Voor de duidelijkheid: je vult hier de efficiency van omvormer 
+       * van ac to dc in. Het rendement van de accu (dc to bat) vul je hieronder in.<br>
+   Bijvoorbeeld: {"power": 30.0, "efficiency": 0.949} <br>
+   De eerste schijf is altijd:  {"power": 0.0, "efficiency": 1},
+   De "power" van de laatste schijf geeft ook het maximale 
+   * discharge stages: op dezelfde wijze als de "charge stages" vul je hier voor het ontladen een aantal stappen of schijven in 
+voor het ontladen via je omvormer/inverter. 
    * minimum power: minimaal laad/ontlaadvermogen
    * ac_to_dc efficiency: efficiency van de inverter bij omzetten van ac naar dc (factor van 1)
    * dc_to_ac efficiency: efficiency van de omvormer bij omzetten van dc naar ac (factor van 1)
