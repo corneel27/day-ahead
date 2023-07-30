@@ -34,7 +34,7 @@ class DayAheadOpt(hass.Hass):
         # print(resp.text)
         self.config.set("latitude", resp_dict['latitude'])
         self.config.set("longitude", resp_dict['longitude'])
-        print(str(self.config.get(["latitude"])) + ':' + str(self.config.get(["longitude"])))
+        # print(str(self.config.get(["latitude"])) + ':' + str(self.config.get(["longitude"])))
         db_da_name = self.config.get(['database da', "database"])
         db_da_server = self.config.get(['database da', "server"])
         db_da_port = int(self.config.get(['database da', "port"]))
