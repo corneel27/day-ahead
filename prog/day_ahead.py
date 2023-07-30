@@ -8,6 +8,7 @@ import json
 import hassapi as hass
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
+import numbers
 import numpy
 import utils
 from utils import get_value_from_dict, get_tibber_data, is_laagtarief
@@ -86,6 +87,7 @@ class DayAheadOpt(hass.Hass):
         :return: een dict met consumption en production
         """
         # from da database
+
         sql = (
                 "SELECT SUM(t1.`value`) as consumed, SUM(t2.`value`) as produced "
                 "FROM `values` AS t1, `values` AS t2, `variabel`AS v1, `variabel` AS v2 "
@@ -103,8 +105,10 @@ class DayAheadOpt(hass.Hass):
             consumption = 0
             production = 0
 
+
         # from home assistant database
         '''
+        self.db_ha.connect()
         grid_sensors = ['sensor.grid_consumption_low', 'sensor.grid_consumption_high', 'sensor.grid_production_low',
                         'sensor.grid_production_high']
         today = datetime.datetime.utcnow().date()
@@ -114,23 +118,23 @@ class DayAheadOpt(hass.Hass):
         self.db_ha.run_sql(sql)
         for sensor in grid_sensors:
             sql = (
-                    "(SELECT CONVERT_TZ(statistics.`start`, 'GMT', 'CET') moment, statistics.state "
+                    "(SELECT CONVERT_TZ(statistics.`start_ts`, 'GMT', 'CET') moment, statistics.state "
                     "FROM `statistics`, `statistics_meta` "
                     "WHERE statistics_meta.`id` = statistics.`metadata_id` "
                     "AND statistics_meta.`statistic_id` = '" + sensor + "' "
                     "AND `state` IS NOT null "
-                    "AND (`start` BETWEEN '" + start.strftime('%Y-%m-%d') + "' "
+                    "AND (CONVERT_TZ(statistics.`start_ts`, 'GMT', 'CET') BETWEEN '" + start.strftime('%Y-%m-%d') + "' "
                         "AND '" + until.strftime('%Y-%m-%d %H:%M') + "') "
-                    "ORDER BY `start` ASC LIMIT 1) " 
+                    "ORDER BY `start_ts` ASC LIMIT 1) " 
                     "UNION "
-                    "(SELECT CONVERT_TZ(statistics.`start`, 'GMT', 'CET') moment, statistics.state "
+                    "(SELECT CONVERT_TZ(statistics.`start_ts`, 'GMT', 'CET') moment, statistics.state "
                     "FROM `statistics`, `statistics_meta` "
                     "WHERE statistics_meta.`id` = statistics.`metadata_id` "
                     "AND statistics_meta.`statistic_id` = '" + sensor + "' "
                     "AND `state` IS NOT null "                    
-                    "AND (`start` BETWEEN '" + start.strftime('%Y-%m-%d') + "' "
+                    "AND (CONVERT_TZ(statistics.`start_ts`, 'GMT', 'CET') BETWEEN '" + start.strftime('%Y-%m-%d') + "' "
                         "AND '" + until.strftime('%Y-%m-%d %H:%M') + "') "
-                    "ORDER BY `start` DESC LIMIT 1); "
+                    "ORDER BY `start_ts` DESC LIMIT 1); "
             )
             data = self.db_ha.run_select_query(sql)
             if len(data.index) == 2:
@@ -139,6 +143,8 @@ class DayAheadOpt(hass.Hass):
                     consumption = consumption + value
                 elif 'production' in sensor:
                     production = production + value
+
+        self.db_ha.disconnect()
         '''
         result = {"consumption": consumption, "production": production}
 
@@ -245,21 +251,24 @@ class DayAheadOpt(hass.Hass):
 
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
         pv_yield = []
+        solar_prod = []
         solar_num = len(self.solar)
         for s in range(solar_num):
             pv_yield.append(self.config.get(["yield"], self.solar[s]))
+            solar_prod.append([])
 
         b_l = []  # basislast verbruik
         uur = []  # hulparray met uren
         tijd = []
         ts = []
         global_rad = []  #globale straling per uur
-        pv = []  # opwekking zonnepanelen
+        pv_org = []  # opwekking zonnepanelen
         p_grl = []  # prijs levering
         p_grt = []  # prijs teruglevering
         hour_fraction = []
         prog_data = prog_data.reset_index()  # make sure indexes pair with number of rows
         first_hour = True
+
         for row in prog_data.itertuples():
             dtime = datetime.datetime.fromtimestamp(row.time)
             hour = int(dtime.hour)
@@ -268,16 +277,19 @@ class DayAheadOpt(hass.Hass):
             b_l.append(self.base_cons[hour])
             global_rad.append(row.glob_rad)
             pv_total = 0
-            for s in range(solar_num):
-                pv_total += self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad)*pv_yield[s]
             if first_hour:
                 ts.append(now_dt)
                 hour_fraction.append(fraction_first_hour)
-                pv.append(pv_total * fraction_first_hour)
+                #pv.append(pv_total * fraction_first_hour)
             else:
                 ts.append(row.time)
                 hour_fraction.append(1)
-                pv.append(pv_total)
+                #pv.append(pv_total)
+            for s in range(solar_num):
+                prod = self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad)*pv_yield[s]*hour_fraction[-1]
+                solar_prod[s].append(prod)
+                pv_total += prod
+            pv_org.append(pv_total)
             dag_str = dtime.strftime("%Y-%m-%d")
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             taxes_t = get_value_from_dict(dag_str, taxes_t_def)
@@ -293,12 +305,12 @@ class DayAheadOpt(hass.Hass):
 
         # volledig salderen?
         salderen = self.prices_options['tax refund'] == "True"
-        """
+
         last_invoice = datetime.datetime.strptime(self.prices_options['last invoice'], "%Y-%m-%d")
         cons_data_history = self.get_consumption(last_invoice, datetime.datetime.today())
         if not salderen:
             salderen = cons_data_history["production"] < cons_data_history["consumption"]
-        """
+
         if salderen:
             print("all taxes refund (alles wordt gesaldeerd")
             consumption_today = 0
@@ -317,6 +329,16 @@ class DayAheadOpt(hass.Hass):
         # pt = p_grt
 
         ##############################################################
+        #                          pv
+        ##############################################################
+        pv_ac = [[model.add_var(var_type=CONTINUOUS, lb = 0, ub = solar_prod[s][u] *1.1) for u in range(U)] for s in range(solar_num)]
+        pv_ac_on_off = [[model.add_var(var_type=BINARY) for u in range(U)] for s in range(solar_num)]
+        for s in range(solar_num):
+            for u in range(U):
+                model += pv_ac[s][u] == solar_prod[s][u] * pv_ac_on_off[s][u]
+
+
+        ##############################################################
         #                          accu / batterij
         ##############################################################
         # accu capaciteit
@@ -328,15 +350,34 @@ class DayAheadOpt(hass.Hass):
         opt_low_level = []
         pv_dc = [] #pv bruto productie per batterij per uur
         pv_dc_hour_sum = []
-        pv_ac_hour_sum = [] #de som van pv_dc productie geleverd aan ac per uur
-        eff_ac_to_dc = []
+        pv_from_dc_hour_sum = [] #de som van pv_dc productie geleverd aan ac per uur
+        #eff_ac_to_dc = []
         eff_dc_to_ac = []
         eff_dc_to_bat = []
         eff_bat_to_dc = []
-        max_ac_to_dc = []
-        max_dc_to_ac = []
+        #max_ac_to_dc = []
+        #max_dc_to_ac = []
 
+        CS = []
+        DS = []
+        max_charge_power = []
+        max_discharge_power = []
+        avg_eff_dc_to_ac = []
+        pv_dc_num = []
+        pv_prod_dc = []
+        pv_prod_ac = []
         for b in range(B):
+            pv_prod_ac.append([])
+            pv_prod_dc.append([])
+            max_charge_power.append(self.battery_options[b]["charge stages"][-1]["power"]/1000)
+            CS.append(len(self.battery_options[b]["charge stages"]))
+            max_discharge_power.append(self.battery_options[b]["discharge stages"][-1]["power"]/1000)
+            DS.append(len(self.battery_options[b]["discharge stages"]))
+            sum_eff = 0
+            for ds in range(DS[b])[1:]:
+                sum_eff += self.battery_options[b]["discharge stages"][ds]["efficiency"]
+            avg_eff_dc_to_ac.append(sum_eff/(DS[b]-1))
+
             ac = float(self.battery_options[b]["capacity"])  # 2 * 50 * 280/1000 #=28 kWh
             one_soc.append(ac / 100) # 1% van 28 kWh = 0,28 kWh
             kwh_cycle_cost.append(self.battery_options[b]["cycle cost"])
@@ -344,14 +385,8 @@ class DayAheadOpt(hass.Hass):
             #   self.battery_options["lower limit"]) / 100)
             # print ("cycle cost: ", kwh_cycle_cost, " eur/kWh")
 
-            #efficiencies
-            eff_ac_to_dc.append(float(self.battery_options[b]["ac_to_dc efficiency"]))  # fractie van 1
-            eff_dc_to_ac.append(float(self.battery_options[b]["dc_to_ac efficiency"]))  # fractie van 1
             eff_dc_to_bat.append(float(self.battery_options[b]["dc_to_bat efficiency"]))  # fractie van 1
             eff_bat_to_dc.append(float(self.battery_options[b]["bat_to_dc efficiency"]))  # fractie van 1
-
-            max_ac_to_dc.append(float(self.battery_options[b]["max charge power"]) * eff_ac_to_dc[b])
-            max_dc_to_ac.append(float(self.battery_options[b]["max discharge power"]) / eff_dc_to_ac[b])
 
             # state of charge
             # start soc
@@ -363,38 +398,53 @@ class DayAheadOpt(hass.Hass):
             opt_low_level.append(float(self.battery_options[b]["optimal lower level"]))
 
             # pv dc
-            pv_dc_num = len(self.battery_options[b]["solar"])
+            pv_dc_num.append(len(self.battery_options[b]["solar"]))
             pv_dc_bat = []
-            for u in range(U):
-                pv_total = 0
-                pv_ac = 0
-                for s in range(pv_dc_num):
-                    pv_yield = self.battery_options[b]["solar"][s]["yield"]
+            for s in range(pv_dc_num[b]):
+                pv_prod_dc[b].append([])
+                pv_prod_ac[b].append([])
+                pv_yield = self.battery_options[b]["solar"][s]["yield"]
+                for u in range(U):
                     #pv_prod productie van batterij b van solar s in uur u
-                    pv_prod = self.meteo.calc_solar_rad(self.battery_options[b]["solar"][s], int(tijd[u].timestamp()), global_rad[u]) * pv_yield
-                    pv_total += pv_prod
-                    pv_ac += pv_prod * eff_dc_to_ac[b]
-                pv_dc_bat.append(pv_total)
-                if b == 0:
-                    pv_dc_hour_sum.append(pv_total)
-                    pv_ac_hour_sum.append (pv_ac)
-                else:
-                    pv_dc_hour_sum[u] += pv_total
-                    pv_ac_hour_sum[u] += pv_ac
-            pv_dc.append(pv_dc_bat)
-
+                    prod_dc = self.meteo.calc_solar_rad(self.battery_options[b]["solar"][s], int(tijd[u].timestamp()), global_rad[u]) * pv_yield
+                    efficiency = 1
+                    for ds in range(DS[b]):
+                        if self.battery_options[b]["discharge stages"][ds]["power"]/1000 > prod_dc:
+                            efficiency = self.battery_options[b]["discharge stages"][ds]["efficiency"]
+                            break
+                    prod_ac = prod_dc * efficiency
+                    pv_prod_dc[b][s].append(prod_dc)
+                    pv_prod_ac[b][s].append(prod_ac)
 
         # energie per uur, vanuit dc gezien
-        ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=hour_fraction[u] * \
-                        max_ac_to_dc[b]) for u in range(U)] for b in range(B) ]
+        #ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=hour_fraction[u] * \
+        #                max_ac_to_dc[b]) for u in range(U)] for b in range(B) ]
+        #totaal elektra van ac naar de busbar, ieder uur
+        pv_dc_on_off = [[[model.add_var(var_type=BINARY) for u in range(U)] for s in range(pv_dc_num[b])] for b in range(B) ]
+        pv_prod_dc_sum = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b]) for u in range(U)] for b in range(B)]
+        ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b]) for u in range(U)] for b in range(B)]
+        dc_from_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b]) for u in range(U)] for b in range(B)]
+        # elektra per vermogensklasse van ac naar de busbar, ieder uur
+        ac_to_dc_st = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=self.battery_options[b]["charge stages"][cs]["power"]/1000)
+                       for u in range(U)] for cs in range(CS[b])] for b in range(B)]
+        # elektra per vermogensklasse van busbar naar ac, ieder uur
+        dc_to_ac_st = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=self.battery_options[b]["discharge stages"][ds]["power"]/1000)
+                       for u in range(U)] for ds in range(DS[b])] for b in range(B)]
+
         ac_to_dc_on = [[model.add_var(var_type=BINARY) for u in range(U)] for b in range(B) ]
         dc_to_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=hour_fraction[u] * \
-                        max_dc_to_ac[b]) for u in range(U)] for b in range(B) ]
+                        max_discharge_power[b]) for u in range(U)] for b in range(B) ]
+        ac_from_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_discharge_power[b])
+                       for u in range(U)] for b in range(B)]
         dc_to_ac_on = [[model.add_var(var_type=BINARY) for u in range(U)] for b in range(B)]
-        bat_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=hour_fraction[u] * 2 *\
-                        float(self.battery_options[b]["max discharge power"])) for u in range(U)] for b in range(B) ]
-        dc_to_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=hour_fraction[u] * 2 *\
-                        float(self.battery_options[b]["max charge power"])) for u in range(U)] for b in range(B) ]
+        bat_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=hour_fraction[u] * 2 * max_discharge_power[b])
+                        for u in range(U)] for b in range(B) ]
+        dc_to_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=hour_fraction[u] * 2 * max_charge_power[b])
+                        for u in range(U)] for b in range(B) ]
+
+        # vermogens klasse aan/uit
+        ac_to_dc_st_on = [[[model.add_var(var_type=BINARY) for u in range(U)] for cs in range(CS[b])] for b in range(B)]
+        dc_to_ac_st_on = [[[model.add_var(var_type=BINARY) for u in range(U)] for ds in range(DS[b])] for b in range(B)]
 
         soc = [[model.add_var(var_type=CONTINUOUS, lb=min(start_soc[b], float(self.battery_options[b]["lower limit"])),
                  ub=max(start_soc[b], float(self.battery_options[b]["upper limit"]))) for u in range(U + 1)] for b in range(B)]
@@ -403,6 +453,26 @@ class DayAheadOpt(hass.Hass):
         soc_mid = [[model.add_var(var_type=CONTINUOUS, lb=0,
                                  ub=-opt_low_level[b] + max(start_soc[b], float(self.battery_options[b]["upper limit"])))
                    for u in range(U + 1)] for b in range(B) ]
+
+        for b in range(B):
+            for u in range(U):
+                #laden
+                for cs in range(CS[b]):
+                    model += ac_to_dc_st[b][cs][u] <= self.battery_options[b]["charge stages"][cs]["power"] * ac_to_dc_st_on[b][cs][u]/1000
+                for cs in range(CS[b])[1:]:
+                    model += ac_to_dc_st[b][cs][u] >= self.battery_options[b]["charge stages"][cs-1]["power"] * ac_to_dc_st_on[b][cs][u]/1000
+                model += ac_to_dc[b][u] == xsum(ac_to_dc_st[b][cs][u] for cs in range(CS[b]))
+                model += (xsum(ac_to_dc_st_on[b][cs][u] for cs in range(CS[b]))) <= 1
+                model += dc_from_ac[b][u] == xsum(ac_to_dc_st[b][cs][u] * self.battery_options[b]["charge stages"][cs]["efficiency"] for cs in range(CS[b]))
+                #ontladen
+                for ds in range(DS[b]):
+                    model += dc_to_ac_st[b][ds][u] <= self.battery_options[b]["discharge stages"][ds]["power"] * dc_to_ac_st_on[b][ds][u]/1000
+                for ds in range(DS[b])[1:]:
+                    model += dc_to_ac_st[b][ds][u] >= self.battery_options[b]["discharge stages"][ds-1]["power"] * dc_to_ac_st_on[b][ds][u]/1000
+                model += dc_to_ac[b][u] == xsum(dc_to_ac_st[b][ds][u] for ds in range(DS[b]))
+                model += (xsum(dc_to_ac_st_on[b][ds][u] for ds in range(DS[b]))) <= 1
+                model += ac_from_dc[b][u] == xsum(dc_to_ac_st[b][ds][u] / self.battery_options[b]["discharge stages"][ds]["efficiency"] for ds in range(DS[b]))
+
 
         for b in range(B):
             for u in range(U + 1):
@@ -414,10 +484,13 @@ class DayAheadOpt(hass.Hass):
             model += soc[b][U] <= max_soc_end_opt
             for u in range(U):
                 model += soc[b][u + 1] == soc[b][u] + (dc_to_bat[b][u] * eff_dc_to_bat[b] / one_soc[b]) - ((bat_to_dc[b][u] / eff_bat_to_dc[b]) / one_soc[b])
-                model += ac_to_dc[b][u] + bat_to_dc[b][u] + pv_dc[b][u] == dc_to_ac[b][u] + dc_to_bat[b][u]
-                model += ac_to_dc[b][u] <= ac_to_dc_on[b][u] * max_ac_to_dc[b]
-                model += dc_to_ac[b][u] <= dc_to_ac_on[b][u] * max_dc_to_ac[b]
+                model += pv_prod_dc_sum[b][u] == xsum(pv_prod_dc[b][s][u] *  pv_dc_on_off[b][s][u] for s in range (pv_dc_num[b]))
+                model += dc_from_ac[b][u] + bat_to_dc[b][u] + pv_prod_dc_sum[b][u] == ac_from_dc[b][u] + dc_to_bat[b][u]
+                model += dc_from_ac[b][u] <= ac_to_dc_on[b][u] * max_charge_power[b]
+                model += dc_to_ac[b][u] <= dc_to_ac_on[b][u] * max_discharge_power[b]
                 model += (ac_to_dc_on[b][u] + dc_to_ac_on[b][u] ) <= 1
+
+
         #####################################
         #             boiler                #
         #####################################
@@ -515,14 +588,21 @@ class DayAheadOpt(hass.Hass):
             # plugged = self.get_state(self.ev_options["entity plugged in"]).state
             ev_plugged_in.append(self.get_state(self.ev_options[e]["entity plugged in"]).state == "on")
             ev_position.append(self.get_state(self.ev_options[e]["entity position"]).state)
-            actual_soc.append(float(self.get_state(self.ev_options[e]["entity actual level"]).state))
+            try:
+                soc_state = float(self.get_state(self.ev_options[e]["entity actual level"]).state)
+            except:
+                soc_state = 100.0
+            actual_soc.append(soc_state)
             wished_level.append(float(self.get_state(self.ev_options[e]["charge scheduler"]["entity set level"]).state))
             ready_str = self.get_state(self.ev_options[e]["charge scheduler"]["entity ready time"]).state
             ready = datetime.datetime.strptime(ready_str, '%H:%M:%S')
             ready = datetime.datetime(now_dt.year, now_dt.month, now_dt.day, ready.hour, ready.minute)
             if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
                 ready = ready + datetime.timedelta(days=1)
-            max_ampere = float(self.get_state(self.ev_options[e]["entity max amperage"]).state)
+            max_ampere = self.get_state(self.ev_options[e]["entity max amperage"]).state
+            if not isinstance(max_ampere, numbers.Number):
+                max_ampere = 10
+            max_ampere = float(max_ampere)
             max_power.append(max_ampere * 230 / 1000) # vermogen in kW
             energy_needed.append(ev_capacity * (wished_level[e] - actual_soc[e]) / 100)  # in kWh
             time_needed = energy_needed[e] / max_power[e]  # uitgedrukt in aantal uren; bijvoorbeeld 1,5
@@ -667,8 +747,8 @@ class DayAheadOpt(hass.Hass):
         #alle verbruiken in de totaal balans
         for u in range(U):
             model += c_l[u] == c_t_total[u] + b_l[u] + \
-                     xsum(ac_to_dc[b][u]/eff_ac_to_dc[b] - dc_to_ac[b][u]*eff_dc_to_ac[b]  for b in range(B)) + \
-                     c_b[u] + xsum(c_ev[e][u] for e in range(EV))  + c_hp[u] - pv[u]
+                     xsum(ac_to_dc[b][u] - dc_to_ac[b][u] for b in range(B)) + \
+                     c_b[u] + xsum(c_ev[e][u] for e in range(EV))  + c_hp[u] - xsum(pv_ac[s][u] for s in range(solar_num))
 
         #cost variabele
         cost = model.add_var(var_type=CONTINUOUS, lb=-1000, ub=1000)
@@ -683,9 +763,12 @@ class DayAheadOpt(hass.Hass):
         model += cost == xsum(c_l[u] * pl[u] - c_t_w_tax[u] * pt[u] - c_t_no_tax[u] * pt_notax[u]  for u in range(U) ) + \
                      xsum(xsum((dc_to_bat[b][u] + bat_to_dc[b][u]) * kwh_cycle_cost[b] + (opt_low_level[b] - soc_low[b][u]) * 0.0025
                         for u in range(U)) for b in range(B)) + \
-                xsum((soc_mid[b][0] - soc_mid[b][U]) * one_soc[b] * eff_bat_to_dc[b] * eff_dc_to_ac[b] * p_bat  for b in range(B)) # waarde opslag accu
+                xsum((soc_mid[b][0] - soc_mid[b][U]) * one_soc[b] * eff_bat_to_dc[b] * avg_eff_dc_to_ac[b] * p_bat  for b in range(B)) # waarde opslag accu
                 # + (boiler_temp[U] - boiler_ondergrens) * (spec_heat_boiler/(3600 * cop_boiler)) * p_avg # waarde energie boiler
 
+        #settings
+        model.max_gap = 0.05
+        model.max_nodes = 500
         # kosten optimalisering
         minimize_cost = self.strategy["minimize cost"].lower() == "true"
         minimize_delivery = self.strategy["minimize delivery"].lower() == "true"
@@ -734,8 +817,8 @@ class DayAheadOpt(hass.Hass):
                 ac_to_dc_sum = 0
                 dc_to_ac_sum = 0
                 for b in range(B):
-                    ac_to_dc_sum += ac_to_dc[b][u].x / eff_ac_to_dc[b]
-                    dc_to_ac_sum += dc_to_ac[b][u].x * eff_dc_to_ac[b]
+                    ac_to_dc_sum += ac_to_dc[b][u].x # / eff_ac_to_dc[b]
+                    dc_to_ac_sum += dc_to_ac[b][u].x # * eff_dc_to_ac[b]
                 accu_in_sum.append(ac_to_dc_sum)
                 accu_out_sum.append(dc_to_ac_sum)
             for u in range(U):
@@ -743,8 +826,17 @@ class DayAheadOpt(hass.Hass):
                 for e in range(EV):
                     ev_sum += c_ev[e][u].x
                 c_ev_sum.append(ev_sum)
+            pv_ac_hour_sum = []
+            solar_hour_sum = []
             for u in range(U):
-                netto = b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] - pv[u] - pv_ac_hour_sum[u]
+                pv_ac_hour_sum.append(0)
+                solar_hour_sum.append(0)
+                for b in range(B):
+                    for s in range(pv_dc_num[b]):
+                        pv_ac_hour_sum[u] += pv_prod_ac[b][s][u]
+                for s in range(solar_num):
+                    solar_hour_sum[u] += pv_ac[s][u].x
+                netto = b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] - solar_hour_sum[u] - pv_ac_hour_sum[u]
                 sum_old_cons += netto
                 if netto >= 0:
                     old_cost_gc += netto * p_grl[u]
@@ -794,10 +886,26 @@ class DayAheadOpt(hass.Hass):
             pd.options.display.float_format = '{:6.2f}'.format
             df_accu = []
             for b in range(B):
-                cols = ['uur', 'ac->dc', 'dc->ac', 'dc->ba', 'ba_dc', 'pv', 'soc']
+                cols = ['uur', 'ac->dc', 'ch_st', 'c_eff', 'dc->ac', 'dc_st', 'd_eff', 'dc->ba', 'ba_dc', 'pv', 'soc']
                 df_accu.append(pd.DataFrame(columns = cols))
                 for u in range(U):
-                    row = [uur[u], ac_to_dc[b][u].x, dc_to_ac[b][u].x, dc_to_bat[b][u].x, bat_to_dc[b][u].x, pv_dc[b][u], soc[b][u+1].x]
+                    ac_to_dc_eff = "--"
+                    c_stage = "--"
+                    for cs in range(CS[b]):
+                        if ac_to_dc_st_on[b][cs][u].x == 1:
+                            c_stage = cs
+                            ac_to_dc_eff = self.battery_options[b]["charge stages"][cs]["efficiency"] * 100.0
+                    dc_to_ac_eff = "--"
+                    d_stage = "--"
+                    for ds in range(DS[b]):
+                        if dc_to_ac_st_on[b][ds][u].x == 1:
+                            d_stage = ds
+                            dc_to_ac_eff = self.battery_options[b]["discharge stages"][ds]["efficiency"] * 100.0
+
+                    pv_prod = 0
+                    for s in range (pv_dc_num[b]):
+                        pv_prod += pv_dc_on_off[b][s][u].x * pv_prod_dc[b][s][u]
+                    row = [uur[u], dc_from_ac[b][u].x, c_stage, ac_to_dc_eff, dc_to_ac[b][u].x, d_stage, dc_to_ac_eff, dc_to_bat[b][u].x, bat_to_dc[b][u].x, pv_prod, soc[b][u+1].x]
                     df_accu[b].loc[df_accu[b].shape[0]] = row
                 df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
                 df_accu[b] = df_accu[b].astype({"uur": int})
@@ -814,7 +922,7 @@ class DayAheadOpt(hass.Hass):
             for u in range(U):
                 row = [uur[u], accu_in_sum[u], accu_out_sum[u]]
                 row = row + [c_l[u].x, c_t_w_tax[u].x, c_t_no_tax[u].x, b_l[u],
-                            c_b[u].x, c_hp[u].x, c_ev_sum[u], pv[u], c_l[u].x * pl[u], -c_t_w_tax[u].x * pt[u],
+                            c_b[u].x, c_hp[u].x, c_ev_sum[u], solar_hour_sum[u], c_l[u].x * pl[u], -c_t_w_tax[u].x * pt[u],
                             -c_t_no_tax[u].x * pt_notax[u], -c_t_w_tax[u].x * pt[u] -c_t_no_tax[u].x * pt_notax[u],
                              boiler_temp[u + 1].x]
                 d_f.loc[d_f.shape[0]] = row
@@ -864,10 +972,18 @@ class DayAheadOpt(hass.Hass):
                         except BaseException:
                             pass
 
+                #solar
+                for s in range(solar_num):
+                    entity_pv_switch = self.config.get(["entity pv switch"], self.solar[s])
+                    if pv_ac_on_off[s][0].x == 1.0 or solar_prod[s][0] == 0.0:
+                        self.turn_on(entity_pv_switch)
+                    else:
+                        self.turn_off(entity_pv_switch)
+
                 # battery
                 for b in range(B):
                     #vermogen aan ac kant
-                    netto_vermogen = int(1000 * ((ac_to_dc[b][0].x / eff_ac_to_dc[b] - dc_to_ac[b][0].x * eff_dc_to_ac[b]) / hour_fraction[0]))
+                    netto_vermogen = int(1000 * ((ac_to_dc[b][0].x - dc_to_ac[b][0].x) / hour_fraction[0]))
                     minimum_power = self.battery_options[b]["minimum power"]
                     if abs(netto_vermogen) <= 20:
                         netto_vermogen = 0
@@ -907,6 +1023,12 @@ class DayAheadOpt(hass.Hass):
                         datetime_str = stop_victron.strftime('%Y-%m-%d %H:%M')
                     helper_id = self.battery_options[b]["entity stop victron"]
                     self.call_service("set_datetime", entity_id=helper_id, datetime=datetime_str)
+                    for s in range(pv_dc_num[b]):
+                        entity_pv_switch = self.battery_options[b]["solar"][s]["entity pv switch"]
+                        if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
+                            self.turn_on(entity_pv_switch)
+                        else:
+                            self.turn_off(entity_pv_switch)
 
                 # heating
                 if self.heater_present:
@@ -940,7 +1062,7 @@ class DayAheadOpt(hass.Hass):
                 boiler_n.append(- c_b[u].x)
                 heatpump_n.append(-c_hp[u].x)
                 ev_n.append(-c_ev_sum[u])
-                pv_p.append(pv[u])
+                pv_p.append(solar_hour_sum[u])
                 pv_ac_p.append (pv_ac_hour_sum[u])
                 accu_in_sum =0
                 accu_out_sum = 0
@@ -1026,12 +1148,12 @@ class DayAheadOpt(hass.Hass):
                     },
                   ]
             }
-            gb = GraphBuilder()
+            backend = self.config.get(["graphical backend"])
+            gb = GraphBuilder(backend)
             gb.build(gr1_df, gr1_options)
 
 
             import matplotlib
-            matplotlib.use('GTK3Agg')
             import matplotlib.pyplot as plt
             import matplotlib.ticker as ticker
             fig, axis = plt.subplots(figsize=(8, 9), nrows=3)  # , sharex= True)

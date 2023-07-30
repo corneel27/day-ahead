@@ -4,5 +4,5 @@ log/*
 __pycache__/
 data/secrets.json
 CODEOWNER
-/webserver/*
-/data/options.json
+webserver/prog/*
+data/options.json

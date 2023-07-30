@@ -104,6 +104,9 @@ Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (4, 'gr', 'globale straling', 'J/cm2');<br/> 
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (5, 'temp', 'temperatuur', '°C'); <br/>
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2');<br/> 
+   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (7, 'cost', 'cost', 'euro');<br/>
+   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (8, 'profit', 'profit', 'euro');
+
  * tabel **values**:<br/>
    * Deze maak je aan met de volgende query: <br/>
     CREATE TABLE \`values\` (<br/>
@@ -133,22 +136,24 @@ De volgende parameters kunnen worden gebruikt:
   Je kunt deze faciliteit gebruiken om een prijshistorie in de database op te bouwen.<br>
   Format: `jjjj-mm-dd` <br>
   Deze functionaliteit werkt alleen bij de bron easyenergy!<br>
-  Voorbeeld ` python day_ahead.py prices 2022-09-01 [2023-03-01]`
+  Voorbeeld ` python3 day_ahead.py prices 2022-09-01 [2023-03-01]`
     
 **tibber**  
   haalt de verbruiks- en productiegegevens op bij tibber  
   Dit commando kan met een extra parameter worden gestart namelijk een datum. In dat geval worden de verbruiksdata opgehaald vanaf de ingegeven datum. <br>
   Format: `jjjj-mm-dd` <br>
-  Voorbeeld: `python day_ahead.py tibber 2023-02-01`
+  Voorbeeld: `python3 day_ahead.py tibber 2023-02-01`
 **calc**  
   voert de "optimaliseringsberekening" uit: 
 * haalt alle data (prijzen, meteo) op uit de database <br> 
 * berekent de optimale inzet van de accu, boiler, warmtepomp en ev <br> 
+    als debug als parameter wordt meegegeven dan wordt de berekende inzet niet doorgevoerd
 * berekent de besparing tov een reguliere leverancier <br>
 * berekent de besparing zonder optimalisering met alleen dynamische prijzen<br>
 * berekent de besparing met optimalisering met dynamische prijzen <br>
 * presenteert een tabel met alle geprognoticeerde uurdata <br>
 * presenteert een grafiek met alle geprognoticeerde uurdata
+
 
 **scheduler**  
  Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd.<br>
@@ -256,7 +261,17 @@ als in deze periode ook je batterij al gedraaid heeft:
   ![img_2.png](images/img_2.png)
 * de 24 getallen uit de tweede kolom vul je in in de lijst.
 
-**strategy** het programma kent drie strategieën die je kunt inzetten om het voor jou optimale energieverbruik
+**grahical backend**<br/>
+Het programma draait op een groot aantal operating systemen en architecturen, Voor het presenteren en opslaan van grafieken
+maakt het programma gebruik van de bibliotheek **matplotlib**. Die probeert de correcte backend (canvas) te detecteren,
+maar dat wil niet altijd lukken. Je kunt met deze instelling de voor jou goed werkende backend selecteren en instellen.
+Je hebt de keuze uit de volgende backends: MacOSX, QtAgg, GTK4Agg, Gtk3Agg, TkAgg, WxAgg, Agg.<br>
+**Gtk3Agg** werkt goed op Ubuntu met desktop <br>
+**Agg** werkt goed op een headless linux (zoals Rasberry PI of Ubuntu in een  VM).<br>
+Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het programma het zelf uit.
+
+**strategy**<br> 
+Het programma kent drie strategieën die je kunt inzetten om het voor jou optimale energieverbruik
 en teruglevering te realiseren.<br>
 Je kiest er één uit door daar **True** achter in te vullen.
 De drie strategieën zijn:

@@ -8,8 +8,13 @@ import math
 
 class GraphBuilder ():
 
+    def __init__(self, backend=None):
+        if backend==None or backend == "":
+            return
+        else:
+            matplotlib.use(backend)
+
     def build(self, df, options):
-        matplotlib.use('GTK3Agg')
         fig, axis = plt.subplots(figsize=(7, 5))  # , sharex= True)
         ind = np.arange(len(df.index))
         stacked_plus= np.zeros( shape=(len(df.index)) )
