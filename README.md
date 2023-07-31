@@ -73,17 +73,20 @@ Het programma day_ahead.py is een python-programma dat alleen draait onder pytho
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
 `pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask`
-  
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
 
-**Home Assistant** actueel bijgewerkte laatste versie.
+**Home Assistant**<br>
+Actueel bijgewerkte laatste versie.
 
-**MariaDB** (best geïnstalleerd als addon van HA), waar ook HA gebruik van maakt. Zet hierbij poort 3306 open door in de Add-on dit poortnummer in te vullen bij het onderdeel Netwerk. Indien het leeg blijft is de MariaDB database alleen bereikbaar voor HA.  
+**MariaDB**<br>
+Best geïnstalleerd als addon van HA waar ook HA gebruik van maakt. Zet hierbij poort 3306 open door in de Add-on dit poortnummer in te vullen bij het onderdeel Netwerk. Indien het leeg blijft is de MariaDB database alleen bereikbaar voor HA.  
 
-**phpMyAdmin** (best geïnstalleerd als addon van HA), met toegang tot de MariaDB server  
+**phpMyAdmin**<br>
+Best geïnstalleerd als addon van HA, met toegang tot de MariaDB server.
 
-**database "day_ahead"** een aparte database in MariaDB voor dit programma met daarin:  
+**database "day_ahead"**<br>
+Een aparte database in MariaDB voor dit programma met daarin:  
 	
 * een user die alle rechten heeft (niet root) 
 * tabel **variabel**:<br/>
@@ -146,7 +149,7 @@ De volgende parameters kunnen worden gebruikt:
   Format: `jjjj-mm-dd` <br>
   Voorbeeld: `python3 day_ahead.py tibber 2023-02-01`
 
-**meteo**
+**meteo**<br>
   Haalt de meteorologische gegevens op.  
 
 **calc**  
@@ -177,7 +180,7 @@ Opmerking: alle instellingen die beginnen met "!secret" staan in het bestand `se
  * token: om de api te kunnen aanroepen is er  een token nodig.  
    Deze kun je genereren in je Home Assistant omgeving.
 
-**database da**
+**database da**<br>
 De database voor het day ahead programma.  
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
@@ -185,7 +188,7 @@ De database voor het day ahead programma.
  * username: user name  
  * password: wachtwoord
 
-**database ha**
+**database ha**<br>
 De database van Home Assistant.  
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
@@ -299,7 +302,7 @@ De drie strategieën zijn:
     Er is een parameter die je moet invullen om in deze strategie tot een oplossing te komen:
   * cost marge combination: dit is het "verlies" dat je maximaal accepteert om tot een "nul op de meter"-oplossing te komen.
 
-**boiler**
+**boiler**<br>
 Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd en rekent het programma ook geen optimale inzet van de boiler uit.
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
@@ -313,7 +316,7 @@ Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * activate entity: entiteit (meestal van een inputhelper) waarmee de boiler opwarmen wordt gestart  
    * activate service: naam van de service van deze entiteit  
 
-**heating**:
+**heating**<br>
 Dit onderdeel is nog in ontwikkeling  
    * heater present : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd en wordt er ook geen optimale inzet van je warmtepomp berekend.
    * degree days factor: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
@@ -325,7 +328,7 @@ Dit onderdeel is nog in ontwikkeling
    * entity adjust heating curve: entiteit waarmee de stooklijn kan worden verschoven
    * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele da prijs 10% afwijkt van het daggemiddelde
 
-**battery**:
+**battery**<br>
 De gegevens en de instellingen van geen, een of meer batterijen
 Je kunt de batterij instellingen herhalen als je meer dan een batterij hebt, of je laat de lijst leeg (geen batterij)
    * name: de naam van de betterij (komt terug in rapportages)
@@ -376,7 +379,7 @@ voor het ontladen via je omvormer/inverter.
          * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
 stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50  <br>
            
-**solar**
+**solar**<br>
 Lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie<br>
      Per pv installatie geef je de volgende gegevens op:
 * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
@@ -384,7 +387,7 @@ Lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoed
 * capacity: capaciteit in kWp  
 * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2 (zie hierboven)  
  
-**electric vehicle**
+**electric vehicle**<br>
 Dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. 
 Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege lijst of een of meer auto's.
    * name: de naam van de auto (komt straks terug in rapportages)
@@ -405,9 +408,8 @@ Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege li
    * log in met je account op https://developer.tibber.com/explorer  
    * de token staat boven onder de balk 
  
- **scheduler** 
- Taken planner. 
- Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
+ **scheduler**<br> 
+ Taken planner. Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
  De volgende taken kunnen worden gepland:
    * get_meteo_data: ophalen van meteo gegevens bij meteoserver  
    * get_tibber_data: ophalen van verbruiks- en productiegegevens per uur bij tibber  
