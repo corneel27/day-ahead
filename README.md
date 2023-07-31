@@ -150,7 +150,7 @@ De volgende parameters kunnen worden gebruikt:
   Haalt de meteorologische gegevens op.  
 
 **calc**  
-  voert de "optimaliseringsberekening" uit: 
+  Voert de "optimaliseringsberekening" uit: 
 * haalt alle data (prijzen, meteo) op uit de database <br> 
 * berekent de optimale inzet van de accu, boiler, warmtepomp en ev <br> 
     als debug als parameter wordt meegegeven dan wordt de berekende inzet niet doorgevoerd
@@ -165,6 +165,7 @@ De volgende parameters kunnen worden gebruikt:
  Dit wordt ook bereikt door het programma zonder parameter op te starten.<br>
  Voorbeeld: `python3 day_ahead.py`<br>
  Wil je dat het programma in de achtergrond blijft draaien dan plaats je er een '&' teken achter.<br> 
+
 ---
 ### Instellingen  
   
@@ -177,7 +178,7 @@ Opmerking: alle instellingen die beginnen met "!secret" staan in het bestand `se
    Deze kun je genereren in je Home Assistant omgeving.
 
 **database da**
-  De database voor het day ahead programma.  
+De database voor het day ahead programma.  
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
  * port: poort op de server (meestal 3306)  
@@ -185,7 +186,7 @@ Opmerking: alle instellingen die beginnen met "!secret" staan in het bestand `se
  * password: wachtwoord
 
 **database ha**
-  De database van Home Assistant.  
+De database van Home Assistant.  
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
  * port: poort op de server (meestal 3306)  
@@ -193,9 +194,9 @@ Opmerking: alle instellingen die beginnen met "!secret" staan in het bestand `se
  * password: wachtwoord
  
 **meteoserver-key**
-  De meteodata worden opgehaald bij meteoserver.  
-    Ook hiervoor heb je een key nodig. <br>
-    Je genereert deze key (token) als volgt: 
+De meteodata worden opgehaald bij meteoserver.  
+Ook hiervoor heb je een key nodig. <br>
+Je genereert deze key (token) als volgt: 
  * website: https://meteoserver.nl/login.php 
  * registreer je als gebruiker 
  * daarna klik je op Account, tabje "API Beheer" en je ziet je key staan<br>
