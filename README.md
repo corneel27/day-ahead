@@ -350,7 +350,11 @@ voor het ontladen via je omvormer/inverter.
    * entity set power feedin: entiteit waar je het te laden / ontladen vermogen inzet  
    * entity set operating mode: entiteit waarmee je het ess aan/uit zet  
    * entity stop victron: entiteit waarmee je datum/tijd opgeeft wanneer het ess moet stoppen  
-   * entity balance switch: entiteit waarmee je de victron op "balanceren" zet (overrult set power feedin)
+   * entity balance switch: entiteit waarmee je Home Assistant in samenwerking met de omvormer op "balanceren" zet (overrult set power feedin)<br>
+Hiermee zorg je ervoor dat er geen levering c.q. teruglevering aan het net plaatsvindt. Deze optie wordt met name interessant en
+bruikbaar als er een verschil is in tarief tussen leveren en terugleveren. Bijvoorbeeld als je niet
+meer kunt salderen. Maar ook bij de strategie "nul op de meter", zal het programma vaker van deze
+mogelijkheid gebruik willen maken.
    * solar lijst van pv installaties die direct invoeden op je batterij (mppt)<br>
      Per pv installatie geef je de volgende gegevens op:
        * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
