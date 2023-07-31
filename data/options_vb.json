@@ -73,7 +73,7 @@
     0.18,
     0.16
   ],
-   "graphical backend": "Gtk3Agg",
+  "graphical backend": "Gtk3Agg",
   "strategy": {
     "minimize cost" : "True",
     "minimize delivery": "False",
