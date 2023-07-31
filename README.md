@@ -354,7 +354,7 @@ voor het ontladen via je omvormer/inverter.
 Hiermee zorg je ervoor dat er geen levering c.q. teruglevering aan het net plaatsvindt. Deze optie wordt met name interessant en
 bruikbaar als er een verschil is in tarief tussen leveren en terugleveren. Bijvoorbeeld als je niet
 meer kunt salderen. Maar ook bij de strategie "nul op de meter", zal het programma vaker van deze
-mogelijkheid gebruik willen maken.
+mogelijkheid gebruik willen maken. 
    * solar lijst van pv installaties die direct invoeden op je batterij (mppt)<br>
      Per pv installatie geef je de volgende gegevens op:
        * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
