@@ -9,7 +9,7 @@ import math
 class GraphBuilder ():
 
     def build(self, df, options):
-        matplotlib.use('GTK3Agg')
+#        matplotlib.use('GTK3Agg') # Error GTK3Agg
         fig, axis = plt.subplots(figsize=(7, 5))  # , sharex= True)
         ind = np.arange(len(df.index))
         stacked_plus= np.zeros( shape=(len(df.index)) )

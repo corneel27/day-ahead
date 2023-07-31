@@ -1,0 +1,17 @@
+MIP gestart: 31-07-2023 09:52:00 :  get_tibber_data
+Locatie:  51.96569895385981:6.729175765067341
+MySQL database connection successful. Default database: day_ahead
+Tibber data present tot en met: 2023-07-29 23:00:00
+{'from': '2023-07-29T22:00:00.000+02:00', 'profit': 2.6151436575, 'production': 8.845} 1690660800 8.845
+{'from': '2023-07-29T23:00:00.000+02:00', 'profit': 0.011430628, 'production': 0.04} 1690664400 0.04
+{'from': '2023-07-29T22:00:00.000+02:00', 'cost': 0.0002956635, 'consumption': 0.001} 1690660800 0.001
+{'from': '2023-07-29T23:00:00.000+02:00', 'cost': 0.0040007198, 'consumption': 0.014} 1690664400 0.014
+         time    code  value
+0  1690660800    prod   8.85
+1  1690660800  profit   2.62
+2  1690664400    prod   0.04
+3  1690664400  profit   0.01
+4  1690660800    cons   0.00
+5  1690660800    cost   0.00
+6  1690664400    cons   0.01
+7  1690664400    cost   0.00
