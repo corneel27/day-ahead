@@ -185,6 +185,7 @@
     "capacity": 6.3,
     "entity position": "device_tracker.wvwzzzauzfw117301_position",
     "entity max amperage": "sensor.wvwzzzauzfw117301_charger_max_ampere",
+    "charge three phase": "False",
     "entity actual level": "sensor.wvwzzzauzfw117301_battery_level",
     "entity plugged in": "binary_sensor.wvwzzzauzfw117301_external_power",
     "charge scheduler": {

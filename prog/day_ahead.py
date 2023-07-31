@@ -35,7 +35,7 @@ class DayAheadOpt(hass.Hass):
         # print(resp.text)
         self.config.set("latitude", resp_dict['latitude'])
         self.config.set("longitude", resp_dict['longitude'])
-        # print(str(self.config.get(["latitude"])) + ':' + str(self.config.get(["longitude"])))
+        print("MIP gestart op ", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
         db_da_name = self.config.get(['database da', "database"])
         db_da_server = self.config.get(['database da', "server"])
         db_da_port = int(self.config.get(['database da', "port"]))
@@ -177,6 +177,7 @@ class DayAheadOpt(hass.Hass):
         # start = datetime.datetime.timestamp(datetime.datetime.strptime("2022-05-27", "%Y-%m-%d"))
         # end = datetime.datetime.timestamp(datetime.datetime.strptime("2022-05-29", "%Y-%m-%d"))
         # prog_data = db_da.getPrognoseData(start, end)
+        print("\nProg_data:")
         print(prog_data)
 
         '''
@@ -241,12 +242,18 @@ class DayAheadOpt(hass.Hass):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             btw = get_value_from_dict(dag_str, btw_def)
             p_avg = (calc_da_avg() + taxes_l + ol_l) * (1 + btw / 100)
-        print(pl)
-        print(pt)
+            
+        print("\nPrijs levering:")
+        pprint(pl)
+
+        print("\nPrijs teruglevering:")
+        pprint(pt)
+        
         for u in range(U):
             pl_avg.append(p_avg)
 
         # base load
+        print("\nBase load:")
         pprint(self.base_cons)  # basislast van 0 tot 23 uur
 
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
@@ -312,7 +319,7 @@ class DayAheadOpt(hass.Hass):
             salderen = cons_data_history["production"] < cons_data_history["consumption"]
 
         if salderen:
-            print("all taxes refund (alles wordt gesaldeerd")
+            print("All taxes refund (alles wordt gesaldeerd)")
             consumption_today = 0
             production_today = 0
         else:
@@ -538,14 +545,14 @@ class DayAheadOpt(hass.Hass):
             if boiler_start > boiler_end:  # geen boiler opwarming in deze periode
                 c_b = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]  # consumption boiler
                 model += xsum(boiler_on[j] for j in range(U)[boiler_start:boiler_end + 1]) == 0
-                print("boiler: geen opwarming")
+                print("\nBoiler: geen opwarming")
                 boiler_end_temp = boiler_act_temp - boiler_cooling * U
-                print("boiler eind temperatuur: ", boiler_end_temp)
+                print("Boiler eind temperatuur: ", boiler_end_temp)
                 for u in range(U):
                     # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
                     model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling
             else:
-                print("boiler: ", uur[boiler_start], uur[boiler_end])
+                print("\nBoiler: ", uur[boiler_start], uur[boiler_end])
                 needed_elec = [0.0 for u in range(U)]
                 needed_time = [0 for u in range(U)]
                 needed_heat = max(0.0, float(spec_heat_boiler * (
@@ -603,12 +610,18 @@ class DayAheadOpt(hass.Hass):
             if not isinstance(max_ampere, numbers.Number):
                 max_ampere = 10
             max_ampere = float(max_ampere)
-            max_power.append(max_ampere * 230 / 1000) # vermogen in kW
+            charge_three_phase = self.ev_options[e]["charge three phase"].lower() == "true"
+            if charge_three_phase:
+                max_power.append(max_ampere * 3 * 230 / 1000) # vermogen in kW
+            else:
+                max_power.append(max_ampere * 230 / 1000) # vermogen in kW
+            print("EV vermogen:", max_power[e], "kW")
             energy_needed.append(ev_capacity * (wished_level[e] - actual_soc[e]) / 100)  # in kWh
             time_needed = energy_needed[e] / max_power[e]  # uitgedrukt in aantal uren; bijvoorbeeld 1,5
             hours_needed.append(math.ceil(time_needed))  # hele uren
             #start = ready - datetime.timedelta(hours=time_needed)
             ready_index = U
+            print("EV plugged in:", ev_plugged_in)
             if ev_plugged_in and (ev_position[e] == "home") and (wished_level[e] > actual_soc[e]) and \
                     ((tijd[U - 1] + datetime.timedelta(hours=1)) >= ready):
                 for u in range(U):
@@ -709,6 +722,7 @@ class DayAheadOpt(hass.Hass):
             degree_days = self.meteo.calc_graaddagen()
             if U>24:
                 degree_days += self.meteo.calc_graaddagen(date=datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1), datetime.datetime.min.time()))
+            print("\nWarmtepomp")
             print("Graaddagen: ", degree_days)
 
             degree_days_factor = self.heating_options["degree days factor"]  #3.6  heat factor kWh th / K.day
@@ -777,13 +791,16 @@ class DayAheadOpt(hass.Hass):
         if combine_min_cost_del:
             cost_marge_combination = float(self.strategy["cost marge combination"])
         if minimize_cost:
+            strategie = 'minimale kosten'     
             model.objective = minimize(cost)
             model.optimize()
         elif minimize_delivery:
+            strategie = 'minimale levering'     
             model.objective = minimize(delivery)
             model.optimize()
         elif combine_min_cost_del:
             #optimize minimaliseer levering
+            strategie = 'gecombineerd'     
             model.objective = minimize(cost)
             model.optimize()
             min_cost = cost.x
@@ -797,8 +814,10 @@ class DayAheadOpt(hass.Hass):
             print("Kosten (euro): ", cost.x)
             print("Levering (kWh): ", delivery.x)
         else:
-            print("kies een strategie in options")
+            print("Kies een strategie in options")
+            strategie = 'niet gekozen'     
             return
+        print("Strategie: " + strategie + "\n") 
 
         # optimizing
         #model.optimize()
@@ -909,7 +928,7 @@ class DayAheadOpt(hass.Hass):
                     df_accu[b].loc[df_accu[b].shape[0]] = row
                 df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
                 df_accu[b] = df_accu[b].astype({"uur": int})
-                print("Accu: ", self.battery_options[b]["name"])
+                print("Batterij: ", self.battery_options[b]["name"])
                 print("In- en uitgaande energie per uur in kWh op de busbar")
                 print(df_accu[b].to_string(index=False))
                 print("\n")
@@ -942,6 +961,7 @@ class DayAheadOpt(hass.Hass):
 
             # doorzetten van alle settings naar HA
             if not self.debug:
+                print("\nDoorzetten van alle settings naar HA")
 
                 '''
                 set helpers output home assistant
@@ -955,7 +975,7 @@ class DayAheadOpt(hass.Hass):
                         self.call_service(self.boiler_options["activate service"],
                                           entity_id=self.boiler_options["activate entity"])
                         # "input_button.hw_trigger")
-                        print("boiler opwarmen geactiveerd")
+                        print("Boiler opwarmen geactiveerd")
 
                 # ev
                 for e in range(EV):
@@ -1180,7 +1200,7 @@ class DayAheadOpt(hass.Hass):
             axis[0].set_xticks(ind, labels=uur)
             axis[0].xaxis.set_major_locator(ticker.MultipleLocator(2))
             axis[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-            axis[0].set_title("Berekend op: " + now_dt.strftime('%Y-%m-%d %H:%M') + "\nNiet geoptimaliseerd")
+            axis[0].set_title("Berekend op: " + now_dt.strftime('%d-%m-%Y %H:%M') + "\nNiet geoptimaliseerd")
 
             axis[1].bar(ind, np.array(c_l_p), label='Levering', color='#00bfff')
             axis[1].bar(ind, np.array(pv_p), bottom=np.array(c_l_p), label='PV AC', color='green')
@@ -1206,7 +1226,7 @@ class DayAheadOpt(hass.Hass):
             axis[1].set_xticks(ind, labels=uur)
             axis[1].xaxis.set_major_locator(ticker.MultipleLocator(2))
             axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-            axis[1].set_title("Geoptimaliseerd")
+            axis[1].set_title("MIP geoptimaliseerd: " + strategie)
 
             ln1 = []
             line_styles = ["solid", "dashed", "dotted"]
@@ -1247,7 +1267,8 @@ class DayAheadOpt(hass.Hass):
         old_stdout = sys.stdout
         log_file = open("../data/log/" + task + datetime.datetime.now().strftime("%H%M") + ".log", "w")
         sys.stdout = log_file
-        print(datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S'), ' : ', task, "\n")
+        print("MIP gestart:", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'), ': ', task)
+        print("Locatie: ", str(self.config.get(["latitude"])) + ':' + str(self.config.get(["longitude"])))
         getattr(self, task)()
         sys.stdout = old_stdout
         log_file.close()
