@@ -399,8 +399,14 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
   Deze vraag je als volgt op:  
    * log in met je account op https://developer.tibber.com/explorer  
    * de token staat boven onder de balk 
- 
- **scheduler** taken planner. 
+
+**report**<br>
+Hier worden de entities in HA opgenomen die het verbruik ("entities grid consumption") en de 
+teruglevering ("entities grid production") presenteren.
+Dit zijn meestal dezelfde entities die ook worden ingevuld in de configuratie
+van het energie dashboard van HA.
+
+**scheduler** taken planner. 
  Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
  De volgende taken kunnen worden gepland:
    * get_meteo_data: ophalen van meteo gegevens bij meteoserver  

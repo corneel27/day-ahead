@@ -201,6 +201,16 @@
     "api url" : "https://api.tibber.com/v1-beta/gql",
     "api_token" : "!secret tibber_api_token"
   },
+  "report":{
+    "entities grid consumption" : [
+      "sensor.grid_consumption_low",
+      "sensor.grid_consumption_high"
+    ],
+    "entities grid production" : [
+      "sensor.grid_production_low",
+      "sensor.grid_production_high"
+    ]
+  },
   "scheduler" : {
     "0355": "get_meteo_data",
     "0955": "get_meteo_data",
