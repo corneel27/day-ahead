@@ -20,8 +20,8 @@ een combinatie van beide. Daarvoor worden de volgende zaken berekend:
 * uit de prognose van het weer (globale straling) per uur wordt een voorspelling berekend van de productie van je 
 zonnepanelen
 * met de tarieven van je dynamische leverancier (incl. opslag, belastingen en btw) worden per uur de kosten 
-en opbrengsten van het verbruik cq teruglevering berekend
-* m.b.v. de karakteristieken van je accu worden per uur het laad- cq ontlaadvermogen berekend
+en opbrengsten van het verbruik c.q. teruglevering berekend
+* m.b.v. de karakteristieken van je accu worden per uur het laad- c.q. ontlaadvermogen berekend
 * wanneer moet je elektrische auto worden geladen
 
 Dit resulteert (in de mip-module) in enkele honderden vergelijkingen en idem dito variabelen(onbekenden). 
@@ -29,7 +29,7 @@ Aan de hand van de gekozen strategie kan met behulp van het algoritme de meest o
 variabelen worden berekend. Dit zijn:
 * per uur verbruik en kosten op de inkoopmeter
 * per uur teruglevering en opbrengst op de inkoopmeter
-* per uur laad- cq ontlaadvermogen van de accu en de SOC aan het einde van het uur
+* per uur laad- c.q. ontlaadvermogen van de accu en de SOC aan het einde van het uur
 * tijdstip waarop de boiler moet worden opgewarmd
 * uurvakken waarin de elektrische auto moet worden geladen
 
@@ -73,20 +73,17 @@ Het programma day_ahead.py is een python-programma dat alleen draait onder pytho
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
 `pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask`
+  
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
 
-**Home Assistant**<br>
-Actueel bijgewerkte laatste versie.
+**Home Assistant** actueel bijgewerkte laatste versie
 
-**MariaDB**<br>
-Best geïnstalleerd als addon van HA waar ook HA gebruik van maakt. Zet hierbij poort 3306 open door in de Add-on dit poortnummer in te vullen bij het onderdeel Netwerk. Indien het leeg blijft is de MariaDB database alleen bereikbaar voor HA.  
+**MariaDB** (best geïnstalleerd als addon van HA), waar ook HA gebruik van maakt  
 
-**phpMyAdmin**<br>
-Best geïnstalleerd als addon van HA, met toegang tot de MariaDB server.
+**phpMyAdmin** (best geïnstalleerd als addon van HA), met toegang tot de MariaDB server  
 
-**database "day_ahead"**<br>
-Een aparte database in MariaDB voor dit programma met daarin:  
+**database "day_ahead"** een aparte database in MariaDB voor dit programma met daarin:  
 	
 * een user die alle rechten heeft (niet root) 
 * tabel **variabel**:<br/>
@@ -130,11 +127,9 @@ Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc:
 	`python3 day_ahead.py [parameters]`  
   
 Start je het programma zonder parameters dan worden de databases "geopend" en dan wacht het programma tot een opdracht uit  de takenplannen (zie hieronder) moet worden uitgevoerd.   
-De volgende parameters kunnen worden gebruikt:
-
+De volgende parameters kunnen worden gebruikt:  
 **debug**  
-  Alleen van toepassing in combinatie met het onderdeel "calc" (zie hierna), voert wel de berekening uit maar zet de berekende resultaten niet door naar de apparaten.
-
+  alleen van toepassing in combinatie met het onderdeel "calc" (zie hierna), voert wel de berekening uit maar zet de berekende resultaten niet door naar de apparaten  
 **prices**  
   Het programmam haalt de day ahead prijzen op bij een van de volgende bronnen: nordpool, entsoe of easyenergy. Deze bron stel je in via options.json (prices).<br>
   Je kunt dit commando uitbreiden met een of twee extra datum-parameters: een start- en een eind datum. Laat je de tweede parameters achterwege dan wordt morgen als einddatum gekozen.
@@ -144,16 +139,12 @@ De volgende parameters kunnen worden gebruikt:
   Voorbeeld ` python3 day_ahead.py prices 2022-09-01 [2023-03-01]`
     
 **tibber**  
-  Haalt de verbruiks- en productiegegevens op bij tibber.  
+  haalt de verbruiks- en productiegegevens op bij tibber  
   Dit commando kan met een extra parameter worden gestart namelijk een datum. In dat geval worden de verbruiksdata opgehaald vanaf de ingegeven datum. <br>
   Format: `jjjj-mm-dd` <br>
   Voorbeeld: `python3 day_ahead.py tibber 2023-02-01`
-
-**meteo**<br>
-  Haalt de meteorologische gegevens op.  
-
 **calc**  
-  Voert de "optimaliseringsberekening" uit: 
+  voert de "optimaliseringsberekening" uit: 
 * haalt alle data (prijzen, meteo) op uit de database <br> 
 * berekent de optimale inzet van de accu, boiler, warmtepomp en ev <br> 
     als debug als parameter wordt meegegeven dan wordt de berekende inzet niet doorgevoerd
@@ -163,43 +154,39 @@ De volgende parameters kunnen worden gebruikt:
 * presenteert een tabel met alle geprognoticeerde uurdata <br>
 * presenteert een grafiek met alle geprognoticeerde uurdata
 
+
 **scheduler**  
  Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd.<br>
- Dit wordt ook bereikt door het programma zonder parameter op te starten.<br>
- Voorbeeld: `python3 day_ahead.py`<br>
- Wil je dat het programma in de achtergrond blijft draaien dan plaats je er een '&' teken achter.<br> 
-
+ Dit wordt ook bereikt door het programma zonder parameter op te starten.
 ---
 ### Instellingen  
   
-Het bestand `options.json` in de folder `data` bevat alle instellingen voor het programma day_ahead.py en dien je zelf aan te maken. Het voorbeeld bestand `options_vb.json` kun je als basis gebruiken en dien je aan passen naar jouw omgeving en omstandigheden.<br> 
-Opmerking: alle instellingen die beginnen met "!secret" staan in het bestand `secrets.json` met de key die hier achter !secret staat <br>
+Het bestand options.json bevat alle instellingen voor het programma day_ahead.py. 
+Opmerking: alle instellingen die beginnen met "!secret" staan in het 
+bestand `secrets.json` met de key die hier achter !secret staat <br>
 
 **homeassistant**
  * url : de url waar de api van je home assistant bereikbaar is  
  * token: om de api te kunnen aanroepen is er  een token nodig.  
-   Deze kun je genereren in je Home Assistant omgeving.
+               Deze kun je genereren in je Home Assistant website
 
-**database da**<br>
-De database voor het day ahead programma.  
+**database da**:  de database voor het day ahead programma  
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
  * port: poort op de server (meestal 3306)  
  * username: user name  
  * password: wachtwoord
 
-**database ha**<br>
-De database van Home Assistant.  
+**database ha**: de database van Home Assistant  
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
  * port: poort op de server (meestal 3306)  
  * username: user name  
  * password: wachtwoord
  
-**meteoserver-key**
-De meteodata worden opgehaald bij meteoserver.  
-Ook hiervoor heb je een key nodig. <br>
-Je genereert deze key (token) als volgt: 
+**meteoserver-key**: de meteodata worden opgehaald bij meteoserver  
+    Ook hiervoor heb je een key nodig. <br>
+    Je genereert deze key (token) als volgt: 
  * website: https://meteoserver.nl/login.php 
  * registreer je als gebruiker 
  * daarna klik je op Account, tabje "API Beheer" en je ziet je key staan<br>
@@ -228,24 +215,24 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    Hoofdstuk 2 Authentication and Authorisation<br><br>
 
  * regular high: het hoge tarief van een "reguliere" oude leverancier,
-   ex btw, kaal, euro per kWh
- * regular low: idem het "lage" tarief, ex btw, kaal , euro per kWh
+   excl. btw, kaal, euro per kWh
+ * regular low: idem het "lage" tarief, excl. btw, kaal , euro per kWh
      switch to low: tijdstop waarop je omschakelt naar "laag tarief" (meestal 23 uur)
-  * energy taxes delivery: energiebelasting op verbruik ex btw, euro per kWh  
+  * energy taxes delivery: energiebelasting op verbruik excl. btw, euro per kWh  
            2022-01-01 : 0.06729,  
            2023-01-01 : 0.12599  
-   * energy taxes redelivery: energiebelasting op teruglevering ex btw, euro per kWh  
+   * energy taxes redelivery: energiebelasting op teruglevering excl. btw, euro per kWh  
            2022-01-01: 0.06729,  
            2023-01-01: 0.12599  
-    * cost supplier delivery: opslag leverancier euro per kWh, ex btw  
+    * cost supplier delivery : opslag leverancier euro per kWh, excl. btw  
         bijv voor Tibber:
         * 2022-01-01: 0.002
         * 2023-03-01: 0.018
-   * cost supplier redelivery: opslag leverancier voor teruglevering per kWh, ex btw  
+   * cost supplier redelivery:  opslag leverancier voor teruglevering per kWh, ex btw  
         bijv voor Tibber:
         * 2022-01-01: 0.002
         * 2023-03-01: 0.018
-   * vat: btw in %  
+   * vat:    btw in %  
       * 2022-01-01: 21
       * 2022-07-01: 9
       * 2023-01-01: 21,  
@@ -253,8 +240,7 @@ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er 
    * last invoice: datum laatste jaarfactuur en/of de begindatum van je contractjaar (formaat "yyyy-mm-dd")
    * tax refund: kun je alles salderen of is je teruglevering hoger dan je verbruik  (True of False) 
 
-**baseload** 
-Hier vul je voor de 24 uren van een etmaal het basisverbruik van je woning in.
+**baseload** Hier vul je voor de 24 uren van een etmaal het basisverbruik van je woning in.
 Deze bepaal je als volgt:<br>
 * neem voor een voldoende lange periode (minimaal een maand) de geregistreerde energiehoeveelheden per uur op de volgende onderdelen:
 * inkoop van je aansluiting op het netwerk: inkoop 
@@ -263,17 +249,17 @@ Deze bepaal je als volgt:<br>
 * het verbruik van je boiler: boiler
 * het totale verbruik van je elektrische auto('s): ev
 * de totale productie van je zonnepanelen: pv
-Als in deze periode ook je batterij al gedraaid heeft:
+als in deze periode ook je batterij al gedraaid heeft:
 * de energie naar je batterij: accu_in
 * de energie uit je batterij: accu_uit
 * de basislast voor ieder uur reken je uit met de volgende formule:<br>
 * basislast = inkoop - teruglevering - wp - boiler - ev + pv - accu_in + accu_uit
 * de resultaten zet je samen met het begintijdstip van ieder uur in een spreadsheet<br>
-  dat ziet er dan als volgt uit:<br>
+  dat ziet er dan als volgt uit: <br>
   ![img_1.png](images/img_1.png)
 * daarnaast begin je een nieuwe tabel met in de eerste kolom de getallen 0, 1 tot en met 23
 * in de tweede kolom bereken je met "averageif" (of in libreoffice "gemiddelde.als") het gemiddelde van de baseloadkolom voor het uur 0, 1 enz. 
-  Dat ziet er dan als volgt uit:<br>
+  Dat ziet er dan als volgt uit: <br>
   ![img_2.png](images/img_2.png)
 * de 24 getallen uit de tweede kolom vul je in in de lijst.
 
@@ -283,7 +269,7 @@ maakt het programma gebruik van de bibliotheek **matplotlib**. Die probeert de c
 maar dat wil niet altijd lukken. Je kunt met deze instelling de voor jou goed werkende backend selecteren en instellen.
 Je hebt de keuze uit de volgende backends: MacOSX, QtAgg, GTK4Agg, Gtk3Agg, TkAgg, WxAgg, Agg.<br>
 **Gtk3Agg** werkt goed op Ubuntu met desktop <br>
-**Agg** werkt goed op een headless linux (zoals Rasberry PI of Ubuntu in een  VM).<br>
+**Agg** werkt goed op een headless linux (zoals Rasberry PI of Ubuntu in een VM).<br>
 Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het programma het zelf uit.
 
 **strategy**<br> 
@@ -302,38 +288,38 @@ De drie strategieën zijn:
     Er is een parameter die je moet invullen om in deze strategie tot een oplossing te komen:
   * cost marge combination: dit is het "verlies" dat je maximaal accepteert om tot een "nul op de meter"-oplossing te komen.
 
-**boiler**<br>
-Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
-   * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd en rekent het programma ook geen optimale inzet van de boiler uit.
+**boiler**  instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
+   * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd en rekent het 
+programma ook geen optimale inzet van de boiler uit.
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
    * entity setpoint: entiteit die de ingestelde boilertemp. presenteert  
    * entity hysterese: entiteit die de gehanteerde hysterese voor de boiler presenteert  
-   * cop: cop van de boiler bijv 3: met 1 kWh elektriciteit wordt 3 kWh warm water gemaakt (een elektrische boiler heeft een cop = 1)
+   * cop: cop van de boiler bijv. 3: met 1 kWh elektriciteit wordt 3 kWh warm water gemaakt (een elektrische boiler heeft een cop = 1)
    * cooling rate: gemiddelde afkoelsnelheid van de boiler in K/uur  
    * volume: inhoud van de boiler in liter  
-   * heating allowed below: temperatuurgrens in °C  waaronder de boiler mag worden opgewarmd  
+   * heating allowed below: temperatuurgrens in °C waaronder de boiler mag worden opgewarmd  
    * elec. power: elektrisch vermogen van de boiler in W  
    * activate entity: entiteit (meestal van een inputhelper) waarmee de boiler opwarmen wordt gestart  
    * activate service: naam van de service van deze entiteit  
 
-**heating**<br>
-Dit onderdeel is nog in ontwikkeling  
-   * heater present : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd en wordt er ook geen optimale inzet van je warmtepomp berekend.
+**heating**: dit onderdeel is nog in ontwikkeling  
+   * heater present: True of False. Als je False invult worden onderstaande heater-instellingen genegeerd en wordt
+er ook geen optimale inzet van je warmtepomp berekend.
    * degree days factor: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
-     Zet deze op 0 als je geen wp hebt.
+     zet deze op 0 als je geen wp hebt
    * stages : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop
      * max_power: het maximum elektrische vermogen van de betreffende schijf in W
      * cop: de cop van de wp behorende bij deze schijf. Dus een cop van 7 met een vermogen van 225 W 
         betekent een thermisch vermogen van 7 x 225 = 1575 W
    * entity adjust heating curve: entiteit waarmee de stooklijn kan worden verschoven
-   * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele da prijs 10% afwijkt van het daggemiddelde
+   * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
+      da prijs 10% afwijkt van het daggemiddelde
 
-**battery**<br>
-De gegevens en de instellingen van geen, een of meer batterijen
-Je kunt de batterij instellingen herhalen als je meer dan een batterij hebt, of je laat de lijst leeg (geen batterij)
-   * name: de naam van de betterij (komt terug in rapportages)
-   * entity actual level: entiteit die de actuele soc van de batterij presenteert  
-   * capacity: capaciteit van de batterij in kWh  
+**battery**: de gegevens en de instellingen van geen, een of meer accu's
+Je kunt de accu instellingen herhalen als je meer dan een accu hebt, of je laat de lijst leeg (geen accu)
+   * name: de naam van de accu (komt terug in rapportages)
+   * entity actual level: entiteit die de actuele soc van de accu presenteert  
+   * capacity: capaciteit van de accu in kWh  
    * lower limit: onderste soc limiet (tijdelijk)  
    * upper limit: bovenste soc limiet  
    * optimal lower level: onderste soc limiet voor langere tijd  
@@ -341,7 +327,7 @@ Je kunt de batterij instellingen herhalen als je meer dan een batterij hebt, of 
      minimale soc in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben 
    * entity max soc end opt: entity in home assistant (input_number), waarmee je de
      maximale soc in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben <br>
-     **opmerking:** met deze twee instellingen kunt u bereiken dat de batterij aan het eind "leeg" of "vol" is. Een lage batterij 
+     **opmerking:** met deze twee instellingen kunt u bereiken dat de accu aan het eind "leeg" of "vol" is. Een lage accu 
      kan zinvol zijn als je de dag(en) na de berekening veel goedkope stroom en/of veel pv productie verwacht. Een volle batterij 
      kan zinvol zijn als je juist dure stroom en/of weinig eigen pv-productie verwacht. 
    * charge stages: hier vul je een zelf te kiezen aantal stappen of schijven in voor het laden via de omvormer.
@@ -349,7 +335,7 @@ Je kunt de batterij instellingen herhalen als je meer dan een batterij hebt, of 
      * power: het maximale vermogen van de schijf (het minimale vermogen van de schijf is het maximale vermogen van de vorige schijf)
      * efficiency: de efficiency (het rendement) voor deze schijf als een factor 
      * van 1. Voor de duidelijkheid: je vult hier de efficiency van omvormer 
-       * van ac to dc in. Het rendement van de batterij (dc to bat) vul je hieronder in.<br>
+       * van ac to dc in. Het rendement van de accu (dc to bat) vul je hieronder in.<br>
    Bijvoorbeeld: {"power": 30.0, "efficiency": 0.949} <br>
    De eerste schijf is altijd:  {"power": 0.0, "efficiency": 1},
    De "power" van de laatste schijf geeft ook het maximale 
@@ -372,24 +358,30 @@ voor het ontladen via je omvormer/inverter.
        * capacity: capaciteit in kWp  
        * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2  
         Deze bereken je als volgt: <br>
-         * Een eerste schatting van de jaarlijkse opbrengst van je panelen is : Wp x 0,85. Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. <br>
+         * Een eerste schatting van de jaarlijkse opbrengst van je panelen is : Wp x 0,85.
+Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. <br>
          * De gemiddelde direct opvallende straling gesommeerd over een jaar is "ongeveer" 400.000 J/cm2.<br>
-         * Als jouw "geschatte" jaaropbrengst van je panelen stelt op 5000 kWh dan wordt de yield: 5000 / 400.000 = 0,0125 kWh/J/cm2<br>
+         * Als jouw "geschatte" jaaropbrengst van je panelen stelt op 5000 kWh dan wordt de yield:
+5000 / 400.000 = 0,0125 kWh/J/cm2<br>
          * Zo kun je voor iedere pv installatie een eerste schatting maken.<br>
-         * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
-stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50  <br>
+           * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
+stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50. <br>
+     * entity pv switch: een entity (meestal een helper in de vorm van een input_boolean), waarmee je
+     de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
+     (of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
            
-**solar**<br>
-Lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie<br>
+**solar** lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie< br>
      Per pv installatie geef je de volgende gegevens op:
 * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
 * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
 * capacity: capaciteit in kWp  
 * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2 (zie hierboven)  
+* entity pv switch: een entity (meestal een helper in de vorm van een input_boolean), waarmee je
+de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
+(of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
  
-**electric vehicle**<br>
-Dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. 
-Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege lijst of een of meer auto's.
+**electric vehicle** dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. 
+    Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege lijst of een of meer auto's
    * name: de naam van de auto (komt straks terug in rapportages)
    * capacity: capaciteit accu in kWh,   
    * entity position: entiteit die aangeeft of de auto "thuis" (home) is  
@@ -408,18 +400,18 @@ Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege li
    * log in met je account op https://developer.tibber.com/explorer  
    * de token staat boven onder de balk 
  
- **scheduler**<br> 
- Taken planner. Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
+ **scheduler** taken planner. 
+ Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
  De volgende taken kunnen worden gepland:
    * get_meteo_data: ophalen van meteo gegevens bij meteoserver  
    * get_tibber_data: ophalen van verbruiks- en productiegegevens per uur bij tibber  
    * get_day_ahead_prices: ophalen van day ahead prijzen bij nordpool cq entsoe  
-   * calc_optimum: bereken de inzet accu, boiler en auto voor de komende uren, de inzet van het lopende uur wordt doorgezet naar de betreffende apparaten (tenzij het programma is gestart met de parameter debug)<br/>
+   * calc_optimum: bereken de inzet accu, boiler en auto voor de komende uren,  
+            de inzet van het lopende uur wordt doorgezet naar de betreffende apparaten (tenzij het programma is 
+          gestart met de parameter debug)<br/>
 
-De key heeft het formaat van "uumm": uu is het uur, mm is de minuut.<br/>
-De uren en minuten zijn ofwel een twee cijferig getal of xx<br/>  
-Ingeval van xx zal de taak ieder uur cq iedere minuut worden uitgevoerd.<br/>
-Bijvoorbeeld : <br/>
-`"0955": "get_meteo_data"`: de meteodata worden opgehaald om 9 uur 55<br/>
-`"1255": "get_day_ahead_prices"`: haal de actuele prijzen op op 12 uur 55<br>
+De key heeft het formaat van "uumm": uu is het uur, mm is de minuut  
+de uren en minuten zijn ofwel een twee cijferig getal of XX  
+ingeval van XX zal de taak ieder uur cq iedere minuut worden uitgevoerd.<br/>
+Bijvoorbeeld : <br/>`"0955": "get_meteo_data"`: de meteodata worden opgehaald om 9 uur 55<br/>
 `"xx00": "calc_optimum"`: ieder uur exact om "00" wordt de optimaliseringsberekening uitgevoerd.

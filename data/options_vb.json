@@ -155,32 +155,32 @@
     "entity set power feedin": "input_number.feedin_grid",
     "entity set operating mode": "input_select.ess_operating_mode",
     "entity stop victron": "input_datetime.stop_victron",
+    "entity balance switch": "input_boolean.balanceer_grid",
     "solar": [
        {"name": "tuinkamer",
         "tilt": 45,
         "orientation": 5,
         "capacity": 1.8,
         "yield": 0.000,
-        "entity pv switch": "input_boolean.pv_switch",
-        "entity balance switch": "input_boolean.balanceer_grid"
-      }
+        "entity pv switch": "input_boolean.pv_tuinkamer_aan_uit"
+       }
      ]
     }
   ],
   "solar": [
     { "name" : "woning",
-      "entity pv switch": "input_boolean.pv_switch",
       "tilt": 35,
       "orientation": 5,
       "capacity": 4.2,
-      "yield": 0.010
+      "yield": 0.010,
+      "entity pv switch": "input_boolean.pv_woning_aan_uit"
     },
     { "name": "garage",
-      "entity pv switch": "input_boolean.pv_switch",
       "tilt": 45,
       "orientation": 5,
       "capacity": 1.8,
-      "yield": 0.005
+      "yield": 0.005,
+      "entity pv switch": "input_boolean.pv_garage_aan_uit"
     }],
   "electric vehicle" : [
     {
@@ -188,7 +188,6 @@
     "capacity": 6.3,
     "entity position": "device_tracker.wvwzzzauzfw117301_position",
     "entity max amperage": "sensor.wvwzzzauzfw117301_charger_max_ampere",
-    "charge three phase": "True",
     "entity actual level": "sensor.wvwzzzauzfw117301_battery_level",
     "entity plugged in": "binary_sensor.wvwzzzauzfw117301_external_power",
     "charge scheduler": {
