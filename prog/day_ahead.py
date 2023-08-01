@@ -980,9 +980,9 @@ class DayAheadOpt(hass.Hass):
 
                 # ev
                 for e in range(EV):
+                    entity_charge_switch = self.ev_options[e]["charge switch"]
+                    state = self.get_state(entity_charge_switch).state
                     if ev_position[e] == "home" and ev_plugged_in[e]:
-                        entity_charge_switch = self.ev_options[e]["charge switch"]
-                        state = self.get_state(entity_charge_switch).state
                         try:
                             if float(c_ev[e][0].x) > 0.0:
                                 if state == "off":
@@ -992,6 +992,8 @@ class DayAheadOpt(hass.Hass):
                                     self.turn_off(entity_charge_switch)
                         except BaseException:
                             pass
+                    else:
+                        self.turn_off(entity_charge_switch)  # charger uitzetten indien niet ingeplugd of niet thuis
 
                 #solar
                 for s in range(solar_num):
