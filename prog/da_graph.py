@@ -15,10 +15,7 @@ class GraphBuilder ():
             matplotlib.use(backend)
 
     def build(self, df, options):
-<<<<<<< HEAD
 #        matplotlib.use('GTK3Agg') # Error GTK3Agg
-=======
->>>>>>> a5423a7de47505e69dfb5bbf8e405fed087b6ae4
         fig, axis = plt.subplots(figsize=(7, 5))  # , sharex= True)
         ind = np.arange(len(df.index))
         stacked_plus= np.zeros( shape=(len(df.index)) )

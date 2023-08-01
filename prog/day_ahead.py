@@ -242,20 +242,13 @@ class DayAheadOpt(hass.Hass):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             btw = get_value_from_dict(dag_str, btw_def)
             p_avg = (calc_da_avg() + taxes_l + ol_l) * (1 + btw / 100)
-<<<<<<< HEAD
-
-=======
             
->>>>>>> a5423a7de47505e69dfb5bbf8e405fed087b6ae4
         print("\nPrijs levering:")
         pprint(pl)
 
         print("\nPrijs teruglevering:")
         pprint(pt)
-<<<<<<< HEAD
-=======
         
->>>>>>> a5423a7de47505e69dfb5bbf8e405fed087b6ae4
         for u in range(U):
             pl_avg.append(p_avg)
 
@@ -613,31 +606,23 @@ class DayAheadOpt(hass.Hass):
             ready = datetime.datetime(now_dt.year, now_dt.month, now_dt.day, ready.hour, ready.minute)
             if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
                 ready = ready + datetime.timedelta(days=1)
-<<<<<<< HEAD
-            max_ampere = float(self.get_state(self.ev_options[e]["entity max amperage"]).state)
-=======
             max_ampere = self.get_state(self.ev_options[e]["entity max amperage"]).state
             if not isinstance(max_ampere, numbers.Number):
                 max_ampere = 10
             max_ampere = float(max_ampere)
->>>>>>> a5423a7de47505e69dfb5bbf8e405fed087b6ae4
             charge_three_phase = self.ev_options[e]["charge three phase"].lower() == "true"
             if charge_three_phase:
                 max_power.append(max_ampere * 3 * 230 / 1000) # vermogen in kW
             else:
                 max_power.append(max_ampere * 230 / 1000) # vermogen in kW
-<<<<<<< HEAD
-            print("EV vermogen:", max_power[e], "kW")  # TvB
-=======
             print("EV vermogen:", max_power[e], "kW")
->>>>>>> a5423a7de47505e69dfb5bbf8e405fed087b6ae4
             energy_needed.append(ev_capacity * (wished_level[e] - actual_soc[e]) / 100)  # in kWh
             time_needed = energy_needed[e] / max_power[e]  # uitgedrukt in aantal uren; bijvoorbeeld 1,5
             hours_needed.append(math.ceil(time_needed))  # hele uren
             #start = ready - datetime.timedelta(hours=time_needed)
             ready_index = U
-            print("EV plugged in:", ev_plugged_in)
-            if ev_plugged_in and (ev_position[e] == "home") and (wished_level[e] > actual_soc[e]) and \
+            print("EV plugged in:", ev_plugged_in[e])
+            if ev_plugged_in[e] and (ev_position[e] == "home") and (wished_level[e] > actual_soc[e]) and \
                     ((tijd[U - 1] + datetime.timedelta(hours=1)) >= ready):
                 for u in range(U):
                     if (tijd[u] + datetime.timedelta(hours=1)) >= ready:
@@ -830,17 +815,10 @@ class DayAheadOpt(hass.Hass):
             print("Kosten (euro): ", cost.x)
             print("Levering (kWh): ", delivery.x)
         else:
-<<<<<<< HEAD
-            strategie = 'niet gekozen'     
-            print("kies een strategie in options")
-            return
-        print("Strategie: " + strategie + "\n")
-=======
             print("Kies een strategie in options")
             strategie = 'niet gekozen'     
             return
         print("Strategie: " + strategie + "\n") 
->>>>>>> a5423a7de47505e69dfb5bbf8e405fed087b6ae4
 
         # optimizing
         #model.optimize()
@@ -1197,10 +1175,6 @@ class DayAheadOpt(hass.Hass):
 
 
             import matplotlib
-<<<<<<< HEAD
-#            matplotlib.use('GTK3Agg')    # Error GTK3Agg
-=======
->>>>>>> a5423a7de47505e69dfb5bbf8e405fed087b6ae4
             import matplotlib.pyplot as plt
             import matplotlib.ticker as ticker
             fig, axis = plt.subplots(figsize=(8, 9), nrows=3)  # , sharex= True)
