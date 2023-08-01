@@ -20,8 +20,8 @@ een combinatie van beide. Daarvoor worden de volgende zaken berekend:
 * uit de prognose van het weer (globale straling) per uur wordt een voorspelling berekend van de productie van je 
 zonnepanelen
 * met de tarieven van je dynamische leverancier (incl. opslag, belastingen en btw) worden per uur de kosten 
-en opbrengsten van het verbruik cq teruglevering berekend
-* m.b.v. de karakteristieken van je batterij worden per uur het laad- cq ontlaadvermogen berekend
+en opbrengsten van het verbruik c.q. teruglevering berekend
+* m.b.v. de karakteristieken van je accu worden per uur het laad- c.q. ontlaadvermogen berekend
 * wanneer moet je elektrische auto worden geladen
 
 Dit resulteert (in de mip-module) in enkele honderden vergelijkingen en idem dito variabelen(onbekenden). 
@@ -72,7 +72,7 @@ Of in tabelvorm:
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.8 of hoger. <br/>
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
-`pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool`
+`pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask`
   
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
@@ -103,9 +103,10 @@ Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`)VALUES (3, 'da', 'price', 'euro/kWh'); <br/>
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (4, 'gr', 'globale straling', 'J/cm2');<br/> 
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (5, 'temp', 'temperatuur', '°C'); <br/>
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2');<br/>
+   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2');<br/> 
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (7, 'cost', 'cost', 'euro');<br/>
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (8, 'profit', 'profit', 'euro');<br/>
+   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (8, 'profit', 'profit', 'euro');
+
  * tabel **values**:<br/>
    * Deze maak je aan met de volgende query: <br/>
     CREATE TABLE \`values\` (<br/>
@@ -151,12 +152,14 @@ De volgende parameters kunnen worden gebruikt:
 **calc**  
   Voert de "optimaliseringsberekening" uit: 
 * haalt alle data (prijzen, meteo) op uit de database <br> 
-* berekent de optimale inzet van de batterij, boiler, warmtepomp en auto <br> 
+* berekent de optimale inzet van de accu, boiler, warmtepomp en ev <br> 
+    als debug als parameter wordt meegegeven dan wordt de berekende inzet niet doorgevoerd
 * berekent de besparing tov een reguliere leverancier <br>
 * berekent de besparing zonder optimalisering met alleen dynamische prijzen<br>
 * berekent de besparing met optimalisering met dynamische prijzen <br>
 * presenteert een tabel met alle geprognoticeerde uurdata <br>
 * presenteert een grafiek met alle geprognoticeerde uurdata
+
 
 **scheduler**  
   Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd.<br>
@@ -223,16 +226,16 @@ Opmerking: alle instellingen die beginnen met "!secret" staan komen in het besta
    Hoofdstuk 2 Authentication and Authorisation<br><br>
 
  * regular high: het hoge tarief van een "reguliere" oude leverancier,
-   ex btw, kaal, euro per kWh
- * regular low: idem het "lage" tarief, ex btw, kaal , euro per kWh
+   excl. btw, kaal, euro per kWh
+ * regular low: idem het "lage" tarief, excl. btw, kaal , euro per kWh
      switch to low: tijdstop waarop je omschakelt naar "laag tarief" (meestal 23 uur)
-  * energy taxes delivery: energiebelasting op verbruik ex btw, euro per kWh  
+  * energy taxes delivery: energiebelasting op verbruik excl. btw, euro per kWh  
            2022-01-01 : 0.06729,  
            2023-01-01 : 0.12599  
-  * energy taxes redelivery: energiebelasting op teruglevering ex btw, euro per kWh  
+   * energy taxes redelivery: energiebelasting op teruglevering excl. btw, euro per kWh  
            2022-01-01: 0.06729,  
            2023-01-01: 0.12599  
-  * cost supplier delivery : opslag leverancier euro per kWh, ex btw  
+    * cost supplier delivery : opslag leverancier euro per kWh, excl. btw  
         bijv voor Tibber:
         * 2022-01-01: 0.002
         * 2023-03-01: 0.018
@@ -264,15 +267,24 @@ Als in deze periode ook je batterij al gedraaid heeft:
 * de basislast voor ieder uur reken je uit met de volgende formule:<br>
 * basislast = inkoop - teruglevering - wp - boiler - ev + pv - accu_in + accu_uit
 * de resultaten zet je samen met het begintijdstip van ieder uur in een spreadsheet<br>
-  dat ziet er dan als volgt uit:<br>
+  dat ziet er dan als volgt uit: <br>
   ![img_1.png](images/img_1.png)
 * daarnaast begin je een nieuwe tabel met in de eerste kolom de getallen 0, 1 tot en met 23
 * in de tweede kolom bereken je met "averageif" (of in libreoffice "gemiddelde.als") het gemiddelde van de baseloadkolom voor het uur 0, 1 enz. 
-  Dat ziet er dan als volgt uit:<br>
+  Dat ziet er dan als volgt uit: <br>
   ![img_2.png](images/img_2.png)
 * de 24 getallen uit de tweede kolom vul je in in de lijst.
 
-**strategy** 
+**graphical backend**<br/>
+Het programma draait op een groot aantal operating systemen en architecturen, Voor het presenteren en opslaan van grafieken
+maakt het programma gebruik van de bibliotheek **matplotlib**. Die probeert de correcte backend (canvas) te detecteren,
+maar dat wil niet altijd lukken. Je kunt met deze instelling de voor jou goed werkende backend selecteren en instellen.
+Je hebt de keuze uit de volgende backends: MacOSX, QtAgg, GTK4Agg, Gtk3Agg, TkAgg, WxAgg, Agg.<br>
+**Gtk3Agg** werkt goed op Ubuntu met desktop <br>
+**Agg** werkt goed op een headless linux (zoals Rasberry PI of Ubuntu in een VM).<br>
+Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het programma het zelf uit.
+
+**strategy**<br> 
 Het programma kent drie strategieën die je kunt inzetten om het voor jou optimale energieverbruik
 en teruglevering te realiseren.<br>
 Je kiest er één uit door daar **True** achter in te vullen.
@@ -294,10 +306,10 @@ De drie strategieën zijn:
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
    * entity setpoint: entiteit die de ingestelde boilertemp. presenteert  
    * entity hysterese: entiteit die de gehanteerde hysterese voor de boiler presenteert  
-   * cop: cop van de boiler bijv 3: met 1 kWh elektriciteit wordt 3 kWh warm water gemaakt (een elektrische boiler heeft een cop = 1)
+   * cop: cop van de boiler bijv. 3: met 1 kWh elektriciteit wordt 3 kWh warm water gemaakt (een elektrische boiler heeft een cop = 1)
    * cooling rate: gemiddelde afkoelsnelheid van de boiler in K/uur  
    * volume: inhoud van de boiler in liter  
-   * heating allowed below: temperatuurgrens in °C  waaronder de boiler mag worden opgewarmd  
+   * heating allowed below: temperatuurgrens in °C waaronder de boiler mag worden opgewarmd  
    * elec. power: elektrisch vermogen van de boiler in W  
    * activate entity: entiteit (meestal van een inputhelper) waarmee de boiler opwarmen wordt gestart  
    * activate service: naam van de service van deze entiteit  
@@ -331,8 +343,17 @@ De drie strategieën zijn:
      **opmerking:** met deze twee instellingen kunt je bereiken dat de batterij aan het eind "leeg" of "vol" is. Een lage batterij 
      kan zinvol zijn als je de dag(en) na de berekening veel goedkope stroom en/of veel pv productie verwacht. Een volle batterij 
      kan zinvol zijn als je juist dure stroom en/of weinig eigen pv-productie verwacht. 
-   * max charge power: maximaal laad vermogen in kW  
-   * max discharge power: maximaal ontlaadvermogen in kW  
+   * charge stages: hier vul je een zelf te kiezen aantal stappen of schijven in voor het laden via de omvormer.
+    Per schijf vul je in: 
+     * power: het maximale vermogen van de schijf (het minimale vermogen van de schijf is het maximale vermogen van de vorige schijf)
+     * efficiency: de efficiency (het rendement) voor deze schijf als een factor 
+     * van 1. Voor de duidelijkheid: je vult hier de efficiency van omvormer 
+       * van ac to dc in. Het rendement van de accu (dc to bat) vul je hieronder in.<br>
+   Bijvoorbeeld: {"power": 30.0, "efficiency": 0.949} <br>
+   De eerste schijf is altijd:  {"power": 0.0, "efficiency": 1},
+   De "power" van de laatste schijf geeft ook het maximale 
+   * discharge stages: op dezelfde wijze als de "charge stages" vul je hier voor het ontladen een aantal stappen of schijven in 
+voor het ontladen via je omvormer/inverter. 
    * minimum power: minimaal laad/ontlaadvermogen
    * ac_to_dc efficiency: efficiency van de inverter bij omzetten van ac naar dc (factor van 1)
    * dc_to_ac efficiency: efficiency van de omvormer bij omzetten van dc naar ac (factor van 1)
@@ -342,7 +363,11 @@ De drie strategieën zijn:
    * entity set power feedin: entiteit waar je het te laden / ontladen vermogen inzet  
    * entity set operating mode: entiteit waarmee je het ess aan/uit zet  
    * entity stop victron: entiteit waarmee je datum/tijd opgeeft wanneer het ess moet stoppen  
-   * entity balance switch: entiteit waarmee je de victron op "balanceren" zet (overrult set power feedin)
+   * entity balance switch: entiteit waarmee je Home Assistant in samenwerking met de omvormer op "balanceren" zet (overrult set power feedin)<br>
+Hiermee zorg je ervoor dat er geen levering c.q. teruglevering aan het net plaatsvindt. Deze optie wordt met name interessant en
+bruikbaar als er een verschil is in tarief tussen leveren en terugleveren. Bijvoorbeeld als je niet
+meer kunt salderen. Maar ook bij de strategie "nul op de meter", zal het programma vaker van deze
+mogelijkheid gebruik willen maken. 
    * solar lijst van pv installaties die direct invoeden op je batterij (mppt)<br>
      Per pv installatie geef je de volgende gegevens op:
        * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
@@ -356,8 +381,11 @@ Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 k
          * Als jouw "geschatte" jaaropbrengst van je panelen stelt op 5000 kWh dan wordt de yield:
 5000 / 400.000 = 0,0125 kWh/J/cm2<br>
          * Zo kun je voor iedere pv installatie een eerste schatting maken.<br>
-         * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
-stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50  <br>
+           * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
+stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50. <br>
+     * entity pv switch: een entity (meestal een helper in de vorm van een input_boolean), waarmee je
+     de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
+     (of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
            
 **solar** 
   Lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie<br>
@@ -366,6 +394,9 @@ stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe y
 * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
 * capacity: capaciteit in kWp  
 * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2 (zie hierboven)  
+* entity pv switch: een entity (meestal een helper in de vorm van een input_boolean), waarmee je
+de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
+(of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
  
 **electric vehicle** 
   Dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. 

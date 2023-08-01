@@ -1,8 +1,8 @@
-images/*
-log/*
+data/images/*
+data/log/*
+data/secrets.json
+data/options.json
 .idea/
 __pycache__/
-data/secrets.json
 CODEOWNER
-/webserver/*
-/data/options.json
+webserver/prog/*

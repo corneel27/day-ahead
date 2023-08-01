@@ -112,9 +112,9 @@ def get_tibber_data():
             latest_ts = min(latest_ts, latest)
     count = math.ceil((now_ts - latest_ts)/3600)
     print("Tibber data present tot en met:", str(datetime.datetime.fromtimestamp(latest_ts)))
-#    if count < 24:
-#        print("Er worden geen data opgehaald")
-#        return
+    if count < 24:
+        print("Er worden geen data opgehaald")
+        return
     query = '{ ' \
             '"query": ' \
             ' "{ ' \

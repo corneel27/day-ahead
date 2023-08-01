@@ -1,0 +1,193 @@
+html,
+body {
+  height:100%;
+  width:100%;
+  margin: 0;
+  overflow: hidden;
+  background-color: #2196f3;
+}
+
+* {
+  font-family: Arial, sans-serif;
+  font-size: 16pt
+}
+
+
+body .body {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+}
+
+
+.content{
+    flex-grow: 1;
+    overflow: auto;
+    min-height: 2em;
+}
+
+
+header footer {
+   flex-shrink: 0;
+}
+
+/* div {background-color: green;} */
+div a {
+  text-decoration: none;
+  color: white;
+  padding: 5px;
+  display:inline-block;
+}
+ul {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+ul li {display: inline-block;}
+ul li:hover {background: #555;}
+ul li:hover ul {display: block;}
+ul li ul {
+  position: absolute;
+  width: 200px;
+  display: none;
+  z-index: 2;
+}
+ul li ul li {
+  background: #555;
+  display: block;
+}
+ul li ul li a {display:block !important;}
+ul li ul li:hover {background: #666;}
+
+code-input {
+  top: 10px;
+  box-sizing: border-box;
+  height: auto;
+  width: calc(100% - 24px);
+}
+
+.selector-container {
+  display: flex;
+  flex-wrap: wrap;}
+
+.select {
+  flex-wrap: nowrap;
+  float:left;
+  width:auto;
+  border: 2px solid white;
+  border-radius: 4px;
+  margin: 0px;
+  padding: 0px;
+  font-size: 0;
+  }
+.spacer {padding: 5px;}
+
+.clear {clear:both;}
+ /* Style the buttons */
+
+.btn {
+  padding: 10px 10px;
+  background-color: inherit;
+  cursor: pointer;
+  margin : 0px;
+  border: 0px;
+}
+
+.btn:hover {
+  background-color: white; /* Green */
+}
+.btn_left {
+  border-right-style: solid;
+  border-right: 1px solid white;
+  margin-right : 0;
+}
+
+.btn_right {
+  border-left: 1px solid white;
+  margin-left : 0;
+}
+.btn_mid {
+  border-left: 1px solid white;
+  margin-left : 0;
+  border-right: 1px solid white;
+  margin-right : 0;
+}
+/* Tooltip container */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+/* Tooltip text */
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color: blue;
+  color: #fff;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+  top: -10px;
+  left: 95%;
+
+  /* Position the tooltip text - see examples below! */
+  position: absolute;
+  z-index: 1;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+.chosen {
+  color: red;
+}
+/* Style the active class (and buttons on mouse-over) */
+.active, .btn:hover {
+  color: blue;
+}
+
+.show {
+  width: 100%;
+  height: 100vh;
+  border: 0px
+}
+
+img {
+  max-width: 100%; /* takes the 100 % width of its container (.box div)*/
+  max-height: 100%; /* takes the 100 % height of its container (.box div)*/
+}
+
+textarea{
+  width: 100%; /* takes the 100 % width of its container (.box div)*/
+  height: 100%; /* takes the 100 % height of its container (.box div)*/
+  font-family: monospace;
+}
+
+table {
+  margin: 5px;
+  border-collapse: collapse;
+  border: 2px solid;
+  border-color: white;
+  border-radius: 4px
+  border-radius: 1em;
+}
+
+table tr td {
+  font-family: monospace;
+  }
+
+table tr td, tr th{
+  text-align: right;
+  width: 5em;
+  border: 2px;
+  border-color: white;
+  border-style: solid;
+  padding-right: 5px;
+}
+
+table tr:last-child {
+  font-weight: bold;
+}
