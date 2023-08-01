@@ -992,8 +992,8 @@ class DayAheadOpt(hass.Hass):
                                     self.turn_off(entity_charge_switch)
                         except BaseException:
                             pass
-                    else:
-                        self.turn_off(entity_charge_switch)  # charger uitzetten indien niet ingeplugd of niet thuis
+                    else: 
+                        self.turn_off(entity_charge_switch)  # charger uitzetten indien niet ingeplugd of niet thuis 
 
                 #solar
                 for s in range(solar_num):
