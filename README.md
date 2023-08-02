@@ -310,8 +310,8 @@ Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * volume: inhoud van de boiler in liter  
    * heating allowed below: temperatuurgrens in °C waaronder de boiler mag worden opgewarmd  
    * elec. power: elektrisch vermogen van de boiler in W  
-   * activate entity: entiteit (meestal van een inputhelper) waarmee de boiler opwarmen wordt gestart  
    * activate service: naam van de service van deze entiteit  
+   * activate entity: entiteit (meestal van een inputhelper) waarmee de boiler opwarmen wordt gestart  
 
 ### **heating**<br>
 Dit onderdeel is nog in ontwikkeling.
