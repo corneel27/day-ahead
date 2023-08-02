@@ -68,22 +68,25 @@ Of in tabelvorm:
 ````
 ---
 
-### Vereisten
+## Vereisten
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.8 of hoger. <br/>
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
 `pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask`
-  
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
 
-**Home Assistant** actueel bijgewerkte laatste versie.
+### **Home Assistant**<br>
+Actueel bijgewerkte laatste versie.
 
-**MariaDB** (best geïnstalleerd als addon van HA), waar ook HA gebruik van maakt. Zet hierbij poort 3306 open door in de Add-on dit poortnummer in te vullen bij het onderdeel Netwerk. Indien het leeg blijft is de MariaDB database alleen bereikbaar voor HA.
+### **MariaDB**<br>
+Best geïnstalleerd als addon van HA waar ook HA gebruik van maakt. Zet hierbij poort 3306 open door in de Add-on dit poortnummer in te vullen bij het onderdeel Netwerk. Indien het leeg blijft is de MariaDB database alleen bereikbaar voor HA.
 
-**phpMyAdmin** (best geïnstalleerd als addon van HA), met toegang tot de MariaDB server.
+### **phpMyAdmin**<br>
+Best geïnstalleerd als addon van HA met toegang tot de MariaDB server.
 
-**database "day_ahead"** een aparte database in MariaDB voor dit programma met daarin:  
+### **database "day_ahead"**<br>
+Een aparte database in MariaDB voor dit programma met daarin:  
 	
 * een user die alle rechten heeft (niet root) 
 * tabel **variabel**:<br/>
@@ -122,37 +125,34 @@ Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
     AUTO_INCREMENT=1;<br> 
    * De inhoud van values bouw je zelf op met het ophalen van de diverse gegevens.  
 ---
-## Programma starten
+## Programma starten<br>
 Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc:   
-	`python3 day_ahead.py [parameters]`  
+`python3 day_ahead.py [parameters]`  
   
-Start je het programma zonder parameters dan worden de databases "geopend" en dan wacht het programma tot een opdracht uit  de takenplannen (zie hieronder) moet worden uitgevoerd.   
-De volgende parameters kunnen worden gebruikt:  
+Start je het programma zonder parameters dan worden de databases "geopend" en dan wacht het programma tot een opdracht uit de takenplanner (zie hieronder) moet worden uitgevoerd. De volgende parameters kunnen worden gebruikt:  
 
-**debug**  
-  Alleen van toepassing in combinatie met het onderdeel "calc" (zie hierna), voert wel de berekening uit maar zet de berekende resultaten niet door naar de apparaten.  
+### **debug**<br>
+Alleen van toepassing in combinatie met het onderdeel "calc" (zie hierna), voert wel de berekening uit maar zet de berekende resultaten niet door naar de apparaten.  
 
-**prices**  
-  Het programmam haalt de day ahead prijzen op bij een van de volgende bronnen: nordpool, entsoe of easyenergy. Deze bron stel je in via options.json (prices).<br>
-  Je kunt dit commando uitbreiden met een of twee extra datum-parameters: een start- en een eind datum. Laat je de tweede parameters achterwege dan wordt morgen als einddatum gekozen.
-  Je kunt deze faciliteit gebruiken om een prijshistorie in de database op te bouwen.<br>
-  Format: `jjjj-mm-dd` <br>
-  Deze functionaliteit werkt alleen bij de bron easyenergy!<br>
-  Voorbeeld ` python3 day_ahead.py prices 2022-09-01 [2023-03-01]`
+### **prices**<br>
+Het programmam haalt de day ahead prijzen op bij een van de volgende bronnen: nordpool, entsoe of easyenergy. Deze bron stel je in via options.json (prices).<br>
+Je kunt dit commando uitbreiden met een of twee extra datum-parameters: een start- en een eind datum. Laat je de tweede parameters achterwege dan wordt morgen als einddatum gekozen. Je kunt deze faciliteit gebruiken om een prijshistorie in de database op te bouwen.<br>
+Format: `jjjj-mm-dd`<br>
+Deze functionaliteit werkt alleen bij de bron easyenergy!<br>
+Voorbeeld ` python3 day_ahead.py prices 2022-09-01 [2023-03-01]`
     
-**tibber**  
-  Haalt de verbruiks- en productiegegevens op bij tibber  
-  Dit commando kan met een extra parameter worden gestart namelijk een datum. In dat geval worden de verbruiksdata opgehaald vanaf de ingegeven datum. <br>
-  Format: `jjjj-mm-dd` <br>
-  Voorbeeld: `python3 day_ahead.py tibber 2023-02-01`
+### **tibber**<br>
+Haalt de verbruiks- en productiegegevens op bij tibber. Dit commando kan met een extra parameter worden gestart namelijk een datum. In dat geval worden de verbruiksdata opgehaald vanaf de ingegeven datum.<br>
+Format: `jjjj-mm-dd` <br>
+Voorbeeld: `python3 day_ahead.py tibber 2023-02-01`
 
-**meteo**
-  Haalt de meteorologische gegevens op.
+### **meteo**<br>
+Haalt de meteorologische gegevens op.
 
-**calc**  
-  Voert de "optimaliseringsberekening" uit: 
+### **calc**<br>
+Voert de "optimaliseringsberekening" uit: 
 * haalt alle data (prijzen, meteo) op uit de database <br> 
-* berekent de optimale inzet van de accu, boiler, warmtepomp en ev <br> 
+* berekent de optimale inzet van de batterij, boiler, warmtepomp en ev <br> 
     als debug als parameter wordt meegegeven dan wordt de berekende inzet niet doorgevoerd
 * berekent de besparing tov een reguliere leverancier <br>
 * berekent de besparing zonder optimalisering met alleen dynamische prijzen<br>
@@ -160,49 +160,46 @@ De volgende parameters kunnen worden gebruikt:
 * presenteert een tabel met alle geprognoticeerde uurdata <br>
 * presenteert een grafiek met alle geprognoticeerde uurdata
 
+### **scheduler**<br>
+Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd. Dit wordt ook bereikt door het programma zonder parameter op te starten.<br>
+Voorbeeld: `python3 day_ahead.py`<br>
+Wil je dat het programma in de achtergrond blijft draaien dan plaats je er een '&' teken achter: `python3 day_ahead.py &`<br>
 
-**scheduler**  
-  Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd.<br>
-  Dit wordt ook bereikt door het programma zonder parameter op te starten.<br>
-  Voorbeeld: `python3 day_ahead.py`<br>
-  Wil je dat het programma in de achtergrond blijft draaien dan plaats je er een '&' teken achter.<br>
 ---
-### Instellingen  
+## Instellingen<br>
   
 Het bestand `options.json` in de folder `data` bevat alle instellingen voor het programma day_ahead.py en dien je zelf aan te maken. Het voorbeeld bestand `options_vb.json` kun je als basis gebruiken en dien je aan passen naar jouw omgeving en omstandigheden.<br>
-Opmerking: alle instellingen die beginnen met "!secret" staan komen in het bestand `secrets.json`te staan  met de key die hier achter !secret staat.
+Opmerking: alle instellingen die beginnen met "!secret" staan komen in het bestand `secrets.json` te staan met de key die hier achter !secret staat.
 
-**homeassistant**
+### **homeassistant**<br>
  * url : de url waar de api van je home assistant bereikbaar is  
- * token: om de api te kunnen aanroepen is er  een token nodig.  
-   Deze kun je genereren in je Home Assistant website
+ * token: om de api te kunnen aanroepen is er een token nodig.  
+   Deze kun je genereren in Home Assistant in je profiel. Maak een token met lange levensduur aan.
 
-**database da**  
-  De database voor het day ahead programma.  
+### **database da**<br>
+De database voor het day ahead programma.  
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
  * port: poort op de server (meestal 3306)  
  * username: user name  
  * password: wachtwoord
 
-**database ha**
-  De database van Home Assistant.  
+### **database ha**<br>
+De database van Home Assistant. Wordt gebruikt om de rapporten te kunnen genereren. 
  * server: ip adres van de server (waar mariadb draait)  
  * database: naam van de database  
  * port: poort op de server (meestal 3306)  
  * username: user name  
  * password: wachtwoord
  
-**meteoserver-key**
-  De meteodata worden opgehaald bij meteoserver  
-  Ook hiervoor heb je een key nodig. <br>
-  Je genereert deze key (token) als volgt: 
+### **meteoserver-key**<br>
+De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig. Je genereert deze key (token) als volgt:<br> 
  * website: https://meteoserver.nl/login.php 
  * registreer je als gebruiker 
  * daarna klik je op Account, tabje "API Beheer" en je ziet je key staan<br>
-  Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er maar 4 per dag = max 124 per maand
+ Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er maar 4 per dag = max 124 per maand.
 
-**prices**  
+### **prices**<br>
  * source day ahead
      Hier bepaal je waar je je day ahead prijzen vandaan wilt halen. Je hebt de keuze uit drie bronnen:
    * nordpool
@@ -243,6 +240,7 @@ Opmerking: alle instellingen die beginnen met "!secret" staan komen in het besta
         bijv voor Tibber:
         * 2022-01-01: 0.002
         * 2023-03-01: 0.018
+        * 2023-09-01: 0.009
   * vat:    btw in %  
       * 2022-01-01: 21
       * 2022-07-01: 9
@@ -251,7 +249,7 @@ Opmerking: alle instellingen die beginnen met "!secret" staan komen in het besta
   * last invoice: datum laatste jaarfactuur en/of de begindatum van je contractjaar (formaat "yyyy-mm-dd")
   * tax refund: kun je alles salderen of is je teruglevering hoger dan je verbruik  (True of False) 
 
-**baseload** 
+### **baseload**<br> 
 Hier vul je voor de 24 uren van een etmaal het basisverbruik van je woning in.
 Deze bepaal je als volgt:<br>
 * neem voor een voldoende lange periode (minimaal een maand) de geregistreerde energiehoeveelheden per uur op de volgende onderdelen:
@@ -275,16 +273,16 @@ Als in deze periode ook je batterij al gedraaid heeft:
   ![img_2.png](images/img_2.png)
 * de 24 getallen uit de tweede kolom vul je in in de lijst.
 
-**graphical backend**<br/>
+### **graphical backend**<br/>
 Het programma draait op een groot aantal operating systemen en architecturen, Voor het presenteren en opslaan van grafieken
 maakt het programma gebruik van de bibliotheek **matplotlib**. Die probeert de correcte backend (canvas) te detecteren,
 maar dat wil niet altijd lukken. Je kunt met deze instelling de voor jou goed werkende backend selecteren en instellen.
 Je hebt de keuze uit de volgende backends: MacOSX, QtAgg, GTK4Agg, Gtk3Agg, TkAgg, WxAgg, Agg.<br>
-**Gtk3Agg** werkt goed op Ubuntu met desktop <br>
+**Gtk3Agg** werkt goed op Ubuntu met desktop.<br>
 **Agg** werkt goed op een headless linux (zoals Rasberry PI of Ubuntu in een VM).<br>
 Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het programma het zelf uit.
 
-**strategy**<br> 
+### **strategy**<br>
 Het programma kent drie strategieën die je kunt inzetten om het voor jou optimale energieverbruik
 en teruglevering te realiseren.<br>
 Je kiest er één uit door daar **True** achter in te vullen.
@@ -300,8 +298,8 @@ De drie strategieën zijn:
     Er is een parameter die je moet invullen om in deze strategie tot een oplossing te komen:
    * cost marge combination: dit is het "verlies" dat je maximaal accepteert om tot een "nul op de meter"-oplossing te komen.
 
-**boiler**  
-  Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
+### **boiler**<br>
+Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd.
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
    * entity setpoint: entiteit die de ingestelde boilertemp. presenteert  
@@ -314,8 +312,8 @@ De drie strategieën zijn:
    * activate entity: entiteit (meestal van een inputhelper) waarmee de boiler opwarmen wordt gestart  
    * activate service: naam van de service van deze entiteit  
 
-**heating**:  
-  Dit onderdeel is nog in ontwikkeling  
+### **heating**<br>
+Dit onderdeel is nog in ontwikkeling.
    * heater present : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd.
    * degree days factor: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
      zet deze op 0 als je geen wp hebt
@@ -327,7 +325,7 @@ De drie strategieën zijn:
    * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
       da prijs 10% afwijkt van het daggemiddelde
 
-**battery**: 
+### **battery**<br> 
   De gegevens en de instellingen van geen, een of meer batterijen
   Je kunt de batterij instellingen herhalen als je meer dan een batterij hebt, of je laat de lijst leeg (geen batterij)
    * name: de naam van de batterij (komt terug in rapportages)
@@ -348,12 +346,11 @@ De drie strategieën zijn:
      * power: het maximale vermogen van de schijf (het minimale vermogen van de schijf is het maximale vermogen van de vorige schijf)
      * efficiency: de efficiency (het rendement) voor deze schijf als een factor 
      * van 1. Voor de duidelijkheid: je vult hier de efficiency van omvormer 
-       * van ac to dc in. Het rendement van de accu (dc to bat) vul je hieronder in.<br>
+       * van ac to dc in. Het rendement van de batterij (dc to bat) vul je hieronder in.<br>
    Bijvoorbeeld: {"power": 30.0, "efficiency": 0.949} <br>
    De eerste schijf is altijd:  {"power": 0.0, "efficiency": 1},
    De "power" van de laatste schijf geeft ook het maximale 
-   * discharge stages: op dezelfde wijze als de "charge stages" vul je hier voor het ontladen een aantal stappen of schijven in 
-voor het ontladen via je omvormer/inverter. 
+   * discharge stages: op dezelfde wijze als de "charge stages" vul je hier voor het ontladen een aantal stappen of schijven in voor het ontladen via je omvormer/inverter. 
    * minimum power: minimaal laad/ontlaadvermogen
    * ac_to_dc efficiency: efficiency van de inverter bij omzetten van ac naar dc (factor van 1)
    * dc_to_ac efficiency: efficiency van de omvormer bij omzetten van dc naar ac (factor van 1)
@@ -364,10 +361,7 @@ voor het ontladen via je omvormer/inverter.
    * entity set operating mode: entiteit waarmee je het ess aan/uit zet  
    * entity stop victron: entiteit waarmee je datum/tijd opgeeft wanneer het ess moet stoppen  
    * entity balance switch: entiteit waarmee je Home Assistant in samenwerking met de omvormer op "balanceren" zet (overrult set power feedin)<br>
-Hiermee zorg je ervoor dat er geen levering c.q. teruglevering aan het net plaatsvindt. Deze optie wordt met name interessant en
-bruikbaar als er een verschil is in tarief tussen leveren en terugleveren. Bijvoorbeeld als je niet
-meer kunt salderen. Maar ook bij de strategie "nul op de meter", zal het programma vaker van deze
-mogelijkheid gebruik willen maken. 
+Hiermee zorg je ervoor dat er geen levering c.q. teruglevering aan het net plaatsvindt. Deze optie wordt met name interessant en bruikbaar als er een verschil is in tarief tussen leveren en terugleveren. Bijvoorbeeld als je niet meer kunt salderen. Maar ook bij de strategie "nul op de meter", zal het programma vaker van deze mogelijkheid gebruik willen maken. 
    * solar lijst van pv installaties die direct invoeden op je batterij (mppt)<br>
      Per pv installatie geef je de volgende gegevens op:
        * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
@@ -387,7 +381,7 @@ stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe y
      de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
      (of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
            
-**solar** 
+### **solar**<br> 
   Lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie<br>
   Per pv installatie geef je de volgende gegevens op:
 * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
@@ -398,40 +392,37 @@ stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe y
 de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
 (of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
  
-**electric vehicle** 
+### **electric vehicle**<br> 
   Dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. 
     Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege lijst of een of meer auto's
    * name: de naam van de auto (komt straks terug in rapportages)
    * capacity: capaciteit batterij in kWh   
    * entity position: entiteit die aangeeft of de auto "thuis" (home) is  
-   * entity max amperage: entiteit die het max aantal amperes aangeeft waarmee kan worden geladen  
+   * entity max amperage: entiteit die het max aantal amperes aangeeft waarmee kan worden geladen
+   * charge three phase: of de EV met drie fasen wordt geleden  
    * entity actual level: entiteit die aangeeft hoe ver de auto is geladen (in %)  
    * entity plugged in: entiteit die aangeeft of de auto is ingeplugged  
    * charge scheduler: oplaad scheduler  
-   * entity set level: entiteit van een input help die aangeeft tot welk niveau moet worden geladen in %  
-   * entity ready time: entiteit van een input tijd hoe laat de auto op het gewenste niveau moet zijn  
+     * entity set level: entiteit van een input help die aangeeft tot welk niveau moet worden geladen in %  
+     * entity ready time: entiteit van een input tijd hoe laat de auto op het gewenste niveau moet zijn  
    * charge switch: entiteit waarmee het laden aan/uit kan worden gezet 
 
- **tibber** 
+ ### **tibber**<br>
  * api url : url van de api van tibber  
  * api_token : het token van de api van tibber  
   Deze vraag je als volgt op:  
    * log in met je account op https://developer.tibber.com/explorer  
    * de token staat boven onder de balk 
  
- **scheduler** 
+ ### **scheduler**<br>
  Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
  De volgende taken kunnen worden gepland:
    * get_meteo_data: ophalen van meteo gegevens bij meteoserver  
    * get_tibber_data: ophalen van verbruiks- en productiegegevens per uur bij tibber  
    * get_day_ahead_prices: ophalen van day ahead prijzen bij nordpool cq entsoe  
-   * calc_optimum: bereken de inzet batterij, boiler en auto voor de komende uren,  
-            de inzet van het lopende uur wordt doorgezet naar de betreffende apparaten (tenzij het programma is 
-          gestart met de parameter debug)<br/>
+   * calc_optimum: bereken de inzet batterij, boiler en auto voor de komende uren, de inzet van het lopende uur wordt doorgezet naar de betreffende apparaten (tenzij het programma is gestart met de parameter debug)<br/>
 
-De key heeft het formaat van "uumm": uu is het uur, mm is de minuut  
-de uren en minuten zijn ofwel een twee cijferig getal of XX  
-ingeval van XX zal de taak ieder uur cq iedere minuut worden uitgevoerd.<br/>
+De key heeft het formaat van "uumm": uu is het uur, mm is de minuut de uren en minuten zijn ofwel een twee cijferig getal of XX ingeval van XX zal de taak ieder uur cq iedere minuut worden uitgevoerd.<br/>
 Bijvoorbeeld : <br/>
 `"0955": "get_meteo_data"`: de meteodata worden opgehaald om 9 uur 55<br/>
 `"1255": "get_day_ahead_prices"`: haal de actuele prijzen op op 12 uur 55<br>
