@@ -1,7 +1,7 @@
 # DAY AHEAD
 
 ## Inleiding
-Het programma Day Ahead voert de volgende acties, berekeningen en bewerkingen uit:
+Het programma Day Ahead voert de volgende acties, berekeningen en bewerkingen uit: 
 
 * ophalen dynamische energie tarieven bij Entsoe en/of NordPool
 * ophalen van je verbruiksgevens van de vorige dag(en) bij Tibber
