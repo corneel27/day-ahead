@@ -784,22 +784,24 @@ class DayAheadOpt(hass.Hass):
         #settings
         model.max_gap = 0.05
         model.max_nodes = 500
+
         # kosten optimalisering
-        minimize_cost = self.strategy["minimize cost"].lower() == "true"
-        minimize_delivery = self.strategy["minimize delivery"].lower() == "true"
-        combine_min_cost_del = self.strategy["combine minimize cost delivery"].lower() == "true"
+        strategy = self.strategy["choice"].lower()
+        # possible choices are "minimize cost | minimize consumption | combine minimize cost consumption",
+        #minimize_delivery = == "minimize consumption"
+        #combine_min_cost_del = self.strategy.lower() == "combine minimize cost consumption"
         cost_marge_combination = 0
-        if combine_min_cost_del:
+        if strategy == "combine minimize cost consumption":
             cost_marge_combination = float(self.strategy["cost marge combination"])
-        if minimize_cost:
+        if strategy == "minimize cost":
             strategie = 'minimale kosten'     
             model.objective = minimize(cost)
             model.optimize()
-        elif minimize_delivery:
+        elif strategy == "minimize consumption":
             strategie = 'minimale levering'     
             model.objective = minimize(delivery)
             model.optimize()
-        elif combine_min_cost_del:
+        elif strategy == "combine minimize cost consumption":
             #optimize minimaliseer levering
             strategie = 'gecombineerd'     
             model.objective = minimize(cost)

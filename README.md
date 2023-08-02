@@ -285,17 +285,18 @@ Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het 
 ### **strategy**<br>
 Het programma kent drie strategieën die je kunt inzetten om het voor jou optimale energieverbruik
 en teruglevering te realiseren.<br>
-Je kiest er één uit door daar **True** achter in te vullen.
+Je kiest er één uit de betreffende naam in te vullen bij "choice"
+Bijvoorbeeld "choice": "minimize cost"<br>
 De drie strategieën zijn:
-  * minimize cost: True/False<br>
+  * minimize cost<br>
     Als je deze kiest worden je batterij en je verbruiken zo ingezet dat deze leiden tot de laagste 
     kosten (= hoogste opbrengst)
-  * minimize delivery: True/False<br>
+  * minimize consumption<br>
     Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter"
-  * combine minimize cost delivery: True/False<br>
+  * combine minimize cost consumption:<br>
     Hiermee worden de twee bovenstaande strategieën gecombineerd tot een nieuwe hybride strategie, 
     waarbij enerzijds wordt gestreefd naar lage kosten maar ook naar "nul op de meter".
-    Er is een parameter die je moet invullen om in deze strategie tot een oplossing te komen:
+    Er is een extra parameter die je moet invullen om in deze strategie tot een oplossing te komen:
    * cost marge combination: dit is het "verlies" dat je maximaal accepteert om tot een "nul op de meter"-oplossing te komen.
 
 ### **boiler**<br>

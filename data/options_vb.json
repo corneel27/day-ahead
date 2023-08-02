@@ -75,10 +75,8 @@
     0.16
   ],
   "graphical backend": "Gtk3Agg",
-  "strategy": {
-    "minimize cost" : "True",
-    "minimize delivery": "False",
-    "combine minimize cost delivery": "False",
+ "strategy": {
+    "choice": "minimize cost",
     "cost marge combination": 1
   },
   "boiler": {
