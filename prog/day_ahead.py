@@ -801,15 +801,15 @@ class DayAheadOpt(hass.Hass):
             model.optimize()
             min_delivery = max(0, delivery.x)
             print("Ronde 1")
-            print("Kosten (euro): ", cost.x)
-            print("Levering (kWh): ", delivery.x)
+            print("Kosten (euro): {:6.2f}".format(cost.x))
+            print("Levering (kWh): {:6.2f}".format(delivery.x))
             model += (delivery <= min_delivery)
             #model += (cost <= min_cost + cost_marge_combination)
             model.objective = minimize(cost)
             model.optimize()
             print("Ronde 2")
-            print("Kosten (euro): ", cost.x)
-            print("Levering (kWh): ", delivery.x)
+            print("Kosten (euro): {:6.2f}".format(cost.x))
+            print("Levering (kWh): {:6.2f}".format(delivery.x))
         else:
             print("Kies een strategie in options")
             strategie = 'niet gekozen'     
@@ -878,7 +878,7 @@ class DayAheadOpt(hass.Hass):
             print("Niet geoptimaliseerd, kosten met reguliere tarieven: {:6.2f}".format(old_cost_gc))
             print("Niet geoptimaliseerd, kosten met day ahead tarieven: {:6.2f}".format(old_cost_da))
             print("Geoptimaliseerd, kosten met day ahead tarieven: {:6.2f}".format(cost.x))
-            print("Levering (kWh): ", delivery.x)
+            print("Levering (kWh): {:6.2f}".format(delivery.x))
             if self.boiler_present:
                 print("Waarde boiler om 23 uur: {:6.2f}".format(
                     (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (spec_heat_boiler / (3600 * cop_boiler))),
@@ -1222,7 +1222,7 @@ class DayAheadOpt(hass.Hass):
             axis[1].set_xticks(ind, labels=uur)
             axis[1].xaxis.set_major_locator(ticker.MultipleLocator(2))
             axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-            axis[1].set_title("Geoptimaliseerd: " + strategie)
+            axis[1].set_title("Day Ahead geoptimaliseerd: " + strategie)
 
             ln1 = []
             line_styles = ["solid", "dashed", "dotted"]
