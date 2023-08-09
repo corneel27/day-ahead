@@ -148,7 +148,7 @@ class DayAheadOpt(hass.Hass):
         '''
         result = {"consumption": consumption, "production": production}
 
-        print(result)
+#        print(result)
         return result
 
     def calc_optimum(self, show_graph=False):
@@ -225,8 +225,8 @@ class DayAheadOpt(hass.Hass):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             taxes_t = get_value_from_dict(dag_str, taxes_t_def)
             btw = get_value_from_dict(dag_str, btw_def)
-            price_l = (row.da_price + taxes_l + ol_l) * (1 + btw / 100)
-            price_t = (row.da_price + taxes_t + ol_t) * (1 + btw / 100)
+            price_l = round((row.da_price + taxes_l + ol_l) * (1 + btw / 100), 5)
+            price_t = round((row.da_price + taxes_t + ol_t) * (1 + btw / 100), 5)
             pl.append(price_l)
             pt.append(price_t)
             # tarief teruglevering zonder eb en btw
@@ -809,13 +809,13 @@ class DayAheadOpt(hass.Hass):
             min_cost = cost.x
             print("Ronde 1")
             print("Kosten (euro): ", min_cost)
-            print("Levering (kWh): ", delivery.x)
+            print("Levering (kWh): {:6.2f}".format(delivery.x))
             model += (cost <= min_cost + cost_marge_combination)
             model.objective = minimize(delivery)
             model.optimize()
             print("Ronde 2")
             print("Kosten (euro): ", cost.x)
-            print("Levering (kWh): ", delivery.x)
+            print("Levering (kWh): {:6.2f}".format(delivery.x))
         else:
             print("Kies een strategie in options")
             strategie = 'niet gekozen'     
@@ -887,7 +887,7 @@ class DayAheadOpt(hass.Hass):
             print("Niet geoptimaliseerd, kosten met reguliere tarieven: {:6.2f}".format(old_cost_gc))
             print("Niet geoptimaliseerd, kosten met day ahead tarieven: {:6.2f}".format(old_cost_da))
             print("Geoptimaliseerd, kosten met day ahead tarieven: {:6.2f}".format(cost.x))
-            print("Levering (kWh): ", delivery.x)
+            print("Levering (kWh): {:6.2f}".format(delivery.x))
             if self.boiler_present:
                 print("Waarde boiler om 23 uur: {:6.2f}".format(
                     (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (spec_heat_boiler / (3600 * cop_boiler))),
