@@ -287,7 +287,7 @@ Het programma kent twee strategieën die je kunt inzetten om het voor jou optima
 en teruglevering te realiseren.<br>
 Je kiest er één uit de betreffende naam in te vullen:
 Bijvoorbeeld "strategy": "minimize cost"<br>
-De drie strategieën zijn:
+De twee strategieën zijn:
   * minimize cost<br>
     Als je deze kiest worden je batterij en je verbruiken zo ingezet dat deze leiden tot de laagste 
     kosten (= hoogste opbrengst)
