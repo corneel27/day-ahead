@@ -75,10 +75,7 @@
     0.16
   ],
   "graphical backend": "Gtk3Agg",
- "strategy": {
-    "choice": "minimize cost",
-    "cost marge combination": 1
-  },
+  "strategy": "minimize cost",
   "boiler": {
     "boiler present": "True",
     "entity actual temp.": "sensor.boiler_gemeten",
