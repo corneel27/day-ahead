@@ -9,8 +9,8 @@ class DBmanagerObj(object):
     """
 
     def __init__(self, db_name,
-                 db_server=None, db_user=None, db_password=None,
-                 db_port=None, unix_socket=None, charset='utf8mb4'):
+                 db_server = None, db_user = None, db_password = None,
+                 db_port = None, unix_socket = None, charset = 'utf8mb4'):
         """
         Initializes a DBManager object
         Args:
@@ -91,8 +91,8 @@ class DBmanagerObj(object):
     """
     
         
-    def readDBtable(self, tablename, limit=None, selectOptions=None,
-                    filterOptions=None, orderOptions=None):
+    def readDBtable(self, tablename, limit = None, selectOptions = None,
+                    filterOptions = None, orderOptions = None):
         """
         Read data from a table in the database can choose to read only some
         specific fields
@@ -111,22 +111,22 @@ class DBmanagerObj(object):
 
         sqlQuery = 'SELECT '
         if selectOptions:
-            sqlQuery = sqlQuery + selectOptions
+            sqlQuery += selectOptions
         else:
-            sqlQuery = sqlQuery + '*'
+            sqlQuery += '*'
 
-        sqlQuery = sqlQuery + ' FROM ' + tablename + ' '
+        sqlQuery += ' FROM ' + tablename + ' '
 
         if filterOptions:
-            sqlQuery = sqlQuery + ' WHERE ' + filterOptions
+            sqlQuery += ' WHERE ' + filterOptions
 
         if orderOptions:
-            sqlQuery = sqlQuery + ' ORDER BY ' + orderOptions
+            sqlQuery += ' ORDER BY ' + orderOptions
 
         if limit:
-            sqlQuery = sqlQuery + ' LIMIT ' + str(limit)
+            sqlQuery += ' LIMIT ' + str(limit)
 
-        sqlQuery = sqlQuery + ';'
+        sqlQuery += ';'
 
 
         try:
@@ -137,7 +137,7 @@ class DBmanagerObj(object):
             # Return the pandas dataframe. Note that numbers in text format
             # are not converted to
             return pd.read_sql(sqlQuery, con=self._conn,
-                               coerce_float=False)
+                               coerce_float = False)
 
         except Exception as E:
             print(str(E))
@@ -155,7 +155,7 @@ class DBmanagerObj(object):
         return tbnames
 
     def getColumnNames(self, table_name):
-        sql = "SHOW `columns` FROM `"+table_name+"`;"
+        sql = "SHOW `columns` FROM `" + table_name+"`;"
         self._c.execute(sql)
         col_names = [el[0] for el in self._c.fetchall()]
         return col_names
@@ -233,7 +233,7 @@ class DBmanagerObj(object):
 
         return
 
-    def upsert(self, tablename, keyflds, df, robust=True):
+    def upsert(self, tablename, keyflds, df, robust = True):
 
         """
         Update records of a DB table with the values in the df
@@ -339,7 +339,7 @@ class DBmanagerObj(object):
                 # record is present
                 variabel_id = rows[0][0]
             query = "SELECT `values`.`id` FROM `values` WHERE " \
-                    "`values`.`variabel` = "+str(variabel_id)+" and `time` = '" + time + "';"
+                    "`values`.`variabel` = " + str(variabel_id) + " and `time` = '" + time + "';"
             if debug:
                 print(query)
             self._c.execute(query)
@@ -378,14 +378,14 @@ class DBmanagerObj(object):
         self._conn.commit()
 
         # Return the pandas dataframe. Note that numbers in text format are not converted
-        return pd.read_sql(sqlQuery, con=self._conn, coerce_float=False)
+        return pd.read_sql(sqlQuery, con=self._conn, coerce_float = False)
 
     def getColumnPrognoseData(self, column, start, end):
         sqlQuery = "SELECT `time`, `value` from prognose " \
                    "where `code` = '" + column + "' and time >= " + str(start) + " and time < " + str(end) + ";"
         # print (sqlQuery)
         self._conn.commit()
-        return pd.read_sql(sqlQuery, con=self._conn, coerce_float=False)
+        return pd.read_sql(sqlQuery, con = self._conn, coerce_float = False)
 
     def run_select_query(self, sql):
         self._conn.commit()

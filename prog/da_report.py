@@ -20,38 +20,38 @@ class Report ():
         db_da_port = int(self.config.get(['database da', "port"]))
         db_da_user = self.config.get(['database da', "username"])
         db_da_password = self.config.get(['database da', "password"])
-        self.db_da = DBmanagerObj(db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
-                                  db_user=db_da_user, db_password=db_da_password)
+        self.db_da = DBmanagerObj(db_name = db_da_name, db_server = db_da_server, db_port = db_da_port,
+                                  db_user = db_da_user, db_password = db_da_password)
         db_ha_name = self.config.get(['database ha', "database"])
         db_ha_server = self.config.get(['database ha', "server"])
         db_ha_port = int(self.config.get(['database ha', "port"]))
         db_ha_user = self.config.get(['database ha', "username"])
         db_ha_password = self.config.get(['database ha', "password"])
-        self.db_ha = DBmanagerObj(db_name=db_ha_name, db_server=db_ha_server, db_port=db_ha_port,
-                                  db_user=db_ha_user, db_password=db_ha_password)
+        self.db_ha = DBmanagerObj(db_name = db_ha_name, db_server = db_ha_server, db_port = db_ha_port,
+                                  db_user = db_ha_user, db_password = db_ha_password)
 
         self.prices_options = self.config.get(["prices"])
         self.report_options = self.config.get(["report"])
         #vandaag
         now = datetime.datetime.now()
         vanaf = datetime.datetime(now.year,now.month,now.day)
-        tot = vanaf + datetime.timedelta(days=1)
+        tot = vanaf + datetime.timedelta(days = 1)
         interval = "uur"
         self.periodes.update(create_dict("vandaag", vanaf, tot, interval))
         #gisteren
         tot = vanaf
-        vanaf = vanaf + datetime.timedelta(days=-1)
+        vanaf += datetime.timedelta(days = -1)
         self.periodes.update(create_dict("gisteren", vanaf, tot, interval))
         #deze week
-        tot = vanaf + datetime.timedelta(days=2)
+        tot = vanaf + datetime.timedelta(days = 2)
         if tot.weekday() == 0:
             delta =7
         else:
             delta = tot.weekday()
-        vanaf = tot + datetime.timedelta(days= - delta)
+        vanaf = tot + datetime.timedelta(days = - delta)
         self.periodes.update(create_dict("deze week", vanaf, tot, "dag"))
         #vorige week
-        vanaf = vanaf + datetime.timedelta(days = -7)
+        vanaf += datetime.timedelta(days = -7)
         tot = vanaf + datetime.timedelta(days = 7)
         self.periodes.update(create_dict("vorige week", vanaf, tot, "dag"))
         #deze maand
@@ -60,7 +60,7 @@ class Report ():
         self.periodes.update(create_dict("deze maand", vanaf, tot, "dag"))
         #vorige maand
         tot = vanaf
-        vanaf = vanaf + relativedelta(months=-1)
+        vanaf += relativedelta(months=-1)
         self.periodes.update(create_dict("vorige maand", vanaf, tot, "dag"))
         #dit jaar
         vanaf = datetime.datetime(now.year,1,1)
@@ -331,10 +331,10 @@ class Report ():
         #fi_df.set_index([columns[0][0]])
         fi_df = fi_df.groupby([first_col], as_index=False).agg({"Verbruik":'sum', "Productie":'sum',
             "Netto verbr.":'sum', "Kosten":'sum', "Opbrengst":'sum', "Netto kosten":'sum'})
-        fi_df['Tarief verbr.'] = fi_df.apply(lambda row: row.Kosten / row.Verbruik if row.Verbruik != 0.0 else row.Verbruik, axis=1)
-        fi_df['Tarief prod.'] = fi_df.apply(lambda row: row.Opbrengst / row.Productie if row.Productie != 0.0 else row.Productie, axis=1)
+        fi_df['Tarief verbr.'] = fi_df.apply(lambda row: row.Kosten / row.Verbruik if row.Verbruik != 0.0 else row.Verbruik, axis = 1)
+        fi_df['Tarief prod.'] = fi_df.apply(lambda row: row.Opbrengst / row.Productie if row.Productie != 0.0 else row.Productie, axis = 1)
         if active_view == "tabel":
-            fi_df.loc["Total"] = fi_df.sum(axis=0, numeric_only=True)
+            fi_df.loc["Total"] = fi_df.sum(axis=0, numeric_only = True)
             fi_df.at[fi_df.index[-1], first_col] = "Totaal"
             row = fi_df.iloc[-1]
             fi_df.at[fi_df.index[-1], "Tarief verbr."] = row.Kosten/row.Verbruik

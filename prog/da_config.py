@@ -18,7 +18,7 @@ class Config:
         if str(result).lower().find("!secret", 0) == 0:
             result = self.secrets[result[8:]]
         if type(result) is dict:
-            if len(keys)>1:
+            if len(keys) > 1:
                 result = self.get(keys[1:], result)
             else:
                 for key in result:

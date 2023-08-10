@@ -29,19 +29,19 @@ class GraphBuilder ():
             else:
                 label = serie["column"].capitalize()
             if type=="bar":
-                axis.bar(ind, data_array, label=label, color=color)
+                axis.bar(ind, data_array, label=label, color = color)
             elif type=="line":
                 linestyle = serie["linestyle"]
-                axis.plot(ind, data_array, label=label, linestyle=linestyle, color=color)
+                axis.plot(ind, data_array, label = label, linestyle = linestyle, color = color)
             else: #stacked bar
                 if "negativ" in serie:
                     data_array = np.negative(data_array)
                 sum = np.sum(data_array)
                 if sum > 0:
-                    axis.bar(ind, data_array, bottom=stacked_plus, label=label, color=color)
+                    axis.bar(ind, data_array, bottom = stacked_plus, label = label, color = color)
                     stacked_plus = stacked_plus + data_array
                 elif sum < 0:
-                    axis.bar(ind, data_array, bottom=stacked_neg, label=label, color=color)
+                    axis.bar(ind, data_array, bottom = stacked_neg, label = label, color = color)
                     stacked_neg = stacked_neg + data_array
 
         xlabels = df[options["haxis"]["values"]].values.tolist()

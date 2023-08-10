@@ -28,9 +28,9 @@ class DA_Prices:
             end = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
         else:
             if now.hour < 12:
-                end = start + datetime.timedelta(days=1)
+                end = start + datetime.timedelta(days = 1)
             else:
-                end = start + datetime.timedelta(days=2)
+                end = start + datetime.timedelta(days = 2)
 
         if len(sys.argv) <= 2:
             present = self.db_da.get_time_latest_record("da")

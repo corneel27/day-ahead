@@ -203,7 +203,7 @@ class Meteo:
 
         self.db_da.savedata(df_db)
         graphs.make_graph_meteo(df1, file="../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
-                                show=show_graph)
+                                show = show_graph)
 
         '''
         url = "https://api.forecast.solar/estimate/watthours/"+str(self.latitude)+"/"+str(self.longitude)+"/45/5/5.5"
