@@ -4,17 +4,18 @@ import urllib.parse
 import datetime
 import html
 import sys, io
-from http.server import HTTPServer, CGIHTTPRequestHandler# Make sure the server is created at current directory
+from http.server import HTTPServer, CGIHTTPRequestHandler # Make sure the server is created at current directory
 
 class ModifiedHTTPRequestHandler(CGIHTTPRequestHandler):
     def list_directory(self, path):
-        """Helper to produce a directory listing (absent index.html).
+        """
+        Helper to produce a directory listing (absent index.html).
 
         Return value is either a file object, or None (indicating an
         error).  In either case, the headers are sent, making the
         interface the same as for send_head().
-
         """
+        
         try:
             list = os.listdir(path)
         except OSError:
@@ -22,14 +23,14 @@ class ModifiedHTTPRequestHandler(CGIHTTPRequestHandler):
                 HTTPStatus.NOT_FOUND,
                 "No permission to list directory")
             return None
-        list.sort(key=lambda a: os.path.getmtime(a), reverse=True)
+        list.sort(key = lambda a: os.path.getmtime(a), reverse = True)
         r = []
         try:
             displaypath = urllib.parse.unquote(self.path,
-                                               errors='surrogatepass')
+                                               errors = 'surrogatepass')
         except UnicodeDecodeError:
             displaypath = urllib.parse.unquote(path)
-        displaypath = html.escape(displaypath, quote=False)
+        displaypath = html.escape(displaypath, quote = False)
         enc = sys.getfilesystemencoding()
         title = f'Directory listing for {displaypath}'
         r.append('<!DOCTYPE HTML>')
@@ -53,8 +54,8 @@ class ModifiedHTTPRequestHandler(CGIHTTPRequestHandler):
             r.append('<li>%s <a href="%s">%s</a></li>'
                     % (file_time.strftime("%Y-%m-%d, %H:%M"),
                        urllib.parse.quote(linkname,
-                                          errors='surrogatepass'),
-                       html.escape(displayname, quote=False)))
+                                          errors = 'surrogatepass'),
+                       html.escape(displayname, quote = False)))
         r.append('</ul>\n<hr>\n</body>\n</html>\n')
         encoded = '\n'.join(r).encode(enc, 'surrogateescape')
         f = io.BytesIO()
@@ -75,7 +76,7 @@ print(s)
 
 os.chdir('../data/images')
 # Create server object listening the port 80
-server_object = HTTPServer(server_address=('', 8012), RequestHandlerClass=ModifiedHTTPRequestHandler)
+server_object = HTTPServer(server_address = ('', 8012), RequestHandlerClass = ModifiedHTTPRequestHandler)
 # Start the web server
 server_object.serve_forever()
 
