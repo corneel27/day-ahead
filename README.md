@@ -1,7 +1,7 @@
-# DAY AHEAD
+# DAY AHEAD OPTIMALISERING
 
 ## Inleiding
-Het programma Day Ahead voert de volgende acties, berekeningen en bewerkingen uit: 
+Het programma Day Ahead Optimalisering voert de volgende acties, berekeningen en bewerkingen uit: 
 
 * ophalen dynamische energie tarieven bij Entsoe en/of NordPool
 * ophalen van je verbruiksgevens van de vorige dag(en) bij Tibber
@@ -10,7 +10,7 @@ Het programma Day Ahead voert de volgende acties, berekeningen en bewerkingen ui
 ---
 ## Optimalisering
 De optimalisering van het verbruik gebeurt met behulp van een generiek wiskundig algoritme
-met de naam "mixed-integer lineair programming". Meer daarover kun je lezen op de 
+met de naam "Mixed-Integer lineair Programming". Meer daarover kun je lezen op de 
 website die ook het algoritme en allerlei bijbehorende hulpmiddelen aanbiedt:
 https://python-mip.com/
 

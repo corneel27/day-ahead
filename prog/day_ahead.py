@@ -1263,7 +1263,7 @@ class DayAheadOpt(hass.Hass):
         old_stdout = sys.stdout
         log_file = open("../data/log/" + task + datetime.datetime.now().strftime("%H%M") + ".log", "w")
         sys.stdout = log_file
-        print("MIP gestart:", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'), ': ', task)
+        print("Day Ahead Optimalistatie gestart:", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'), ': ', task)
         print("Locatie: ", str(self.config.get(["latitude"])) + ':' + str(self.config.get(["longitude"])))
         getattr(self, task)()
         sys.stdout = old_stdout
