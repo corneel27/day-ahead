@@ -35,7 +35,7 @@ class DayAheadOpt(hass.Hass):
         # print(resp.text)
         self.config.set("latitude", resp_dict['latitude'])
         self.config.set("longitude", resp_dict['longitude'])
-        print("MIP gestart op ", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+        print("Day-ahead optimalisering gestart op ", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
         db_da_name = self.config.get(['database da', "database"])
         db_da_server = self.config.get(['database da', "server"])
         db_da_port = int(self.config.get(['database da', "port"]))
@@ -64,6 +64,10 @@ class DayAheadOpt(hass.Hass):
         self.base_cons = self.config.get(["baseload"])
         self.heater_present = False
         self.boiler_present = False
+
+    def day_ahead_berekening_uitvoeren(self):
+        self.calc_optimum()
+        return
 
     def get_meteo_data(self, show_graph: bool = False):
         self.db_da.connect()
@@ -147,7 +151,8 @@ class DayAheadOpt(hass.Hass):
         self.db_ha.disconnect()
         '''
         result = {"consumption": consumption, "production": production}
-#        print(result)
+
+        print(result)
         return result
 
     def calc_optimum(self, show_graph=False):
@@ -224,8 +229,8 @@ class DayAheadOpt(hass.Hass):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             taxes_t = get_value_from_dict(dag_str, taxes_t_def)
             btw = get_value_from_dict(dag_str, btw_def)
-            price_l = round((row.da_price + taxes_l + ol_l) * (1 + btw / 100), 5)
-            price_t = round((row.da_price + taxes_t + ol_t) * (1 + btw / 100), 5)
+            price_l = (row.da_price + taxes_l + ol_l) * (1 + btw / 100)
+            price_t = (row.da_price + taxes_t + ol_t) * (1 + btw / 100)
             pl.append(price_l)
             pt.append(price_t)
             # tarief teruglevering zonder eb en btw
@@ -785,44 +790,31 @@ class DayAheadOpt(hass.Hass):
         model.max_nodes = 500
 
         # kosten optimalisering
-        strategy = self.strategy["choice"].lower()
-        # possible choices are "minimize cost | minimize consumption | combine minimize cost consumption",
-        #minimize_delivery = == "minimize consumption"
-        #combine_min_cost_del = self.strategy.lower() == "combine minimize cost consumption"
-        cost_marge_combination = 0
-        if strategy == "combine minimize cost consumption":
-            cost_marge_combination = float(self.strategy["cost marge combination"])
+        strategy = self.strategy.lower()
         if strategy == "minimize cost":
-            strategie = 'minimale kosten'     
+            strategie = 'minimale kosten'
             model.objective = minimize(cost)
             model.optimize()
         elif strategy == "minimize consumption":
-            strategie = 'minimale levering'     
+            strategie = 'minimale levering'
             model.objective = minimize(delivery)
             model.optimize()
-        elif strategy == "combine minimize cost consumption":
-            #optimize minimaliseer levering
-            strategie = 'gecombineerd'     
+            min_delivery = max(0, delivery.x)
+            print("Ronde 1")
+            print("Kosten (euro): {:6.2f}".format(cost.x))
+            print("Levering (kWh): {:6.2f}".format(delivery.x))
+            model += (delivery <= min_delivery)
+            #model += (cost <= min_cost + cost_marge_combination)
             model.objective = minimize(cost)
             model.optimize()
-            min_cost = cost.x
-            print("Ronde 1")
-            print("Kosten (euro): ", min_cost)
-            print("Levering (kWh): {:6.2f}".format(delivery.x))
-            model += (cost <= min_cost + cost_marge_combination)
-            model.objective = minimize(delivery)
-            model.optimize()
             print("Ronde 2")
-            print("Kosten (euro): ", cost.x)
+            print("Kosten (euro): {:6.2f}".format(cost.x))
             print("Levering (kWh): {:6.2f}".format(delivery.x))
         else:
             print("Kies een strategie in options")
             strategie = 'niet gekozen'     
             return
         print("Strategie: " + strategie + "\n") 
-
-        # optimizing
-        #model.optimize()
 
         if model.num_solutions: #er is een oplossing
             #afdrukken van de resultaten
@@ -1230,7 +1222,7 @@ class DayAheadOpt(hass.Hass):
             axis[1].set_xticks(ind, labels=uur)
             axis[1].xaxis.set_major_locator(ticker.MultipleLocator(2))
             axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-            axis[1].set_title("MIP geoptimaliseerd: " + strategie)
+            axis[1].set_title("Day Ahead geoptimaliseerd: " + strategie)
 
             ln1 = []
             line_styles = ["solid", "dashed", "dotted"]

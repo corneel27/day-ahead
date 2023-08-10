@@ -283,21 +283,21 @@ Je hebt de keuze uit de volgende backends: MacOSX, QtAgg, GTK4Agg, Gtk3Agg, TkAg
 Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het programma het zelf uit.
 
 ### **strategy**<br>
-Het programma kent drie strategieën die je kunt inzetten om het voor jou optimale energieverbruik
+Het programma kent twee strategieën die je kunt inzetten om het voor jou optimale energieverbruik
 en teruglevering te realiseren.<br>
-Je kiest er één uit de betreffende naam in te vullen bij "choice"
-Bijvoorbeeld "choice": "minimize cost"<br>
-De drie strategieën zijn:
+Je kiest er één uit de betreffende naam in te vullen:
+Bijvoorbeeld "strategy": "minimize cost"<br>
+De twee strategieën zijn:
   * minimize cost<br>
     Als je deze kiest worden je batterij en je verbruiken zo ingezet dat deze leiden tot de laagste 
     kosten (= hoogste opbrengst)
+Als voorbeeld levert deze het volgende resultaat:
+  ![img_3.png](images/img_3.png)
   * minimize consumption<br>
-    Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter"
-  * combine minimize cost consumption:<br>
-    Hiermee worden de twee bovenstaande strategieën gecombineerd tot een nieuwe hybride strategie, 
-    waarbij enerzijds wordt gestreefd naar lage kosten maar ook naar "nul op de meter".
-    Er is een extra parameter die je moet invullen om in deze strategie tot een oplossing te komen:
-   * cost marge combination: dit is het "verlies" dat je maximaal accepteert om tot een "nul op de meter"-oplossing te komen.
+    Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter" bij zo laag mogelijke kosten.
+Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
+  ![img_4.png](images/img_4.png)
+
 
 ### **boiler**<br>
 Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
