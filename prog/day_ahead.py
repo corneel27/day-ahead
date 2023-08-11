@@ -229,8 +229,8 @@ class DayAheadOpt(hass.Hass):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             taxes_t = get_value_from_dict(dag_str, taxes_t_def)
             btw = get_value_from_dict(dag_str, btw_def)
-            price_l = (row.da_price + taxes_l + ol_l) * (1 + btw / 100)
-            price_t = (row.da_price + taxes_t + ol_t) * (1 + btw / 100)
+            price_l = round((row.da_price + taxes_l + ol_l) * (1 + btw / 100), 5)
+            price_t = round((row.da_price + taxes_t + ol_t) * (1 + btw / 100), 5)
             pl.append(price_l)
             pt.append(price_t)
             # tarief teruglevering zonder eb en btw
