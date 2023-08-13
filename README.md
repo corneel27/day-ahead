@@ -1,7 +1,7 @@
 # DAY AHEAD OPTIMALISERING
 
 ## Inleiding
-Het programma Day Ahead Optimalisering voert de volgende acties, berekeningen en bewerkingen uit: 
+Het programma Day Ahead Optimalisering (DAO) voert de volgende acties, berekeningen en bewerkingen uit: 
 
 * ophalen dynamische energie tarieven bij Entsoe en/of NordPool
 * ophalen van je verbruiksgevens van de vorige dag(en) bij Tibber
@@ -72,7 +72,7 @@ Of in tabelvorm:
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.8 of hoger. <br/>
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
-`pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask`
+`pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask websocket`
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
 
@@ -164,6 +164,8 @@ Voert de "optimaliseringsberekening" uit:
 Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd. Dit wordt ook bereikt door het programma zonder parameter op te starten.<br>
 Voorbeeld: `python3 day_ahead.py`<br>
 Wil je dat het programma in de achtergrond blijft draaien dan plaats je er een '&' teken achter: `python3 day_ahead.py &`<br>
+Als het programma in "scheduler-mode" draait wordt er een websocket geopend naar Home Assistant
+en kan met een zelf te kiezen trigger-entity (zie hierna) een optimaliseringsberekening worden gestart.
 
 ---
 ## Instellingen<br>
@@ -298,6 +300,13 @@ Als voorbeeld levert deze het volgende resultaat:
 Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
   ![img_4.png](images/img_4.png)
 
+### **trigger entity**
+In de zogenaamde scheduler-mode van het programma wordt er een websocket geopend naar Home Assistant
+en daarmee wordt een statusverandering van een zelf te kiezen "trigger entity" waargenomen. Deze statusverandering
+zorgt op zijn beurt voor het starten van een optimaliseringsberekening.
+Het best kies voor je een helper-entity in de vorm van een input_button.
+Deze kun je handmatig in HA aanklikken, maar je kunt ook diverse automatiseringen die de input_button activeren.
+Bijvoorbeeld als je met je EV thuiskomt en/of deze aansluit op het elektriciteitsnet.
 
 ### **boiler**<br>
 Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler

@@ -16,6 +16,9 @@ from da_config import Config
 from da_meteo import Meteo
 from da_prices import DA_Prices
 from db_manager import DBmanagerObj
+import websocket
+import threading
+
 
 class DayAheadOpt(hass.Hass):
 
@@ -23,11 +26,13 @@ class DayAheadOpt(hass.Hass):
         utils.make_data_path()
         self.debug = False
         self.config = Config(file_name)
-        self.hassurl = self.config.get(['homeassistant', 'url'])
-        self.token = self.config.get(['homeassistant', 'token'])
-        super().__init__(hassurl=self.hassurl, token=self.token)
+        self.ip_adress = self.config.get(['homeassistant', 'ip adress'])
+        self.ip_port = self.config.get(['homeassistant', 'ip port'])
+        self.hassurl = "http://" + self.ip_adress + ":" + str(self.ip_port) + "/"
+        self.hasstoken = self.config.get(['homeassistant', 'token'])
+        super().__init__(hassurl=self.hassurl, token=self.hasstoken)
         headers = {
-            "Authorization": "Bearer " + self.token,
+            "Authorization": "Bearer " + self.hasstoken,
             "content-type": "application/json",
         }
         resp = get(self.hassurl + "api/config", headers=headers)
@@ -1295,8 +1300,69 @@ class DayAheadOpt(hass.Hass):
                 quit()
     '''
 
-    def scheduler(self):
+    def subscribe(self, ws: websocket) -> None:
+        """
+        set a subscription for an event in ha, defined with subscribe_triger
+        :param ws: websocket
+        """
+        trigger_entity = self.config.get(["trigger entity"])
+        subscribe_trigger = {
+            "id": 1,
+            "type": "subscribe_trigger",
+            "trigger": {
+                "platform": "state",
+                "entity_id": trigger_entity,
+            }
+        }
+        send_str = json.dumps(subscribe_trigger)
+        ws.send(send_str)
+        mess = ws.recv()
+        print(mess)
+
+
+    def unsubscribe(self, ws: websocket) -> None:
+        """
+        remove subscription
+        :param ws: websocket
+        """
+        unsubscribe_mess = {
+            "id": 3,
+            "type": "unsubscribe_events",
+            "subscription": 1
+        }
+        send_str = json.dumps(unsubscribe_mess)
+        ws.send(send_str)
+        mess = ws.recv()
+        print(mess)
+
+
+    def recieve_events(self, ws: websocket, th_event: threading.Event) -> None:
+        print('wacht op binnenkomende messages van ha')
         while True:
+            message = ws.recv()
+            print("ontv. message:" + message)
+            th_event.set()
+            time.sleep(1)
+
+
+    def scheduler(self):
+        ws = websocket.WebSocket()
+        ws.connect("ws://" + self.ip_adress + ":" + str(self.ip_port) + "/api/websocket")
+        print("websocket connect: ", ws.recv())
+        ws.send('{"type": "auth", "access_token": "' + self.hasstoken + '"}')
+        print("websocket auth: ", ws.recv())
+        th_event = threading.Event()
+        recieve_thread = threading.Thread(name="recieve thread", target=self.recieve_events, args=(ws, th_event,))
+        self.subscribe(ws)
+        th_event.clear()
+        recieve_thread.start()
+
+        while True:
+            if th_event.is_set():
+                th_event.clear()
+                print('event ontvangen')
+                print("start berekening")
+                self.run_task("calc_optimum")
             t = datetime.datetime.now()
             next_min = t - datetime.timedelta(minutes = -1, seconds = t.second, microseconds = t.microsecond)
             #            if not (self.stop_victron == None):

@@ -1,5 +1,6 @@
 { "homeassistant": {
-    "url": "http://192.168.178.36:8123/",
+    "ip adress": "192.168.178.36",
+    "ip port": 8123,
     "token": "!secret ha_api_token"
   },
   "database da": {
@@ -76,6 +77,7 @@
   ],
   "graphical backend": "Gtk3Agg",
   "strategy": "minimize cost",
+  "trigger entity": "input_button.day_ahead_berekening_uitvoeren",
   "boiler": {
     "boiler present": "True",
     "entity actual temp.": "sensor.boiler_gemeten",
