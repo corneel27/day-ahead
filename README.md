@@ -427,10 +427,13 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
  ### **scheduler**<br>
  Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
  De volgende taken kunnen worden gepland:
-   * get_meteo_data: ophalen van meteo gegevens bij meteoserver  
-   * get_tibber_data: ophalen van verbruiks- en productiegegevens per uur bij tibber  
-   * get_day_ahead_prices: ophalen van day ahead prijzen bij nordpool cq entsoe  
-   * calc_optimum: bereken de inzet batterij, boiler en auto voor de komende uren, de inzet van het lopende uur wordt doorgezet naar de betreffende apparaten (tenzij het programma is gestart met de parameter debug)<br/>
+   * **get_meteo_data**: ophalen van meteo gegevens bij meteoserver  
+   * **get_tibber_data**: ophalen van verbruiks- en productiegegevens per uur bij tibber  
+   * **get_day_ahead_prices**: ophalen van day ahead prijzen bij nordpool cq entsoe  
+   * **calc_optimum**: bereken de inzet batterij, boiler en auto voor de komende uren, de inzet van het lopende uur 
+wordt doorgezet naar de betreffende apparaten (tenzij het programma is gestart met de 
+parameter debug)<br/>
+   * **clean_data**: hiermee worden log en png bestanden in de mappen data\log\ respectievelijk data\images\ die ouder zijn 7 dagen verwijderd.
 
 De key heeft het formaat van "uumm": uu is het uur, mm is de minuut de uren en minuten zijn ofwel een twee cijferig getal of XX ingeval van XX zal de taak ieder uur cq iedere minuut worden uitgevoerd.<br/>
 Bijvoorbeeld : <br/>

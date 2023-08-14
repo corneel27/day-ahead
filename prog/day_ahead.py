@@ -1,6 +1,6 @@
 import datetime
 from pprint import pprint
-import sys
+import sys, os, fnmatch
 import time
 from requests import get
 import math
@@ -1263,6 +1263,27 @@ class DayAheadOpt(hass.Hass):
             if show_graph:
                 plt.show()
             plt.close()
+
+    def clean_data(self):
+        """
+        takes care for cleaning folders data/log and data/images
+        """
+        def clean_folder(folder:str, pattern: str):
+            current_time = time.time()
+            day = 24 * 60 * 60
+            N = 7
+            current_dir = os.getcwd()
+            os.chdir(os.path.join(os.getcwd(), folder))
+            list_files = os.listdir()
+            for f in list_files:
+                if fnmatch.fnmatch(f, pattern):
+                    creation_time = os.path.getctime(f)
+                    if (current_time - creation_time) >= N * day:
+                        os.remove(f)
+                        print('{} removed'.format(f))
+            os.chdir(current_dir)
+        clean_folder("../data/log", "*.log")
+        clean_folder("../data/images", "*.png")
 
     def run_task(self, task):
         old_stdout = sys.stdout
