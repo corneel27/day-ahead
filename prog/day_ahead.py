@@ -610,36 +610,46 @@ class DayAheadOpt(hass.Hass):
                 soc_state = 100.0
             actual_soc.append(soc_state)
             wished_level.append(float(self.get_state(self.ev_options[e]["charge scheduler"]["entity set level"]).state))
-            ready_str = self.get_state(self.ev_options[e]["charge scheduler"]["entity ready time"]).state
-            ready = datetime.datetime.strptime(ready_str, '%H:%M:%S')
-            ready = datetime.datetime(now_dt.year, now_dt.month, now_dt.day, ready.hour, ready.minute)
-            if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
-                ready = ready + datetime.timedelta(days=1)
+            ready_str = self.get_state(self.ev_options[e]["charge scheduler"]["entity ready datetime"]).state
+            if len(ready_str) > 9:
+                #dus met datum en tijd
+                ready = datetime.datetime.strptime(ready_str, '%Y-%m-%d %H:%M:%S')
+            else:
+                ready = datetime.datetime.strptime(ready_str, '%H:%M:%S')
+                ready = datetime.datetime(now_dt.year, now_dt.month, now_dt.day, ready.hour, ready.minute)
+                if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
+                    ready = ready + datetime.timedelta(days=1)
             max_ampere = self.get_state(self.ev_options[e]["entity max amperage"]).state
-            if not isinstance(max_ampere, numbers.Number):
+            try:
+                max_ampere = float(max_ampere)
+            except ValueError:
                 max_ampere = 10
-            max_ampere = float(max_ampere)
             charge_three_phase = self.ev_options[e]["charge three phase"].lower() == "true"
             if charge_three_phase:
                 max_power.append(max_ampere * 3 * 230 / 1000) # vermogen in kW
             else:
                 max_power.append(max_ampere * 230 / 1000) # vermogen in kW
-            print("EV vermogen:", max_power[e], "kW")
+            print ("\nInstellingen voor laden van EV: ", self.ev_options[e]["name"])
+            print("Laadvermogen:", max_power[e], "kW")
+            print("Klaar met laden op: ", ready.strftime('%Y-%m-%d %H:%M:%S'))
+            print("Huidig laadniveau: ", actual_soc[e], "%")
+            print("Gewenst laadniveau: ", wished_level[e], "%")
+            print("Locatie: ", ev_position[e])
+            print("Ingeplugged: ", ev_plugged_in[e])
             energy_needed.append(ev_capacity * (wished_level[e] - actual_soc[e]) / 100)  # in kWh
             time_needed = energy_needed[e] / max_power[e]  # uitgedrukt in aantal uren; bijvoorbeeld 1,5
-            hours_needed.append(math.ceil(time_needed))  # hele uren
-            #start = ready - datetime.timedelta(hours=time_needed)
+            hours_needed.append(math.ceil(time_needed))  # afgerond naar boven in hele uren
             ready_index = U
-            print("EV plugged in:", ev_plugged_in[e])
             if ev_plugged_in[e] and (ev_position[e] == "home") and (wished_level[e] > actual_soc[e]) and \
-                    ((tijd[U - 1] + datetime.timedelta(hours=1)) >= ready):
+                    ((tijd[U - 1] + datetime.timedelta(hours=1)) >= ready) and (tijd[0] < ready) :
                 for u in range(U):
                     if (tijd[u] + datetime.timedelta(hours=1)) >= ready:
                         ready_index = u
                         break
-                print("\nAuto") 
-                print(self.ev_options[e]["name"] + " klaar om: ", (1 + uur[ready_index]), "uur")  # ready index =laatste uur waarin wordt geladen
-
+            if ready_index == U:
+                print ("Er wordt niet opgeladen\n")
+            else:
+                print("Opladen wordt ingepland\n")
             ready_u.append(ready_index)
 
         charger_on = [[model.add_var(var_type=BINARY) for u in range(U)] for e in range(EV)]
@@ -663,6 +673,9 @@ class DayAheadOpt(hass.Hass):
                 for u in range(U):
                     model += c_ev[e][u] == 0
 
+        ##################################################################
+        #            salderen                                            #
+        ##################################################################
         # total consumption per hour: base_load plus accuload
         # inkoop + pv + accu_out = teruglevering + base_cons + accu_in + boiler + ev + ruimteverwarming
         # in code:  c_l + pv + accu_out = c_t + b_l + accu_in + hw + ev + rv
@@ -673,12 +686,13 @@ class DayAheadOpt(hass.Hass):
 
         # anders geschreven c_l = c_t + ct_notax + b_l + accu_in + hw + rv - pv - accu_out
         # continue variabele c consumption in kWh/h
-        # minimaal 20 kW terugleveren max 10 kW leveren
+        # minimaal 20 kW terugleveren max 20 kW leveren (3 x 25A = 17,5 kW)
+        # instelbaar maken?
         # levering
-        c_l = [model.add_var(var_type=CONTINUOUS, lb = 0, ub = 10) for u in range(U)]
+        c_l = [model.add_var(var_type=CONTINUOUS, lb = 0, ub = 20) for u in range(U)]
         # teruglevering
         c_t_total = [model.add_var(var_type=CONTINUOUS, lb = 0, ub = 20) for u in range(U)]
-        c_t_w_tax = [model.add_var(var_type=CONTINUOUS, lb = 0, ub = 10) for u in range(U)]
+        c_t_w_tax = [model.add_var(var_type=CONTINUOUS, lb = 0, ub = 20) for u in range(U)]
         c_l_on = [model.add_var(var_type=BINARY) for u in range(U)]
         c_t_on = [model.add_var(var_type=BINARY) for u in range(U)]
 

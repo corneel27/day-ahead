@@ -14,7 +14,7 @@ met de naam "Mixed-Integer lineair Programming". Meer daarover kun je lezen op d
 website die ook het algoritme en allerlei bijbehorende hulpmiddelen aanbiedt:
 https://python-mip.com/
 
-Deze implementatie berekent een optimale inzet van je batterij, boiler en ev, waarbij naar keuze wordt 
+Deze implementatie berekent een optimale inzet van je batterij, boiler en e.v., waarbij naar keuze wordt 
 gestreefd naar minimalisering van je kosten, naar minimalisering van je inkoop (nul op de meter) of 
 een combinatie van beide. Daarvoor worden de volgende zaken berekend:
 * uit de prognose van het weer (globale straling) per uur wordt een voorspelling berekend van de productie van je 
@@ -323,16 +323,16 @@ Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * activate entity: entiteit (meestal van een inputhelper) waarmee de boiler opwarmen wordt gestart  
 
 ### **heating**<br>
-Dit onderdeel is nog in ontwikkeling.
-   * heater present : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd.
-   * degree days factor: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
+Dit onderdeel is nog in ontwikkeling. 
+   * `heater present` : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd.
+   * `degree days factor`: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
      zet deze op 0 als je geen wp hebt
-   * stages : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop
-     * max_power: het maximum elektrische vermogen van de betreffende schijf in W
-     * cop: de cop van de wp behorende bij deze schijf. Dus een cop van 7 met een vermogen van 225 W 
+   * `stages` : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop
+     * `max_power`: het maximum elektrische vermogen van de betreffende schijf in W
+     * `cop`: de cop van de wp behorende bij deze schijf. Dus een cop van 7 met een vermogen van 225 W 
         betekent een thermisch vermogen van 7 x 225 = 1575 W
-   * entity adjust heating curve: entiteit waarmee de stooklijn kan worden verschoven
-   * adjustment factor: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
+   * `entity adjust heating curve`: entiteit waarmee de stooklijn kan worden verschoven
+   * `adjustment factor`: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
       da prijs 10% afwijkt van het daggemiddelde
 
 ### **battery**<br> 
@@ -413,8 +413,12 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
    * entity actual level: entiteit die aangeeft hoe ver de auto is geladen (in %)  
    * entity plugged in: entiteit die aangeeft of de auto is ingeplugged  
    * charge scheduler: oplaad scheduler  
-     * entity set level: entiteit van een input help die aangeeft tot welk niveau moet worden geladen in %  
-     * entity ready time: entiteit van een input tijd hoe laat de auto op het gewenste niveau moet zijn  
+     * entity set level: entiteit van een input helper die aangeeft tot welk niveau moet worden geladen in %  
+     * entity ready datetime: entiteit van een input_datetime die het tijdstip en eventueel de datum weergeeft hoe laat de auto op het gewenste niveau moet zijn. 
+     Je kunt zelf kiezen of je een helper met of zonder datum gebruikt. Een helper zonder datum zal er altijd voor zorgen dat de auto iedere dag op hetzelfde
+     gewenste tijdstip is geladen. Een helper met datum zul je steeds moeten updaten maar heeft wel als voordeel dat je verder in de toekomst kunt plannen. <br>
+     * Er zal alleen geladen worden als het eindtijdstip binnen het tijdvenster van het optimaliseringsprogramma valt. 
+     Het begintijdstip van venster is het huidige uur en het eindtijdstip is het laatste uur waarvoor nog dynamische prijzen bekend zijn in het programma.
    * charge switch: entiteit waarmee het laden aan/uit kan worden gezet 
 
  ### **tibber**<br>
