@@ -1,3 +1,8 @@
+"""
+Het programma Day Ahead Optimalisatie kun je je energieverbruik en energiekosten optimaliseren als je gebruik maakt
+van dynamische prijzen.
+Zie verder: README.md
+"""
 import datetime
 from pprint import pprint
 import sys, os, fnmatch
@@ -12,6 +17,7 @@ import numbers
 import numpy
 import utils
 from utils import get_value_from_dict, get_tibber_data, is_laagtarief
+from _version import __version__
 from da_config import Config
 from da_meteo import Meteo
 from da_prices import DA_Prices
@@ -40,7 +46,8 @@ class DayAheadOpt(hass.Hass):
         # print(resp.text)
         self.config.set("latitude", resp_dict['latitude'])
         self.config.set("longitude", resp_dict['longitude'])
-        print("Day-ahead optimalisering gestart op ", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+        print("Day Ahead Optimalisering versie: ", __version__)
+        print("Day Ahead Optimalisering gestart op ", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
         db_da_name = self.config.get(['database da', "database"])
         db_da_server = self.config.get(['database da', "server"])
         db_da_port = int(self.config.get(['database da', "port"]))
@@ -186,7 +193,16 @@ class DayAheadOpt(hass.Hass):
         # start = datetime.datetime.timestamp(datetime.datetime.strptime("2022-05-27", "%Y-%m-%d"))
         # end = datetime.datetime.timestamp(datetime.datetime.strptime("2022-05-29", "%Y-%m-%d"))
         # prog_data = db_da.getPrognoseData(start, end)
-        print("\nProg_data:")
+        u = len(prog_data)
+        if u <= 2 :
+            print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
+                  "er kan niet worden gerekend")
+            return
+
+        if u <= 8:
+            print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
+                  "controleer of alle gegevens zijn opgehaald")
+        print("\nPrognose data:")
         print(prog_data)
 
         '''
@@ -940,7 +956,7 @@ class DayAheadOpt(hass.Hass):
                     row = [uur[u], dc_from_ac[b][u].x, c_stage, ac_to_dc_eff, dc_to_ac[b][u].x, d_stage, dc_to_ac_eff, dc_to_bat[b][u].x, bat_to_dc[b][u].x, pv_prod, soc[b][u+1].x]
                     df_accu[b].loc[df_accu[b].shape[0]] = row
                 df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
-                df_accu[b] = df_accu[b].astype({"uur": int})
+                #df_accu[b] = df_accu[b].astype({"uur": int})
                 print("Batterij: ", self.battery_options[b]["name"])
                 print("In- en uitgaande energie per uur in kWh op de busbar")
                 print(df_accu[b].to_string(index = False))
