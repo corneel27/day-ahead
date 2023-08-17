@@ -956,7 +956,7 @@ class DayAheadOpt(hass.Hass):
                     row = [uur[u], dc_from_ac[b][u].x, c_stage, ac_to_dc_eff, dc_to_ac[b][u].x, d_stage, dc_to_ac_eff, dc_to_bat[b][u].x, bat_to_dc[b][u].x, pv_prod, soc[b][u+1].x]
                     df_accu[b].loc[df_accu[b].shape[0]] = row
                 df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
-                #df_accu[b] = df_accu[b].astype({"uur": int})
+                df_accu[b] = df_accu[b].astype({"uur": int})
                 print("Batterij: ", self.battery_options[b]["name"])
                 print("In- en uitgaande energie per uur in kWh op de busbar")
                 print(df_accu[b].to_string(index = False))
