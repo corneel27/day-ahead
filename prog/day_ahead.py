@@ -1310,7 +1310,7 @@ class DayAheadOpt(hass.Hass):
                     creation_time = os.path.getctime(f)
                     if (current_time - creation_time) >= N * day:
                         os.remove(f)
-                        print({} removed".format(f))
+                        print("{} removed".format(f))
             os.chdir(current_dir)
         clean_folder("../data/log", "*.log")
         clean_folder("../data/images", "*.png")
