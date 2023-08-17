@@ -1310,7 +1310,7 @@ class DayAheadOpt(hass.Hass):
                     creation_time = os.path.getctime(f)
                     if (current_time - creation_time) >= N * day:
                         os.remove(f)
-                        print('{} removed'.format(f))
+                        print({} removed".format(f))
             os.chdir(current_dir)
         clean_folder("../data/log", "*.log")
         clean_folder("../data/images", "*.png")
@@ -1330,7 +1330,7 @@ class DayAheadOpt(hass.Hass):
         char = sys.stdin()
             # Print the input value
 
-        print('The input value is:%s' % char)
+        print("The input value is:%s" % char)
 
         # if key.char == 'a': # here you can choose the letter you want to get detected
         #ch = sys.stdin.read(1)
@@ -1388,10 +1388,10 @@ class DayAheadOpt(hass.Hass):
 
 
     def recieve_events(self, ws: websocket, th_event: threading.Event) -> None:
-        print('wacht op binnenkomende messages van ha')
+        print("Wacht op binnenkomende messages van Home Assistant")
         while True:
             message = ws.recv()
-            print("ontv. message:" + message)
+            print("Ontvangen message:" + message)
             th_event.set()
             time.sleep(1)
 
@@ -1399,9 +1399,9 @@ class DayAheadOpt(hass.Hass):
     def scheduler(self):
         ws = websocket.WebSocket()
         ws.connect("ws://" + self.ip_adress + ":" + str(self.ip_port) + "/api/websocket")
-        print("websocket connect: ", ws.recv())
+        print("Websocket connect: ", ws.recv())
         ws.send('{"type": "auth", "access_token": "' + self.hasstoken + '"}')
-        print("websocket auth: ", ws.recv())
+        print("Websocket auth: ", ws.recv())
         th_event = threading.Event()
         recieve_thread = threading.Thread(name="recieve thread", target=self.recieve_events, args=(ws, th_event,))
         self.subscribe(ws)
@@ -1411,8 +1411,8 @@ class DayAheadOpt(hass.Hass):
         while True:
             if th_event.is_set():
                 th_event.clear()
-                print('event ontvangen')
-                print("start berekening")
+                print("Event ontvangen")
+                print("Start optimalisatieberekening")
                 self.run_task("calc_optimum")
             t = datetime.datetime.now()
             next_min = t - datetime.timedelta(minutes = -1, seconds = t.second, microseconds = t.microsecond)
