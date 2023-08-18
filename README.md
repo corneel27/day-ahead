@@ -308,6 +308,30 @@ Het best kies voor je een helper-entity in de vorm van een input_button.
 Deze kun je handmatig in HA aanklikken, maar je kunt ook diverse automatiseringen die de input_button activeren.
 Bijvoorbeeld als je met je EV thuiskomt en/of deze aansluit op het elektriciteitsnet.
 
+### **notification entity**
+Maak in Home Assistant een helper (max 100 tekens) aan in de vorm van een input_text.
+Wanneer er problemen ontstaan tijdens de berekening of tijdens het ophalen van gegevens dan wordt
+hier een in betreffende helper een tekst gezet.
+Desgewenst kun je met behulp van een automatisering een notificatie starten naar analogie van onderstaand voorbeeld: <br>
+```
+alias: Notification DAO
+description: Send notification from DAO
+trigger:
+  - platform: state
+    entity_id: input_text.notification_dao
+condition: []
+action:
+  - service: notify.mobile_app_nokia_7_plus
+    data:
+      message: "{{ trigger.to_state.state }}"
+      title: DAO let op
+      data:
+        color: blue
+        sticky: true
+        ttl: 0
+        priority: high
+mode: single
+```
 ### **boiler**<br>
 Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd.

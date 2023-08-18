@@ -4,7 +4,7 @@ De volgende zaken staan op de todo lijst: <br>
 De software onderbrengen in een HA addon
 Alle print opdrachten omzetten naar logger
 
-## [v0.3.0] - 2023-08-17
+## [v0.3.0] - 2023-08-18
 
 ### Added
 
@@ -22,13 +22,14 @@ Alle print opdrachten omzetten naar logger
 
 ### Changed
     
+- notificatie via Home Assistant toegevoegd. Zie voor meer informatie README.md bij **notification entity**
 - in het instellingenbestand options.json is de naam van de entity aanduiding veranderd: <br>
 `"entity ready time"` wordt `"entity ready datetime"`
 - aanvullingen en wijzigingen in README.md
 
 ### Removed
 
-- geen
+- prog/da_webserver.py verwijderd
 
 ### Deprecated
 

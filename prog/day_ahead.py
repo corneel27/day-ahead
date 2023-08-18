@@ -5,7 +5,9 @@ Zie verder: README.md
 """
 import datetime
 from pprint import pprint
-import sys, os, fnmatch
+import sys
+import os
+import fnmatch
 import time
 from requests import get
 import math
@@ -13,7 +15,6 @@ import json
 import hassapi as hass
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
-import numbers
 import numpy
 import utils
 from utils import get_value_from_dict, get_tibber_data, is_laagtarief
@@ -74,6 +75,7 @@ class DayAheadOpt(hass.Hass):
         self.heating_options = self.config.get(["heating"])
         self.tasks = self.config.get(["scheduler"])
         self.base_cons = self.config.get(["baseload"])
+        self.notification_entity = self.config.get(["notification entity"])
         self.heater_present = False
         self.boiler_present = False
 
@@ -197,11 +199,15 @@ class DayAheadOpt(hass.Hass):
         if u <= 2 :
             print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
                   "er kan niet worden gerekend")
+            self.set_value(self.notification_entity,
+                           "Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend")
             return
 
         if u <= 8:
             print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
                   "controleer of alle gegevens zijn opgehaald")
+            self.set_value(self.notification_entity,
+                           "Er ontbreken voor een aantal uur gegevens")
         print("\nPrognose data:")
         print(prog_data)
 
@@ -830,18 +836,26 @@ class DayAheadOpt(hass.Hass):
             strategie = 'minimale kosten'
             model.objective = minimize(cost)
             model.optimize()
+            if model.num_solutions==0:
+                print("Geen oplossing  voor:", strategy)
+                return
         elif strategy == "minimize consumption":
             strategie = 'minimale levering'
             model.objective = minimize(delivery)
             model.optimize()
-            min_delivery = max(0, delivery.x)
+            if model.num_solutions==0:
+                print("Geen oplossing  voor:", strategy)
+                return
+            min_delivery = max(0.0, delivery.x)
             print("Ronde 1")
             print("Kosten (euro): {:6.2f}".format(cost.x))
             print("Levering (kWh): {:6.2f}".format(delivery.x))
             model += (delivery <= min_delivery)
-            #model += (cost <= min_cost + cost_marge_combination)
             model.objective = minimize(cost)
             model.optimize()
+            if model.num_solutions==0:
+                print("Geen oplossing in ronde 2 voor:", strategy)
+                return
             print("Ronde 2")
             print("Kosten (euro): {:6.2f}".format(cost.x))
             print("Levering (kWh): {:6.2f}".format(delivery.x))
