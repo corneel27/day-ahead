@@ -29,7 +29,7 @@ Aan de hand van de gekozen strategie kan met behulp van het algoritme de meest o
 variabelen worden berekend. Dit zijn:
 * per uur verbruik en kosten op de inkoopmeter
 * per uur teruglevering en opbrengst op de inkoopmeter
-* per uur laad- cq ontlaadvermogen van de batterij en de SOC aan het einde van het uur
+* per uur laad- cq ontlaadvermogen van de batterij en de SoC aan het einde van het uur
 * tijdstip waarop de boiler moet worden opgewarmd
 * uurvakken waarin de elektrische auto moet worden geladen
 
@@ -363,19 +363,19 @@ Dit onderdeel is nog in ontwikkeling.
   De gegevens en de instellingen van geen, een of meer batterijen
   Je kunt de batterij instellingen herhalen als je meer dan een batterij hebt, of je laat de lijst leeg (geen batterij)
    * name: de naam van de batterij (komt terug in rapportages)
-   * entity actual level: entiteit die de actuele soc van de batterij presenteert  
+   * entity actual level: entiteit die de actuele SoC van de batterij presenteert  
    * capacity: capaciteit van de batterij in kWh  
-   * lower limit: onderste soc limiet (tijdelijk)  
-   * upper limit: bovenste soc limiet  
-   * optimal lower level: onderste soc limiet voor langere tijd  
+   * lower limit: onderste SoC limiet (tijdelijk)  
+   * upper limit: bovenste SoC limiet  
+   * optimal lower level: onderste SoC limiet voor langere tijd  
    * entity min soc end opt: entity in home assistant (input_number), waarmee je de 
-     minimale soc in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben 
+     minimale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben 
    * entity max soc end opt: entity in home assistant (input_number), waarmee je de
-     maximale soc in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben <br>
+     maximale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben <br>
      **opmerking:** met deze twee instellingen kunt je bereiken dat de batterij aan het eind "leeg" of "vol" is. Een lage batterij 
      kan zinvol zijn als je de dag(en) na de berekening veel goedkope stroom en/of veel pv productie verwacht. Een volle batterij 
      kan zinvol zijn als je juist dure stroom en/of weinig eigen pv-productie verwacht. 
-   * charge stages: hier vul je een zelf te kiezen aantal stappen of schijven in voor het laden via de omvormer.
+   * charge stages: hier vul je een zelf te kiezen aantal stappen of schijven in voor het laden via de omvormer. In een drie fase systeem tel je het vermogen van alle omvormers bij elkaar op.
     Per schijf vul je in: 
      * power: het maximale vermogen van de schijf (het minimale vermogen van de schijf is het maximale vermogen van de vorige schijf)
      * efficiency: de efficiency (het rendement) voor deze schijf als een factor 

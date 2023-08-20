@@ -208,6 +208,8 @@ class DayAheadOpt(hass.Hass):
                   "controleer of alle gegevens zijn opgehaald")
             self.set_value(self.notification_entity,
                            "Er ontbreken voor een aantal uur gegevens")
+        self.set_value(self.notification_entity, "DAO calc gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+
         print("\nPrognose data:")
         print(prog_data)
 
@@ -1421,6 +1423,7 @@ class DayAheadOpt(hass.Hass):
         self.subscribe(ws)
         th_event.clear()
         recieve_thread.start()
+        self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         while True:
             if th_event.is_set():
