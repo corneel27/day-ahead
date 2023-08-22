@@ -1,8 +1,10 @@
 # Changelog Day Ahead Optimalisering
 ## [Unreleased]
-De volgende zaken staan op de todo lijst: <br>
-De software onderbrengen in een HA addon
-Alle print opdrachten omzetten naar logger
+De volgende zaken staan op de todo lijst:
+- Documentatie webserver in README
+- De software onderbrengen in een HA addon
+- Alle print opdrachten omzetten naar logger 
+- 
 
 ## [v0.3.0] - 2023-08-18
 
@@ -22,10 +24,19 @@ Alle print opdrachten omzetten naar logger
 
 ### Changed
     
+- ongebruikte instellingen uit README.md gehaald
+- navigatieknoppen in webserver bij "home" omgezet
+- menu optie **Meteo** in webserver voorzien van toelichting "in ontwikkeling"
 - notificatie via Home Assistant toegevoegd. Zie voor meer informatie README.md bij **notification entity**
 - in het instellingenbestand options.json is de naam van de entity aanduiding veranderd: <br>
 `"entity ready time"` wordt `"entity ready datetime"`
 - aanvullingen en wijzigingen in README.md
+
+
+### Issues
+Als het programma draait in scheduler-mode wordt een websocket geopend naar HA zodat vanuit HA een 
+optimaliserings berekening kan worden gestart.
+Als HA stopt (bijv voor een update) dan blijft de websocket "in de lucht" maar is niet meer effectief.
 
 ### Removed
 

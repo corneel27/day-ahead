@@ -75,6 +75,7 @@ class DayAheadOpt(hass.Hass):
         self.heating_options = self.config.get(["heating"])
         self.tasks = self.config.get(["scheduler"])
         self.base_cons = self.config.get(["baseload"])
+        self.w_socket : websocket = None
         self.notification_entity = self.config.get(["notification entity"])
         self.heater_present = False
         self.boiler_present = False
@@ -208,7 +209,7 @@ class DayAheadOpt(hass.Hass):
                   "controleer of alle gegevens zijn opgehaald")
             self.set_value(self.notification_entity,
                            "Er ontbreken voor een aantal uur gegevens")
-        self.set_value(self.notification_entity, "DAO calc gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+        #self.set_value(self.notification_entity, "DAO calc gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         print("\nPrognose data:")
         print(prog_data)
@@ -1027,13 +1028,16 @@ class DayAheadOpt(hass.Hass):
                     entity_charge_switch = self.ev_options[e]["charge switch"]
                     state = self.get_state(entity_charge_switch).state
                     if ev_position[e] == "home" and ev_plugged_in[e]:
+                        ev_name = self.ev_options[e]["name"]
                         try:
                             if float(c_ev[e][0].x) > 0.0:
                                 if state == "off":
                                     self.turn_on(entity_charge_switch)
+                                    print(f"Laden van {ev_name}+aangezet")
                             else:
                                 if state == "on":
                                     self.turn_off(entity_charge_switch)
+                                    print(f"Laden van {ev_name}+uitgezet")
                         except BaseException:
                             pass
                     else:
@@ -1403,27 +1407,44 @@ class DayAheadOpt(hass.Hass):
         print(mess)
 
 
-    def recieve_events(self, ws: websocket, th_event: threading.Event) -> None:
+    def recieve_events(self, th_event: threading.Event) -> None:
         print("Wacht op binnenkomende messages van Home Assistant")
         while True:
-            message = ws.recv()
-            print("Ontvangen message:" + message)
-            th_event.set()
-            time.sleep(1)
+            try:
+                while True:
+                    message = self.w_socket.recv()
+                    if message != '':
+                        print("Ontvangen message:" + message)
+                        th_event.set()
+                time.sleep(1)
+            except websocket.WebSocketConnectionClosedException:
+                print("Websocket verbinding verbroken")
+                while not self.w_socket.connected:
+                    time.sleep(60) #een minuut wachten
+                    try:
+                        self.w_socket = self.start_websocket()
+                        print("Websocket verbinding hersteld")
+                        self.subscribe(ws)
+                        th_event.clear()
+                    except:
+                        pass
 
-
-    def scheduler(self):
+    def start_websocket(self) -> websocket:
         ws = websocket.WebSocket()
         ws.connect("ws://" + self.ip_adress + ":" + str(self.ip_port) + "/api/websocket")
         print("Websocket connect: ", ws.recv())
         ws.send('{"type": "auth", "access_token": "' + self.hasstoken + '"}')
         print("Websocket auth: ", ws.recv())
+        return ws
+
+    def scheduler(self):
+        self.w_socket = self.start_websocket()
         th_event = threading.Event()
-        recieve_thread = threading.Thread(name="recieve thread", target=self.recieve_events, args=(ws, th_event,))
-        self.subscribe(ws)
+        recieve_thread = threading.Thread(name="recieve thread", target=self.recieve_events, args=(th_event,))
+        self.subscribe(self.w_socket)
         th_event.clear()
         recieve_thread.start()
-        self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+        #self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         while True:
             if th_event.is_set():

@@ -158,3 +158,7 @@ def reports():
     return render_template('report.html', title='Rapportage', subjects=subjects, views=views,
                            periode_options=periode_options, active_period=active_period,
                            active_subject=active_subject, active_view=active_view, tables=tables)
+
+@app.route('/meteo', methods=['POST', 'GET'])
+def meteo():
+    return render_template('meteo.html', title='Meteo')

@@ -386,8 +386,6 @@ Dit onderdeel is nog in ontwikkeling.
    De "power" van de laatste schijf geeft ook het maximale 
    * discharge stages: op dezelfde wijze als de "charge stages" vul je hier voor het ontladen een aantal stappen of schijven in voor het ontladen via je omvormer/inverter. 
    * minimum power: minimaal laad/ontlaadvermogen
-   * ac_to_dc efficiency: efficiency van de inverter bij omzetten van ac naar dc (factor van 1)
-   * dc_to_ac efficiency: efficiency van de omvormer bij omzetten van dc naar ac (factor van 1)
    * dc_to_bat efficiency: efficiency van het laden van de batterij vanuit dc (factor van 1)
    * bat_to_dc efficiency: efficiency van het ontladen van de batterij naar dc (factor van 1)
    * cycle cost : afschrijfkosten (in euro) van het laden of ontladen van 1 kWh  
