@@ -68,6 +68,8 @@ class DayAheadOpt(hass.Hass):
         self.prices = DA_Prices(self.config, self.db_da)
         self.strategy = self.config.get(["strategy"])
         self.tibber_options = self.config.get(["tibber"])
+        self.notification_options = self.config.get(["notifications"])  # TvB
+        self.notification_entity = self.notification_options["notification entity"]  # TvB
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
         self.prices_options = self.config.get(["prices"])
@@ -76,7 +78,6 @@ class DayAheadOpt(hass.Hass):
         self.tasks = self.config.get(["scheduler"])
         self.base_cons = self.config.get(["baseload"])
         self.w_socket : websocket = None
-        self.notification_entity = self.config.get(["notification entity"])
         self.heater_present = False
         self.boiler_present = False
 
@@ -209,7 +210,8 @@ class DayAheadOpt(hass.Hass):
                   "controleer of alle gegevens zijn opgehaald")
             self.set_value(self.notification_entity,
                            "Er ontbreken voor een aantal uur gegevens")
-        #self.set_value(self.notification_entity, "DAO calc gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+        if self.notification_options["berekening"].lower() == "true":  # TvB
+            self.set_value(self.notification_entity, "DAO calc gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         print("\nPrognose data:")
         print(prog_data)
@@ -1444,7 +1446,8 @@ class DayAheadOpt(hass.Hass):
         self.subscribe(self.w_socket)
         th_event.clear()
         recieve_thread.start()
-        #self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+        if self.notification_options["opstarten"].lower() == "true":  # TvB
+            self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))  # TvB
 
         while True:
             if th_event.is_set():

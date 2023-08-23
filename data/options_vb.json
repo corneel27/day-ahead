@@ -78,7 +78,11 @@
   "graphical backend": "Gtk3Agg",
   "strategy": "minimize cost",
   "trigger entity": "input_button.day_ahead_berekening_uitvoeren",
-  "notification entity": "input_text.notification_dao",
+  "notifications": {
+    "notification entity": "input_text.dao_notificatie",
+    "opstarten": "False",
+    "berekening": "False"
+  },
   "boiler": {
     "boiler present": "True",
     "entity actual temp.": "sensor.boiler_gemeten",
