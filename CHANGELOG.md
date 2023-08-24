@@ -20,10 +20,12 @@ De volgende zaken staan op de todo lijst:
 
 ### Fixed
 
+- ws parameter overal omgezet naar self.w_socket
 - naar keuze datum-tijd of alleen tijd input helper voor aangeven wanneer een elektrische auto geladen moet zijn
 
 ### Changed
     
+- laden auto wordt alleen uitgezet als auto thuis is (en aangesloten) 
 - ongebruikte instellingen uit README.md gehaald
 - navigatieknoppen in webserver bij "home" omgezet
 - menu optie **Meteo** in webserver voorzien van toelichting "in ontwikkeling"
