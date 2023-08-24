@@ -1284,7 +1284,7 @@ class DayAheadOpt(hass.Hass):
             ln1 = []
             line_styles = ["solid", "dashed", "dotted"]
             for b in range(B):
-                ln1.append(axis[2].plot(ind, soc_p[b], label = SoC '+ self.battery_options[b]["name"],
+                ln1.append(axis[2].plot(ind, soc_p[b], label = 'SoC ' + self.battery_options[b]["name"],
                                         linestyle = line_styles[b], color = 'red'))
             axis[2].set_xticks(ind, labels=uur)
             axis[2].set_ylabel('% SoC')
