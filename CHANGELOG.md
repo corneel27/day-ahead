@@ -4,12 +4,15 @@ De volgende zaken staan op de todo lijst:
 - Documentatie webserver in README
 - De software onderbrengen in een HA addon
 - Alle print opdrachten omzetten naar logger 
-- 
+- prijzengrafiek(en) in blokvorm
+
 
 ## [v0.3.0] - 2023-08-18
 
 ### Added
 
+- een logger is toegevoegd aan de webserver (wordt straks dashboard). <br>
+De loggings zijn te vinden in data\log\dashboard.log.
 - versienummer in bestand _version.py
 - check op voldoende aantal rijen bij prognose data (dynamische prijzen en meteo)
     - bij 2 rijen of minder wordt er niet gerekend<br>
