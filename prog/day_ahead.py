@@ -1284,15 +1284,15 @@ class DayAheadOpt(hass.Hass):
             ln1 = []
             line_styles = ["solid", "dashed", "dotted"]
             for b in range(B):
-                ln1.append(axis[2].plot(ind, soc_p[b], label = 'SOC '+ self.battery_options[b]["name"],
+                ln1.append(axis[2].plot(ind, soc_p[b], label = SoC '+ self.battery_options[b]["name"],
                                         linestyle = line_styles[b], color = 'red'))
             axis[2].set_xticks(ind, labels=uur)
-            axis[2].set_ylabel('% SOC')
+            axis[2].set_ylabel('% SoC')
             axis[2].set_xlabel("uren van de dag")
             axis[2].xaxis.set_major_locator(ticker.MultipleLocator(2))
             axis[2].xaxis.set_minor_locator(ticker.MultipleLocator(1))
             axis[2].set_ylim([0, 100])
-            axis[2].set_title("Verloop SOC en tarieven")
+            axis[2].set_title("Verloop SoC en tarieven")
 
             axis22 = axis[2].twinx()
             ln2 = axis22.plot(ind, np.array(pl), label = 'Tarief\nlevering', color = '#00bfff')
