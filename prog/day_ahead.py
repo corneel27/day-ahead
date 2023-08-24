@@ -1279,7 +1279,7 @@ class DayAheadOpt(hass.Hass):
             axis[1].set_xticks(ind, labels=uur)
             axis[1].xaxis.set_major_locator(ticker.MultipleLocator(2))
             axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-            axis[1].set_title("Day Ahead geoptimaliseerd: " + strategie)
+            axis[1].set_title("Day Ahead geoptimaliseerd: " + strategie + ", winst:" + "{:6.2f}".format(old_cost_da - cost.x))
 
             ln1 = []
             line_styles = ["solid", "dashed", "dotted"]
