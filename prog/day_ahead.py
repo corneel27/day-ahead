@@ -1042,8 +1042,9 @@ class DayAheadOpt(hass.Hass):
                                     print(f"Laden van {ev_name}+uitgezet")
                         except BaseException:
                             pass
-                    else:
-                        self.turn_off(entity_charge_switch)  # charger uitzetten indien niet ingeplugd of niet thuis
+#                    else:
+#                        self.turn_off(entity_charge_switch)  # charger uitzetten indien niet ingeplugd of niet thuis
+#geeft error, bovendien als je elders aan de laadpaal staat moet ie doorgaan!
 
                 #solar
                 for s in range(solar_num):
@@ -1373,7 +1374,7 @@ class DayAheadOpt(hass.Hass):
                 quit()
     '''
 
-    def subscribe(self, ws: websocket) -> None:
+    def subscribe(self) -> None:
         """
         set a subscription for an event in ha, defined with subscribe_triger
         :param ws: websocket
@@ -1388,12 +1389,12 @@ class DayAheadOpt(hass.Hass):
             }
         }
         send_str = json.dumps(subscribe_trigger)
-        ws.send(send_str)
-        mess = ws.recv()
+        self.w_socket.send(send_str)
+        mess = self.w_socket.recv()
         print(mess)
 
 
-    def unsubscribe(self, ws: websocket) -> None:
+    def unsubscribe(self) -> None:
         """
         remove subscription
         :param ws: websocket
@@ -1404,8 +1405,8 @@ class DayAheadOpt(hass.Hass):
             "subscription": 1
         }
         send_str = json.dumps(unsubscribe_mess)
-        ws.send(send_str)
-        mess = ws.recv()
+        self.w_socket.send(send_str)
+        mess = self.w_socket.recv()
         print(mess)
 
 
@@ -1426,7 +1427,7 @@ class DayAheadOpt(hass.Hass):
                     try:
                         self.w_socket = self.start_websocket()
                         print("Websocket verbinding hersteld")
-                        self.subscribe(ws)
+                        self.subscribe()
                         th_event.clear()
                     except:
                         pass
@@ -1443,7 +1444,7 @@ class DayAheadOpt(hass.Hass):
         self.w_socket = self.start_websocket()
         th_event = threading.Event()
         recieve_thread = threading.Thread(name="recieve thread", target=self.recieve_events, args=(th_event,))
-        self.subscribe(self.w_socket)
+        self.subscribe()
         th_event.clear()
         recieve_thread.start()
         if self.notification_options["opstarten"].lower() == "true":  # TvB
