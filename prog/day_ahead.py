@@ -68,8 +68,9 @@ class DayAheadOpt(hass.Hass):
         self.prices = DA_Prices(self.config, self.db_da)
         self.strategy = self.config.get(["strategy"])
         self.tibber_options = self.config.get(["tibber"])
-        self.notification_options = self.config.get(["notifications"])  # TvB
-        self.notification_entity = self.notification_options["notification entity"]  # TvB
+        self.notification_options = self.config.get(["notifications"])
+        self.notification_entity = self.notification_options["notification entity"]
+        self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
         self.prices_options = self.config.get(["prices"])
@@ -210,7 +211,7 @@ class DayAheadOpt(hass.Hass):
                   "controleer of alle gegevens zijn opgehaald")
             self.set_value(self.notification_entity,
                            "Er ontbreken voor een aantal uur gegevens")
-        if self.notification_options["berekening"].lower() == "true":  # TvB
+        if self.notification_options["berekening"].lower() == "true":
             self.set_value(self.notification_entity, "DAO calc gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         print("\nPrognose data:")
@@ -1324,14 +1325,14 @@ class DayAheadOpt(hass.Hass):
         def clean_folder(folder:str, pattern: str):
             current_time = time.time()
             day = 24 * 60 * 60
-            N = 7
+            print("Start removing files")
             current_dir = os.getcwd()
             os.chdir(os.path.join(os.getcwd(), folder))
             list_files = os.listdir()
             for f in list_files:
                 if fnmatch.fnmatch(f, pattern):
                     creation_time = os.path.getctime(f)
-                    if (current_time - creation_time) >= N * day:
+                    if (current_time - creation_time) >= self.history_options["days"] * day:
                         os.remove(f)
                         print("{} removed".format(f))
             os.chdir(current_dir)
@@ -1447,8 +1448,8 @@ class DayAheadOpt(hass.Hass):
         self.subscribe()
         th_event.clear()
         recieve_thread.start()
-        if self.notification_options["opstarten"].lower() == "true":  # TvB
-            self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))  # TvB
+        if self.notification_options["opstarten"].lower() == "true":
+            self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         while True:
             if th_event.is_set():
@@ -1512,6 +1513,9 @@ def main():
                 continue
             if arg.lower() == "scheduler":
                 day_ah.scheduler()
+                continue
+            if arg.lower() == "clean":  
+                day_ah.clean_data()
                 continue
     else:
         day_ah.scheduler()

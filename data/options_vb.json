@@ -83,6 +83,9 @@
     "opstarten": "False",
     "berekening": "False"
   },
+  "history": {
+    "days": 7
+  },
   "boiler": {
     "boiler present": "True",
     "entity actual temp.": "sensor.boiler_gemeten",
