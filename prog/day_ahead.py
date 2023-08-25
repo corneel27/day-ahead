@@ -1325,14 +1325,14 @@ class DayAheadOpt(hass.Hass):
         def clean_folder(folder:str, pattern: str):
             current_time = time.time()
             day = 24 * 60 * 60
-            print("Start removing files")
+            print(f"Start removing files in {folder} with pattern {pattern}")
             current_dir = os.getcwd()
             os.chdir(os.path.join(os.getcwd(), folder))
             list_files = os.listdir()
             for f in list_files:
                 if fnmatch.fnmatch(f, pattern):
                     creation_time = os.path.getctime(f)
-                    if (current_time - creation_time) >= self.history_options["days"] * day:
+                    if (current_time - creation_time) >= self.history_options["save days"] * day:
                         os.remove(f)
                         print("{} removed".format(f))
             os.chdir(current_dir)

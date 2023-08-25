@@ -84,7 +84,7 @@
     "berekening": "False"
   },
   "history": {
-    "days": 7
+    "save days": 7
   },
   "boiler": {
     "boiler present": "True",
