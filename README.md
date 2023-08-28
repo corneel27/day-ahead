@@ -90,6 +90,7 @@ Een aparte database in MariaDB voor dit programma met daarin:
 	
 * een user die alle rechten heeft (niet root) 
 * tabel **variabel**:<br/>
+````
   * Deze maak je met de query: <br/>
     CREATE TABLE \`variabel\` ( <br>
      \`id\` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, <br/>
@@ -100,7 +101,9 @@ Een aparte database in MariaDB voor dit programma met daarin:
       UNIQUE INDEX \`name\` (\`name\`) USING BTREE ) COLLATE='utf8mb4_unicode_ci'<br/> 
       ENGINE=InnoDB <br/>
       AUTO_INCREMENT=1;
+````
   * Query voor het vullen van de inhoud van tabel "variabel" <br/>
+````  
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (1, 'cons', 'consumed', 'kWh'); <br/>
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (2, 'prod', 'produced', 'kWh'); <br/>
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`)VALUES (3, 'da', 'price', 'euro/kWh'); <br/>
@@ -109,9 +112,10 @@ Een aparte database in MariaDB voor dit programma met daarin:
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2');<br/> 
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (7, 'cost', 'cost', 'euro');<br/>
    INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (8, 'profit', 'profit', 'euro');
-
+````
  * tabel **values**:<br/>
    * Deze maak je aan met de volgende query: <br/>
+````   
     CREATE TABLE \`values\` (<br/>
     \`id\` BIGINT(20) UNSIGNED NOT NULL  AUTO_INCREMENT,<br/>
     \`variabel\` INT(10) UNSIGNED NOT NULL DEFAULT '0', <br/>
@@ -122,7 +126,8 @@ Een aparte database in MariaDB voor dit programma met daarin:
     INDEX \`variabel\` (\`variabel\`) USING BTREE, <br/>
     INDEX \`time\` (\`time\`) USING BTREE ) COLLATE='utf8mb4_unicode_ci' <br/>
     ENGINE=InnoDB <br/>
-    AUTO_INCREMENT=1;<br> 
+    AUTO_INCREMENT=1;<br>
+````
    * De inhoud van values bouw je zelf op met het ophalen van de diverse gegevens.  
 ---
 ## Programma starten<br>
