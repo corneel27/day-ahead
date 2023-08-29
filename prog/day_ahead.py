@@ -70,6 +70,7 @@ class DayAheadOpt(hass.Hass):
         self.tibber_options = self.config.get(["tibber"])
         self.notification_options = self.config.get(["notifications"])
         self.notification_entity = self.notification_options["notification entity"]
+        self.last_calulated_entity = self.notification_options["last calulated entity"]
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
@@ -646,7 +647,7 @@ class DayAheadOpt(hass.Hass):
                 ready = datetime.datetime.strptime(ready_str, '%H:%M:%S')
                 ready = datetime.datetime(now_dt.year, now_dt.month, now_dt.day, ready.hour, ready.minute)
                 if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
-                    ready = ready + datetime.timedelta(days=1)
+                    ready = ready + datetime.timedelta(days = 1)
             max_ampere = self.get_state(self.ev_options[e]["entity max amperage"]).state
             try:
                 max_ampere = float(max_ampere)
@@ -1097,7 +1098,7 @@ class DayAheadOpt(hass.Hass):
                         print("tot: ", stop_victron)
                         datetime_str = stop_victron.strftime('%Y-%m-%d %H:%M')
                     helper_id = self.battery_options[b]["entity stop victron"]
-                    self.call_service("set_datetime", entity_id=helper_id, datetime=datetime_str)
+                    self.call_service("set_datetime", entity_id = helper_id, datetime = datetime_str)
                     for s in range(pv_dc_num[b]):
                         entity_pv_switch = self.battery_options[b]["solar"][s]["entity pv switch"]
                         if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
@@ -1114,6 +1115,9 @@ class DayAheadOpt(hass.Hass):
                     adjustment = utils.calc_adjustment_heatcurve(pl[0], p_avg, adjustment_factor, old_adjustment)
                     print("Aanpassing stooklijn: ", adjustment)
                     self.set_value(entity_curve_adjustment, adjustment)
+                
+                # Datum/tijd laatste berekening naar HA
+                self.call_service("set_datetime", entity_id = self.last_calulated_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
             self.db_da.disconnect()
 
