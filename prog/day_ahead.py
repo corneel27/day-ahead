@@ -29,7 +29,7 @@ import threading
 
 class DayAheadOpt(hass.Hass):
 
-    def __init__(self, file_name=None):
+    def __init__(self, file_name = None):
         utils.make_data_path()
         self.debug = False
         self.config = Config(file_name)
@@ -37,12 +37,12 @@ class DayAheadOpt(hass.Hass):
         self.ip_port = self.config.get(['homeassistant', 'ip port'])
         self.hassurl = "http://" + self.ip_adress + ":" + str(self.ip_port) + "/"
         self.hasstoken = self.config.get(['homeassistant', 'token'])
-        super().__init__(hassurl=self.hassurl, token=self.hasstoken)
+        super().__init__(hassurl = self.hassurl, token=self.hasstoken)
         headers = {
             "Authorization": "Bearer " + self.hasstoken,
             "content-type": "application/json",
         }
-        resp = get(self.hassurl + "api/config", headers=headers)
+        resp = get(self.hassurl + "api/config", headers = headers)
         resp_dict = json.loads(resp.text)
         # print(resp.text)
         self.config.set("latitude", resp_dict['latitude'])
@@ -54,15 +54,15 @@ class DayAheadOpt(hass.Hass):
         db_da_port = int(self.config.get(['database da', "port"]))
         db_da_user = self.config.get(['database da', "username"])
         db_da_password = self.config.get(['database da', "password"])
-        self.db_da = DBmanagerObj(db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
-                                  db_user=db_da_user, db_password=db_da_password)
+        self.db_da = DBmanagerObj(db_name = db_da_name, db_server=db_da_server, db_port = db_da_port,
+                                  db_user = db_da_user, db_password = db_da_password)
         db_ha_name = self.config.get(['database ha', "database"])
         db_ha_server = self.config.get(['database ha', "server"])
         db_ha_port = int(self.config.get(['database ha', "port"]))
         db_ha_user = self.config.get(['database ha', "username"])
         db_ha_password = self.config.get(['database ha', "password"])
-        self.db_ha = DBmanagerObj(db_name=db_ha_name, db_server=db_ha_server, db_port=db_ha_port,
-                                  db_user=db_ha_user, db_password=db_ha_password)
+        self.db_ha = DBmanagerObj(db_name = db_ha_name, db_server = db_ha_server, db_port = db_ha_port,
+                                  db_user = db_ha_user, db_password = db_ha_password)
         self.meteo = Meteo(self.config, self.db_da)
         self.solar = self.config.get(["solar"])
         self.prices = DA_Prices(self.config, self.db_da)
@@ -86,23 +86,27 @@ class DayAheadOpt(hass.Hass):
 
     def day_ahead_berekening_uitvoeren(self):
         self.calc_optimum()
+        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         return
 
     def get_meteo_data(self, show_graph: bool = False):
         self.db_da.connect()
         self.meteo.get_meteo_data(show_graph)
         self.db_da.disconnect()
+        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     @staticmethod
     def get_tibber_data():
         get_tibber_data()
+        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def get_day_ahead_prices(self):
         self.db_da.connect()
         self.prices.get_prices(self.prices_options["source day ahead"])
         self.db_da.disconnect()
+        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
-    def get_consumption(self, start: datetime.datetime, until=datetime.datetime.now()):
+    def get_consumption(self, start: datetime.datetime, until = datetime.datetime.now()):
         """
         Berekent consumption en production tussen start en until
         :param start: begindatum periode, meestal de ingangsdatum van het lopende contractjaar
@@ -174,7 +178,7 @@ class DayAheadOpt(hass.Hass):
         print(result)
         return result
 
-    def calc_optimum(self, show_graph=False):
+    def calc_optimum(self, show_graph = False):
 
         def calc_da_avg():
             sql_avg = (
@@ -196,7 +200,7 @@ class DayAheadOpt(hass.Hass):
         now_h = int(3600 * (math.floor(now_dt / 3600)) + offset * 3600)
         fraction_first_hour = 1 - (now_dt - now_h) / 3600
 
-        prog_data = self.db_da.getPrognoseData(start=now_h, end=None)
+        prog_data = self.db_da.getPrognoseData(start = now_h, end = None)
         # start = datetime.datetime.timestamp(datetime.datetime.strptime("2022-05-27", "%Y-%m-%d"))
         # end = datetime.datetime.timestamp(datetime.datetime.strptime("2022-05-29", "%Y-%m-%d"))
         # prog_data = db_da.getPrognoseData(start, end)
@@ -332,7 +336,7 @@ class DayAheadOpt(hass.Hass):
                 hour_fraction.append(1)
                 #pv.append(pv_total)
             for s in range(solar_num):
-                prod = self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad)*pv_yield[s]*hour_fraction[-1]
+                prod = self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad) * pv_yield[s] * hour_fraction[-1]
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org.append(pv_total)
@@ -377,7 +381,7 @@ class DayAheadOpt(hass.Hass):
         ##############################################################
         #                          pv
         ##############################################################
-        pv_ac = [[model.add_var(var_type=CONTINUOUS, lb = 0, ub = solar_prod[s][u] *1.1) for u in range(U)] for s in range(solar_num)]
+        pv_ac = [[model.add_var(var_type=CONTINUOUS, lb = 0, ub = solar_prod[s][u] * 1.1) for u in range(U)] for s in range(solar_num)]
         pv_ac_on_off = [[model.add_var(var_type=BINARY) for u in range(U)] for s in range(solar_num)]
         for s in range(solar_num):
             for u in range(U):
@@ -497,7 +501,7 @@ class DayAheadOpt(hass.Hass):
         soc_low = [[model.add_var(var_type=CONTINUOUS, lb=min(start_soc[b], float(self.battery_options[b]["lower limit"])),
                     ub = opt_low_level[b]) for u in range(U + 1)] for b in range(B) ]
         soc_mid = [[model.add_var(var_type=CONTINUOUS, lb = 0,
-                                 ub = -opt_low_level[b] + max(start_soc[b], float(self.battery_options[b]["upper limit"])))
+                    ub = -opt_low_level[b] + max(start_soc[b], float(self.battery_options[b]["upper limit"])))
                    for u in range(U + 1)] for b in range(B) ]
 
         for b in range(B):
@@ -548,8 +552,7 @@ class DayAheadOpt(hass.Hass):
             boiler_hysterese = 10
             spec_heat_boiler = 200 * 4.2 + 100 * 0.5  # kJ/K
             cop_boiler = 3
-            boiler_temp = [
-                model.add_var(var_type=CONTINUOUS, lb=20, ub = 20) for u in range(U + 1)]  # end temp boiler
+            boiler_temp = [model.add_var(var_type=CONTINUOUS, lb=20, ub = 20) for u in range(U + 1)]  # end temp boiler
             c_b = [model.add_var(var_type=CONTINUOUS, lb = 0, ub = 0) for u in range(U)]  # consumption boiler
             model += xsum(boiler_on[j] for j in range(U)) == 0
             print("Geen boiler aanwezig")
@@ -559,8 +562,7 @@ class DayAheadOpt(hass.Hass):
             boiler_setpoint = float(self.get_state(self.boiler_options["entity setpoint"]).state)
             boiler_hysterese = float(self.get_state(self.boiler_options["entity hysterese"]).state)
             boiler_cooling = self.boiler_options["cooling rate"]  # 0.4 #K/uur instelbaar
-            boiler_bovengrens = self.boiler_options[
-                "heating allowed below"]  # 45 # oC instelbaar daaronder kan worden verwarmd
+            boiler_bovengrens = self.boiler_options["heating allowed below"]  # 45 # oC instelbaar daaronder kan worden verwarmd
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
             boiler_ondergrens = boiler_setpoint - boiler_hysterese  # 41 #C instelbaar daaronder moet worden verwarmd
             vol = self.boiler_options["volume"]  # liter
@@ -573,8 +575,7 @@ class DayAheadOpt(hass.Hass):
             boiler_start = int(max(0, min(23, int((boiler_act_temp - boiler_bovengrens) / boiler_cooling))))
 
             # tijdstip index waarop boiler nog aan kan
-            boiler_end = int(
-                min(U - 1, max(0, int((boiler_act_temp - boiler_ondergrens) / boiler_cooling))))  # (41-40)/0.4=2.5
+            boiler_end = int(min(U - 1, max(0, int((boiler_act_temp - boiler_ondergrens) / boiler_cooling))))  # (41-40)/0.4=2.5
 
 
             boiler_temp = [
@@ -779,9 +780,9 @@ class DayAheadOpt(hass.Hass):
             print("\nWarmtepomp")
             print("Graaddagen: ", degree_days)
 
-            degree_days_factor = self.heating_options["degree days factor"]  #3.6  heat factor kWh th / K.day
+            degree_days_factor = self.heating_options["degree days factor"]  # 3.6  heat factor kWh th / K.day
             heat_produced = float(self.get_state("sensor.daily_heat_production_heating").state)
-            heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)# heet needed
+            heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)  # heet needed
             stages = self.heating_options["stages"]
             S = len(stages)
             c_hp = [model.add_var(var_type = CONTINUOUS, lb = 0, ub = 10) for u in range(U)]  # elektriciteitsverbruik in kWh/h
@@ -1007,7 +1008,7 @@ class DayAheadOpt(hass.Hass):
             #pd.options.display.float_format = '{:6.2f}'.format
             d_f.loc['total'] = d_f.select_dtypes(numpy.number).sum()
             d_f = d_f.astype({"uur": int})
-            print(d_f.to_string(index=False))
+            print(d_f.to_string(index = False))
             print("\nWinst: ", "{:6.2f}".format(old_cost_da - cost.x))
 
             # doorzetten van alle settings naar HA
@@ -1024,7 +1025,7 @@ class DayAheadOpt(hass.Hass):
                 if self.boiler_present:
                     if float(c_b[0].x) > 0.0:
                         self.call_service(self.boiler_options["activate service"],
-                                          entity_id=self.boiler_options["activate entity"])
+                                          entity_id = self.boiler_options["activate entity"])
                         # "input_button.hw_trigger")
                         print("Boiler opwarmen geactiveerd")
 
@@ -1151,7 +1152,7 @@ class DayAheadOpt(hass.Hass):
                     accu_out_sum += dc_to_ac[b][u].x
                 accu_in_n.append(-accu_in_sum)
                 accu_out_p.append(accu_out_sum)
-                max_y = max(max_y, (c_l_p[u] + pv_p[u] + pv_ac_p[u]), abs (c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] +accu_in_sum)
+                max_y = max(max_y, (c_l_p[u] + pv_p[u] + pv_ac_p[u]), abs (c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + accu_in_sum)
                 for b in range(B):
                     if u == 0:
                         soc_p.append([])
@@ -1236,7 +1237,7 @@ class DayAheadOpt(hass.Hass):
             import matplotlib
             import matplotlib.pyplot as plt
             import matplotlib.ticker as ticker
-            fig, axis = plt.subplots(figsize=(8, 9), nrows = 3)  # , sharex= True)
+            fig, axis = plt.subplots(figsize=(8, 9), nrows = 3)  # , sharex = True)
             ind = np.arange(U)
             axis[0].bar(ind, np.array(org_l), label = 'Levering', color = '#00bfff')
             if sum(pv_p) > 0:
@@ -1252,7 +1253,7 @@ class DayAheadOpt(hass.Hass):
                         color = '#fefbbd')
             axis[0].bar(ind, np.array(org_t), bottom = np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
                         label = "Teruglev.", color = '#0080ff')
-            axis[0].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
+            axis[0].legend(loc = 'best', bbox_to_anchor = (1.05, 1.00))
             axis[0].set_ylabel('kWh')
             ylim = math.ceil(max_y)
             #math.ceil(max(max(accu_out_p) + max(c_l_p) + max(pv_p), -min(min(base_n), min(boiler_n), min(heatpump_n), min(ev_n), min(c_t_n), min(accu_in_n) )))
@@ -1280,7 +1281,7 @@ class DayAheadOpt(hass.Hass):
             axis[1].bar(ind, np.array(accu_in_n),
                         bottom = np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n) + np.array(c_t_n),
                         label = 'Accu in', color = '#ff8000')
-            axis[1].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
+            axis[1].legend(loc = 'best', bbox_to_anchor = (1.05, 1.00))
             axis[1].set_ylabel('kWh')
             axis[1].set_ylim([-ylim, ylim])
             axis[1].set_xticks(ind, labels=uur)
@@ -1315,8 +1316,8 @@ class DayAheadOpt(hass.Hass):
                 lns += ln1[b]
             lns += ln2 + ln3 + ln4
             labels = [l.get_label() for l in lns]
-            axis22.legend(lns, labels, loc='best', bbox_to_anchor=(1.40, 1.00))
-            plt.subplots_adjust(right=0.75)
+            axis22.legend(lns, labels, loc='best', bbox_to_anchor = (1.40, 1.00))
+            plt.subplots_adjust(right = 0.75)
             fig.tight_layout()
             plt.savefig("../data/images/optimum" + datetime.datetime.now().strftime("%H%M") + ".png")
             if show_graph:
@@ -1343,6 +1344,7 @@ class DayAheadOpt(hass.Hass):
             os.chdir(current_dir)
         clean_folder("../data/log", "*.log")
         clean_folder("../data/images", "*.png")
+        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def run_task(self, task):
         old_stdout = sys.stdout
@@ -1455,7 +1457,7 @@ class DayAheadOpt(hass.Hass):
         recieve_thread.start()
         if self.notification_options["opstarten"].lower() == "true":
             self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
-# TvB
+
         while True:
             if th_event.is_set():
                 th_event.clear()
