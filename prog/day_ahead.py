@@ -70,7 +70,8 @@ class DayAheadOpt(hass.Hass):
         self.tibber_options = self.config.get(["tibber"])
         self.notification_options = self.config.get(["notifications"])
         self.notification_entity = self.notification_options["notification entity"]
-        self.last_calulated_entity = self.notification_options["last calulated entity"]
+        self.last_activity_entity = self.notification_options["last activity entity"]
+        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
@@ -1117,7 +1118,7 @@ class DayAheadOpt(hass.Hass):
                     self.set_value(entity_curve_adjustment, adjustment)
                 
                 # Datum/tijd laatste berekening naar HA
-                self.call_service("set_datetime", entity_id = self.last_calulated_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
             self.db_da.disconnect()
 
@@ -1454,7 +1455,7 @@ class DayAheadOpt(hass.Hass):
         recieve_thread.start()
         if self.notification_options["opstarten"].lower() == "true":
             self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
-
+# TvB
         while True:
             if th_event.is_set():
                 th_event.clear()

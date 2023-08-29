@@ -82,7 +82,7 @@
     "notification entity": "input_text.dao_notificatie",
     "opstarten": "False",
     "berekening": "False",
-    "last calulated entity": "input_datetime.laatste_berekening"
+    "last activity entity": "input_datetime.laatste_activiteit"
   },
   "history": {
     "save days": 7
