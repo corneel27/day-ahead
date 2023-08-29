@@ -90,42 +90,43 @@ Een aparte database in MariaDB voor dit programma met daarin:
 	
 * een user die alle rechten heeft (niet root) 
 * tabel **variabel**:<br/>
-````
+
   * Deze maak je met de query: <br/>
-    CREATE TABLE \`variabel\` ( <br>
-     \`id\` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, <br/>
-     \`code\` CHAR(10) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',<br/>
-     \`name\` CHAR(50) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',<br/>
-     \`dim\` CHAR(10) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',<br/>
-      PRIMARY KEY (\`id\`) USING BTREE, UNIQUE INDEX \`code\` (\`code\`) USING BTREE,<br/>
-      UNIQUE INDEX \`name\` (\`name\`) USING BTREE ) COLLATE='utf8mb4_unicode_ci'<br/> 
-      ENGINE=InnoDB <br/>
-      AUTO_INCREMENT=1;
+````
+    CREATE TABLE `variabel` (
+    `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `code` CHAR(10) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
+    `name` CHAR(50) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
+    `dim` CHAR(10) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
+    PRIMARY KEY (`id`) USING BTREE, UNIQUE INDEX `code` (`code`) USING BTREE,
+    UNIQUE INDEX `name` (`name`) USING BTREE ) COLLATE='utf8mb4_unicode_ci' 
+    ENGINE=InnoDB
+    AUTO_INCREMENT=1;
 ````
   * Query voor het vullen van de inhoud van tabel "variabel" <br/>
 ````  
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (1, 'cons', 'consumed', 'kWh'); <br/>
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (2, 'prod', 'produced', 'kWh'); <br/>
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`)VALUES (3, 'da', 'price', 'euro/kWh'); <br/>
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (4, 'gr', 'globale straling', 'J/cm2');<br/> 
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (5, 'temp', 'temperatuur', '°C'); <br/>
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2');<br/> 
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (7, 'cost', 'cost', 'euro');<br/>
-   INSERT INTO \`variabel\` (\`id\`, \`code\`, \`name\`, \`dim\`) VALUES (8, 'profit', 'profit', 'euro');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (1, 'cons', 'consumed', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (2, 'prod', 'produced', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`)VALUES (3, 'da', 'price', 'euro/kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (4, 'gr', 'globale straling', 'J/cm2'); 
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (5, 'temp', 'temperatuur', '°C');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2'); 
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (7, 'cost', 'cost', 'euro');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (8, 'profit', 'profit', 'euro');
 ````
  * tabel **values**:<br/>
    * Deze maak je aan met de volgende query: <br/>
 ````   
-    CREATE TABLE \`values\` (<br/>
-    \`id\` BIGINT(20) UNSIGNED NOT NULL  AUTO_INCREMENT,<br/>
-    \`variabel\` INT(10) UNSIGNED NOT NULL DEFAULT '0', <br/>
-    \`time\` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0', <br/>
-    \`value\` FLOAT NULL DEFAULT NULL, <br/>
-    PRIMARY KEY (\`id\`) USING BTREE, <br/>
-    UNIQUE INDEX \`variabel_time\` (\`variabel\`, \`time\`) USING BTREE, <br/>
-    INDEX \`variabel\` (\`variabel\`) USING BTREE, <br/>
-    INDEX \`time\` (\`time\`) USING BTREE ) COLLATE='utf8mb4_unicode_ci' <br/>
-    ENGINE=InnoDB <br/>
+    CREATE TABLE `values` (
+    `id` BIGINT(20) UNSIGNED NOT NULL  AUTO_INCREMENT,
+    `variabel` INT(10) UNSIGNED NOT NULL DEFAULT '0',
+    `time` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0',
+    `value` FLOAT NULL DEFAULT NULL,
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE INDEX `variabel_time` (`variabel`, `time`) USING BTREE,
+    INDEX `variabel` (`variabel`) USING BTREE,
+    INDEX `time` (`time`) USING BTREE ) COLLATE='utf8mb4_unicode_ci'
+    ENGINE=InnoDB
     AUTO_INCREMENT=1;<br>
 ````
    * De inhoud van values bouw je zelf op met het ophalen van de diverse gegevens.  
