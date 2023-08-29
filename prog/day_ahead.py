@@ -98,7 +98,6 @@ class DayAheadOpt(hass.Hass):
     @staticmethod
     def get_tibber_data():
         get_tibber_data()
-        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def get_day_ahead_prices(self):
         self.db_da.connect()
