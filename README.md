@@ -348,7 +348,24 @@ en bij het uitvoeren van een optimaliseringsberekening
 In deze entity (helper van het type input_datetime) wordt de datum-tijd weggeschreven als er door het programma 
 een activiteit is uitgevoerd (berekening, ophalen prijzen enz). Als deze helper niet uurlijks wordt geupdate kun je daar in
 Home Assistant met een automatisering een alarm notificatie op zetten. <br>
-Als je aan deze functionaliteit geen behoefte hebt kun je deze instelling weglaten.
+Voorbeeld van een watchdog timer in HA:
+````
+alias: DAO herstart watchdog timer
+description: ""
+trigger:
+  - platform: state
+    entity_id:
+      - input_datetime.dao_laatste_activiteit
+condition: []
+action:
+  - service: timer.start
+    data:
+      duration: "01:01:00"
+    target:
+      entity_id: timer.dao_watchdog_timer
+mode: single
+````
+Zodra de timer voltooid is er wat loos. Als je aan deze functionaliteit geen behoefte hebt kun je de entity instelling weglaten uit de options.
 
 ### **boiler**<br>
 Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
