@@ -314,12 +314,14 @@ Het best kies voor je een helper-entity in de vorm van een input_button.
 Deze kun je handmatig in HA aanklikken, maar je kunt ook diverse automatiseringen die de input_button activeren.
 Bijvoorbeeld als je met je EV thuiskomt en/of deze aansluit op het elektriciteitsnet.
 
-### **notification entity**
+### **notifications**
+
+ * entity<br>
 Maak in Home Assistant een helper (max 100 tekens) aan in de vorm van een input_text.
 Wanneer er problemen ontstaan tijdens de berekening of tijdens het ophalen van gegevens dan wordt
 hier een in betreffende helper een tekst gezet.
 Desgewenst kun je met behulp van een automatisering een notificatie starten naar analogie van onderstaand voorbeeld: <br>
-```
+````
 alias: Notification DAO
 description: Send notification from DAO
 trigger:
@@ -337,7 +339,17 @@ action:
         ttl: 0
         priority: high
 mode: single
-```
+````
+* opstarten
+* berekening<br>
+Met "True" of "False" geeft je aan of je een notificatie wilt bij het opstarten van het programma
+en bij het uitvoeren van een optimaliseringsberekening
+*  last activity entity<br>
+In deze entity (helper van het type input_datetime) wordt de datum-tijd weggeschreven als er door het programma 
+een activiteit is uitgevoerd (berekening, ophalen prijzen enz). Als deze helper niet uurlijks wordt geupdate kun je daar in
+Home Assistant met een automatisering een alarm notificatie op zetten. <br>
+Als je aan deze functionaliteit geen behoefte hebt kun je deze instelling weglaten.
+
 ### **boiler**<br>
 Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd.

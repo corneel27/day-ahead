@@ -70,9 +70,13 @@ class DayAheadOpt(hass.Hass):
         self.tibber_options = self.config.get(["tibber"])
         self.notification_options = self.config.get(["notifications"])
         self.notification_entity = self.notification_options["notification entity"]
-        self.last_activity_entity = self.notification_options["last activity entity"]
-        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        self.history_options = self.config.get(["history"])
+        if "last activity entity" in self.notification_options:
+            self.last_activity_entity = self.notification_options["last activity entity"]
+        else:
+            self.last_activity_entity = None
+        self.set_last_activity()
+        # self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        self .history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
         self.prices_options = self.config.get(["prices"])
@@ -83,17 +87,21 @@ class DayAheadOpt(hass.Hass):
         self.w_socket : websocket = None
         self.heater_present = False
         self.boiler_present = False
+    def set_last_activity(self):
+        if self.last_activity_entity != None:
+            self.call_service("set_datetime", entity_id=self.last_activity_entity,
+                          datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def day_ahead_berekening_uitvoeren(self):
         self.calc_optimum()
-        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        # self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
         return
 
     def get_meteo_data(self, show_graph: bool = False):
         self.db_da.connect()
         self.meteo.get_meteo_data(show_graph)
         self.db_da.disconnect()
-        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        # self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     @staticmethod
     def get_tibber_data():
@@ -103,7 +111,7 @@ class DayAheadOpt(hass.Hass):
         self.db_da.connect()
         self.prices.get_prices(self.prices_options["source day ahead"])
         self.db_da.disconnect()
-        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        # self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def get_consumption(self, start: datetime.datetime, until = datetime.datetime.now()):
         """
@@ -632,8 +640,17 @@ class DayAheadOpt(hass.Hass):
         for e in range(EV):
             ev_capacity = self.ev_options[e]["capacity"]
             # plugged = self.get_state(self.ev_options["entity plugged in"]).state
-            ev_plugged_in.append(self.get_state(self.ev_options[e]["entity plugged in"]).state == "on")
-            ev_position.append(self.get_state(self.ev_options[e]["entity position"]).state)
+            try:
+                plugged_in = self.get_state(self.ev_options[e]["entity plugged in"]).state == "on"
+
+            except:
+               plugged_in = False
+            ev_plugged_in.append(plugged_in)
+            try:
+                position = self.get_state(self.ev_options[e]["entity position"]).state
+            except:
+                position = "away"
+            ev_position.append(position)
             try:
                 soc_state = float(self.get_state(self.ev_options[e]["entity actual level"]).state)
             except:
@@ -1118,7 +1135,7 @@ class DayAheadOpt(hass.Hass):
                     self.set_value(entity_curve_adjustment, adjustment)
                 
                 # Datum/tijd laatste berekening naar HA
-                self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                # self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
             self.db_da.disconnect()
 
@@ -1343,7 +1360,7 @@ class DayAheadOpt(hass.Hass):
             os.chdir(current_dir)
         clean_folder("../data/log", "*.log")
         clean_folder("../data/images", "*.png")
-        self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        #self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def run_task(self, task):
         old_stdout = sys.stdout
@@ -1352,6 +1369,7 @@ class DayAheadOpt(hass.Hass):
         print("Day Ahead Optimalistatie gestart:", datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'), ': ', task)
         print("Locatie: ", str(self.config.get(["latitude"])) + ':' + str(self.config.get(["longitude"])))
         getattr(self, task)()
+        self.set_last_activity()
         sys.stdout = old_stdout
         log_file.close()
 
@@ -1507,21 +1525,26 @@ def main():
                 continue
             if arg.lower() == "calc":
                 day_ah.calc_optimum(show_graph=True)
+                day_ah.set_last_activity()
                 continue
             if arg.lower() == "meteo":
                 day_ah.get_meteo_data(True)
+                day_ah.set_last_activity()
                 continue
             if arg.lower() == "prices":
                 day_ah.get_day_ahead_prices()
+                day_ah.set_last_activity()
                 continue
             if arg.lower() == "tibber":
                 day_ah.get_tibber_data()
+                day_ah.set_last_activity()
                 continue
             if arg.lower() == "scheduler":
                 day_ah.scheduler()
                 continue
             if arg.lower() == "clean":  
                 day_ah.clean_data()
+                day_ah.set_last_activity()
                 continue
     else:
         day_ah.scheduler()
