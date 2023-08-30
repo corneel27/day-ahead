@@ -69,7 +69,10 @@ class DayAheadOpt(hass.Hass):
         self.strategy = self.config.get(["strategy"])
         self.tibber_options = self.config.get(["tibber"])
         self.notification_options = self.config.get(["notifications"])
-        self.notification_entity = self.notification_options["notification entity"]
+        if "notification entity" in self.notification_options:        
+            self.notification_entity = self.notification_options["notification entity"]
+        else:
+            self.notification_entity = None
         if "last activity entity" in self.notification_options:
             self.last_activity_entity = self.notification_options["last activity entity"]
         else:
@@ -89,7 +92,7 @@ class DayAheadOpt(hass.Hass):
     def set_last_activity(self):
         if self.last_activity_entity != None:
             self.call_service("set_datetime", entity_id = self.last_activity_entity,
-                          datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                          datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def day_ahead_berekening_uitvoeren(self):
         self.calc_optimum()
@@ -211,17 +214,21 @@ class DayAheadOpt(hass.Hass):
         if u <= 2 :
             print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
                   "er kan niet worden gerekend")
-            self.set_value(self.notification_entity,
+            if self.notification_entity != None:            
+                self.set_value(self.notification_entity,
                            "Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend")
             return
 
         if u <= 8:
             print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
                   "controleer of alle gegevens zijn opgehaald")
-            self.set_value(self.notification_entity,
+            if self.notification_entity != None:            
+                self.set_value(self.notification_entity,
                            "Er ontbreken voor een aantal uur gegevens")
-        if self.notification_options["berekening"].lower() == "true":
-            self.set_value(self.notification_entity, "DAO calc gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+                
+        if self.notification_entity != None:
+            if self.notification_options["berekening"].lower() == "true":
+                self.set_value(self.notification_entity, "DAO calc gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         print("\nPrognose data:")
         print(prog_data)
@@ -1353,7 +1360,6 @@ class DayAheadOpt(hass.Hass):
             os.chdir(current_dir)
         clean_folder("../data/log", "*.log")
         clean_folder("../data/images", "*.png")
-        #self.call_service("set_datetime", entity_id = self.last_activity_entity, datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def run_task(self, task):
         old_stdout = sys.stdout
@@ -1465,8 +1471,9 @@ class DayAheadOpt(hass.Hass):
         self.subscribe()
         th_event.clear()
         recieve_thread.start()
-        if self.notification_options["opstarten"].lower() == "true":
-            self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+        if self.notification_entity != None:
+            if self.notification_options["opstarten"].lower() == "true":
+                self.set_value(self.notification_entity, "DAO scheduler gestart " + datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         while True:
             if th_event.is_set():
