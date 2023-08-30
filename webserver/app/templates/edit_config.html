@@ -5,12 +5,12 @@
 </head>
 <body>
     <h1>JSON Editor</h1>
-    <form id="json-form">
+    <form id = "json-form">
         {% for key, value in json_data.items() %}
-            <label for="{{ key }}">{{ key }}:</label>
-            <input type="text" name="{{ key }}" value="{{ value }}" id="{{ key }}"><br>
+            <label for = "{{ key }}">{{ key }}:</label>
+            <input type = "text" name = "{{ key }}" value = "{{ value }}" id = "{{ key }}"><br>
         {% endfor %}
-        <input type="submit" value="Update">
+        <input type = "submit" value = "Update">
     </form>
     <script>
         // Submit form data as JSON when form is submitted

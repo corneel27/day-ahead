@@ -38,9 +38,9 @@ class Meteo:
         berekent de omrekenfacor van directe zon straling op het collectorvlak
         alle parameters in radialen
         :param hcol: helling van de collector: 0 = horizontaal, 0.5 pi verticaal
-        :param acol: azimuth van de collector: 0 = zuid , -0,5 pi= oost, +0,5 pi = west
+        :param acol: azimuth van de collector: 0 = zuid , -0,5 pi = oost, +0,5 pi = west
         :param hzon: hoogte van de zon, 0 = horizontaal, 0.5 pi verticaal
-        :param azon: azimuth van de zon 0 = zuid , -0,5 pi= oost, +0,5 pi = west
+        :param azon: azimuth van de zon 0 = zuid , -0,5 pi = oost, +0,5 pi = west
         :return: de omrekenfactor
         """
         if hzon <= 0:
@@ -169,7 +169,7 @@ class Meteo:
             global_rad.loc[(global_rad.tijd == utc_time), 'solar_rad'] = q_tot
         return global_rad
 
-    def get_meteo_data(self, show_graph=False):
+    def get_meteo_data(self, show_graph = False):
 
         url = "https://data.meteoserver.nl/api/uurverwachting.php?lat=" + str(self.latitude) + \
               "&long=" + str(self.longitude) + "&key=" + self.meteoserver_key
@@ -190,7 +190,7 @@ class Meteo:
         print(df1)
 
         count =  0
-        df_db = pd.DataFrame(columns=['time', 'code', 'value'])
+        df_db = pd.DataFrame(columns = ['time', 'code', 'value'])
         df1 = df1.reset_index()  # make sure indexes pair with number of rows
         for row in df1.itertuples():
             df_db.loc[df_db.shape[0]] = [row.tijd, 'gr', float(row.gr)]
@@ -211,7 +211,7 @@ class Meteo:
         print (resp.text)
         json_object = json.loads(resp.text)
         data = json_object["result"]
-        df_db = pd.DataFrame(columns=['time', 'time_str', 'code', 'value'])
+        df_db = pd.DataFrame(columns = ['time', 'time_str', 'code', 'value'])
         last_hour = -1
         last_value = 0
         last_day = -1
@@ -252,7 +252,7 @@ class Meteo:
 
         print(df_db)
 
-#        graphs.make_graph_meteo(df_db, file="../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
+#        graphs.make_graph_meteo(df_db, file = "../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
 #                                show=show_graph)
         del df_db["time_str"]
         print(df_db)
@@ -267,14 +267,14 @@ class Meteo:
         :param weighted : boolean, berekenen met (true) of zonder (false) weegfactor
         :return: berekende gewogen graaddagen
         """
-        if date==None:
+        if date == None:
             date = datetime.datetime.combine(datetime.datetime.today(), datetime.datetime.min.time())
         date_utc = int(date.timestamp())
         sql_avg_temp = (
             "SELECT AVG(t1.`value`) avg_temp FROM "
                 "(SELECT `time`, `value`,  from_unixtime(`time`) 'begin' "
                 "FROM `values` , `variabel` "
-                "WHERE `variabel`.`code` = 'temp' AND `values`.`variabel` = `variabel`.`id` AND time >="+str(date_utc)+" "
+                "WHERE `variabel`.`code` = 'temp' AND `values`.`variabel` = `variabel`.`id` AND time >= " + str(date_utc) + " "
                 "ORDER BY `time` ASC LIMIT 24) t1 "
             )
         data = self.db_da.run_select_query(sql_avg_temp)
