@@ -501,3 +501,18 @@ Bijvoorbeeld : <br/>
 `"0955": "get_meteo_data"`: de meteodata worden opgehaald om 9 uur 55<br/>
 `"1255": "get_day_ahead_prices"`: haal de actuele prijzen op op 12 uur 55<br>
 `"xx00": "calc_optimum"`: ieder uur exact om "00" wordt de optimaliseringsberekening uitgevoerd.
+
+## Dashboard
+Het programma wordt geleverd met een webserver die je als een dashboard kunt benaderen.
+Dit onderdeel is nog helemaal in ontwikkeling, maar kan al wel gedeeltelijk worden  getest.
+
+De webserver kan op twee manieren worden opgestart:
+* om te testen start je het programma op in een console in de directory webserver met het commando: `python3 da_server.py`
+* voor een productiesituatie dien je gebruik te maken van gunicorn en dan geef je in de directory webserver het commando: <br>
+`gunicorn --config gunicorn_config.py  app:app`
+
+De specifieke instellingen voor dit onderdeel staan ook in options.json onder de sleutel **dashboard**
+Je kunt de volgende instellingen maken:
+* port: dit is de poort op de server waarop je de webserver kunt benaderen.
+
+wordt vervolgd

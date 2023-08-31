@@ -1,5 +1,3 @@
-import sys
-
 from webserver.app import app
 from flask import render_template, request
 import json, fnmatch
@@ -7,8 +5,6 @@ import os
 import logging
 from datetime import date
 from logging.handlers import TimedRotatingFileHandler
-
-#sys.path.append("../")
 from prog.da_config import Config
 import prog.da_report
 

@@ -11,6 +11,7 @@ De volgende zaken staan op de todo lijst:
 
 ### Added
 
+- de webserver /het dasboard kan gedeeltelijk worden gebruikt (zie README)
 - een input_datetime entity die wordt geupdate als door het programma een taak wordt uitgevoerd.
 - een logger is toegevoegd aan de webserver (wordt straks dashboard). <br>
 De loggings zijn te vinden in data\log\dashboard.log.
