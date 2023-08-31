@@ -1,4 +1,5 @@
-{ "homeassistant": {
+{
+  "homeassistant": {
     "ip adress": "192.168.178.36",
     "ip port": 8123,
     "token": "!secret ha_api_token"
@@ -19,14 +20,14 @@
   },
   "meteoserver-key": "!secret meteoserver-key",
   "prices": {
-    "source day ahead" : "nordpool",
+    "source day ahead": "nordpool",
     "entsoe-api-key": "!secret entsoe-api-key",
-    "regular high" : 0.50,
-    "regular low" : 0.40,
+    "regular high": 0.50,
+    "regular low": 0.40,
     "switch to low": 23,
     "energy taxes delivery": {
       "2022-01-01": 0.06729,
-      "2023-01-01" : 0.12599
+      "2023-01-01": 0.12599
     },
     "energy taxes redelivery": {
       "2022-01-01": 0.06729,
@@ -46,8 +47,8 @@
       "2022-07-01": 9,
       "2023-01-01": 21
     },
-    "last invoice" : "2022-09-01",
-    "tax refund" : "True"
+    "last invoice": "2022-09-01",
+    "tax refund": "True"
   },
   "baseload": [
     0.14,
@@ -104,125 +105,232 @@
     "activate entity": "input_button.hw_trigger"
   },
   "heating": {
-    "heater present" : "True",
-    "degree days factor" : 3.6,
+    "heater present": "True",
+    "degree days factor": 3.6,
     "stages": [
-        {"max_power":  225, "cop": 7.1},
-        {"max_power":  300, "cop": 7.0},
-        {"max_power":  400, "cop": 6.5},
-        {"max_power":  500, "cop": 6.0},
-        {"max_power":  600, "cop": 5.5},
-        {"max_power":  750, "cop": 5.0},
-        {"max_power": 1000, "cop": 4.5},
-        {"max_power": 1250, "cop": 4.0}
+      {
+        "max_power": 225,
+        "cop": 7.1
+      },
+      {
+        "max_power": 300,
+        "cop": 7.0
+      },
+      {
+        "max_power": 400,
+        "cop": 6.5
+      },
+      {
+        "max_power": 500,
+        "cop": 6.0
+      },
+      {
+        "max_power": 600,
+        "cop": 5.5
+      },
+      {
+        "max_power": 750,
+        "cop": 5.0
+      },
+      {
+        "max_power": 1000,
+        "cop": 4.5
+      },
+      {
+        "max_power": 1250,
+        "cop": 4.0
+      }
     ],
     "entity adjust heating curve": "input_number.stooklijn_verschuiving_day_ahead",
     "adjustment factor": 0.04
   },
   "battery": [
-    {"name" : "Accu1",
-     "entity actual level": "sensor.ess_battery_soc",
-     "capacity": 28,
-     "upper limit": 98,
-     "lower limit": 21,
-     "optimal lower level": 21,
-     "entity min soc end opt": "input_number.min_soc_einde_opt",
-     "entity max soc end opt": "input_number.max_soc_einde_opt",
-     "charge stages" : [
-        {"power": 0.0, "efficiency": 1},
-        {"power": 30.0, "efficiency": 0.949},
-        {"power": 60.0, "efficiency": 0.950},
-        {"power": 90.0, "efficiency": 0.951},
-        {"power": 150.0, "efficiency": 0.952},
-        {"power": 300.0, "efficiency": 0.953},
-        {"power": 600.0, "efficiency": 0.954},
-        {"power": 1200.0, "efficiency": 0.955},
-        {"power": 2400.0, "efficiency": 0.949},
-        {"power": 3600.0, "efficiency": 0.934},
-        {"power": 4800.0, "efficiency": 0.92},
-        {"power": 6000.0, "efficiency": 0.905},
-        {"power": 7200.0, "efficiency": 0.885}
-     ],
-     "discharge stages" : [
-        {"power": 0.0, "efficiency": 1},
-        {"power": 30.0, "efficiency": 0.949},
-        {"power": 60.0, "efficiency": 0.950},
-        {"power": 90.0, "efficiency": 0.951},
-        {"power": 150.0, "efficiency": 0.952},
-        {"power": 300.0, "efficiency": 0.953},
-        {"power": 600.0, "efficiency": 0.954},
-        {"power": 1200.0, "efficiency": 0.955},
-        {"power": 2400.0, "efficiency": 0.949},
-        {"power": 3600.0, "efficiency": 0.934},
-        {"power": 4800.0, "efficiency": 0.92},
-        {"power": 6000.0, "efficiency": 0.905},
-        {"power": 7200.0, "efficiency": 0.885}
-    ],
-    "minimum power" : 1000,
-    "dc_to_bat efficiency" : 0.93,
-    "bat_to_dc efficiency": 0.93,
-    "cycle cost" : 0.01,
-    "entity set power feedin": "input_number.feedin_grid",
-    "entity set operating mode": "input_select.ess_operating_mode",
-    "entity stop victron": "input_datetime.stop_victron",
-    "entity balance switch": "input_boolean.balanceer_grid",
-    "solar": [
-       {"name": "tuinkamer",
-        "tilt": 45,
-        "orientation": 5,
-        "capacity": 1.8,
-        "yield": 0.000,
-        "entity pv switch": "input_boolean.pv_tuinkamer_aan_uit"
-       }
-     ]
+    {
+      "name": "Accu1",
+      "entity actual level": "sensor.ess_battery_soc",
+      "capacity": 28,
+      "upper limit": 98,
+      "lower limit": 21,
+      "optimal lower level": 21,
+      "entity min soc end opt": "input_number.min_soc_einde_opt",
+      "entity max soc end opt": "input_number.max_soc_einde_opt",
+      "charge stages": [
+        {
+          "power": 0.0,
+          "efficiency": 1
+        },
+        {
+          "power": 30.0,
+          "efficiency": 0.949
+        },
+        {
+          "power": 60.0,
+          "efficiency": 0.950
+        },
+        {
+          "power": 90.0,
+          "efficiency": 0.951
+        },
+        {
+          "power": 150.0,
+          "efficiency": 0.952
+        },
+        {
+          "power": 300.0,
+          "efficiency": 0.953
+        },
+        {
+          "power": 600.0,
+          "efficiency": 0.954
+        },
+        {
+          "power": 1200.0,
+          "efficiency": 0.955
+        },
+        {
+          "power": 2400.0,
+          "efficiency": 0.949
+        },
+        {
+          "power": 3600.0,
+          "efficiency": 0.934
+        },
+        {
+          "power": 4800.0,
+          "efficiency": 0.92
+        },
+        {
+          "power": 6000.0,
+          "efficiency": 0.905
+        },
+        {
+          "power": 7200.0,
+          "efficiency": 0.885
+        }
+      ],
+      "discharge stages": [
+        {
+          "power": 0.0,
+          "efficiency": 1
+        },
+        {
+          "power": 30.0,
+          "efficiency": 0.949
+        },
+        {
+          "power": 60.0,
+          "efficiency": 0.950
+        },
+        {
+          "power": 90.0,
+          "efficiency": 0.951
+        },
+        {
+          "power": 150.0,
+          "efficiency": 0.952
+        },
+        {
+          "power": 300.0,
+          "efficiency": 0.953
+        },
+        {
+          "power": 600.0,
+          "efficiency": 0.954
+        },
+        {
+          "power": 1200.0,
+          "efficiency": 0.955
+        },
+        {
+          "power": 2400.0,
+          "efficiency": 0.949
+        },
+        {
+          "power": 3600.0,
+          "efficiency": 0.934
+        },
+        {
+          "power": 4800.0,
+          "efficiency": 0.92
+        },
+        {
+          "power": 6000.0,
+          "efficiency": 0.905
+        },
+        {
+          "power": 7200.0,
+          "efficiency": 0.885
+        }
+      ],
+      "minimum power": 1000,
+      "dc_to_bat efficiency": 0.93,
+      "bat_to_dc efficiency": 0.93,
+      "cycle cost": 0.01,
+      "entity set power feedin": "input_number.feedin_grid",
+      "entity set operating mode": "input_select.ess_operating_mode",
+      "entity stop victron": "input_datetime.stop_victron",
+      "entity balance switch": "input_boolean.balanceer_grid",
+      "solar": [
+        {
+          "name": "tuinkamer",
+          "tilt": 45,
+          "orientation": 5,
+          "capacity": 1.8,
+          "yield": 0.000,
+          "entity pv switch": "input_boolean.pv_tuinkamer_aan_uit"
+        }
+      ]
     }
   ],
   "solar": [
-    { "name" : "woning",
+    {
+      "name": "woning",
       "tilt": 35,
       "orientation": 5,
       "capacity": 4.2,
       "yield": 0.010,
       "entity pv switch": "input_boolean.pv_woning_aan_uit"
     },
-    { "name": "garage",
+    {
+      "name": "garage",
       "tilt": 45,
       "orientation": 5,
       "capacity": 1.8,
       "yield": 0.005,
       "entity pv switch": "input_boolean.pv_garage_aan_uit"
-    }],
-  "electric vehicle" : [
-    {
-    "name": "Golf GTE",
-    "capacity": 6.3,
-    "entity position": "device_tracker.wvwzzzauzfw117301_position",
-    "entity max amperage": "sensor.wvwzzzauzfw117301_charger_max_ampere",
-    "charge three phase": "False",
-    "entity actual level": "sensor.wvwzzzauzfw117301_battery_level",
-    "entity plugged in": "binary_sensor.wvwzzzauzfw117301_external_power",
-    "charge scheduler": {
-      "entity set level": "input_number.gewenst_laad_niveau",
-      "entity ready datetime": "input_datetime.tijdstip_klaar_met_laden"
-    },
-    "charge switch": "switch.wvwzzzauzfw117301_charging"
     }
   ],
-  "tibber" : {
-    "api url" : "https://api.tibber.com/v1-beta/gql",
-    "api_token" : "!secret tibber_api_token"
+  "electric vehicle": [
+    {
+      "name": "Golf GTE",
+      "capacity": 6.3,
+      "entity position": "device_tracker.wvwzzzauzfw117301_position",
+      "entity max amperage": "sensor.wvwzzzauzfw117301_charger_max_ampere",
+      "charge three phase": "False",
+      "entity actual level": "sensor.wvwzzzauzfw117301_battery_level",
+      "entity plugged in": "binary_sensor.wvwzzzauzfw117301_external_power",
+      "charge scheduler": {
+        "entity set level": "input_number.gewenst_laad_niveau",
+        "entity ready datetime": "input_datetime.tijdstip_klaar_met_laden"
+      },
+      "charge switch": "switch.wvwzzzauzfw117301_charging"
+    }
+  ],
+  "tibber": {
+    "api url": "https://api.tibber.com/v1-beta/gql",
+    "api_token": "!secret tibber_api_token"
   },
-  "report":{
-    "entities grid consumption" : [
+  "report": {
+    "entities grid consumption": [
       "sensor.grid_consumption_low",
       "sensor.grid_consumption_high"
     ],
-    "entities grid production" : [
+    "entities grid production": [
       "sensor.grid_production_low",
       "sensor.grid_production_high"
     ]
   },
-  "scheduler" : {
+  "scheduler": {
     "0355": "get_meteo_data",
     "0955": "get_meteo_data",
     "1555": "get_meteo_data",
