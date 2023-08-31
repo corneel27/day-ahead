@@ -15,11 +15,11 @@ class GraphBuilder ():
             matplotlib.use(backend)
 
     def build(self, df, options):
-#        matplotlib.use('GTK3Agg') # Error GTK3Agg
+        #        matplotlib.use('GTK3Agg') # Error GTK3Agg
         fig, axis = plt.subplots(figsize=(7, 5))  # , sharex= True)
         ind = np.arange(len(df.index))
-        stacked_plus = np.zeros( shape=(len(df.index)) )
-        stacked_neg = np.zeros( shape=(len(df.index)) )
+        stacked_plus = np.zeros(shape=(len(df.index)))
+        stacked_neg = np.zeros(shape=(len(df.index)))
         for serie in options["series"]:
             data_array = df[serie['column']]
             type = serie["type"]
@@ -32,22 +32,25 @@ class GraphBuilder ():
                 axis.bar(ind, data_array, label=label, color=color)
             elif type == "line":
                 linestyle = serie["linestyle"]
-                axis.plot(ind, data_array, label=label, linestyle=linestyle, color=color)
-            else: #stacked bar
+                axis.plot(ind, data_array, label=label,
+                          linestyle=linestyle, color=color)
+            else:  # stacked bar
                 if "negativ" in serie:
                     data_array = np.negative(data_array)
                 sum = np.sum(data_array)
                 if sum > 0:
-                    axis.bar(ind, data_array, bottom=stacked_plus, label=label, color=color)
+                    axis.bar(ind, data_array, bottom=stacked_plus,
+                             label=label, color=color)
                     stacked_plus = stacked_plus + data_array
                 elif sum < 0:
-                    axis.bar(ind, data_array, bottom=stacked_neg, label=label, color=color)
+                    axis.bar(ind, data_array, bottom=stacked_neg,
+                             label=label, color=color)
                     stacked_neg = stacked_neg + data_array
 
         xlabels = df[options["haxis"]["values"]].values.tolist()
         axis.set_xticks(ind, labels=xlabels)
         axis.set_xlabel(options["haxis"]["title"])
-        if len(df.index)>15:
+        if len(df.index) > 15:
             axis.xaxis.set_major_locator(ticker.MultipleLocator(2))
             axis.xaxis.set_minor_locator(ticker.MultipleLocator(1))
 
@@ -56,7 +59,7 @@ class GraphBuilder ():
         if np.min(stacked_neg) < 0:
             axis.set_ylim([-ylim, ylim])
         else:
-            axis.set_ylim([0,ylim])
+            axis.set_ylim([0, ylim])
         axis.set_ylabel(options["vaxis"][0]["title"])
 
         axis.set_title(options["title"])
@@ -64,6 +67,6 @@ class GraphBuilder ():
         box = axis.get_position()
         axis.set_position([box.x0, box.y0, box.width * 0.8, box.height])
         # Put a legend to the right of the current axis
-        #axis.legend(loc = 'center left', bbox_to_anchor=(1, 0.5))
-        axis.legend(loc = 'upper left', bbox_to_anchor=(1.05, 1.00))
+        # axis.legend(loc = 'center left', bbox_to_anchor=(1, 0.5))
+        axis.legend(loc='upper left', bbox_to_anchor=(1.05, 1.00))
         plt.show()

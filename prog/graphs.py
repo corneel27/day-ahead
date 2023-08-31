@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # maak een figuur aan en assen om op te plotten
+
+
 def make_graph_meteo(df, file=None, show=False):
     fig = plt.figure(figsize=(15, 10))
     df['gr'] = df['gr'].astype(float)
@@ -15,6 +17,7 @@ def make_graph_meteo(df, file=None, show=False):
     if show:
         plt.show()
     return
+
 
 def make_graph_entsoe(df):
     fig = plt.figure(figsize=(15, 10))

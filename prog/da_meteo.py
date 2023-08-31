@@ -7,8 +7,8 @@ from db_manager import DBmanagerObj
 import graphs
 import datetime
 
-#import os, sys
-#sys.path.append(os.path.abspath("../dalib"))
+# import os, sys
+# sys.path.append(os.path.abspath("../dalib"))
 from da_config import Config
 
 
@@ -62,7 +62,8 @@ class Meteo:
         delta_j = jd - 2451545  # J - J2000
         m_deg = (357.5291 + 0.98560028 * delta_j) % 360  # in graden
         m_rad = math.radians(m_deg)  # in radialen
-        c_aarde = 1.9148 * math.sin(m_rad) + 0.02 * math.sin(2 * m_rad) + 0.0003 * math.sin(3 * m_rad)  # in graden
+        c_aarde = 1.9148 * math.sin(m_rad) + 0.02 * math.sin(2 * m_rad) + \
+            0.0003 * math.sin(3 * m_rad)  # in graden
         lamda_zon_deg = (m_deg + 102.9372 + c_aarde + 180) % 360  # in graden
         lamda_zon_rad = math.radians(lamda_zon_deg)
 
@@ -93,11 +94,14 @@ class Meteo:
         return result
 
     def get_dif_rad_factor(self, utc_time):
-        cor_utc_time = float(utc_time) + 1800  # een half uur verder voor berekenen van gem zonpositie in dat uur.
-        sunpos = self.sun_position(cor_utc_time)  # 52 graden noorderbreedte, 5 graden oosterlengte
+        # een half uur verder voor berekenen van gem zonpositie in dat uur.
+        cor_utc_time = float(utc_time) + 1800
+        # 52 graden noorderbreedte, 5 graden oosterlengte
+        sunpos = self.sun_position(cor_utc_time)
         sun_h = sunpos['h']  # hoogte boven horizon in rad
         if sun_h > 0:
-            value = 360 * 1.37 * math.sin(sun_h)  # maximale theoretische straling op hor vlak
+            # maximale theoretische straling op hor vlak
+            value = 360 * 1.37 * math.sin(sun_h)
         else:
             value = 0.0
         return value
@@ -116,9 +120,11 @@ class Meteo:
             q_tot = radiation
         else:
             sun_pos = self.sun_position(utc_time)
-            dir_rad_factor = min(2.0, self.direct_radiation_factor(h_col, a_col, sun_pos['h'], sun_pos['A']))
+            dir_rad_factor = min(2.0, self.direct_radiation_factor(
+                h_col, a_col, sun_pos['h'], sun_pos['A']))
 
-            q_oz = self.get_dif_rad_factor(utc_time)  # maximale straling op horz.vlak
+            # maximale straling op horz.vlak
+            q_oz = self.get_dif_rad_factor(utc_time)
 
             if q_oz > 0:
                 k_t = max(0.2, min(0.8, radiation / q_oz))
@@ -161,12 +167,13 @@ class Meteo:
         hcol = math.radians(tilt)
         acol = math.radians(orientation)
         global_rad['solar_rad'] = ''  # new column empty
-        global_rad = global_rad.reset_index()  # make sure indexes pair with number of rows
+        # make sure indexes pair with number of rows
+        global_rad = global_rad.reset_index()
         for row in global_rad.itertuples():
             utc_time = row.tijd
             radiation = float(row.gr)
             q_tot = self.solar_rad(float(utc_time), radiation, hcol, acol)
-            global_rad.loc[(global_rad.tijd == utc_time), 'solar_rad']=q_tot
+            global_rad.loc[(global_rad.tijd == utc_time), 'solar_rad'] = q_tot
         return global_rad
 
     def get_meteo_data(self, show_graph=False):
@@ -189,13 +196,14 @@ class Meteo:
         df1 = df[['tijd', 'tijd_nl', 'gr', 'temp', 'solar_rad']]
         print(df1)
 
-        count =  0
+        count = 0
         df_db = pd.DataFrame(columns=['time', 'code', 'value'])
         df1 = df1.reset_index()  # make sure indexes pair with number of rows
         for row in df1.itertuples():
             df_db.loc[df_db.shape[0]] = [row.tijd, 'gr', float(row.gr)]
             df_db.loc[df_db.shape[0]] = [row.tijd, 'temp', float(row.temp)]
-            df_db.loc[df_db.shape[0]] = [row.tijd, 'solar_rad', float(row.solar_rad)]
+            df_db.loc[df_db.shape[0]] = [
+                row.tijd, 'solar_rad', float(row.solar_rad)]
             count += 1
             if count >= 48:
                 break
@@ -259,7 +267,7 @@ class Meteo:
         self.db_da.savedata(df_db)
         '''
 
-    def calc_graaddagen(self, date : datetime.datetime=None, weighted : bool=False) -> float:
+    def calc_graaddagen(self, date: datetime.datetime = None, weighted: bool = False) -> float:
         """
         berekend gewogen met temperatuur grens van 16 oC
         :param date: de datum waarvoor de berekening wordt gevraagd
@@ -268,15 +276,17 @@ class Meteo:
         :return: berekende gewogen graaddagen
         """
         if date == None:
-            date = datetime.datetime.combine(datetime.datetime.today(), datetime.datetime.min.time())
+            date = datetime.datetime.combine(
+                datetime.datetime.today(), datetime.datetime.min.time())
         date_utc = int(date.timestamp())
         sql_avg_temp = (
             "SELECT AVG(t1.`value`) avg_temp FROM "
-                "(SELECT `time`, `value`,  from_unixtime(`time`) 'begin' "
-                "FROM `values` , `variabel` "
-                "WHERE `variabel`.`code` = 'temp' AND `values`.`variabel` = `variabel`.`id` AND time >= " + str(date_utc) + " "
-                "ORDER BY `time` ASC LIMIT 24) t1 "
-            )
+            "(SELECT `time`, `value`,  from_unixtime(`time`) 'begin' "
+            "FROM `values` , `variabel` "
+            "WHERE `variabel`.`code` = 'temp' AND `values`.`variabel` = `variabel`.`id` AND time >= " +
+            str(date_utc) + " "
+            "ORDER BY `time` ASC LIMIT 24) t1 "
+        )
         data = self.db_da.run_select_query(sql_avg_temp)
         avg_temp = float(data['avg_temp'].values[0])
         weight_factor = 1
@@ -292,7 +302,7 @@ class Meteo:
             result = weight_factor * (16 - avg_temp)
         return result
 
-    def calc_solar_rad(self, solar_opt:dict, utc_time:int, global_rad:float)->float:
+    def calc_solar_rad(self, solar_opt: dict, utc_time: int, global_rad: float) -> float:
         '''
         :param solar_opt: definitie van paneel met
             tilt: helling tov plat vlak in graden, 0 = vlak (horizontaal), 90 = verticaal
@@ -311,4 +321,3 @@ class Meteo:
         radiation = global_rad
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot
-

@@ -2,9 +2,11 @@ import sys
 
 from webserver.app import app
 from flask import render_template, request
-import json, os, fnmatch
+import json
+import os
+import fnmatch
 
-#sys.path.append("../")
+# sys.path.append("../")
 from prog.da_config import Config
 import prog.da_report
 
@@ -13,20 +15,22 @@ app_datapath = "app/static/data/"
 images_folder = os.path.join(web_datapath, 'images')
 config = Config(app_datapath + "options.json")
 
-def get_file_list(path:str, filter:str):
+
+def get_file_list(path: str, filter: str):
     """
     """
     flist = []
-    #path = os.path.join(path, "/")
+    # path = os.path.join(path, "/")
     for f in os.listdir(path):
         if fnmatch.fnmatch(f, filter):
             fullname = os.path.join(path, f)
             flist.append({"name": f, "time": os.path.getmtime(fullname)})
-            #print(f, time.ctime(os.path.getmtime(f)))
-    flist.sort(key = lambda x: x.get('time'), reverse = True)
+            # print(f, time.ctime(os.path.getmtime(f)))
+    flist.sort(key=lambda x: x.get('time'), reverse=True)
     return flist
 
-@app.route('/settings/<filename>', methods = ['POST', 'GET'])
+
+@app.route('/settings/<filename>', methods=['POST', 'GET'])
 def settings(filename):
     message = None
     filename_ext = app_datapath + filename + ".json"
@@ -45,10 +49,11 @@ def settings(filename):
         # Load initial JSON data from a file
         with open(filename_ext, 'r') as f:
             options = f.read()
-    return render_template('settings.html', title = 'Instellingen', options_data = options, message = message)
+    return render_template('settings.html', title='Instellingen', options_data=options, message=message)
 
-@app.route('/', methods = ['POST', 'GET'])
-@app.route('/home', methods = ['POST', 'GET'])
+
+@app.route('/', methods=['POST', 'GET'])
+@app.route('/home', methods=['POST', 'GET'])
 def optimalisering():
     subjects = ["grid"]
     views = ["grafiek", "tabel"]
@@ -60,8 +65,8 @@ def optimalisering():
     for b in range(len(battery_options)):
         subjects.append(battery_options[b]["name"])
     if request.method == 'POST':
-        #ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
-        list = request.form.to_dict(flat = False)
+        # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
+        list = request.form.to_dict(flat=False)
         if "cur_subject" in list:
             active_subject = list["cur_subject"][0]
         if "cur_view" in list:
@@ -91,9 +96,9 @@ def optimalisering():
     if action == "first":
         index = 0
     if action == "previous":
-        index = max (0, index - 1)
+        index = max(0, index - 1)
     if action == "next":
-        index = min (len(flist) - 1, index + 1)
+        index = min(len(flist) - 1, index + 1)
     if action == "last":
         index = len(flist) - 1
     if action == "delete":
@@ -109,11 +114,12 @@ def optimalisering():
         with open(app_datapath+active_map + flist[index]["name"], 'r') as f:
             tabel = f.read()
 
-    return render_template('optimalisering.html', title='Optimalisering', subjects = subjects, views = views,
-                           active_subject=active_subject, active_view=active_view, image = image, tabel = tabel,
+    return render_template('optimalisering.html', title='Optimalisering', subjects=subjects, views=views,
+                           active_subject=active_subject, active_view=active_view, image=image, tabel=tabel,
                            active_time=active_time)
 
-@app.route('/reports', methods = ['POST', 'GET'])
+
+@app.route('/reports', methods=['POST', 'GET'])
 def reports():
     report = prog.da_report.Report()
     subjects = ["verbruik", "kosten"]
@@ -123,8 +129,8 @@ def reports():
     periode_options = report.periodes.keys()
     active_period = "vandaag"
     if request.method in ['POST', 'GET']:
-        #ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
-        list = request.form.to_dict(flat = False)
+        # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
+        list = request.form.to_dict(flat=False)
         if "cur_subject" in list:
             active_subject = list["cur_subject"][0]
         if "cur_view" in list:
@@ -142,7 +148,8 @@ def reports():
     filtered_df = report.calc_columns(report_df, active_interval, active_view)
     filtered_df.round(1)
     if active_view == "tabel":
-        tables = [filtered_df.to_html(index = False, justify = "right", decimal=",", classes="data", border = 0) ]
+        tables = [filtered_df.to_html(
+            index=False, justify="right", decimal=",", classes="data", border=0)]
     else:
         d = filtered_df.values.tolist()
         c = filtered_df.columns.tolist()
@@ -154,11 +161,12 @@ def reports():
             "seriesType": 'bars',
             "series": {6: {"type": 'line'}}
         }
-        tables = json.dumps({"options":options, 'data': d})
+        tables = json.dumps({"options": options, 'data': d})
     return render_template('report.html', title='Rapportage', subjects=subjects, views=views,
                            periode_options=periode_options, active_period=active_period,
-                           active_subject=active_subject, active_view=active_view, tables = tables)
+                           active_subject=active_subject, active_view=active_view, tables=tables)
 
-@app.route('/meteo', methods = ['POST', 'GET'])
+
+@app.route('/meteo', methods=['POST', 'GET'])
 def meteo():
-    return render_template('meteo.html', title = 'Meteo')
+    return render_template('meteo.html', title='Meteo')

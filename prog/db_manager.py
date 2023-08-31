@@ -3,13 +3,14 @@ import mysql.connector
 import numpy as np
 import datetime
 
+
 class DBmanagerObj(object):
     """
     Database manager class.
     """
 
-    def __init__(self, db_name, \
-                 db_server=None, db_user=None, db_password=None, \
+    def __init__(self, db_name,
+                 db_server=None, db_user=None, db_password=None,
                  db_port=None, unix_socket=None, charset='utf8mb4'):
         """
         Initializes a DBManager object
@@ -45,22 +46,22 @@ class DBmanagerObj(object):
         try:
             if self.unix_socket:
                 self._conn = mysql.connector.connect(host=self.server,
-                                user=self.user, passwd=self.password,
-                                db=self.dbname, auth_plugin='mysql_native_password')
-                                #unix_socket=unix_socket, charset=charset)
+                                                     user=self.user, passwd=self.password,
+                                                     db=self.dbname, auth_plugin='mysql_native_password')
+                # unix_socket=unix_socket, charset=charset)
             elif self.port:
                 self._conn = mysql.connector.connect(host=self.server,
-                                user=self.user, passwd=self.password, port=self.port,
-                                db=self.dbname, auth_plugin='mysql_native_password')
-                                #port=self.port, charset=charset)
+                                                     user=self.user, passwd=self.password, port=self.port,
+                                                     db=self.dbname, auth_plugin='mysql_native_password')
+                # port=self.port, charset=charset)
             else:
                 self._conn = mysql.connector.connect(host=self.server,
-                                user=self.user, passwd=self.password,
-                                db=self.dbname, charset=self.charset, auth_plugin='mysql_native_password')
+                                                     user=self.user, passwd=self.password,
+                                                     db=self.dbname, charset=self.charset, auth_plugin='mysql_native_password')
             self._c = self._conn.cursor()
             print('MySQL database connection successful. Default database:', self.dbname)
             self.dbON = True
-            #self._conn.set_character_set('utf8')
+            # self._conn.set_character_set('utf8')
         except Exception as e:
             print("---- Error connecting to the database")
             raise e
@@ -81,7 +82,7 @@ class DBmanagerObj(object):
                 self._conn.commit()
                 self._conn.close()
         except:
-            pass #print("---- Error closing database")
+            pass  # print("---- Error closing database")
 
         return
 
@@ -89,9 +90,8 @@ class DBmanagerObj(object):
         self._conn.set_character_set(charsetcode)
         return
     """
-    
-        
-    def readDBtable(self, tablename, limit=None, selectOptions=None, \
+
+    def readDBtable(self, tablename, limit=None, selectOptions=None,
                     filterOptions=None, orderOptions=None):
         """
         Read data from a table in the database can choose to read only some
@@ -107,7 +107,6 @@ class DBmanagerObj(object):
                             (e.g, 'Cconv')
             limit:          The maximum number of records to retrieve
         """
-
 
         sqlQuery = 'SELECT '
         if selectOptions:
@@ -128,7 +127,6 @@ class DBmanagerObj(object):
 
         sqlQuery += ';'
 
-
         try:
             # This is to update the connection to changes by other
             # processes.
@@ -136,14 +134,14 @@ class DBmanagerObj(object):
 
             # Return the pandas dataframe. Note that numbers in text format
             # are not converted to
-            return pd.read_sql(sqlQuery, con=self._conn, \
+            return pd.read_sql(sqlQuery, con=self._conn,
                                coerce_float=False)
 
         except Exception as E:
             print(str(E))
             print('Error in query:', sqlQuery)
             return
-    
+
     def getTableNames(self):
         """
         Returns a list with the names of all tables in the database
@@ -195,7 +193,7 @@ class DBmanagerObj(object):
         ncol_keys = len(keyflds)
         ncol_values = len(valueflds)
 
-        if  (len(values[0])== ncol_keys + ncol_values):
+        if (len(values[0]) == ncol_keys + ncol_values):
             # Make sure the tablename is valid
             if tablename in self.getTableNames():
 
@@ -212,7 +210,7 @@ class DBmanagerObj(object):
                 # This is the old version: it might not have the problem of
                 # the above version, but did not work properly with sqlite.
                 # Make sure we have a list of tuples; necessary for mysql
-                
+
                 # Put key value last in the tuples
                 for i in range(len(keyflds)):
                     values = list(map(circ_left_shift, values))
@@ -234,7 +232,6 @@ class DBmanagerObj(object):
         return
 
     def upsert(self, tablename, keyflds, df, robust=True):
-
         """
         Update records of a DB table with the values in the df
         This function implements the following additional functionality:
@@ -270,7 +267,6 @@ class DBmanagerObj(object):
             else:
                 print('Upsert function failed: Table does not exist')
                 return
-
 
         # Reorder dataframe to make sure that the key fields goes first
         for keyfld in keyflds:
@@ -322,7 +318,7 @@ class DBmanagerObj(object):
         """
         df = df.reset_index()  # make sure indexes pair with number of rows
         for index, dfrow in df.iterrows():
-            #pprint(dfrow)
+            # pprint(dfrow)
             code = dfrow['code']
             time = dfrow['time']
             value = dfrow['value']
@@ -339,21 +335,22 @@ class DBmanagerObj(object):
                 # record is present
                 variabel_id = rows[0][0]
             query = "SELECT `values`.`id` FROM `values` WHERE " \
-                    "`values`.`variabel` = " + str(variabel_id) + " and `time` = '" + time + "';"
+                    "`values`.`variabel` = " + \
+                str(variabel_id) + " and `time` = '" + time + "';"
             if debug:
                 print(query)
             self._c.execute(query)
             rows = self._c.fetchall()
-            if len(rows)== 1 :
-                #record is present
-                id =  rows[0][0]
+            if len(rows) == 1:
+                # record is present
+                id = rows[0][0]
                 query = 'UPDATE `values` SET `value` = %s WHERE id= %s;'
                 if debug:
                     print(query)
                 self._c.execute(query, (value, id))
                 self._conn.commit()
             else:
-                #make new record
+                # make new record
                 query = "INSERT INTO `values` (variabel, time, value) VALUES (%s, %s, %s);"
                 val = (str(variabel_id), time, value)
                 if debug:
@@ -371,9 +368,9 @@ class DBmanagerObj(object):
                    "(t2.`variabel` = v2.id AND v2.code = 'solar_rad') " \
                    "AND t3.`time`= t1.`time` AND t3.`variabel`= v3.id AND v3.code ='da' AND " \
                    "t0.`time` = t1.`time` AND t0.`variabel`= v0.id AND v0.`code`= 'temp' " \
-                   "and t1.`time` >= "+ str(start)
+                   "and t1.`time` >= " + str(start)
         if (end != None):
-            sqlQuery += " and t1.`time` < "+ str(end)
+            sqlQuery += " and t1.`time` < " + str(end)
         sqlQuery += " ORDER BY t1.`time`;"
         self._conn.commit()
 
@@ -382,10 +379,11 @@ class DBmanagerObj(object):
 
     def getColumnPrognoseData(self, column, start, end):
         sqlQuery = "SELECT `time`, `value` from prognose " \
-                   "where `code` = '" + column + "' and time >= " + str(start) + " and time < " + str(end) + ";"
+                   "where `code` = '" + column + "' and time >= " + \
+            str(start) + " and time < " + str(end) + ";"
         # print (sqlQuery)
         self._conn.commit()
-        return pd.read_sql(sqlQuery, con = self._conn, coerce_float = False)
+        return pd.read_sql(sqlQuery, con=self._conn, coerce_float=False)
 
     def run_select_query(self, sql):
         self._conn.commit()
@@ -404,7 +402,8 @@ class DBmanagerObj(object):
     def get_time_latest_record(self, code: str) -> datetime.datetime:
         query = ("SELECT from_unixtime(`time`) tijd, `value` "
                  "FROM `values`, `variabel` "
-                 "WHERE `variabel`.`code` = '" + code + "'  and `values`.`variabel` = `variabel`.`id` "
+                 "WHERE `variabel`.`code` = '" + code +
+                 "'  and `values`.`variabel` = `variabel`.`id` "
                  "ORDER BY `time` desc LIMIT 1")
         df = self.run_select_query(query)
         df = df.reset_index()  # make sure indexes pair with number of rows
@@ -412,4 +411,3 @@ class DBmanagerObj(object):
         for row in df.itertuples():
             result = row.tijd
         return result
-
