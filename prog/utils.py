@@ -20,9 +20,9 @@ def is_laagtarief(dtime, switch_hour):
     feestdagen = [datetime.datetime(jaar, 1, 1), datetime.datetime(jaar, 4, 27), datetime.datetime(jaar, 12, 25),
                   datetime.datetime(jaar, 12, 26)]
     pasen = easter.easter(jaar)
-    feestdagen.append(pasen + datetime.timedelta(days = 1))  # 2e paasdag
-    feestdagen.append(pasen + datetime.timedelta(days = 39))  # hemelvaart
-    feestdagen.append(pasen + datetime.timedelta(days = 50))  # 2e pinksterdag
+    feestdagen.append(pasen + datetime.timedelta(days=1))  # 2e paasdag
+    feestdagen.append(pasen + datetime.timedelta(days=39))  # hemelvaart
+    feestdagen.append(pasen + datetime.timedelta(days=50))  # 2e pinksterdag
 
     for day in feestdagen:
         if day == datum:  # dag is een feestdag
@@ -78,8 +78,8 @@ def get_tibber_data():
     db_da_port = int(config.get(['database da', "port"]))
     db_da_user = config.get(['database da', "username"])
     db_da_password = config.get(['database da', "password"])
-    db_da = DBmanagerObj(db_name = db_da_name, db_server = db_da_server, db_port = db_da_port,
-                              db_user = db_da_user, db_password = db_da_password)
+    db_da = DBmanagerObj(db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
+                              db_user=db_da_user, db_password=db_da_password)
     db_da.connect()
     prices_options = config.get(["prices"])
     headers = {
@@ -113,7 +113,7 @@ def get_tibber_data():
     count = math.ceil((now_ts - latest_ts)/3600)
     print("Tibber data present tot en met:", str(datetime.datetime.fromtimestamp(latest_ts)))
     if count < 24:
-        print("Er worden geen data opgehaald")
+        print("Er is geen data opgehaald.")
         return
     query = '{ ' \
             '"query": ' \
@@ -140,7 +140,7 @@ def get_tibber_data():
         '}'
 
     # print(query)
-    resp = post(url, headers=headers, data = query)
+    resp = post(url, headers=headers, data=query)
     tibber_dict = json.loads(resp.text)
     production_nodes = tibber_dict['data']['viewer']['homes'][0]['production']['nodes']
     consumption_nodes = tibber_dict['data']['viewer']['homes'][0]['consumption']['nodes']

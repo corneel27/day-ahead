@@ -166,10 +166,10 @@ class Meteo:
             utc_time = row.tijd
             radiation = float(row.gr)
             q_tot = self.solar_rad(float(utc_time), radiation, hcol, acol)
-            global_rad.loc[(global_rad.tijd == utc_time), 'solar_rad'] = q_tot
+            global_rad.loc[(global_rad.tijd == utc_time), 'solar_rad']=q_tot
         return global_rad
 
-    def get_meteo_data(self, show_graph = False):
+    def get_meteo_data(self, show_graph=False):
 
         url = "https://data.meteoserver.nl/api/uurverwachting.php?lat=" + str(self.latitude) + \
               "&long=" + str(self.longitude) + "&key=" + self.meteoserver_key
@@ -190,7 +190,7 @@ class Meteo:
         print(df1)
 
         count =  0
-        df_db = pd.DataFrame(columns = ['time', 'code', 'value'])
+        df_db = pd.DataFrame(columns=['time', 'code', 'value'])
         df1 = df1.reset_index()  # make sure indexes pair with number of rows
         for row in df1.itertuples():
             df_db.loc[df_db.shape[0]] = [row.tijd, 'gr', float(row.gr)]
@@ -203,7 +203,7 @@ class Meteo:
 
         self.db_da.savedata(df_db)
         graphs.make_graph_meteo(df1, file="../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
-                                show = show_graph)
+                                show=show_graph)
 
         '''
         url = "https://api.forecast.solar/estimate/watthours/"+str(self.latitude)+"/"+str(self.longitude)+"/45/5/5.5"
@@ -259,7 +259,7 @@ class Meteo:
         self.db_da.savedata(df_db)
         '''
 
-    def calc_graaddagen(self, date : datetime.datetime = None, weighted : bool = False) -> float:
+    def calc_graaddagen(self, date : datetime.datetime=None, weighted : bool=False) -> float:
         """
         berekend gewogen met temperatuur grens van 16 oC
         :param date: de datum waarvoor de berekening wordt gevraagd

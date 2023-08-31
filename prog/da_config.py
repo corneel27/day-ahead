@@ -11,7 +11,7 @@ class Config:
         secrets_json = open(datapath + "/secrets.json")
         self.secrets = json.load(secrets_json)
 
-    def get (self, keys, options = None):
+    def get (self, keys, options=None):
         if options is None:
             options = self.options
         result = options[keys[0]]

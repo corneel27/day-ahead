@@ -28,9 +28,9 @@ class DA_Prices:
             end = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
         else:
             if now.hour < 12:
-                end = start + datetime.timedelta(days = 1)
+                end = start + datetime.timedelta(days=1)
             else:
-                end = start + datetime.timedelta(days = 2)
+                end = start + datetime.timedelta(days=2)
 
         if len(sys.argv) <= 2:
             present = self.db_da.get_time_latest_record("da")
@@ -43,18 +43,18 @@ class DA_Prices:
 
         # day-ahead market prices (€/MWh)
         if source.lower() == "entsoe":
-            start = pd.Timestamp(year = start.year, month = start.month, day = start.day, tz = 'CET')
-            end = pd.Timestamp(year = end.year, month = end.month, day = end.day, tz = 'CET')
+            start = pd.Timestamp(year=start.year, month=start.month, day=start.day, tz='CET')
+            end = pd.Timestamp(year=end.year, month=end.month, day=end.day, tz='CET')
             api_key = self.config.get(["prices", "entsoe-api-key"])
-            client = EntsoePandasClient(api_key = api_key)
+            client = EntsoePandasClient(api_key=api_key)
             da_prices = pd.DataFrame()
             last_time = 0
             try:
-                da_prices = client.query_day_ahead_prices('NL', start = start, end = end)
+                da_prices = client.query_day_ahead_prices('NL', start=start, end=end)
             except Exception as e:
                 print(f"Geen data van Entsoe: tussen {start} en {end}")
             if len(da_prices.index) > 0:
-                df_db = pd.DataFrame(columns = ['time', 'code', 'value'])
+                df_db = pd.DataFrame(columns=['time', 'code', 'value'])
                 da_prices = da_prices.reset_index()  # make sure indexes pair with number of rows
                 for row in da_prices.itertuples():
                     last_time = int(datetime.datetime.timestamp(row[1]))
@@ -65,10 +65,10 @@ class DA_Prices:
         if source.lower() == "nordpool":
             # ophalen bij Nordpool
             prices_spot = Prices()
-            hourly_prices_spot = prices_spot.hourly(areas = ['NL'])
+            hourly_prices_spot = prices_spot.hourly(areas=['NL'])
             hourly_values = hourly_prices_spot['areas']['NL']['values']
             print(hourly_values)
-            df_db = pd.DataFrame(columns = ['time', 'code', 'value'])
+            df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             for hourly_value in hourly_values:
                 time_dt = hourly_value['start']
                 time_ts = time_dt.timestamp()
@@ -89,7 +89,7 @@ class DA_Prices:
             df = pd.DataFrame.from_records(json_object)
             print(df)
             # datetime.datetime.strptime('Tue Jun 22 12:10:20 2010 EST', '%a %b %d %H:%M:%S %Y %Z')
-            df_db = pd.DataFrame(columns = ['time', 'code', 'value'])
+            df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             df = df.reset_index()  # make sure indexes pair with number of rows
             for row in df.itertuples():
                 dtime = str(int(datetime.datetime.fromisoformat(row.Timestamp).timestamp()))

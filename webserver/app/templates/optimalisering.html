@@ -13,70 +13,70 @@
     }
 }
 </script>
-<form method = "post" id = "content_form">
-<div class = "selector-container">
-  <div class = "spacer">
-    <div class = "select subject">
-     <input type = "hidden" id = "cur_subject" name = "cur_subject" value = "{{active_subject}}">
+<form method="post" id="content_form">
+<div class="selector-container">
+  <div class="spacer">
+    <div class="select subject">
+     <input type="hidden" id="cur_subject" name="cur_subject" value="{{active_subject}}">
     {% for subject in subjects %}
       {% if active_subject == subject %}
-        <button name = "subject" class = "btn chosen btn_mid" value = "{{subject}}">{{ subject }}</button>
+        <button name="subject" class="btn chosen btn_mid" value="{{subject}}">{{ subject }}</button>
       {% else %}
-        <button name = "subject" class = "btn btn_mid" value = "{{subject}}">{{ subject }}</button>
+        <button name="subject" class="btn btn_mid" value="{{subject}}">{{ subject }}</button>
       {% endif %}
     {% endfor %}
     </div>
   </div>
-  <div class = "spacer">
-    <div class = "select view">
-     <input type = "hidden" id = "cur_view" name = "cur_view" value = "{{active_view}}">
+  <div class="spacer">
+    <div class="select view">
+     <input type="hidden" id="cur_view" name="cur_view" value="{{active_view}}">
      {% if active_time  %}
-         <input type = "hidden" id = "active_time" name = "active_time" value = "{{active_time}}">
+         <input type="hidden" id="active_time" name="active_time" value="{{active_time}}">
      {% endif %}
     {% for view in views %}
       {% if active_view == view %}
-        <button name = "view" class = "btn chosen btn_mid" value = "{{ view }}">
-          <img src = "static/{{view}}.png" alt = "first" border = "0" style = "display:inline-block; height:1em; width:auto;" />
+        <button name="view" class="btn chosen btn_mid" value="{{ view }}">
+          <img src="static/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1em; width:auto;" />
           {{ view }}
         </button>
       {% else %}
-        <button name = "view" class = "btn btn_mid" value = "{{view}}">
-          <img src = "static/{{view}}.png" alt = "first" border = "0" style = "display:inline-block; height:1em; width:auto;" />
+        <button name="view" class="btn btn_mid" value="{{view}}">
+          <img src="static/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1em; width:auto;" />
         </button>
       {% endif %}
     {% endfor %}
     </div>
   </div>
-  <div class = "spacer">
-    <div class = "select action">
-      <button name = "action" class = "btn btn_left" value = "last">
-        <img src = "static/last.png" alt = "first" border = "0" style = "display:inline-block; height:1em; width:auto;" />
+  <div class="spacer">
+    <div class="select action">
+      <button name="action" class="btn btn_left" value="last">
+        <img src="static/last.png" alt="first" border="0" style="display:inline-block; height:1em; width:auto;" />
       </button>
-      <button name = "action" class = "btn btn_mid" value = "next">
-        <img src = "static/next.png" alt = "prev" border = "0" style = "display:inline-block; height:1em; width:auto;" />
+      <button name="action" class="btn btn_mid" value="next">
+        <img src="static/next.png" alt="prev" border="0" style="display:inline-block; height:1em; width:auto;" />
       </button>
-      <button name = "action" class = "btn btn_mid" value = "previous">
-        <img src = "static/prev.png" alt = "next" border = "0" style = "display:inline-block; height:1em; width:auto;" />
+      <button name="action" class="btn btn_mid" value="previous">
+        <img src="static/prev.png" alt="next" border="0" style="display:inline-block; height:1em; width:auto;" />
       </button>
-      <button name = "action" class = "btn btn_mid" value = "first">
-        <img src = "static/first.png" alt = "last" border = "0" style = "display:inline-block; height:1em; width:auto;" />
+      <button name="action" class="btn btn_mid" value="first">
+        <img src="static/first.png" alt="last" border="0" style="display:inline-block; height:1em; width:auto;" />
       </button>
-      <button name = "action" class = "btn btn_right" onclick = "confirmation()" value = "delete">
-        <img src = "static/delete.png" alt = "last" border = "0" style = "display:inline-block; height:1em; width:auto;" />
+      <button name="action" class="btn btn_right" onclick="confirmation()" value="delete">
+        <img src="static/delete.png" alt="last" border="0" style="display:inline-block; height:1em; width:auto;" />
       </button>
     </div>
   </div>
 </div>
-<div class = "clear"></div>
+<div class="clear"></div>
 </form>
 
 {% if active_view == "grafiek" %}
-<div class = "show graph">
-  <img src = "{{image}}" alt = "image" width = "800" height = "900">
+<div class="show graph">
+  <img src="{{image}}" alt="image" width="800" height="900">
 </div>
 
 {% else %}
-<div class = "show table">
+<div class="show table">
   <textarea> {{tabel}} </textarea>
 </div>
 {% endif %}

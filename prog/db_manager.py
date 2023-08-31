@@ -8,9 +8,9 @@ class DBmanagerObj(object):
     Database manager class.
     """
 
-    def __init__(self, db_name,
-                 db_server = None, db_user = None, db_password = None,
-                 db_port = None, unix_socket = None, charset = 'utf8mb4'):
+    def __init__(self, db_name, \
+                 db_server=None, db_user=None, db_password=None, \
+                 db_port=None, unix_socket=None, charset='utf8mb4'):
         """
         Initializes a DBManager object
         Args:
@@ -91,8 +91,8 @@ class DBmanagerObj(object):
     """
     
         
-    def readDBtable(self, tablename, limit = None, selectOptions = None,
-                    filterOptions = None, orderOptions = None):
+    def readDBtable(self, tablename, limit=None, selectOptions=None, \
+                    filterOptions=None, orderOptions=None):
         """
         Read data from a table in the database can choose to read only some
         specific fields
@@ -136,8 +136,8 @@ class DBmanagerObj(object):
 
             # Return the pandas dataframe. Note that numbers in text format
             # are not converted to
-            return pd.read_sql(sqlQuery, con=self._conn,
-                               coerce_float = False)
+            return pd.read_sql(sqlQuery, con=self._conn, \
+                               coerce_float=False)
 
         except Exception as E:
             print(str(E))
@@ -233,7 +233,7 @@ class DBmanagerObj(object):
 
         return
 
-    def upsert(self, tablename, keyflds, df, robust = True):
+    def upsert(self, tablename, keyflds, df, robust=True):
 
         """
         Update records of a DB table with the values in the df
@@ -307,7 +307,7 @@ class DBmanagerObj(object):
 
         return
 
-    def savedata(self, df, debug = False):
+    def savedata(self, df, debug=False):
         """
         save data in dateframe,
         id exist then update else insert
@@ -372,13 +372,13 @@ class DBmanagerObj(object):
                    "AND t3.`time`= t1.`time` AND t3.`variabel`= v3.id AND v3.code ='da' AND " \
                    "t0.`time` = t1.`time` AND t0.`variabel`= v0.id AND v0.`code`= 'temp' " \
                    "and t1.`time` >= "+ str(start)
-        if (end!=None):
+        if (end != None):
             sqlQuery += " and t1.`time` < "+ str(end)
         sqlQuery += " ORDER BY t1.`time`;"
         self._conn.commit()
 
         # Return the pandas dataframe. Note that numbers in text format are not converted
-        return pd.read_sql(sqlQuery, con=self._conn, coerce_float = False)
+        return pd.read_sql(sqlQuery, con=self._conn, coerce_float=False)
 
     def getColumnPrognoseData(self, column, start, end):
         sqlQuery = "SELECT `time`, `value` from prognose " \
