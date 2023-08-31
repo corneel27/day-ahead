@@ -4,14 +4,14 @@ import os
 
 class Config:
 
-    def __init__(self, file_name:str):
+    def __init__(self, file_name: str):
         file_json = open(file_name)
         self.options = json.load(file_json)
         datapath = os.path.dirname(file_name)
         secrets_json = open(datapath + "/secrets.json")
         self.secrets = json.load(secrets_json)
 
-    def get (self, keys, options=None):
+    def get(self, keys, options=None):
         if options is None:
             options = self.options
         result = options[keys[0]]
