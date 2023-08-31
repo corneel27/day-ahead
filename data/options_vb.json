@@ -87,6 +87,9 @@
   "history": {
     "save days": 7
   },
+  "dashboard": {
+    "port": 5000,
+  },
   "boiler": {
     "boiler present": "True",
     "entity actual temp.": "sensor.boiler_gemeten",

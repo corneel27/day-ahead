@@ -27,3 +27,7 @@ class Config:
 
     def set(self, key, value):
         self.options[key] = value
+
+def get_config(file_name:str, keys, options = None):
+    config = Config(file_name = file_name)
+    return config.get(keys, options)
