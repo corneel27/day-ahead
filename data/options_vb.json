@@ -88,7 +88,7 @@
     "save days": 7
   },
   "dashboard": {
-    "port": 5000,
+    "port": 5000
   },
   "boiler": {
     "boiler present": "True",
