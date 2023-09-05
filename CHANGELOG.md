@@ -25,6 +25,8 @@ De loggings zijn te vinden in data\log\dashboard.log.
 
 ### Fixed
 
+- Tijdens een lopend uur (dus met een eerste uur wat minder dan 60 minuten duurt)
+gaf het programma verkeerde resultaten voor dat eerste uur. Dit is gefixed.
 - ws parameter overal omgezet naar self.w_socket
 - naar keuze datum-tijd of alleen tijd input helper voor aangeven wanneer een elektrische auto geladen moet zijn
 
