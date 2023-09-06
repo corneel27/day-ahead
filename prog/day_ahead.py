@@ -80,7 +80,7 @@ class DayAheadOpt(hass.Hass):
         else:
             self.last_activity_entity = None
         self.set_last_activity()
-        self.graphics_options = self.config.get(["graphic"])
+        self.graphics_options = self.config.get(["graphics"])
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
