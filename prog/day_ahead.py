@@ -1506,13 +1506,13 @@ class DayAheadOpt(hass.Hass):
             axis[2].set_title("Verloop SoC en tarieven")
 
             axis22 = axis[2].twinx()
-            if self.graphics_options["tarief levering"].lower() == "true":
+            if self.graphics_options["prices delivery"].lower() == "true":
                 ln2 = axis22.plot(ind, np.array(
                     pl), label='Tarief\nlevering', color='#00bfff')
-            if self.graphics_options["tarief terug"].lower() == "true":
+            if self.graphics_options["prices redelivery"].lower() == "true":
                 ln3 = axis22.plot(ind, np.array(pt_notax),
                                 label="Tarief terug\nno tax", color='#0080ff')
-            if self.graphics_options["tarief levering gemiddeld"].lower() == "true":
+            if self.graphics_options["average delivery"].lower() == "true":
                 ln4 = axis22.plot(ind, np.array(
                     pl_avg), label="Tarief lev.\ngemid.", linestyle="dashed", color='#00bfff')
             axis22.set_ylabel("euro/kWh")
@@ -1525,11 +1525,11 @@ class DayAheadOpt(hass.Hass):
             for b in range(B)[1:]:
                 lns += ln1[b]
 #            lns += ln2 + ln3 + ln4
-            if self.graphics_options["tarief levering"].lower() == "true":
+            if self.graphics_options["prices delivery"].lower() == "true":
                 lns += ln2
-            if self.graphics_options["tarief terug"].lower() == "true":
+            if self.graphics_options["prices redelivery"].lower() == "true":
                 lns += ln3
-            if self.graphics_options["tarief levering gemiddeld"].lower() == "true":
+            if self.graphics_options["average delivery"].lower() == "true":
                 lns += ln4
             labels = [l.get_label() for l in lns]
             axis22.legend(lns, labels, loc='best', bbox_to_anchor=(1.40, 1.00))

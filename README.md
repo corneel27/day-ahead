@@ -290,6 +290,12 @@ Je hebt de keuze uit de volgende backends: MacOSX, QtAgg, GTK4Agg, Gtk3Agg, TkAg
 **Agg** werkt goed op een headless linux (zoals Rasberry PI of Ubuntu in een VM).<br>
 Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het programma het zelf uit.
 
+### graphics
+Voor de lijngrafieken van de prijzen kun je met **True** of **False** kiezen welke je wil zien:
+* prices delivery: prijzen voor levering
+* prices redelivery: prijzen voor teruglevering (ex btw en belasting)
+* average delivery": gemiddelde prijs voor levering
+
 ### **strategy**<br>
 Het programma kent twee strategieën die je kunt inzetten om het voor jou optimale energieverbruik
 en teruglevering te realiseren.<br>
