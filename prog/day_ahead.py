@@ -94,7 +94,7 @@ class DayAheadOpt(hass.Hass):
         self.boiler_present = False
 
     def set_last_activity(self):
-        if self.last_activity_entity != None:
+        if self.last_activity_entity is not None:
             self.call_service("set_datetime", entity_id=self.last_activity_entity,
                               datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -219,7 +219,7 @@ class DayAheadOpt(hass.Hass):
         if u <= 2:
             print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
                   "er kan niet worden gerekend")
-            if self.notification_entity != None:
+            if self.notification_entity is not None:
                 self.set_value(self.notification_entity,
                                "Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend")
             return
@@ -227,11 +227,11 @@ class DayAheadOpt(hass.Hass):
         if u <= 8:
             print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
                   "controleer of alle gegevens zijn opgehaald")
-            if self.notification_entity != None:
+            if self.notification_entity is not None:
                 self.set_value(self.notification_entity,
                                "Er ontbreken voor een aantal uur gegevens")
 
-        if self.notification_entity != None:
+        if self.notification_entity is not None:
             if self.notification_options["berekening"].lower() == "true":
                 self.set_value(self.notification_entity, "DAO calc gestart " +
                                datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
@@ -487,7 +487,7 @@ class DayAheadOpt(hass.Hass):
                 pv_yield = self.battery_options[b]["solar"][s]["yield"]
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u
-                    prod_dc = self.meteo.calc_solar_rad(self.battery_options[b]["solar"][s], \
+                    prod_dc = self.meteo.calc_solar_rad(self.battery_options[b]["solar"][s],
                         int(tijd[u].timestamp()), global_rad[u]) * pv_yield
                     efficiency = 1
                     for ds in range(DS[b]):
@@ -517,7 +517,7 @@ class DayAheadOpt(hass.Hass):
         ac_to_dc_on = [[model.add_var(var_type=BINARY) for u in range(U)] for b in range(B)]
 
         # elektra per vermogensklasse van ac naar de busbar, ieder uur
-        ac_to_dc_st = [[[model.add_var(var_type=CONTINUOUS, lb=0, \
+        ac_to_dc_st = [[[model.add_var(var_type=CONTINUOUS, lb=0,
                         ub=self.battery_options[b]["charge stages"][cs]["power"]/1000)
                         for u in range(U)] for cs in range(CS[b])] for b in range(B)]
         # vermogens klasse aan/uit
@@ -529,7 +529,7 @@ class DayAheadOpt(hass.Hass):
         ac_from_dc_on = [[model.add_var(var_type=BINARY) for u in range(U)] for b in range(B)]
 
         # elektra per vermogensklasse van busbar naar ac, ieder uur
-        ac_from_dc_st = [[[model.add_var(var_type=CONTINUOUS, lb=0, \
+        ac_from_dc_st = [[[model.add_var(var_type=CONTINUOUS, lb=0,
                         ub=self.battery_options[b]["discharge stages"][ds]["power"]/1000)
                         for u in range(U)] for ds in range(DS[b])] for b in range(B)]
         ac_from_dc_st_on = [[[model.add_var(var_type=BINARY) \
@@ -1156,117 +1156,156 @@ class DayAheadOpt(hass.Hass):
             # doorzetten van alle settings naar HA
             if not self.debug:
                 print("\nDoorzetten van alle settings naar HA")
+            else:
+                print("\nOnderstaande settings worden NIET doorgezet naar HA")
 
                 '''
-                set helpers output home assistant
-                boiler c_b[0].x >0 trigger boiler
-                ev     c_ev[0].x > 0 start laden auto, ==0 stop laden auto
-                battery multiplus feedin from grid = accu_in[0].x - accu_out[0].x
-                '''
-                # boiler
-                if self.boiler_present:
-                    if float(c_b[0].x) > 0.0:
+            set helpers output home assistant
+            boiler c_b[0].x >0 trigger boiler
+            ev     c_ev[0].x > 0 start laden auto, ==0 stop laden auto
+            battery multiplus feedin from grid = accu_in[0].x - accu_out[0].x
+            '''
+            # boiler
+            if self.boiler_present:
+                if float(c_b[0].x) > 0.0:
+                    if self.debug:
+                        print ("Boiler opwarmen zou zijn geactiveerd")
+                    else:
                         self.call_service(self.boiler_options["activate service"],
                                           entity_id=self.boiler_options["activate entity"])
                         # "input_button.hw_trigger")
                         print("Boiler opwarmen geactiveerd")
+                else:
+                    print("Boiler opwarmen niet geactiveerd")
 
-                # ev
-                for e in range(EV):
-                    entity_charge_switch = self.ev_options[e]["charge switch"]
-                    state = self.get_state(entity_charge_switch).state
-                    if ev_position[e] == "home" and ev_plugged_in[e]:
-                        ev_name = self.ev_options[e]["name"]
-                        try:
-                            if float(c_ev[e][0].x) > 0.0:
-                                if state == "off":
+            # ev
+            for e in range(EV):
+                entity_charge_switch = self.ev_options[e]["charge switch"]
+                state = self.get_state(entity_charge_switch).state
+                if ev_position[e] == "home" and ev_plugged_in[e]:
+                    ev_name = self.ev_options[e]["name"]
+                    try:
+                        if float(c_ev[e][0].x) > 0.0:
+                            if state == "off":
+                                if self.debug:
+                                    print(f"Laden van {ev_name} zou zijn aangezet")
+                                else:
                                     self.turn_on(entity_charge_switch)
-                                    print(f"Laden van {ev_name}+aangezet")
-                            else:
-                                if state == "on":
-                                    self.turn_off(entity_charge_switch)
-                                    print(f"Laden van {ev_name}+uitgezet")
-                        except BaseException:
-                            pass
-#                    else:
-#                        self.turn_off(entity_charge_switch)  # charger uitzetten indien niet ingeplugd of niet thuis
-# geeft error, bovendien als je elders aan de laadpaal staat moet ie doorgaan!
-
-                # solar
-                for s in range(solar_num):
-                    entity_pv_switch = self.config.get(
-                        ["entity pv switch"], self.solar[s])
-                    if pv_ac_on_off[s][0].x == 1.0 or solar_prod[s][0] == 0.0:
-                        self.turn_on(entity_pv_switch)
-                    else:
-                        self.turn_off(entity_pv_switch)
-
-                # battery
-                for b in range(B):
-                    # vermogen aan ac kant
-                    netto_vermogen = int(1000 * ((ac_to_dc[b][0].x - ac_from_dc[b][0].x)))
-                    minimum_power = self.battery_options[b]["minimum power"]
-                    if abs(netto_vermogen) <= 20:
-                        netto_vermogen = 0
-                        new_state = "Uit"
-                        stop_victron = None
-                        balance = False
-                    elif abs(c_l[0].x - c_t_w_tax[0].x - c_t_no_tax[0].x) <= 0.01:
-                        new_state = "Aan"
-                        balance = True
-                        stop_victron = None
-                    elif abs(netto_vermogen) < minimum_power:
-                        new_state = "Aan"
-                        balance = False
-                        new_ts = now_dt.timestamp() + (abs(netto_vermogen) / minimum_power) * 3600
-                        stop_victron = datetime.datetime.fromtimestamp(
-                            int(new_ts))
-                        if netto_vermogen > 0:
-                            netto_vermogen = minimum_power
+                                    print(f"Laden van {ev_name} aangezet")
                         else:
-                            netto_vermogen = -minimum_power
-                    else:
-                        new_state = "Aan"
-                        balance = False
-                        stop_victron = None
+                            if state == "on":
+                                if self.debug:
+                                    print(f"Laden van {ev_name} zou zijn uitgezet")
+                                else:
+                                    self.turn_off(entity_charge_switch)
+                                    print(f"Laden van {ev_name} uitgezet")
+                    except BaseException:
+                        pass
 
-                    self.set_value(
-                        self.battery_options[b]["entity set power feedin"], netto_vermogen)
-                    self.select_option(
-                        self.battery_options[b]["entity set operating mode"], new_state)
-                    if balance:
-                        self.set_state(
-                            self.battery_options[b]["entity balance switch"], 'on')
-                    else:
-                        self.set_state(
-                            self.battery_options[b]["entity balance switch"], 'off')
-                    print("Netto vermogen uit grid batterij " +
-                          str(b) + ": ", netto_vermogen, "W")
-                    print("Balanceren:", balance)
-                    if stop_victron is None:
-                        datetime_str = "2000-01-01 00:00:00"
-                    else:
-                        print("tot: ", stop_victron)
-                        datetime_str = stop_victron.strftime('%Y-%m-%d %H:%M')
-                    helper_id = self.battery_options[b]["entity stop victron"]
-                    self.call_service(
-                        "set_datetime", entity_id=helper_id, datetime=datetime_str)
-                    for s in range(pv_dc_num[b]):
-                        entity_pv_switch = self.battery_options[b]["solar"][s]["entity pv switch"]
-                        if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
+            # solar
+            for s in range(solar_num):
+                entity_pv_switch = self.config.get(["entity pv switch"], self.solar[s])
+                switch_state = self.get_state(entity_pv_switch).state
+                pv_name = self.solar[s]["name"]
+                if (pv_ac_on_off[s][0].x == 1.0 or solar_prod[s][0] == 0.0):
+                    if switch_state == "off":
+                        if self.debug:
+                            print(f"PV {pv_name} zou zijn aangezet")
+                        else:
                             self.turn_on(entity_pv_switch)
+                            print(f"PV {pv_name} aangezet")
+                else:
+                    if switch_state == "on":
+                        if self.debug:
+                            print(f"PV {pv_name} zou zijn uitgezet")
                         else:
                             self.turn_off(entity_pv_switch)
+                            print(f"PV {pv_name} uitgezet")
 
-                # heating
-                if self.heater_present:
-                    entity_curve_adjustment = self.heating_options["entity adjust heating curve"]
-                    old_adjustment = float(self.get_state(
-                        entity_curve_adjustment).state)
-                    # adjustment factor (K/%) bijv 0.4 K/10% = 0.04
-                    adjustment_factor = self.heating_options["adjustment factor"]
-                    adjustment = utils.calc_adjustment_heatcurve(
-                        pl[0], p_avg, adjustment_factor, old_adjustment)
+                # battery
+            for b in range(B):
+                # vermogen aan ac kant
+                netto_vermogen = int(1000 * ((ac_to_dc[b][0].x - ac_from_dc[b][0].x)))
+                minimum_power = self.battery_options[b]["minimum power"]
+                bat_name = self.battery_options[b]["name"]
+                if abs(netto_vermogen) <= 20:
+                    netto_vermogen = 0
+                    new_state = "Uit"
+                    stop_victron = None
+                    balance = False
+                elif abs(c_l[0].x - c_t_w_tax[0].x - c_t_no_tax[0].x) <= 0.01:
+                    new_state = "Aan"
+                    balance = True
+                    stop_victron = None
+                elif abs(netto_vermogen) < minimum_power:
+                    new_state = "Aan"
+                    balance = False
+                    new_ts = now_dt.timestamp() + (abs(netto_vermogen) / minimum_power) * 3600
+                    stop_victron = datetime.datetime.fromtimestamp(int(new_ts))
+                    if netto_vermogen > 0:
+                        netto_vermogen = minimum_power
+                    else:
+                        netto_vermogen = -minimum_power
+                else:
+                    new_state = "Aan"
+                    balance = False
+                    stop_victron = None
+                if stop_victron is None:
+                    stop_str = "2000-01-01 00:00:00"
+                else:
+                    stop_str = stop_victron.strftime('%Y-%m-%d %H:%M')
+
+                if self.debug:
+                    print(f"Netto vermogen naar(+)/uit(-) batterij {bat_name} zou zijn: ", netto_vermogen, "W")
+                    print("Balanceren zou zijn:", balance)
+                    if stop_victron :
+                       print("tot: ", stop_str)
+                else:
+                    self.set_value(self.battery_options[b]["entity set power feedin"], netto_vermogen)
+                    self.select_option(self.battery_options[b]["entity set operating mode"], new_state)
+                    if balance:
+                        self.set_state(self.battery_options[b]["entity balance switch"], 'on')
+                    else:
+                        self.set_state(self.battery_options[b]["entity balance switch"], 'off')
+                    print(f"Netto vermogen (+)/uit(-) batterij {bat_name}: ", netto_vermogen, "W")
+                    print("Balanceren:", balance)
+                    if stop_victron :
+                       print("tot: ", stop_str)
+                    helper_id = self.battery_options[b]["entity stop victron"]
+                    self.call_service("set_datetime", entity_id=helper_id, datetime=stop_str)
+
+                for s in range(pv_dc_num[b]):
+                    entity_pv_switch = self.battery_options[b]["solar"][s]["entity pv switch"]
+                    switch_state = self.get_state(entity_pv_switch).state
+                    pv_name = self.battery_options[b]["solar"][s]["name"]
+                    if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
+                        if switch_state == "off":
+                            if self.debug:
+                                print(f"PV {pv_name} zou zijn aangezet")
+                            else:
+                                self.turn_on(entity_pv_switch)
+                                print(f"PV {pv_name} aangezet")
+                    else:
+                        if switch_state == "on":
+                            if self.debug:
+                                print(f"PV {pv_name} zou zijn uitgezet")
+                            else:
+                                self.turn_off(entity_pv_switch)
+                                print(f"PV {pv_name} uitgezet")
+                        self.turn_on(entity_pv_switch)
+
+            # heating
+            if self.heater_present:
+                entity_curve_adjustment = self.heating_options["entity adjust heating curve"]
+                old_adjustment = float(self.get_state(
+                    entity_curve_adjustment).state)
+                # adjustment factor (K/%) bijv 0.4 K/10% = 0.04
+                adjustment_factor = self.heating_options["adjustment factor"]
+                adjustment = utils.calc_adjustment_heatcurve(
+                    pl[0], p_avg, adjustment_factor, old_adjustment)
+                if self.debug:
+                    print("Aanpassing stooklijn zou zijn: ", adjustment)
+                else:
                     print("Aanpassing stooklijn: ", adjustment)
                     self.set_value(entity_curve_adjustment, adjustment)
 
