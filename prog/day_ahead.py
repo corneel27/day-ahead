@@ -80,7 +80,8 @@ class DayAheadOpt(hass.Hass):
         else:
             self.last_activity_entity = None
         self.set_last_activity()
-        self .history_options = self.config.get(["history"])
+        self.graphics_options = self.config.get(["graphic"])
+        self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
         self.prices_options = self.config.get(["prices"])
@@ -1466,12 +1467,15 @@ class DayAheadOpt(hass.Hass):
             axis[2].set_title("Verloop SoC en tarieven")
 
             axis22 = axis[2].twinx()
-            ln2 = axis22.plot(ind, np.array(
-                pl), label='Tarief\nlevering', color='#00bfff')
-            ln3 = axis22.plot(ind, np.array(pt_notax),
-                              label="Tarief terug\nno tax", color='#0080ff')
-            ln4 = axis22.plot(ind, np.array(
-                pl_avg), label="Tarief lev.\ngemid.", linestyle="dashed", color='#00bfff')
+            if self.graphics_options["tarief levering"].lower() == "true":
+                ln2 = axis22.plot(ind, np.array(
+                    pl), label='Tarief\nlevering', color='#00bfff')
+            if self.graphics_options["tarief terug"].lower() == "true":
+                ln3 = axis22.plot(ind, np.array(pt_notax),
+                                label="Tarief terug\nno tax", color='#0080ff')
+            if self.graphics_options["tarief levering gemiddeld"].lower() == "true":
+                ln4 = axis22.plot(ind, np.array(
+                    pl_avg), label="Tarief lev.\ngemid.", linestyle="dashed", color='#00bfff')
             axis22.set_ylabel("euro/kWh")
             axis22.yaxis.set_major_formatter(
                 ticker.FormatStrFormatter('% 1.2f'))
@@ -1481,7 +1485,13 @@ class DayAheadOpt(hass.Hass):
             lns = ln1[0]
             for b in range(B)[1:]:
                 lns += ln1[b]
-            lns += ln2 + ln3 + ln4
+#            lns += ln2 + ln3 + ln4
+            if self.graphics_options["tarief levering"].lower() == "true":
+                lns += ln2
+            if self.graphics_options["tarief terug"].lower() == "true":
+                lns += ln3
+            if self.graphics_options["tarief levering gemiddeld"].lower() == "true":
+                lns += ln4
             labels = [l.get_label() for l in lns]
             axis22.legend(lns, labels, loc='best', bbox_to_anchor=(1.40, 1.00))
             plt.subplots_adjust(right=0.75)

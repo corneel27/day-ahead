@@ -76,6 +76,11 @@
     0.16
   ],
   "graphical backend": "Gtk3Agg",
+  "graphics": {
+    "tarief levering": "True",
+    "tarief terug": "False",
+    "tarief levering gemiddeld": "False"
+  },
   "strategy": "minimize cost",
   "trigger entity": "input_button.day_ahead_berekening_uitvoeren",
   "notifications": {
