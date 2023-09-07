@@ -4,5 +4,5 @@ data/secrets.json
 data/options.json
 .idea/
 __pycache__/
-CODEOWNER
+CODEOWNERS
 webserver/prog/*

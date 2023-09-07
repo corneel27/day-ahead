@@ -9,6 +9,7 @@ from nordpool.elspot import Prices
 import pytz
 import json
 
+
 class DA_Prices:
     def __init__(self, config: Config, db_da: DBmanagerObj):
         self.config = config
@@ -16,13 +17,14 @@ class DA_Prices:
 
     def get_prices(self, source):
         now = datetime.datetime.now()
-        #start
+        # start
         if len(sys.argv) > 2:
             arg_s = sys.argv[2]
             start = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
         else:
-            start = pd.Timestamp(year=now.year, month=now.month, day=now.day, tz='CET')
-        #end
+            start = pd.Timestamp(
+                year=now.year, month=now.month, day=now.day, tz='CET')
+        # end
         if len(sys.argv) > 3:
             arg_s = sys.argv[3]
             end = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
@@ -43,14 +45,17 @@ class DA_Prices:
 
         # day-ahead market prices (€/MWh)
         if source.lower() == "entsoe":
-            start = pd.Timestamp(year=start.year, month=start.month, day=start.day, tz='CET')
-            end = pd.Timestamp(year=end.year, month=end.month, day=end.day, tz='CET')
+            start = pd.Timestamp(
+                year=start.year, month=start.month, day=start.day, tz='CET')
+            end = pd.Timestamp(year=end.year, month=end.month,
+                               day=end.day, tz='CET')
             api_key = self.config.get(["prices", "entsoe-api-key"])
-            client = EntsoePandasClient(api_key = api_key)
+            client = EntsoePandasClient(api_key=api_key)
             da_prices = pd.DataFrame()
             last_time = 0
             try:
-                da_prices = client.query_day_ahead_prices('NL', start=start, end=end)
+                da_prices = client.query_day_ahead_prices(
+                    'NL', start=start, end=end)
             except Exception as e:
                 print(f"Geen data van Entsoe: tussen {start} en {end}")
             if len(da_prices.index) > 0:
@@ -58,7 +63,8 @@ class DA_Prices:
                 da_prices = da_prices.reset_index()  # make sure indexes pair with number of rows
                 for row in da_prices.itertuples():
                     last_time = int(datetime.datetime.timestamp(row[1]))
-                    df_db.loc[df_db.shape[0]] = [str(last_time), 'da', row[2] / 1000]
+                    df_db.loc[df_db.shape[0]] = [
+                        str(last_time), 'da', row[2] / 1000]
                 print(df_db)
                 self.db_da.savedata(df_db)
 
@@ -82,7 +88,8 @@ class DA_Prices:
             # 2022-06-25T00:00:00
             startstr = start.strftime('%Y-%m-%dT%H:%M:%S')
             endstr = end.strftime('%Y-%m-%dT%H:%M:%S')
-            url = "https://mijn.easyenergy.com/nl/api/tariff/getapxtariffs?startTimestamp=" + startstr + "&endTimestamp=" + endstr
+            url = "https://mijn.easyenergy.com/nl/api/tariff/getapxtariffs?startTimestamp=" + \
+                startstr + "&endTimestamp=" + endstr
             resp = get(url)
             # print (resp.text)
             json_object = json.loads(resp.text)
@@ -92,10 +99,9 @@ class DA_Prices:
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             df = df.reset_index()  # make sure indexes pair with number of rows
             for row in df.itertuples():
-                dtime = str(int(datetime.datetime.fromisoformat(row.Timestamp).timestamp()))
+                dtime = str(
+                    int(datetime.datetime.fromisoformat(row.Timestamp).timestamp()))
                 df_db.loc[df_db.shape[0]] = [dtime, 'da', row.TariffReturn]
-    
+
             # print (df_db)
             self.db_da.savedata(df_db)
-
-

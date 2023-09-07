@@ -1,10 +1,10 @@
-import sys
-
 from webserver.app import app
 from flask import render_template, request
-import json, os, fnmatch
-
-#sys.path.append("../")
+import json, fnmatch
+import os
+import logging
+from datetime import date
+from logging.handlers import TimedRotatingFileHandler
 from prog.da_config import Config
 import prog.da_report
 
@@ -13,13 +13,24 @@ app_datapath = "app/static/data/"
 images_folder = os.path.join(web_datapath, 'images')
 config = Config(app_datapath + "options.json")
 
-def get_file_list(path:str, filter:str):
+
+
+logname = "dashboard.log"
+handler = TimedRotatingFileHandler("../data/log/" + logname, when="midnight", backupCount=config.get(["history", "save days"]))
+handler.suffix = "%Y%m%d"
+handler.setLevel(logging.INFO)
+logging.basicConfig(level=logging.DEBUG, handlers=[handler], format=f'%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
+
+
+def get_file_list(path:str, pattern:str) -> list:
     """
+    get a time-ordered file list with name and modified time
+    :parameter path: folder
+    :parameter pattern: wildcards to search for
     """
     flist = []
-    #path = os.path.join(path, "/")
     for f in os.listdir(path):
-        if fnmatch.fnmatch(f, filter):
+        if fnmatch.fnmatch(f, pattern):
             fullname = os.path.join(path, f)
             flist.append({"name": f, "time": os.path.getmtime(fullname)})
             #print(f, time.ctime(os.path.getmtime(f)))
@@ -158,3 +169,7 @@ def reports():
     return render_template('report.html', title='Rapportage', subjects=subjects, views=views,
                            periode_options=periode_options, active_period=active_period,
                            active_subject=active_subject, active_view=active_view, tables=tables)
+
+@app.route('/meteo', methods=['POST', 'GET'])
+def meteo():
+    return render_template('meteo.html', title='Meteo')

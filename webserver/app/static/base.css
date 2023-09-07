@@ -5,11 +5,12 @@ body {
   margin: 0;
   overflow: hidden;
   background-color: #2196f3;
+  color: black;
 }
 
 * {
   font-family: Arial, sans-serif;
-  font-size: 16pt
+  font-size: 16pt;
 }
 
 
@@ -171,7 +172,7 @@ table {
   border-collapse: collapse;
   border: 2px solid;
   border-color: white;
-  border-radius: 4px
+  border-radius: 4px;
   border-radius: 1em;
 }
 

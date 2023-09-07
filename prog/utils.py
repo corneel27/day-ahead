@@ -6,7 +6,7 @@ import json
 import os
 import sys
 import pandas as pd
-#from day_ahead import DayAheadOpt
+# from day_ahead import DayAheadOpt
 from requests import post
 
 
@@ -43,13 +43,14 @@ def calc_adjustment_heatcurve(price: float, price_avg: float, adjustment_factor,
     if price_avg == 0:
         adjustment = 0
     else:
-        adjustment = round(- adjustment_factor * (price - price_avg) * 100 / price_avg, 1)
+        adjustment = round(- adjustment_factor *
+                           (price - price_avg) * 100 / price_avg, 1)
     # toename en afname maximeren op 10 x adjustment factor
     if adjustment >= old_adjustment:
         adjustment = min(adjustment, old_adjustment + adjustment_factor*10)
     else:
         adjustment = max(adjustment, old_adjustment - adjustment_factor*10)
-    return round(adjustment,1)
+    return round(adjustment, 1)
 
 
 def get_value_from_dict(dag: str, options: dict) -> float:
@@ -60,15 +61,18 @@ def get_value_from_dict(dag: str, options: dict) -> float:
     :return: de correcte value
     """
     o_list = list(options.keys())
-    result = options.get(dag, options[o_list[bisect.bisect_left(o_list, dag) - 1]])
+    result = options.get(
+        dag, options[o_list[bisect.bisect_left(o_list, dag) - 1]])
     return result
 
 
 def get_tibber_data():
     from da_config import Config
     from db_manager import DBmanagerObj
+
     def get_datetime_from_str(s):
-        result = datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f%z")  # "2022-09-01T01:00:00.000+02:00"
+        # "2022-09-01T01:00:00.000+02:00"
+        result = datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f%z")
         return result
     config = Config("../data/options.json")
     tibber_options = config.get(["tibber"])
@@ -79,14 +83,15 @@ def get_tibber_data():
     db_da_user = config.get(['database da', "username"])
     db_da_password = config.get(['database da', "password"])
     db_da = DBmanagerObj(db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
-                              db_user=db_da_user, db_password=db_da_password)
+                         db_user=db_da_user, db_password=db_da_password)
     db_da.connect()
     prices_options = config.get(["prices"])
     headers = {
         "Authorization": "Bearer " + tibber_options["api_token"],
         "content-type": "application/json",
     }
-    now_ts = latest_ts = math.ceil(datetime.datetime.now().timestamp() / 3600) * 3600
+    now_ts = latest_ts = math.ceil(
+        datetime.datetime.now().timestamp() / 3600) * 3600
     arg_dt = None
     if len(sys.argv) > 2:
         arg_s = sys.argv[2]
@@ -106,14 +111,16 @@ def get_tibber_data():
                 "WHERE v2.`code` = '"+cat+"' AND v2.id = t2.variabel AND t1.time + 3600 = t2.time);")
             data = db_da.run_select_query(sql_latest_ts)
             if len(data.index) == 0:
-                latest = datetime.datetime.strptime(prices_options["last invoice"], "%Y-%m-%d").timestamp()
+                latest = datetime.datetime.strptime(
+                    prices_options["last invoice"], "%Y-%m-%d").timestamp()
             else:
                 latest = data['time'].values[0]
             latest_ts = min(latest_ts, latest)
     count = math.ceil((now_ts - latest_ts)/3600)
-    print("Tibber data present tot en met:", str(datetime.datetime.fromtimestamp(latest_ts)))
+    print("Tibber data present tot en met:", str(
+        datetime.datetime.fromtimestamp(latest_ts)))
     if count < 24:
-        print("Er worden geen data opgehaald")
+        print("Er is geen data opgehaald.")
         return
     query = '{ ' \
             '"query": ' \
@@ -147,7 +154,7 @@ def get_tibber_data():
     tibber_df = pd.DataFrame(columns=['time', 'code', 'value'])
     for node in production_nodes:
         time_stamp = str(int(get_datetime_from_str(node['from']).timestamp()))
-        if not(node["production"] is None):
+        if not (node["production"] is None):
             code = "prod"
             value = float(node["production"])
             print(node, time_stamp, value)
@@ -155,7 +162,7 @@ def get_tibber_data():
         if not (node["profit"] is None):
             code = 'profit'
             value = float(node["profit"])
-            #print(node, time_stamp, value)
+            # print(node, time_stamp, value)
             tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
     for node in consumption_nodes:
         time_stamp = str(int(get_datetime_from_str(node['from']).timestamp()))
@@ -167,11 +174,12 @@ def get_tibber_data():
         if not (node["cost"] is None):
             code = "cost"
             value = float(node["cost"])
-            #print(node, time_stamp, value)
+            # print(node, time_stamp, value)
             tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
     print(tibber_df)
     db_da.savedata(tibber_df)
     db_da.disconnect()
+
 
 '''
 def calc_heatpump_usage
@@ -198,6 +206,7 @@ def calc_heatpump_usage
         for u in range(U):
             usage.append(250+ (pl[u]-pl_min) * energy_cost)
 '''
+
 
 def make_data_path():
     if os.path.lexists("../data"):
