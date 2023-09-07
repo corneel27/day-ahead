@@ -1352,7 +1352,7 @@ class DayAheadOpt(hass.Hass):
             from da_graph import GraphBuilder
             gr1_df = pd.DataFrame()
             gr1_df["index"] = np.arange(U)
-            gr1_df["uur"] = uur
+            gr1_df["uur"] = uur[0:U]
             gr1_df["verbruik"] = c_l_p
             gr1_df["productie"] = c_t_n
             gr1_df["baseload"] = base_n
@@ -1507,14 +1507,14 @@ class DayAheadOpt(hass.Hass):
 
             axis22 = axis[2].twinx()
             if self.graphics_options["prices delivery"].lower() == "true":
-                ln2 = axis22.plot(ind, np.array(
-                    pl), label='Tarief\nlevering', color='#00bfff')
+                ln2 = axis22.step(ind, np.array(pl),
+                        label='Tarief\nlevering', color='#00bfff', where='post')
             if self.graphics_options["prices redelivery"].lower() == "true":
-                ln3 = axis22.plot(ind, np.array(pt_notax),
-                                label="Tarief terug\nno tax", color='#0080ff')
+                ln3 = axis22.step(ind, np.array(pt_notax),
+                        label="Tarief terug\nno tax", color='#0080ff', where='post')
             if self.graphics_options["average delivery"].lower() == "true":
-                ln4 = axis22.plot(ind, np.array(
-                    pl_avg), label="Tarief lev.\ngemid.", linestyle="dashed", color='#00bfff')
+                ln4 = axis22.plot(ind, np.array(pl_avg),
+                        label="Tarief lev.\ngemid.", linestyle="dashed", color='#00bfff')
             axis22.set_ylabel("euro/kWh")
             axis22.yaxis.set_major_formatter(
                 ticker.FormatStrFormatter('% 1.2f'))

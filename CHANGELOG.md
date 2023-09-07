@@ -11,6 +11,7 @@ De volgende zaken staan op de todo lijst:
 
 ### Added
 
+- de grafieklijnen van de prijzen zijn nu stapsgewijs
 - via de optie **graphics** kun je kiezen welke prijzen moeten worden getoond in de grafiek met prijzen (zie README)
 - als je een berekening laat uitvoeren met de parameter **debug** krijg je nu meer info welke instellingen zouden zijn 
 aangepast als je de berekening zonder **debug** zou hebben laten uitvoeren
