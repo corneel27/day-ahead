@@ -1428,25 +1428,25 @@ class DayAheadOpt(hass.Hass):
             fig, axis = plt.subplots(figsize=(8, 9), nrows=3)  # , sharex=True)
             ind = np.arange(U)
             axis[0].bar(ind, np.array(org_l),
-                        label='Levering', color='#00bfff')
+                        label='Levering', color='#00bfff', align="edge")
             if sum(pv_p) > 0:
                 axis[0].bar(ind, np.array(pv_p), bottom=np.array(
-                    org_l), label='PV AC', color='green')
+                    org_l), label='PV AC', color='green', align="edge")
             if sum(pv_ac_p) > 0:
                 axis[0].bar(ind, np.array(pv_ac_p), bottom=np.array(
-                    org_l) + np.array(pv_p), label='PV DC', color='lime')
+                    org_l) + np.array(pv_p), label='PV DC', color='lime', align="edge")
             axis[0].bar(ind, np.array(base_n),
-                        label="Overig verbr.", color='#f1a603')
+                        label="Overig verbr.", color='#f1a603', align="edge")
             if self.boiler_present:
                 axis[0].bar(ind, np.array(boiler_n), bottom=np.array(
-                    base_n), label="Boiler", color='#e39ff6')
+                    base_n), label="Boiler", color='#e39ff6', align="edge")
             if self.heater_present:
                 axis[0].bar(ind, np.array(heatpump_n), bottom=np.array(
-                    base_n), label="WP", color='#a32cc4')
+                    base_n), label="WP", color='#a32cc4', align="edge")
             axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
-                        color='#fefbbd')
+                        color='#fefbbd', align="edge")
             axis[0].bar(ind, np.array(org_t), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
-                        label="Teruglev.", color='#0080ff')
+                        label="Teruglev.", color='#0080ff', align="edge")
             axis[0].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
             axis[0].set_ylabel('kWh')
             ylim = math.ceil(max_y)
@@ -1459,30 +1459,30 @@ class DayAheadOpt(hass.Hass):
                 "Berekend op: " + now_dt.strftime('%d-%m-%Y %H:%M') + "\nNiet geoptimaliseerd")
 
             axis[1].bar(ind, np.array(c_l_p),
-                        label='Levering', color='#00bfff')
+                        label='Levering', color='#00bfff', align="edge")
             axis[1].bar(ind, np.array(pv_p), bottom=np.array(
-                c_l_p), label='PV AC', color='green')
+                c_l_p), label='PV AC', color='green', align="edge")
             axis[1].bar(ind, np.array(accu_out_p), bottom=np.array(c_l_p) + np.array(pv_p), label='Accu uit',
-                        color='red')
+                        color='red', align="edge")
 
             # axis[1].bar(ind, np.array(cons_n), label="Verbruik", color='yellow')
             axis[1].bar(ind, np.array(base_n),
-                        label="Overig verbr.", color='#f1a603')
+                        label="Overig verbr.", color='#f1a603', align="edge")
             if self.boiler_present:
                 axis[1].bar(ind, np.array(boiler_n), bottom=np.array(
-                    base_n), label="Boiler", color='#e39ff6')
+                    base_n), label="Boiler", color='#e39ff6', align="edge")
             if self.heater_present:
                 axis[1].bar(ind, np.array(heatpump_n), bottom=np.array(
-                    base_n), label="WP", color='#a32cc4')
+                    base_n), label="WP", color='#a32cc4', align="edge")
             axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
-                        color='#fefbbd')
+                        color='#fefbbd', align="edge")
             axis[1].bar(ind, np.array(c_t_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
-                        label="Teruglev.", color='#0080ff')
+                        label="Teruglev.", color='#0080ff', align="edge")
             axis[1].bar(ind, np.array(accu_in_n),
                         bottom=np.array(base_n) + np.array(boiler_n) +
                         np.array(heatpump_n) + np.array(ev_n) +
                         np.array(c_t_n),
-                        label='Accu in', color='#ff8000')
+                        label='Accu in', color='#ff8000', align="edge")
             axis[1].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
             axis[1].set_ylabel('kWh')
             axis[1].set_ylim([-ylim, ylim])
