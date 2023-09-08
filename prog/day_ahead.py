@@ -1560,6 +1560,7 @@ class DayAheadOpt(hass.Hass):
                         print("{} removed".format(f))
             os.chdir(current_dir)
         clean_folder("../data/log", "*.log")
+        clean_folder("../data/log", "dashboard.log.*")
         clean_folder("../data/images", "*.png")
 
     def run_task(self, task):

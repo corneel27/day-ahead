@@ -513,9 +513,9 @@ Het programma wordt geleverd met een webserver die je als een dashboard kunt ben
 Dit onderdeel is nog helemaal in ontwikkeling, maar kan al wel gedeeltelijk worden  getest.
 
 De webserver kan op twee manieren worden opgestart:
-* om te testen start je het programma op in een console in de directory webserver met het commando: `python3 da_server.py`
+* om te testen start je het programma op in een console in de directory webserver met het commando: ````python3 da_server.py````
 * voor een productiesituatie dien je gebruik te maken van gunicorn en dan geef je in de directory webserver het commando: <br>
-`gunicorn --config gunicorn_config.py  app:app`
+````gunicorn --config gunicorn_config.py  app:app````
 
 De specifieke instellingen voor dit onderdeel staan ook in options.json onder de sleutel **dashboard**
 Je kunt de volgende instellingen maken:
