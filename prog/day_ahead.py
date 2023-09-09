@@ -1346,6 +1346,8 @@ class DayAheadOpt(hass.Hass):
                     if u == 0:
                         soc_p.append([])
                     soc_p[b].append(soc[b][u].x)
+#            for b in range(B):
+#                soc_p[b].append(soc[b][U].x)
 
             # grafiek 1
             import numpy as np
@@ -1425,7 +1427,7 @@ class DayAheadOpt(hass.Hass):
             import matplotlib
             import matplotlib.pyplot as plt
             import matplotlib.ticker as ticker
-            fig, axis = plt.subplots(figsize=(8, 9), nrows=3)  # , sharex=True)
+            fig, axis = plt.subplots(figsize=(8, 9), nrows=3) #, sharex=other)
             ind = np.arange(U)
             axis[0].bar(ind, np.array(org_l),
                         label='Levering', color='#00bfff', align="edge")
@@ -1491,9 +1493,11 @@ class DayAheadOpt(hass.Hass):
             axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
             axis[1].set_title("Day Ahead geoptimaliseerd: " + strategie +
                               ", winst € {:<0.2f}".format(old_cost_da - cost.x))
+            axis[1].sharex(axis[0])
 
             ln1 = []
             line_styles = ["solid", "dashed", "dotted"]
+            np.append(ind, 24)
             for b in range(B):
                 ln1.append(axis[2].plot(ind, soc_p[b], label='SoC ' + self.battery_options[b]["name"],
                            linestyle=line_styles[b], color='red'))
@@ -1504,6 +1508,7 @@ class DayAheadOpt(hass.Hass):
             axis[2].xaxis.set_minor_locator(ticker.MultipleLocator(1))
             axis[2].set_ylim([0, 100])
             axis[2].set_title("Verloop SoC en tarieven")
+            axis[2].sharex(axis[0])
 
             axis22 = axis[2].twinx()
             if self.graphics_options["prices delivery"].lower() == "true":
@@ -1533,6 +1538,7 @@ class DayAheadOpt(hass.Hass):
                 lns += ln4
             labels = [l.get_label() for l in lns]
             axis22.legend(lns, labels, loc='best', bbox_to_anchor=(1.40, 1.00))
+
             plt.subplots_adjust(right=0.75)
             fig.tight_layout()
             plt.savefig("../data/images/optimum" +
