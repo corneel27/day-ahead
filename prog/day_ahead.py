@@ -33,10 +33,11 @@ class DayAheadOpt(hass.Hass):
         utils.make_data_path()
         self.debug = False
         self.config = Config(file_name)
+        self.protol_api = self.config.get(['homeassistant', 'protocol api'])
+        self.protol_ws = self.config.get(['homeassistant', 'protocol ws'])
         self.ip_adress = self.config.get(['homeassistant', 'ip adress'])
         self.ip_port = self.config.get(['homeassistant', 'ip port'])
-        self.hassurl = "http://" + self.ip_adress + \
-            ":" + str(self.ip_port) + "/"
+        self.hassurl = self.protol_api+"://" + self.ip_adress + ":" + str(self.ip_port) + "/"
         self.hasstoken = self.config.get(['homeassistant', 'token'])
         super().__init__(hassurl=self.hassurl, token=self.hasstoken)
         headers = {
@@ -1346,8 +1347,6 @@ class DayAheadOpt(hass.Hass):
                     if u == 0:
                         soc_p.append([])
                     soc_p[b].append(soc[b][u].x)
-#            for b in range(B):
-#                soc_p[b].append(soc[b][U].x)
 
             # grafiek 1
             import numpy as np
@@ -1427,7 +1426,7 @@ class DayAheadOpt(hass.Hass):
             import matplotlib
             import matplotlib.pyplot as plt
             import matplotlib.ticker as ticker
-            fig, axis = plt.subplots(figsize=(8, 9), nrows=3) #, sharex=other)
+            fig, axis = plt.subplots(figsize=(8, 9), nrows=3)
             ind = np.arange(U)
             axis[0].bar(ind, np.array(org_l),
                         label='Levering', color='#00bfff', align="edge")
@@ -1667,8 +1666,7 @@ class DayAheadOpt(hass.Hass):
 
     def start_websocket(self) -> websocket:
         ws = websocket.WebSocket()
-        ws.connect("ws://" + self.ip_adress + ":" +
-                   str(self.ip_port) + "/api/websocket")
+        ws.connect(self.protol_ws+"://" + self.ip_adress + ":" + str(self.ip_port) + "/api/websocket")
         print("Websocket connect: ", ws.recv())
         ws.send('{"type": "auth", "access_token": "' + self.hasstoken + '"}')
         print("Websocket auth: ", ws.recv())

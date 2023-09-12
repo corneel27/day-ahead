@@ -180,7 +180,12 @@ Het bestand `options.json` in de folder `data` bevat alle instellingen voor het 
 Opmerking: alle instellingen die beginnen met "!secret" staan komen in het bestand `secrets.json` te staan met de key die hier achter !secret staat.
 
 ### **homeassistant**<br>
- * url : de url waar de api van je home assistant bereikbaar is  
+ * protocol api: hiermee geeft je aan met welke protocol jouw HA installatie 
+bereikbaar is. Je kunt kiezen uit `http` (zonder ssl) of `https` (met ssl).
+ * protocol ws: hiermee geeft je aan met welke protocol je een websocket naar HA kunt openen. 
+Je kunt kiezen uit `ws` (zonder ssl) of `wss` (met ssl).
+ * ip adress: het ip-adres waar je home assistant installatie bereikbaar is.  
+ * ip port: de ip-poort waar je home assistant installatie bereikbaar is.
  * token: om de api te kunnen aanroepen is er een token nodig.  
    Deze kun je genereren in Home Assistant in je profiel. Maak een token met lange levensduur aan.
 
@@ -508,6 +513,12 @@ Bijvoorbeeld : <br/>
 `"1255": "get_day_ahead_prices"`: haal de actuele prijzen op op 12 uur 55<br>
 `"xx00": "calc_optimum"`: ieder uur exact om "00" wordt de optimaliseringsberekening uitgevoerd.
 
+## Addon
+Het bovenstaande programma en de webserver voor het dashboard kunnen samen draaien in een addon van Home Assistant.
+Voorlopig draait deze addon alleen op de platforms met een arm64 
+processor, zoals een Raspberry PI4 of Odroid.
+
+De addon komt met 4 configuratie-bestanden, die je moet kopieren naar 
 ## Dashboard
 Het programma wordt geleverd met een webserver die je als een dashboard kunt benaderen.
 Dit onderdeel is nog helemaal in ontwikkeling, maar kan al wel gedeeltelijk worden  getest.

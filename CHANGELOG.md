@@ -6,6 +6,33 @@ De volgende zaken staan op de todo lijst:
 - Alle print opdrachten omzetten naar logger 
 - prijzengrafiek(en) in blokvorm
 
+## [v0.3.1] - 2023-09-12
+
+### Added
+
+- het protocol voor de api en de ws richting Home Assistant is instelbaar (zie README, onderdeel Home Assistant) 
+
+
+### Fixed
+
+
+### Changed
+
+### Issues
+Als het programma draait in scheduler-mode wordt een websocket geopend naar HA zodat vanuit HA een 
+optimaliserings berekening kan worden gestart.
+Als HA stopt (bijv voor een update) dan blijft de websocket "in de lucht" maar is niet meer effectief.
+
+### Removed
+
+
+### Deprecated
+
+- geen
+
+### Security
+
+- geen
 
 ## [v0.3.0] - 2023-08-18
 

@@ -1,5 +1,7 @@
 {
   "homeassistant": {
+    "protocol api": "http",
+    "protocol ws": "ws",
     "ip adress": "192.168.178.36",
     "ip port": 8123,
     "token": "!secret ha_api_token"
