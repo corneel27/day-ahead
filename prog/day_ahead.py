@@ -208,7 +208,7 @@ class DayAheadOpt(hass.Hass):
 
         now_dt = int(datetime.datetime.now().timestamp())
 
-        offset = 0  # offset in uren
+        offset = 0 # offset in uren
         now_h = int(3600 * (math.floor(now_dt / 3600)) + offset * 3600)
         fraction_first_hour = 1 - (now_dt - now_h) / 3600
 
@@ -512,6 +512,8 @@ class DayAheadOpt(hass.Hass):
         pv_prod_dc_sum = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b])
             for u in range(U)] for b in range(B)]
 
+        ### ac_to_dc met aan uit #############################################################
+        '''
         #ac_to_dc: wat er gaat er vanuit ac naar de omvormer
         ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b])
                      for u in range(U)] for b in range(B)]
@@ -524,6 +526,18 @@ class DayAheadOpt(hass.Hass):
         # vermogens klasse aan/uit
         ac_to_dc_st_on = [[[model.add_var(var_type=BINARY)
             for u in range(U)] for cs in range(CS[b])] for b in range(B)]
+        '''
+        #met sos ###################################################################
+        ac_to_dc_samples = [[self.battery_options[b]["charge stages"][cs]["power"]/1000
+                          for cs in range(CS[b])] for b in range(B)]
+        dc_from_ac_samples = [[(self.battery_options[b]["charge stages"][cs]["efficiency"] *
+                               self.battery_options[b]["charge stages"][cs]["power"] / 1000)
+                          for cs in range(CS[b])] for b in range(B)]
+        ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b])
+                     for u in range(U)] for b in range(B)]
+        ac_to_dc_on = [[model.add_var(var_type=BINARY) for u in range(U)] for b in range(B)]
+        ac_to_dc_w = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=1) \
+                     for cs in range(CS[b])] for u in range(U)] for b in range(B)]
 
         ac_from_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_discharge_power[b])
                         for u in range(U)] for b in range(B)]
@@ -560,6 +574,8 @@ class DayAheadOpt(hass.Hass):
         for b in range(B):
             for u in range(U):
                 # laden, alles uitgedrukt in vermogen kW
+                ## met aan/uit
+                '''
                 for cs in range(CS[b]):
                     model += (ac_to_dc_st[b][cs][u] <=
                         self.battery_options[b]["charge stages"][cs]["power"] * ac_to_dc_st_on[b][cs][u]/1000)
@@ -571,6 +587,17 @@ class DayAheadOpt(hass.Hass):
                 model += (xsum(ac_to_dc_st_on[b][cs][u] for cs in range(CS[b]))) <= 1
                 model += dc_from_ac[b][u] == xsum(ac_to_dc_st[b][cs][u] * \
                                     self.battery_options[b]["charge stages"][cs]["efficiency"] for cs in range(CS[b]))
+                '''
+                ## met sos
+                model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
+                model += xsum(ac_to_dc_w[b][u][cs] * ac_to_dc_samples[b][cs]
+                            for cs in range(CS[b])) == ac_to_dc[b][u]
+                model += xsum(ac_to_dc_w[b][u][cs] * dc_from_ac_samples[b][cs]
+                            for cs in range(CS[b])) == dc_from_ac[b][u]
+                model.add_sos([(ac_to_dc_w[b][u][cs], ac_to_dc_samples[b][cs])
+                               for cs in range(CS[b])] , 2)
+
+
                 # ontladen
                 for ds in range(DS[b]):
                     model += ac_from_dc_st[b][ds][u] <= self.battery_options[b]["discharge stages"][ds]["power"] * \
@@ -1094,16 +1121,20 @@ class DayAheadOpt(hass.Hass):
             pd.options.display.float_format = '{:6.2f}'.format
             df_accu = []
             for b in range(B):
-                cols = ['uur', 'ac->dc', 'ch_st', 'c_eff', 'dc->ac',
+                cols = ['uur', 'dc<-ac', 'ch_st', 'c_eff', 'dc->ac',
                         'dc_st', 'd_eff', 'dc->ba', 'ba_dc', 'pv', 'soc']
                 df_accu.append(pd.DataFrame(columns=cols))
                 for u in range(U):
                     ac_to_dc_eff = "--"
                     c_stage = "--"
+                    '''
                     for cs in range(CS[b]):
                         if ac_to_dc_st_on[b][cs][u].x == 1:
                             c_stage = cs
                             ac_to_dc_eff = self.battery_options[b]["charge stages"][cs]["efficiency"] * 100.0
+                    '''
+                    if ac_to_dc[b][u].x != 0:
+                        ac_to_dc_eff = dc_from_ac[b][u].x / ac_to_dc[b][u].x
                     dc_to_ac_eff = "--"
                     d_stage = "--"
                     for ds in range(DS[b]):
@@ -1421,7 +1452,8 @@ class DayAheadOpt(hass.Hass):
             }
             backend = self.config.get(["graphical backend"])
             gb = GraphBuilder(backend)
-            gb.build(gr1_df, gr1_options)
+            if show_graph:
+                gb.build(gr1_df, gr1_options)
 
             import matplotlib
             import matplotlib.pyplot as plt

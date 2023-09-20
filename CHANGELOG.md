@@ -11,12 +11,19 @@ De volgende zaken staan op de todo lijst:
 ### Added
 
 - het protocol voor de api en de ws richting Home Assistant is instelbaar (zie README, onderdeel Home Assistant) 
-
+ 
 
 ### Fixed
-
+- Grafieken worden niet meer getoond in de schedule-modus zodat het programma daar niet op blijft hangen
+- De pvproductie werd niet goed berekend voor panelen die niet op zuid waren georienteerd.
+Dit is aangepast,
 
 ### Changed
+- het laden van de batterij (van omvormer naar dc) wordt nu berekend met een zogenaamde "special ordered set"(sos). 
+Dit heeft twee voordelen:<br>
+  - het rekent veel sneller
+  - er wordt makkelijker tussen twee "stages" geinterpoleerd. <br>
+  Als dit goed bevalt zal het ook worden geimplementeerd voor het ontladen (van dc naar ac) en van dc naar batterij en vice versa.<br>
 
 ### Issues
 Als het programma draait in scheduler-mode wordt een websocket geopend naar HA zodat vanuit HA een 

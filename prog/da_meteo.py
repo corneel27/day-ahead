@@ -6,6 +6,7 @@ import pandas as pd
 from db_manager import DBmanagerObj
 import graphs
 import datetime
+import pytz
 
 # import os, sys
 # sys.path.append(os.path.abspath("../dalib"))
@@ -57,6 +58,8 @@ class Meteo:
         """
         # param NB: latitude: noorderbreed in graden
         # param OL: longitude: oosterlengte in graden
+        '''
+        # oude methode
 
         jd = (float(utc_time) / 86400.0) + 2440587.5
         delta_j = jd - 2451545  # J - J2000
@@ -64,6 +67,7 @@ class Meteo:
         m_rad = math.radians(m_deg)  # in radialen
         c_aarde = 1.9148 * math.sin(m_rad) + 0.02 * math.sin(2 * m_rad) + \
             0.0003 * math.sin(3 * m_rad)  # in graden
+        c_aarde = math.degrees(c_aarde)
         lamda_zon_deg = (m_deg + 102.9372 + c_aarde + 180) % 360  # in graden
         lamda_zon_rad = math.radians(lamda_zon_deg)
 
@@ -91,6 +95,56 @@ class Meteo:
                            math.cos(h_rad) * math.sin(noorder_breedte_rad) - math.tan(delta_zon_rad) * math.cos(
                                noorder_breedte_rad))  # links of rechts van zuid
         result = {'h': h_rad, 'A': a_rad}
+
+        ## tot hier oude methode
+        '''
+        ## vanaf hier nieuwe methode
+        '''
+   
+        Declinatie en uurhoek
+        De in de afbeelding over deklinatie en uurhoek getekende hoeken zoals u en d leggen de stralingsrichting vast. 
+        Op iedere datum geldt: d = constant. Deze constante kan op de n- de dag van het jaar met grote nauwkeurigheid 
+        worden berekend met behulp van formule 1:
+        d = 23,44° sin {360°(284 + n)/365} (1)
+        Eveneens op iedere datum geldt, dat:
+        u = t x 15° (2)
+        met t gelik aan de tijd in uren volgens Z.T. Met gehulp van (1) en (2) kan nu de stralingsrichting worden gevonden 
+        op ieder gewenst tijdstip op iedere gewenste datum.
+
+        Azimut en zonshoogte
+        De stralingsrichting is ook vast te leggen met behulp van de hoeken a en h. Zie de figuur over Azimut en zonshoogte. 
+        In appendix A is afgeleid, hoe deze hoeken kunnen worden geschreven als functie van de zojuist genoemde hoeken u en d. 
+        Het blijkt handiger om h te schrijven als functie van u en d en om a te schrijven als functie van u, d en h.
+        Gevonden wordt:
+        h = arcsin (sin ф sin d – cos ф cos d cos u) (3)
+        a = arcsin { (cos d sin u) / cos h } (4)
+        De hoek ф is gelijk aan de breedtegraad van de plaats op aarde, waar a en h moeten worden bepaald. 
+        De waarden, die a en h aannemen, zijn nu dus plaatsafhankelijk. 
+        '''
+        '''
+        dt = datetime.datetime.fromtimestamp(utc_time)
+        dt_start = datetime.datetime(dt.year,1,1)
+        dif = dt - dt_start
+        n = dif.days
+        d = math.radians(23.44 *  math.sin(math.radians(360*(284 + n) / 365))) # declinatie in radialen
+        dtz = datetime.datetime.fromtimestamp(utc_time, tz=pytz.utc)
+        t = dtz.hour
+        u = t * math.radians(15) #uurhoek in radialen
+        br = math.radians(self.latitude) # breedtegraad
+        h = math.asin(math.sin(br) * math.sin(d) - math.cos(br) * math.cos(d) * math.cos(u))
+        a = math.asin((math.cos(d) * math.sin(u)) / math.cos(h))
+        h_degrees = math.degrees(h)
+        a_degrees = math.degrees(a)
+        result = {'d': math.degrees(d), 'u': math.degrees(u), 'h': h, 'A': a}
+        '''
+        import ephem
+        observer = ephem.Observer()
+        observer.lat = math.radians(self.latitude) # breedtegraad
+        observer.lon = math.radians(self.longitude)
+        dtz = datetime.datetime.fromtimestamp(utc_time, tz=pytz.utc)
+        observer.date = dtz.strftime("%Y-%m-%d %H:%M:%S.%f")  # '2023-09-19 12:00:00'
+        sun = ephem.Sun(observer)
+        result = {"h": sun.alt * 1.0, "A": (sun.az + math.pi) % (2 * math.pi)}
         return result
 
     def get_dif_rad_factor(self, utc_time):
