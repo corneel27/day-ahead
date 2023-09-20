@@ -72,7 +72,7 @@ Of in tabelvorm:
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.8 of hoger. <br/>
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
-`pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask websocket-client`
+````pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask websocket-client ephem````
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
 
