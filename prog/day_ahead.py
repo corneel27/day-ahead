@@ -968,7 +968,7 @@ class DayAheadOpt(hass.Hass):
         for u in range(U):
             model += c_l[u] == c_t_total[u] + b_l[u] * hour_fraction[u] + \
                 xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B)) * hour_fraction[u] + \
-                c_b[u] + xsum(c_ev[e][u] for e in range(EV)) * hour_fraction[u] + \
+                c_b[u] + xsum(c_ev[e][u] for e in range(EV)) + \
                 c_hp[u] * hour_fraction[u] - xsum(pv_ac[s][u] for s in range(solar_num))
 
         # cost variabele
@@ -1134,7 +1134,7 @@ class DayAheadOpt(hass.Hass):
                             ac_to_dc_eff = self.battery_options[b]["charge stages"][cs]["efficiency"] * 100.0
                     '''
                     if ac_to_dc[b][u].x != 0:
-                        ac_to_dc_eff = dc_from_ac[b][u].x / ac_to_dc[b][u].x
+                        ac_to_dc_eff = (dc_from_ac[b][u].x / ac_to_dc[b][u].x) * 100
                     dc_to_ac_eff = "--"
                     d_stage = "--"
                     for ds in range(DS[b]):
