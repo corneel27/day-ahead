@@ -1436,7 +1436,8 @@ class DayAheadOpt(hass.Hass):
                            {"column": "ev",
                             "title": "EV",
                             "type": "stacked",
-                            "color": '#fefbbd'
+#                            "color": '#fefbbd'
+                            "color": 'yellow'
                             },
                            {"column": "productie",
                             "title": "Teruglev.",
@@ -1476,8 +1477,10 @@ class DayAheadOpt(hass.Hass):
             if self.heater_present:
                 axis[0].bar(ind, np.array(heatpump_n), bottom=np.array(
                     base_n), label="WP", color='#a32cc4', align="edge")
+#            axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
+#                        color='#fefbbd', align="edge")
             axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
-                        color='#fefbbd', align="edge")
+                        color='yellow', align="edge")
             axis[0].bar(ind, np.array(org_t), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
                         label="Teruglev.", color='#0080ff', align="edge")
             axis[0].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
@@ -1507,8 +1510,10 @@ class DayAheadOpt(hass.Hass):
             if self.heater_present:
                 axis[1].bar(ind, np.array(heatpump_n), bottom=np.array(
                     base_n), label="WP", color='#a32cc4', align="edge")
+#            axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
+#                        color='#fefbbd', align="edge")
             axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n), label="EV laden",
-                        color='#fefbbd', align="edge")
+                        color='yellow', align="edge")
             axis[1].bar(ind, np.array(c_t_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
                         label="Teruglev.", color='#0080ff', align="edge")
             axis[1].bar(ind, np.array(accu_in_n),
