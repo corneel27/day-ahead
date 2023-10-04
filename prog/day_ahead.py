@@ -1028,7 +1028,10 @@ class DayAheadOpt(hass.Hass):
             return
         print("Strategie: " + strategie + "\n")
 
-        if model.num_solutions:  # er is een oplossing
+        if model.num_solutions == 0:
+            print("Er is helaas geen oplossing gevonden, kijk naar je instellingen.")
+            return
+        else: # er is een oplossing
             # afdrukken van de resultaten
             old_cost_gc = 0
             old_cost_da = 0
@@ -1610,12 +1613,14 @@ class DayAheadOpt(hass.Hass):
         log_file = open("../data/log/" + task +
                         datetime.datetime.now().strftime("%H%M") + ".log", "w")
         sys.stdout = log_file
-        print("Day Ahead Optimalistatie gestart:",
-              datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'), ': ', task)
-        print("Locatie: ", str(self.config.get(
-            ["latitude"])) + ':' + str(self.config.get(["longitude"])))
-        getattr(self, task)()
-        self.set_last_activity()
+        try:
+            print("Day Ahead Optimalisatie gestart:",
+                  datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'), ': ', task)
+            print("Locatie: ", str(self.config.get(["latitude"])) + ':' + str(self.config.get(["longitude"])))
+            getattr(self, task)()
+            self.set_last_activity()
+        except:
+            pass
         sys.stdout = old_stdout
         log_file.close()
 
