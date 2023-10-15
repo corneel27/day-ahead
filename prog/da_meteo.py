@@ -330,8 +330,7 @@ class Meteo:
         :return: berekende gewogen graaddagen
         """
         if date == None:
-            date = datetime.datetime.combine(
-                datetime.datetime.today(), datetime.datetime.min.time())
+            date = datetime.datetime.combine(datetime.datetime.today(), datetime.datetime.min.time())
         date_utc = int(date.timestamp())
         sql_avg_temp = (
             "SELECT AVG(t1.`value`) avg_temp FROM "

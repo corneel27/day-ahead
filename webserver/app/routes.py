@@ -1,7 +1,11 @@
+import datetime
+import glob
+import os
 from webserver.app import app
-from flask import render_template, request
+from flask import render_template, request, jsonify, Response
 import json, fnmatch
 import os
+from  subprocess import Popen, PIPE, run
 import logging
 from datetime import date
 from logging.handlers import TimedRotatingFileHandler
@@ -13,16 +17,54 @@ app_datapath = "app/static/data/"
 images_folder = os.path.join(web_datapath, 'images')
 config = Config(app_datapath + "options.json")
 
-
-
 logname = "dashboard.log"
-handler = TimedRotatingFileHandler("../data/log/" + logname, when="midnight", backupCount=config.get(["history", "save days"]))
+handler = TimedRotatingFileHandler("../data/log/" + logname, when="midnight",
+                                   backupCount=config.get(["history", "save days"]))
 handler.suffix = "%Y%m%d"
 handler.setLevel(logging.INFO)
-logging.basicConfig(level=logging.DEBUG, handlers=[handler], format=f'%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
+logging.basicConfig(level=logging.DEBUG, handlers=[handler],
+                    format=f'%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
 
+bewerkingen = {
+    "calc_met_debug": {
+        "name": "Optimaliseringsberekening met debug",
+        "cmd": [
+            "python3",
+            "../prog/day_ahead.py",
+            "debug",
+            "calc"],
+        "task": "calc_optimum"},
+    "calc_zonder_debug": {
+        "name": "Optimaliseringsberekening zonder debug",
+        "cmd": [
+            "python3",
+            "../prog/day_ahead.py",
+            "calc"],
+        "task": "calc_optimum"},
+    "get_tibber": {
+        "name": "Verbruiksgegevens bij Tibber ophalen",
+        "cmd": [
+            "python3",
+            "../prog/day_ahead.py",
+            "tibber"],
+        "task": "get_tibber_data"},
+    "get_meteo": {
+        "name": "Meteoprognoses ophalen",
+        "cmd": [
+            "python3",
+            "../prog/day_ahead.py",
+            "meteo"],
+        "task": "get_meteo_data"},
+    "get_prices": {
+        "name": "Day ahead prijzen ophalen",
+        "cmd": [
+            "python3",
+            "../prog/day_ahead.py",
+            "prices"],
+        "task": "get_day_ahead_prices"},
+}
 
-def get_file_list(path:str, pattern:str) -> list:
+def get_file_list(path: str, pattern: str) -> list:
     """
     get a time-ordered file list with name and modified time
     :parameter path: folder
@@ -33,9 +75,10 @@ def get_file_list(path:str, pattern:str) -> list:
         if fnmatch.fnmatch(f, pattern):
             fullname = os.path.join(path, f)
             flist.append({"name": f, "time": os.path.getmtime(fullname)})
-            #print(f, time.ctime(os.path.getmtime(f)))
+            # print(f, time.ctime(os.path.getmtime(f)))
     flist.sort(key=lambda x: x.get('time'), reverse=True)
     return flist
+
 
 @app.route('/settings/<filename>', methods=['POST', 'GET'])
 def settings(filename):
@@ -58,9 +101,10 @@ def settings(filename):
             options = f.read()
     return render_template('settings.html', title='Instellingen', options_data=options, message=message)
 
+
 @app.route('/', methods=['POST', 'GET'])
 @app.route('/home', methods=['POST', 'GET'])
-def optimalisering():
+def home():
     subjects = ["grid"]
     views = ["grafiek", "tabel"]
     active_subject = "grid"
@@ -71,7 +115,7 @@ def optimalisering():
     for b in range(len(battery_options)):
         subjects.append(battery_options[b]["name"])
     if request.method == 'POST':
-        #ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
+        # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
         list = request.form.to_dict(flat=False)
         if "cur_subject" in list:
             active_subject = list["cur_subject"][0]
@@ -92,7 +136,7 @@ def optimalisering():
     else:
         active_map = "/log/"
         active_filter = "calc_optimum*.log"
-    flist = get_file_list(app_datapath+active_map, active_filter)
+    flist = get_file_list(app_datapath + active_map, active_filter)
     index = 0
     if active_time:
         for i in range(len(flist)):
@@ -102,39 +146,41 @@ def optimalisering():
     if action == "first":
         index = 0
     if action == "previous":
-        index = max (0, index - 1)
+        index = max(0, index - 1)
     if action == "next":
-        index = min (len(flist)-1, index + 1)
+        index = min(len(flist) - 1, index + 1)
     if action == "last":
-        index = len(flist)-1
+        index = len(flist) - 1
     if action == "delete":
         os.remove(app_datapath + active_map + flist[index]["name"])
-        flist = get_file_list(app_datapath+active_map, active_filter)
+        flist = get_file_list(app_datapath + active_map, active_filter)
         index = min(len(flist) - 1, index)
     active_time = str(flist[index]["time"])
     if active_view == "grafiek":
-        image = os.path.join(web_datapath+active_map, flist[index]["name"])
+        image = os.path.join(web_datapath + active_map, flist[index]["name"])
         tabel = None
     else:
         image = None
-        with open(app_datapath+active_map + flist[index]["name"], 'r') as f:
+        with open(app_datapath + active_map + flist[index]["name"], 'r') as f:
             tabel = f.read()
 
-    return render_template('optimalisering.html', title='Optimalisering', subjects=subjects, views=views,
+    return render_template('home.html', title='Optimalisering', subjects=subjects, views=views,
                            active_subject=active_subject, active_view=active_view, image=image, tabel=tabel,
                            active_time=active_time)
+
 
 @app.route('/reports', methods=['POST', 'GET'])
 def reports():
     report = prog.da_report.Report()
-    subjects =["verbruik", "kosten"]
+    subjects = ["verbruik", "kosten"]
     active_subject = "verbruik"
     views = ["grafiek", "tabel"]
     active_view = "tabel"
     periode_options = report.periodes.keys()
     active_period = "vandaag"
+    met_prognose = False
     if request.method in ['POST', 'GET']:
-        #ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
+        # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
         list = request.form.to_dict(flat=False)
         if "cur_subject" in list:
             active_subject = list["cur_subject"][0]
@@ -148,28 +194,112 @@ def reports():
             active_view = list["view"][0]
         if "periode-select" in list:
             active_period = list["periode-select"][0]
+        if "met_prognose" in list:
+            met_prognose = list["met_prognose"][0]
+    tot = None
+    if (active_period == "vandaag" or active_period == "deze week" or active_period == "deze maand" or
+            active_period == "dit contractjaar"):
+        if not met_prognose:
+            now = datetime.datetime.now()
+            tot = datetime.datetime(now.year, now.month, now.day, now.hour)
+    else:
+        met_prognose = False
     active_interval = report.periodes[active_period]["interval"]
-    report_df = report.get_grid_data(active_period)
+    report_df = report.get_grid_data(active_period, _tot=tot)
     filtered_df = report.calc_columns(report_df, active_interval, active_view)
     filtered_df.round(1)
     if active_view == "tabel":
-        tables = [filtered_df.to_html(index=False, justify="right", decimal=",", classes="data", border=0) ]
+        report_data = [filtered_df.to_html(index=False, justify="right", decimal=",", classes="data", border=0)]
     else:
-        d = filtered_df.values.tolist()
-        c = filtered_df.columns.tolist()
-        d.insert(0, c)
-        options = {
-            "title": active_subject + " " + active_period,
-            "vAxis": {"title": 'Verbruik'},
-            "hAxis": {"title": filtered_df.columns[0][0]},
-            "seriesType": 'bars',
-            "series": {6: {"type": 'line'}}
-        }
-        tables = json.dumps({"options":options, 'data': d})
-    return render_template('report.html', title='Rapportage', subjects=subjects, views=views,
-                           periode_options=periode_options, active_period=active_period,
-                           active_subject=active_subject, active_view=active_view, tables=tables)
+        report_data = report.make_graph(filtered_df, active_period, None)
 
-@app.route('/meteo', methods=['POST', 'GET'])
-def meteo():
-    return render_template('meteo.html', title='Meteo')
+    return render_template('report.html', title='Rapportage', subjects=subjects, views=views,
+                           periode_options=periode_options, active_period=active_period, met_prognose=met_prognose,
+                           active_subject=active_subject, active_view=active_view, report_data=report_data)
+
+
+@app.route('/api/prognose/<string:fld>', methods=['GET'])
+def api_prognose(fld: str):
+    """
+    retourneert in json de data van
+    :param fld: de code van de gevraagde data
+    :return: de gevraagde data in json formaat
+    """
+    report = prog.da_report.Report()
+    start = request.args.get('start')
+    end = request.args.get('end')
+    data = report.get_api_data(fld, prognose=True, start=start, end=end)
+    return jsonify({'data': data})
+
+
+@app.route('/api/report/<string:fld>/<string:periode>', methods=['GET'])
+def api_report(fld: str, periode: str):
+    """
+    retourneert in json de data van
+    :param fld: de code van de gevraagde data
+    :param periode: de periode van de gevraagde data
+    :return: de gevraagde data in json formaat
+    """
+    cumulate = request.args.get('cumulate')
+    report = prog.da_report.Report()
+    # start = request.args.get('start')
+    # end = request.args.get('end')
+    try:
+        cumulate = int(cumulate)
+        cumulate = cumulate == 1
+    except:
+        cumulate = False
+    result = report.get_api_data(fld, periode, cumulate=cumulate)
+    return result
+
+import codecs
+@app.route('/api/run/<string:bewerking>', methods=['GET'])
+def run_api(bewerking: str):
+    if bewerking in bewerkingen.keys():
+        proc = run(bewerkingen[bewerking]["cmd"], capture_output=True, text=True)
+        data =  proc.stdout
+        err = proc.stderr
+        log_content = data + err
+        filename = "../data/log/" + bewerkingen[bewerking]["task"] + \
+                   datetime.datetime.now().strftime("%H%M") + ".log"
+        with open(filename, "w") as f:
+            f.write(log_content)
+        return render_template("api_run.html", log_content=log_content)
+    else:
+        return "Onbekende bewerking: "+ bewerking
+
+@app.route('/run', methods=['POST', 'GET'])
+def run_process():
+    bewerking = ""
+    current_bewerking = ""
+    log_content = ""
+
+    if request.method in ['POST', 'GET']:
+        dict = request.form.to_dict(flat=False)
+        if "current_bewerking" in dict:
+            current_bewerking = dict["current_bewerking"][0]
+            bewerking = ""
+            proc = run(bewerkingen[current_bewerking]["cmd"], stdout=PIPE, stderr=PIPE)
+            data = proc.stdout.decode()
+            err = proc.stderr.decode()
+            log_content = data + err
+            filename = "../data/log/" + bewerkingen[current_bewerking]["task"] +\
+                        datetime.datetime.now().strftime("%H%M") + ".log"
+            with open(filename, "w") as f:
+                f.write(log_content)
+            '''
+            with open("../data/proc.log", "w") as f:
+                f.write(data)
+                f.write(err)
+            list_of_files = glob.glob('../data/log/'+bewerkingen[current_bewerking]["log"])  # * means all if need specific format then *.csv
+            latest_file = max(list_of_files, key=os.path.getctime)
+            with open(latest_file, "r") as f:
+                log_content = f.read()
+            '''
+        else:
+            if len(dict) == 1 :
+                bewerking = list(dict.keys())[0]
+
+    return render_template('run.html', title='Run', bewerkingen=bewerkingen, bewerking=bewerking,
+                           current_bewerking=current_bewerking, log_content=log_content)
+

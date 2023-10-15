@@ -72,7 +72,9 @@ Of in tabelvorm:
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.8 of hoger. <br/>
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
-````pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask websocket-client ephem````
+````
+pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask websocket-client gunicorn ephem
+````
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
 
@@ -105,14 +107,23 @@ Een aparte database in MariaDB voor dit programma met daarin:
 ````
   * Query voor het vullen van de inhoud van tabel "variabel" <br/>
 ````  
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (1, 'cons', 'consumed', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (2, 'prod', 'produced', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`)VALUES (3, 'da', 'price', 'euro/kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (4, 'gr', 'globale straling', 'J/cm2'); 
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (5, 'temp', 'temperatuur', '°C');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (1, 'cons', 'Verbruik', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (2, 'prod', 'Productie', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`)VALUES (3, 'da', 'Tarief', 'euro/kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (4, 'gr', 'Globale straling', 'J/cm2'); 
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (5, 'temp', 'Temperatuur', '°C');
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2'); 
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (7, 'cost', 'cost', 'euro');
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (8, 'profit', 'profit', 'euro');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (9, 'bat_in', 'Batterij in', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (10, 'bat_out', 'Batterij uit', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (11, 'base', 'Basislast', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (12, 'boil', 'Boiler', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (13, 'wp', 'Warmtepomp', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (14, 'ev', 'Elektrische auto', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (15, 'pv', 'Zonnenergie', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (16, 'soc', 'SoC', '%');
+   
 ````
  * tabel **values**:<br/>
    * Deze maak je aan met de volgende query: <br/>
@@ -125,11 +136,31 @@ Een aparte database in MariaDB voor dit programma met daarin:
     PRIMARY KEY (`id`) USING BTREE,
     UNIQUE INDEX `variabel_time` (`variabel`, `time`) USING BTREE,
     INDEX `variabel` (`variabel`) USING BTREE,
-    INDEX `time` (`time`) USING BTREE ) COLLATE='utf8mb4_unicode_ci'
+    INDEX `time` (`time`) USING BTREE ) 
+    COLLATE='utf8mb4_unicode_ci'
     ENGINE=InnoDB
-    AUTO_INCREMENT=1;<br>
+    AUTO_INCREMENT=1;
 ````
-   * De inhoud van values bouw je zelf op met het ophalen van de diverse gegevens.  
+   * De inhoud van values bouw je zelf op met het ophalen van de diverse gegevens. <br> 
+* tabel **prognoses**
+  * Deze maak je aan met de volgende query:
+````
+CREATE TABLE `prognoses` (
+	`id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+	`variabel` INT(10) UNSIGNED NOT NULL DEFAULT '0',
+	`time` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0',
+	`value` FLOAT NULL DEFAULT NULL,
+	PRIMARY KEY (`id`) USING BTREE,
+	UNIQUE INDEX `variabel_time` (`variabel`, `time`) USING BTREE,
+	INDEX `variabel` (`variabel`) USING BTREE,
+	INDEX `time` (`time`) USING BTREE )
+    COLLATE='utf8mb4_unicode_ci'
+    ENGINE=InnoDB
+    AUTO_INCREMENT=1;
+````
+
+  * Deze tabel wordt gevuld/aangevuld/geupdate met data door het programma als je een optimaliseringsberekening uitvoert.<br>  
+
 ---
 ## Programma starten<br>
 Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc:   
@@ -513,23 +544,330 @@ Bijvoorbeeld : <br/>
 `"1255": "get_day_ahead_prices"`: haal de actuele prijzen op op 12 uur 55<br>
 `"xx00": "calc_optimum"`: ieder uur exact om "00" wordt de optimaliseringsberekening uitgevoerd.
 
-## Addon
-Het bovenstaande programma en de webserver voor het dashboard kunnen samen draaien in een addon van Home Assistant.
-Voorlopig draait deze addon alleen op de platforms met een arm64 
-processor, zoals een Raspberry PI4 of Odroid.
-
-De addon komt met 4 configuratie-bestanden, die je moet kopieren naar 
 ## Dashboard
 Het programma wordt geleverd met een webserver die je als een dashboard kunt benaderen.
 Dit onderdeel is nog helemaal in ontwikkeling, maar kan al wel gedeeltelijk worden  getest.
 
 De webserver kan op twee manieren worden opgestart:
-* om te testen start je het programma op in een console in de directory webserver met het commando: ````python3 da_server.py````
-* voor een productiesituatie dien je gebruik te maken van gunicorn en dan geef je in de directory webserver het commando: <br>
+* om te testen start je het programma op in een console in de directory ```webserver``` met het commando: ````python3 da_server.py````
+* voor een productiesituatie dien je gebruik te maken van gunicorn en 
+dan geef je in de directory ```webserver``` het commando: <br>
 ````gunicorn --config gunicorn_config.py  app:app````
+* het bestand ```gunicorn_config.py``` bevat de configuatieinstellingen voor de webserver.
+Verander dit alleen als je weet wat en waarom je het doet. De port waarop je 
+de webserver kunt benaderen kun je instellen in het option.json bestand onder dashboard (zie hierna).<br />
+
+Je benadert de webserver/het dashboard met een browser als volgt:
+```http://<ip-adres>:<ip-poort>/```, waarbij je voor:<br />
+```<ip-adres>``` het ipadres invult van de machine waarop de webserver draait
+```<ip-poort``` het poortnummer invult waarop je de webserver kunt bereiken (zie verder).<br/>
+Bijvoorbeeld : ```http://192.168.178.36:5000/```
 
 De specifieke instellingen voor dit onderdeel staan ook in options.json onder de sleutel **dashboard**
 Je kunt de volgende instellingen maken:
 * port: dit is de poort op de server waarop je de webserver kunt benaderen.
+
+Het hoofdmenu van het dashboard bestaat uit 4 opties: <br />
+  ![Img_5.png](images/Img_5.png) <br />
+
+- Home (huisje)
+- Run
+- Reports
+- Settings
+
+**Home**<br/>
+Deze webpagina komt ook naar voren als je de webservervia je browser benadert: <br />
+  ![Img_6.png](images/Img_6.png) <br />
+Daarin toont zich een submenu met daarin de informatie die je met submenu selecteert:
+Het submenu geeft links de keuze de keuze uit (voorlopig twee **onderwerpen**):
+ - grid (deze is nu actief, dat wordt aangegeven met de kleur rood)
+ - accu1 (de naam van je accu), helaas werkt dit nog niet <br />
+
+In het midden van het submenu kun je kiezen **hoe** je de gevraagde informatie wil zien:
+ - grafiek (nu actief)
+ - tabel <br />
+
+Rechts kun je bladeren door de aangeboden informatie:
+- **|<** de laatste aanwezige grafiek/tabel
+- **<** de vorige
+- **>** de volgende
+- **>|** de eerste
+- ![delete.png](images/delete.png) met de afvalbak kun je de aangeboden informatie verwijderen
+
+**Run**<br/>
+![Img_8.png](images/Img_8.png) <br />
+Via deze menu-optie kun je alle mogelijke berekeningen en bewerkingen van het programma activeren 
+(zie ook het begin van deze handleiding). <br/>
+Je activeert een bewerking door deze aan te klikken.<br/>
+Je krijgt direct een bevestiging dat de betreffende berekening/bewerking wordt uitgevoerd.<br/>
+Na 10 tot 15 seconden komt het log-bestand van de bewerking/berekening in beeld.
+Wil je het grafische resultaat van een optimaliseringsberekening zien klik dan op "Home",
+Je krijgt dan de laatste berekende grafiek in beeld.
+
+**Reports**<br/>
+![Img_7.png](images/Img_7.png) <br />
+Dit onderdeel is nog in ontwikkeling, maar biedt nu al veel mogelijkheden.<br/>
+Er is nog geen verschil tussen verbruik en kosten, omdat alles netjes in een tabel past.
+Maar er komen nog wel verschillende verbruiks- en kostengrafieken.
+Het grafische deel werkt nu nog basaal, maar wordt ook nog verder uitgewerkt.
+In het pull-down menu kun je de periode kiezen waarvan je een rapport wil zien.
+Je hebt de keuze uit de volgende perioden:
+* vandaag _*_ <br/>
+* vandaag en morgen (alleen zinvol na 13:00 uur) _*_ <br/>
+* gisteren <br/>
+* deze week _*_ <br/>
+* vorige week <br/>
+* deze maand _*_ <br/>
+* vorige maand <br/>
+* dit jaar _*_ <br/>
+* vorig jaar <br/>
+* dit contractjaar _*_ <br/>
+
+De perioden met een _*_ hebben de optie "met prognose".
+Als je die aanvinkt wordt een rapportage berekend inclusief de resultaten van de laatst uitgevoerde optimaliseringsberekening.
+Dit geldt zowel voor de tabel als de grafiek. In de toekomst zullen in de grafiek de "prognose waarden" iets afwijkend worden getoond.
+
+**Settings**<br/>
+-    ***Options***<br/>
+Hiermee kun je het instellingen bestand (options.json) bewerken
+- ***Secrets***<br />
+Hiermee bewerk je het bestand (secrets.json) met je wachtwoorden en andere zaken die je niet in options.json wil opnemen.
+
+# Api
+Het dashboard is ook benaderbaar via een api:
+* \<url>/api/run/\<commando>
+* \<url>/api/report/\<variable>/\<period>?parameter=parameter_value <br/>
+
+De ```<url>``` bestaat uit: ```http://<ip-adres>:<ip-poort>```
+Voor ```<ip-adres>``` en ```<ip-poort>``` zie hierboven.<br/> 
+
+## \<url>/api/run/\<commando><br />
+Met dit onderdeel van de api kun je via het dashboard alle berekeningen en bewerkingen
+van het programma starten. Dit kan met **curl** maar ook kun je hiermee vanuit Home Assistant een bewerking of berekening uitvoeren. 
+Binnenkort komt hier een voorbeeld van een automation in HA die getriggerd wordt door een sensor wijziging (bijv een ev die thuis 
+ingeplugd wordt of wanneer de "gereed" datum/tijd van je ev is aangepast).
+
+Bij ```<commando>``` vul je een van de volgende commando's in:<br />
+* ```calc_zonder_debug```: een optimaliseringsberekening wordt uitgevoerd. 
+De resultaten worden doorgezet naar Home Assistant.<br />  
+* ```calc_met_debug```: een optimaliseringsbereking wordt uitgevoerd. De resultaten worden **niet**
+doorgezet naar Home Assistant.
+* ```get_tibber```: haalt verbruiksgegevens (consumption, production, cost, profit) op bij Tibber en slaat deze op in de database<br/>
+* ```get_meteo```: haalt prognose van meteogegevens op bij Meteoserver en slaat deze op in de database
+* ```get_prices```: haalt de day-ahead prijzen voor de volgende dag op en slaat deze op in de database<br/>
+
+## \<url>/api/report/\<variable>/\<period>?\<param>=\<param_value>
+Hiermee kun je diverse gegevens uit de database ophalen en deze kun je dan bijv. in Home Assistant
+gebruiken om grafieken te maken met bijv. apex-charts (zie hieronder).<br/>
+Voor **\<variabele>** kun je (voorlopig) een van de volgende mogelijkheden invullen (wordt uitgebreid):
+- **da**<br/>
+    Hiermee vraag je de day ahead prijzen op. Het programma retourneert de volgende gegevens (json):
+```{ "message":"Success", "recorded": [{"time":"2023-10-13 00:00","da_ex":0.12399,"da_cons":0.3242558,"da_prod":0.3242558},{"time":"2023-10-13 01:00","da_ex":0.115,"da_cons":0.3133779,"da_prod":0.3133779},{"time":"2023-10-13 02:00","da_ex":0.10714,"da_cons":0.3038673,"da_prod":0.3038673},{"time":"2023-10-13 03:00","da_ex":0.1014,"da_cons":0.2969219,"da_prod":0.2969219}, .....```
+per uur worden de drie prijzen geretourneerd:
+  - ```da_ex```: kale day ahead prijs, excl. belasting, excl. btw en excl opslag leverancier
+  - ```da_cons```: de day ahead prijs waarvoor jij elektriciteit koopt, dus inclusief energiebelasting, btw en opslag leverancier
+  - ```da_prod```: de day ahead prijs waarvoor jij elektriciteit teruglevert. Dit is afhankelijk van: kun je nog salderen en in hoeverre
+  (voorlopig is dit bij de meeste gelijk aan da_cons) 
+- **consumption** <br/>
+  Hiermee vraag je je verbruiksgegevens op. Bijvoorbeeld:<br/>
+```{ "message":"Success", "recorded": [{"time":"2023-10-13 00:00","value":0.177},{"time":"2023-10-13 01:00","value":0.458},{"time":"2023-10-13 02:00","value":0.158},{"time":"2023-10-13 03:00","value":0.648},{"time":"2023-10-13 04:00","value":0.134},{"time":"2023-10-13 05:00","value":0.129},{"time":"2023-10-13 06:00","value":0.128},{"time":"2023-10-13 07:00","value":0.1},{"time":"2023-10-13 08:00","value":0.02}, ...  ,{"time":"2023-10-13 15:00","value":5.343}], "expected" : [{"time":"2023-10-13 16:00","value":2.20486},{"time":"2023-10-13 17:00","value":0.501},{"time":"2023-10-13 18:00","value":0.0},{"time":"2023-10-13 19:00","value":0.0},{"time":"2023-10-13 20:00","value":0.0},{"time":"2023-10-13 21:00","value":0.19},{"time":"2023-10-13 22:00","value":1.605},{"time":"2023-10-13 23:00","value":1.585}] }```<br/>
+Deze reeks data bestaat uit twee onderdelen:
+  - ```recorded```: het geregistreerde verbruik (hier vanaf 0:00 uur tot en met 15:00 uur)
+  - ```expected```: het geprognotiseerde verbruik (hier vanaf 16:00 uur). 
+  Dit is het verwachte verbruik zoals het programma dit de laatste keer dat het heeft gedraaid heeft berekend. 
+- **production**<br/>
+    Hiermee vraag je je teruglevering gegevens op. De indeling is hetzelfde als bij consumption.
+- **cost**<br/>
+    Hiermee vraag je je verbruikskosten op.
+- **profit**<br/>
+    Hiermee vraag je je teruglevering inkomsten op.
+
+Bij **\<period>** kun je de periode opgeven waarover je de gevraagde gegevens wilt ontvangen. 
+Je kunt kiezen uit:
+- **vandaag** met interval uur
+- **vandaag_en_morgen** met interval uur
+- **morgen** met interval uur
+- **deze_week** met interval dag
+- **vorige_week**  met interval dag
+- **deze_maand**  met interval dag
+- **vorige_maand**  met interval dag
+- **dit jaar** met interval maand
+- **vorig_jaar** met interval maand
+- **dit_contractjaar**  met interval maand
+
+Het laatste stuk **?\<param>=\<param_value>** is facultatief.
+Voorlopig is is parameter die je kunt invullen: 
+- **?cumulate=1**<br/>
+    Als je cumulate opgeeft en je zet deze op "1" dan worden alle resultaten cumulatief berekend.
+Bijvoorbeeld: ```/api/report/profit/vorige_week?cumulate=1``` geeft als resultaat:<br/>
+```{ "message":"Success", "recorded": [{"time":"2023-10-02 00:00","value":10.9429554939},{"time":"2023-10-03 00:00","value":19.7526173011},{"time":"2023-10-04 00:00","value":24.1756554841},{"time":"2023-10-05 00:00","value":31.4851145427},{"time":"2023-10-06 00:00","value":37.0579458385},{"time":"2023-10-07 00:00","value":38.6841635039},{"time":"2023-10-08 00:00","value":40.9582582529}], "expected" : [] }```
+
+## Gebruik van deze api voor presentatie in Home Assistant
+
+### Aanmaken van sensoren
+Je maakt gebruik van de restful integratie van Home Assistant (https://www.home-assistant.io/integrations/rest/). 
+Daarvoor maak je in ```configuration.yaml``` de gewenste sensoren aan.
+Bijvoorbeeld:<br/>
+````
+rest:
+  - resource: http://192.168.178.64:5000/api/report/da/vandaag_en_morgen
+    verify_ssl: false
+    scan_interval: 600
+    sensor:
+      - name: da_price
+        unit_of_measurement: 'euro/kWh'
+        value_template: "{{ (value_json.recorded[now().hour].da_ex) | round(5) }}"
+        json_attributes:
+          - recorded
+          - expected
+  - resource: http://192.168.178.64:5000/api/report/consumption/vandaag_en_morgen
+    verify_ssl: false
+    scan_interval: 600
+    sensor:
+      - name: dao_grid_consumption
+        unit_of_measurement: 'kWh'
+        value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
+        json_attributes:
+          - recorded
+          - expected
+  - resource: http://192.168.178.64:5000/api/report/consumption/vandaag?cumulate=1
+    verify_ssl: false
+    scan_interval: 600
+    sensor:
+      - name: dao_grid_consumption_cumulatief
+        unit_of_measurement: 'kWh'
+        value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
+        json_attributes:
+          - recorded
+          - expected
+  - resource: http://192.168.178.64:5000/api/report/production/vandaag_en_morgen
+    verify_ssl: false
+    scan_interval: 600
+    sensor:
+      - name: dao_grid_production
+        unit_of_measurement: 'kWh'
+        value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
+        json_attributes:
+          - recorded
+          - expected
+````
+Korte toelichting:
+- **resource: http://192.168.178.64:5000/api/report/da/vandaag_en_morgen** verwijst naar de url-api waarmee je de data ophaalt van de gewenste sensor
+- **verify_ssl**: false, voorlopig nog geen https
+- **scan_interval: 600**: haal de data iedere 10 minuten op
+- **sensor:**
+    - **name: da_price** naam van de sensor in Home Assistant
+    - **unit_of_measurement: 'euro/kWh'** de dimensie
+    - **value_template: "{{ (value_json.recorded[now().hour].value) | round(5) }}"**<br/>
+    de template waarmee de actuele waarde van de sensor uit de attributen wordt gehaald
+    - **json_attributes:<br/>
+          - recorded** de daadwerkelijk geregistreerde waarden (in de values tabel)
+          - **expected** de geprognotiseerde waarden (in de prognoses tabel)<br />
+
+Kijk je in Home Assistant via Ontwikkelhulpmiddelen/Statussen en filter je bijvoorbeeld 
+je sensoren op "da_", dan moet je zoiets te zien krijgen:<br/>
+![Img_9.png](images/Img_9.png) <br />
+waarmee duidelijk is dat je de gegevens binnenkrijgt in Home Assistant en dat de aangemaakte sensor(en) werken.
+
+### Presentatie van deze data in Home Assistant 
+Je kunt op de jouw bekende wijze deze sensoren opnemen in allerlei entiteits kaarten,
+maar nog mooier als je er met behulp van de apex charts grafieken van maakt.
+Zie voor alle informatie: https://github.com/RomRider/apexcharts-card
+Daar staat ook hoe je de software installeert en alleinfo over de configuratie-opties.
+Voorbeeld:
+<br/>
+![Img_10.png](images/Img_10.png) <br />
+De configuratie van deze grafiek ziet er als volgt uit:<br/>
+````
+type: custom:apexcharts-card
+graph_span: 48h
+span:
+  start: day
+header:
+  show: true
+  title: Day Ahead Price vandaag en morgen
+  colorize_states: true
+  show_states: true
+yaxis:
+  - min: ~0
+    max: ~0.2
+    decimals: 2
+series:
+  - entity: sensor.da_price
+    attribute: recorded
+    name: Exclusief historie
+    type: line
+    curve: stepline
+    show:
+      in_header: true
+      legend_value: false
+    color: orange
+    opacity: 1
+    float_precision: 5
+    statistics:
+      align: start
+    data_generator: |
+      return entity.attributes.recorded.map(row => {
+              return [row.time, row.da_ex];
+            });
+  - entity: sensor.da_price
+    attribute: expected
+    name: Exclusief prognose
+    type: line
+    curve: stepline
+    show:
+      in_header: false
+      legend_value: false
+    color: orange
+    opacity: 0.5
+    float_precision: 5
+    data_generator: |
+      return entity.attributes.expected.map(row => {
+              return [row.time, row.da_ex];
+            });
+  - entity: sensor.da_price
+    attribute: recorded
+    name: Consumptie historie
+    type: line
+    curve: stepline
+    show:
+      in_header: true
+      legend_value: false
+    color: blue
+    opacity: 1
+    float_precision: 5
+    statistics:
+      align: start
+    data_generator: |
+      return entity.attributes.recorded.map(row => {
+              return [row.time, row.da_cons];
+            });
+  - entity: sensor.da_price
+    attribute: expected
+    name: Consumptie prognose
+    type: line
+    curve: stepline
+    show:
+      in_header: false
+      legend_value: false
+    color: blue
+    opacity: 0.5
+    float_precision: 5
+    data_generator: |
+      return entity.attributes.expected.map(row => {
+              return [row.time, row.da_cons];
+            });
+````
+Voor de uitleg van deze instellingen verwijs ik je (voorlopig)naar de documentatie van de apexcharts:<br/>
+```https://github.com/RomRider/apexcharts-card/blob/master/README.md```
+
+
+# Addon
+Het bovenstaande programma en de webserver voor het dashboard kunnen samen draaien in een addon van Home Assistant.
+Voorlopig draait deze addon alleen op de platforms met een arm64 
+processor, zoals een Raspberry PI4 of Odroid.
+
+Ik ga het zo proberen te maken dat je deze addon met alle software kunt installeren vanuit 
+de addon winkel van Home Assistant,
 
 wordt vervolgd

@@ -48,6 +48,12 @@
         {% endif %}
         {% endfor %}
       </select>
+      {% if active_period == "vandaag" or active_period == "deze week" or active_period == "deze maand" or
+        active_period == "dit contractjaar" %}
+        <input type="checkbox" id="id_met_prognose" name="met_prognose" onchange="this.form.submit()"
+               {{ 'checked' if met_prognose else '' }} />
+        <label for="id_met_prognose">Met prognose </label>
+      {% endif %}
       <button name="action" class="btn btn_mid" value="previous">
         <img src="static/prev.png" alt="prev" border="0" style="display:inline-block; height:1em; width:auto;" />
       </button>
@@ -61,40 +67,16 @@
 </form>
 
 {% if active_view == "grafiek" %}
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  <script>
-    // Set variables from the json data
-    ch_data = JSON.parse({{tables|tojson|safe}});
-    chart_data = ch_data.data;
-    options = ch_data.options,
-    //chart_title = ch_options.title;
-    chartType = "ComboChart";
-    containerId = "show_graph";
-    //options = {'title':chart_title};
-  </script>
-
-  <script type = "text/javascript">
-    google.charts.load('current', {'packages':['corechart']});
-    google.charts.setOnLoadCallback(drawVisualization);
-
-    function drawVisualization() {
-        google.visualization.drawChart({
-			"containerId": containerId,
-			"dataTable": chart_data,
-			"chartType": chartType,
-			"options": options
-		});
-    }
-  </script>
-<div class="show graph" id="show_graph">
-  <!--  <img src="{{image}}" alt="image" width="800" height="900"> --->
+<div class="show graph" id="show_graph2">
+  <img src='data:image/png;base64,{{ report_data }}' alt="image" width="1000" height="800"/>"
 </div>
 {% else %}
 <div class="show table">
-  {% for table in tables %}
+  {% for table in report_data %}
      {{ table|safe }}
   {% endfor %}
 </div>
 {% endif %}
+
 
 {% endblock %}

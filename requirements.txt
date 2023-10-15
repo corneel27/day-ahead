@@ -16,3 +16,4 @@ mariadb
 flask~=2.3.2
 websocket-client~=1.6.1
 ephem
+gunicorn

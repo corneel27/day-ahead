@@ -3,6 +3,10 @@ import mysql.connector
 import numpy as np
 import datetime
 
+import warnings
+warnings.filterwarnings('ignore')
+
+
 
 class DBmanagerObj(object):
     """
@@ -303,7 +307,7 @@ class DBmanagerObj(object):
 
         return
 
-    def savedata(self, df, debug=False):
+    def savedata(self, df:pd.DataFrame, debug=False, tablename:str="values"):
         """
         save data in dateframe,
         id exist then update else insert
@@ -334,8 +338,8 @@ class DBmanagerObj(object):
             if len(rows) == 1:
                 # record is present
                 variabel_id = rows[0][0]
-            query = "SELECT `values`.`id` FROM `values` WHERE " \
-                    "`values`.`variabel` = " + \
+            query = "SELECT `" + tablename + "`.`id` FROM `" + tablename + "` WHERE " \
+                    "`" + tablename + "`.`variabel` = " + \
                 str(variabel_id) + " and `time` = '" + time + "';"
             if debug:
                 print(query)
@@ -344,14 +348,14 @@ class DBmanagerObj(object):
             if len(rows) == 1:
                 # record is present
                 id = rows[0][0]
-                query = 'UPDATE `values` SET `value` = %s WHERE id= %s;'
+                query = "UPDATE `" + tablename + "` SET `value` = %s WHERE id= %s;"
                 if debug:
                     print(query)
                 self._c.execute(query, (value, id))
                 self._conn.commit()
             else:
                 # make new record
-                query = "INSERT INTO `values` (variabel, time, value) VALUES (%s, %s, %s);"
+                query = "INSERT INTO `" + tablename + "` (variabel, time, value) VALUES (%s, %s, %s);"
                 val = (str(variabel_id), time, value)
                 if debug:
                     print(query, val)
@@ -372,18 +376,39 @@ class DBmanagerObj(object):
         if (end != None):
             sqlQuery += " and t1.`time` < " + str(end)
         sqlQuery += " ORDER BY t1.`time`;"
-        self._conn.commit()
+        #self._conn.commit()
 
         # Return the pandas dataframe. Note that numbers in text format are not converted
         return pd.read_sql(sqlQuery, con=self._conn, coerce_float=False)
 
-    def getColumnPrognoseData(self, column, start, end):
-        sqlQuery = "SELECT `time`, `value` from prognose " \
-                   "where `code` = '" + column + "' and time >= " + \
-            str(start) + " and time < " + str(end) + ";"
-        # print (sqlQuery)
+    def getColumnData(self, table:str, column:str, start:datetime.datetime=None, end:datetime.datetime=None):
+        """
+        retourneert een dataframe
+        :param table: de naam van de tabel "prognoses" of "values"
+        :param column: de code van het veld
+        :param start: eerste uur, als deze "None" dan vanaf vandaag
+        :param end: tot het laatste uur, als deze "None: dan tot alle aanwezige data
+        :return:
+        """
+        if start is None:
+            start = datetime.datetime.now()
+        start = start.strftime("%Y-%m-%d")
+        sqlQuery = (
+            "SELECT `time`, `value` " \
+            "FROM `variabel`, `" + table + "` " \
+            "WHERE `variabel`.`code` = '" + column + "' " \
+            "AND `variabel`.`id` = `" + table + "`.`variabel` " \
+            "AND `time` >= UNIX_TIMESTAMP('" + start + "') "
+            )
+        if end:
+            sqlQuery += "AND `time` < UNIX_TIMESTAMP(end) "
+        sqlQuery += "ORDER BY `time`;"
+        print (sqlQuery)
         self._conn.commit()
-        return pd.read_sql(sqlQuery, con=self._conn, coerce_float=False)
+        df = pd.read_sql(sqlQuery, con=self._conn, coerce_float=False)
+        df["datasoort"] = np.where(df['time'] <= datetime.datetime.now().timestamp(), "recorded", "expected")
+        df['time'] = df['time'].apply(lambda x: datetime.datetime.fromtimestamp(x).strftime("%Y-%m-%d %H:%M"))
+        return df
 
     def run_select_query(self, sql):
         self._conn.commit()

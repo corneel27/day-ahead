@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<form method="post" name="bewerk_form" id="bewerk_form">
+<h3>Voer een bewerking, berekening of actie uit door een van onderstaande onderdelen aan te klikken</h3>
+  {% for key, value in bewerkingen.items() %}
+    {% set id_= "id_" ~ key %}
+    {% if key == bewerking  %}
+    <input type="checkbox" id= "{{ id_ }}" name= "{{ key }}" checked onchange="this.form.submit()"/>
+    {% else %}
+    <input type="checkbox" id= "{{ id_ }}" name= "{{ key }}" onchange="this.form.submit()"/>
+    {% endif %}
+      <label for= "{{ id_ }}"> {{ value["name"] }} </label><br />
+  {% endfor %}
+  {% if not (bewerking == '') %}
+    <input type="hidden" id="current_bewerking" name="current_bewerking" value="{{bewerking}}">
+  {% endif %}
+  <div class="clear"></div>
+</form>
+<div>
+  <hr>
+{% if not (bewerking == '') %}
+    <h2>Bewerking "{{ bewerkingen[bewerking]["name"] }}" wordt uitgevoerd</h2>
+  <script>
+  window.onload=function(){
+    window.setTimeout(document.bewerk_form.submit.bind(document.bewerk_form), {{ bewerkingen[bewerking]["wait"] }});
+    };
+  </script>
+
+{% endif %}
+
+{% if current_bewerking != "" %}
+  <h2> Logging van bewerking "{{ bewerkingen[current_bewerking]["name"] }}":</h2>
+    <pre class="log_content">{{ log_content }}</pre>
+{% endif %}
+
+</div>
+<hr>
+
+{% endblock content %}
+
+
+
