@@ -739,6 +739,7 @@ rest:
     scan_interval: 600
     sensor:
       - name: da_price
+        unique_id: da_price
         unit_of_measurement: 'euro/kWh'
         value_template: "{{ (value_json.recorded[now().hour].da_ex) | round(5) }}"
         json_attributes:
@@ -749,6 +750,7 @@ rest:
     scan_interval: 600
     sensor:
       - name: dao_grid_consumption
+        unique_id: dao_grid_consumption
         unit_of_measurement: 'kWh'
         value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
         json_attributes:
@@ -759,6 +761,7 @@ rest:
     scan_interval: 600
     sensor:
       - name: dao_grid_consumption_cumulatief
+        unique_id: dao_grid_consumption_cumulatief
         unit_of_measurement: 'kWh'
         value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
         json_attributes:
@@ -769,6 +772,7 @@ rest:
     scan_interval: 600
     sensor:
       - name: dao_grid_production
+        unique_id: dao_grid_production
         unit_of_measurement: 'kWh'
         value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
         json_attributes:
