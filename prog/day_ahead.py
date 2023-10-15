@@ -1158,16 +1158,10 @@ class DayAheadOpt(hass.Hass):
                 d_f.loc[d_f.shape[0]] = row
             self.save_df(tablename='prognoses', tijd=tijd, df=d_f.iloc[:, 1:-1])
 
-            # pd.options.display.float_format = '{:6.2f}'.format
-
-            #d_f = d_f.groupby(["uur"], as_index=False).agg({"bat in": 'sum', "bat out" : 'sum', "cons": 'sum', "prod": 'sum', "base": 'sum',
-            #                          "boiler": 'sum', "wp": 'sum', "pv": 'sum', "cost": 'sum', "profit": 'sum', "b_tem": 'mean'})
             d_f = d_f.astype({"uur": int})
-            # d_f.loc['total'] = d_f.iloc[:,1:-1].sum()
-            # d_f.at[d_f.index[-1], "uur"] = "Totaal"
-            # d_f.at[d_f.index[-1], "b_tem"] = ""
-
-
+            d_f.loc['total'] = d_f.iloc[:,1:-1].sum()
+            d_f.at[d_f.index[-1], "uur"] = "Totaal"
+            d_f.at[d_f.index[-1], "b_tem"] = ""
 
             print(d_f.to_string(index=False)) # , formatters={'uur':'{:03d}'.format}))
             print("\nWinst: {:<0.2f}".format(old_cost_da - cost.x), "€")
