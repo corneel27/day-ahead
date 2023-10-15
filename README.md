@@ -73,7 +73,7 @@ Het programma day_ahead.py is een python-programma dat alleen draait onder pytho
 Het programma draait alleen als de volgende modules zijn geïnstalleerd met pip3. <br/>
 Je installeert de benodigde modules als volgt:<br/>
 ````
-pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask websocket-client gunicorn ephem
+pip3 install mip pandas entsoe-py mysql-connector hassapi matplotlib nordpool flask gunicorn ephem
 ````
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
@@ -201,8 +201,6 @@ Voert de "optimaliseringsberekening" uit:
 Hiermee komt het programma in een loop en checkt iedere minuut of er een taak moet worden uitgevoerd. Dit wordt ook bereikt door het programma zonder parameter op te starten.<br>
 Voorbeeld: `python3 day_ahead.py`<br>
 Wil je dat het programma in de achtergrond blijft draaien dan plaats je er een '&' teken achter: `python3 day_ahead.py &`<br>
-Als het programma in "scheduler-mode" draait wordt er een websocket geopend naar Home Assistant
-en kan met een zelf te kiezen trigger-entity (zie hierna) een optimaliseringsberekening worden gestart.
 
 ---
 ## Instellingen<br>
@@ -213,8 +211,6 @@ Opmerking: alle instellingen die beginnen met "!secret" staan komen in het besta
 ### **homeassistant**<br>
  * protocol api: hiermee geeft je aan met welke protocol jouw HA installatie 
 bereikbaar is. Je kunt kiezen uit `http` (zonder ssl) of `https` (met ssl).
- * protocol ws: hiermee geeft je aan met welke protocol je een websocket naar HA kunt openen. 
-Je kunt kiezen uit `ws` (zonder ssl) of `wss` (met ssl).
  * ip adress: het ip-adres waar je home assistant installatie bereikbaar is.  
  * ip port: de ip-poort waar je home assistant installatie bereikbaar is.
  * token: om de api te kunnen aanroepen is er een token nodig.  

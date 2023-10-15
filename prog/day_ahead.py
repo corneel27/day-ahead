@@ -23,7 +23,6 @@ from da_config import Config
 from da_meteo import Meteo
 from da_prices import DA_Prices
 from db_manager import DBmanagerObj
-import websocket
 import threading
 
 
@@ -34,7 +33,6 @@ class DayAheadOpt(hass.Hass):
         self.debug = False
         self.config = Config(file_name)
         self.protol_api = self.config.get(['homeassistant', 'protocol api'])
-        self.protol_ws = self.config.get(['homeassistant', 'protocol ws'])
         self.ip_adress = self.config.get(['homeassistant', 'ip adress'])
         self.ip_port = self.config.get(['homeassistant', 'ip port'])
         self.hassurl = self.protol_api+"://" + self.ip_adress + ":" + str(self.ip_port) + "/"
@@ -90,7 +88,6 @@ class DayAheadOpt(hass.Hass):
         self.heating_options = self.config.get(["heating"])
         self.tasks = self.config.get(["scheduler"])
         self.base_cons = self.config.get(["baseload"])
-        self.w_socket: websocket = None
         self.heater_present = False
         self.boiler_present = False
 
@@ -1601,89 +1598,13 @@ class DayAheadOpt(hass.Hass):
         sys.stdout = old_stdout
         log_file.close()
 
-    def subscribe(self) -> None:
-        """
-        set a subscription for an event in ha, defined with subscribe_triger
-        :param ws: websocket
-        """
-        trigger_entity = self.config.get(["trigger entity"])
-        subscribe_trigger = {
-            "id": 1,
-            "type": "subscribe_trigger",
-            "trigger": {
-                "platform": "state",
-                "entity_id": trigger_entity,
-            }
-        }
-        send_str = json.dumps(subscribe_trigger)
-        self.w_socket.send(send_str)
-        mess = self.w_socket.recv()
-        print(mess)
-
-    def unsubscribe(self) -> None:
-        """
-        remove subscription
-        :param ws: websocket
-        """
-        unsubscribe_mess = {
-            "id": 3,
-            "type": "unsubscribe_events",
-            "subscription": 1
-        }
-        send_str = json.dumps(unsubscribe_mess)
-        self.w_socket.send(send_str)
-        mess = self.w_socket.recv()
-        print(mess)
-
-    def recieve_events(self, th_event: threading.Event) -> None:
-        print("Wacht op binnenkomende messages van Home Assistant")
-        while True:
-            try:
-                while True:
-                    message = self.w_socket.recv()
-                    if message != '':
-                        print("Ontvangen message:" + message)
-                        th_event.set()
-                time.sleep(1)
-            except websocket.WebSocketConnectionClosedException:
-                print("Websocket verbinding verbroken")
-                while not self.w_socket.connected:
-                    time.sleep(60)  # een minuut wachten
-                    try:
-                        self.w_socket = self.start_websocket()
-                        print("Websocket verbinding hersteld")
-                        self.subscribe()
-                        th_event.clear()
-                    except:
-                        pass
-
-    def start_websocket(self) -> websocket:
-        ws = websocket.WebSocket()
-        ws.connect(self.protol_ws+"://" + self.ip_adress + ":" + str(self.ip_port) + "/api/websocket")
-        print("Websocket connect: ", ws.recv())
-        ws.send('{"type": "auth", "access_token": "' + self.hasstoken + '"}')
-        print("Websocket auth: ", ws.recv())
-        return ws
-
     def scheduler(self):
-        self.w_socket = self.start_websocket()
-        th_event = threading.Event()
-        recieve_thread = threading.Thread(
-            name="recieve thread", target=self.recieve_events, args=(th_event,))
-        self.subscribe()
-        th_event.clear()
-        recieve_thread.start()
         if self.notification_entity != None:
             if self.notification_options["opstarten"].lower() == "true":
                 self.set_value(self.notification_entity, "DAO scheduler gestart " +
                                datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         while True:
-            if th_event.is_set():
-                th_event.clear()
-                print("Event ontvangen")
-                print("Start optimalisatieberekening")
-                self.run_task("calc_optimum")
             t = datetime.datetime.now()
             next_min = t - datetime.timedelta(minutes=-1, seconds=t.second, microseconds=t.microsecond)
             # wacht tot hele minuut 0% cpu
@@ -1720,7 +1641,6 @@ def main():
     day_ah = DayAheadOpt("../data/options.json")
     if len(sys.argv) > 1:
         task = ""
-        dashboard = False
         args = sys.argv[1:]
         for arg in args:
             if arg.lower() == "debug":

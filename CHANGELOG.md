@@ -5,6 +5,12 @@ De volgende zaken staan op de todo lijst:
 - De software onderbrengen in een HA addon
 - Alle print opdrachten omzetten naar logger 
 
+##[v0.4.0] - 2023-10-15
+
+### Removed
+De functionaliteit om via de websocket in HA een berekening te starten is verwijderd.
+Dat kan nu via een rest-command: /api/run
+
 
 ## [v0.3.1] - 2023-09-12
 
