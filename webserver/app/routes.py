@@ -253,7 +253,7 @@ def api_report(fld: str, periode: str):
     return result
 
 import codecs
-@app.route('/api/run/<string:bewerking>', methods=['GET'])
+@app.route('/api/run/<string:bewerking>', methods=['GET','POST'])
 def run_api(bewerking: str):
     if bewerking in bewerkingen.keys():
         proc = run(bewerkingen[bewerking]["cmd"], capture_output=True, text=True)

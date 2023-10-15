@@ -643,10 +643,7 @@ Voor ```<ip-adres>``` en ```<ip-poort>``` zie hierboven.<br/>
 
 ## \<url>/api/run/\<commando><br />
 Met dit onderdeel van de api kun je via het dashboard alle berekeningen en bewerkingen
-van het programma starten. Dit kan met **curl** maar ook kun je hiermee vanuit Home Assistant een bewerking of berekening uitvoeren. 
-Binnenkort komt hier een voorbeeld van een automation in HA die getriggerd wordt door een sensor wijziging (bijv een ev die thuis 
-ingeplugd wordt of wanneer de "gereed" datum/tijd van je ev is aangepast).
-
+van het programma starten. Dit kan met **curl** maar ook kun je hiermee vanuit Home Assistant een bewerking of berekening uitvoeren. <br/>
 Bij ```<commando>``` vul je een van de volgende commando's in:<br />
 * ```calc_zonder_debug```: een optimaliseringsberekening wordt uitgevoerd. 
 De resultaten worden doorgezet naar Home Assistant.<br />  
@@ -655,6 +652,33 @@ doorgezet naar Home Assistant.
 * ```get_tibber```: haalt verbruiksgegevens (consumption, production, cost, profit) op bij Tibber en slaat deze op in de database<br/>
 * ```get_meteo```: haalt prognose van meteogegevens op bij Meteoserver en slaat deze op in de database
 * ```get_prices```: haalt de day-ahead prijzen voor de volgende dag op en slaat deze op in de database<br/>
+
+Een uitgewerkt voorbeeld hoe je vanuit Home Assistant een berekening kunt starten:<br/>
+- Maak een (of meer) rest-commands aan. <br/>
+    Voeg de volgende code toe aan configuration.yaml van Home Assistant:<br/>
+    ````
+    rest_command:
+      start_dao_calc:
+        url: http://192.168.178.36:8012/api/run/calc_zonder_debug
+        verify_ssl: false
+    ````
+-   Maak een helper aan Home Assistant bijvoorbeeld: ```input_button.start_day_ahead_berekening``` en
+zet deze helper op een voor jou passende entity card.<br/>
+- Maak een automatisering aan die wordt getriggerd als je op deze helper klikt.
+Bijvoorbeeld:<br/>
+    ````
+    alias: Start berekening DAO via rest
+    description: Start berekening DAO
+    trigger:
+      - platform: state
+        entity_id:
+          - input_button.start_day_ahead_berekening
+    condition: []
+    action:
+      - service: rest_command.start_dao_calc
+        data: {}
+    mode: single
+    ````
 
 ## \<url>/api/report/\<variable>/\<period>?\<param>=\<param_value>
 Hiermee kun je diverse gegevens uit de database ophalen en deze kun je dan bijv. in Home Assistant
