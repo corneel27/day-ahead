@@ -344,14 +344,6 @@ Als voorbeeld levert deze het volgende resultaat:
 Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
   ![img_4.png](images/img_4.png)
 
-### **trigger entity**
-In de zogenaamde scheduler-mode van het programma wordt er een websocket geopend naar Home Assistant
-en daarmee wordt een statusverandering van een zelf te kiezen "trigger entity" waargenomen. Deze statusverandering
-zorgt op zijn beurt voor het starten van een optimaliseringsberekening.
-Het best kies voor je een helper-entity in de vorm van een input_button.
-Deze kun je handmatig in HA aanklikken, maar je kunt ook diverse automatiseringen die de input_button activeren.
-Bijvoorbeeld als je met je EV thuiskomt en/of deze aansluit op het elektriciteitsnet.
-
 ### **notifications**
 
  * entity<br>

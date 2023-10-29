@@ -83,7 +83,6 @@
     "average delivery": "True"
   },
   "strategy": "minimize cost",
-  "trigger entity": "input_button.day_ahead_berekening_uitvoeren",
   "notifications": {
     "notification entity": "input_text.dao_notificatie",
     "opstarten": "False",
