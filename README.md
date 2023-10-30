@@ -323,6 +323,20 @@ Je hebt de keuze uit de volgende backends: MacOSX, QtAgg, GTK4Agg, Gtk3Agg, TkAg
 Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het programma het zelf uit.
 
 ### graphics
+* style: hier kun je de stijl van je grafiek definieren.<br/>
+Je hebt de keuze uit de volgende opties:
+  * default (witte achtergrond)
+  * dark_background (donkere achtergrond)
+  * bmh (=Bayesian Methods for Hackers)
+  * fivethirtyeight
+  * ggplot
+  * grayscale (werkt niet helemaal)
+  * Solarize_Light2 (als door de zon beschenen)<br/>
+  
+   Meer informatie:``https://matplotlib.org/stable/gallery/style_sheets/index.html```
+
+* show : "true" of "false". Als je deze op "true" zet wordt na het uitvoeren van de berekening direct de grafiek getoond.
+
 Voor de lijngrafieken van de prijzen kun je met **True** of **False** kiezen welke je wil zien:
 * prices delivery: prijzen voor levering
 * prices redelivery: prijzen voor teruglevering (ex btw en belasting)

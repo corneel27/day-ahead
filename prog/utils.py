@@ -43,8 +43,7 @@ def calc_adjustment_heatcurve(price: float, price_avg: float, adjustment_factor,
     if price_avg == 0:
         adjustment = 0
     else:
-        adjustment = round(- adjustment_factor *
-                           (price - price_avg) * 100 / price_avg, 1)
+        adjustment = round(- adjustment_factor * (price - price_avg) * 100 / price_avg, 1)
     # toename en afname maximeren op 10 x adjustment factor
     if adjustment >= old_adjustment:
         adjustment = min(adjustment, old_adjustment + adjustment_factor*10)

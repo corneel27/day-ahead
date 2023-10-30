@@ -15,7 +15,8 @@ Dat kan nu via een rest-command: /api/run
 ## [v0.3.1] - 2023-09-12
 
 ### Added
-
+- je kunt nu de grafische stijl definieren o.a. darkmode. (zie README, graphics) 
+- je kunt het presenteren van de grafieken na het uitvoeren van een berekening aan/uit zetten. (zie README, graphics)
 - de volgende aanvullende python modules moeten worden geinstalleerd:
 ````
   pip3 install gunicorn ephem

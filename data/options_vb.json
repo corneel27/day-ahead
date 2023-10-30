@@ -78,6 +78,8 @@
   ],
   "graphical backend": "Gtk3Agg",
   "graphics": {
+    "style": "dark_background",
+    "show" : "true",
     "prices delivery": "True",
     "prices redelivery": "True",
     "average delivery": "True"

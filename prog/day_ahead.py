@@ -1373,8 +1373,10 @@ class DayAheadOpt(hass.Hass):
             gr1_df["pv_dc"] = pv_ac_p
             gr1_df["accu_in"] = accu_in_n
             gr1_df["accu_out"] = accu_out_p
+            style = self.config.get(['graphics', 'style'])
             gr1_options = {
                 "title": "Prognose berekend op: " + now_dt.strftime('%Y-%m-%d %H:%M'),
+                "style" : style,
                 "haxis": {
                     "values": "uur",
                     "title": "uren van de dag"
@@ -1430,15 +1432,17 @@ class DayAheadOpt(hass.Hass):
             }
             backend = self.config.get(["graphical backend"])
             gb = GraphBuilder(backend)
+            show_graph = self.config.get(['graphics','show']).lower() == 'true'
             if show_graph:
                 gb.build(gr1_df, gr1_options)
 
             import matplotlib.pyplot as plt
             import matplotlib.ticker as ticker
+
+            plt.style.use(style)
             fig, axis = plt.subplots(figsize=(8, 9), nrows=3)
             ind = np.arange(U)
-            axis[0].bar(ind, np.array(org_l),
-                        label='Levering', color='#00bfff', align="edge")
+            axis[0].bar(ind, np.array(org_l), label='Levering', color='#00bfff', align="edge")
             if sum(pv_p) > 0:
                 axis[0].bar(ind, np.array(pv_p), bottom=np.array(
                     org_l), label='PV AC', color='green', align="edge")
