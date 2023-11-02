@@ -70,6 +70,7 @@ AUTO_INCREMENT=1;
   de logging van het resultaat te zien (zie README.md) 
 
 ### Fixed
+- Het laatste uur (meestal uur 23:00) wordt nu bij de grafieken volledig getoond. Dat geldt ook voor de SoC waarde die om 24:00 uur wordt bereikt.
 - Grafieken worden niet meer getoond in de schedule-modus zodat het programma daar niet op blijft hangen
 - De pv-productie werd niet goed berekend voor panelen die niet op zuid waren georienteerd.
 Dit is aangepast.

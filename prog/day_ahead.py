@@ -1035,8 +1035,8 @@ class DayAheadOpt(hass.Hass):
                 for e in range(EV):
                     ev_sum += c_ev[e][u].x
                 c_ev_sum.append(ev_sum)
-            pv_ac_hour_sum = []
-            solar_hour_sum = []
+            pv_ac_hour_sum = [] # totale bruto pv_dc->ac productie
+            solar_hour_sum = [] # totale netto pv_ac productie
             for u in range(U):
                 pv_ac_hour_sum.append(0)
                 solar_hour_sum.append(0)
@@ -1128,8 +1128,7 @@ class DayAheadOpt(hass.Hass):
 
                     pv_prod = 0
                     for s in range(pv_dc_num[b]):
-                        pv_prod += pv_dc_on_off[b][s][u].x * \
-                            pv_prod_dc[b][s][u]
+                        pv_prod += pv_dc_on_off[b][s][u].x * pv_prod_dc[b][s][u]
                     row = [uur[u], dc_from_ac[b][u].x, c_stage, ac_to_dc_eff, ac_from_dc[b][u].x, d_stage,
                            dc_to_ac_eff, dc_to_bat[b][u].x, dc_from_bat[b][u].x, pv_prod, soc[b][u + 1].x]
                     df_accu[b].loc[df_accu[b].shape[0]] = row
@@ -1356,6 +1355,8 @@ class DayAheadOpt(hass.Hass):
                     if u == 0:
                         soc_p.append([])
                     soc_p[b].append(soc[b][u].x)
+            for b in range(B):
+                soc_p[b].append(soc[b][U].x)
 
             # grafiek 1
             import numpy as np
@@ -1436,6 +1437,18 @@ class DayAheadOpt(hass.Hass):
             if show_graph:
                 gb.build(gr1_df, gr1_options)
 
+            grid0_df = pd.DataFrame()
+            grid0_df["index"] = np.arange(U)
+            grid0_df["uur"] = uur[0:U]
+            grid0_df["verbruik"] = org_l
+            grid0_df["productie"] = org_t
+            grid0_df["baseload"] = base_n
+            grid0_df["boiler"] = boiler_n
+            grid0_df["heatpump"] = heatpump_n
+            grid0_df["ev"] = ev_n
+            grid0_df["pv_ac"] = pv_ac_p
+            grid0_df["pv_dc"] = pv_p
+            style = self.config.get(['graphics', 'style'])
             import matplotlib.pyplot as plt
             import matplotlib.ticker as ticker
 
@@ -1509,7 +1522,8 @@ class DayAheadOpt(hass.Hass):
 
             ln1 = []
             line_styles = ["solid", "dashed", "dotted"]
-            np.append(ind, 24)
+            ind = np.arange(U+1)
+            uur.append(24)
             for b in range(B):
                 ln1.append(axis[2].plot(ind, soc_p[b], label='SoC ' + self.battery_options[b]["name"],
                            linestyle=line_styles[b], color='red'))
@@ -1524,16 +1538,19 @@ class DayAheadOpt(hass.Hass):
 
             axis22 = axis[2].twinx()
             if self.graphics_options["prices delivery"].lower() == "true":
+                pl.append(pl[-1])
                 ln2 = axis22.step(ind, np.array(pl),
                         label='Tarief\nlevering', color='#00bfff', where='post')
             else:
                 ln2 = None
             if self.graphics_options["prices redelivery"].lower() == "true":
+                pt_notax.append(pt_notax[-1])
                 ln3 = axis22.step(ind, np.array(pt_notax),
                         label="Tarief terug\nno tax", color='#0080ff', where='post')
             else:
                 ln3 = None
             if self.graphics_options["average delivery"].lower() == "true":
+                pl_avg.append(pl_avg[-1])
                 ln4 = axis22.plot(ind, np.array(pl_avg),
                         label="Tarief lev.\ngemid.", linestyle="dashed", color='#00bfff')
             else:
