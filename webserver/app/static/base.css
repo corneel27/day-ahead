@@ -192,3 +192,7 @@ table tr td, tr th{
 table tr:last-child {
   font-weight: bold;
 }
+
+.log_content{
+  font-family: monospace;
+}

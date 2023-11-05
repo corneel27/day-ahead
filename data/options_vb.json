@@ -1,5 +1,6 @@
 {
   "homeassistant": {
+    "protocol api": "http",
     "ip adress": "192.168.178.36",
     "ip port": 8123,
     "token": "!secret ha_api_token"
@@ -77,12 +78,13 @@
   ],
   "graphical backend": "Gtk3Agg",
   "graphics": {
+    "style": "dark_background",
+    "show" : "true",
     "prices delivery": "True",
     "prices redelivery": "True",
     "average delivery": "True"
   },
   "strategy": "minimize cost",
-  "trigger entity": "input_button.day_ahead_berekening_uitvoeren",
   "notifications": {
     "notification entity": "input_text.dao_notificatie",
     "opstarten": "False",
