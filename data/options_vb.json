@@ -91,6 +91,9 @@
     "berekening": "False",
     "last activity entity": "input_datetime.laatste_activiteit"
   },
+  "grid": {
+    "max_power": 17
+  },
   "history": {
     "save days": 7
   },
@@ -295,7 +298,8 @@
       "orientation": 5,
       "capacity": 4.2,
       "yield": 0.010,
-      "entity pv switch": "input_boolean.pv_woning_aan_uit"
+      "entity pv switch": "input_boolean.pv_woning_aan_uit",
+      "sensor history": "sensor.solaredge_woning_ac_energy_kwh"
     },
     {
       "name": "garage",
@@ -303,7 +307,8 @@
       "orientation": 5,
       "capacity": 1.8,
       "yield": 0.005,
-      "entity pv switch": "input_boolean.pv_garage_aan_uit"
+      "entity pv switch": "input_boolean.pv_garage_aan_uit",
+      "sensor history": "sensor.solaredge_garage_ac_energy_kwh_2"
     }
   ],
   "electric vehicle": [

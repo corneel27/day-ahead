@@ -121,8 +121,9 @@ Een aparte database in MariaDB voor dit programma met daarin:
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (12, 'boil', 'Boiler', 'kWh');
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (13, 'wp', 'Warmtepomp', 'kWh');
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (14, 'ev', 'Elektrische auto', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (15, 'pv', 'Zonnenergie', 'kWh');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (15, 'pv_ac', 'Zonne energie AC', 'kWh');
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (16, 'soc', 'SoC', '%');
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (17, 'pv_dc', 'Zonne energie DC', 'kWh');
    
 ````
  * tabel **values**:<br/>
@@ -410,6 +411,10 @@ action:
 mode: single
 ````
 Zodra de timer voltooid is er wat loos. Als je aan deze functionaliteit geen behoefte hebt kun je de entity instelling weglaten uit de options.
+
+### **grid**<br>
+* max_power: hier geef in je kW het maximale vermogen op van je netwerkaansluiting. 
+    Een netwerkaansluiting van 3 x 25 A = 3 x 25 x 230 = 17 kW. Het programma zal er voor zorgen dat dit maximum niet zal worden overschreden.<br>
 
 ### **boiler**<br>
 Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler

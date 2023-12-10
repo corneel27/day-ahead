@@ -5,6 +5,20 @@ De volgende zaken staan op de todo lijst:
 - De software onderbrengen in een HA addon
 - Alle print opdrachten omzetten naar logger 
 
+
+### Changed
+De volgende update query moet in de database "day_ahead" worden doorgevoerd:
+````
+UPDATE `day_ahead`.`variabel` SET `code`='pv_ac', `name`='Zonne energie AC' WHERE  `id`=15;
+````
+### Added
+De volgende variabelen worden toegevoegd aan het bestand `variabel`:
+````commandline
+   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (17, 'pv_dc', 'Zonne energie DC', 'kWh');
+````
+In options.json kun je nu het maximale vermogen opgeven van je netwerk aansluiting.
+Zie README.md
+
 ##[v0.4.0] - 2023-10-15
 
 ### Removed
