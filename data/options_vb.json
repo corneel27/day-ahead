@@ -326,8 +326,7 @@
         "entity set level": "input_number.gewenst_laad_niveau",
         "entity ready datetime": "input_datetime.tijdstip_klaar_met_laden"
       },
-      "charge switch": "switch.fritz_dect_200_laadpunt",
-      "//charge switch": "switch.wvwzzzauzfw117301_charging"
+      "charge switch": "switch.wvwzzzauzfw117301_charging"
     }
   ],
   "tibber": {
