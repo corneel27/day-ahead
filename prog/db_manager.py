@@ -392,7 +392,9 @@ class DBmanagerObj(object):
         """
         if start is None:
             start = datetime.datetime.now()
-        start = start.strftime("%Y-%m-%d")
+        start = start.strftime("%Y-%m-%d %H:%M")
+        if not (end is None):
+            end = end.strftime("%Y-%m-%d %H:%M")
         sqlQuery = (
             "SELECT `time`, `value` " \
             "FROM `variabel`, `" + table + "` " \
@@ -401,7 +403,7 @@ class DBmanagerObj(object):
             "AND `time` >= UNIX_TIMESTAMP('" + start + "') "
             )
         if end:
-            sqlQuery += "AND `time` < UNIX_TIMESTAMP(end) "
+            sqlQuery += "AND `time` < UNIX_TIMESTAMP('" + end + "') "
         sqlQuery += "ORDER BY `time`;"
         print (sqlQuery)
         self._conn.commit()
