@@ -35,7 +35,7 @@ variabelen worden berekend. Dit zijn:
 
 Het geheel kan grafisch worden weergegeven:
 
-![optimalisering](imagesptimum2300.png "optimalisering")
+![optimalisering](dao/images/optimum2300.png "optimalisering")
 
 Of in tabelvorm:
 ````
