@@ -18,6 +18,7 @@ COPY webserver /root/webserver/
 RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
 
 # COPY miplib/ /root/prog/miplib/
+WORKDIR /root
 COPY miplib.tar.gz /tmp/
 RUN tar -zxvf /tmp/miplib.tar.gz /root/prog
 RUN export PMIP_CBC_LIBRARY="/root/prog/miplib/lib/libCbc.so"
