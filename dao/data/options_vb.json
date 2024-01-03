@@ -28,11 +28,13 @@
     "switch to low": 23,
     "energy taxes delivery": {
       "2022-01-01": 0.06729,
-      "2023-01-01": 0.12599
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.10880
     },
     "energy taxes redelivery": {
       "2022-01-01": 0.06729,
-      "2023-01-01": 0.12599
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.10880
     },
     "cost supplier delivery": {
       "2022-01-01": 0.002,
@@ -90,6 +92,9 @@
     "opstarten": "False",
     "berekening": "False",
     "last activity entity": "input_datetime.laatste_activiteit"
+  },
+  "grid": {
+    "max_power": 17
   },
   "history": {
     "save days": 7
@@ -295,7 +300,8 @@
       "orientation": 5,
       "capacity": 4.2,
       "yield": 0.010,
-      "entity pv switch": "input_boolean.pv_woning_aan_uit"
+      "entity pv switch": "input_boolean.pv_woning_aan_uit",
+      "sensor history": "sensor.solaredge_woning_ac_energy_kwh"
     },
     {
       "name": "garage",
@@ -303,7 +309,8 @@
       "orientation": 5,
       "capacity": 1.8,
       "yield": 0.005,
-      "entity pv switch": "input_boolean.pv_garage_aan_uit"
+      "entity pv switch": "input_boolean.pv_garage_aan_uit",
+      "sensor history": "sensor.solaredge_garage_ac_energy_kwh_2"
     }
   ],
   "electric vehicle": [

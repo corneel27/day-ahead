@@ -2,22 +2,25 @@
 
 {% block content %}
     <div>
-        <form id="json-form" action="/settings" method="post">
+        <form id="json-form" method="post" id="settings_form">
           <div class="spacer">
             <div class="select action">
               <span style="display:block; float:left; padding:10px"><b>JSON Editor</b></span>
               <button name="action" class="btn btn_mid" value="update">
                 <img src="../static/update.png" alt="update" border="0" style="display:inline-block; height:1em; width:auto;" />
               </button>
+              <button name="action" class="btn btn_mid" value="cancel">
+                <img src="../static/cancel.png" alt="cancel" border="0" style="display:inline-block; height:1em; width:auto;" />
+              </button>
             </div>
           </div>
+          {% if message %}
+            <p class="message">
+              {{ message }}
+            </p>
+          {% endif %}
           <code-input lang="JSON" id="codeinput" name="codeinput" class="line-numbers" style="overflow:auto;">{{ options_data }}</code-input>
         </form>
-      {% if message %}
-        <p>
-          {{ message }}
-        </p>
-      {% endif %}
     </div>
     <script>
       codeInput.registerTemplate("syntax-highlighted",

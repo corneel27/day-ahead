@@ -23,8 +23,6 @@ from da_config import Config
 from da_meteo import Meteo
 from da_prices import DA_Prices
 from db_manager import DBmanagerObj
-import threading
-
 
 class DayAheadOpt(hass.Hass):
 
@@ -90,6 +88,7 @@ class DayAheadOpt(hass.Hass):
         self.base_cons = self.config.get(["baseload"])
         self.heater_present = False
         self.boiler_present = False
+        self.grid_max_power = self.config.get(["grid","max_power"])
 
     def set_last_activity(self):
         if self.last_activity_entity is not None:
@@ -301,10 +300,8 @@ class DayAheadOpt(hass.Hass):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             taxes_t = get_value_from_dict(dag_str, taxes_t_def)
             btw = get_value_from_dict(dag_str, btw_def)
-            price_l = round((row.da_price + taxes_l + ol_l)
-                            * (1 + btw / 100), 5)
-            price_t = round((row.da_price + taxes_t + ol_t)
-                            * (1 + btw / 100), 5)
+            price_l = round((row.da_price + taxes_l + ol_l) * (1 + btw / 100), 5)
+            price_t = round((row.da_price + taxes_t + ol_t) * (1 + btw / 100), 5)
             pl.append(price_l)
             pt.append(price_t)
             # tarief teruglevering zonder eb en btw
@@ -423,8 +420,7 @@ class DayAheadOpt(hass.Hass):
         ##############################################################
         pv_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=solar_prod[s][u] * 1.1)
                   for u in range(U)] for s in range(solar_num)]
-        pv_ac_on_off = [[model.add_var(var_type=BINARY)
-                         for u in range(U)] for s in range(solar_num)]
+        pv_ac_on_off = [[model.add_var(var_type=BINARY) for u in range(U)] for s in range(solar_num)]
         for s in range(solar_num):
             for u in range(U):
                 model += pv_ac[s][u] == solar_prod[s][u] * pv_ac_on_off[s][u]
@@ -541,7 +537,7 @@ class DayAheadOpt(hass.Hass):
         ac_to_dc_st_on = [[[model.add_var(var_type=BINARY)
             for u in range(U)] for cs in range(CS[b])] for b in range(B)]
         '''
-        #met sos ###################################################################
+        # met sos ###################################################################
         ac_to_dc_samples = [[self.battery_options[b]["charge stages"][cs]["power"]/1000
                           for cs in range(CS[b])] for b in range(B)]
         dc_from_ac_samples = [[(self.battery_options[b]["charge stages"][cs]["efficiency"] *
@@ -552,8 +548,8 @@ class DayAheadOpt(hass.Hass):
         ac_to_dc_on = [[model.add_var(var_type=BINARY) for u in range(U)] for b in range(B)]
         ac_to_dc_w = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=1) \
                      for cs in range(CS[b])] for u in range(U)] for b in range(B)]
-        #tot hier met sos
-        #'''
+        # tot hier met sos
+        # '''
         ac_from_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_discharge_power[b])
                         for u in range(U)] for b in range(B)]
         ac_from_dc_on = [[model.add_var(var_type=BINARY) for u in range(U)] for b in range(B)]
@@ -865,10 +861,10 @@ class DayAheadOpt(hass.Hass):
         # minimaal 20 kW terugleveren max 20 kW leveren (3 x 25A = 17,5 kW)
         # instelbaar maken?
         # levering
-        c_l = [model.add_var(var_type=CONTINUOUS, lb=0, ub=20)for u in range(U)]
+        c_l = [model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power)for u in range(U)]
         # teruglevering
-        c_t_total = [model.add_var(var_type=CONTINUOUS, lb=0, ub=20) for u in range(U)]
-        c_t_w_tax = [model.add_var(var_type=CONTINUOUS, lb=0, ub=20) for u in range(U)]
+        c_t_total = [model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power) for u in range(U)]
+        c_t_w_tax = [model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power) for u in range(U)]
         c_l_on = [model.add_var(var_type=BINARY) for u in range(U)]
         c_t_on = [model.add_var(var_type=BINARY) for u in range(U)]
 
@@ -876,11 +872,10 @@ class DayAheadOpt(hass.Hass):
         # c_t_no_tax = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]
 
         if salderen:
-            c_t_no_tax = [model.add_var(
-                var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]
+            c_t_no_tax = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]
         else:
             # alles wat meer wordt teruggeleverd dan geleverd (c_t_no_tax) wordt niet gesaldeerd (geen belasting terug): tarief pt_notax
-            c_t_no_tax = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for u in range(U)]
+            c_t_no_tax = [model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power) for u in range(U)]
             model += (xsum(c_t_w_tax[u] for u in range(U)) + production_today) <= \
                      (xsum(c_l[u] for u in range(U)) + consumption_today)
         # netto per uur alleen leveren of terugleveren niet tegelijk?
@@ -970,8 +965,8 @@ class DayAheadOpt(hass.Hass):
         # + (boiler_temp[U] - boiler_ondergrens) * (spec_heat_boiler/(3600 * cop_boiler)) * p_avg # waarde energie boiler
 
         # settings
-        model.max_gap = 0.05
-        model.max_nodes = 500
+        model.max_gap = 0.1
+        model.max_nodes = 1500
 
         # kosten optimalisering
         strategy = self.strategy.lower()
@@ -1143,7 +1138,7 @@ class DayAheadOpt(hass.Hass):
             # totaal overzicht
             #pd.options.display.float_format = '{:,.3f}'.format
             cols = ['uur', 'bat_in', 'bat_out']
-            cols = cols + ['cons', 'prod', 'base', 'boiler', 'wp', 'ev', 'pv', 'cost', 'profit', 'b_tem']
+            cols = cols + ['cons', 'prod', 'base', 'boiler', 'wp', 'ev', 'pv_ac', 'cost', 'profit', 'b_tem']
             d_f = pd.DataFrame(columns=cols)
             for u in range(U):
                 row = [uur[u], accu_in_sum[u], accu_out_sum[u]]
@@ -1152,7 +1147,10 @@ class DayAheadOpt(hass.Hass):
                              -c_t_w_tax[u].x * pt[u] - c_t_no_tax[u].x * pt_notax[u],
                              boiler_temp[u + 1].x]
                 d_f.loc[d_f.shape[0]] = row
-            self.save_df(tablename='prognoses', tijd=tijd, df=d_f.iloc[:, 1:-1])
+            if not self.debug:
+                self.save_df(tablename='prognoses', tijd=tijd, df=d_f.iloc[:, 1:-1])
+            else:
+                print("Prognoses zijn niet opgeslagen.")
 
             d_f = d_f.astype({"uur": int})
             d_f.loc['total'] = d_f.iloc[:,1:-1].sum()
@@ -1539,14 +1537,12 @@ class DayAheadOpt(hass.Hass):
             axis22 = axis[2].twinx()
             if self.graphics_options["prices delivery"].lower() == "true":
                 pl.append(pl[-1])
-                ln2 = axis22.step(ind, np.array(pl),
-                        label='Tarief\nlevering', color='#00bfff', where='post')
+                ln2 = axis22.step(ind, np.array(pl), label='Tarief\nlevering', color='#00bfff', where='post')
             else:
                 ln2 = None
             if self.graphics_options["prices redelivery"].lower() == "true":
                 pt_notax.append(pt_notax[-1])
-                ln3 = axis22.step(ind, np.array(pt_notax),
-                        label="Tarief terug\nno tax", color='#0080ff', where='post')
+                ln3 = axis22.step(ind, np.array(pt_notax), label="Tarief terug\nno tax", color='#0080ff', where='post')
             else:
                 ln3 = None
             if self.graphics_options["average delivery"].lower() == "true":

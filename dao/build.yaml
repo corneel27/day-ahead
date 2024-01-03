@@ -1,0 +1,5 @@
+---
+build_from:
+  aarch64: ghcr.io/hassio-addons/debian-base/aarch64:stable
+
+

@@ -4,7 +4,7 @@ sys.path.append("../")
 
 app = Flask(__name__)
 
-from webserver.app.routes import *
+from dao.webserver.app.routes import *
 
 
 #if __name__ == '__main__':

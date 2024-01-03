@@ -1,18 +1,15 @@
-import numpy
-import pandas as pd
-import datetime
+
 import calendar
 from dateutil.relativedelta import relativedelta
-from prog.db_manager import DBmanagerObj
-from prog.da_config import Config
-from prog.utils import *
-from prog.da_graph import GraphBuilder
+from dao.prog.db_manager import DBmanagerObj
+from dao.prog.da_config import Config
+from dao.prog.utils import *
+from dao.prog.da_graph import GraphBuilder
 import base64
 from io import BytesIO
-from matplotlib.figure import Figure
 
 
-class Report ():
+class Report:
     periodes = {}
 
     def __init__(self):
@@ -44,11 +41,57 @@ class Report ():
         #
         self.report_options = self.config.get(["report"])
         self.make_periodes()
+        self.categorie_distr = {
+            "cons":
+                {"dim": "kWh",
+                 "sign": "pos",
+                 "name": "Verbruik",
+                 "sensors": self.report_options["entities grid consumption"],
+                 },
+            "prod":
+                {"dim": "kWh",
+                 "sign": "neg",
+                 "name": "Productie",
+                 "sensors": self.report_options["entities grid production"],
+                 },
+            "bat_out":
+                {"dim": "kWh",
+                 "sign": "pos",
+                 "name": "Accu_uit",
+                 "sensors": ["sensor.ess_grid_consumption"]
+                 },
+            "bat_in":
+                {"dim": "kWh",
+                 "sign": "neg",
+                 "name": "Accu in",
+                 "sensors": ["sensor.ess_grid_production"]
+                 },
+            "pv_ac":
+                {"dim": "kWh",
+                 "sign": "pos",
+                 "name": "PV ac",
+                 "sensors": ["sensor.solaredge_woning_ac_energy_kwh", "sensor.solaredge_garage_ac_energy_kwh_2"]
+                 },
+            "wp":
+                {"dim": "kWh",
+                 "sign": "neg",
+                 "//code": ["wp", "boiler"],
+                 "name": "WP",
+                 "sensors": ["sensor.youless_meterstand"]
+                 },
+            "base":
+                {"dim": "kWh",
+                 "sign": "neg",
+                 "code": "Overig",
+                 "sensors": ["Verbruik", "Production", "Accu uit", "Accu in", "PV ac", "WP"],
+                 },
+        }
+
         return
 
     def make_periodes(self):
-        def create_dict(name, vanaf, tot, interval):
-            return {name: {"vanaf": vanaf, "tot": tot, "interval": interval}}
+        def create_dict(name, _vanaf, _tot, interval):
+            return {name: {"vanaf": _vanaf, "tot": _tot, "interval": interval}}
 
         # vandaag
         now = datetime.datetime.now()
@@ -59,10 +102,10 @@ class Report ():
         # morgen
         vanaf_m = tot
         tot_m = vanaf_m + datetime.timedelta(days=1)
-        self.periodes.update(create_dict("morgen", vanaf=vanaf_m, tot=tot_m, interval="uur"))
+        self.periodes.update(create_dict("morgen", vanaf_m, tot_m, interval="uur"))
 
-        #vandaag en morgen
-        self.periodes.update(create_dict("vandaag en morgen", vanaf=vanaf, tot=tot_m, interval="uur"))
+        # vandaag en morgen
+        self.periodes.update(create_dict("vandaag en morgen", vanaf, tot_m, interval="uur"))
 
         # gisteren
         tot_g = vanaf
@@ -71,7 +114,7 @@ class Report ():
 
         # deze week
         delta = vanaf.weekday()
-        vanaf = vanaf +datetime.timedelta(days=-delta)
+        vanaf = vanaf + datetime.timedelta(days=-delta)
         tot = vanaf + datetime.timedelta(days=7)
         self.periodes.update(create_dict("deze week", vanaf, tot, "dag"))
 
@@ -106,49 +149,54 @@ class Report ():
         now = datetime.datetime.now()
         tot = datetime.datetime(now.year, now.month, now.day)
         tot = tot + datetime.timedelta(days=1)
-        self.periodes.update(create_dict(
-            "dit contractjaar", vanaf, tot, "maand"))
+        self.periodes.update(create_dict("dit contractjaar", vanaf, tot, "maand"))
 
+        # 365 dagen
+        tot = tot_g
+        vanaf = tot + datetime.timedelta(days=-365)
+        self.periodes.update(create_dict("365 dagen", vanaf, tot, "maand"))
         return
 
-    def get_sensor_data(self, sensor: str, vanaf: datetime.datetime, tot: datetime.datetime, col_name: str) -> pd.DataFrame:
+    def get_sensor_data(self, sensor: str, vanaf: datetime.datetime, tot: datetime.datetime,
+                        col_name: str) -> pd.DataFrame:
         """
-        vanaf last_moment + datetime.timedelta(hours=-1)
+        Vanaf last_moment + datetime.timedelta(hours=-1)
         """
-        #sql = "SET time_zone='CET';"
-        #self.db_ha.run_sql(sql)
-        #vanaf_ts = int(vanaf.timestamp())
-        #tot_ts = int(tot.timestamp()-7200)
+        # sql = "SET time_zone='CET';"
+        # self.db_ha.run_sql(sql)
+        # vanaf_ts = int(vanaf.timestamp())
+        # tot_ts = int(tot.timestamp()-7200)
         sql = "SELECT FROM_UNIXTIME(t2.`start_ts`) 'tijd', " \
-            "round(t2.state - t1.`state`,3) '" + col_name + "' " \
-            "FROM `statistics` t1,`statistics` t2, `statistics_meta` " \
-            "WHERE statistics_meta.`id` = t1.`metadata_id` AND statistics_meta.`id` = t2.`metadata_id` " \
-            "AND statistics_meta.`statistic_id` = '" + sensor + "' " \
-            "AND (t2.`start_ts` = t1.`start_ts` + 3600) " \
-            "AND t1.`state` IS NOT null AND t2.`state` IS NOT null " \
-            "AND t1.`start_ts` >= UNIX_TIMESTAMP('" + str(vanaf) + "') - 3600 "  \
-            "AND t1.`start_ts` < UNIX_TIMESTAMP('" + str(tot) + "') - 3600 " \
-            "ORDER BY t1.`start_ts`;"
-#            "AND FROM_UNIXTIME(t1.`start_ts`) BETWEEN '" + str(vanaf) + "' " \
-#            "AND '" + str(tot) + "' ORDER BY t1.`start_ts`;"
-#            "AND t1.`start_ts` < " + str(tot_ts) + " ORDER BY t1.`start_ts`;"
-        # print(sql)
-        df_sensor = self.db_ha.run_select_query(sql)
+              "round(t2.state - t1.`state`,3) '" + col_name + "' " \
+              "FROM `statistics` t1,`statistics` t2, `statistics_meta` " \
+              "WHERE statistics_meta.`id` = t1.`metadata_id` AND statistics_meta.`id` = t2.`metadata_id` " \
+              "AND statistics_meta.`statistic_id` = '" + sensor + "' " \
+              "AND (t2.`start_ts` = t1.`start_ts` + 3600) " \
+              "AND t1.`state` IS NOT null AND t2.`state` IS NOT null " \
+              "AND t1.`start_ts` >= UNIX_TIMESTAMP('" + str(vanaf) + "') - 3600 " \
+              "AND t1.`start_ts` < UNIX_TIMESTAMP('" + str(tot) + "') - 3600 " \
+              "ORDER BY t1.`start_ts`;"
+        #            "AND FROM_UNIXTIME(t1.`start_ts`) BETWEEN '" + str(vanaf) + "' " \
+        #            "AND '" + str(tot) + "' ORDER BY t1.`start_ts`;"
+        #            "AND t1.`start_ts` < " + str(tot_ts) + " ORDER BY t1.`start_ts`;"
+        print(sql)
+        df = self.db_ha.run_select_query(sql)
         # print(df_sensor)
-        return df_sensor
+        return df
 
-    def copy_col_df(self, copy_from, copy_to, col_name):
+    @staticmethod
+    def copy_col_df(copy_from, copy_to, col_name):
         copy_to[col_name] = 0
         # copy_from = copy_from.reset_index()
         for row in copy_from.itertuples():
             copy_to.at[row.tijd, col_name] = copy_from.at[row.tijd, col_name]
         return copy_to
 
-    def add_col_df(self, add_from, add_to, col_name):
+    @staticmethod
+    def add_col_df(add_from, add_to, col_name):
         # add_from = add_from.reset_index()
         for row in add_from.itertuples():
-            add_to.at[row.tijd, col_name] = add_to.at[row.tijd,
-                                                      col_name] + add_from.at[row.tijd, col_name]
+            add_to.at[row.tijd, col_name] = add_to.at[row.tijd, col_name] + add_from.at[row.tijd, col_name]
         return add_to
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
@@ -160,11 +208,16 @@ class Report ():
         if len(org_data_df.index) == 0:
             return fi_df
         old_dagstr = ""
+        taxes_l = 0
+        taxes_t = 0
+        ol_l = 0
+        ol_t = 0
+        btw = 0
         for row in org_data_df.itertuples():
             if pd.isnull(row.tijd):
                 continue
             if not isinstance(row.tijd, datetime.datetime):
-                print (row)
+                print(row)
             dag_str = row.tijd.strftime("%Y-%m-%d")
             if dag_str != old_dagstr:
                 ol_l = get_value_from_dict(dag_str, self.ol_l_def)
@@ -191,9 +244,114 @@ class Report ():
                                                                    "production": 'sum', "cost": 'sum', "profit": 'sum'})
         return fi_df
 
-    def get_grid_data(self, periode: str, _vanaf=None, _tot=None, datasoort:str | None=None):
+    def aggregate_df(self, result: pd.DataFrame, interval: str):
+        result.rename(columns={"tijd": "vanaf"})
+        result["tot"] = result["vanaf"]
+        columns = [interval] + result.columns
+
+        agg_dict = {"vanaf": 'min', "tot": 'max'}
+        for key, categorie in self.categorie_distr.items():
+            agg_dict[key] = 'sum'
+        # TODO nog afmaken
+        return result
+
+    def get_distribution_data(self, periode, _vanaf=None, _tot=None):
+        self.db_da.connect()
+        self.db_ha.connect()
+        periode_d = self.periodes[periode]
+        vanaf = _vanaf if _vanaf else periode_d["vanaf"]
+        tot = _tot if _tot else periode_d["tot"]
+        interval = periode_d["interval"]
+        cat_count = 0
+        result = pd.DataFrame()
+        for key, categorie in self.categorie_distr.items():
+            '''
+            if interval == "maand":
+                sql = "SELECT concat(year(from_unixtime(t1.`time`)),LPAD(MONTH(from_unixtime(t1.`time`)),3, ' ')) "\
+                      "AS 'maand', " \
+                    "MIN(from_unixtime(t1.`time`)) AS 'vanaf', MAX(from_unixtime(t1.`time`)) AS 'tot', " \
+                    "sum(t1.`value`) " + key + ", " \
+                    " 'recorded' as 'datasoort' " \
+                    "FROM `values` AS t1, `variabel`AS v1  " \
+                    "WHERE (v1.`code` = '" + code +"') AND (v1.id = t1.variabel) AND  " \
+                    "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
+                    "GROUP BY maand;"
+            elif interval == "dag":
+                sql = "SELECT date(from_unixtime(t1.`time`)) AS 'dag', " \
+                    "MIN(from_unixtime(t1.`time`)) AS 'vanaf', MAX(from_unixtime(t1.`time`)) AS 'tot', " \
+                    "sum(t1.`value`) " + key + ", " \
+                    " 'recorded' as 'datasoort' " \
+                    "FROM `values` AS t1, `variabel`AS v1  " \
+                    "WHERE (v1.`code` = '" + code +"') AND (v1.id = t1.variabel) AND  " \
+                    "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
+                    "GROUP BY dag;"
+            else:  # interval == "uur"
+            '''
+            sql = "SELECT from_unixtime(t1.`time`) AS 'tijd', " \
+                  "t1.`value` " + categorie["name"] + ", " \
+                  " 'recorded' as 'datasoort' " \
+                  "FROM `values` AS t1, `variabel`AS v1  " \
+                  "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
+                  "t1.`time`>= UNIX_TIMESTAMP('" + str(vanaf) + "') AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
+            print(sql)
+            code_result = self.db_da.run_select_query(sql)
+            code_result.index = pd.to_datetime(code_result["vanaf"])
+            if cat_count == 0:
+                result = code_result
+            else:
+                self.copy_col_df(code_result, result, key)
+
+            if code_result.shape[0] == 0:
+                # datetime.datetime.combine(vanaf, datetime.time(0,0)) - datetime.timedelta(hours=1)
+                last_moment = vanaf
+            else:
+                last_moment = code_result['tot'].iloc[-1] + datetime.timedelta(hours=1)
+            if last_moment < tot:
+                result_ha = pd.DataFrame()
+                sensor_count = 0
+                for sensor in categorie["sensors"]:
+                    if sensor_count == 0:
+                        result_ha = self.get_sensor_data(sensor, last_moment, tot, key)
+                        result_ha.index = pd.to_datetime(result_ha["tijd"])
+                    else:
+                        df_2 = self.get_sensor_data(sensor, last_moment, tot, key)
+                        df_2.index = pd.to_datetime(df_2["tijd"])
+                        result_ha = self.add_col_df(df_2, result_ha, key)
+                    sensor_count = + 1
+                if cat_count == 0:
+                    result_ha['datasoort'] = "recorded"
+                    result = pd.concat([result, result_ha])
+                else:
+                    self.copy_col_df(result_ha, result, key)
+                if len(result_ha) > 0:
+                    last_moment = result_ha['tijd'].iloc[-1] + datetime.timedelta(hours=1)
+                else:
+                    last_moment = vanaf
+
+            if last_moment < tot:
+                sql = "SELECT from_unixtime(t1.`time`) tijd,  " \
+                      " t1.`value` " + categorie["name"] + " " \
+                      "FROM `prognoses` AS t1,  `variabel` AS v1  " \
+                      "WHERE v1.`code` ='" + key + "' " \
+                      "AND v1.id = t1.variabel " \
+                      "AND t1.`time` >= UNIX_TIMESTAMP('" + str(last_moment) + "') " \
+                      "AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
+                df_prog = self.db_da.run_select_query(sql)
+                df_prog.index = pd.to_datetime(df_prog["tijd"])
+                # df_prog = self.copy_col_df(df_prod, df_prog, "production")
+                if cat_count == 0:
+                    df_prog["datasoort"] = "expected"
+                    result = pd.concat([result, df_prog])
+                else:
+                    self.copy_col_df(df_prog, result, key)
+
+            cat_count += 1
+            result = self.aggregate_df(result, interval)
+        return result
+
+    def get_grid_data(self, periode: str, _vanaf=None, _tot=None, datasoort: str | None = None):
         """
-        Haalt de grid data:consumptie. productie, cost, profit op de drie tabellen:
+        Haalt de grid data: consumptie. productie, cost, profit op de drie tabellen:
         db_da: values tibber data
         aangevuld met
         db_ha: sensoren Home Assistant tot het laatste uur
@@ -209,6 +367,7 @@ class Report ():
         :return: een dataframe met de gevraagde griddata
         """
         self.db_da.connect()
+        self.db_ha.connect()
         periode_d = self.periodes[periode]
         vanaf = _vanaf if _vanaf else periode_d["vanaf"]
         tot = _tot if _tot else periode_d["tot"]
@@ -238,46 +397,57 @@ class Report ():
         result["profit"] = df_fin["profit"]
         '''
         if interval == "maand":
-            sql = "SELECT concat(year(from_unixtime(t1.`time`)),LPAD(MONTH(from_unixtime(t1.`time`)),3, ' ')) AS 'maand', " \
-                "MIN(from_unixtime(t1.`time`)) AS 'vanaf', MAX(from_unixtime(t1.`time`)) AS 'tot', " \
-                "sum(t1.`value`) consumption,sum(t2.`value`) production, sum(t3.`value`) cost, SUM(t4.`value`) profit,  " \
-                " 'recorded' as 'datasoort' " \
-                "FROM `values` AS t1, `values` AS t2, `values` AS t3,`values` AS t4,  " \
-                "`variabel`AS v1, `variabel` AS v2, `variabel` AS v3, `variabel` AS v4  " \
-                "WHERE (t1.`time`= t2.`time`) AND (t1.`time`= t3.`time`)AND (t1.`time`= t4.`time`)AND  " \
-                "(v1.`code` ='cons')AND (v2.`code` = 'prod') AND (v3.`code` = 'cost') AND (v4.`code` = 'profit') AND  " \
-                "(v1.id = t1.variabel) AND (v2.id = t2.variabel) AND (v3.id = t3.variabel)AND (v4.id = t4.variabel) AND  " \
-                "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
-                "GROUP BY maand;"
+            sql = "SELECT concat(year(from_unixtime(t1.`time`)),LPAD(MONTH(from_unixtime(t1.`time`)),3, ' ')) " \
+                  "AS 'maand', " \
+                  "MIN(from_unixtime(t1.`time`)) AS 'vanaf', MAX(from_unixtime(t1.`time`)) AS 'tot', " \
+                  "sum(t1.`value`) consumption,sum(t2.`value`) production, sum(t3.`value`) cost, " \
+                  " SUM(t4.`value`) profit," \
+                  " 'recorded' as 'datasoort' " \
+                  "FROM `values` AS t1, `values` AS t2, `values` AS t3,`values` AS t4,  " \
+                  "`variabel`AS v1, `variabel` AS v2, `variabel` AS v3, `variabel` AS v4  " \
+                  "WHERE (t1.`time`= t2.`time`) AND (t1.`time`= t3.`time`)AND (t1.`time`= t4.`time`)AND  " \
+                  "(v1.`code` ='cons')AND (v2.`code` = 'prod') AND " \
+                  "(v3.`code` = 'cost') AND (v4.`code` = 'profit') AND " \
+                  "(v1.id = t1.variabel) AND (v2.id = t2.variabel) AND " \
+                  "(v3.id = t3.variabel)AND (v4.id = t4.variabel) AND  " \
+                  "t1.`time` >= UNIX_TIMESTAMP('" + str(vanaf) + "') AND " \
+                  "t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "') " \
+                  "GROUP BY maand;"
         elif interval == "dag":
             sql = "SELECT date(from_unixtime(t1.`time`)) AS 'dag', " \
-                "MIN(from_unixtime(t1.`time`)) AS 'vanaf', MAX(from_unixtime(t1.`time`)) AS 'tot', " \
-                "sum(t1.`value`) consumption,sum(t2.`value`) production, sum(t3.`value`) cost, SUM(t4.`value`) profit,  " \
-                " 'recorded' as 'datasoort' " \
-                "FROM `values` AS t1, `values` AS t2, `values` AS t3,`values` AS t4,  " \
-                "`variabel`AS v1, `variabel` AS v2, `variabel` AS v3, `variabel` AS v4  " \
-                "WHERE (t1.`time`= t2.`time`) AND (t1.`time`= t3.`time`)AND (t1.`time`= t4.`time`)AND  " \
-                "(v1.`code` ='cons')AND (v2.`code` = 'prod') AND (v3.`code` = 'cost') AND (v4.`code` = 'profit') AND  " \
-                "(v1.id = t1.variabel) AND (v2.id = t2.variabel) AND (v3.id = t3.variabel)AND (v4.id = t4.variabel) AND  " \
-                "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
-                "GROUP BY dag;"
+                  "MIN(from_unixtime(t1.`time`)) AS 'vanaf', MAX(from_unixtime(t1.`time`)) AS 'tot', " \
+                  "sum(t1.`value`) consumption,sum(t2.`value`) production, " \
+                  "sum(t3.`value`) cost, SUM(t4.`value`) profit,  " \
+                  " 'recorded' as 'datasoort' " \
+                  "FROM `values` AS t1, `values` AS t2, `values` AS t3,`values` AS t4,  " \
+                  "`variabel`AS v1, `variabel` AS v2, `variabel` AS v3, `variabel` AS v4  " \
+                  "WHERE (t1.`time`= t2.`time`) AND (t1.`time`= t3.`time`)AND (t1.`time`= t4.`time`)AND  " \
+                  "(v1.`code` ='cons')AND (v2.`code` = 'prod') AND (v3.`code` = 'cost') AND "\
+                  "(v4.`code` = 'profit') AND  " \
+                  "(v1.id = t1.variabel) AND (v2.id = t2.variabel) AND " \
+                  "(v3.id = t3.variabel)AND (v4.id = t4.variabel) AND  " \
+                  "t1.`time` >= UNIX_TIMESTAMP('" + str(vanaf) + "') AND " \
+                  "t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "') " \
+                  "GROUP BY dag;"
         else:  # interval == "uur"
             sql = "SELECT from_unixtime(t1.`time`) AS 'uur', " \
-                "from_unixtime(t1.`time`) AS 'vanaf', from_unixtime(t1.`time`) AS 'tot', " \
-                "t1.`value` consumption, t2.`value` production, t3.`value` cost, t4.`value` profit,  " \
-                " 'recorded' as 'datasoort' " \
-                "FROM `values` AS t1, `values` AS t2, `values` AS t3,`values` AS t4,  " \
-                "`variabel`AS v1, `variabel` AS v2, `variabel` AS v3, `variabel` AS v4  " \
-                "WHERE (t1.`time`= t2.`time`) AND (t1.`time`= t3.`time`)AND (t1.`time`= t4.`time`)AND  " \
-                "(v1.`code` ='cons')AND (v2.`code` = 'prod') AND (v3.`code` = 'cost') AND (v4.`code` = 'profit') AND  " \
-                "(v1.id = t1.variabel) AND (v2.id = t2.variabel) AND (v3.id = t3.variabel)AND (v4.id = t4.variabel) AND  " \
-                "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf) + \
-                "') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') ;"
+                  "from_unixtime(t1.`time`) AS 'vanaf', from_unixtime(t1.`time`) AS 'tot', " \
+                  "t1.`value` consumption, t2.`value` production, t3.`value` cost, t4.`value` profit,  " \
+                  " 'recorded' as 'datasoort' " \
+                  "FROM `values` AS t1, `values` AS t2, `values` AS t3,`values` AS t4,  " \
+                  "`variabel`AS v1, `variabel` AS v2, `variabel` AS v3, `variabel` AS v4  " \
+                  "WHERE (t1.`time`= t2.`time`) AND (t1.`time`= t3.`time`)AND (t1.`time`= t4.`time`)AND  " \
+                  "(v1.`code` ='cons')AND (v2.`code` = 'prod') AND (v3.`code` = 'cost') AND " \
+                  "(v4.`code` = 'profit') AND  " \
+                  "(v1.id = t1.variabel) AND (v2.id = t2.variabel) AND (v3.id = t3.variabel) AND " \
+                  "(v4.id = t4.variabel) AND  " \
+                  "t1.`time` >= UNIX_TIMESTAMP('" + str(vanaf) + \
+                  "') AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "') ;"
 
         result = self.db_da.run_select_query(sql)
         result.index = pd.to_datetime(result["vanaf"])
 
-        #aanvullende prijzen ophalen
+        # aanvullende prijzen ophalen
         if result.shape[0] == 0:
             # datetime.datetime.combine(vanaf, datetime.time(0,0)) - datetime.timedelta(hours=1)
             last_moment = vanaf
@@ -296,9 +466,10 @@ class Report ():
             df_prices = self.db_da.run_select_query(sql)
             # print(df_prices)
 
-            #data uit ha ophalen
+            # data uit ha ophalen
             self.db_ha.connect()
             count = 0
+            df_ha = pd.DataFrame()
             for sensor in self.report_options["entities grid consumption"]:
                 if count == 0:
                     df_ha = self.get_sensor_data(sensor, last_moment, tot, "consumption")
@@ -335,8 +506,8 @@ class Report ():
                       "AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
                 df_prog = self.db_da.run_select_query(sql)
                 df_prog.index = pd.to_datetime(df_prog["tijd"])
-                #df_ha = self.copy_col_df(df_prog, df_ha, "consumption")
-                #get production
+                # df_ha = self.copy_col_df(df_prog, df_ha, "consumption")
+                # get production
                 sql = "SELECT from_unixtime(t1.`time`) tijd,  " \
                       " t1.`value` production " \
                       "FROM `prognoses` AS t1,  `variabel` AS v1  " \
@@ -361,12 +532,13 @@ class Report ():
 
         return result
 
-    def get_last_day_month(self, input_dt: datetime):
+    @staticmethod
+    def get_last_day_month(input_dt: datetime):
         # Get the last day of the month from a given datetime
         res = calendar.monthrange(input_dt.year, input_dt.month)
         return res[1]
 
-    def calc_columns(self, report_df, active_interval, active_view):
+    def calc_grid_columns(self, report_df, active_interval, active_view):
         first_col = active_interval.capitalize()
         # if active_subject == "verbruik":
         #    columns.extend(["Verbruik", "Productie", "Netto"])
@@ -388,8 +560,13 @@ class Report ():
         taxes_t_def = self.prices_options["energy taxes redelivery"]
         ol_t_def = self.prices_options["cost supplier redelivery"]
         btw_def = self.prices_options["vat"]
-#        report_df = report_df.reset_index()
+        #        report_df = report_df.reset_index()
         old_dagstr = ""
+        taxes_l = 0
+        taxes_t = 0
+        ol_l = 0
+        ol_t = 0
+        btw = 0
         for row in report_df.itertuples():
             if pd.isnull(row.vanaf):
                 continue
@@ -437,18 +614,18 @@ class Report ():
         # fi_df.set_index([columns[0][0]])
         if active_interval != "uur":
             fi_df = fi_df.groupby([first_col], as_index=False).agg({"Verbruik": 'sum', "Productie": 'sum',
-                                    "Netto verbr.": 'sum', "Kosten": 'sum', "Opbrengst": 'sum', "Netto kosten": 'sum'})
+                                                                    "Netto verbr.": 'sum', "Kosten": 'sum',
+                                                                    "Opbrengst": 'sum', "Netto kosten": 'sum'})
         fi_df['Tarief verbr.'] = fi_df.apply(
-            lambda row: row.Kosten / row.Verbruik if row.Verbruik != 0.0 else row.Verbruik, axis=1)
+            lambda rw: rw.Kosten / rw.Verbruik if rw.Verbruik != 0.0 else rw.Verbruik, axis=1)
         fi_df['Tarief prod.'] = fi_df.apply(
-            lambda row: row.Opbrengst / row.Productie if row.Productie != 0.0 else row.Productie, axis=1)
+            lambda rw: rw.Opbrengst / rw.Productie if rw.Productie != 0.0 else rw.Productie, axis=1)
         if active_view == "tabel":
             fi_df.loc["Total"] = fi_df.sum(axis=0, numeric_only=True)
             fi_df.at[fi_df.index[-1], first_col] = "Totaal"
             row = fi_df.iloc[-1]
-            fi_df.at[fi_df.index[-1], "Tarief verbr."] = row.Kosten/row.Verbruik
-            fi_df.at[fi_df.index[-1],
-                     "Tarief prod."] = row.Opbrengst/row.Productie
+            fi_df.at[fi_df.index[-1], "Tarief verbr."] = row.Kosten / row.Verbruik
+            fi_df.at[fi_df.index[-1], "Tarief prod."] = row.Opbrengst / row.Productie
             # value = fi_df.iloc[-1][7]
             # fi_df.at[fi_df.index[-1], "Tarief"] = value / (len(fi_df.index)-1)
 
@@ -458,15 +635,60 @@ class Report ():
             # columns.append(["", "kWh", "kWh", "kWh", "eur", "eur", "eur", "eur/kWh",  "eur/kWh"])
             # columns = [columns,
             fi_df.columns = [columns, ["", "kWh", "kWh", "kWh",
-                                       "eur", "eur", "eur", "eur/kWh",  "eur/kWh"]]
+                                       "eur", "eur", "eur", "eur/kWh", "eur/kWh"]]
         fi_df = fi_df.round(3)
         return fi_df
 
-    def get_api_data(self, field: str, periode: str, cumulate: bool=False):
+    def get_field_data(self, field: str, periode: str):
+        period = self.periodes[periode]
+        self.db_ha.connect()
+        if not (field in self.categorie_distr):
+            result = None
+            return result
+        categorie = self.categorie_distr[field]
+        df = self.db_da.getColumnData('values', field, start=period["vanaf"], end=period["tot"])
+        df.index = pd.to_datetime(df["time"])
+        df = df.rename(columns={"value": field})
+        df["datasoort"] = "recorded"
+
+        df_ha_result = pd.DataFrame()
+        if len(df) > 0:
+            last_moment = df['time'].iloc[-1] + datetime.timedelta(hours=1)
+        else:
+            last_moment = self.periodes[periode]["vanaf"]
+        if last_moment < self.periodes[periode]["tot"]:
+            count = 0
+            for sensor in categorie["sensors"]:
+                df_ha = self.get_sensor_data(sensor, last_moment, period["tot"], field)
+                df_ha.index = pd.to_datetime(df_ha["tijd"])
+                if count == 0:
+                    df_ha_result = df_ha
+                else:
+                    df_ha_result = self.add_col_df(df_ha, df_ha_result, field)
+                count += 1
+            df_ha_result['datasoort'] = 'recorded'
+            df_ha_result = df_ha_result.rename(columns={"tijd": "time"})
+            if len(df_ha_result) > 0:
+                last_moment = df_ha_result['time'].iloc[-1] + datetime.timedelta(hours=1)
+            df_ha_result['time'] = df_ha_result['time'].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+
+        if last_moment < self.periodes[periode]["tot"]:
+            df_prog = self.db_da.getColumnData('prognoses', field, start=last_moment, end=period["tot"])
+            df_prog.index = pd.to_datetime(df_prog["time"])
+            df_prog = df_prog.rename(columns={"value": field})
+            df_prog['datasoort'] = 'expected'
+            df_uur = pd.concat([df_ha_result, df_prog])
+        else:
+            df_uur = df_ha_result
+        df = pd.concat([df, df_uur])
+        return df
+
+    def get_api_data(self, field: str, periode: str, cumulate: bool = False):
         self.db_da.connect()
-        periode =periode.replace("_", " ")
+        periode = periode.replace("_", " ")
         grid_fields = ["consumption", "production", "netto_consumption", "cost", "profit", "netto_cost"]
-        if field in ["grid"] + grid_fields : # grid data
+        df = pd.DataFrame()
+        if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode)
             df_grid['time'] = df_grid['vanaf'].apply(lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M"))
             if field in grid_fields:
@@ -480,9 +702,14 @@ class Report ():
                     for field in grid_fields:
                         df[field] = df[field].cumsum()
         elif field == 'da':
-            df_da = self.db_da.getColumnData('values', field)
+            df_da = self.db_da.getColumnData('values', field,
+                                             start=self.periodes[periode]["vanaf"], end=self.periodes[periode]["tot"])
             old_dagstr = ""
-            interval = self.periodes[periode]["interval"]
+            taxes_l = 0
+            taxes_t = 0
+            ol_l = 0
+            ol_t = 0
+            btw = 0
             columns = ["time", "da_ex", "da_cons", 'da_prod', "datasoort"]
             df = pd.DataFrame(columns=columns)
             for row in df_da.itertuples():
@@ -500,40 +727,63 @@ class Report ():
                 da_prod = (row.value + taxes_t + ol_t) * (1 + btw / 100)
                 df.loc[df.shape[0]] = [row.time, row.value, da_cons, da_prod, row.datasoort]
         else:
-            df = self.db_da.getColumnData('values', field)
+            if not (field in self.categorie_distr):
+                result = '{"message":"Failed"}'
+                return result
+            df = self.get_field_data(field, periode)
+
         history_df = df[df['datasoort'] == 'recorded']
         history_df = history_df.drop('datasoort', axis=1)
-        history_json = history_df.to_json(orient = 'records')
+        history_json = history_df.to_json(orient='records')
         expected_df = df[df['datasoort'] == 'expected']
         expected_df = expected_df.drop('datasoort', axis=1)
-        expected_json = expected_df.to_json(orient = 'records')
-        result ='{ "message":"Success", "recorded": ' + history_json + ', "expected" : '+ expected_json+' }'
+        expected_json = expected_df.to_json(orient='records')
+        result = '{ "message":"Success", "recorded": ' + history_json + ', "expected" : ' + expected_json + ' }'
         return result
 
-    def make_graph(self, df, period, options=None):
-        options = {
-            "title": "Grafiek van ",
-            "haxis": {
-                "values": self.periodes[period]["interval"].capitalize(),
-                "title": self.periodes[period]["interval"] + " van "+ period
-            },
-            "vaxis": [{
-                "title": "kWh"
+    def make_graph(self, df, period, _options=None):
+        if _options:
+            options = _options
+        else:
+            options = {
+                "title": "Grafiek verbruik",
+                "style": self.config.get(["graphics", "style"]),
+                "haxis": {
+                    "values": self.periodes[period]["interval"].capitalize(),
+                    "title": self.periodes[period]["interval"] + " van " + period
+                },
+                "vaxis": [{
+                    "title": "kWh"
+                },
+                    {"title": "euro"
+                     }
+                ],
+                "series": [{"column": "Verbruik",
+                            "title": "Verbruik",
+                            "type": "stacked",
+                            "color": '#00bfff'
+                            },
+                           {"column": "Productie",
+                            "title": "Productie",
+                            "negativ": "true",
+                            "type": "stacked",
+                            "color": 'green'
+                            },
+                           {"column": "Kosten",
+                            "label": "Kosten",
+                            "type": "stacked",
+                            "color": 'red',
+                            "vaxis": "right"
+                            },
+                           {"column": "Opbrengst",
+                            "label": "Opbrengst",
+                            "negativ": "true",
+                            "type": "stacked",
+                            "color": '#ff8000',
+                            "vaxis": "right"
+                            },
+                           ]
             }
-            ],
-            "series": [{"column": "Verbruik",
-                        "title": "Verbruik",
-                        "type": "stacked",
-                        "color": '#00bfff'
-                        },
-                       {"column": "Productie",
-                        "title": "Productie",
-                        "negativ": "true",
-                        "type": "stacked",
-                        "color": 'green'
-                        },
-                       ]
-        }
         gb = GraphBuilder()
         fig = gb.build(df, options, False)
         buf = BytesIO()
@@ -541,4 +791,3 @@ class Report ():
         # Embed the result in the html output.
         report_data = base64.b64encode(buf.getbuffer()).decode("ascii")
         return report_data
-

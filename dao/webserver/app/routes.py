@@ -1,16 +1,13 @@
 import datetime
-import glob
-import os
-from webserver.app import app
-from flask import render_template, request, jsonify, Response
+from dao.webserver.app import app
+from flask import render_template, request, jsonify
 import json, fnmatch
 import os
-from  subprocess import Popen, PIPE, run
+from  subprocess import PIPE, run
 import logging
-from datetime import date
 from logging.handlers import TimedRotatingFileHandler
-from prog.da_config import Config
-import prog.da_report
+from dao.prog.da_config import Config
+import dao.prog.da_report
 
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
@@ -82,23 +79,29 @@ def get_file_list(path: str, pattern: str) -> list:
 
 @app.route('/settings/<filename>', methods=['POST', 'GET'])
 def settings(filename):
+    def get_file(fname):
+        with open(fname, 'r') as f:
+            return f.read()
     message = None
     filename_ext = app_datapath + filename + ".json"
     if request.method == 'POST':
         updated_data = request.form["codeinput"]
-        try:
-            json_data = json.loads(updated_data)
-            # Update the JSON data
-            with open(filename_ext, 'w') as f:
-                f.write(updated_data)
-            message = 'JSON data updated successfully'
-        except Exception as err:
-            message = 'Error: ' + err.args[0]
-        options = updated_data
+        action = request.form["action"]
+        if action == "update":
+            try:
+                json_data = json.loads(updated_data)
+                # Update the JSON data
+                with open(filename_ext, 'w') as f:
+                    f.write(updated_data)
+                message = 'JSON data updated successfully'
+            except Exception as err:
+                message = 'Error: ' + err.args[0]
+            options = updated_data
+        if action == 'cancel':
+           options = get_file(filename_ext)
     else:
         # Load initial JSON data from a file
-        with open(filename_ext, 'r') as f:
-            options = f.read()
+        options = get_file(filename_ext)
     return render_template('settings.html', title='Instellingen', options_data=options, message=message)
 
 
@@ -171,9 +174,9 @@ def home():
 
 @app.route('/reports', methods=['POST', 'GET'])
 def reports():
-    report = prog.da_report.Report()
-    subjects = ["verbruik", "kosten"]
-    active_subject = "verbruik"
+    report = dao.prog.da_report.Report()
+    subjects = ["grid", "distribution"]
+    active_subject = "grid"
     views = ["grafiek", "tabel"]
     active_view = "tabel"
     periode_options = report.periodes.keys()
@@ -205,8 +208,11 @@ def reports():
     else:
         met_prognose = False
     active_interval = report.periodes[active_period]["interval"]
-    report_df = report.get_grid_data(active_period, _tot=tot)
-    filtered_df = report.calc_columns(report_df, active_interval, active_view)
+    if active_subject == "grid":
+        report_df = report.get_grid_data(active_period, _tot=tot)
+        filtered_df = report.calc_grid_columns(report_df, active_interval, active_view)
+    else:
+        report_df = report.get_distribution_data(active_period, _tot=tot)
     filtered_df.round(1)
     if active_view == "tabel":
         report_data = [filtered_df.to_html(index=False, justify="right", decimal=",", classes="data", border=0)]
@@ -225,7 +231,7 @@ def api_prognose(fld: str):
     :param fld: de code van de gevraagde data
     :return: de gevraagde data in json formaat
     """
-    report = prog.da_report.Report()
+    report = dao.prog.da_report.Report()
     start = request.args.get('start')
     end = request.args.get('end')
     data = report.get_api_data(fld, prognose=True, start=start, end=end)
@@ -241,7 +247,7 @@ def api_report(fld: str, periode: str):
     :return: de gevraagde data in json formaat
     """
     cumulate = request.args.get('cumulate')
-    report = prog.da_report.Report()
+    report = dao.prog.da_report.Report()
     # start = request.args.get('start')
     # end = request.args.get('end')
     try:
@@ -252,7 +258,7 @@ def api_report(fld: str, periode: str):
     result = report.get_api_data(fld, periode, cumulate=cumulate)
     return result
 
-import codecs
+
 @app.route('/api/run/<string:bewerking>', methods=['GET','POST'])
 def run_api(bewerking: str):
     if bewerking in bewerkingen.keys():
@@ -287,15 +293,6 @@ def run_process():
                         datetime.datetime.now().strftime("%H%M") + ".log"
             with open(filename, "w") as f:
                 f.write(log_content)
-            '''
-            with open("../data/proc.log", "w") as f:
-                f.write(data)
-                f.write(err)
-            list_of_files = glob.glob('../data/log/'+bewerkingen[current_bewerking]["log"])  # * means all if need specific format then *.csv
-            latest_file = max(list_of_files, key=os.path.getctime)
-            with open(latest_file, "r") as f:
-                log_content = f.read()
-            '''
         else:
             if len(dict) == 1 :
                 bewerking = list(dict.keys())[0]
