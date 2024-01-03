@@ -11,8 +11,8 @@ RUN apt-get upgrade -y
 RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn
 
 # Copy software for add-on
-COPY prog/ /root/prog/
-COPY webserver/ /root/webserver/
+COPY prog /root/prog/
+COPY webserver /root/webserver/
 
 #benodigde libraries voor mip
 RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3

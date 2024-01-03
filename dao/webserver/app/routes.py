@@ -1,16 +1,13 @@
 import datetime
-import glob
-import os
-from webserver.app import app
-from flask import render_template, request, jsonify, Response
+from dao.webserver.app import app
+from flask import render_template, request, jsonify
 import json, fnmatch
 import os
-from  subprocess import Popen, PIPE, run
+from  subprocess import PIPE, run
 import logging
-from datetime import date
 from logging.handlers import TimedRotatingFileHandler
-from prog.da_config import Config
-import prog.da_report
+from dao.prog.da_config import Config
+import dao.prog.da_report
 
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
@@ -177,7 +174,7 @@ def home():
 
 @app.route('/reports', methods=['POST', 'GET'])
 def reports():
-    report = prog.da_report.Report()
+    report = dao.prog.da_report.Report()
     subjects = ["grid", "distribution"]
     active_subject = "grid"
     views = ["grafiek", "tabel"]
@@ -234,7 +231,7 @@ def api_prognose(fld: str):
     :param fld: de code van de gevraagde data
     :return: de gevraagde data in json formaat
     """
-    report = prog.da_report.Report()
+    report = dao.prog.da_report.Report()
     start = request.args.get('start')
     end = request.args.get('end')
     data = report.get_api_data(fld, prognose=True, start=start, end=end)
@@ -250,7 +247,7 @@ def api_report(fld: str, periode: str):
     :return: de gevraagde data in json formaat
     """
     cumulate = request.args.get('cumulate')
-    report = prog.da_report.Report()
+    report = dao.prog.da_report.Report()
     # start = request.args.get('start')
     # end = request.args.get('end')
     try:
@@ -261,7 +258,7 @@ def api_report(fld: str, periode: str):
     result = report.get_api_data(fld, periode, cumulate=cumulate)
     return result
 
-import codecs
+
 @app.route('/api/run/<string:bewerking>', methods=['GET','POST'])
 def run_api(bewerking: str):
     if bewerking in bewerkingen.keys():
