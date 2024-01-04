@@ -2,7 +2,7 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Set shell
-SHELL ["/bin/bash", "-o", "pipefail", "-c" , "-l"]
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update -y
 RUN apt-get upgrade -y
@@ -14,7 +14,7 @@ RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gun
 RUN mkdir /root/dao
 COPY prog /root/dao/prog/
 COPY webserver /root/dao/webserver/
-COPY data /tmp/daodata
+COPY data /tmp/daodata/
 
 #benodigde libraries voor mip
 RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
@@ -43,6 +43,9 @@ COPY requirements.txt /tmp/
 EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
+RUN chmod a+x run_loop.sh
 # CMD ["/bin/bash", "./run.sh"]
-# CMD ["/bin/bash", "./run_loop.sh"]
-CMD ["top"]
+CMD ["/bin/bash", "./run_loop.sh"]
+# CMD ["top"]
+# CMD ["/bin/bash", "./run.sh"]
+
