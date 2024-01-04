@@ -44,4 +44,5 @@ EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
 # CMD ["/bin/bash", "./run.sh"]
-CMD ["/bin/bash", "./run_loop.sh"]
+# CMD ["/bin/bash", "./run_loop.sh"]
+CMD ["top"]
