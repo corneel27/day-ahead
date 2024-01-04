@@ -1,5 +1,5 @@
 #!/bin/bash
-dir = "/addon_config/daodata"
+dir="/addon_config/daodata"
 if [ ! -d "$dir" ]; then
   cp -r /tmp/daodata /addon_config
 fi
