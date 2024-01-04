@@ -31,6 +31,8 @@ gunicorn --config gunicorn_config.py app:app &
 cd /root/dao/prog
 # bash ./watchdog.sh python3 day_ahead.py
 # python3 day_ahead.py &
+bash python3 loop.py
+
 
 
 
