@@ -1,7 +1,8 @@
 #!/bin/bash
 dir="/addon_config/daodata"
 if [ ! -d "$dir" ]; then
-  cp -r /tmp/daodata /addon_config
+  echo "=> /"
+  cp -r /tmp/daodata /addon_config/daodata
   cp /addon_config/daodata/options_vb.json /addon_config/daodata/options.json
   cp /addon_config/daodata/secrets_vb.json /addon_config/daodata/secrets.json
 fi
