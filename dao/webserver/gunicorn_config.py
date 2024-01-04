@@ -1,6 +1,6 @@
 import sys
 sys.path.append("../../")
-from dao.prog.da_config import get_config
+from ..prog.da_config import get_config
 app_datapath = "app/static/data/"
 port = get_config(app_datapath + "options.json", ["dashboard", "port"])
 workers = 2
