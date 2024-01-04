@@ -44,4 +44,5 @@ EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
 # CMD ["/bin/bash", "./run.sh"]
+ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
 CMD ["/bin/bash"]
