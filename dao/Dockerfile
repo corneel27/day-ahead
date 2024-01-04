@@ -2,7 +2,7 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Set shell
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+SHELL ["/bin/bash", "-o", "pipefail", "-c" , "-l"]
 
 RUN apt-get update -y
 RUN apt-get upgrade -y
@@ -44,5 +44,4 @@ EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
 # CMD ["/bin/bash", "./run.sh"]
-ENTRYPOINT [ "/bin/bash", "-l", "-c" ]
 CMD ["/bin/bash"]
