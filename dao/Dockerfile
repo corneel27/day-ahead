@@ -2,7 +2,7 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Set shell
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+SHELL ["/bin/bash", "-o", "pipefail", "-c" , "-l"]
 
 RUN apt-get update -y
 RUN apt-get upgrade -y
@@ -43,4 +43,5 @@ COPY requirements.txt /tmp/
 EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
-CMD ["/bin/bash", "./run.sh"]
+# CMD ["/bin/bash", "./run.sh"]
+CMD ["/bin/bash"]
