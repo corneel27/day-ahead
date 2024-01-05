@@ -1,17 +1,19 @@
 ---
 name: Day Ahead Optimalisatie
-version: "0.3.30"
+version: "0.3.31"
 slug: day_ahead_opt
-description: Docker used by Home Assistant Community Add-ons for day ahead optimalisations
+description: Docker used by Home Assistant Community Add-ons for day ahead optimisations
 url: https://github.com/corneel27/day-ahead/
 arch:
   - aarch64
 init: false
+apparmor: true
+legacy: true
 map:
   - ssl:rw
   - addon_config:rw
   - share:rw
-hassio_api: true
+homeassistant_api: true
 ports:
   5000/tcp: 5000
 
