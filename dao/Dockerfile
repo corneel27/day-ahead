@@ -32,8 +32,8 @@ RUN apt-get install python3 -y\
     python3-pip -y\
     python3-venv -y
     
-WORKDIR /root
-ENV VIRTUAL_ENV=/root/venv/day_ahead
+WORKDIR /root/dao
+ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
@@ -42,8 +42,8 @@ COPY requirements.txt /tmp/
 
 EXPOSE 5000
 WORKDIR /root/dao/prog
-RUN chmod a+x run.sh
-RUN chmod a+x run_loop.sh
+#RUN chmod a+x run.sh
+#RUN chmod a+x run_loop.sh
 # CMD ["/bin/bash", "./run.sh"]
 CMD ["/bin/bash", "./run_loop.sh"]
 # CMD ["top"]
