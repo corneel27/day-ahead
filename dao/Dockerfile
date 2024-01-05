@@ -32,8 +32,8 @@ RUN apt-get install python3 -y\
     python3-pip -y\
     python3-venv -y
     
-WORKDIR /root/dao
-ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
+WORKDIR /root
+ENV VIRTUAL_ENV=/root/venv/day_ahead
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
