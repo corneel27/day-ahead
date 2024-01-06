@@ -1,12 +1,18 @@
 #!/bin/bash
-dir="/addon_config/daodata"
+dir="/config/dao_data"
 if [ ! -d "$dir" ]; then
-  echo "=> directory daodata made, files copied"
-  cp -r /tmp/daodata /addon_config/daodata
-  cp /addon_config/daodata/options_vb.json /addon_config/daodata/options.json
-  cp /addon_config/daodata/secrets_vb.json /addon_config/daodata/secrets.json
+  echo "=> directory dao_data made, files copied"
+  cp -r /tmp/daodata /config/dao_data
+  file=/config/dao_data/options.json
+  if [ ! -L "$file" ]
+    cp /config/dao_data/options_vb.json $file
+  fi
+  file=/config/dao_data/secrets.json
+  if [ ! -L "$file" ]
+    cp /config/dao_data/secrets_vb.json $file
+  fi
 else
-  echo "=> directory daodata exist"
+  echo "=> directory dao_data exist"
 fi
 
 cd /root/dao/prog
@@ -16,7 +22,7 @@ then
   echo "=> /root/dao/prog/data exist"
 else
   echo "=> /root/dao/prog/data doesn't exist, made"
-  ln -s /addon_config/daodata $file
+  ln -s /config/dao_data $file
 fi
 
 cd /root/dao/webserver/
@@ -26,7 +32,7 @@ then
   echo "=> /root/dao/webserver/app/static/data exist"
 else
   echo "=> /root/dao/webserver/app/static/data doesn't exist, made"
-  ln -s /addon_config/daodata $file
+  ln -s /config/dao_data $file
 fi
 export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
 gunicorn --config gunicorn_config.py app:app &
