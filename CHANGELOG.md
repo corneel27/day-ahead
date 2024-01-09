@@ -1,12 +1,15 @@
+## [v0.4.5] - 2024-01-09
 # Changelog Day Ahead Optimalisering
 ## [Unreleased]
 De volgende zaken staan op de todo lijst:
-- Documentatie webserver in README
-- De software onderbrengen in een HA addon
 - Alle print opdrachten omzetten naar logger 
-
+- webserver afmaken
 
 ### Changed
+Het programma is ondergebracht in een addon van Home Assistant.<br>
+Ten behoeve van de addon is alle software geplaatst onder de directory "dao". <br>
+Alle documentatie is verplaatst naar docs\MANUAL.md
+
 De volgende update query moet in de database "day_ahead" worden doorgevoerd:
 ````
 UPDATE `day_ahead`.`variabel` SET `code`='pv_ac', `name`='Zonne energie AC' WHERE  `id`=15;
