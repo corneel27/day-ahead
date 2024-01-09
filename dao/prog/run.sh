@@ -38,9 +38,9 @@ export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
 gunicorn --config gunicorn_config.py app:app &
 
 cd /root/dao/prog
-# bash ./watchdog.sh python3 day_ahead.py
+bash ./watchdog.sh python3 day_ahead.py
 # python3 day_ahead.py &
-python3 loop.py
+
 
 
 
