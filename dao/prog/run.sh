@@ -4,11 +4,11 @@ if [ ! -d "$dir" ]; then
   echo "=> directory dao_data made, files copied"
   cp -r /tmp/daodata /config/dao_data
   file=/config/dao_data/options.json
-  if [ ! -L "$file" ]
+  if [ ! -L "$file" ]; then
     cp /config/dao_data/options_vb.json $file
   fi
   file=/config/dao_data/secrets.json
-  if [ ! -L "$file" ]
+  if [ ! -L "$file" ]; then
     cp /config/dao_data/secrets_vb.json $file
   fi
 else
