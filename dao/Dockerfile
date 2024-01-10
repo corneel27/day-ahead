@@ -21,7 +21,8 @@ RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
 
 # COPY miplib/ /root/prog/miplib/
 COPY miplib.tar.gz /tmp/
-RUN tar -zxvf /tmp/miplib.tar.gz -C /root/dao/prog
+WORKDIR /root/dao/prog
+RUN tar -xvf /tmp/miplib.tar.gz
 RUN export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
 RUN export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"
 RUN echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc
@@ -31,8 +32,7 @@ RUN echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc
 RUN apt-get install python3 -y\
     python3-pip -y\
     python3-venv -y
-    
-WORKDIR /root/dao
+
 ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
