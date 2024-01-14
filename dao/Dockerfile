@@ -1,6 +1,9 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
+ARG BUILD_ARCH
+ENV ENV_BUILD_ARCH=$BUILD_ARCH
+
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -19,14 +22,19 @@ COPY data /tmp/daodata/
 #benodigde libraries voor mip
 RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
 
-# COPY miplib/ /root/prog/miplib/
 COPY miplib.tar.gz /tmp/
 WORKDIR /root/dao/prog
-RUN tar -xvf /tmp/miplib.tar.gz
-RUN export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
-RUN export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"
-RUN echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc
-RUN echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc
+RUN echo 'platform: "$ENV_BUILD_ARCH"' \
+  && export BUILD_ARCH="$ENV_BUILD_ARCH" \
+  && echo 'export BUILD_ARCH="$ENV_BUILD_ARCH"' >> ~/.bashrc
+
+RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
+      tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
+      export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" && \
+      export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"  && \
+      echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  && \
+      echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc \
+   ; fi
 
 #installeer python en pip
 RUN apt-get install python3 -y\

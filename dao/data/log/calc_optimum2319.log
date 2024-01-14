@@ -1,0 +1,265 @@
+Day Ahead Optimalisering versie: 0.3.1
+Day Ahead Optimalisering gestart op: 12-10-2023 23:19:37
+Debug = True
+MySQL database connection successful. Default database: day_ahead
+
+Prognose data:
+                  tijd        time  temp  glob_rad    pv_rad  da_price
+0  2023-10-12 23:00:00  1697144400  17.0       0.0    0.0000   0.10984
+1  2023-10-13 00:00:00  1697148000  17.0       0.0    0.0000   0.12399
+2  2023-10-13 01:00:00  1697151600  17.0       0.0    0.0000   0.11500
+3  2023-10-13 02:00:00  1697155200  17.0       0.0    0.0000   0.10714
+4  2023-10-13 03:00:00  1697158800  17.0       0.0    0.0000   0.10140
+5  2023-10-13 04:00:00  1697162400  16.0       0.0    0.0000   0.09990
+6  2023-10-13 05:00:00  1697166000  16.0       0.0    0.0000   0.08575
+7  2023-10-13 06:00:00  1697169600  16.0       0.0    0.0000   0.10420
+8  2023-10-13 07:00:00  1697173200  16.0       0.0    0.0000   0.14076
+9  2023-10-13 08:00:00  1697176800  17.0       1.0    1.0000   0.14492
+10 2023-10-13 09:00:00  1697180400  17.0      21.0   24.5252   0.13205
+11 2023-10-13 10:00:00  1697184000  18.0      73.0  100.6750   0.09900
+12 2023-10-13 11:00:00  1697187600  19.0      58.0   69.1304   0.07202
+13 2023-10-13 12:00:00  1697191200  19.0      18.0   20.1396   0.03445
+14 2023-10-13 13:00:00  1697194800  20.0      21.0   23.5396   0.00730
+15 2023-10-13 14:00:00  1697198400  21.0      88.0  114.5110   0.00431
+16 2023-10-13 15:00:00  1697202000  21.0      55.0   66.8564   0.00424
+17 2023-10-13 16:00:00  1697205600  21.0      61.0   85.2904   0.01017
+18 2023-10-13 17:00:00  1697209200  21.0      17.0   19.8537   0.05010
+19 2023-10-13 18:00:00  1697212800  20.0       1.0    1.0000   0.07991
+20 2023-10-13 19:00:00  1697216400  19.0       0.0    0.0000   0.10000
+21 2023-10-13 20:00:00  1697220000  18.0       0.0    0.0000   0.07400
+22 2023-10-13 21:00:00  1697223600  18.0       0.0    0.0000   0.00800
+23 2023-10-13 22:00:00  1697227200  18.0       0.0    0.0000   0.00021
+24 2023-10-13 23:00:00  1697230800  18.0       0.0    0.0000  -0.00081
+
+Prijs levering:
+[0.30713,
+ 0.32426,
+ 0.31338,
+ 0.30387,
+ 0.29692,
+ 0.29511,
+ 0.27799,
+ 0.30031,
+ 0.34455,
+ 0.34958,
+ 0.33401,
+ 0.29402,
+ 0.26137,
+ 0.21591,
+ 0.18306,
+ 0.17944,
+ 0.17936,
+ 0.18653,
+ 0.23485,
+ 0.27092,
+ 0.29523,
+ 0.26377,
+ 0.18391,
+ 0.17448,
+ 0.17325]
+
+Prijs teruglevering:
+[0.30713,
+ 0.32426,
+ 0.31338,
+ 0.30387,
+ 0.29692,
+ 0.29511,
+ 0.27799,
+ 0.30031,
+ 0.34455,
+ 0.34958,
+ 0.33401,
+ 0.29402,
+ 0.26137,
+ 0.21591,
+ 0.18306,
+ 0.17944,
+ 0.17936,
+ 0.18653,
+ 0.23485,
+ 0.27092,
+ 0.29523,
+ 0.26377,
+ 0.18391,
+ 0.17448,
+ 0.17325]
+
+Base load:
+[0.14,
+ 0.38,
+ 0.26,
+ 0.42,
+ 0.15,
+ 0.12,
+ 0.13,
+ 0.15,
+ 0.23,
+ 0.26,
+ 0.31,
+ 0.32,
+ 0.31,
+ 0.23,
+ 0.26,
+ 0.21,
+ 0.21,
+ 0.54,
+ 0.26,
+ 0.26,
+ 0.22,
+ 0.19,
+ 0.18,
+ 0.16]
+{'consumption': 618.2920007037465, 'production': 818.1779986069305}
+All taxes refund (alles wordt gesaldeerd)
+
+Boiler:  10 23
+
+Warmtepomp
+Graaddagen:  0.7083333333333339
+Welcome to the CBC MILP Solver 
+Version: Trunk
+Build Date: Oct 24 2021 
+
+Starting solution of the Linear programming relaxation problem using Dual Simplex
+
+Clp0024I Matrix will be packed to eliminate 164 small elements
+Coin0506I Presolve 864 (-556) rows, 1130 (-876) columns and 3550 (-1797) elements
+Clp0014I Perturbing problem by 0.001% of 1.1894098 - largest nonzero change 0.00010979594 ( 0.72665546%) - largest zero change 0.00010914726
+Clp0000I Optimal - objective value -0.66909718
+Coin0511I After Postsolve, objective -0.66909718, infeasibilities - dual 0 (0), primal 0 (0)
+Clp0032I Optimal objective -0.6690971797 - 316 iterations time 0.022, Presolve 0.01
+
+Starting MIP optimization
+Cgl0002I 11 variables fixed
+Cgl0003I 0 fixed, 0 tightened bounds, 50 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 26 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 25 strengthened rows, 0 substitutions
+Cgl0003I 0 fixed, 0 tightened bounds, 25 strengthened rows, 0 substitutions
+Cgl0004I processed model has 888 rows, 1196 columns (411 integer (411 of which binary)) and 3809 elements
+Coin3009W Conflict graph built in 0.001 seconds, density: 0.067%
+Cgl0015I Clique Strengthening extended 0 cliques, 0 were dominated
+Cbc0036I Heuristics switched off as 25 branching objects are of wrong type
+Cbc0045I Nauty did not find any useful orbits in time 0.032277
+Cbc0031I 43 added rows had average density of 36.348837
+Cbc0013I At root node, 43 cuts changed objective from -0.66909718 to -0.66843342 in 3 passes
+Cbc0014I Cut generator 0 (Probing) - 40 row cuts average 2.4 elements, 0 column cuts (0 active)  in 0.011 seconds - new frequency is 1
+Cbc0014I Cut generator 1 (Gomory) - 23 row cuts average 33.9 elements, 0 column cuts (0 active)  in 0.003 seconds - new frequency is 1
+Cbc0014I Cut generator 2 (Knapsack) - 17 row cuts average 9.5 elements, 0 column cuts (0 active)  in 0.008 seconds - new frequency is 1
+Cbc0014I Cut generator 3 (Clique) - 0 row cuts average 0.0 elements, 0 column cuts (0 active)  in 0.000 seconds - new frequency is -100
+Cbc0014I Cut generator 4 (OddWheel) - 0 row cuts average 0.0 elements, 0 column cuts (0 active)  in 0.001 seconds - new frequency is -100
+Cbc0014I Cut generator 5 (MixedIntegerRounding2) - 41 row cuts average 23.6 elements, 0 column cuts (0 active)  in 0.004 seconds - new frequency is 1
+Cbc0014I Cut generator 6 (FlowCover) - 22 row cuts average 4.2 elements, 0 column cuts (0 active)  in 0.003 seconds - new frequency is 1
+Cbc0014I Cut generator 7 (TwoMirCuts) - 54 row cuts average 54.2 elements, 0 column cuts (0 active)  in 0.007 seconds - new frequency is -100
+Cbc0016I Integer solution of -0.66843342 found by strong branching after 113 iterations and 0 nodes (0.25 seconds)
+Cbc0001I Search completed - best objective -0.6684334194127182, took 166 iterations and 0 nodes (0.26 seconds)
+Cbc0032I Strong branching done 6 times (39 iterations), fathomed 1 nodes and fixed 0 variables
+Cbc0035I Maximum depth 0, 0 variables fixed on reduced cost
+64 bounds tightened after postprocessing
+
+Total time (CPU seconds):       0.30   (Wallclock seconds):       0.31
+
+Strategie: minimale kosten
+
+Het programma heeft een optimale oplossing gevonden.
+Geen saldeer correctie
+Niet geoptimaliseerd, kosten met reguliere tarieven: -0.04 
+Niet geoptimaliseerd, kosten met day ahead tarieven: 0.22  
+Geoptimaliseerd, kosten met day ahead tarieven: -0.67 
+Levering (kWh): 35.24 
+Waarde boiler om 23 uur: 1.16 kWh
+
+Inzet warmtepomp
+u     tar     p0     p1     p2     p3     p4     p5     p6     p7   heat   cons
+23 0.3071      0      0      0      0      0      0      0      0  -0.00  -0.00
+ 0 0.3243      0      0      0      0      0      0      0      0  -0.00  -0.00
+ 1 0.3134      0      0      0      0      0      0      0      0  -0.00  -0.00
+ 2 0.3039      0      0      0      0      0      0      0      0  -0.00  -0.00
+ 3 0.2969      0      0      0      0      0     -0      0      0   0.00  -0.00
+ 4 0.2951      0      0      0      0     -0      0      0      0   0.00  -0.00
+ 5 0.2780      0      0     -0      0      0      0      0      0   0.00  -0.00
+ 6 0.3003      0      0      0     -0      0      0      0      0   0.00  -0.00
+ 7 0.3446      0      0      0      0      0      0      0     -0   0.00  -0.00
+ 8 0.3496      0      0     -0      0      0      0      0      0   0.00  -0.00
+ 9 0.3340      0      0      0      0     -0      0      0      0   0.00  -0.00
+10 0.2940      0      0      0      0     -0      0      0      0   0.00  -0.00
+11 0.2614      0      0      0      0      0      0      0     -0   0.00  -0.00
+12 0.2159      0      0     -0      0      0      0      0      0   0.00  -0.00
+13 0.1831     -0      0      0      0      0      0      0      0   0.00  -0.00
+14 0.1794      0      0      0      0     -0      0      0      0   0.00  -0.00
+15 0.1794     -0      0      0      0      0      0      0      0   0.00  -0.00
+16 0.1865      0      0      0      0      0      0     -0      0   0.00  -0.00
+17 0.2349      0      0      0      0      0      0     -0      0   0.00  -0.00
+18 0.2709      0     -0      0      0      0      0      0      0   0.00  -0.00
+19 0.2952      0      0      0      0      0     -0      0      0   0.00  -0.00
+20 0.2638      0      0      0      0     -0      0      0      0   0.00  -0.00
+21 0.1839      0      0      0      0      0     -0      0      0   0.00  -0.00
+22 0.1745      0      0     -0      0      0      0      0      0   0.00  -0.00
+23 0.1732      0      0      0      0      0      0      0      0   0.00  -0.00
+
+
+Batterij: Accu1
+In- en uitgaande energie per uur in kWh op de busbar
+ uur  dc<-ac ch_st  c_eff  dc->ac dc_st  d_eff  dc->ba  ba_dc     pv    soc
+  23    0.00    --     --    0.00    --     --    0.00   0.00   0.00  16.00
+   0    0.00    --     --    0.00     1  94.90    0.00   0.00   0.00  16.00
+   1    0.00    --     --    0.00    --     --    0.00   0.00   0.00  16.00
+   2    0.00    --     --    0.00    --     --    0.00   0.00   0.00  16.00
+   3    0.00    --     --    0.00    --     --    0.00   0.00   0.00  16.00
+   4    0.00    --     --    0.00    --     --    0.00   0.00   0.00  16.00
+   5    0.00    --     --    0.00    --     --    0.00   0.00   0.00  16.00
+   6    0.00    --     --    0.00    --     --    0.00   0.00   0.00  16.00
+   7    0.00    --     --    0.34     6  95.40    0.00   0.36   0.00  14.67
+   8    0.00    --     --    1.20     7  95.50    0.00   1.26   0.00  10.00
+   9    0.00    --     --    0.00    --     --    0.00   0.00   0.00  10.00
+  10    0.00    --     --    0.00    --     --    0.00   0.00   0.00  10.00
+  11    0.00    --     --    0.00    --     --    0.00   0.00   0.00  10.00
+  12    0.00    --     --    0.00    --     --    0.00   0.00   0.00  10.00
+  13    4.42    --  92.00    0.00    --     --    4.42   0.00   0.00  25.14
+  14    4.42    --  92.00    0.00    --     --    4.42   0.00   0.00  40.28
+  15    4.42    --  92.00    0.00    --     --    4.42   0.00   0.00  55.42
+  16    4.42    --  92.00    0.00    --     --    4.42   0.00   0.00  70.56
+  17    0.00    --     --    0.00    --     --    0.00   0.00   0.00  70.56
+  18    0.00    --     --    2.40     8  94.90    0.00   2.53   0.00  61.15
+  19    0.00    --     --    4.80    10  92.00    0.00   5.22   0.00  41.74
+  20    0.00    --     --    0.00    --     --    0.00   0.00   0.00  41.74
+  21    4.42    --  92.00    0.00    --     --    4.42   0.00   0.00  56.88
+  22    4.42    --  92.00    0.00    --     --    4.42   0.00   0.00  72.03
+  23    4.98    --  90.50    0.00    --     --    4.98   0.00   0.00  89.09
+ 299   31.47   NaN    NaN    8.74   NaN    NaN   31.47   9.36   0.00 817.28
+
+
+ uur  bat_in  bat_out   cons   prod   base  boiler     wp     ev     pv   cost  profit  b_tem
+  23    0.00     0.00   0.11   0.00   0.16    0.00  -0.00   0.00   0.00   0.03    0.00  48.40
+   0    0.00     0.00   0.14   0.00   0.14    0.00  -0.00   0.00   0.00   0.05    0.00  48.00
+   1    0.00     0.00   0.38   0.00   0.38    0.00  -0.00   0.00   0.00   0.12    0.00  47.60
+   2    0.00     0.00   0.26   0.00   0.26    0.00  -0.00   0.00   0.00   0.08    0.00  47.20
+   3    0.00     0.00   0.42   0.00   0.42    0.00  -0.00   0.00   0.00   0.12    0.00  46.80
+   4    0.00     0.00   0.15   0.00   0.15    0.00  -0.00   0.00   0.00   0.04    0.00  46.40
+   5    0.00     0.00   0.12   0.00   0.12    0.00  -0.00   0.00   0.00   0.03    0.00  46.00
+   6    0.00     0.00   0.13   0.00   0.13    0.00  -0.00   0.00   0.00   0.04    0.00  45.60
+   7    0.00     0.34   0.00   0.19   0.15    0.00  -0.00   0.00   0.00   0.00   -0.07  45.20
+   8    0.00     1.20   0.00   0.98   0.23    0.00  -0.00   0.00   0.01   0.00   -0.34  44.80
+   9    0.00     0.00   0.00   0.06   0.26    0.00  -0.00   0.00   0.32   0.00   -0.02  44.40
+  10    0.00     0.00   0.00   1.01   0.31    0.00  -0.00   0.00   1.32   0.00   -0.30  44.00
+  11    0.00     0.00   0.00   0.58   0.32    0.00  -0.00   0.00   0.90   0.00   -0.15  43.60
+  12    0.00     0.00   0.05   0.00   0.31    0.00  -0.00   0.00   0.26   0.01    0.00  43.20
+  13    4.80     0.00   4.72   0.00   0.23    0.00  -0.00   0.00   0.31   0.86    0.00  42.80
+  14    4.80     0.00   3.56   0.00   0.26    0.00  -0.00   0.00   1.50   0.64    0.00  42.40
+  15    4.80     0.00   4.14   0.00   0.21    0.00  -0.00   0.00   0.87   0.74    0.00  42.00
+  16    4.80     0.00   3.91   0.00   0.21    0.00  -0.00   0.00   1.10   0.73    0.00  41.60
+  17    0.00     0.00   0.28   0.00   0.54    0.00  -0.00   0.00   0.26   0.07    0.00  41.20
+  18    0.00     2.40   0.00   2.15   0.26    0.00  -0.00   0.00   0.01   0.00   -0.58  40.80
+  19    0.00     4.80   0.00   4.54   0.26    0.00  -0.00   0.00   0.00   0.00   -1.34  40.40
+  20    0.00     0.00   0.22   0.00   0.22    0.00  -0.00   0.00   0.00   0.06    0.00  40.00
+  21    4.80     0.00   4.99   0.00   0.19    0.00  -0.00   0.00   0.00   0.92    0.00  39.60
+  22    4.80     0.00   4.98   0.00   0.18    0.00  -0.00   0.00   0.00   0.87    0.00  39.20
+  23    5.50     0.00   6.68   0.00   0.16    1.02  -0.00   0.00   0.00   1.16    0.00  51.20
+
+Winst: 0.89 €
+
+Onderstaande settings worden NIET doorgezet naar HA
+Boiler opwarmen niet geactiveerd
+Netto vermogen naar(+)/uit(-) batterij Accu1 zou zijn:  0 W
+Balanceren zou zijn: False
+Aanpassing stooklijn zou zijn:  -0.7
