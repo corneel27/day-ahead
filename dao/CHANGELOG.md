@@ -1,3 +1,7 @@
+## [V0.4.56] 2024-01-14
+### Changed
+Addon is met volledige ondersteuning voor 64 bit Intel/AMD Processor
+
 ## [v0.4.5] - 2024-01-09
 # Changelog Day Ahead Optimalisering
 ## [Unreleased]
@@ -6,6 +10,7 @@ De volgende zaken staan op de todo lijst:
 - webserver afmaken
 
 ### Changed
+
 Het programma is ondergebracht in een addon van Home Assistant.<br>
 Ten behoeve van de addon is alle software geplaatst onder de directory "dao". <br>
 Alle documentatie is verplaatst naar docs\MANUAL.md

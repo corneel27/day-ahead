@@ -34,7 +34,12 @@ else
   echo "=> /root/dao/webserver/app/static/data doesn't exist, made"
   ln -s /config/dao_data $file
 fi
-export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
+
+dir="/root/dao/prog/miplib/"
+if [ -d "$dir" ]; then
+  export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
+fi
+
 gunicorn --config gunicorn_config.py app:app &
 
 cd /root/dao/prog

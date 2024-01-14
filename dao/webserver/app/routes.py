@@ -158,16 +158,21 @@ def home():
         os.remove(app_datapath + active_map + flist[index]["name"])
         flist = get_file_list(app_datapath + active_map, active_filter)
         index = min(len(flist) - 1, index)
-    active_time = str(flist[index]["time"])
-    if active_view == "grafiek":
-        image = os.path.join(web_datapath + active_map, flist[index]["name"])
-        tabel = None
+    if len(flist) > 0:
+        active_time = str(flist[index]["time"])
+        if active_view == "grafiek":
+            image = os.path.join(web_datapath + active_map, flist[index]["name"])
+            tabel = None
+        else:
+            image = None
+            with open(app_datapath + active_map + flist[index]["name"], 'r') as f:
+                tabel = f.read()
     else:
+        active_time = None
         image = None
-        with open(app_datapath + active_map + flist[index]["name"], 'r') as f:
-            tabel = f.read()
+        tabel = None
 
-    return render_template('home.html', title='Optimalisering', subjects=subjects, views=views,
+    return render_template('home.html', title='Optimization', subjects=subjects, views=views,
                            active_subject=active_subject, active_view=active_view, image=image, tabel=tabel,
                            active_time=active_time)
 
