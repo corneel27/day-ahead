@@ -26,7 +26,7 @@ ENV DAO_VERSION=$BUILD_VERSION
 #    && echo export DAO_VERSION="$BUILD_VERSION"' >> ~/.bashrc
 
 #benodigde libraries voor mip
-RUN apt-get install -  wget libnauty2-dev coinor-libcgl-dev libcholmod3
+RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
 
 COPY miplib.tar.gz /tmp/
 WORKDIR /root/dao/prog
