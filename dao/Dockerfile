@@ -19,6 +19,12 @@ COPY prog /root/dao/prog/
 COPY webserver /root/dao/webserver/
 COPY data /tmp/daodata/
 
+#version
+ARG BUILD_VERSION
+ENV DAO_VERSION=$BUILD_VERSION
+RUN echo '__version__ = "$BUILD_VERSION"' > /root/dao/prog/_version.py \
+    && echo export DAO_VERSION="$BUILD_VERSION"' >> ~/.bashrc
+
 #benodigde libraries voor mip
 RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
 

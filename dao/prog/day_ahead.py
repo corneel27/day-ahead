@@ -1,7 +1,7 @@
 """
 Het programma Day Ahead Optimalisatie kun je je energieverbruik en energiekosten optimaliseren als je gebruik maakt
 van dynamische prijzen.
-Zie verder: README.md
+Zie verder: DOCS.md
 """
 import datetime
 from pprint import pprint
@@ -30,11 +30,11 @@ class DayAheadOpt(hass.Hass):
         utils.make_data_path()
         self.debug = False
         self.config = Config(file_name)
-        self.protol_api = self.config.get(['homeassistant', 'protocol api'])
-        self.ip_adress = self.config.get(['homeassistant', 'ip adress'])
-        self.ip_port = self.config.get(['homeassistant', 'ip port'])
-        self.hassurl = self.protol_api+"://" + self.ip_adress + ":" + str(self.ip_port) + "/"
-        self.hasstoken = self.config.get(['homeassistant', 'token'])
+        self.protocol_api = self.config.get(['homeassistant', 'protocol api'], default="http" )
+        self.ip_adress = self.config.get(['homeassistant', 'ip adress'],  default="supervisor" )
+        self.ip_port = self.config.get(['homeassistant', 'ip port'], default="8123" )
+        self.hassurl = self.protocol_api+"://" + self.ip_adress + ":" + str(self.ip_port) + "/"
+        self.hasstoken = self.config.get(['homeassistant','token'], default=os.environ.get("HASSIO_TOKEN"))
         super().__init__(hassurl=self.hassurl, token=self.hasstoken)
         headers = {
             "Authorization": "Bearer " + self.hasstoken,
@@ -67,15 +67,10 @@ class DayAheadOpt(hass.Hass):
         self.prices = DA_Prices(self.config, self.db_da)
         self.strategy = self.config.get(["strategy"])
         self.tibber_options = self.config.get(["tibber"])
-        self.notification_options = self.config.get(["notifications"])
-        if "notification entity" in self.notification_options:
-            self.notification_entity = self.notification_options["notification entity"]
-        else:
-            self.notification_entity = None
-        if "last activity entity" in self.notification_options:
-            self.last_activity_entity = self.notification_options["last activity entity"]
-        else:
-            self.last_activity_entity = None
+        self.notification_entity = self.config.get(["notifications", "notification entity"])
+        self.notification_opstarten = self.config.get(["notifications", "opstarten"], None, False)
+        self.notification_berekening = self.config.get(["notifications", "berekening"], None, False)
+        self.last_activity_entity = self.config.get(["notification", "last activity entity"])
         self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.history_options = self.config.get(["history"])
@@ -242,11 +237,9 @@ class DayAheadOpt(hass.Hass):
             print("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
                   "controleer of alle gegevens zijn opgehaald")
             if self.notification_entity is not None:
-                self.set_value(self.notification_entity,
-                               "Er ontbreken voor een aantal uur gegevens")
+                self.set_value(self.notification_entity,"Er ontbreken voor een aantal uur gegevens")
 
-        if self.notification_entity is not None:
-            if self.notification_options["berekening"].lower() == "true":
+        if self.notification_entity is not None and self.notification_berekening:
                 self.set_value(self.notification_entity, "DAO calc gestart " +
                                datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
@@ -1616,10 +1609,9 @@ class DayAheadOpt(hass.Hass):
         log_file.close()
 
     def scheduler(self):
-        if self.notification_entity != None:
-            if self.notification_options["opstarten"].lower() == "true":
-                self.set_value(self.notification_entity, "DAO scheduler gestart " +
-                               datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+        if self.notification_entity != None and self.notification_opstarten:
+            self.set_value(self.notification_entity, "DAO scheduler gestart " +
+                            datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
 
         while True:
             t = datetime.datetime.now()

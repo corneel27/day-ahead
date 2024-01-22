@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block content %}
-
+{% block selectie %}
 <form method="post" id="content_form">
 <div class="selector-container">
+  <input type="hidden" id="current_menu" name="current_menu" value="reports">
   <div class="spacer">
     <div class="select subject">
      <input type="hidden" id="cur_subject" name="cur_subject" value="{{active_subject}}">
@@ -65,7 +65,9 @@
 </div>
 <div class="clear"></div>
 </form>
+{% endblock %}
 
+{% block content %}
 {% if active_view == "grafiek" %}
 <div class="show graph" id="show_graph2">
   <img src='data:image/png;base64,{{ report_data }}' alt="image" width="1000" height="800"/>"

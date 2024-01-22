@@ -1,13 +1,23 @@
+# Changelog 刀 DAO
+# Day Ahead Optimalisering
+## [Unreleased]
+De volgende zaken staan op de todo lijst:
+- Alle uitvoer omzetten naar logger 
+- dashboard afmaken
+
+## [V0.4.57] 2024-01-20
+### Added
+- Ingress is toegevoegd aan de presentatie van de addon via het dashboard ("toon zijbalk")
+### Changed
+- README.md is gesplitst:
+  - een korte inleiding in het programma (heet nog steeds README.md)
+  - een uitgebreide handleiding (DOCS.md) die ook benaderd kan worden via "documentatie" vanuit de addon
+
 ## [V0.4.56] 2024-01-14
 ### Changed
 Addon is met volledige ondersteuning voor 64 bit Intel/AMD Processor
 
 ## [v0.4.5] - 2024-01-09
-# Changelog Day Ahead Optimalisering
-## [Unreleased]
-De volgende zaken staan op de todo lijst:
-- Alle print opdrachten omzetten naar logger 
-- webserver afmaken
 
 ### Changed
 
@@ -25,7 +35,7 @@ De volgende variabelen worden toegevoegd aan het bestand `variabel`:
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (17, 'pv_dc', 'Zonne energie DC', 'kWh');
 ````
 In options.json kun je nu het maximale vermogen opgeven van je netwerk aansluiting.
-Zie README.md
+Zie DOCS.md
 
 ##[v0.4.0] - 2023-10-15
 
@@ -37,13 +47,13 @@ Dat kan nu via een rest-command: /api/run
 ## [v0.3.1] - 2023-09-12
 
 ### Added
-- je kunt nu de grafische stijl definieren o.a. darkmode. (zie README, graphics) 
-- je kunt het presenteren van de grafieken na het uitvoeren van een berekening aan/uit zetten. (zie README, graphics)
+- je kunt nu de grafische stijl definieren o.a. darkmode. (zie DOCS.md, graphics) 
+- je kunt het presenteren van de grafieken na het uitvoeren van een berekening aan/uit zetten. (zie DOCS.md, graphics)
 - de volgende aanvullende python modules moeten worden geinstalleerd:
 ````
   pip3 install gunicorn ephem
 ````
-- het protocol voor de api en de ws richting Home Assistant is instelbaar (zie in README, bij het onderdeel "Home Assistant") 
+- het protocol voor de api en de ws richting Home Assistant is instelbaar (zie in DOCS.md, bij het onderdeel "Home Assistant") 
 - voor de ondersteuning van een API moeten berekende resultaten worden opgeslagen.
 Daarvoor moeten de volgende variabelen worden toegevoegd aan het bestand `variabel`:
 ````
@@ -83,13 +93,13 @@ AUTO_INCREMENT=1;
 - de webserver/dashboard is uitgebreid met de volgende functionaliteit:
   * je kunt met een api-call gegevens opvragen die je o.a. kunt gebruiken in Home Assistant 
   om sensoren te voorzien van data en attributen en waar je met de apexcharts-card 
-  grafieken kunt maken (zie README.md)
+  grafieken kunt maken (zie DOCS.md)
   * je kunt met een api call een berekening of bewerking uitvoeren. Deze nieuwe functionaliteit zal de
   websocket interface vervangen.
   * de "reports" zijn uitgebreid met meer perioden en bij de perioden waar ook de prognose die van toepassing zijn
-  van toepassing is kun je "prognose" aan/uit zetten (zie README.md)
+  van toepassing is kun je "prognose" aan/uit zetten (zie DOCS.md)
   * je kunt met de web-interface alle berekeningen en bewerkingen uitvoeren en je krijgt direct 
-  de logging van het resultaat te zien (zie README.md) 
+  de logging van het resultaat te zien (zie DOCS.md) 
 
 ### Fixed
 - Het laatste uur (meestal uur 23:00) wordt nu bij de grafieken volledig getoond. Dat geldt ook voor de SoC waarde die om 24:00 uur wordt bereikt.
@@ -157,13 +167,13 @@ gaf het programma verkeerde resultaten voor dat eerste uur. Dit is gefixed.
 ### Changed
     
 - laden auto wordt alleen uitgezet als auto thuis is (en aangesloten) 
-- ongebruikte instellingen uit README.md gehaald
+- ongebruikte instellingen uit DOCS.md gehaald
 - navigatieknoppen in webserver bij "home" omgezet
 - menu optie **Meteo** in webserver voorzien van toelichting "in ontwikkeling"
-- notificatie via Home Assistant toegevoegd. Zie voor meer informatie README.md bij **notification entity**
+- notificatie via Home Assistant toegevoegd. Zie voor meer informatie DOCS.md bij **notification entity**
 - in het instellingenbestand options.json is de naam van de entity aanduiding veranderd: <br>
 `"entity ready time"` wordt `"entity ready datetime"`
-- aanvullingen en wijzigingen in README.md
+- aanvullingen en wijzigingen in DOCS.md
 
 
 ### Issues

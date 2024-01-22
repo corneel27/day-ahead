@@ -140,7 +140,7 @@ Je kunt de volgende instellingen maken:
 
 ### Dashboard menu
 Het hoofdmenu van het dashboard bestaat uit 4 opties: <br />
-  ![Img_5.png](../images/Img_5.png) <br />
+  ![Img_5.png](images/Img_5.png) <br />
 
 - Home (huisje)
 - Run
@@ -149,7 +149,7 @@ Het hoofdmenu van het dashboard bestaat uit 4 opties: <br />
 
 **Home**<br/>
 Deze webpagina komt ook naar voren als je de webservervia je browser benadert: <br />
-  ![Img_6.png](../images/Img_6.png) <br />
+  ![Img_6.png](images/Img_6.png) <br />
 Daarin toont zich een submenu met daarin de informatie die je met submenu selecteert:
 Het submenu geeft links de keuze de keuze uit (voorlopig twee **onderwerpen**):
  - grid (deze is nu actief, dat wordt aangegeven met de kleur rood)
@@ -164,10 +164,10 @@ Rechts kun je bladeren door de aangeboden informatie:
 - **<** de vorige
 - **>** de volgende
 - **>|** de eerste
-- ![delete.png](../images/delete.png) met de afvalbak kun je de aangeboden informatie verwijderen
+- ![delete.png](images/delete.png) met de afvalbak kun je de aangeboden informatie verwijderen
 
 **Run**<br/>
-![Img_8.png](../images/Img_8.png) <br />
+![Img_8.png](images/Img_8.png) <br />
 Via deze menu-optie kun je alle mogelijke berekeningen en bewerkingen van het programma activeren 
 (zie ook het begin van deze handleiding). <br/>
 Je activeert een bewerking door deze aan te klikken.<br/>
@@ -177,7 +177,7 @@ Wil je het grafische resultaat van een optimaliseringsberekening zien klik dan o
 Je krijgt dan de laatste berekende grafiek in beeld.
 
 **Reports**<br/>
-![Img_7.png](../images/Img_7.png) <br />
+![Img_7.png](images/Img_7.png) <br />
 Dit onderdeel is nog in ontwikkeling, maar biedt nu al veel mogelijkheden.<br/>
 Er is nog geen verschil tussen verbruik en kosten, omdat alles netjes in een tabel past.
 Maar er komen nog wel verschillende verbruiks- en kostengrafieken.
@@ -352,11 +352,11 @@ Als in deze periode ook je batterij al gedraaid heeft:
 * basislast = inkoop - teruglevering - wp - boiler - ev + pv - accu_in + accu_uit
 * de resultaten zet je samen met het begintijdstip van ieder uur in een spreadsheet<br>
   dat ziet er dan als volgt uit: <br>
-  ![img_1.png](../images/img_1.png)
+  ![img_1.png](images/img_1.png)
 * daarnaast begin je een nieuwe tabel met in de eerste kolom de getallen 0, 1 tot en met 23
 * in de tweede kolom bereken je met "averageif" (of in libreoffice "gemiddelde.als") het gemiddelde van de baseloadkolom voor het uur 0, 1 enz. 
   Dat ziet er dan als volgt uit: <br>
-  ![img_2.png](../images/img_2.png)
+  ![img_2.png](images/img_2.png)
 * de 24 getallen uit de tweede kolom vul je in in de lijst.
 
 ### **graphical backend**<br/>
@@ -398,11 +398,11 @@ De twee strategieën zijn:
     Als je deze kiest worden je batterij en je verbruiken zo ingezet dat deze leiden tot de laagste 
     kosten (= hoogste opbrengst)
 Als voorbeeld levert deze het volgende resultaat:
-  ![img_3.png](../images/img_3.png)
+  ![img_3.png](images/img_3.png)
   * minimize consumption<br>
     Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter" bij zo laag mogelijke kosten.
 Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
-  ![img_4.png](../images/img_4.png)
+  ![img_4.png](images/img_4.png)
 
 ### **notifications**
 
@@ -764,7 +764,7 @@ Korte toelichting:
 
 Kijk je in Home Assistant via Ontwikkelhulpmiddelen/Statussen en filter je bijvoorbeeld 
 je sensoren op "da_", dan moet je zoiets te zien krijgen:<br/>
-![Img_9.png](../images/Img_9.png) <br />
+![Img_9.png](images/Img_9.png) <br />
 waarmee duidelijk is dat je de gegevens binnenkrijgt in Home Assistant en dat de aangemaakte sensor(en) werken.
 
 ### Presentatie van deze data in Home Assistant 
@@ -774,7 +774,7 @@ Zie voor alle informatie: https://github.com/RomRider/apexcharts-card
 Daar staat ook hoe je de software installeert en alleinfo over de configuratie-opties.
 Voorbeeld:
 <br/>
-![Img_10.png](../images/Img_10.png) <br />
+![Img_10.png](images/Img_10.png) <br />
 De configuratie van deze grafiek ziet er als volgt uit:<br/>
 ````
 type: custom:apexcharts-card

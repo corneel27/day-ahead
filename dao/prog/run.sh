@@ -19,9 +19,9 @@ cd /root/dao/prog
 file=../data
 if [ -L "$file" ]
 then
-  echo "=> /root/dao/prog/data exist"
+  echo "=> /root/dao/data exist"
 else
-  echo "=> /root/dao/prog/data doesn't exist, made"
+  echo "=> /root/dao/data doesn't exist, made"
   ln -s /config/dao_data $file
 fi
 

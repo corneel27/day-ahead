@@ -1,6 +1,6 @@
 import datetime
 from dao.webserver.app import app
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, redirect, url_for
 import json, fnmatch
 import os
 from  subprocess import PIPE, run
@@ -8,6 +8,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from dao.prog.da_config import Config
 import dao.prog.da_report
+from dao.prog._version import __version__
 
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
@@ -77,35 +78,33 @@ def get_file_list(path: str, pattern: str) -> list:
     return flist
 
 
-@app.route('/settings/<filename>', methods=['POST', 'GET'])
-def settings(filename):
-    def get_file(fname):
-        with open(fname, 'r') as f:
-            return f.read()
-    message = None
-    filename_ext = app_datapath + filename + ".json"
-    if request.method == 'POST':
-        updated_data = request.form["codeinput"]
-        action = request.form["action"]
-        if action == "update":
-            try:
-                json_data = json.loads(updated_data)
-                # Update the JSON data
-                with open(filename_ext, 'w') as f:
-                    f.write(updated_data)
-                message = 'JSON data updated successfully'
-            except Exception as err:
-                message = 'Error: ' + err.args[0]
-            options = updated_data
-        if action == 'cancel':
-           options = get_file(filename_ext)
-    else:
-        # Load initial JSON data from a file
-        options = get_file(filename_ext)
-    return render_template('settings.html', title='Instellingen', options_data=options, message=message)
-
-
 @app.route('/', methods=['POST', 'GET'])
+def menu():
+    list = request.form.to_dict(flat=False)
+    if "current_menu" in list:
+        current_menu = list["current_menu"][0]
+        if current_menu == "home":
+            return home()
+        elif current_menu == "run":
+            return run_process()
+        elif current_menu == "reports":
+            return reports()
+        elif current_menu == "settings":
+            return settings()
+        else:
+            return home()
+    else:
+        if "menu_home" in list:
+            return home()
+        elif "menu_run" in list:
+            return run_process()
+        elif "menu_reports" in list:
+            return reports()
+        elif "menu_settings" in list:
+            return settings()
+        else:
+           return home()
+
 @app.route('/home', methods=['POST', 'GET'])
 def home():
     subjects = ["grid"]
@@ -172,10 +171,40 @@ def home():
         image = None
         tabel = None
 
-    return render_template('home.html', title='Optimization', subjects=subjects, views=views,
+    return render_template('home.html', title='Optimization', active_menu="home",
+                           subjects=subjects, views=views,
                            active_subject=active_subject, active_view=active_view, image=image, tabel=tabel,
-                           active_time=active_time)
+                           active_time=active_time, version=__version__)
 
+@app.route('/run', methods=['POST', 'GET'])
+def run_process():
+    bewerking = ""
+    current_bewerking = ""
+    log_content = ""
+
+    if request.method in ['POST', 'GET']:
+        dict = request.form.to_dict(flat=False)
+        if "current_bewerking" in dict:
+            current_bewerking = dict["current_bewerking"][0]
+            bewerking = ""
+            proc = run(bewerkingen[current_bewerking]["cmd"], stdout=PIPE, stderr=PIPE)
+            data = proc.stdout.decode()
+            err = proc.stderr.decode()
+            log_content = data + err
+            filename = "../data/log/" + bewerkingen[current_bewerking]["task"] +\
+                        datetime.datetime.now().strftime("%H%M") + ".log"
+            with open(filename, "w") as f:
+                f.write(log_content)
+        else:
+            for i in range(len(dict.keys())):
+                bew = list(dict.keys())[i]
+                if (bew in bewerkingen):
+                    bewerking = bew
+                    break
+
+    return render_template('run.html', title='Run', active_menu="run",
+                           bewerkingen=bewerkingen, bewerking=bewerking, current_bewerking=current_bewerking,
+                           log_content=log_content, version=__version__)
 
 @app.route('/reports', methods=['POST', 'GET'])
 def reports():
@@ -224,9 +253,56 @@ def reports():
     else:
         report_data = report.make_graph(filtered_df, active_period, None)
 
-    return render_template('report.html', title='Rapportage', subjects=subjects, views=views,
-                           periode_options=periode_options, active_period=active_period, met_prognose=met_prognose,
-                           active_subject=active_subject, active_view=active_view, report_data=report_data)
+    return render_template('report.html', title='Rapportage', active_menu="reports",
+                           subjects=subjects, views=views, periode_options=periode_options,
+                           active_period=active_period, met_prognose=met_prognose,
+                           active_subject=active_subject, active_view=active_view, report_data=report_data,
+                           version=__version__)
+
+@app.route('/settings/<filename>', methods=['POST', 'GET'])
+def settings():
+    def get_file(fname):
+        with open(fname, 'r') as f:
+            return f.read()
+    settings = ["options", "secrets"]
+    active_setting = "options"
+    cur_setting= ""
+    list = request.form.to_dict(flat=False)
+    if request.method in ['POST', 'GET']:
+        if "cur_setting" in list:
+            active_setting = list["cur_setting"][0]
+            cur_setting = active_setting
+        if "setting" in list:
+            active_setting = list["setting"][0]
+    message = None
+    filename_ext = app_datapath + active_setting + ".json"
+
+    if (cur_setting != active_setting) or ("setting" in list):
+        options = get_file(filename_ext)
+    else:
+        list = request.form.to_dict(flat=False)
+        if "codeinput" in list:
+            updated_data = request.form["codeinput"]
+            if "action" in list:
+                action = request.form["action"]
+                if action == "update":
+                    try:
+                        json_data = json.loads(updated_data)
+                        # Update the JSON data
+                        with open(filename_ext, 'w') as f:
+                            f.write(updated_data)
+                        message = 'JSON data updated successfully'
+                    except Exception as err:
+                        message = 'Error: ' + err.args[0]
+                    options = updated_data
+                if action == "cancel":
+                   options = get_file(filename_ext)
+        else:
+            # Load initial JSON data from a file
+            options = get_file(filename_ext)
+    return render_template('settings.html', title='Instellingen', active_menu="settings",
+                           settings=settings, active_setting=active_setting, options_data=options,
+                           message=message, version=__version__)
 
 
 @app.route('/api/prognose/<string:fld>', methods=['GET'])
@@ -279,29 +355,4 @@ def run_api(bewerking: str):
     else:
         return "Onbekende bewerking: "+ bewerking
 
-@app.route('/run', methods=['POST', 'GET'])
-def run_process():
-    bewerking = ""
-    current_bewerking = ""
-    log_content = ""
-
-    if request.method in ['POST', 'GET']:
-        dict = request.form.to_dict(flat=False)
-        if "current_bewerking" in dict:
-            current_bewerking = dict["current_bewerking"][0]
-            bewerking = ""
-            proc = run(bewerkingen[current_bewerking]["cmd"], stdout=PIPE, stderr=PIPE)
-            data = proc.stdout.decode()
-            err = proc.stderr.decode()
-            log_content = data + err
-            filename = "../data/log/" + bewerkingen[current_bewerking]["task"] +\
-                        datetime.datetime.now().strftime("%H%M") + ".log"
-            with open(filename, "w") as f:
-                f.write(log_content)
-        else:
-            if len(dict) == 1 :
-                bewerking = list(dict.keys())[0]
-
-    return render_template('run.html', title='Run', bewerkingen=bewerkingen, bewerking=bewerking,
-                           current_bewerking=current_bewerking, log_content=log_content)
 

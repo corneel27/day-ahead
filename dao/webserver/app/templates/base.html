@@ -2,22 +2,19 @@
 <html lang="nl">
 <head>
 
-    <!-- prism + linenumber plugin -->
-    <script src="/static/prism.js"></script>
-    <link rel="stylesheet" href="/static/prism.css" />
-
     <!--code-input-->
     <script src="https://cdn.jsdelivr.net/gh/WebCoder49/code-input@1.2/code-input.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebCoder49/code-input@1.2/code-input.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/WebCoder49/code-input@1.2/plugins/prism-line-numbers.min.css">
 
-
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-    <link rel="stylesheet" href='/static/base.css' />
-    <link rel="stylesheet" media="screen and (min-width: 1100px)" href="/static/widescreen.css">
-    <link rel="stylesheet" media="screen and (max-width: 1100px)" href="/static/smallscreen.css">
+    <script src="static/prism.js"></script>
+    <link rel="stylesheet" href="static/prism.css" />
+    <link rel="stylesheet" href='static/base.css' />
+    <link rel="stylesheet" href='static/base.css' />
+    <link rel="stylesheet" media="screen and (min-width: 1100px)" href="static/widescreen.css">
+    <link rel="stylesheet" media="screen and (max-width: 1100px)" href="static/smallscreen.css">
 
     <meta charset="UTF-8">
     <title>{{ title }} - Day Ahead Optimization</title>
@@ -25,8 +22,46 @@
 <body>
 <div class="body">
     <header>
+        <form method="post" name="menu_form" id="menu_form">
+            <input type="hidden" id="active_menu" name="active_menu" value="{{active_menu}}">
+            <div class="selector-container">
+            <div class="spacer">
+            <div class="select menubox">
+                <button name="menu_home" value="home"
+                    {% if active_menu == "home" %}
+                        class="menubtn menubtn_left active"
+                    {% else %}
+                        class="menubtn menubtn_left"
+                    {% endif %}
+                    >Home</button>
+                <button name="menu_run" value="run"
+                    {% if active_menu == "run" %}
+                        class="menubtn menubtn_mid active"
+                    {% else %}
+                        class="menubtn menubtn_mid "
+                    {% endif %}
+                    >Run</button>
+                <button name="menu_reports" value="reports"
+                    {% if active_menu == "reports" %}
+                        class="menubtn menubtn_mid active"
+                    {% else %}
+                        class="menubtn menubtn_mid "
+                    {% endif %}
+                    >Reports</button>
+                <button name="menu_settings" value="settings"
+                    {% if active_menu == "settings" %}
+                        class="menubtn menubtn_right active"
+                    {% else %}
+                        class="menubtn menubtn_right"
+                    {% endif %}
+                    >Config</button>
+            </div>
+            </div>
+            </div>
+        </form>
+        <!---
         <ul>
-            <li><a href="/home"><img src="../static/home_white.png" alt="home" border="0" style="display:inline-block; height:1em; width:auto;" /></a></li>
+            <li><a href="/home"><img src="static/home_white.png" alt="home" border="0" style="display:inline-block; height:1em; width:auto;" /></a></li>
             <li><a href="/run">Run</a></li>
             <li><a href="/reports">Reports</a></li>
             <li><a href="#">Settings</a>
@@ -36,12 +71,15 @@
                 </ul>
             </li>
         </ul>
+        --->
+        {% block selectie %}{% endblock %}
     </header>
     <div class="content">
     {% block content %}{% endblock %}
     </div>
   <footer>
-     <span><a href="http://www.apache.org/licenses/LICENSE-2.0">&nbsp;&nbsp;&nbsp;2023 copyright: Apache 2.0</a></span>
+      <span style="float:right;"><a href="http://www.apache.org/licenses/LICENSE-2.0">&nbsp&copy;&nbsp2024 copyright: Apache 2.0</a></span>
+      <span>&nbsp <a href="https://github.com/corneel27/day-ahead">Day Ahead Optimization versie: {{ version }}</a></span>&nbsp
   </footer>
 </div>
 </body>
