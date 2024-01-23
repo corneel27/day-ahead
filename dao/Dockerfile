@@ -22,7 +22,7 @@ COPY data /tmp/daodata/
 #version
 ARG BUILD_VERSION
 ENV DAO_VERSION=$BUILD_VERSION
-RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/_version.py
+# RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/_version.py
 
 #benodigde libraries voor mip
 RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
