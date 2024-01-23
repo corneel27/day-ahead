@@ -70,7 +70,7 @@ class DayAheadOpt(hass.Hass):
         self.notification_entity = self.config.get(["notifications", "notification entity"])
         self.notification_opstarten = self.config.get(["notifications", "opstarten"], None, False)
         self.notification_berekening = self.config.get(["notifications", "berekening"], None, False)
-        self.last_activity_entity = self.config.get(["notification", "last activity entity"])
+        self.last_activity_entity = self.config.get(["notification", "last activity entity"], None, None)
         self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.history_options = self.config.get(["history"])

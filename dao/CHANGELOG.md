@@ -1,9 +1,15 @@
 # Changelog 刀 DAO
-# Day Ahead Optimalisering
+# Day Ahead Optimization
 ## [Unreleased]
 De volgende zaken staan op de todo lijst:
 - Alle uitvoer omzetten naar logger 
 - dashboard afmaken
+
+## [V0.4.61]
+- kleuren DOCS.md staan nu goed
+- addon kan ook voor niet-admin gebruikers in zijbalk worden geplaatst
+- notificatie datum/tijd moet nu werken
+- in titels wordt nu alleennog maar "Optimization" gebruik
 
 ## [V0.4.57] 2024-01-20
 ### Added

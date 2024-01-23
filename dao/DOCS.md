@@ -1,14 +1,15 @@
+# **刀 Day Ahead Optimization**
 # Installatie en instellingen<br>
 
 ## Inhoudsopgave  
-[Vereisten](#vereisten)<br>
+[Vereisten](#Vereisten)<br>
 [Installatie](#installatie)<br> 
 [Dashboard](#dashboard) <br>
 [Configuratie](#configuratie) <br>
 [Api](#api) <br>
 [Terminal](#terminal)
 
-<a name="vereisten"/>
+
 
 ## Vereisten
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.10 of hoger. <br/>
@@ -102,8 +103,6 @@ CREATE TABLE `prognoses` (
   * Deze tabel wordt gevuld/aangevuld/geupdate met data door het programma als je een optimaliseringsberekening uitvoert.<br>  
 
 
-<a name="installatie"/>
-
 ## Installatie
 De addon wordt geinstalleerd als een community addon voor Home Assistant.
 Je installeert de addon als volgt:
@@ -118,7 +117,6 @@ Als je nu je pagina ververst (met F5) staat de nieuw addon  in het overzicht (on
 Klik op de nieuwe addon en je krijgt het informatie-scherm te zien.
 
 ---
-<a name="dashboard"/>
 
 ## Dashboard
 
@@ -206,7 +204,7 @@ Hiermee kun je het instellingen bestand (options.json) bewerken
 - ***Secrets***<br />
 Hiermee bewerk je het bestand (secrets.json) met je wachtwoorden en andere zaken die je niet in options.json wil opnemen.
 
-<a name="configuratie"/>
+---
 
 ## Configuratie
 
@@ -596,9 +594,9 @@ Bijvoorbeeld : <br/>
 `"1255": "get_day_ahead_prices"`: haal de actuele prijzen op op 12 uur 55<br>
 `"xx00": "calc_optimum"`: ieder uur exact om "00" wordt de optimaliseringsberekening uitgevoerd.
 
-<a name="api"/>
+---
 
-# Api
+## Api
 De addon beschikt over een api, waarmee allerlei relevante gegevens uit 
 de database kunnen worden opgevraagd en bijvoorbeeld in HomeAssistant of een ander 
 programma (bijv Excel) kunnen getoond. Ook kun je met de api bewerkingen en berekeningen opstarten.
@@ -860,10 +858,10 @@ Voor de uitleg van deze instellingen verwijs ik je (voorlopig)naar de documentat
 ```https://github.com/RomRider/apexcharts-card/blob/master/README.md```
 
 ---
-<a name="Terminal"/>
 
 ## Terminal
 
+### **Via je addon**
 Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc. <br>
 **Opmerking** Dit is echt voor gebruikers die weten waar ze mee bezig zijn.
 Je krijgt hiermee toegang tot de krochten van Home Assistant en je kunt je installatie hiermee 
@@ -890,10 +888,15 @@ rechtsboven op de informatie pagina van de addon.
  * tenslotte krijg je een prompt van een shell binnen de addon:<br>
 ```root@94e386ba-day-ahead-opt:~/dao/prog#```. De code `94e386ba` is het id van het docker-image van de addon. 
 Dit id wisselt per installatie.
-
-Vanaf hier kun je gaan spelen met onderstaande commandos. <br>
 **Let op**: het hoofdprogramma draait al in de schedulermode als achtergrondtaak, 
 dus start het hoofdprogramma niet nog een keer in de schedulermodus. Ook het dashboard (webserver) draait in de achtergrond.
+
+### **Apart geinstalleerd**
+
+Je kunt de software van het programma ook rechtstreeks kopieren van github en het dan op een linuxmachine of een windowsmachine met het linux subssyteem zetten en dan draaien.
+
+
+Vanaf hier kun je gaan spelen met onderstaande commandos. <br>
 Het hoofdprogramma start je met het volgende commando
 
 `python3 day_ahead.py [parameters]`  
