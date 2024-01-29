@@ -25,83 +25,17 @@ Best geïnstalleerd als addon van HA waar ook HA gebruik van maakt. Zet hierbij 
 
 ### **phpMyAdmin**<br>
 Best geïnstalleerd als addon van HA met toegang tot de MariaDB server.
+Start de webui van phpMyAdmin maak je met een scherm zowel de user als de database 
+voor het programma aan: <br>
+ ![img_0.png](images/img_0.png) <br />
+De gebruikersnaam mag je zelf kiezen, evenals het te gebruiken wachtwoord.
+Maak van beide een aantekening want die gegevens moet je straks invullen bij de instellingen van het programma.
+Voor de rechten vink je alles aan onder de kopjes "data" en "structuur".
+Om mogelijke problemen te voorkomen geef je deze user GEEN toegang tot "Administratie".
+Volgende stap: installeer de addon.
 
-Met behulp van phpMyAdmin kun je onderstaande database, tabellen en inhoud van de tabellen in MariaDB onderbrengen.
-### **database "day_ahead"**<br>
-Een aparte database in MariaDB voor dit programma met daarin:  
-	
-* een user die alle rechten heeft (niet root) 
-* tabel **variabel**:<br/>
-
-  * Deze maak je met de query: <br/>
-````
-    CREATE TABLE `variabel` (
-    `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-    `code` CHAR(10) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
-    `name` CHAR(50) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
-    `dim` CHAR(10) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
-    PRIMARY KEY (`id`) USING BTREE, UNIQUE INDEX `code` (`code`) USING BTREE,
-    UNIQUE INDEX `name` (`name`) USING BTREE ) COLLATE='utf8mb4_unicode_ci' 
-    ENGINE=InnoDB
-    AUTO_INCREMENT=1;
-````
-  * Query voor het vullen van de inhoud van tabel "variabel" <br/>
-````  
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (1, 'cons', 'Verbruik', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (2, 'prod', 'Productie', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`)VALUES (3, 'da', 'Tarief', 'euro/kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (4, 'gr', 'Globale straling', 'J/cm2'); 
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (5, 'temp', 'Temperatuur', '°C');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2'); 
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (7, 'cost', 'cost', 'euro');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (8, 'profit', 'profit', 'euro');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (9, 'bat_in', 'Batterij in', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (10, 'bat_out', 'Batterij uit', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (11, 'base', 'Basislast', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (12, 'boil', 'Boiler', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (13, 'wp', 'Warmtepomp', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (14, 'ev', 'Elektrische auto', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (15, 'pv_ac', 'Zonne energie AC', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (16, 'soc', 'SoC', '%');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (17, 'pv_dc', 'Zonne energie DC', 'kWh');
-   
-````
- * tabel **values**:<br/>
-   * Deze maak je aan met de volgende query: <br/>
-````   
-    CREATE TABLE `values` (
-    `id` BIGINT(20) UNSIGNED NOT NULL  AUTO_INCREMENT,
-    `variabel` INT(10) UNSIGNED NOT NULL DEFAULT '0',
-    `time` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0',
-    `value` FLOAT NULL DEFAULT NULL,
-    PRIMARY KEY (`id`) USING BTREE,
-    UNIQUE INDEX `variabel_time` (`variabel`, `time`) USING BTREE,
-    INDEX `variabel` (`variabel`) USING BTREE,
-    INDEX `time` (`time`) USING BTREE ) 
-    COLLATE='utf8mb4_unicode_ci'
-    ENGINE=InnoDB
-    AUTO_INCREMENT=1;
-````
-   * De inhoud van values bouw je zelf op met het ophalen van de diverse gegevens. <br> 
-* tabel **prognoses**
-  * Deze maak je aan met de volgende query:
-````
-CREATE TABLE `prognoses` (
-	`id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-	`variabel` INT(10) UNSIGNED NOT NULL DEFAULT '0',
-	`time` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0',
-	`value` FLOAT NULL DEFAULT NULL,
-	PRIMARY KEY (`id`) USING BTREE,
-	UNIQUE INDEX `variabel_time` (`variabel`, `time`) USING BTREE,
-	INDEX `variabel` (`variabel`) USING BTREE,
-	INDEX `time` (`time`) USING BTREE )
-    COLLATE='utf8mb4_unicode_ci'
-    ENGINE=InnoDB
-    AUTO_INCREMENT=1;
-````
-
-  * Deze tabel wordt gevuld/aangevuld/geupdate met data door het programma als je een optimaliseringsberekening uitvoert.<br>  
-
+****************************************
+*****************************************
 
 ## Installatie
 De addon wordt geinstalleerd als een community addon voor Home Assistant.
@@ -113,8 +47,19 @@ In het "drie puntjes menu" rechtsboven kies je voor "Repositories".
 Dan krijg je een pop-up waarin je o.a Github repositories kunt toevoegen.
 Vul daar  `https://github.com/corneel27/day-ahead/` in en klik op "Toevoegen" (Add).
 Na ca 10 seconden staat de addon in de lijst en kun je de "Beheer de add-onrepositories" dialoog sluiten.
-Als je nu je pagina ververst (met F5) staat de nieuw addon  in het overzicht (onder de officiele addons).
+Als je nu je pagina ververst (met F5) staat de nieuw addon in het overzicht (onder de officiele addons).
 Klik op de nieuwe addon en je krijgt het informatie-scherm te zien.
+
+Klik op "Installeer" en wacht ca 5 minuten (deze tijd is afhankelijk van de snelheid van je processor).
+Als de addon is geinstalleerd kun je klikken op "Toon in zijbalk", waardoor je makkelijk bij
+het dashboard van de addon kunt komen.
+
+Klik op de naam van de addon in de zijbalk en kies voor `"Config"\"Options"`
+Vul bij "Homeassistant", "Database Homeassistant" en "Database Day Ahead" alle gegevens in.
+De wachtwoorden en het token kun je invullen bij `"Config"\"Secrets"`
+Je gaat nu weer terug naar het Informatiescherm van de addon en klik op "Herstarten",
+zodat alle instellingen worden overgenomen.
+
 
 ---
 
@@ -138,12 +83,12 @@ Je kunt de volgende instellingen maken:
 
 ### Dashboard menu
 Het hoofdmenu van het dashboard bestaat uit 4 opties: <br />
-  ![Img_5.png](images/Img_5.png) <br />
+  ![img_5.png](images/img_5.png) <br />
 
-- Home (huisje)
+- Home
 - Run
 - Reports
-- Settings
+- Config
 
 **Home**<br/>
 Deze webpagina komt ook naar voren als je de webservervia je browser benadert: <br />

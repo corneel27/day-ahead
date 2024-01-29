@@ -67,7 +67,7 @@ class DBmanagerObj(object):
             self.dbON = True
             # self._conn.set_character_set('utf8')
         except Exception as e:
-            print("---- Error connecting to the database")
+            print("Error: No connection to the database")
             raise e
         return
 
@@ -229,7 +229,7 @@ class DBmanagerObj(object):
                 self._conn.commit()
 
             else:
-                print('Error udpating table values: The table does not exist')
+                print('Error updating table values: The table does not exist')
         else:
             print('Error updating table values: number of columns mismatch')
 

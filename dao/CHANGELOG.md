@@ -5,11 +5,16 @@ De volgende zaken staan op de todo lijst:
 - Alle uitvoer omzetten naar logger 
 - dashboard afmaken
 
+## [V0.4.70]
+- apparmor is (gedeeltelijk) geactiveerd
+- het creeeren van de tables en de benodigde inhoud in de database wordt 
+na installatie of update van de addon door de software uitgevoerd
+
 ## [V0.4.61]
 - kleuren DOCS.md staan nu goed
 - addon kan ook voor niet-admin gebruikers in zijbalk worden geplaatst
 - notificatie datum/tijd moet nu werken
-- in titels wordt nu alleennog maar "Optimization" gebruik
+- in titels wordt nu alleen nog maar "Optimization" gebruik
 
 ## [V0.4.57] 2024-01-20
 ### Added
