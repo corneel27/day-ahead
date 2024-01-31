@@ -16,8 +16,9 @@ Het programma Day Ahead Optimization (DAO) voert de volgende acties, berekeninge
 
 Het programma draait alleen als addon op HA installaties met een arm64 processor (bijv Raspberry Pi4),
 een intel 64 bit processor (amd64), of intel 32 bit (i386).
+
 ---
-## Optimalisering
+## Optimization
 De optimalisering van het verbruik gebeurt met behulp van een generiek wiskundig algoritme
 met de naam "Mixed-Integer lineair Programming". Meer daarover kun je lezen op de 
 website die ook het algoritme en allerlei bijbehorende hulpmiddelen aanbiedt:

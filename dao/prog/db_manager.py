@@ -63,11 +63,11 @@ class DBmanagerObj(object):
                                                      user=self.user, passwd=self.password,
                                                      db=self.dbname, charset=self.charset, auth_plugin='mysql_native_password')
             self._c = self._conn.cursor()
-            print('MySQL database connection successful. Default database:', self.dbname)
+            # print('MySQL database connection successful. Default database:', self.dbname)
             self.dbON = True
             # self._conn.set_character_set('utf8')
         except Exception as e:
-            print("---- Error connecting to the database")
+            print("Error: No connection to the database")
             raise e
         return
 
@@ -229,7 +229,7 @@ class DBmanagerObj(object):
                 self._conn.commit()
 
             else:
-                print('Error udpating table values: The table does not exist')
+                print('Error updating table values: The table does not exist')
         else:
             print('Error updating table values: number of columns mismatch')
 
@@ -405,7 +405,7 @@ class DBmanagerObj(object):
         if end:
             sqlQuery += "AND `time` < UNIX_TIMESTAMP('" + end + "') "
         sqlQuery += "ORDER BY `time`;"
-        print (sqlQuery)
+        # print (sqlQuery)
         self._conn.commit()
         df = pd.read_sql(sqlQuery, con=self._conn, coerce_float=False)
         df["datasoort"] = np.where(df['time'] <= datetime.datetime.now().timestamp(), "recorded", "expected")

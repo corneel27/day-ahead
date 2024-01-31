@@ -179,7 +179,7 @@ class Report:
         #            "AND FROM_UNIXTIME(t1.`start_ts`) BETWEEN '" + str(vanaf) + "' " \
         #            "AND '" + str(tot) + "' ORDER BY t1.`start_ts`;"
         #            "AND t1.`start_ts` < " + str(tot_ts) + " ORDER BY t1.`start_ts`;"
-        print(sql)
+        # print(sql)
         df = self.db_ha.run_select_query(sql)
         # print(df_sensor)
         return df

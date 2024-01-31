@@ -1,30 +1,48 @@
 {% extends "base.html" %}
-
+{% block selectie %}{% endblock %}
 {% block content %}
-    <div>
-        <form id="json-form" method="post" id="settings_form">
-          <div class="spacer">
-            <div class="select action">
-              <span style="display:block; float:left; padding:10px"><b>JSON Editor</b></span>
-              <button name="action" class="btn btn_mid" value="update">
-                <img src="../static/update.png" alt="update" border="0" style="display:inline-block; height:1em; width:auto;" />
-              </button>
-              <button name="action" class="btn btn_mid" value="cancel">
-                <img src="../static/cancel.png" alt="cancel" border="0" style="display:inline-block; height:1em; width:auto;" />
-              </button>
-            </div>
-          </div>
-          {% if message %}
-            <p class="message">
-              {{ message }}
-            </p>
-          {% endif %}
-          <code-input lang="JSON" id="codeinput" name="codeinput" class="line-numbers" style="overflow:auto;">{{ options_data }}</code-input>
-        </form>
-    </div>
-    <script>
-      codeInput.registerTemplate("syntax-highlighted",
-        codeInput.templates.prism(Prism, []));
-    </script>
+<form id="json-form" method="post">
+
+<div class="selector-container">
+  <input type="hidden" id="current_menu" name="current_menu" value="settings">
+  <div class="spacer">
+      <div class="select setting">
+       <input type="hidden" id="cur_setting" name="cur_setting" value="{{ active_setting }}">
+      {% for setting in settings %}
+        {% if active_setting == setting %}
+          <button name="setting" class="btn chosen btn_mid" value="{{setting}}">{{ setting }}</button>
+        {% else %}
+          <button name="setting" class="btn btn_mid" value="{{setting}}">{{ setting }}</button>
+        {% endif %}
+      {% endfor %}
+      </div>
+  </div>
+
+  <div class="spacer">
+     <div class="select action">
+      <span style="display:block; float:left; padding:10px"><b>JSON Editor</b></span>
+      <button name="action" class="btn btn_mid" value="update">
+        <img src="static/update.png" alt="update" border="0" style="display:inline-block; height:1em; width:auto;" />
+      </button>
+      <button name="action" class="btn btn_mid" value="cancel">
+        <img src="static/cancel.png" alt="cancel" border="0" style="display:inline-block; height:1em; width:auto;" />
+      </button>
+     </div>
+   </div>
+</div>
+    {% if message %}
+    <p class="message">
+      {{ message }}
+    </p>
+  {% endif %}
+<div class="clear"></div>
+
+  <code-input lang="JSON" id="codeinput" name="codeinput" class="line-numbers" style="overflow:auto;">{{ options_data }}</code-input>
+</form>
+
+<script>
+  codeInput.registerTemplate("syntax-highlighted",
+    codeInput.templates.prism(Prism, []));
+</script>
 
 {% endblock %}

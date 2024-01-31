@@ -1,6 +1,5 @@
 {% extends "base.html" %}
-
-{% block content %}
+{% block selectie %}
 <script>
   function confirmation(){
     var result = confirm("Wil je dit verwijderen?");
@@ -17,6 +16,7 @@
 <div class="selector-container">
   <div class="spacer">
     <div class="select subject">
+     <input type="hidden" id="current_menu" name="current_menu" value="home">
      <input type="hidden" id="cur_subject" name="cur_subject" value="{{active_subject}}">
     {% for subject in subjects %}
       {% if active_subject == subject %}
@@ -69,6 +69,9 @@
 </div>
 <div class="clear"></div>
 </form>
+{% endblock %}
+
+{% block content %}
 
 {% if active_view == "grafiek" %}
 <div class="show graph">

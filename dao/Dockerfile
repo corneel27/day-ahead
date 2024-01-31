@@ -19,6 +19,11 @@ COPY prog /root/dao/prog/
 COPY webserver /root/dao/webserver/
 COPY data /tmp/daodata/
 
+#version
+ARG BUILD_VERSION
+ENV DAO_VERSION=$BUILD_VERSION
+RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/_version.py
+
 #benodigde libraries voor mip
 RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
 
@@ -51,9 +56,5 @@ RUN pip3 install -r /tmp/requirements.txt
 EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
-RUN chmod a+x run_loop.sh
 CMD ["/bin/bash", "./run.sh"]
-# CMD ["./run_loop.sh"]
-#
-#CMD ["top"]
 

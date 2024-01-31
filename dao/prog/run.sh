@@ -19,9 +19,9 @@ cd /root/dao/prog
 file=../data
 if [ -L "$file" ]
 then
-  echo "=> /root/dao/prog/data exist"
+  echo "=> /root/dao/data exist"
 else
-  echo "=> /root/dao/prog/data doesn't exist, made"
+  echo "=> /root/dao/data doesn't exist, made"
   ln -s /config/dao_data $file
 fi
 
@@ -40,6 +40,10 @@ if [ -d "$dir" ]; then
   export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
 fi
 
+cd /root/dao/prog
+python3 check_db.py
+
+cd /root/dao/webserver/
 gunicorn --config gunicorn_config.py app:app &
 
 cd /root/dao/prog

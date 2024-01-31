@@ -29,6 +29,9 @@ body .body {
     min-height: 2em;
 }
 
+header {
+    box-shadow: 0px 2px 3px rgba(0,0,0,0.2);
+}
 
 header footer {
    flex-shrink: 0;
@@ -83,11 +86,16 @@ code-input {
   padding: 0px;
   font-size: 0;
   }
-.spacer {padding: 5px;}
 
-.clear {clear:both;}
+.spacer {
+ padding: 5px;
+ }
+
+.clear {
+  clear: both;
+}
+
  /* Style the buttons */
-
 .btn {
   padding: 10px 10px;
   background-color: inherit;
@@ -99,6 +107,7 @@ code-input {
 .btn:hover {
   background-color: white; /* Green */
 }
+
 .btn_left {
   border-right-style: solid;
   border-right: 1px solid white;
@@ -115,6 +124,55 @@ code-input {
   border-right: 1px solid white;
   margin-right : 0;
 }
+
+
+/* menubuttons */
+.menu_box {
+  background-color: orange;
+  flex-wrap: nowrap;
+  float:left;
+  width:auto;
+  border: 2px solid white;
+  margin: 0px;
+  padding: 0px;
+  font-size: 0;
+}
+
+.menubtn:hover {
+  background-color: white; /* Green */
+}
+
+.menubtn {
+  padding: 10px 10px;
+  background-color: inherit;
+  cursor: pointer;
+  margin : 0px;
+  border: 0px;
+}
+.menubtn.active {
+    background-color: orange;
+}
+
+.menubtn_left {
+  border-right-style: solid;
+  border-right: 1px solid white;
+  margin-right : 0;
+}
+
+.menubtn_right {
+  border-left: 1px solid white;
+  margin-left : 0;
+}
+.menubtn_mid {
+  border-left: 1px solid white;
+  margin-left : 0;
+  border-right: 1px solid white;
+  margin-right : 0;
+}
+
+
+
+
 /* Tooltip container */
 .tooltip {
   position: relative;
@@ -142,9 +200,11 @@ code-input {
 .tooltip:hover .tooltiptext {
   visibility: visible;
 }
-.chosen {
-  color: red;
+
+.btn.chosen{
+  background-color: orange;
 }
+
 /* Style the active class (and buttons on mouse-over) */
 .active, .btn:hover {
   color: blue;

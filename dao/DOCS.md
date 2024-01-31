@@ -1,14 +1,15 @@
+# **刀 Day Ahead Optimization**
 # Installatie en instellingen<br>
 
 ## Inhoudsopgave  
-[Vereisten](#vereisten)<br>
+[Vereisten](#Vereisten)<br>
 [Installatie](#installatie)<br> 
 [Dashboard](#dashboard) <br>
 [Configuratie](#configuratie) <br>
 [Api](#api) <br>
 [Terminal](#terminal)
 
-<a name="vereisten"/>
+
 
 ## Vereisten
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.10 of hoger. <br/>
@@ -24,85 +25,17 @@ Best geïnstalleerd als addon van HA waar ook HA gebruik van maakt. Zet hierbij 
 
 ### **phpMyAdmin**<br>
 Best geïnstalleerd als addon van HA met toegang tot de MariaDB server.
+Start de webui van phpMyAdmin maak je met een scherm zowel de user als de database 
+voor het programma aan: <br>
+ ![img_0.png](images/img_0.png) <br />
+De gebruikersnaam mag je zelf kiezen, evenals het te gebruiken wachtwoord.
+Maak van beide een aantekening want die gegevens moet je straks invullen bij de instellingen van het programma.
+Voor de rechten vink je alles aan onder de kopjes "data" en "structuur".
+Om mogelijke problemen te voorkomen geef je deze user GEEN toegang tot "Administratie".
+Volgende stap: installeer de addon.
 
-Met behulp van phpMyAdmin kun je onderstaande database, tabellen en inhoud van de tabellen in MariaDB onderbrengen.
-### **database "day_ahead"**<br>
-Een aparte database in MariaDB voor dit programma met daarin:  
-	
-* een user die alle rechten heeft (niet root) 
-* tabel **variabel**:<br/>
-
-  * Deze maak je met de query: <br/>
-````
-    CREATE TABLE `variabel` (
-    `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-    `code` CHAR(10) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
-    `name` CHAR(50) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
-    `dim` CHAR(10) NOT NULL DEFAULT '' COLLATE 'utf8mb4_general_ci',
-    PRIMARY KEY (`id`) USING BTREE, UNIQUE INDEX `code` (`code`) USING BTREE,
-    UNIQUE INDEX `name` (`name`) USING BTREE ) COLLATE='utf8mb4_unicode_ci' 
-    ENGINE=InnoDB
-    AUTO_INCREMENT=1;
-````
-  * Query voor het vullen van de inhoud van tabel "variabel" <br/>
-````  
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (1, 'cons', 'Verbruik', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (2, 'prod', 'Productie', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`)VALUES (3, 'da', 'Tarief', 'euro/kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (4, 'gr', 'Globale straling', 'J/cm2'); 
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (5, 'temp', 'Temperatuur', '°C');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (6, 'solar_rad', 'PV radiation', 'J/cm2'); 
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (7, 'cost', 'cost', 'euro');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (8, 'profit', 'profit', 'euro');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (9, 'bat_in', 'Batterij in', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (10, 'bat_out', 'Batterij uit', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (11, 'base', 'Basislast', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (12, 'boil', 'Boiler', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (13, 'wp', 'Warmtepomp', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (14, 'ev', 'Elektrische auto', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (15, 'pv_ac', 'Zonne energie AC', 'kWh');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (16, 'soc', 'SoC', '%');
-   INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (17, 'pv_dc', 'Zonne energie DC', 'kWh');
-   
-````
- * tabel **values**:<br/>
-   * Deze maak je aan met de volgende query: <br/>
-````   
-    CREATE TABLE `values` (
-    `id` BIGINT(20) UNSIGNED NOT NULL  AUTO_INCREMENT,
-    `variabel` INT(10) UNSIGNED NOT NULL DEFAULT '0',
-    `time` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0',
-    `value` FLOAT NULL DEFAULT NULL,
-    PRIMARY KEY (`id`) USING BTREE,
-    UNIQUE INDEX `variabel_time` (`variabel`, `time`) USING BTREE,
-    INDEX `variabel` (`variabel`) USING BTREE,
-    INDEX `time` (`time`) USING BTREE ) 
-    COLLATE='utf8mb4_unicode_ci'
-    ENGINE=InnoDB
-    AUTO_INCREMENT=1;
-````
-   * De inhoud van values bouw je zelf op met het ophalen van de diverse gegevens. <br> 
-* tabel **prognoses**
-  * Deze maak je aan met de volgende query:
-````
-CREATE TABLE `prognoses` (
-	`id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-	`variabel` INT(10) UNSIGNED NOT NULL DEFAULT '0',
-	`time` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0',
-	`value` FLOAT NULL DEFAULT NULL,
-	PRIMARY KEY (`id`) USING BTREE,
-	UNIQUE INDEX `variabel_time` (`variabel`, `time`) USING BTREE,
-	INDEX `variabel` (`variabel`) USING BTREE,
-	INDEX `time` (`time`) USING BTREE )
-    COLLATE='utf8mb4_unicode_ci'
-    ENGINE=InnoDB
-    AUTO_INCREMENT=1;
-````
-
-  * Deze tabel wordt gevuld/aangevuld/geupdate met data door het programma als je een optimaliseringsberekening uitvoert.<br>  
-
-
-<a name="installatie"/>
+****************************************
+*****************************************
 
 ## Installatie
 De addon wordt geinstalleerd als een community addon voor Home Assistant.
@@ -114,11 +47,21 @@ In het "drie puntjes menu" rechtsboven kies je voor "Repositories".
 Dan krijg je een pop-up waarin je o.a Github repositories kunt toevoegen.
 Vul daar  `https://github.com/corneel27/day-ahead/` in en klik op "Toevoegen" (Add).
 Na ca 10 seconden staat de addon in de lijst en kun je de "Beheer de add-onrepositories" dialoog sluiten.
-Als je nu je pagina ververst (met F5) staat de nieuw addon  in het overzicht (onder de officiele addons).
+Als je nu je pagina ververst (met F5) staat de nieuw addon in het overzicht (onder de officiele addons).
 Klik op de nieuwe addon en je krijgt het informatie-scherm te zien.
 
+Klik op "Installeer" en wacht ca 5 minuten (deze tijd is afhankelijk van de snelheid van je processor).
+Als de addon is geinstalleerd kun je klikken op "Toon in zijbalk", waardoor je makkelijk bij
+het dashboard van de addon kunt komen.
+
+Klik op de naam van de addon in de zijbalk en kies voor `"Config"\"Options"`
+Vul bij "Homeassistant", "Database Homeassistant" en "Database Day Ahead" alle gegevens in.
+De wachtwoorden en het token kun je invullen bij `"Config"\"Secrets"`
+Je gaat nu weer terug naar het Informatiescherm van de addon en klik op "Herstarten",
+zodat alle instellingen worden overgenomen.
+
+
 ---
-<a name="dashboard"/>
 
 ## Dashboard
 
@@ -140,16 +83,16 @@ Je kunt de volgende instellingen maken:
 
 ### Dashboard menu
 Het hoofdmenu van het dashboard bestaat uit 4 opties: <br />
-  ![Img_5.png](../images/Img_5.png) <br />
+  ![img_5.png](images/img_5.png) <br />
 
-- Home (huisje)
+- Home
 - Run
 - Reports
-- Settings
+- Config
 
 **Home**<br/>
 Deze webpagina komt ook naar voren als je de webservervia je browser benadert: <br />
-  ![Img_6.png](../images/Img_6.png) <br />
+  ![Img_6.png](images/Img_6.png) <br />
 Daarin toont zich een submenu met daarin de informatie die je met submenu selecteert:
 Het submenu geeft links de keuze de keuze uit (voorlopig twee **onderwerpen**):
  - grid (deze is nu actief, dat wordt aangegeven met de kleur rood)
@@ -164,10 +107,10 @@ Rechts kun je bladeren door de aangeboden informatie:
 - **<** de vorige
 - **>** de volgende
 - **>|** de eerste
-- ![delete.png](../images/delete.png) met de afvalbak kun je de aangeboden informatie verwijderen
+- ![delete.png](images/delete.png) met de afvalbak kun je de aangeboden informatie verwijderen
 
 **Run**<br/>
-![Img_8.png](../images/Img_8.png) <br />
+![Img_8.png](images/Img_8.png) <br />
 Via deze menu-optie kun je alle mogelijke berekeningen en bewerkingen van het programma activeren 
 (zie ook het begin van deze handleiding). <br/>
 Je activeert een bewerking door deze aan te klikken.<br/>
@@ -177,7 +120,7 @@ Wil je het grafische resultaat van een optimaliseringsberekening zien klik dan o
 Je krijgt dan de laatste berekende grafiek in beeld.
 
 **Reports**<br/>
-![Img_7.png](../images/Img_7.png) <br />
+![Img_7.png](images/Img_7.png) <br />
 Dit onderdeel is nog in ontwikkeling, maar biedt nu al veel mogelijkheden.<br/>
 Er is nog geen verschil tussen verbruik en kosten, omdat alles netjes in een tabel past.
 Maar er komen nog wel verschillende verbruiks- en kostengrafieken.
@@ -206,7 +149,7 @@ Hiermee kun je het instellingen bestand (options.json) bewerken
 - ***Secrets***<br />
 Hiermee bewerk je het bestand (secrets.json) met je wachtwoorden en andere zaken die je niet in options.json wil opnemen.
 
-<a name="configuratie"/>
+---
 
 ## Configuratie
 
@@ -352,11 +295,11 @@ Als in deze periode ook je batterij al gedraaid heeft:
 * basislast = inkoop - teruglevering - wp - boiler - ev + pv - accu_in + accu_uit
 * de resultaten zet je samen met het begintijdstip van ieder uur in een spreadsheet<br>
   dat ziet er dan als volgt uit: <br>
-  ![img_1.png](../images/img_1.png)
+  ![img_1.png](images/img_1.png)
 * daarnaast begin je een nieuwe tabel met in de eerste kolom de getallen 0, 1 tot en met 23
 * in de tweede kolom bereken je met "averageif" (of in libreoffice "gemiddelde.als") het gemiddelde van de baseloadkolom voor het uur 0, 1 enz. 
   Dat ziet er dan als volgt uit: <br>
-  ![img_2.png](../images/img_2.png)
+  ![img_2.png](images/img_2.png)
 * de 24 getallen uit de tweede kolom vul je in in de lijst.
 
 ### **graphical backend**<br/>
@@ -398,11 +341,11 @@ De twee strategieën zijn:
     Als je deze kiest worden je batterij en je verbruiken zo ingezet dat deze leiden tot de laagste 
     kosten (= hoogste opbrengst)
 Als voorbeeld levert deze het volgende resultaat:
-  ![img_3.png](../images/img_3.png)
+  ![img_3.png](images/img_3.png)
   * minimize consumption<br>
     Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter" bij zo laag mogelijke kosten.
 Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
-  ![img_4.png](../images/img_4.png)
+  ![img_4.png](images/img_4.png)
 
 ### **notifications**
 
@@ -596,9 +539,9 @@ Bijvoorbeeld : <br/>
 `"1255": "get_day_ahead_prices"`: haal de actuele prijzen op op 12 uur 55<br>
 `"xx00": "calc_optimum"`: ieder uur exact om "00" wordt de optimaliseringsberekening uitgevoerd.
 
-<a name="api"/>
+---
 
-# Api
+## Api
 De addon beschikt over een api, waarmee allerlei relevante gegevens uit 
 de database kunnen worden opgevraagd en bijvoorbeeld in HomeAssistant of een ander 
 programma (bijv Excel) kunnen getoond. Ook kun je met de api bewerkingen en berekeningen opstarten.
@@ -764,7 +707,7 @@ Korte toelichting:
 
 Kijk je in Home Assistant via Ontwikkelhulpmiddelen/Statussen en filter je bijvoorbeeld 
 je sensoren op "da_", dan moet je zoiets te zien krijgen:<br/>
-![Img_9.png](../images/Img_9.png) <br />
+![Img_9.png](images/Img_9.png) <br />
 waarmee duidelijk is dat je de gegevens binnenkrijgt in Home Assistant en dat de aangemaakte sensor(en) werken.
 
 ### Presentatie van deze data in Home Assistant 
@@ -774,7 +717,7 @@ Zie voor alle informatie: https://github.com/RomRider/apexcharts-card
 Daar staat ook hoe je de software installeert en alleinfo over de configuratie-opties.
 Voorbeeld:
 <br/>
-![Img_10.png](../images/Img_10.png) <br />
+![Img_10.png](images/Img_10.png) <br />
 De configuratie van deze grafiek ziet er als volgt uit:<br/>
 ````
 type: custom:apexcharts-card
@@ -860,10 +803,10 @@ Voor de uitleg van deze instellingen verwijs ik je (voorlopig)naar de documentat
 ```https://github.com/RomRider/apexcharts-card/blob/master/README.md```
 
 ---
-<a name="Terminal"/>
 
 ## Terminal
 
+### **Via je addon**
 Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc. <br>
 **Opmerking** Dit is echt voor gebruikers die weten waar ze mee bezig zijn.
 Je krijgt hiermee toegang tot de krochten van Home Assistant en je kunt je installatie hiermee 
@@ -890,10 +833,15 @@ rechtsboven op de informatie pagina van de addon.
  * tenslotte krijg je een prompt van een shell binnen de addon:<br>
 ```root@94e386ba-day-ahead-opt:~/dao/prog#```. De code `94e386ba` is het id van het docker-image van de addon. 
 Dit id wisselt per installatie.
-
-Vanaf hier kun je gaan spelen met onderstaande commandos. <br>
 **Let op**: het hoofdprogramma draait al in de schedulermode als achtergrondtaak, 
 dus start het hoofdprogramma niet nog een keer in de schedulermodus. Ook het dashboard (webserver) draait in de achtergrond.
+
+### **Apart geinstalleerd**
+
+Je kunt de software van het programma ook rechtstreeks kopieren van github en het dan op een linuxmachine of een windowsmachine met het linux subssyteem zetten en dan draaien.
+
+
+Vanaf hier kun je gaan spelen met onderstaande commandos. <br>
 Het hoofdprogramma start je met het volgende commando
 
 `python3 day_ahead.py [parameters]`  

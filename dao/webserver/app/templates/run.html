@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block content %}
-
+{% block selectie %}
 <form method="post" name="bewerk_form" id="bewerk_form">
 <h3>Voer een bewerking, berekening of actie uit door een van onderstaande onderdelen aan te klikken</h3>
+  <input type="hidden" id="current_menu" name="current_menu" value="run">
   {% for key, value in bewerkingen.items() %}
     {% set id_= "id_" ~ key %}
     {% if key == bewerking  %}
@@ -18,13 +18,16 @@
   {% endif %}
   <div class="clear"></div>
 </form>
+{% endblock %}
+
+{% block content %}
 <div>
-  <hr>
+<hr>
 {% if not (bewerking == '') %}
-    <h2>Bewerking "{{ bewerkingen[bewerking]["name"] }}" wordt uitgevoerd</h2>
+  <h2>Bewerking "{{ bewerkingen[bewerking]["name"] }}" wordt uitgevoerd</h2>
   <script>
-  window.onload=function(){
-    window.setTimeout(document.bewerk_form.submit.bind(document.bewerk_form), {{ bewerkingen[bewerking]["wait"] }});
+    window.onload=function(){
+      window.setTimeout(document.bewerk_form.submit.bind(document.bewerk_form), {{ bewerkingen[bewerking]["wait"] }});
     };
   </script>
 
@@ -38,7 +41,7 @@
 </div>
 <hr>
 
-{% endblock content %}
+{% endblock %}
 
 
 
