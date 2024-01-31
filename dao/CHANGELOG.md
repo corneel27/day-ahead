@@ -1,9 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
 ## [Unreleased]
-De volgende zaken staan op de todo lijst:
+De volgende zaken staan nog op de todo lijst:
 - Alle uitvoer omzetten naar logger 
 - dashboard afmaken
+
+## [V0.4.72]
+- apparmor is geimplementeerd
+- er is icon toegevoegd voor de zijbalk 
 
 ## [V0.4.70]
 - apparmor is (gedeeltelijk) geactiveerd

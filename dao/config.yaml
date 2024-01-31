@@ -1,6 +1,6 @@
 ---
 name: 刀 Day Ahead Optimization
-version: "0.4.71"
+version: "0.4.72"
 slug: day_ahead_opt
 description: Docker used by Home Assistant Community Add-ons for day ahead optimizations
 url: https://github.com/corneel27/day-ahead/
@@ -13,6 +13,7 @@ init: false
 ingress: true
 ingress_port: 5000
 panel_admin: false
+panel_icon: mdi:home-battery-outline
 apparmor: true
 legacy: true
 map:
