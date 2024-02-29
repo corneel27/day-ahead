@@ -1,6 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
 
+## [V2024.2.2]
+- de opmaak van de tabel die een overzicht geeft van de invoer van trappen van een ev is verbetered
+- als 0 ampere ontbreekt wordt deze toegevoegd
+
 ## [V2024.2.1]
 In deze versie zijn veel zaken toegevoegd en gewijzigd:
 - We stappen over op eenzelfde soort **versienummering** als Home Assistant: jaar, maand en opvolgende nummering binnen die maand.
