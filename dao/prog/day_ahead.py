@@ -740,10 +740,9 @@ class DayAheadOpt(hass.Hass):
                 print("Boiler eind temperatuur: ", boiler_end_temp)
                 for u in range(U):
                     # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
-                    model += boiler_temp[u +
-                                         1] == boiler_temp[u] - boiler_cooling
+                    model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling
             else:
-                print("\nBoiler: ", uur[boiler_start], uur[boiler_end])
+                print("\nBoiler opwarmen worden ingepland tussen: ", uur[boiler_start], " en ", uur[boiler_end], " uur")
                 needed_elec = [0.0 for u in range(U)]
                 needed_time = [0 for u in range(U)]
                 needed_heat = max(0.0, float(spec_heat_boiler * (
@@ -769,6 +768,7 @@ class DayAheadOpt(hass.Hass):
                     # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
                     model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling + c_b[u] * cop_boiler \
                         * 3600 / spec_heat_boiler
+        print("\n");
 
         ################################################
         #             electric vehicles
@@ -817,7 +817,10 @@ class DayAheadOpt(hass.Hass):
                 if (ready.hour == now_dt.hour and ready.minute < now_dt.minute) or (ready.hour < now_dt.hour):
                     ready = ready + datetime.timedelta(days=1)
             hours_available = (ready - now_dt).total_seconds()/3600
-            charge_stages.append(self.ev_options[e]["charge stages"])
+            ev_stages = self.ev_options[e]["charge stages"]
+            if ev_stages[0]["ampere"] != 0.0:
+                ev_stages= [{"ampere" : 0.0, "efficiency" : 1}] + ev_stages
+            charge_stages.append(ev_stages)
             ECS.append(len(charge_stages[e]))
             max_ampere = charge_stages[e][-1]["ampere"]
             #max_ampere = self.get_state(self.ev_options[e]["entity max amperage"]).state
@@ -832,13 +835,15 @@ class DayAheadOpt(hass.Hass):
                 ampere_f = 1
             ampere_factor.append(ampere_f)
             max_power.append(max_ampere * ampere_f * 230 / 1000)  # vermogen in kW
+            print(" Ampere  Effic. Grid kW Accu kW")
             for cs in range(ECS[e]):
                 if not ("efficiency" in charge_stages[e][cs]):
-                    charge_stages[e][cs]["efficiency"] = 1.0
+                    charge_stages[e][cs]["efficiency"] = 1.0 #{:>25.2f}
                 charge_stages[e][cs]["power"] = charge_stages[e][cs]["ampere"] * 230 * ampere_factor[e]/1000
                 charge_stages[e][cs]["accu_power"] =charge_stages[e][cs]["power"] * charge_stages[e][cs]["efficiency"]
-                print(f"{charge_stages[e][cs]['ampere']:.2f}", f"{charge_stages[e][cs]['efficiency']:.2f}",
-                      f"{charge_stages[e][cs]['power']:.2f}", f"{charge_stages[e][cs]['accu_power']:.2f}")
+                print(f"{charge_stages[e][cs]['ampere']:>7.2f}", f"{charge_stages[e][cs]['efficiency']:>7.2f}",
+                      f"{charge_stages[e][cs]['power']:>7.2f}", f"{charge_stages[e][cs]['accu_power']:>7.2f}")
+            print("\n")
             '''
             #test voor bug
             ev_plugged_in.append(True)

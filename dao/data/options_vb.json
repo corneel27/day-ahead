@@ -313,7 +313,8 @@
       "entity max amperage": "sensor.wvwzzz_charger_max_ampere",
       "charge three phase": "False",
       "charge stages" : [
-        {"ampere": 6, "efficiency": 0.95},
+        {"ampere":  0, "efficiency" :  1},
+        {"ampere":  6, "efficiency": 0.95},
         {"ampere": 10, "efficiency": 1},
         {"ampere": 13, "efficiency": 0.95},
         {"ampere": 16, "efficiency": 0.92}

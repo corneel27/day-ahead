@@ -720,8 +720,7 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
 (of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
  
 ### **electric vehicle**<br> 
-  Dit is voorlopig gebaseerd op een Volkswagen auto die kan worden bereikt met WeConnect. 
-    Andere auto's graag in overleg toevoegen. Ook hier kun je kiezen uit een lege lijst of een of meer auto's
+   Ook hier kun je kiezen uit een lege lijst (= geen auto) of een of meer auto's.
    * name: de naam van de auto (komt straks terug in rapportages)
    * capacity: capaciteit batterij in kWh   
    * entity position: entiteit die aangeeft of de auto "thuis" (home) is  
@@ -729,7 +728,7 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
    * charge three phase , true of false (default true): of de EV met drie fasen wordt geleden  
    * entity actual level: entiteit die aangeeft hoe ver de auto is geladen (in %)  
    * entity plugged in: entiteit die aangeeft of de auto is ingeplugged  
-   * charge stages: list of ampere/efficiency waarmee geladen kan worden, minimaal twee rijsen (0 A en x A)
+   * charge stages: list of ampere/efficiency waarmee geladen kan worden. Er moeten minimaal twee rijen worden ingevuld (0 A en x A) en per rij:
      * ampere (over een fase)
      * de efficiency van de lader bij deze laadstroom (default 1)
    * charge scheduler: oplaad scheduler  
