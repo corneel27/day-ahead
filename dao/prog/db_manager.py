@@ -72,6 +72,7 @@ class DBmanagerObj(object):
         return
 
     def disconnect(self):
+        self.dbON = False
         self.__del__()
 
     def __del__(self):
@@ -413,6 +414,8 @@ class DBmanagerObj(object):
         return df
 
     def run_select_query(self, sql):
+        if not self.dbON:
+            self.connect()
         self._conn.commit()
         self._c.execute(sql)
         rows = self._c.fetchall()

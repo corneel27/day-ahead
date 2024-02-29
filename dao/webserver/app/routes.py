@@ -209,7 +209,7 @@ def run_process():
 @app.route('/reports', methods=['POST', 'GET'])
 def reports():
     report = dao.prog.da_report.Report()
-    subjects = ["grid", "distribution"]
+    subjects = ["grid", "balans"]
     active_subject = "grid"
     views = ["grafiek", "tabel"]
     active_view = "tabel"
@@ -246,12 +246,16 @@ def reports():
         report_df = report.get_grid_data(active_period, _tot=tot)
         filtered_df = report.calc_grid_columns(report_df, active_interval, active_view)
     else:
-        report_df = report.get_distribution_data(active_period, _tot=tot)
-    filtered_df.round(1)
+        report_df = report.get_energy_balance_data(active_period, _tot=tot)
+        filtered_df = report.calc_balance_columns(report_df, active_interval, active_view)
+    filtered_df.round(3)
     if active_view == "tabel":
-        report_data = [filtered_df.to_html(index=False, justify="right", decimal=",", classes="data", border=0)]
+        report_data = [filtered_df.to_html(index=False, justify="right", decimal=",", classes="data", border=0, float_format='{:.3f}'.format)]
     else:
-        report_data = report.make_graph(filtered_df, active_period, None)
+        if active_subject == "grid":
+            report_data = report.make_graph(filtered_df, active_period)
+        else:
+            report_data = report.make_graph(filtered_df, active_period, report.balance_graph_options)
 
     return render_template('report.html', title='Rapportage', active_menu="reports",
                            subjects=subjects, views=views, periode_options=periode_options,

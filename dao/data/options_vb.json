@@ -78,7 +78,7 @@
     0.18,
     0.16
   ],
-  "graphical backend": "Gtk3Agg",
+  "graphical backend": "",
   "graphics": {
     "style": "dark_background",
     "show" : "true",
@@ -300,8 +300,7 @@
       "orientation": 5,
       "capacity": 4.2,
       "yield": 0.010,
-      "entity pv switch": "input_boolean.pv_woning_aan_uit",
-      "sensor history": "sensor.solaredge_woning_ac_energy_kwh"
+      "entity pv switch": "input_boolean.pv_woning_aan_uit"
     },
     {
       "name": "garage",
@@ -309,24 +308,29 @@
       "orientation": 5,
       "capacity": 1.8,
       "yield": 0.005,
-      "entity pv switch": "input_boolean.pv_garage_aan_uit",
-      "sensor history": "sensor.solaredge_garage_ac_energy_kwh_2"
+      "entity pv switch": "input_boolean.pv_garage_aan_uit"
     }
   ],
   "electric vehicle": [
     {
       "name": "Golf GTE",
       "capacity": 6.3,
-      "entity position": "device_tracker.wvwzzzauzfw117301_position",
-      "entity max amperage": "sensor.wvwzzzauzfw117301_charger_max_ampere",
+      "entity position": "device_tracker.wvwzzz_position",
+      "entity max amperage": "sensor.wvwzzz_charger_max_ampere",
       "charge three phase": "False",
-      "entity actual level": "sensor.wvwzzzauzfw117301_battery_level",
-      "entity plugged in": "binary_sensor.wvwzzzauzfw117301_external_power",
+      "charge stages" : [
+        {"ampere": 6, "efficiency": 0.95},
+        {"ampere": 10, "efficiency": 1},
+        {"ampere": 13, "efficiency": 0.95},
+        {"ampere": 16, "efficiency": 0.92}
+      ],
+      "entity actual level": "sensor.wvwzzz_battery_level",
+      "entity plugged in": "binary_sensor.wvwzzz_external_power",
       "charge scheduler": {
         "entity set level": "input_number.gewenst_laad_niveau",
         "entity ready datetime": "input_datetime.tijdstip_klaar_met_laden"
       },
-      "charge switch": "switch.wvwzzzauzfw117301_charging"
+      "charge switch": "switch.wvwzzzauz_charging"
     }
   ],
   "tibber": {

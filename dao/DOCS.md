@@ -9,11 +9,13 @@
 [Api](#api) <br>
 [Terminal](#terminal)
 
-
+**Opmerking**: De verwijzingen in bovenstaand menu en ook verwijzingen naar plaatjes werken niet in de documentatie pagina van de 
+add-on. Wil je de documentatie goed lezen open dan een extra tab in je browser met deze verwijzing:
+https://github.com/corneel27/day-ahead/blob/main/dao/DOCS.md
 
 ## Vereisten
 Het programma day_ahead.py is een python-programma dat alleen draait onder python versie 3.10 of hoger. <br/>
-De benodigde software en alle modules worden met het installeren van de addon geinstalleerd.
+De benodigde software en alle modules worden met het installeren van de add-on geinstalleerd.
 
 Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
 
@@ -21,45 +23,82 @@ Het programma veronderstelt de volgende zaken aanwezig/bereikbaar:
 Actueel bijgewerkte laatste versie.
 
 ### **MariaDB**<br>
-Best geïnstalleerd als addon van HA waar ook HA gebruik van maakt. Zet hierbij poort 3306 open door in de Add-on dit poortnummer in te vullen bij het onderdeel Netwerk. Indien het leeg blijft is de MariaDB database alleen bereikbaar voor HA.
+Best geïnstalleerd als add-on van HA waar ook HA gebruik van maakt. 
+Na installatie (duurt enkele minuten) dien je ook de database van Home Assistant om te zetten naar 
+de MariaDB server.
+Een goede uitleg van de installatie van MariaDB en hoe je de HA-database overzet naar MariaDB is hier te vinden:
+https://theprivatesmarthome.com/how-to/use-mariadb-instead-of-sqlite-db-in-home-assistant/
+Ten slotte zorg ervoor dat poort 3306 ingevuld staat op de configuratie pagina van de add-on bij het onderdeel Netwerk.
+Indien het leeg blijft is de MariaDB database alleen bereikbaar voor HA.
+Voorbeeld:<br>
+ ![img_mariadb.png](images/img_mariadb.png) <br />
 
 ### **phpMyAdmin**<br>
-Best geïnstalleerd als addon van HA met toegang tot de MariaDB server.
-Start de webui van phpMyAdmin maak je met een scherm zowel de user als de database 
-voor het programma aan: <br>
+Best geïnstalleerd als add-on van HA. In dat geval heb je standaard toegang tot de MariaDB server. 
+Maar werk je met phpMyAdmin zonder add-on zul je je eerst zelf toegang moeten verschaffen tot de MariaDB server.
+De installatie van de add-on duurt enkele minuten. Start de de webui van phpMyAdmin. Kies in het menu voor de optie
+"Gebruikseraccount" en maak de een nieuw gebruikersaccount aan. 
+Vul alle opties in zoals aangegeven in onderstaand scherm: <br>
+**Let op**: selecteer "`een database aanmaken met dezelfde naam en alle rechten hierop geven`"
  ![img_0.png](images/img_0.png) <br />
-De gebruikersnaam mag je zelf kiezen, evenals het te gebruiken wachtwoord.
-Maak van beide een aantekening want die gegevens moet je straks invullen bij de instellingen van het programma.
-Voor de rechten vink je alles aan onder de kopjes "data" en "structuur".
-Om mogelijke problemen te voorkomen geef je deze user GEEN toegang tot "Administratie".
-Volgende stap: installeer de addon.
+De gebruikersnaam (en daarmee de naam  van de database) mag je zelf kiezen, evenals het te gebruiken wachtwoord.
+Maak van alles een aantekening want die gegevens moet je straks invullen bij de instellingen van het programma.
+Voor de rechten vink je alles aan onder de kopjes "Data" en "Structuur".
+Om mogelijke problemen te voorkomen geef je deze user GEEN toegang tot "Administratie". <br>
+
+Volgende stap: installeer de add-on.
 
 ****************************************
 *****************************************
 
 ## Installatie
-De addon wordt geinstalleerd als een community addon voor Home Assistant.
-Je installeert de addon als volgt:
+De add-on wordt geinstalleerd als een community add-on voor Home Assistant.
+Je installeert de add-on als volgt:
 In Home Assistant kies je in de zijbalk voor "Instellingen" (Settings), 
 daarna voor de optie "Add-ons".
 Je kiest met de knop rechtsonder voor "Add-on shop".
 In het "drie puntjes menu" rechtsboven kies je voor "Repositories".
 Dan krijg je een pop-up waarin je o.a Github repositories kunt toevoegen.
 Vul daar  `https://github.com/corneel27/day-ahead/` in en klik op "Toevoegen" (Add).
-Na ca 10 seconden staat de addon in de lijst en kun je de "Beheer de add-onrepositories" dialoog sluiten.
-Als je nu je pagina ververst (met F5) staat de nieuw addon in het overzicht (onder de officiele addons).
-Klik op de nieuwe addon en je krijgt het informatie-scherm te zien.
+Na ca 10 seconden staat de add-on in de lijst en kun je de "Beheer de add-onrepositories" dialoog sluiten.
+Als je nu je pagina ververst (met F5) staat de nieuw add-on in het overzicht (onder de officiele add-ons).
+Klik op de nieuwe add-on en je krijgt het informatie-scherm te zien.
 
 Klik op "Installeer" en wacht ca 5 minuten (deze tijd is afhankelijk van de snelheid van je processor).
-Als de addon is geinstalleerd kun je klikken op "Toon in zijbalk", waardoor je makkelijk bij
-het dashboard van de addon kunt komen.
+Als de add-on met succes is geinstalleerd krijg je het volgende scherm:
+ ![img_start.png](images/img_start.png) <br />
+Dat is de informatie-pagina van de add-on.
+Je hebt bovenin 4 menu-opties:<br>
+**Informatie**: Hiermee ga je naar de informatiepagina <br>
+**Documentatie**: Hiermee krijg je deze documentatie te zien <br>
+**Configuratie**: Hiermee kun je de netwerk-poort van het dashboard wijzigen <br>
+**Logboek**: Hiermee krijg toegang tot de logging van de add-on. Handig om te zien wat er fout gaat als iets niet lukt.<br>
 
-Klik op de naam van de addon in de zijbalk en kies voor `"Config"\"Options"`
+Als je klikt op **Toon in zijbalk** kun je altijd makkelijk bij het dashboard van de 
+add-on kunt komen. Je kunt ook bij het dashboard komen via de knop **Open web-ui** 
+op het informatiescherm van de add-on.
+
+Klik op **Starten** om de add-on te starten. Je moet nu het dashboard kunnen benaderen via de zijbalk 
+of via de knop **Open web-ui**. 
+Als je geen dashboard te zien krijgt is er iets fout gegaan.
+Kijk op de informatie pagina bij **Logboek** (klik eventueel op vernieuw).
+
+Om alles goed te laten werken moeten de volgende zaken in het configuratiebestand goed ingesteld worden:
+* Toegang tot homeassistant
+* Toegang tot de database van homeassistant
+* Toegang tot de database van day ahead optimization <br>
+Deze instellingen worden gemaakt in het options.json bestand van de add-on.
+Klik op de naam van de add-on in de zijbalk en kies voor `"Config"\"Options"`
 Vul bij "Homeassistant", "Database Homeassistant" en "Database Day Ahead" alle gegevens in.
 De wachtwoorden en het token kun je invullen bij `"Config"\"Secrets"`
-Je gaat nu weer terug naar het Informatiescherm van de addon en klik op "Herstarten",
-zodat alle instellingen worden overgenomen.
+Zie voor detail informatie bij [Configuratie](#configuratie)<br>
 
+Als je alles goed hebt ingevuld gaat je weer terug naar het Informatiescherm van de add-on en klik op "Herstarten",
+zodat alle instellingen worden overgenomen.<br>
+Controleer via het Logboek op de informatiepagina of je geen foutmeldingen krijgt tijdens het herstarten.
+
+
+---
 
 ---
 
@@ -67,10 +106,12 @@ zodat alle instellingen worden overgenomen.
 
 ### Dashboard benaderen
 Het programma wordt geleverd met een webserver die je als een dashboard kunt benaderen.
-Dit onderdeel is nog in ontwikkeling, maar kan al wel worden gebruikt.
-
-Na een succesvolle installatie van de addon zou de webserver in de lucht moeten zijn.<br>
-Je benadert de webserver/het dashboard met een browser als volgt:<br>
+Dit onderdeel is nog in ontwikkeling.
+Je kunt het dashboard op drie manieren benaderen:
+* Via het informatiescherm van de add-on en dan de knop **Open web-ui**
+* Via de zijbalk in Home Assistant (als je dat hebt ingesteld)
+* Via je browser:
+* Je benadert de webserver/het dashboard met een browser als volgt:<br>
   * ```http://<ip-adres>:<ip-poort>/```, waarbij je voor:<br />
   * ```<ip-adres>``` het ipadres invult van ja HA machine waarop ook de webserver draait<br>
   * ```<ip-poort``` het poortnummer invult waarop je de webserver kunt bereiken (zie verder).<br/>
@@ -122,9 +163,20 @@ Je krijgt dan de laatste berekende grafiek in beeld.
 **Reports**<br/>
 ![Img_7.png](images/Img_7.png) <br />
 Dit onderdeel is nog in ontwikkeling, maar biedt nu al veel mogelijkheden.<br/>
-Er is nog geen verschil tussen verbruik en kosten, omdat alles netjes in een tabel past.
-Maar er komen nog wel verschillende verbruiks- en kostengrafieken.
-Het grafische deel werkt nu nog basaal, maar wordt ook nog verder uitgewerkt.
+Er zijn twee rapportmogelijkheden:
+- **grid** Hiermee krijg je inzicht in je energieverbruik, maar ook je productie (teruglevering) aan je leverancier
+maar ook je kosten, opbrengsten, nettokosten en het (gemiddelde) tarief dat je daarvoor hebt betaald of teruggekregen.
+- **balans** Dit geeft een tabel/grafiek met de energiebalans van je aansluiting.<br>
+ Wat komt er binnen: inkoop (verbruik), zonne-energie, productie (ontladen) van je thuisbatterij. <br>
+ Wat gaat er uit: teruglevering(productie), warmtepomp, boiler, laden van je batterij, basisverbruik (baseload).<br>
+ **Opmerking** Dit onderdeel werkt alleen goed als je van alle bovengenoemde energiestromen in HA het verbruik registreert in
+ het energiedashboard van Home Assistant en je de betrokken entiteiten hebt ingevuld
+ bij de instellingen bij onderdeel "report"
+
+Bij beide onderwerpen kun je kiezen uit twee weergaven:
+- grafiek, het grafische deel werkt nu nog basaal, maar wordt ook nog verder uitgewerkt.
+- tabel
+
 In het pull-down menu kun je de periode kiezen waarvan je een rapport wil zien.
 Je hebt de keuze uit de volgende perioden:
 * vandaag _*_ <br/>
@@ -139,7 +191,7 @@ Je hebt de keuze uit de volgende perioden:
 * dit contractjaar _*_ <br/>
 * 365 dagen
 
-De perioden met een _*_ hebben de optie "met prognose".
+Bij de perioden met een _*_ hebben je optie "met prognose".
 Als je die aanvinkt wordt een rapportage berekend inclusief de resultaten van de laatst uitgevoerde optimaliseringsberekening.
 Dit geldt zowel voor de tabel als de grafiek. In de toekomst zullen in de grafiek de "prognose waarden" iets afwijkend worden getoond.
 
@@ -153,17 +205,20 @@ Hiermee bewerk je het bestand (secrets.json) met je wachtwoorden en andere zaken
 
 ## Configuratie
 
-Na de eerste installatie van de addon wordt er een bestand aangemaakt (gekopieerd van options_vb.json) met alle instellingen van het programma.
+Na de eerste installatie van de add-on wordt er een bestand aangemaakt (gekopieerd van options_vb.json) met alle instellingen van het programma.
 Het bestand `options.json` in de folder bevat alle instellingen voor het programma day_ahead.py en dien je zelf aan te maken. Het voorbeeld bestand `options_vb.json` kun je als basis gebruiken en dien je aan passen naar jouw omgeving en omstandigheden.<br>
-Alle instellingen die beginnen met "!secret" staan komen in het bestand `secrets.json` te staan met de key die hier achter !secret staat.
-Deze bestanden staan lokaal in de map `\config`, maar zijn externe benaderbaar met Samba,<br>
+Alle instellingen die beginnen met "!secret" komen in het bestand `secrets.json` te staan met de key die hier achter !secret staat.
+Deze bestanden staan lokaal in de map `\config`, maar zijn externe benaderbaar met Samba.<br>
 Er zijn twee manieren om bestanden aan te passen:
-* als je de HA-addon Samba hebt geinstalleerd, krijg je met je bestandenbladeraar (bij Windows is dat de explorer, bij Mac finger) 
-toegang tot de folder `/addon_configs/xxx_day_ahead_opt` op je Home Assistant machine. 
-In de supmap `dao_data` staan de configuratie bestanden. Je kunt dan met je eigen teksteditor (bijv notepad) de bestanden aanpassen.<br>
+* als je de HA-add-on Samba hebt geinstalleerd, krijg je met je bestandenbladeraar (bij Windows is dat de explorer, bij Mac finger) 
+toegang o.a. tot de folder `/add-on_configs/xxx_day_ahead_opt` van je Home Assistant machine. 
+In de submap `dao_data` staan de genoemde configuratie bestanden. Je kunt dan met je eigen teksteditor (bijv notepad) de bestanden aanpassen.<br>
  Let op gebruik geen Word of iets dergelijks, want die plaatsen opmaak codes in de tekst.<br>
-* via het dashboard van de addon (als deze kan opstarten) kun je via de menu-opties `\Settings\options` en `\Settings\secrets`
+* via het dashboard van de add-on (als deze kan opstarten) kun je via de menu-opties `\Config\options` en `\Config\secrets`
 
+Als je twijfelt hoe je iets moet invullen:
+* kijk in het voorbeeldbestand options_vb.json
+* stel een vraag op github onderdeel discussions
 
 Hieronder staat voor de verschillende onderdelen van options.json uitgelegd welke informatie dient te worden ingevuld.
 Ga je hier voor de eerste keer mee aan gang volg dan de volgende aanpak:
@@ -173,7 +228,7 @@ Ga je hier voor de eerste keer mee aan gang volg dan de volgende aanpak:
     * database ha
     * meteoserver
     * prices
-    * baseload (als je die niet weet neem de basload over van het voorbeeld) 
+    * baseload (als je die niet weet: neem tijdelijk de baseload over van het voorbeeld) 
 * zet de volgende instellingen op "standaard":
   * graphical backend: blanko ("")
   * graphics: default
@@ -189,38 +244,170 @@ Ga je hier voor de eerste keer mee aan gang volg dan de volgende aanpak:
   * electric vehicle: leeg = "[]"
   * tibber nog niet invullen of wijzigen
   * scheduler: alles laten staan
-* Kijk nu of de addon wil opstarten, kijk na ca 10 seconden naar de logging en probeer
-in je browser het dashboard van de addon te bereiken: `http://<ipadres van homeassistant>:5000`
+* Kijk nu of de add-on wil opstarten, kijk na ca 10 seconden naar de logging en probeer
+in je browser het dashboard van de add-on te bereiken: `http://<ipadres van homeassistant>:5000`
 * Als dit allemaal werkt kun je een verbruiksonderdeel invullen waarmee het programma het verbruik kan "schuiven".
 Als je dit hebt ingevuld laat dan het programma via het menu van het dashboard rekenen:<br> 
 \Run\Optimaliseringsberekening met debug. Dit duurt een aantal seconden. Inspecteer het resultaat en pas
 desgewenst je instelling aan. Ben je tevreden: vul een volgende gebruiker en je solar data in en ga zo verder.
 
+### **Overzicht van alle instellingen**
+In onderstaande tabel is een overzicht opgenomen van alle instellingen. Als voor jou de default-waarde voldoet 
+dan kun je die (sub)instelling achterwege laten en zorgt het programma voor de default-waarde.
+Als je de software installeert als addon op je Home Assistant machine kan de hele instelling **homeassistant** weggelaten worden. 
+Dit regelt de supervisor van Home Assistant dan voor je.
+
+| Key                       | Subkey                       | Type             | Default                            | Opmerkingen                                |
+|---------------------------|------------------------------|------------------|------------------------------------|--------------------------------------------|
+| **homeassistant**         | protocol api                 | string           | http                               | Alleen invullen                            |
+|                           | ip adress                    | string           | supervisor                         | als addon op                               |  
+|                           | ip port                      | integer          | blanco                             | andere machine                             | 
+|                           | token                        | string           | blanco                             | draait                                     | 
+| **database ha**           | server                       | string           | core-mariadb                       | default als addon                          |
+|                           | database                     | string           | homeassistant                      |                                            |
+|                           | username                     | string           | homeassistant                      |                                            |
+|                           | password                     | string           |                                    |                                            |
+| **database da**           | server                       | string           | core-mariadb                       | default als addon                          |
+|                           | database                     | string           | day_ahead                          |                                            |
+|                           | username                     | string           | day_ahead                          |                                            |
+|                           | password                     | string           |                                    |                                            |
+| **meteoserver-key**       |                              | string           |                                    |                                            |
+| **prices**                | source day ahead             | string           | nordpool                           | keuze uit nordpool / entsoe / easyenergy   |
+|                           | entsoe-api-key               | string           |                                    | alleen bij entsoe als source               |
+|                           | regular high                 | getal            |                                    |                                            |
+|                           | regular low                  | getal            |                                    |                                            |
+|                           | switch to low                | integer          | 23                                 |                                            |
+|                           | energy taxes delivery        | list             |                                    | {datum : getal}                            |
+|                           | energy taxes redelivery      | list             |                                    | {datum : getal}                            |
+|                           | cost supplier delivery       | list             |                                    | {datum : getal}                            |
+|                           | cost supplier redelivery     | list             |                                    | {datum : getal}                            |
+|                           | vat                          | list             |                                    | {datum : getal}                            |
+|                           | last invoice                 | datum            |                                    | begindatum contract                        |
+|                           | tax refund                   | boolean          |                                    | 
+| **baseload calc**         |                              | boolean          | "False"                            | 
+| **baseload calc periode** |                              | getal            | 56                                 | alleen als baseload calc = True            | 
+| **baseload**              |                              | list 24 getallen |                                    | alleen als baseload calc = False           | 
+| **graphical backend**     |                              | string           | ""                                 |                                            |
+| **graphics**              | style                        | string           | "default"                          | kies uit lijst                             |
+|                           | prices delivery              | boolean          | "True"                             |                                            |
+|                           | prices redelivery            | boolean          | "True"                             |                                            |
+|                           | average delivery             | boolean          | "True"                             |                                            |
+|                           | show                         | boolean          | "False"                            |                                            |
+| **strategy**              |                              | string           | "minimize cost"                    | "minimize cost" of "minimize consumption"  |
+| **notifications**         | notification entity          | string           | ""                                 |                                            | 
+|                           | opstarten                    | boolean          | "False"                            | 
+|                           | berekening                   | boolean          | "False"                            |                                            | 
+|                           | last activity entity         | string           | ""                                 |                                            | 
+| **grid**                  | max_power                    | getal            | 17                                 |                                            | 
+| **history**               | save days                    | getal            | 7                                  |                                            | 
+| **dashboard**             | port                         | getal            | 5000                               |                                            | 
+| **boiler**                | boiler present               | boolean          | "False"                            |                                            | 
+|                           | entity actual temp.          | string           |                                    |                                            |
+|                           | entity setpoint              | string           |                                    |                                            |
+|                           | entity hysterese             | string           |                                    |                                            |
+|                           | cop                          | getal            |                                    | kWh/kWh                                    |
+|                           | cooling rate                 | getal            |                                    | K/h                                        |
+|                           | volume                       | getal            |                                    | liter                                      |
+|                           | heating allowed below        | getal            |                                    | °C                                         |
+|                           | elec. power                  | getal            |                                    | W                                          |
+|                           | activate service             | string           |                                    |                                            |
+|                           | activate entity              | string           |                                    |                                            |
+| **heating**               | heater present               | boolean          | "False"                            |                                            | 
+|                           | degree days factor           | getal            |                                    | kWh/K.day                                  | 
+|                           | stages                       | list             |                                    | {max_power, cop}                           | 
+|                           | ______max_power              | getal            |                                    | W                                          | 
+|                           | ______cop                    | getal            |                                    | kWh/kWh                                    | 
+|                           | entity adjust heating curve  | string           |                                    | kWh/kWh                                    | 
+|                           | adjustment factor            | getal            |                                    | K                                          | 
+| **battery**               |                              | list             |                                    | 0, 1 of meer {..}                          | 
+|                           | name                         | string           |                                    |                                            |
+|                           | name                         | string           |                                    |                                            |
+|                           | entity actual level          | string           |                                    |                                            |
+|                           | upper limit                  | getal            |                                    | %                                          |
+|                           | lower limit                  | getal            |                                    | %                                          |
+|                           | optimal lower level          | getal            |                                    | %                                          |
+|                           | entity actual level          | string           |                                    |                                            |
+|                           | entity min soc end opt       | string           | 0                                  |                                            |
+|                           | entity max soc end opt       | string           | 100                                |                                            |
+|                           | charge stages                | list             |                                    | {power, efficiency}                        | 
+|                           | ______power                  | getal            |                                    | W                                          | 
+|                           | ______efficiency             | getal            |                                    | W/W (factor 0..1)                          | 
+|                           | discharge stages             | list             |                                    | {power, efficiency}                        | 
+|                           | ______power                  | getal            |                                    | W                                          | 
+|                           | ______efficiency             | getal            |                                    | W/W (factor 0..1)                          | 
+|                           | minimum power                | getal            |                                    | W                                          |
+|                           | dc_to_bat efficiency         | getal            |                                    | 0 .. 1.0                                   |
+|                           | bat_to_dc efficiency         | getal            |                                    | 0 .. 1.0                                   |
+|                           | cycle cost                   | getal            |                                    | euro                                       |
+|                           | entity set power feedin      | string           |                                    | input_number                               |
+|                           | entity stop victron          | string           |                                    | input_datetime                             |
+|                           | entity balance switch        | string           |                                    | input_boolean                              |
+|                           | solar                        | list             |                                    | 0, 1 of meer {..} pv_dc, zie solar (pv_ac) | 
+| **solar**                 |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                   | 
+|                           | name                         | string           |                                    |                                            |
+|                           | tilt                         | getal            |                                    | helling 0 ..90                             |
+|                           | orientation                  | getal            |                                    | -180(N) ..-90(W)..0(Z) ..90(W)..180(N)     |
+|                           | capacity                     | getal            |                                    | kWp                                        |
+|                           | yield                        | getal            |                                    | Wh/J/cm2                                   |
+|                           | entity pv switch             | string           |                                    | input_boolean                              |
+| **electric vehicle**      |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                   | 
+|                           | name                         | string           |                                    |                                            |
+|                           | capacity                     | getal            |                                    | kWh                                        |
+|                           | entity position              | string           |                                    | tracker                                    |
+|                           | entity actual level          | string           |                                    |                                            |
+|                           | entity plugged in            | string           |                                    | binary_sensor                              |
+|                           | charging stages              | list             |                                    | 2 of meer {..}                             | 
+|                           | ______ampere                 | getal            |                                    | A                                          | 
+|                           | ______efficiency             | getal            | 1                                  | factor 0..1                                | 
+|                           | charge three phase           | boolean          | true                               | true of false                              |
+|                           | entity set charging ampere   | string           |                                    | input_number                               |
+|                           | charge scheduler             |                  |                                    |                                            |
+|                           | _____entity set level        | string           |                                    | input_number                               |
+|                           | _____entity ready datetime   | string           |                                    | input_datetime                             |
+| **tibber**                | api url                      | string, url      | https://api.tibber.com/v1-beta/gql | desgewenst                                 | 
+|                           | api_token                    | string           |                                    |                                            |
+| **report**                | entities grid consumption    | list of string   | []                                 |                                            | 
+|                           | entities grid production     | list of string   | []                                 |                                            | 
+|                           | entities solar production ac | list of string   | []                                 |                                            | 
+|                           | entities solar production dc | list of string   | []                                 |                                            | 
+|                           | entities ev consumption      | list of string   | []                                 |                                            | 
+|                           | entities wp consumption      | list of string   | []                                 |                                            | 
+|                           | entities boiler consumption  | list of string   | []                                 |                                            | 
+|                           | entities battery consumption | list of string   | []                                 |                                            | 
+|                           | entities battery production  | list of string   | []                                 |                                            | 
+| **scheduler**             |                              | list             |                                    | {time, task}                               | 
 
 ### **homeassistant**<br>
+Dit onderdeel hoeft alleen ingevuld te worden als je niet werkt met een add-on.<br>
+Dus als add-on kun je volstaan met: `homeassistant: {},`
+Heb je software buiten de add-on geinstalleerd dan moet dit onderdeel wel worden ingevuld:
  * protocol api: hiermee geeft je aan met welke protocol jouw HA installatie (homeassistant core)
 bereikbaar is. Je kunt kiezen uit `http` (zonder ssl) of `https` (met ssl).
  * ip adress: het ip-adres waar je home assistant installatie bereikbaar is.  
  * ip port: de ip-poort waar je home assistant installatie bereikbaar is.
  * token: om de api te kunnen aanroepen is er een token nodig.  
    Deze kun je genereren in Home Assistant in je profiel. Maak een token met lange levensduur aan.
-
-### **database da**<br>
-De database voor het day ahead programma.  
- * server: ip adres van de server (waar mariadb draait)  
- * database: naam van de database  
- * port: poort op de server (meestal 3306)  
- * username: user name  
- * password: wachtwoord
+   Check of je alle netjes kopieert en tussen quotes zet zonder per ongeluk een extra spatie mee te nemen.
 
 ### **database ha**<br>
-De database van Home Assistant. Wordt gebruikt om de rapporten te kunnen genereren. 
- * server: ip adres van de server (waar mariadb draait)  
- * database: naam van de database  
- * port: poort op de server (meestal 3306)  
- * username: user name  
+De database van Home Assistant. Deze wordt gebruikt om de rapporten te kunnen genereren.
+Je vult hier de gegevens in die je ook heb ingevuld tijdens het omzetten van de HA database van sqlite3 naar MariaDB.
+ * server: ip adres van de server (waar mariadb draait), kan achterwege blijven als add-on (default = "core-mariadb")
+ * database: naam van de database, default "homeassistant"  
+ * port: poort op de server, default 3306  
+ * username: user name, default "homeassistant"   
  * password: wachtwoord
  
+### **database da**<br>
+De database voor het day ahead programma.  
+Je vult hier de gegevens in die je ingevuld tijdens het aanmaken van het 
+gebruikersaccount en de database voor Day Ahead Optimization:
+ * server: ip adres van de server (waar mariadb draait), kan achterwege blijven als add-on (default = "core-mariadb")  
+ * database: naam van de database, default "day_ahead"   
+ * port: poort op de server, default 3306   
+ * username: user name, default "day_ahead"  
+ * password: wachtwoord
+
 ### **meteoserver-key**<br>
 De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig. Je genereert deze key (token) als volgt:<br> 
  * website: https://meteoserver.nl/login.php 
@@ -229,7 +416,7 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
  Opmerking: je kunt gratis maximaal 500 dataverzoeken per maand doen, we doen er maar 4 per dag = max 124 per maand.
 
 ### **prices**<br>
- * source day ahead
+ * source day ahead, default "nordpool"
      Hier bepaal je waar je je day ahead prijzen vandaan wilt halen. Je hebt de keuze uit drie bronnen:
    * nordpool
    * entsoe
@@ -254,7 +441,7 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
  * regular high: het hoge tarief van een "reguliere" oude leverancier,
    excl. btw, kaal, euro per kWh
  * regular low: idem het "lage" tarief, excl. btw, kaal , euro per kWh
-     switch to low: tijdstop waarop je omschakelt naar "laag tarief" (meestal 23 uur)
+ * switch to low: tijdstop waarop je omschakelt naar "laag tarief", default 23
   * energy taxes delivery: energiebelasting op verbruik excl. btw, euro per kWh  
            2022-01-01 : 0.06729,  
            2023-01-01 : 0.12599  
@@ -279,7 +466,41 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
   * tax refund: kun je alles salderen of is je teruglevering hoger dan je verbruik  (True of False) 
 
 ### **baseload**<br> 
-Hier vul je voor de 24 uren van een etmaal het basisverbruik van je woning in.
+De baseload is het basisverbruik van je woning: dus al het verbruik waarop het programma geen invloed heeft.
+Deze kan op twee manieren worden verkregen:
+* je laat het programma deze berekenen
+* je geeft het hier op 
+
+#### baseload berekenen
+Als je de baseload door het programma wilt laten berekenen moet je de volgende instellingen meegeven:
+* "baseload calc": "True"/"False" default "False" <br>
+Hiermee vertel je het programma dat de baseload moet worden berekend. 
+* "baseload calc periode": default 56<br>
+Hiermee geeft je het aantal dagen op waarover de baseload moet worden berekend
+* Bij report (zie hierna) vul je de sensoren waarmee Home Assistant middels een oplopende tellerstand
+het verbruik of de productie van alle relevante beinvloedbare gebruikers registeert. 
+* Dat zijn dezelfde soort sensoren die je opgeeft bij de configuratie van het energiedashboard van HA.
+  * grid consumption
+  * grid production
+  * battery consumption
+  * battery production
+  * solar production ac
+  * ev consumption
+  * wp consumption
+  * boiler consumption<br>
+  
+**opmerkingen**:<br>
+- Als je iets niet hebt (bijvoorbeeld geen elektrische auto) dan laat je de lijst achter het onderdeel leeg.<br>
+ Bijvoorbeeld: `"entities ev consumption": []`
+- In deze versie duurt het berekenen van de baseload over 56 dagen lang (ca 30 seconden). 
+ Een voorlopige oplossing daarvoor kan zijn om 
+  - Baseload calc tijdelijk op true te zetten. 
+  - Met het programma een "debug"berekening uit te voeren
+  - De verkregen baseload-gegevens kopieren van het uitvoerscherm naar je instellingen.
+
+#### baseload opgeven
+Je zet "baseload calc": "False" (default) of je laat deze regel weg (false is de default waarde)<br>
+Je vult bij "baseload" 24 waarden in een lijst. Dat is voor de 24 uren van een etmaal het basisverbruik van je woning.
 Deze bepaal je als volgt:<br>
 * neem voor een voldoende lange periode (minimaal een maand) de geregistreerde energiehoeveelheden per uur op de volgende onderdelen:
 * inkoop van je aansluiting op het netwerk: inkoop 
@@ -309,7 +530,7 @@ maar dat wil niet altijd lukken. Je kunt met deze instelling de voor jou goed we
 Je hebt de keuze uit de volgende backends: MacOSX, QtAgg, GTK4Agg, Gtk3Agg, TkAgg, WxAgg, Agg.<br>
 **Gtk3Agg** werkt goed op Ubuntu met desktop.<br>
 **Agg** werkt goed op een headless linux (zoals Rasberry PI of Ubuntu in een VM).<br>
-Je kunt beginnen te proberen om de keuze blanco te laten: **""**. Dan zoekt het programma het zelf uit.
+Je kunt beginnen te proberen om de keuze blanco te laten: **""** (default). Dan zoekt het programma het zelf uit.
 
 ### graphics
 * style: hier kun je de stijl van je grafiek definieren.<br/>
@@ -324,12 +545,13 @@ Je hebt de keuze uit de volgende opties:
   
    Meer informatie:``https://matplotlib.org/stable/gallery/style_sheets/index.html```
 
-* show : "true" of "false". Als je deze op "true" zet wordt na het uitvoeren van de berekening direct de grafiek getoond.
+* show : "true" of "false", default "false" <br>
+ Als je deze op "true" zet wordt na het uitvoeren van de berekening direct de grafiek getoond.
 
 Voor de lijngrafieken van de prijzen kun je met **True** of **False** kiezen welke je wil zien:
-* prices delivery: prijzen voor levering
-* prices redelivery: prijzen voor teruglevering (ex btw en belasting)
-* average delivery": gemiddelde prijs voor levering
+* prices delivery: prijzen voor levering, default = True
+* prices redelivery: prijzen voor teruglevering (ex btw en belasting), default = True
+* average delivery": gemiddelde prijs voor levering, default = True
 
 ### **strategy**<br>
 Het programma kent twee strategieën die je kunt inzetten om het voor jou optimale energieverbruik
@@ -337,7 +559,7 @@ en teruglevering te realiseren.<br>
 Je kiest er één uit de betreffende naam in te vullen:
 Bijvoorbeeld "strategy": "minimize cost"<br>
 De twee strategieën zijn:
-  * minimize cost<br>
+  * minimize cost<br> (default)
     Als je deze kiest worden je batterij en je verbruiken zo ingezet dat deze leiden tot de laagste 
     kosten (= hoogste opbrengst)
 Als voorbeeld levert deze het volgende resultaat:
@@ -349,7 +571,7 @@ Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
 
 ### **notifications**
 
- * entity<br>
+ * entity (default "")<br> 
 Maak in Home Assistant een helper (max 100 tekens) aan in de vorm van een input_text.
 Wanneer er problemen ontstaan tijdens de berekening of tijdens het ophalen van gegevens dan wordt
 hier een in betreffende helper een tekst gezet.
@@ -373,11 +595,11 @@ action:
         priority: high
 mode: single
 ````
-* opstarten
-* berekening<br>
+* opstarten (default "False")
+* berekening (default "False")<br> 
 Met "True" of "False" geeft je aan of je een notificatie wilt bij het opstarten van het programma
 en bij het uitvoeren van een optimaliseringsberekening
-*  last activity entity<br>
+*  last activity entity (default "")<br>
 In deze entity (helper van het type input_datetime) wordt de datum-tijd weggeschreven als er door het programma 
 een activiteit is uitgevoerd (berekening, ophalen prijzen enz). Als deze helper niet uurlijks wordt geupdate kun je daar in
 Home Assistant met een automatisering een alarm notificatie op zetten. <br>
@@ -401,12 +623,12 @@ mode: single
 Zodra de timer voltooid is er wat loos. Als je aan deze functionaliteit geen behoefte hebt kun je de entity instelling weglaten uit de options.
 
 ### **grid**<br>
-* max_power: hier geef in je kW het maximale vermogen op van je netwerkaansluiting. 
+* max_power: (default 17) Hier geef in je kW het maximale vermogen op van je netwerkaansluiting. 
     Een netwerkaansluiting van 3 x 25 A = 3 x 25 x 230 = 17 kW. Het programma zal er voor zorgen dat dit maximum niet zal worden overschreden.<br>
 
 ### **boiler**<br>
 Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
-   * boiler present: True of False. Als je False invult worden onderstaande boiler-instellingen genegeerd.
+   * boiler present: True of False (default False). Als je False invult worden onderstaande boiler-instellingen genegeerd.
    * entity actual temp. : entiteit in ha die de actuele boilertemp. presenteert  
    * entity setpoint: entiteit die de ingestelde boilertemp. presenteert  
    * entity hysterese: entiteit die de gehanteerde hysterese voor de boiler presenteert  
@@ -420,7 +642,7 @@ Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
 
 ### **heating**<br>
 Dit onderdeel is nog in ontwikkeling. 
-   * `heater present` : True of False. Als je False invult worden onderstaande heater-instellingen genegeerd.
+   * `heater present` : True of False (default False). Als je False invult worden onderstaande heater-instellingen genegeerd.
    * `degree days factor`: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
      zet deze op 0 als je geen wp hebt
    * `stages` : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop
@@ -440,24 +662,25 @@ Dit onderdeel is nog in ontwikkeling.
    * lower limit: onderste SoC limiet (tijdelijk)  
    * upper limit: bovenste SoC limiet  
    * optimal lower level: onderste SoC limiet voor langere tijd  
-   * entity min soc end opt: entity in home assistant (input_number), waarmee je de 
+   * entity min soc end opt: (default 0) entity in home assistant (input_number), waarmee je de 
      minimale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben 
-   * entity max soc end opt: entity in home assistant (input_number), waarmee je de
+   * entity max soc end opt: (default 100) entity in home assistant (input_number), waarmee je de
      maximale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben <br>
      **opmerking:** met deze twee instellingen kunt je bereiken dat de batterij aan het eind "leeg" of "vol" is. Een lage batterij 
      kan zinvol zijn als je de dag(en) na de berekening veel goedkope stroom en/of veel pv productie verwacht. Een volle batterij 
      kan zinvol zijn als je juist dure stroom en/of weinig eigen pv-productie verwacht. 
    * charge stages: hier vul je een zelf te kiezen aantal stappen of schijven in voor het laden via de omvormer. In een drie fase systeem tel je het vermogen van alle omvormers bij elkaar op.
     Per schijf vul je in: 
-     * power: het maximale vermogen van de schijf (het minimale vermogen van de schijf is het maximale vermogen van de vorige schijf)
-     * efficiency: de efficiency (het rendement) voor deze schijf als een factor 
-     * van 1. Voor de duidelijkheid: je vult hier de efficiency van omvormer 
-       * van ac to dc in. Het rendement van de batterij (dc to bat) vul je hieronder in.<br>
-   Bijvoorbeeld: {"power": 30.0, "efficiency": 0.949} <br>
+     * power: het maximale vermogen van de schijf in W. Het minimale vermogen van de schijf 
+       is het maximale vermogen van de vorige schijf.
+     * efficiency: de efficiency (het rendement) voor deze schijf als een factor van 1. 
+       Voor de duidelijkheid: je vult hier de efficiency van omvormer van ac naar dc in. 
+       Het rendement van de batterij (dc to bat) vul je hieronder in.<br>
+   Bijvoorbeeld: {"power": 300.0, "efficiency": 0.949} <br>
    De eerste schijf is altijd:  {"power": 0.0, "efficiency": 1},
-   De "power" van de laatste schijf geeft ook het maximale 
+   De "power" van de laatste schijf geeft ook het maximale vermogen van de omvormer
    * discharge stages: op dezelfde wijze als de "charge stages" vul je hier voor het ontladen een aantal stappen of schijven in voor het ontladen via je omvormer/inverter. 
-   * minimum power: minimaal laad/ontlaadvermogen
+   * minimum power (in W) : minimaal laad/ontlaadvermogen
    * dc_to_bat efficiency: efficiency van het laden van de batterij vanuit dc (factor van 1)
    * bat_to_dc efficiency: efficiency van het ontladen van de batterij naar dc (factor van 1)
    * cycle cost : afschrijfkosten (in euro) van het laden of ontladen van 1 kWh  
@@ -503,9 +726,12 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
    * capacity: capaciteit batterij in kWh   
    * entity position: entiteit die aangeeft of de auto "thuis" (home) is  
    * entity max amperage: entiteit die het max aantal amperes aangeeft waarmee kan worden geladen
-   * charge three phase: of de EV met drie fasen wordt geleden  
+   * charge three phase , true of false (default true): of de EV met drie fasen wordt geleden  
    * entity actual level: entiteit die aangeeft hoe ver de auto is geladen (in %)  
    * entity plugged in: entiteit die aangeeft of de auto is ingeplugged  
+   * charge stages: list of ampere/efficiency waarmee geladen kan worden, minimaal twee rijsen (0 A en x A)
+     * ampere (over een fase)
+     * de efficiency van de lader bij deze laadstroom (default 1)
    * charge scheduler: oplaad scheduler  
      * entity set level: entiteit van een input helper die aangeeft tot welk niveau moet worden geladen in %  
      * entity ready datetime: entiteit van een input_datetime die het tijdstip en eventueel de datum weergeeft hoe laat de auto op het gewenste niveau moet zijn. 
@@ -513,16 +739,61 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
      gewenste tijdstip is geladen. Een helper met datum zul je steeds moeten updaten maar heeft wel als voordeel dat je verder in de toekomst kunt plannen. <br>
      * Er zal alleen geladen worden als het eindtijdstip binnen het tijdvenster van het optimaliseringsprogramma valt. 
      Het begintijdstip van venster is het huidige uur en het eindtijdstip is het laatste uur waarvoor nog dynamische prijzen bekend zijn in het programma.
-   * charge switch: entiteit waarmee het laden aan/uit kan worden gezet 
+   * charge switch: (deprecated, verouderd; wordt straks niet meer gebruikt) entiteit waarmee het laden aan/uit kan worden gezet. Dit kan ook een helper zijn
+ in de vorm van een input_boolean, die bij wijziging naar "aan"/"true" een automatisering triggert.
+   * entity set charging ampere: een entiteit (input_number) waarin het programma de berekende hoeveelheid 
+ ampere kan doorgeven aan HA. Deze kan door een automatisering worden gebruikt om de auto eventueel eerst uit de slaap-modus te halen(Tesla) en
+ en daarna de ingeschreven waarde naar de lader te sturen.
 
  ### **tibber**<br>
- * api url : url van de api van tibber  
+ * api url : url van de api van tibber , default "https://api.tibber.com/v1-beta/gql" 
  * api_token : het token van de api van tibber  
   Deze vraag je als volgt op:  
    * log in met je account op https://developer.tibber.com/explorer  
    * de token staat boven onder de balk 
  
- ### **scheduler**<br>
+ ### report
+Via het dashboard kun je met het programma diverse rapportages genereren.
+DVan de meeste sensoren houdt Home Assistant het verbruik bij in de historische database.
+Dat geldt met name voor de sensoren die je hebt opgegeven (of kunt opgeven) bij de configuratie van het energiedashboard van HA.
+Het programma gebruikt deze sensoren ook voor het berekenen van de baseload (basisverbruik) van je woning.
+Default []
+
+Je kunt de volgende onderdelen invullen
+* entities grid consumption 
+* entities grid production
+* entities solar production ac 
+* entities solar production dc
+* entities ev consumption
+* entities wp consumption
+* entities boiler consumption
+* entities battery consumption
+* entities battery production<br>
+
+Als voorbeeld: zo heb ik deze lijst ingevuld:
+``` 
+    "entities grid consumption : [
+      "sensor.grid_consumption_low",
+      "sensor.grid_consumption_high"
+    ],
+    "entities grid production" : [
+      "sensor.grid_production_low",
+      "sensor.grid_production_high"
+    ],
+    "entities solar production ac": [
+      "sensor.solaredge_woning_ac_energy_kwh",
+      "sensor.solaredge_garage_ac_energy_kwh_2"
+    ],
+    "entities solar production dc": [],
+    "entities ev consumption" : ["sensor.fritz_dect_200_laadpunt_total_energy"],
+    "entities wp consumption" : ["sensor.youless_meterstand"],
+    "entities boiler consumption": [],
+    "entities battery consumption": ["sensor.ess_grid_consumption"],
+    "entities battery production": ["sensor.ess_grid_production"]
+  },
+```
+
+### **scheduler**<br>
  Het programma maakt gebruik van een eenvoudige takenplanner. <br/>
  De volgende taken kunnen worden gepland:
    * **get_meteo_data**: ophalen van meteo gegevens bij meteoserver  
@@ -542,7 +813,7 @@ Bijvoorbeeld : <br/>
 ---
 
 ## Api
-De addon beschikt over een api, waarmee allerlei relevante gegevens uit 
+De add-on beschikt over een api, waarmee allerlei relevante gegevens uit 
 de database kunnen worden opgevraagd en bijvoorbeeld in HomeAssistant of een ander 
 programma (bijv Excel) kunnen getoond. Ook kun je met de api bewerkingen en berekeningen opstarten.
 Bijvoorbeeld (zie voor meer uitleg hierna):
@@ -592,7 +863,7 @@ Bijvoorbeeld:<br/>
     ````
 
 ## \<url>/api/report/\<variable>/\<period>?\<param>=\<param_value>
-**Opmerking**: Dit onderdeel werkt pas echt goed als de addon prijs- en meteogegevens heeft opgehaald en opgeslagen in de database en 
+**Opmerking**: Dit onderdeel werkt pas echt goed als de add-on prijs- en meteogegevens heeft opgehaald en opgeslagen in de database en 
 met succes optimaliseringsberekeningen heeft uitgevoerd. <br>
 Met deze api kun je diverse gegevens uit de database ophalen en deze kun je dan o.a. in Home Assistant
 gebruiken om grafieken te maken met bijv. apex-charts (zie hieronder).<br/>
@@ -806,17 +1077,17 @@ Voor de uitleg van deze instellingen verwijs ik je (voorlopig)naar de documentat
 
 ## Terminal
 
-### **Via je addon**
+### **Via je add-on**
 Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc. <br>
 **Opmerking** Dit is echt voor gebruikers die weten waar ze mee bezig zijn.
 Je krijgt hiermee toegang tot de krochten van Home Assistant en je kunt je installatie hiermee 
 naar de x@#x@#$x#$%x helpen.
-Daartoe moet je je eerst toegang verschaffen tot het binnenste van de addon.
+Daartoe moet je je eerst toegang verschaffen tot het binnenste van de add-on.
 Dat gaat als volgt:
  * eerst zet je in je profiel op Home Assistant de geavanceerde modus 
 (advanced mode) aan. Je krijgt een waarschuwing: lees deze goed!
  * Daarna installeer je de add-on "Terminal en SSH:<br>
-https://github.com/home-assistant/addons/tree/master/ssh
+https://github.com/home-assistant/add-ons/tree/master/ssh
  * bij de instellingen van deze add-on:
    * vul een zelf te kiezen username en password in 
    * zet "weergeven in zijbalk" aan.
@@ -826,12 +1097,12 @@ https://github.com/home-assistant/addons/tree/master/ssh
     * ssh <username>@<ip-adres home asssistant>
     * daarna moet je alsnig het opgegeven wachtwoord invoeren
  * je krijgt dan in beide gevallen de shell-prompt van de ha-supervisor
- * je krijgt vandaaruit toegang tot day-ahead addon met het volgende commando:<br/>
-```docker exec -it addon_<12345678>_day_ahead_opt bash```, waarbij je <12345678> 
-vervangt door het id van de day_ahead addon. Die id wisselt per ha installatie en vind je 
-rechtsboven op de informatie pagina van de addon.
- * tenslotte krijg je een prompt van een shell binnen de addon:<br>
-```root@94e386ba-day-ahead-opt:~/dao/prog#```. De code `94e386ba` is het id van het docker-image van de addon. 
+ * je krijgt vandaaruit toegang tot day-ahead add-on met het volgende commando:<br/>
+```docker exec -it add-on_<12345678>_day_ahead_opt bash```, waarbij je <12345678> 
+vervangt door het id van de day_ahead add-on. Die id wisselt per ha installatie en vind je 
+rechtsboven op de informatie pagina van de add-on.
+ * tenslotte krijg je een prompt van een shell binnen de add-on:<br>
+```root@94e386ba-day-ahead-opt:~/dao/prog#```. De code `94e386ba` is het id van het docker-image van de add-on. 
 Dit id wisselt per installatie.
 **Let op**: het hoofdprogramma draait al in de schedulermode als achtergrondtaak, 
 dus start het hoofdprogramma niet nog een keer in de schedulermodus. Ook het dashboard (webserver) draait in de achtergrond.

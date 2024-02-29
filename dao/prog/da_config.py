@@ -11,7 +11,7 @@ class Config:
         secrets_json = open(datapath + "/secrets.json")
         self.secrets = json.load(secrets_json)
 
-    def get(self, keys:list, options=None, default=None)->str|dict|None:
+    def get(self, keys:list, options=None, default=None) -> str|dict|list|None:
         if options is None:
             options = self.options
         if keys[0] in options:
@@ -31,6 +31,7 @@ class Config:
     def set(self, key, value):
         self.options[key] = value
 
-def get_config(file_name:str, keys, options = None):
-    config = Config(file_name = file_name)
-    return config.get(keys, options)
+
+def get_config(file_name:str, keys:list, default=None):
+    config = Config(file_name=file_name)
+    return config.get(keys, None, default)
