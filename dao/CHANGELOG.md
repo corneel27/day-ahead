@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.2.4]
+De schakelaar is terug voor het aan- en uitzetten van het laden van een elektrische auto
+
+## [V2024.2.3]
+Enkele opmaakfoutjes zijn hersteld
 
 ## [V2024.2.2]
 - de opmaak van de tabel die een overzicht geeft van de invoer van trappen van een ev is verbetered
@@ -20,7 +25,6 @@ waaruit het programma de voor jouw gunstigste amperages kiest gegeven de prijs v
 en het tijdstip waarop de auto het jouw gewenste laadniveau moet hebben (zie ook DOCS.md).<br>
 **breaking change** Naast de instellingen voor de verschillende laadniveaus moet je nu ook een entiteit ("entity set charging ampere", input_number) opgeven,
 waarin het programma de gewenste hoeveelheid ampere kan doorgeven waarmee in het lopende uur geladen moet worden.<br>
-De instelling "charge switch" komt te vervallen.
 - Het invoeren je **baseload** bij je instellingen kan vervallen als het programma jouw baseload kan berekenen uit opgeslagen 
   verbruiken over een voldoende lange periode. <br>
   Daarvoor moet je over minimaal twee maanden de volgende gegevens bijhouden in Home Assistant (via de instellingen van het energiedashboard):

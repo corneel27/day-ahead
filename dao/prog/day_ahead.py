@@ -1299,26 +1299,28 @@ class DayAheadOpt(hass.Hass):
                     print("Boiler opwarmen niet geactiveerd")
             print()
 
-            if ready_u[e] < U:
-                print(f"Inzet-factor laden {self.ev_options[e]['name']} per stap")
-                print ("uur    0A    6A   10A   13A     16A" )
-                for u in range(ready_u[e] + 1):
-                    print (f"{uur[u]:2d}", end="   ")
-                    for  cs in range(ECS[0]):
-                        print(f"{abs(charger_factor[0][cs][u].x):.2f}", end="  ")
-                    print()
                 # ev
             for e in range(EV):
-                #entity_charge_switch = self.ev_options[e]["charge switch"]
+                if ready_u[e] < U:
+                    print(f"Inzet-factor laden {self.ev_options[e]['name']} per stap")
+                    print("uur    0A    6A   10A   13A     16A")
+                    for u in range(ready_u[e] + 1):
+                        print(f"{uur[u]:2d}", end="   ")
+                        for cs in range(ECS[0]):
+                            print(f"{abs(charger_factor[0][cs][u].x):.2f}", end="  ")
+                        print()
+                entity_charge_switch = self.ev_options[e]["charge switch"]
                 entity_charging_ampere = self.ev_options[e]["entity set charging ampere"]
-                #state = self.get_state(entity_charge_switch).state
-                new_state = 0
+                old_switch_state = self.get_state(entity_charge_switch).state
+                old_ampere_state = self.get_state(entity_charging_ampere).state
+                new_ampere_state = 0
+                new_switch_state = "off"
                 # print()
                 # print(uur[0], end="  ")
-                for cs in range(ECS[e]):
+                for cs in range(ECS[e])[1:]:
                     # print(f"{charger_factor[e][cs][0].x:.2f}", end="  ")
-                    if charger_factor[e][cs][0].x == 1:
-                        new_state = charge_stages[e][cs]["ampere"]
+                    if charger_factor[e][cs][0].x > 0:
+                        new_ampere_state = charge_stages[e][cs]["ampere"]
                         break
                 print()
 
@@ -1326,11 +1328,21 @@ class DayAheadOpt(hass.Hass):
                     ev_name = self.ev_options[e]["name"]
                     try:
                         if float(c_ev[e][0].x) > 0.0:
+                            if old_switch_state == "off":
                                 if self.debug:
-                                    print(f"Laden van {ev_name} zou zijn aangezet met {new_state} ampere")
+                                    print(f"Laden van {ev_name} zou zijn aangezet met {new_ampere_state} ampere")
                                 else:
-                                    print(f"Laden van {ev_name} aangezet met {new_state} ampere")
-                                    self.set_value(entity_charging_ampere, new_state)
+                                    print(f"Laden van {ev_name} aangezet met {new_ampere_state} ampere")
+                                    self.set_value(entity_charging_ampere, new_ampere_state)
+                                    self.turn_on(entity_charge_switch)
+                        else:
+                            if old_switch_state == "on":
+                                if self.debug:
+                                    print(f"Laden van {ev_name} zou zijn uitgezet")
+                                else:
+                                    self.set_value(entity_charging_ampere, 0)
+                                    self.turn_off(entity_charge_switch)
+                                    print(f"Laden van {ev_name} uitgezet")
                     except BaseException:
                         pass
 

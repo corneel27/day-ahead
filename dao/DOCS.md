@@ -738,8 +738,7 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
      gewenste tijdstip is geladen. Een helper met datum zul je steeds moeten updaten maar heeft wel als voordeel dat je verder in de toekomst kunt plannen. <br>
      * Er zal alleen geladen worden als het eindtijdstip binnen het tijdvenster van het optimaliseringsprogramma valt. 
      Het begintijdstip van venster is het huidige uur en het eindtijdstip is het laatste uur waarvoor nog dynamische prijzen bekend zijn in het programma.
-   * charge switch: (deprecated, verouderd; wordt straks niet meer gebruikt) entiteit waarmee het laden aan/uit kan worden gezet. Dit kan ook een helper zijn
- in de vorm van een input_boolean, die bij wijziging naar "aan"/"true" een automatisering triggert.
+   * charge switch: entiteit waarmee het laden aan/uit kan worden gezet. Dit kan een helper zijn die bij wijziging naar "aan"/"true" een automatisering triggert.
    * entity set charging ampere: een entiteit (input_number) waarin het programma de berekende hoeveelheid 
  ampere kan doorgeven aan HA. Deze kan door een automatisering worden gebruikt om de auto eventueel eerst uit de slaap-modus te halen(Tesla) en
  en daarna de ingeschreven waarde naar de lader te sturen.
