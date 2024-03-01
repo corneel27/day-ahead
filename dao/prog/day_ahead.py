@@ -835,6 +835,8 @@ class DayAheadOpt(hass.Hass):
                 ampere_f = 1
             ampere_factor.append(ampere_f)
             max_power.append(max_ampere * ampere_f * 230 / 1000)  # vermogen in kW
+            print("\nInstellingen voor laden van EV: ", self.ev_options[e]["name"], "\n")
+
             print(" Ampere  Effic. Grid kW Accu kW")
             for cs in range(ECS[e]):
                 if not ("efficiency" in charge_stages[e][cs]):
@@ -843,7 +845,7 @@ class DayAheadOpt(hass.Hass):
                 charge_stages[e][cs]["accu_power"] =charge_stages[e][cs]["power"] * charge_stages[e][cs]["efficiency"]
                 print(f"{charge_stages[e][cs]['ampere']:>7.2f}", f"{charge_stages[e][cs]['efficiency']:>7.2f}",
                       f"{charge_stages[e][cs]['power']:>7.2f}", f"{charge_stages[e][cs]['accu_power']:>7.2f}")
-            print("\n")
+            print()
             '''
             #test voor bug
             ev_plugged_in.append(True)
@@ -853,9 +855,8 @@ class DayAheadOpt(hass.Hass):
             max_power.append(10 * 230 / 1000)
             #tot hier
             '''
-            print("\nInstellingen voor laden van EV:", self.ev_options[e]["name"])
             print(f"Capaciteit accu: {ev_capacity} kWh")
-            print("Laadvermogen:", max_power[e], "kW")
+            print("Maximaal laadvermogen:", max_power[e], "kW")
             print("Klaar met laden op:", ready.strftime('%d-%m-%Y %H:%M:%S'))
             print("Huidig laadniveau:", actual_soc[e], "%")
             print("Gewenst laadniveau:", wished_level[e], "%")
