@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.2.5]
+De logging van de bestaande situatie en de nieuwe situatie voor het laden van de auto
+is uitgebreid.
+
 ## [V2024.2.4]
 De schakelaar is terug voor het aan- en uitzetten van het laden van een elektrische auto
 
