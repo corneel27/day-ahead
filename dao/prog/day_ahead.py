@@ -15,7 +15,6 @@ import json
 import hassapi as hass
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
-import numpy
 import utils
 from utils import get_value_from_dict, get_tibber_data, is_laagtarief
 from _version import __version__
@@ -24,24 +23,26 @@ from da_meteo import Meteo
 from da_prices import DA_Prices
 from db_manager import DBmanagerObj
 
-path = os.getcwd()
-new_path = "/".join(list(path.split('/')[0:-2]))
-sys.path.append(new_path)
-print("python pad: ",  sys.path)
+
 
 class DayAheadOpt(hass.Hass):
 
+
     def __init__(self, file_name=None):
+        path = os.getcwd()
+        new_path = "/".join(list(path.split('/')[0:-2]))
+        sys.path.append(new_path)
+        print("python pad: ", sys.path)
         utils.make_data_path()
         self.debug = False
         self.config = Config(file_name)
-        self.protocol_api = self.config.get(['homeassistant', 'protocol api'], default="http" )
-        self.ip_adress = self.config.get(['homeassistant', 'ip adress'],  default="supervisor" )
+        self.protocol_api = self.config.get(['homeassistant', 'protocol api'], default="http")
+        self.ip_address = self.config.get(['homeassistant', 'ip adress'], default="supervisor")
         self.ip_port = self.config.get(['homeassistant', 'ip port'], default= None )
         if self.ip_port is None:
-            self.hassurl = self.protocol_api+"://" + self.ip_adress + "/core/"
+            self.hassurl = self.protocol_api +"://" + self.ip_address + "/core/"
         else:
-            self.hassurl = self.protocol_api+"://" + self.ip_adress + ":" + str(self.ip_port) + "/"
+            self.hassurl = self.protocol_api +"://" + self.ip_address + ":" + str(self.ip_port) + "/"
         self.hasstoken = self.config.get(['homeassistant','token'], default=os.environ.get("SUPERVISOR_TOKEN"))
         super().__init__(hassurl=self.hassurl, token=self.hasstoken)
         headers = {
@@ -90,7 +91,7 @@ class DayAheadOpt(hass.Hass):
         self.baseload_calc = (self.config.get(["baseload calc"], None, "false").lower() == "true")
         self.heater_present = False
         self.boiler_present = False
-        self.grid_max_power = self.config.get(["grid","max_power"], None, 17)
+        self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
 
     def set_last_activity(self):
         if self.last_activity_entity is not None:
@@ -198,9 +199,9 @@ class DayAheadOpt(hass.Hass):
         print(result)
         return result
 
-    def save_df(self, tablename : str, tijd : list, df:pd.DataFrame):
+    def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """
-        slaat de data in het dataframe op in de tabel "table"
+        Slaat de data in het dataframe op in de tabel "table"
         :param tablename: de naam van de tabel waarin de data worden opgeslagen
         :param tijd: de datum tijd van de rijen in het dataframe
         :param df: het dataframe met de code van de variabelen in de kolomheader
@@ -213,9 +214,9 @@ class DayAheadOpt(hass.Hass):
             utc = tijd[index].timestamp()
             for c in columns:
                 db_row = [str(utc), c, float(df.loc[index, c])]
-                #print(db_row)
+                # print(db_row)
                 df_db.loc[df_db.shape[0]] = db_row
-        #print(df_db)
+        # print(df_db)
         self.db_da.savedata(df_db, debug=False, tablename=tablename)
         return
 
@@ -362,7 +363,7 @@ class DayAheadOpt(hass.Hass):
         solar_prod = []
         solar_num = len(self.solar)
         for s in range(solar_num):
-            pv_yield.append(self.config.get(["yield"], self.solar[s]))
+            pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
             solar_prod.append([])
 
         time_first_hour =datetime.datetime.fromtimestamp(prog_data["time"].iloc[0])
@@ -485,8 +486,8 @@ class DayAheadOpt(hass.Hass):
         for b in range(B):
             pv_prod_ac.append([])
             pv_prod_dc.append([])
-            max_charge_power.append(self.battery_options[b]["charge stages"][-1]["power"]/1000)
-            #CS is aantal charge stages
+            max_charge_power.append(int(self.battery_options[b]["charge stages"][-1]["power"])/1000)
+            # CS is aantal charge stages
             CS.append(len(self.battery_options[b]["charge stages"]))
             max_discharge_power.append(self.battery_options[b]["discharge stages"][-1]["power"]/1000)
             #DS is aantal discharge stages
@@ -869,10 +870,25 @@ class DayAheadOpt(hass.Hass):
             # uitgedrukt in aantal uren; bijvoorbeeld 1,5
             time_needed = energy_needed[e] / (max_power[e] * charge_stages[e][-1]["efficiency"])
             print(f"Tijd nodig om te laden: {time_needed} uur")
+            old_switch_state = self.get_state(self.ev_options[e]["charge switch"]).state
+            old_ampere_state = self.get_state(self.ev_options[e]["entity set charging ampere"]).state
+            print(f"Stand laden schakelaar: {old_switch_state}")
+            print(f"Stand aantal ampere laden: {old_ampere_state} A")
             # afgerond naar boven in hele uren
             hours_needed.append(math.ceil(time_needed))
             print(f"Afgerond naar hele uren: {hours_needed[e]}")
             ready_index = U
+            reden = ""
+            if (wished_level[e] <= actual_soc[e]):
+                reden = f" werkelijk niveau ({actual_soc[e]:.1f}%) is hoger of gelijk aan gewenst niveau ({wished_level[e]:.1f}%),"
+            if not (ev_position[e] == "home"):
+                reden = reden + " auto is niet huis,"
+            if not ev_plugged_in[e]:
+                reden = reden + " auto is niet ingeplugd,"
+            if not (tijd[0] < ready):
+                reden = reden + f" opgegeven tijdstip ({str(ready)}) is verouderd,"
+            if (tijd[U-1] < ready):
+                reden = reden  + f" opgegeven tijdstip ({str(ready)}) ligt voorbij de planningshorizon ({tijd[U - 1]}),"
             if (ev_plugged_in[e] and (ev_position[e] == "home") and
                     (wished_level[e] > actual_soc[e]) and (tijd[0] < ready)):
                 for u in range(U):
@@ -880,7 +896,9 @@ class DayAheadOpt(hass.Hass):
                         ready_index = u
                         break
             if ready_index == U:
-                print("Er wordt niet opgeladen.\n")
+                if len(reden)>0:
+                    reden = reden[:-1] + "."
+                print(f"Er wordt niet opgeladen, omdat{reden}\n")
             else:
                 print("Opladen wordt ingepland.\n")
             ready_u.append(ready_index)
@@ -1332,9 +1350,15 @@ class DayAheadOpt(hass.Hass):
                                 if self.debug:
                                     print(f"Laden van {ev_name} zou zijn aangezet met {new_ampere_state} ampere")
                                 else:
-                                    print(f"Laden van {ev_name} aangezet met {new_ampere_state} ampere")
+                                    print(f"Laden van {ev_name} aangezet met {new_ampere_state} ampere via '{entity_charging_ampere}'")
                                     self.set_value(entity_charging_ampere, new_ampere_state)
                                     self.turn_on(entity_charge_switch)
+                            if old_switch_state == "on":
+                                if self.debug:
+                                    print(f"Laden van {ev_name} zou zijn doorgegaan met {new_ampere_state} ampere")
+                                else:
+                                    print(f"Laden van {ev_name} is doorgegaan met {new_ampere_state} ampere")
+                                    self.set_value(entity_charging_ampere, new_ampere_state)
                         else:
                             if old_switch_state == "on":
                                 if self.debug:

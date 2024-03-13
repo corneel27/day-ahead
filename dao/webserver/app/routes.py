@@ -107,7 +107,7 @@ def menu():
 
 @app.route('/home', methods=['POST', 'GET'])
 def home():
-    subjects = ["grid"]
+    subjects = ["balans"]
     views = ["grafiek", "tabel"]
     active_subject = "grid"
     active_view = "grafiek"

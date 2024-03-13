@@ -8,6 +8,7 @@ from dao.prog.db_manager import DBmanagerObj
 from dao.prog.da_config import Config
 from dao.prog.da_graph import GraphBuilder
 import math
+import json
 import itertools
 
 
@@ -951,7 +952,6 @@ class Report:
         """
         result = []
         config = Config("../data/options.json")
-        self.db_ha.connect()
 
         calc_periode = config.get(["baseload calc periode"], None, 56)
         calc_start = datetime.datetime.combine((datetime.datetime.now() - datetime.timedelta(days=calc_periode)).date(),
@@ -997,6 +997,15 @@ class Report:
         result.baseload = result.baseload.round(3)
         result = result['baseload'].values.tolist()
         return result
+
+    def calc_save_baseload(self):
+        self.db_ha.connect()
+        for weekday in range (7):
+            baseload = self.calc_baseload(weekday)
+            out_file = "../data/baseload_" + str(weekday) +".json"
+            with open(out_file, 'w') as output_file:
+                print(json.dumps(baseload, indent=2), file=output_file)
+        return
 
     #------------------------------------------------
 
