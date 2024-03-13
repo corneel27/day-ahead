@@ -1321,11 +1321,14 @@ class DayAheadOpt(hass.Hass):
             for e in range(EV):
                 if ready_u[e] < U:
                     print(f"Inzet-factor laden {self.ev_options[e]['name']} per stap")
-                    print("uur    0A    6A   10A   13A     16A")
+                    print("uur", end=" ")# 0A    6A   10A   13A     16A")
+                    for cs in range(ECS[0]):
+                        print(f" {charge_stages[e][cs]['ampere']:4.1f}A", end=" ")
+                    print()
                     for u in range(ready_u[e] + 1):
-                        print(f"{uur[u]:2d}", end="   ")
+                        print(f"{uur[u]:2d}", end="    ")
                         for cs in range(ECS[0]):
-                            print(f"{abs(charger_factor[0][cs][u].x):.2f}", end="  ")
+                            print(f"{abs(charger_factor[0][cs][u].x):.2f}", end="   ")
                         print()
                 entity_charge_switch = self.ev_options[e]["charge switch"]
                 entity_charging_ampere = self.ev_options[e]["entity set charging ampere"]
