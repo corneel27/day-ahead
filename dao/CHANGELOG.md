@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.2.6]
+De logging van de verwerking van de data voor het laden de van de auto richting HA is nog verder uitgebreid.
+
 ## [V2024.2.5]
 De logging van de bestaande situatie en de nieuwe situatie voor het laden van de auto
 is uitgebreid.

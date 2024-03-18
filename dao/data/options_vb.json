@@ -369,6 +369,7 @@
     "1554": "get_day_ahead_prices",
     "1655": "get_day_ahead_prices",
     "xx00": "calc_optimum",
-    "2359": "clean_data"
+    "2359": "clean_data",
+    "0945": "calc_baseloads"
   }
 }

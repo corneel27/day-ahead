@@ -32,7 +32,7 @@ class DayAheadOpt(hass.Hass):
         path = os.getcwd()
         new_path = "/".join(list(path.split('/')[0:-2]))
         sys.path.append(new_path)
-        print("python pad: ", sys.path)
+        # print("python pad: ", sys.path)
         utils.make_data_path()
         self.debug = False
         self.config = Config(file_name)
@@ -88,7 +88,7 @@ class DayAheadOpt(hass.Hass):
         self.ev_options = self.config.get(["electric vehicle"])
         self.heating_options = self.config.get(["heating"])
         self.tasks = self.config.get(["scheduler"])
-        self.baseload_calc = (self.config.get(["baseload calc"], None, "false").lower() == "true")
+        self.use_calc_baseload = (self.config.get(["use_calc_baseload"], None, "false").lower() == "true")
         self.heater_present = False
         self.boiler_present = False
         self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
@@ -220,6 +220,17 @@ class DayAheadOpt(hass.Hass):
         self.db_da.savedata(df_db, debug=False, tablename=tablename)
         return
 
+    def get_calculated_baseload(self, weekday:int)->list:
+        """
+        haalt de berekende baseload op voor de weekdag
+        :param weekday: : 0 = maandag, 6 zondag
+        :return: een lijst van eerder berekende baseload van 24uurvoor de betreffende dag
+        """
+        in_file = "../data/baseload_" + str(weekday) + ".json"
+        with open(in_file, 'r') as f:
+            result = json.load(f)
+        return result
+
     def calc_optimum(self, show_graph=False):
 
         def calc_da_avg():
@@ -339,17 +350,14 @@ class DayAheadOpt(hass.Hass):
             pl_avg.append(p_avg)
 
         # base load
-        if self.baseload_calc:
-            from da_report import Report
-            report = Report()
-            report.db_ha.connect()
+        if self.use_calc_baseload:
             weekday = datetime.datetime.weekday(datetime.datetime.now())
-            base_cons = report.calc_baseload(weekday)
+            base_cons = self.get_calculated_baseload(weekday)
             if U > 24:
                 # volgende dag ophalen
-                weekday :+1
+                weekday += 1
                 weekday = weekday % 7
-                base_cons = base_cons + report.calc_baseload(weekday)
+                base_cons = base_cons + self.get_calculated_baseload(weekday)
         else:
             base_cons = self.config.get(["baseload"])
             if U > 24:
@@ -510,8 +518,7 @@ class DayAheadOpt(hass.Hass):
 
             # state of charge
             # start soc
-            start_soc_str = self.get_state(
-                self.battery_options[b]["entity actual level"]).state
+            start_soc_str = self.get_state(self.battery_options[b]["entity actual level"]).state
             if start_soc_str.lower() == "unavailable":
                 start_soc.append(50)
             else:
@@ -872,15 +879,15 @@ class DayAheadOpt(hass.Hass):
             print(f"Tijd nodig om te laden: {time_needed} uur")
             old_switch_state = self.get_state(self.ev_options[e]["charge switch"]).state
             old_ampere_state = self.get_state(self.ev_options[e]["entity set charging ampere"]).state
-            print(f"Stand laden schakelaar: {old_switch_state}")
-            print(f"Stand aantal ampere laden: {old_ampere_state} A")
             # afgerond naar boven in hele uren
             hours_needed.append(math.ceil(time_needed))
             print(f"Afgerond naar hele uren: {hours_needed[e]}")
+            print(f"Stand laden schakelaar: {old_switch_state}")
+            print(f"Stand aantal ampere laden: {old_ampere_state} A")
             ready_index = U
             reden = ""
             if (wished_level[e] <= actual_soc[e]):
-                reden = f" werkelijk niveau ({actual_soc[e]:.1f}%) is hoger of gelijk aan gewenst niveau ({wished_level[e]:.1f}%),"
+                reden = f" werkelijk niveau ({actual_soc[e]:.1f}%) hoger is of gelijk aan gewenst niveau ({wished_level[e]:.1f}%),"
             if not (ev_position[e] == "home"):
                 reden = reden + " auto is niet huis,"
             if not ev_plugged_in[e]:
@@ -898,7 +905,7 @@ class DayAheadOpt(hass.Hass):
             if ready_index == U:
                 if len(reden)>0:
                     reden = reden[:-1] + "."
-                print(f"Er wordt niet opgeladen, omdat{reden}\n")
+                print(f"Opgeladen wordt niet ingepland, omdat{reden}\n")
             else:
                 print("Opladen wordt ingepland.\n")
             ready_u.append(ready_index)
@@ -1342,13 +1349,19 @@ class DayAheadOpt(hass.Hass):
                     # print(f"{charger_factor[e][cs][0].x:.2f}", end="  ")
                     if charger_factor[e][cs][0].x > 0:
                         new_ampere_state = charge_stages[e][cs]["ampere"]
+                        if new_ampere_state > 0:
+                            new_switch_state = "on"
                         break
-                print()
+                ev_name = self.ev_options[e]["name"]
+                print(f"Berekeningsuitkomst voor opladen van {ev_name}:")
+                print(f"- aantal ampere {new_ampere_state}A (was {old_ampere_state}A)")
+                print(f"- stand schakelaar '{new_switch_state}' (was '{old_switch_state}')")
+                print(f"- positie: {ev_position[e]}")
+                print(f"- ingeplugd: {ev_plugged_in[e]}")
 
                 if ev_position[e] == "home" and ev_plugged_in[e]:
-                    ev_name = self.ev_options[e]["name"]
                     try:
-                        if float(c_ev[e][0].x) > 0.0:
+                        if float(new_ampere_state) > 0.0:
                             if old_switch_state == "off":
                                 if self.debug:
                                     print(f"Laden van {ev_name} zou zijn aangezet met {new_ampere_state} ampere")
@@ -1370,8 +1383,15 @@ class DayAheadOpt(hass.Hass):
                                     self.set_value(entity_charging_ampere, 0)
                                     self.turn_off(entity_charge_switch)
                                     print(f"Laden van {ev_name} uitgezet")
-                    except BaseException:
-                        pass
+                    except:
+                        error_str = utils.error_handling()
+                        print(f"Onverwachte fout: {error_str}")
+                else:
+                    print(f"{ev_name} is niet thuis of niet ingeplugd")
+                print(f"Evaluatie status laden {ev_name} op {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
+                print(f"- schakelaar laden: {self.get_state(entity_charge_switch).state}")
+                print(f"- aantal ampere: {self.get_state(entity_charging_ampere).state}")
+                print()
 
             # solar
             for s in range(solar_num):
@@ -1763,6 +1783,11 @@ class DayAheadOpt(hass.Hass):
         clean_folder("../data/log", "dashboard.log.*")
         clean_folder("../data/images", "*.png")
 
+    def calc_baseloads(self):
+        from da_report import Report
+        report = Report()
+        report.calc_save_baseloads()
+
     def run_task(self, task, terminal=False):
         old_stdout = sys.stdout
         log_file = open("../data/log/" + task +
@@ -1771,7 +1796,7 @@ class DayAheadOpt(hass.Hass):
         try:
             print("Day Ahead Optimalisatie gestart:",
                   datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'), ': ', task)
-            print("Locatie: ", str(self.config.get(["latitude"])) + ':' + str(self.config.get(["longitude"])))
+            print("Locatie: latitude", str(self.config.get(["latitude"])) + ' longitude:' + str(self.config.get(["longitude"])))
             getattr(self, task)()
             self.set_last_activity()
         except:
@@ -1856,6 +1881,10 @@ def main():
                 continue
             if arg.lower() == "clean":
                 day_ah.clean_data()
+                day_ah.set_last_activity()
+                continue
+            if arg.lower() == "calc_baseload":
+                day_ah.calc_baseload()
                 day_ah.set_last_activity()
                 continue
         if task != "":

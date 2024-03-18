@@ -945,7 +945,7 @@ class Report:
             counter = + 1
         return result
 
-    def calc_baseload(self, wd: int) -> list:
+    def calc_weekday_baseload(self, wd: int) -> list:
         """
         :param wd : weekdag 0= maandag, 6 = zondag
         :return: de berekende basislast voor die dag
@@ -998,13 +998,15 @@ class Report:
         result = result['baseload'].values.tolist()
         return result
 
-    def calc_save_baseload(self):
+    def calc_save_baseloads(self):
         self.db_ha.connect()
         for weekday in range (7):
-            baseload = self.calc_baseload(weekday)
+            baseload = self.calc_weekday_baseload(weekday)
+            print(f"baseload voor weekdag {weekday} :", end=" ")
+            print(baseload, sep=", ")
             out_file = "../data/baseload_" + str(weekday) +".json"
-            with open(out_file, 'w') as output_file:
-                print(json.dumps(baseload, indent=2), file=output_file)
+            with open(out_file, 'w') as f:
+                print(json.dumps(baseload, indent=2), file=f)
         return
 
     #------------------------------------------------

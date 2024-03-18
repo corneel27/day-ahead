@@ -220,3 +220,8 @@ def version_number(version_str:str)->int:
     l = [int(x, 10) for x in version_str.split('.')]
     l.reverse()
     return sum(x * (100 ** i) for i, x in enumerate(l))
+
+def error_handling():
+    return ' {}. {}, regelnummer: {}'.format(sys.exc_info()[0],
+                                         sys.exc_info()[1],
+                                         sys.exc_info()[2].tb_lineno)
