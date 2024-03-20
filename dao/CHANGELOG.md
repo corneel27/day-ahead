@@ -1,5 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.2.7]
+Er is een extra instelling geintroduceerd voor het inplannen van het opladen van een auto.
+De *level margin* (default 0) zorgt desgewenst voor een extra marge voordat opladen wordt ingeplan 
+(zie voor meer uitleg DOCS.md)
+
+Heel soms startte een ingeplande berekening een seconde voor het hele uur.
+Dat gaf dan veel ongewenste resultaten
+Als nu een ingeplande berekening minder dan 10 seconden voor het hele uur start wordt deze 
+berekend alsof deze op het hele uur is gestart.
+
 ## [V2024.2.6]
 De logging van de verwerking van de data voor het laden de van de auto richting HA is nog verder uitgebreid.
 

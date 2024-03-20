@@ -363,6 +363,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                           | entity set charging ampere   | string           |                                    | input_number                               |
 |                           | charge scheduler             |                  |                                    |                                            |
 |                           | _____entity set level        | string           |                                    | input_number                               |
+|                           | _____level margin            | getal            | 0                                  |                              |
 |                           | _____entity ready datetime   | string           |                                    | input_datetime                             |
 | **tibber**                | api url                      | string, url      | https://api.tibber.com/v1-beta/gql | desgewenst                                 | 
 |                           | api_token                    | string           |                                    |                                            |
@@ -732,7 +733,12 @@ de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt 
      * ampere (over een fase)
      * de efficiency van de lader bij deze laadstroom (default 1)
    * charge scheduler: oplaad scheduler  
-     * entity set level: entiteit van een input helper die aangeeft tot welk niveau moet worden geladen in %  
+     * entity set level: entiteit van een input helper die aangeeft tot welk niveau moet worden 
+     geladen in %; als het niveau van de accu hierboven zit zal er het opladen ook niet worden ingepland (zie ook "level margin") 
+     * level margin (default 0) in %: als een berekening. Deze marge wordt in acht genomen voor het inplannen van het opladen van de accu.
+     Dus als je 90% hebt ingesteld als gewenst niveau, maar het niveau is gezakt naar 89% en je hebt als level marge 2%  
+     ingesteld dan zal het opladen niet worden ingepland. In deze situatie zal pas onder de 88% het opladen worden ingepland,
+     waarbij dan wel zal worden geladen tot 90%
      * entity ready datetime: entiteit van een input_datetime die het tijdstip en eventueel de datum weergeeft hoe laat de auto op het gewenste niveau moet zijn. 
      Je kunt zelf kiezen of je een helper met of zonder datum gebruikt. Een helper zonder datum zal er altijd voor zorgen dat de auto iedere dag op hetzelfde
      gewenste tijdstip is geladen. Een helper met datum zul je steeds moeten updaten maar heeft wel als voordeel dat je verder in de toekomst kunt plannen. <br>

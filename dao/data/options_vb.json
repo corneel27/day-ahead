@@ -323,6 +323,7 @@
       "entity plugged in": "binary_sensor.wvwzzz_external_power",
       "charge scheduler": {
         "entity set level": "input_number.gewenst_laad_niveau",
+        "level margin": 1,
         "entity ready datetime": "input_datetime.tijdstip_klaar_met_laden"
       },
       "charge switch": "switch.wvwzzzauz_charging",

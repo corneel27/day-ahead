@@ -247,6 +247,9 @@ class DayAheadOpt(hass.Hass):
 
         self.db_da.connect()
         now_dt = int(datetime.datetime.now().timestamp())
+        modulo = now_dt % 3600
+        if modulo > 3550:
+            now_dt = now_dt + 3600 - modulo
         offset = 0  # offset in uren
         now_h = int(3600 * (math.floor(now_dt / 3600)) + offset * 3600)
         fraction_first_hour = 1 - (now_dt - now_h) / 3600
@@ -784,6 +787,7 @@ class DayAheadOpt(hass.Hass):
         EV = len(self.ev_options)
         actual_soc = []
         wished_level = []
+        level_margin = []
         ready_u = []
         hours_needed = []
         max_power = []
@@ -815,6 +819,7 @@ class DayAheadOpt(hass.Hass):
             #     soc_state = min(soc_state, 50.0)
             actual_soc.append(soc_state)
             wished_level.append(float(self.get_state(self.ev_options[e]["charge scheduler"]["entity set level"]).state))
+            level_margin.append(self.config.get(["level margin"], self.ev_options[e]["charge scheduler"], 0))
             ready_str = self.get_state(self.ev_options[e]["charge scheduler"]["entity ready datetime"]).state
             if len(ready_str) > 9:
                 # dus met datum en tijd
@@ -868,6 +873,7 @@ class DayAheadOpt(hass.Hass):
             print("Klaar met laden op:", ready.strftime('%d-%m-%Y %H:%M:%S'))
             print("Huidig laadniveau:", actual_soc[e], "%")
             print("Gewenst laadniveau:", wished_level[e], "%")
+            print(f"Marge voor het laden: {level_margin[e]} %")
             print("Locatie:", ev_position[e])
             print("Ingeplugged:", ev_plugged_in[e])
             e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
@@ -886,8 +892,8 @@ class DayAheadOpt(hass.Hass):
             print(f"Stand aantal ampere laden: {old_ampere_state} A")
             ready_index = U
             reden = ""
-            if (wished_level[e] <= actual_soc[e]):
-                reden = f" werkelijk niveau ({actual_soc[e]:.1f}%) hoger is of gelijk aan gewenst niveau ({wished_level[e]:.1f}%),"
+            if (wished_level[e] - level_margin[e] <= actual_soc[e]):
+                reden = f" werkelijk niveau ({actual_soc[e]:.1f}%) hoger is of gelijk aan gewenst niveau ({wished_level[e]:.1f}% minus de marge {level_margin[e]}%),"
             if not (ev_position[e] == "home"):
                 reden = reden + " auto is niet huis,"
             if not ev_plugged_in[e]:
@@ -897,7 +903,7 @@ class DayAheadOpt(hass.Hass):
             if (tijd[U-1] < ready):
                 reden = reden  + f" opgegeven tijdstip ({str(ready)}) ligt voorbij de planningshorizon ({tijd[U - 1]}),"
             if (ev_plugged_in[e] and (ev_position[e] == "home") and
-                    (wished_level[e] > actual_soc[e]) and (tijd[0] < ready)):
+                    (wished_level[e] - level_margin[e] > actual_soc[e]) and (tijd[0] < ready)):
                 for u in range(U):
                     if (tijd[u] + datetime.timedelta(hours=1)) >= ready:
                         ready_index = u
