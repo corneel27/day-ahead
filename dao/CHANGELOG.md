@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+
+## [V2024.2.8]
+Er zat een fout in de opgehaalde meteogegevens. In tegenstelling tot de documentatie van 
+Meteoserver waren de tijdstippen een uur verschoven. Dit is gecorrigeerd.
+
 ## [V2024.2.7]
 Er is een extra instelling geintroduceerd voor het inplannen van het opladen van een auto.
 De *level margin* (default 0) zorgt desgewenst voor een extra marge voordat opladen wordt ingeplan 
