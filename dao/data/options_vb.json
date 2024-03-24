@@ -45,7 +45,8 @@
     "last invoice": "2022-09-01",
     "tax refund": "True"
   },
-  "baseload calc": "False",
+  "use_calc_baseload": "True",
+  "baseload calc periode": 56,
   "baseload": [
     0.14,
     0.38,
@@ -371,6 +372,6 @@
     "1655": "get_day_ahead_prices",
     "xx00": "calc_optimum",
     "2359": "clean_data",
-    "0945": "calc_baseloads"
+    "0930": "calc_baseloads"
   }
 }

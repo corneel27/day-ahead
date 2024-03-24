@@ -226,7 +226,7 @@ class DayAheadOpt(hass.Hass):
         :param weekday: : 0 = maandag, 6 zondag
         :return: een lijst van eerder berekende baseload van 24uurvoor de betreffende dag
         """
-        in_file = "../data/baseload_" + str(weekday) + ".json"
+        in_file = "../data/baseload/baseload_" + str(weekday) + ".json"
         with open(in_file, 'r') as f:
             result = json.load(f)
         return result
@@ -354,6 +354,7 @@ class DayAheadOpt(hass.Hass):
 
         # base load
         if self.use_calc_baseload:
+            print(f"\nZelf berekende baseloads:")
             weekday = datetime.datetime.weekday(datetime.datetime.now())
             base_cons = self.get_calculated_baseload(weekday)
             if U > 24:
@@ -362,11 +363,11 @@ class DayAheadOpt(hass.Hass):
                 weekday = weekday % 7
                 base_cons = base_cons + self.get_calculated_baseload(weekday)
         else:
+            print(f"\nBaseload uit instellingen:")
             base_cons = self.config.get(["baseload"])
             if U > 24:
                 base_cons = base_cons + base_cons
 
-        print("\nBase load:")
         pprint(base_cons)  # basislast van 0 tot 23/47 uur
 
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
@@ -836,7 +837,6 @@ class DayAheadOpt(hass.Hass):
             charge_stages.append(ev_stages)
             ECS.append(len(charge_stages[e]))
             max_ampere = charge_stages[e][-1]["ampere"]
-            #max_ampere = self.get_state(self.ev_options[e]["entity max amperage"]).state
             try:
                 max_ampere = float(max_ampere)
             except ValueError:
@@ -1889,8 +1889,8 @@ def main():
                 day_ah.clean_data()
                 day_ah.set_last_activity()
                 continue
-            if arg.lower() == "calc_baseload":
-                day_ah.calc_baseload()
+            if arg.lower() == "calc_baseloads":
+                day_ah.calc_baseloads()
                 day_ah.set_last_activity()
                 continue
         if task != "":

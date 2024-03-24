@@ -1004,7 +1004,7 @@ class Report:
             baseload = self.calc_weekday_baseload(weekday)
             print(f"baseload voor weekdag {weekday} :", end=" ")
             print(baseload, sep=", ")
-            out_file = "../data/baseload_" + str(weekday) +".json"
+            out_file = "../data/baseload/baseload_" + str(weekday) +".json"
             with open(out_file, 'w') as f:
                 print(json.dumps(baseload, indent=2), file=f)
         return

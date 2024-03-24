@@ -60,6 +60,13 @@ bewerkingen = {
             "../prog/day_ahead.py",
             "prices"],
         "task": "get_day_ahead_prices"},
+    "calc_baseloads": {
+        "name": "Bereken de baseloads",
+        "cmd": [
+            "python3",
+            "../prog/day_ahead.py",
+            "calc_baseloads"],
+        "task": "calc_baseloads"},
 }
 
 def get_file_list(path: str, pattern: str) -> list:

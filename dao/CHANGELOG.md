@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.3.0]
+Vanaf deze versie kun je de te gebruiken baseload(s) in de berekening door het systeem zelf laten berekenen.
+Zie DOCS.md
 
 ## [V2024.2.8]
 Er zat een fout in de opgehaalde meteogegevens. In tegenstelling tot de documentatie van 

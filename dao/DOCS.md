@@ -239,9 +239,9 @@ Ga je hier voor de eerste keer mee aan gang volg dan de volgende aanpak:
 * laat de rest "blanko" 
   * boiler, boiler present false
   * heating, heater present false
-  * battery: leeg = "[]"
-  * solar: leeg = "[]"
-  * electric vehicle: leeg = "[]"
+  * battery: leeg = "[ ]"
+  * solar: leeg = "[ ]"
+  * electric vehicle: leeg = "[ ]"
   * tibber nog niet invullen of wijzigen
   * scheduler: alles laten staan
 * Kijk nu of de add-on wil opstarten, kijk na ca 10 seconden naar de logging en probeer
@@ -474,7 +474,7 @@ Deze kan op twee manieren worden verkregen:
 
 #### baseload berekenen
 Als je de baseload door het programma wilt laten berekenen moet je de volgende instellingen meegeven:
-* "baseload calc": "True"/"False" default "False" <br>
+* "use_calc_baseload": "True"/"False" default "False" <br>
 Hiermee vertel je het programma dat de baseload moet worden berekend. 
 * "baseload calc periode": default 56<br>
 Hiermee geeft je het aantal dagen op waarover de baseload moet worden berekend
@@ -489,18 +489,16 @@ het verbruik of de productie van alle relevante beinvloedbare gebruikers registe
   * ev consumption
   * wp consumption
   * boiler consumption<br>
+* In de scheduler (zie hierna) zet je een regel met een commando dat de baseloads iedere dag 
+een keer worden geactualiseerd: <br> bijvoorbeeld ` "2230": "calc_baseloads"`
   
-**opmerkingen**:<br>
+**opmerking**:<br>
 - Als je iets niet hebt (bijvoorbeeld geen elektrische auto) dan laat je de lijst achter het onderdeel leeg.<br>
  Bijvoorbeeld: `"entities ev consumption": []`
-- In deze versie duurt het berekenen van de baseload over 56 dagen lang (ca 30 seconden). 
- Een voorlopige oplossing daarvoor kan zijn om 
-  - Baseload calc tijdelijk op true te zetten. 
-  - Met het programma een "debug"berekening uit te voeren
-  - De verkregen baseload-gegevens kopieren van het uitvoerscherm naar je instellingen.
+
 
 #### baseload opgeven
-Je zet "baseload calc": "False" (default) of je laat deze regel weg (false is de default waarde)<br>
+Je zet "use_calc_baseload": "False" (default) of je laat deze regel weg (false is de default waarde)<br>
 Je vult bij "baseload" 24 waarden in een lijst. Dat is voor de 24 uren van een etmaal het basisverbruik van je woning.
 Deze bepaal je als volgt:<br>
 * neem voor een voldoende lange periode (minimaal een maand) de geregistreerde energiehoeveelheden per uur op de volgende onderdelen:
@@ -1151,4 +1149,6 @@ Voert de "optimaliseringsberekening" uit:
 * presenteert een tabel met alle geprognoticeerde uurdata <br>
 * berekent een grafiek met alle geprognoticeerde uurdata en slaat deze op
 
-
+### **calc_baseloads**<br>
+Berekent voor 7 weekdagen de baseload en sluit deze op zodat deze kan worden teruggevonden
+als bij de uurlijkse berekeningen daarvan gebruik gemaakt gaat worden (`"use_calc_baseload": "True"`)
