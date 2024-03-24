@@ -1,21 +1,12 @@
 {
-  "homeassistant": {
-    "protocol api": "http",
-    "ip adress": "192.168.178.36",
-    "ip port": 8123,
-    "token": "!secret ha_api_token"
-  },
+  "homeassistant": { },
   "database da": {
-    "server": "192.168.178.36",
     "database": "day_ahead",
-    "port": 3306,
     "username": "day_ahead",
     "password": "!secret db_da_password"
   },
   "database ha": {
-    "server": "homeassistant",
     "database": "homeassistant",
-    "port": 3306,
     "username": "homeassistant",
     "password": "!secret db_ha_password"
   },
@@ -38,11 +29,13 @@
     },
     "cost supplier delivery": {
       "2022-01-01": 0.002,
-      "2023-03-01": 0.018
-    },
+      "2023-03-01": 0.018,
+      "2024-04-01": 0.0175
+   },
     "cost supplier redelivery": {
       "2022-01-01": 0.002,
-      "2023-03-01": 0.018
+      "2023-03-01": 0.018,
+      "2024-04-01": 0.0175
     },
     "vat": {
       "2022-01-01": 21,
@@ -52,6 +45,8 @@
     "last invoice": "2022-09-01",
     "tax refund": "True"
   },
+  "use_calc_baseload": "True",
+  "baseload calc periode": 56,
   "baseload": [
     0.14,
     0.38,
@@ -78,7 +73,7 @@
     0.18,
     0.16
   ],
-  "graphical backend": "Gtk3Agg",
+  "graphical backend": "",
   "graphics": {
     "style": "dark_background",
     "show" : "true",
@@ -300,8 +295,7 @@
       "orientation": 5,
       "capacity": 4.2,
       "yield": 0.010,
-      "entity pv switch": "input_boolean.pv_woning_aan_uit",
-      "sensor history": "sensor.solaredge_woning_ac_energy_kwh"
+      "entity pv switch": "input_boolean.pv_woning_aan_uit"
     },
     {
       "name": "garage",
@@ -309,28 +303,35 @@
       "orientation": 5,
       "capacity": 1.8,
       "yield": 0.005,
-      "entity pv switch": "input_boolean.pv_garage_aan_uit",
-      "sensor history": "sensor.solaredge_garage_ac_energy_kwh_2"
+      "entity pv switch": "input_boolean.pv_garage_aan_uit"
     }
   ],
   "electric vehicle": [
     {
       "name": "Golf GTE",
       "capacity": 6.3,
-      "entity position": "device_tracker.wvwzzzauzfw117301_position",
-      "entity max amperage": "sensor.wvwzzzauzfw117301_charger_max_ampere",
+      "entity position": "device_tracker.wvwzzz_position",
+      "entity max amperage": "sensor.wvwzzz_charger_max_ampere",
       "charge three phase": "False",
-      "entity actual level": "sensor.wvwzzzauzfw117301_battery_level",
-      "entity plugged in": "binary_sensor.wvwzzzauzfw117301_external_power",
+      "charge stages" : [
+        {"ampere":  0, "efficiency" :  1},
+        {"ampere":  6, "efficiency": 0.95},
+        {"ampere": 10, "efficiency": 1},
+        {"ampere": 13, "efficiency": 0.95},
+        {"ampere": 16, "efficiency": 0.92}
+      ],
+      "entity actual level": "sensor.wvwzzz_battery_level",
+      "entity plugged in": "binary_sensor.wvwzzz_external_power",
       "charge scheduler": {
         "entity set level": "input_number.gewenst_laad_niveau",
+        "level margin": 1,
         "entity ready datetime": "input_datetime.tijdstip_klaar_met_laden"
       },
-      "charge switch": "switch.wvwzzzauzfw117301_charging"
+      "charge switch": "switch.wvwzzzauz_charging",
+      "entity set charging ampere" : "input_number.set_car_charging_ampere"
     }
   ],
   "tibber": {
-    "api url": "https://api.tibber.com/v1-beta/gql",
     "api_token": "!secret tibber_api_token"
   },
   "report": {
@@ -341,7 +342,17 @@
     "entities grid production": [
       "sensor.grid_production_low",
       "sensor.grid_production_high"
-    ]
+    ],
+    "entities solar production ac": [
+      "sensor.solaredge_woning_ac_energy_kwh",
+      "sensor.solaredge_garage_ac_energy_kwh_2"
+    ],
+    "entities solar production dc": [],
+    "entities ev consumption" : ["sensor.laadpunt_total_energy"],
+    "entities wp consumption" : ["sensor.youless_meterstand"],
+    "entities boiler consumption": [],
+    "entities battery consumption": ["sensor.ess_grid_consumption"],
+    "entities battery production": ["sensor.ess_grid_production"]
   },
   "scheduler": {
     "0355": "get_meteo_data",
@@ -360,6 +371,7 @@
     "1554": "get_day_ahead_prices",
     "1655": "get_day_ahead_prices",
     "xx00": "calc_optimum",
-    "2359": "clean_data"
+    "2359": "clean_data",
+    "0930": "calc_baseloads"
   }
 }

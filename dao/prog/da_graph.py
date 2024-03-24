@@ -38,8 +38,12 @@ class GraphBuilder:
                 ax = axis
             else:
                 ax = axis_right
-            data_array = df[serie['column']]
-            if "negativ" in serie:
+            if "column" in serie:
+                data_array = df[serie['column']]
+            else:
+                data_array = df[serie['name']]
+            if ("negativ" in serie) or (("sign" in serie) and (serie["sign"] == "neg")):
+                negative = True
                 data_array = np.negative(data_array)
             s_type = serie["type"]
             color = serie["color"]
@@ -55,7 +59,7 @@ class GraphBuilder:
                 plot = ax.plot(ind, data_array, label=label, linestyle=linestyle, color=color, align="edge")
             else:  # stacked bar
                 data_sum = np.sum(data_array)
-                if data_sum > 0:
+                if data_sum >= 0:
                     if vax == "left":
                         plot = ax.bar(ind, data_array, width=width, bottom=stacked_plus, label=label, color=color, align="edge")
                         stacked_plus = stacked_plus + data_array
@@ -73,7 +77,8 @@ class GraphBuilder:
 
         xlabels = df[options["haxis"]["values"]].values.tolist()
         axis.set_xticks(ind, labels=xlabels, )
-        axis.set_xlabel(options["haxis"]["title"])
+        if "title" in options["haxis"]:
+            axis.set_xlabel(options["haxis"]["title"])
         if len(df.index) > 8:
             axis.xaxis.set_major_locator(ticker.MultipleLocator(2))
             axis.xaxis.set_minor_locator(ticker.MultipleLocator(1))

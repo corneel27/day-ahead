@@ -8,6 +8,9 @@ import sys
 import pandas as pd
 # from day_ahead import DayAheadOpt
 from requests import post
+#from dao.prog.da_config import Config
+#from dao.prog.db_manager import DBmanagerObj
+#from dao.prog.da_report import Report
 
 
 def is_laagtarief(dtime, switch_hour):
@@ -75,7 +78,7 @@ def get_tibber_data():
         return result
     config = Config("../data/options.json")
     tibber_options = config.get(["tibber"])
-    url = tibber_options["api url"]
+    url = config.get(["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql")
     db_da_name = config.get(['database da', "database"])
     db_da_server = config.get(['database da', "server"])
     db_da_port = int(config.get(['database da', "port"]))
@@ -119,7 +122,7 @@ def get_tibber_data():
     print("Tibber data present tot en met:", str(
         datetime.datetime.fromtimestamp(latest_ts)))
     if count < 24:
-        print("Er is geen data opgehaald.")
+        print("Er zijn geen data opgehaald.")
         return
     query = '{ ' \
             '"query": ' \
@@ -211,4 +214,14 @@ def make_data_path():
     if os.path.lexists("../data"):
         return
     else:
-        os.symlink("/addons/day_ahead_dev/data", "../data")
+        os.symlink("/config/dao_data", "../data")
+
+def version_number(version_str:str)->int:
+    l = [int(x, 10) for x in version_str.split('.')]
+    l.reverse()
+    return sum(x * (100 ** i) for i, x in enumerate(l))
+
+def error_handling():
+    return ' {}. {}, regelnummer: {}'.format(sys.exc_info()[0],
+                                         sys.exc_info()[1],
+                                         sys.exc_info()[2].tb_lineno)

@@ -226,7 +226,7 @@ class Meteo:
         for row in global_rad.itertuples():
             utc_time = row.tijd
             radiation = float(row.gr)
-            q_tot = self.solar_rad(float(utc_time), radiation, hcol, acol)
+            q_tot = self.solar_rad(int(utc_time) - 3600, radiation, hcol, acol)
             global_rad.loc[(global_rad.tijd == utc_time), 'solar_rad'] = q_tot
         return global_rad
 
@@ -254,14 +254,13 @@ class Meteo:
         df_db = pd.DataFrame(columns=['time', 'code', 'value'])
         df1 = df1.reset_index()  # make sure indexes pair with number of rows
         for row in df1.itertuples():
-            df_db.loc[df_db.shape[0]] = [row.tijd, 'gr', float(row.gr)]
-            df_db.loc[df_db.shape[0]] = [row.tijd, 'temp', float(row.temp)]
-            df_db.loc[df_db.shape[0]] = [
-                row.tijd, 'solar_rad', float(row.solar_rad)]
+            df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'gr', float(row.gr)]
+            df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'temp', float(row.temp)]
+            df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'solar_rad', float(row.solar_rad)]
             count += 1
             if count >= 48:
                 break
-        # print(df_db)
+        print(df_db)
 
         self.db_da.savedata(df_db)
         graphs.make_graph_meteo(df1, file="../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",

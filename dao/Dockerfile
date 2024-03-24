@@ -17,6 +17,7 @@ RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gun
 RUN mkdir /root/dao
 COPY prog /root/dao/prog/
 COPY webserver /root/dao/webserver/
+# COPY dao/__init__.py /root/dao
 COPY data /tmp/daodata/
 
 #version
@@ -56,5 +57,5 @@ RUN pip3 install -r /tmp/requirements.txt
 EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
-CMD ["/bin/bash", "./run.sh"]
+ENTRYPOINT  ["/bin/bash", "./run.sh"]
 
