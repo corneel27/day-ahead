@@ -10,7 +10,6 @@
 Het programma Day Ahead Optimization (DAO) voert de volgende acties, berekeningen en bewerkingen uit: 
 
 * ophalen dynamische energie tarieven bij Entsoe en/of NordPool
-* ophalen van je verbruiksgevens van de vorige dag(en) bij Tibber
 * ophalen van meteogegevens bij Meteoserver
 * berekenen van de optimale inzet van een aanwezige batterij, wp-boiler en elektrische auto.<br>
 
