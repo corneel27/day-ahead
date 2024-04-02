@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.3.1]
+In sommige browsers (o.a. Firefox oner Windows) worden oude bestanden van de grafieken getoond.
+De naamgeving van de grafieken is aangepast met datum en tijd zodat het probleem over zou moeten zijn.
+
 ## [V2024.3.0]
 Vanaf deze versie kun je de te gebruiken baseload(s) in de berekening door het systeem zelf laten berekenen.
 Zie DOCS.md
