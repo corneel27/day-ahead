@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.3.2]
+Met de versie 2024.4.0 van Home Asssistant is een nieuwe attribuut geintroduceerd (last_reported).  
+De nieuwe versie (0.2.1) van module hassapi gaat hier goed mee om, 
+de oude versies genereerde foutmeldingen.
+Deze versie installeert de nieuwe versie van deze module.
+
 ## [V2024.3.1]
 In sommige browsers (o.a. Firefox oner Windows) worden oude bestanden van de grafieken getoond.
 De naamgeving van de grafieken is aangepast met datum en tijd zodat het probleem over zou moeten zijn.
