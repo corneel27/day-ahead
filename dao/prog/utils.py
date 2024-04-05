@@ -68,6 +68,14 @@ def get_value_from_dict(dag: str, options: dict) -> float:
     return result
 
 
+def convert_timestr(time_str: str, now_dt: datetime.datetime) -> datetime.datetime:
+    result_hm = datetime.datetime.strptime(time_str, '%H:%M:%S')
+    result = datetime.datetime(now_dt.year, now_dt.month, now_dt.day, result_hm.hour, result_hm.minute)
+    if (result.hour == now_dt.hour and result.minute < now_dt.minute) or (result.hour < now_dt.hour):
+        result = result + datetime.timedelta(days=1)
+    return result
+
+
 def get_tibber_data():
     from da_config import Config
     from db_manager import DBmanagerObj
