@@ -11,7 +11,14 @@
     {% else %}
     <input type="checkbox" id= "{{ id_ }}" name= "{{ key }}" onchange="this.form.submit()"/>
     {% endif %}
-      <label for= "{{ id_ }}"> {{ value["name"] }} </label><br />
+    <label for= "{{ id_ }}"> {{ value["name"] }} </label>
+    {% for parameter in value["parameters"] %}
+      {% set id_p= "id_p" ~ parameter %}
+      {% set value = parameters[parameter] %}
+          <label for= "{{ id_p }}"> {{ parameter }} </label>
+          <input type="text" id="{{ id_p }}" name="{{ parameter }}" required minlength="10" maxlength="12" size="10" value="{{ value }}" />
+    {% endfor %}
+  <br />
   {% endfor %}
   {% if not (bewerking == '') %}
     <input type="hidden" id="current_bewerking" name="current_bewerking" value="{{bewerking}}">

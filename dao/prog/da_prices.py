@@ -61,6 +61,7 @@ class DA_Prices:
             if len(da_prices.index) > 0:
                 df_db = pd.DataFrame(columns=['time', 'code', 'value'])
                 da_prices = da_prices.reset_index()  # make sure indexes pair with number of rows
+                print(da_prices)
                 for row in da_prices.itertuples():
                     last_time = int(datetime.datetime.timestamp(row[1]))
                     df_db.loc[df_db.shape[0]] = [
@@ -71,7 +72,7 @@ class DA_Prices:
         if source.lower() == "nordpool":
             # ophalen bij Nordpool
             prices_spot = Prices()
-            hourly_prices_spot = prices_spot.hourly(areas=['NL'])
+            hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=start)
             hourly_values = hourly_prices_spot['areas']['NL']['values']
             print(hourly_values)
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])

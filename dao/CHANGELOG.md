@@ -1,5 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.3.3]
+Voor de gebruikers die op 3,4 en/of 5 april 2024geen day ahead prijzen binnen hebben gekregen is in deze versie een kleine
+uitbreiding aangebracht in het Run-menu van de webserver. Daarmee kun je nu een vanaf- en tot-datum invullen bij het 
+ophalen van de prijsinformatie. Dat werkt bij alle drie de providers (nordpool, entsoe en easyenergy), maar bij nordpool
+kun je steeds maar een dag tegelijk ophalen en dat doet hij dan op de ingevulde vanaf-datum.
+Meer info in DOCS.md
+
 ## [V2024.3.2]
 Met de versie 2024.4.0 van Home Asssistant is een nieuwe attribuut geintroduceerd (last_reported).  
 De nieuwe versie (0.2.1) van module hassapi gaat hier goed mee om, 
