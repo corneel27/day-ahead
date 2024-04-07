@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.3.4]
+Er mist een bestand in versie 2024.3.3.
+Is hiermee hersteld.
+
 ## [V2024.3.3]
 Voor de gebruikers die op 3,4 en/of 5 april 2024geen day ahead prijzen binnen hebben gekregen is in deze versie een kleine
 uitbreiding aangebracht in het Run-menu van de webserver. Daarmee kun je nu een vanaf- en tot-datum invullen bij het 
