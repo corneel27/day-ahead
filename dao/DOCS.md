@@ -160,6 +160,14 @@ Na 10 tot 15 seconden komt het log-bestand van de bewerking/berekening in beeld.
 Wil je het grafische resultaat van een optimaliseringsberekening zien klik dan op "Home",
 Je krijgt dan de laatste berekende grafiek in beeld.
 
+Bij het ophalen van day ahead prijzen kun je twee datums invullen (formaat jjjj-mm-dd).
+Laat je deze velden leeg dan zullen de prijzen van vandaag (als je de actie voor 12 uur uitvoert) of morgen (na 12 uur) worden opgehaald.
+Vul je alleen "prijzen vanaf" in dan zal vanaf die dag tot vandaag de prijzen worden opgehaald. Behalve bij nordpool,
+die kan maar gegevens van een etmaal tegelijk ophoesten en dus alleen van de dag die je invult bij "prijzen vanaf".  
+Controleer de getoonde logging of alles gaat zoals je het verwacht.
+Als je bijvoorbeeld van een periode terug de prijzen wilt ophalen, krijg je dit scherm: 
+![img_8a.png](images/img_8a.png)
+
 **Reports**<br/>
 ![Img_7.png](images/Img_7.png) <br />
 Dit onderdeel is nog in ontwikkeling, maar biedt nu al veel mogelijkheden.<br/>
