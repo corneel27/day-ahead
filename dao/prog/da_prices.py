@@ -72,7 +72,11 @@ class DA_Prices:
         if source.lower() == "nordpool":
             # ophalen bij Nordpool
             prices_spot = Prices()
-            hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=start)
+            if len(sys.argv) <= 2:
+                end_date = None
+            else:
+                end_date = start
+            hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=end_date)
             hourly_values = hourly_prices_spot['areas']['NL']['values']
             print(hourly_values)
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])

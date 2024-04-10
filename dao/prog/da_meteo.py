@@ -263,7 +263,7 @@ class Meteo:
         print(df_db)
 
         self.db_da.savedata(df_db)
-        graphs.make_graph_meteo(df1, file="../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
+        graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M") + ".png",
                                 show=show_graph)
 
         '''

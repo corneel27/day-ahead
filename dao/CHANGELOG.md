@@ -1,11 +1,16 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
 ## [V2024.3.4]
+Bij de uitbreiding van het Run-menu is een storende fout geslopen in het onderdeel waarmee bij nordpool prijzen worden opgehaald.
+In deze versie is die fout hersteld.
+Alle bestandnamen van all logfiles en grafieken (ook van het ophalen van meteogegevens) zijn nu voorzien van datum-tijd info
+
+## [V2024.3.4]
 Er mist een bestand in versie 2024.3.3.
 Is hiermee hersteld.
 
 ## [V2024.3.3]
-Voor de gebruikers die op 3,4 en/of 5 april 2024geen day ahead prijzen binnen hebben gekregen is in deze versie een kleine
+Voor de gebruikers die op 3,4 en/of 5 april 2024 geen day ahead prijzen binnen hebben gekregen is in deze versie een kleine
 uitbreiding aangebracht in het Run-menu van de webserver. Daarmee kun je nu een vanaf- en tot-datum invullen bij het 
 ophalen van de prijsinformatie. Dat werkt bij alle drie de providers (nordpool, entsoe en easyenergy), maar bij nordpool
 kun je steeds maar een dag tegelijk ophalen en dat doet hij dan op de ingevulde vanaf-datum.
