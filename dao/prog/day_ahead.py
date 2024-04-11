@@ -815,8 +815,9 @@ class DayAheadOpt(hass.Hass):
             except Exception as ex:
                 print(ex)
                 soc_state = 100.0
-            # if self.debug:
-            #     soc_state = min(soc_state, 50.0)
+
+            soc_state = min(soc_state, 90.0)
+
             actual_soc.append(soc_state)
             wished_level.append(float(self.get_state(self.ev_options[e]["charge scheduler"]["entity set level"]).state))
             level_margin.append(self.config.get(["level margin"], self.ev_options[e]["charge scheduler"], 0))
@@ -1348,11 +1349,15 @@ class DayAheadOpt(hass.Hass):
                         print()
                 entity_charge_switch = self.ev_options[e]["charge switch"]
                 entity_charging_ampere = self.ev_options[e]["entity set charging ampere"]
+                entity_stop_laden = self.config.get(["entity stop charging"], self.ev_options[e], None)
                 old_switch_state = self.get_state(entity_charge_switch).state
                 old_ampere_state = self.get_state(entity_charging_ampere).state
                 new_ampere_state = 0
                 new_switch_state = "off"
+                new_state_stop_laden = None  # "2000-01-01 00:00:00"
+                # stop_str = stop_victron.strftime('%Y-%m-%d %H:%M')
                 # print()
+
                 # print(uur[0], end="  ")
                 for cs in range(ECS[e])[1:]:
                     # print(f"{charger_factor[e][cs][0].x:.2f}", end="  ")
@@ -1360,11 +1365,17 @@ class DayAheadOpt(hass.Hass):
                         new_ampere_state = charge_stages[e][cs]["ampere"]
                         if new_ampere_state > 0:
                             new_switch_state = "on"
+                        if charger_factor[e][cs][0].x < 1:
+                            new_ts = now_dt.timestamp() + charger_factor[e][cs][0].x * 3600
+                            stop_laden = datetime.datetime.fromtimestamp(int(new_ts))
+                            new_state_stop_laden = stop_laden.strftime('%Y-%m-%d %H:%M')
                         break
                 ev_name = self.ev_options[e]["name"]
                 print(f"Berekeningsuitkomst voor opladen van {ev_name}:")
                 print(f"- aantal ampere {new_ampere_state}A (was {old_ampere_state}A)")
                 print(f"- stand schakelaar '{new_switch_state}' (was '{old_switch_state}')")
+                if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
+                    print(f"- stop laden op {new_state_stop_laden}")
                 print(f"- positie: {ev_position[e]}")
                 print(f"- ingeplugd: {ev_plugged_in[e]}")
 
@@ -1379,12 +1390,18 @@ class DayAheadOpt(hass.Hass):
                                           f"'{entity_charging_ampere}'")
                                     self.set_value(entity_charging_ampere, new_ampere_state)
                                     self.turn_on(entity_charge_switch)
+                                    if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
+                                        self.call_service("set_datetime", entity_id=entity_stop_laden,
+                                                          datetime=new_state_stop_laden)
                             if old_switch_state == "on":
                                 if self.debug:
                                     print(f"Laden van {ev_name} zou zijn doorgegaan met {new_ampere_state} ampere")
                                 else:
                                     print(f"Laden van {ev_name} is doorgegaan met {new_ampere_state} ampere")
                                     self.set_value(entity_charging_ampere, new_ampere_state)
+                                    if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
+                                        self.call_service("set_datetime", entity_id=entity_stop_laden,
+                                                          datetime=new_state_stop_laden)
                         else:
                             if old_switch_state == "on":
                                 if self.debug:
@@ -1393,6 +1410,9 @@ class DayAheadOpt(hass.Hass):
                                     self.set_value(entity_charging_ampere, 0)
                                     self.turn_off(entity_charge_switch)
                                     print(f"Laden van {ev_name} uitgezet")
+                                    if not (entity_stop_laden is None):
+                                        self.call_service("set_datetime", entity_id=entity_stop_laden,
+                                                          datetime=new_state_stop_laden)
                     except Exception as ex:
                         error_str = utils.error_handling()
                         print(ex)

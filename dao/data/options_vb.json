@@ -322,13 +322,15 @@
       ],
       "entity actual level": "sensor.wvwzzz_battery_level",
       "entity plugged in": "binary_sensor.wvwzzz_external_power",
+      "entity stop charging": "input_datetime.stop_laden_ev",
       "charge scheduler": {
         "entity set level": "input_number.gewenst_laad_niveau",
         "level margin": 1,
         "entity ready datetime": "input_datetime.tijdstip_klaar_met_laden"
       },
       "charge switch": "switch.wvwzzzauz_charging",
-      "entity set charging ampere" : "input_number.set_car_charging_ampere"
+      "entity set charging ampere" : "input_number.set_car_charging_ampere",
+      "entity stop charging": "input_datetime.stop_laden_ev"
     }
   ],
   "tibber": {

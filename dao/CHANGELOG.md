@@ -1,6 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
-## [V2024.3.4]
+## [V2024.3.6]
+Er is een optionele aanvulling te gebruiken bij het inplannen van het laden van een elektrische auto.
+Soms komt het voor het beter is om in een uur maar een deel van dat uur met een beter rendement (en een hoger vermogen)
+de auto te laden.
+Je kunt nu bij je instellingen een entiteit opgeven (entity stop charging) waarin het programma het eindstip van het 
+berekende eindstip opslaat van de oplaadactie in het betreffende (alleen  als er niet een heel uur hoeft te worden geladen).
+Je zult daar dan zelf in HA een automatisering voor moeten maken die wordt getriggerd op het betreffende tijdstip.
+Zie voor informatie en een voorbeeld DOCS.md
+
+## [V2024.3.5]
 Bij de uitbreiding van het Run-menu is een storende fout geslopen in het onderdeel waarmee bij nordpool prijzen worden opgehaald.
 In deze versie is die fout hersteld.
 Alle bestandnamen van all logfiles en grafieken (ook van het ophalen van meteogegevens) zijn nu voorzien van datum-tijd info
