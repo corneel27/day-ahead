@@ -1,16 +1,16 @@
-import math
-from requests import get
-import json
-import pandas as pd
-
-from db_manager import DBmanagerObj
-import graphs
 import datetime
-import pytz
+import json
+import math
 
+import pandas as pd
+import pytz
+from requests import get
+
+import graphs
 # import os, sys
 # sys.path.append(os.path.abspath("../dalib"))
 from da_config import Config
+from db_manager import DBmanagerObj
 
 
 class Meteo:
@@ -52,12 +52,12 @@ class Meteo:
 
     def sun_position(self, utc_time):
         """
-        berekent postie van de zon op tijdstip time op coord. noorderbreedte en oosterlengte
+        Berekent postie van de zon op tijdstip 'time' op coordinaten noorderbreedte en oosterlengte
         :param utc_time: timestamp in utc seconds
         :return: een array met positie van de zon hoogte(h) (elevatie) en azimuth(A) in radialen
         """
-        # param NB: latitude: noorderbreed in graden
-        # param OL: longitude: oosterlengte in graden
+        # param nb: latitude: noorderbreed in graden
+        # param ol: longitude: oosterlengte in graden
         '''
         # oude methode
 
@@ -96,9 +96,9 @@ class Meteo:
                                noorder_breedte_rad))  # links of rechts van zuid
         result = {'h': h_rad, 'A': a_rad}
 
-        ## tot hier oude methode
+        # tot hier oude methode
         '''
-        ## vanaf hier nieuwe methode
+        # vanaf hier nieuwe methode
         '''
    
         Declinatie en uurhoek
@@ -108,14 +108,14 @@ class Meteo:
         d = 23,44° sin {360°(284 + n)/365} (1)
         Eveneens op iedere datum geldt, dat:
         u = t x 15° (2)
-        met t gelik aan de tijd in uren volgens Z.T. Met gehulp van (1) en (2) kan nu de stralingsrichting worden gevonden 
-        op ieder gewenst tijdstip op iedere gewenste datum.
+        met t gelijk aan de tijd in uren volgens Z.T. Met gehulp van (1) en (2) kan nu de stralingsrichting worden 
+        gevonden op ieder gewenst tijdstip op iedere gewenste datum.
 
         Azimut en zonshoogte
-        De stralingsrichting is ook vast te leggen met behulp van de hoeken a en h. Zie de figuur over Azimut en zonshoogte. 
-        In appendix A is afgeleid, hoe deze hoeken kunnen worden geschreven als functie van de zojuist genoemde hoeken u en d. 
-        Het blijkt handiger om h te schrijven als functie van u en d en om a te schrijven als functie van u, d en h.
-        Gevonden wordt:
+        De stralingsrichting is ook vast te leggen met behulp van de hoeken a en h. Zie de figuur over Azimut en  
+        zonshoogte. In appendix A is afgeleid, hoe deze hoeken kunnen worden geschreven als functie van de zojuist 
+        genoemde hoeken u en d. Het blijkt handiger om h te schrijven als functie van u en d en om a te schrijven als 
+        functie van u, d en h. Gevonden wordt:
         h = arcsin (sin ф sin d – cos ф cos d cos u) (3)
         a = arcsin { (cos d sin u) / cos h } (4)
         De hoek ф is gelijk aan de breedtegraad van de plaats op aarde, waar a en h moeten worden bepaald. 
@@ -137,9 +137,10 @@ class Meteo:
         a_degrees = math.degrees(a)
         result = {'d': math.degrees(d), 'u': math.degrees(u), 'h': h, 'A': a}
         '''
+
         import ephem
         observer = ephem.Observer()
-        observer.lat = math.radians(self.latitude) # breedtegraad
+        observer.lat = math.radians(self.latitude)  # breedtegraad
         observer.lon = math.radians(self.longitude)
         dtz = datetime.datetime.fromtimestamp(utc_time, tz=pytz.utc)
         observer.date = dtz.strftime("%Y-%m-%d %H:%M:%S.%f")  # '2023-09-19 12:00:00'
@@ -163,10 +164,10 @@ class Meteo:
     def solar_rad(self, utc_time: float, radiation: float, h_col: float, a_col: float) -> float:
         """
         :param utc_time: utc tijd in sec
-        :param radiation: globale straling in J/cm2
+        :param radiation: globale straling in J/cm²
         :param h_col: hoogte van de collector in radialen
         :param a_col: azimuth van de collector in radialen
-        :return: de straling (direct en diffuus) in J/cm2 op het vlak van de collector
+        :return: de straling (direct en diffuus) in J/cm² op het vlak van de collector
         """
         if radiation <= 0:
             q_tot = 0
@@ -201,9 +202,9 @@ class Meteo:
         berekent netto instraling op collector in J/cm2
         retouneert dataframe met (time, solar_rad)
         """
-        # tilt: helling tov plat vlak in graden
+        # tilt: helling t.o.v. plat vlak in graden
         # orientation: orientatie oost = -90, zuid = 0, west = 90 in graden
-        # zoek de eerste de beste pv installatie op
+        # zoekt de eerste de beste pv installatie op
         solar = None
         if len(self.solar) > 0:
             solar = self.solar[0]
@@ -211,7 +212,7 @@ class Meteo:
             for b in range(len(self.bat)):
                 if len(self.bat[b]["solar"]) > 0:
                     solar = self.bat[b]["solar"][0]
-        if solar != None:
+        if not (solar is None):
             tilt = solar["tilt"]
             orientation = solar["orientation"]
         else:
@@ -263,8 +264,8 @@ class Meteo:
         print(df_db)
 
         self.db_da.savedata(df_db)
-        graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M") + ".png",
-                                show=show_graph)
+        graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
+                                          + ".png", show=show_graph)
 
         '''
         url = "https://api.forecast.solar/estimate/watthours/"+str(self.latitude)+"/"+str(self.longitude)+"/45/5/5.5"
@@ -313,8 +314,9 @@ class Meteo:
 
         print(df_db)
 
-#        graphs.make_graph_meteo(df_db, file = "../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + ".png",
-#                                show=show_graph)
+        graphs.make_graph_meteo(df_db, file = "../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + 
+                                             ".png", show=show_graph)
+                               
         del df_db["time_str"]
         print(df_db)
         self.db_da.savedata(df_db)
@@ -322,13 +324,13 @@ class Meteo:
 
     def calc_graaddagen(self, date: datetime.datetime = None, weighted: bool = False) -> float:
         """
-        berekend gewogen met temperatuur grens van 16 oC
+        Berekent gewogen met temperatuur grens van 16 oC
         :param date: de datum waarvoor de berekening wordt gevraagd
         als None: vandaag
         :param weighted : boolean, berekenen met (true) of zonder (false) weegfactor
         :return: berekende gewogen graaddagen
         """
-        if date == None:
+        if date is None:
             date = datetime.datetime.combine(datetime.datetime.today(), datetime.datetime.min.time())
         date_utc = int(date.timestamp())
         sql_avg_temp = (
@@ -355,14 +357,14 @@ class Meteo:
         return result
 
     def calc_solar_rad(self, solar_opt: dict, utc_time: int, global_rad: float) -> float:
-        '''
+        """
         :param solar_opt: definitie van paneel met
-            tilt: helling tov plat vlak in graden, 0 = vlak (horizontaal), 90 = verticaal
+            tilt: helling t.o.v. plat vlak in graden, 0 = vlak (horizontaal), 90 = verticaal
             orienation: orientatie oost = -90, zuid = 0, west = 90 in graden
         :param utc_time: utc tijd in seconden
-        :param global_rad: globale straling in J/cm2
-        :return: alle straling op paneel J/cm2
-        '''
+        :param global_rad: globale straling in J/cm²
+        :return: alle straling op paneel J/cm²
+        """
         # tilt:
         # orientation: orientatie oost = -90, zuid = 0, west = 90 in graden
         tilt = solar_opt["tilt"]
@@ -370,6 +372,5 @@ class Meteo:
         hcol = math.radians(tilt)
         orientation = solar_opt["orientation"]
         acol = math.radians(orientation)
-        radiation = global_rad
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot

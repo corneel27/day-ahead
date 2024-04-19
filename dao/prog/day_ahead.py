@@ -16,11 +16,11 @@ import hassapi as hass
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
 import utils
-from utils import get_value_from_dict, get_tibber_data, is_laagtarief
+from utils import get_value_from_dict, get_tibber_data, is_laagtarief, convert_timestr, calc_uur_index
 from _version import __version__
 from da_config import Config
 from da_meteo import Meteo
-from da_prices import DA_Prices
+from da_prices import DaPrices
 from db_manager import DBmanagerObj
 
 
@@ -70,7 +70,7 @@ class DayAheadOpt(hass.Hass):
                                   db_user=db_ha_user, db_password=db_ha_password)
         self.meteo = Meteo(self.config, self.db_da)
         self.solar = self.config.get(["solar"])
-        self.prices = DA_Prices(self.config, self.db_da)
+        self.prices = DaPrices(self.config, self.db_da)
         self.strategy = self.config.get(["strategy"])
         self.tibber_options = self.config.get(["tibber"], None, None)
         self.notification_entity = self.config.get(["notifications", "notification entity"], None, None)
@@ -90,6 +90,7 @@ class DayAheadOpt(hass.Hass):
         self.heater_present = False
         self.boiler_present = False
         self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
+        self.machines = self.config.get(["machines"], None, [])
 
     def set_last_activity(self):
         if self.last_activity_entity is not None:
@@ -816,7 +817,8 @@ class DayAheadOpt(hass.Hass):
                 print(ex)
                 soc_state = 100.0
 
-            soc_state = min(soc_state, 90.0)
+            # onderstaand evt voor testen
+            # soc_state = min(soc_state, 90.0)
 
             actual_soc.append(soc_state)
             wished_level.append(float(self.get_state(self.ev_options[e]["charge scheduler"]["entity set level"]).state))
@@ -930,7 +932,7 @@ class DayAheadOpt(hass.Hass):
         c_ev = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_power[e])
                  for _ in range(U)] for e in range(EV)]  # consumption charger
         ev_accu_in = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_power[e])
-                       for _ in range(U)] for e in range(EV)]  # consumption charger
+                       for _ in range(U)] for e in range(EV)]  # load battery
 
         for e in range(EV):
             if (energy_needed[e] > 0) and (ready_u[e] < U):
@@ -1061,12 +1063,144 @@ class DayAheadOpt(hass.Hass):
             # som van alle geproduceerde warmte == benodigde warmte
             model += xsum(h_hp[u] for u in range(U)) == heat_needed
 
+        ########################################################################
+        # apparaten /machines
+        ########################################################################
+        program_selected = []  # "kleur 30", "eco"]
+        M = len(self.machines)
+        R = []  # aantal mogelijke runs
+        RL = []  # lengte van een run
+        KW = []  # aantal kwartieren
+        ma_uur_kw = []  # per machine een list met beschikbare kwartieren
+        ma_kw_dt = []   # per machine een list op welk tijdstip een kwartier begint
+        program_index = []
+        ma_name = []
+        ma_entity_plan_start = []
+        ma_entity_plan_end = []
+        for m in range(M):
+            error = False
+            ma_name.append(self.machines[m]['name'])
+            # machines[m]["power"] = [0] + machines[m]["power"] + [0]
+            start_entity = self.config.get(["entity start window"], self.machines[m], None)
+            start_dt = uur[0]
+            ready_dt = uur[U-1]
+            if start_entity is None:
+                print(f"De 'entity start window' is niet gedefinieerd bij de instellingen van {ma_name[m]}.")
+                print(f"Machine {ma_name[m]} wordt niet ingepland.")
+                error = True
+            else:
+                start = self.get_state(start_entity).state
+                start_dt = convert_timestr(start, now_dt)
+            ready_entity = self.config.get(["entity end window"], self.machines[m], None)
+            if ready_entity is None:
+                print(f"De 'entity end window' is niet gedefinieerd bij de instellingen van {ma_name[m]}.")
+                if not error:
+                    print(f"Machine {ma_name[m]} wordt niet ingepland.")
+                    error = True
+            else:
+                ready = self.get_state(ready_entity).state
+                ready_dt = convert_timestr(ready, now_dt)
+            if not error and start_dt > ready_dt:
+                if ready_dt > now_dt:
+                    print(f"Machine {ma_name[m]} wordt nog niet ingepland: start berekening zit in de planningsperiode")
+                    error = True
+                else:
+                    ready_dt = ready_dt + datetime.timedelta(days=1)
+            if ready_dt > tijd[U-1]:
+                print(f"Machine {ma_name[m]} wordt niet ingepland, want {ready_dt} "
+                      f"ligt voorbij de planningshorizon {uur[U-1]}")
+                error = True
+            if error:
+                kw_num = 0
+            else:
+                delta = ready_dt - start_dt
+                kw_num = math.ceil(delta.seconds / 900)
+            KW.append(kw_num)
+            entity_machine_program = self.config.get(["entity selected program"], self.machines[m], None)
+            if entity_machine_program:
+                try:
+                    program_selected.append(self.get_state(entity_machine_program).state)
+                except Exception as ex:
+                    print(ex)
+            p = next((i for i, item in enumerate(self.machines[m]["programs"]) if item["name"] ==
+                      program_selected[m]), 0)
+            program_index.append(p)
+            RL.append(len(self.machines[m]["programs"][p]["power"]))  # aantal stages
+            if RL[m] == 0:
+                print(f"machine {ma_name[m]} wordt niet ingepland, "
+                      f"want er is gekozen voor {program_selected[m]}")
+            uur_kw = []
+            kw_dt = []
+            kwartier_dt = start_dt
+            for u in range(U):
+                uur_kw.append([])
+            for kw in range(kw_num):
+                uur_index = calc_uur_index(kwartier_dt, tijd)
+                if uur_index < U:
+                    uur_kw[uur_index].append(kw)
+                kw_dt.append(kwartier_dt)
+                kwartier_dt = kwartier_dt + datetime.timedelta(seconds=900)
+            ma_uur_kw.append(uur_kw)
+            ma_kw_dt.append(kw_dt)
+            R.append(min(KW[m], KW[m] - RL[m] + 1))  # aantal runs = aantal kwartieren - aantal stages + 1
+            ma_entity_plan_start.append(self.config.get(["entity calculated start"], self.machines[m], None))
+            ma_entity_plan_end.append(self.config.get(["entity calculated end"], self.machines[m], None))
+        # ma_start : wanneer machine start = 1 anders = 0
+        ma_start = [[model.add_var(var_type=BINARY) for _ in range(KW[m])] for m in range(M)]
+
+        # machine aan per kwartier per run
+        # ma_on = [[[model.add_var(var_type=BINARY) for kw in range(KW[m])] for r in range(R[m])] for m in range(M)]
+
+        # consumption per kwartier
+        c_ma_kw = [[model.add_var(var_type=CONTINUOUS, lb=0,
+                                  ub=math.ceil(max(self.machines[m]["programs"][program_index[m]]["power"], default=0)))
+                    for _ in range(KW[m])] for m in range(M)]
+
+        c_ma_u = [[model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(U)] for _ in range(M)]
+
+        # kosten per uur
+        # k_ma = [[model.add_var(var_type=CONTINUOUS) for _ in range(U)] for _ in range(M)]
+        # total_cost_ma = [model.add_var(var_type=CONTINUOUS) for _ in range(M)]
+        # total_cost = model.add_var(var_type=CONTINUOUS)
+
+        #  constraints
+        for m in range(M):
+            # maar 1 start
+            if KW[m] == 0:
+                model += xsum(ma_start[m][kw] for kw in range(KW[m])) == 0
+            else:
+                model += xsum(ma_start[m][kw] for kw in range(KW[m])) == 1
+
+            # kan niet starten als je de run niet kan afmaken
+            for kw in range(KW[m])[KW[m]-RL[m]:]:
+                model += ma_start[m][kw] == 0
+
+            for kw in range(KW[m]):
+                '''
+                print(f"kw: {kw} range r: {max(0, kw - RL[m]+1)} <-> {min(kw, R[m])+1} r:", end=" ")
+                for r in range(R[m])[max(0, kw - RL[m]+1): min(kw, R[m])+1]:
+                    print(f"{r} power: {machines[m]['power'][kw-r]}", end=" ")
+                print()
+                '''
+
+                model += c_ma_kw[m][kw] == xsum(self.machines[m]["programs"][program_index[m]]["power"][kw-r] *
+                                                ma_start[m][r]/4000
+                                                for r in range(R[m])[max(0, kw - RL[m]+1): min(kw, R[m])+1])
+            for u in range(U):
+                if len(ma_uur_kw[m][u]) == 0:
+                    model += c_ma_u[m][u] == 0
+                else:
+                    model += c_ma_u[m][u] == xsum(c_ma_kw[m][kw] for kw in ma_uur_kw[m][u])
+
+        #####################################################
         # alle verbruiken in de totaal balans in kWh
+        #####################################################
         for u in range(U):
-            model += c_l[u] == c_t_total[u] + b_l[u] * hour_fraction[u] + \
-                xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B)) * hour_fraction[u] + \
-                c_b[u] + xsum(c_ev[e][u] for e in range(EV)) + \
-                c_hp[u] * hour_fraction[u] - xsum(pv_ac[s][u] for s in range(solar_num))
+            model += (c_l[u] == c_t_total[u] + b_l[u] * hour_fraction[u] +
+                      xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B)) * hour_fraction[u] +
+                      c_b[u] + xsum(c_ev[e][u] for e in range(EV)) +
+                      c_hp[u] * hour_fraction[u] + xsum(c_ma_u[m][u] for m in range(M)) -
+                      xsum(pv_ac[s][u] for s in range(solar_num)))
 
         # cost variabele
         cost = model.add_var(var_type=CONTINUOUS, lb=-1000, ub=1000)
@@ -1092,6 +1226,8 @@ class DayAheadOpt(hass.Hass):
         # settings
         model.max_gap = 0.1
         model.max_nodes = 1500
+
+        model.check_optimization_results()
 
         # kosten optimalisering
         strategy = self.strategy.lower()
@@ -1140,6 +1276,7 @@ class DayAheadOpt(hass.Hass):
             org_l = []
             org_t = []
             c_ev_sum = []
+            c_ma_sum = []
             accu_in_sum = []
             accu_out_sum = []
             for u in range(U):
@@ -1155,6 +1292,10 @@ class DayAheadOpt(hass.Hass):
                 for e in range(EV):
                     ev_sum += c_ev[e][u].x
                 c_ev_sum.append(ev_sum)
+                ma_sum = 0
+                for m in range(M):
+                    ma_sum += c_ma_u[m][u].x
+                c_ma_sum.append(ma_sum)
             pv_ac_hour_sum = []  # totale bruto pv_dc->ac productie
             solar_hour_sum = []  # totale netto pv_ac productie
             for u in range(U):
@@ -1165,8 +1306,8 @@ class DayAheadOpt(hass.Hass):
                         pv_ac_hour_sum[u] += pv_prod_ac[b][s][u]
                 for s in range(solar_num):
                     solar_hour_sum[u] += pv_ac[s][u].x
-                netto = b_l[u] + c_b[u].x + c_hp[u].x + \
-                    c_ev_sum[u] - solar_hour_sum[u] - pv_ac_hour_sum[u]
+                netto = b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] \
+                    - solar_hour_sum[u] - pv_ac_hour_sum[u]
                 sum_old_cons += netto
                 if netto >= 0:
                     old_cost_gc += netto * p_grl[u]
@@ -1287,6 +1428,8 @@ class DayAheadOpt(hass.Hass):
             # pd.options.display.float_format = '{:,.3f}'.format
             cols = ['uur', 'bat_in', 'bat_out']
             cols = cols + ['cons', 'prod', 'base', 'boil', 'wp', 'ev', 'pv_ac', 'cost', 'profit', 'b_tem']
+            if M > 0:
+                cols = cols + ["mach"]
             d_f = pd.DataFrame(columns=cols)
             for u in range(U):
                 row = [uur[u], accu_in_sum[u], accu_out_sum[u]]
@@ -1294,6 +1437,8 @@ class DayAheadOpt(hass.Hass):
                              c_b[u].x, c_hp[u].x, c_ev_sum[u], solar_hour_sum[u], c_l[u].x * pl[u],
                              -c_t_w_tax[u].x * pt[u] - c_t_no_tax[u].x * pt_notax[u],
                              boiler_temp[u + 1].x]
+                if M > 0:
+                    row = row + [c_ma_sum[u]]
                 d_f.loc[d_f.shape[0]] = row
             if not self.debug:
                 self.save_df(tablename='prognoses', tijd=tijd, df=d_f.iloc[:, 1:-1])
@@ -1301,7 +1446,7 @@ class DayAheadOpt(hass.Hass):
                 print("Prognoses zijn niet opgeslagen.")
 
             d_f = d_f.astype({"uur": int})
-            d_f.loc['total'] = d_f.iloc[:, 1:-1].sum()
+            d_f.loc['total'] = d_f.iloc[:, 1:].sum()
             d_f.at[d_f.index[-1], "uur"] = "Totaal"
             d_f.at[d_f.index[-1], "b_tem"] = ""
 
@@ -1314,13 +1459,16 @@ class DayAheadOpt(hass.Hass):
             else:
                 print("\nOnderstaande settings worden NIET doorgezet naar HA")
 
-                '''
+            '''
             set helpers output home assistant
             boiler c_b[0].x >0 trigger boiler
             ev     c_ev[0].x > 0 start laden auto, ==0 stop laden auto
             battery multiplus feedin from grid = accu_in[0].x - accu_out[0].x
             '''
+
+            #############################################
             # boiler
+            ############################################
             if self.boiler_present:
                 if float(c_b[0].x) > 0.0:
                     if self.debug:
@@ -1334,7 +1482,9 @@ class DayAheadOpt(hass.Hass):
                     print("Boiler opwarmen niet geactiveerd")
             print()
 
+            ###########################################
             # ev
+            ##########################################
             for e in range(EV):
                 if ready_u[e] < U:
                     print(f"Inzet-factor laden {self.ev_options[e]['name']} per stap")
@@ -1365,7 +1515,7 @@ class DayAheadOpt(hass.Hass):
                         new_ampere_state = charge_stages[e][cs]["ampere"]
                         if new_ampere_state > 0:
                             new_switch_state = "on"
-                        if charger_factor[e][cs][0].x < 1:
+                        if (charger_factor[e][cs][0].x < 1) and (energy_needed[e] > (ev_accu_in[e][0].x + 0.01)):
                             new_ts = now_dt.timestamp() + charger_factor[e][cs][0].x * 3600
                             stop_laden = datetime.datetime.fromtimestamp(int(new_ts))
                             new_state_stop_laden = stop_laden.strftime('%Y-%m-%d %H:%M')
@@ -1424,7 +1574,9 @@ class DayAheadOpt(hass.Hass):
                 print(f"- aantal ampere: {self.get_state(entity_charging_ampere).state}")
                 print()
 
+            #######################################
             # solar
+            ######################################
             for s in range(solar_num):
                 entity_pv_switch = self.config.get(["entity pv switch"], self.solar[s])
                 switch_state = self.get_state(entity_pv_switch).state
@@ -1444,7 +1596,9 @@ class DayAheadOpt(hass.Hass):
                             self.turn_off(entity_pv_switch)
                             print(f"PV {pv_name} uitgezet")
 
-                # battery
+            ############################################
+            # battery
+            ############################################
             for b in range(B):
                 # vermogen aan ac kant
                 netto_vermogen = int(1000 * (ac_to_dc[b][0].x - ac_from_dc[b][0].x))
@@ -1516,7 +1670,9 @@ class DayAheadOpt(hass.Hass):
                                 print(f"PV {pv_name} uitgezet")
                         self.turn_on(entity_pv_switch)
 
+            ##################################################
             # heating
+            ##################################################
             if self.heater_present:
                 entity_curve_adjustment = self.heating_options["entity adjust heating curve"]
                 old_adjustment = float(self.get_state(
@@ -1531,15 +1687,55 @@ class DayAheadOpt(hass.Hass):
                     print("Aanpassing stooklijn: ", adjustment)
                     self.set_value(entity_curve_adjustment, adjustment)
 
+            ########################################################################
+            # apparaten /machines
+            ########################################################################
+            for m in range(M):
+                print()
+                print(f"Apparaat: {ma_name[m]} programma: {program_selected[m]}")
+                if RL[m] > 0:
+                    for r in range(R[m]):
+                        if ma_start[m][r].x == 1:
+                            # print(f"ma_start: run {r} start {ma_start[m][r].x}")
+                            start_machine_str = ma_kw_dt[m][r].strftime('%Y-%m-%d %H:%M')
+                            if not (ma_entity_plan_start[m] is None):
+                                if self.debug:
+                                    print(f"Apparaat {ma_name[m]} zou zijn gestart op {start_machine_str}")
+                                else:
+                                    self.call_service("set_datetime", entity_id=ma_entity_plan_start[m],
+                                                      datetime=start_machine_str)
+                                    print(f"Apparaat: {ma_name[m]} start op {start_machine_str}")
+                            end_machine_str = ma_kw_dt[m][r + RL[m]].strftime('%Y-%m-%d %H:%M')
+                            if not (ma_entity_plan_end[m] is None):
+                                if self.debug:
+                                    print(f"Apparaat  {ma_name[m]} zou klaar zijn op {end_machine_str}")
+                                else:
+                                    self.call_service("set_datetime", entity_id=ma_entity_plan_end[m],
+                                                      datetime=end_machine_str)
+                                    print(f"Apparaat  {ma_name[m]} is klaar op {end_machine_str}")
+
+                            print(f"Stopt op {end_machine_str}")
+                if self.debug:
+                    for kw in range(KW[m]):
+                        print(f"kwartier {kw:>2} tijd: {ma_kw_dt[m][kw].strftime('%H:%M')} "
+                              f"consumption: {c_ma_kw[m][kw].x:>7.3f} "
+                              f"uur: {math.floor(kw / 4)} tarief: {pl[math.floor(kw / 4)]:.4f}")
+                    for u in range(U):
+                        print(f"uur {u:>2} tijdstip {tijd[u].strftime('%H:%M')} "
+                              f"consumption: {c_ma_u[m][u].x:>7.3f} tarief: {pl[u]:.4f}")
+
             self.db_da.disconnect()
 
+            #############################################
             # graphs
+            #############################################
             accu_in_n = []
             accu_out_p = []
             c_t_n = []
             base_n = []
             boiler_n = []
             heatpump_n = []
+            mach_n = []
             ev_n = []
             c_l_p = []
             soc_p = []
@@ -1553,6 +1749,7 @@ class DayAheadOpt(hass.Hass):
                 boiler_n.append(- c_b[u].x)
                 heatpump_n.append(-c_hp[u].x)
                 ev_n.append(-c_ev_sum[u])
+                mach_n.append(-c_ma_sum[u])
                 pv_p.append(solar_hour_sum[u])
                 pv_ac_p.append(pv_ac_hour_sum[u])
                 accu_in_sum = 0
@@ -1563,7 +1760,7 @@ class DayAheadOpt(hass.Hass):
                 accu_in_n.append(-accu_in_sum * hour_fraction[u])
                 accu_out_p.append(accu_out_sum * hour_fraction[u])
                 max_y = max(max_y, (c_l_p[u] + pv_p[u] + pv_ac_p[u]), abs(
-                    c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + accu_in_sum)
+                    c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] + accu_in_sum)
                 for b in range(B):
                     if u == 0:
                         soc_p.append([])
@@ -1583,6 +1780,7 @@ class DayAheadOpt(hass.Hass):
             gr1_df["boiler"] = boiler_n
             gr1_df["heatpump"] = heatpump_n
             gr1_df["ev"] = ev_n
+            gr1_df["mach"] = mach_n
             gr1_df["pv_ac"] = pv_p
             gr1_df["pv_dc"] = pv_ac_p
             gr1_df["accu_in"] = accu_in_n
@@ -1632,6 +1830,11 @@ class DayAheadOpt(hass.Hass):
                             "type": "stacked",
                             "color": 'yellow'
                             },
+                           {"column": "mach",
+                            "title": "App.",
+                            "type": "stacked",
+                            "color": 'brown'
+                            },
                            {"column": "productie",
                             "title": "Teruglev.",
                             "type": "stacked",
@@ -1659,6 +1862,7 @@ class DayAheadOpt(hass.Hass):
             grid0_df["boiler"] = boiler_n
             grid0_df["heatpump"] = heatpump_n
             grid0_df["ev"] = ev_n
+            grid0_df["mach"] = mach_n
             grid0_df["pv_ac"] = pv_ac_p
             grid0_df["pv_dc"] = pv_p
             style = self.config.get(['graphics', 'style'], None, "default")
@@ -1685,8 +1889,13 @@ class DayAheadOpt(hass.Hass):
                     base_n), label="WP", color='#a32cc4', align="edge")
             axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
                         label="EV laden", color='yellow', align="edge")
+            if M > 0:
+                axis[0].bar(ind, np.array(mach_n),
+                            bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
+                            label="Apparatuur", color='brown', align="edge")
             axis[0].bar(ind, np.array(org_t),
-                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
+                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n) +
+                               np.array(mach_n),
                         label="Teruglev.", color='#0080ff', align="edge")
             axis[0].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
             axis[0].set_ylabel('kWh')
@@ -1718,12 +1927,17 @@ class DayAheadOpt(hass.Hass):
                     base_n), label="WP", color='#a32cc4', align="edge")
             axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
                         label="EV laden", color='yellow', align="edge")
+            if M > 0:
+                axis[1].bar(ind, np.array(mach_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) +
+                                                          np.array(ev_n),
+                            label="Apparatuur", color='brown', align="edge")
             axis[1].bar(ind, np.array(c_t_n),
-                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
+                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n) +
+                               np.array(mach_n),
                         label="Teruglev.", color='#0080ff', align="edge")
             axis[1].bar(ind, np.array(accu_in_n),
                         bottom=np.array(base_n) + np.array(boiler_n) +
-                        np.array(heatpump_n) + np.array(ev_n) + np.array(c_t_n),
+                        np.array(heatpump_n) + np.array(ev_n) + np.array(mach_n) + np.array(c_t_n),
                         label='Accu in', color='#ff8000', align="edge")
             axis[1].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
             axis[1].set_ylabel('kWh')

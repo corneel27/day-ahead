@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.3.7]
+- De installatieprocedure is verkort door over te stappen van pip naar uv als tool voor het installeren van Python modules 
+- In het laatste uur van het laden van een elektrische auto wordt geen eindtijd doorgegeven aan de entiteit **entity stop charging**
+- Format specifier opgenomen voor het invoeren datums bij het ophalen van prijzen.
+- DAO is uitgebreid met optionele functionaliteit voor het inplannen van diverse huishuidelijke machines en apparaten (zie DOCS.md)
+
 ## [V2024.3.6]
 Er is een optionele aanvulling te gebruiken bij het inplannen van het laden van een elektrische auto.
 Soms komt het voor het beter is om in een uur maar een deel van dat uur met een beter rendement (en een hoger vermogen)

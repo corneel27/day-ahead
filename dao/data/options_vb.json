@@ -333,6 +333,39 @@
       "entity stop charging": "input_datetime.stop_laden_ev"
     }
   ],
+    "machines" : [
+      { "name": "wasmachine",
+        "programs":[
+          {"name": "uit",
+           "power": []},
+          {"name": "kleur 30 graden",
+           "power": [2000, 1500, 500, 400, 200, 300]
+           },
+          {"name": "wolwas",
+           "power": [1500, 1000, 500, 400, 200, 300,200, 300]
+           }
+        ],
+        "entity start window": "input_datetime.start_window_wasmachine",
+        "entity end window": "input_datetime.end_window_wasmachine",
+        "entity selected program": "input_select.program_wasmachine"
+        "entity calculated start": "input_datetime.calculated_start_wasmachine",
+        "entity calculated end": "input_datetime.calculated_stop_wasmachine"
+      },
+      { "name": "vaatwasser",
+        "programs":[
+          {"name": "off",
+           "power": []},
+          {"name": "eco",
+           "power": [2000, 2000, 1500, 1000, 500, 500, 1000, 1000]
+           }
+        ],
+        "entity start window": "input_datetime.start_window_vaatwasser",
+        "entity end window": "input_datetime.end_window_vaatwasser",
+        "entity selected program": "input_select.program_vaatwasser"
+        "entity calculated start": "input_datetime.calculated_start_vaatwasser",
+        "entity calculated end": "input_datetime.calculated_stop_vaatwasser"
+      }
+  ],
   "tibber": {
     "api_token": "!secret tibber_api_token"
   },
