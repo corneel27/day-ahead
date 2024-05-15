@@ -16,7 +16,7 @@
       {% set id_p= "id_p" ~ parameter %}
       {% set value = parameters[parameter] %}
           <label for= "{{ id_p }}"> {{ parameter }} </label>
-          <input type="text" id="{{ id_p }}" name="{{ parameter }}" required minlength="10" maxlength="12" size="10" value="{{ value }}" />
+          <input type="text" id="{{ id_p }}" name="{{ parameter }}" required minlength="10" placeholder="jjjj-mm-dd" maxlength="12" size="10" value="{{ value }}" />
     {% endfor %}
   <br />
   {% endfor %}

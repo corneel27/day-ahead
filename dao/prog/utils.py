@@ -6,11 +6,7 @@ import json
 import os
 import sys
 import pandas as pd
-# from day_ahead import DayAheadOpt
 from requests import post
-#from dao.prog.da_config import Config
-#from dao.prog.db_manager import DBmanagerObj
-#from dao.prog.da_report import Report
 
 
 def is_laagtarief(dtime, switch_hour):
@@ -39,7 +35,7 @@ def calc_adjustment_heatcurve(price: float, price_avg: float, adjustment_factor,
     formule: -0,5*(price-price_avg)*10/price_avg
     :param price: de actuele uurprijs
     :param price_avg: de dag gemiddelde prijs
-    :param adjustment_factor: aanpassingsfactor in K/% bijv 0,4K per 10% = 0.04 K/%
+    :param adjustment_factor: aanpassingsfactor in K/% bijv. 0,4K per 10% = 0.04 K/%
     :param old_adjustment: huidige aanpassing
     :return: de berekende aanpassing
     """
@@ -59,7 +55,7 @@ def get_value_from_dict(dag: str, options: dict) -> float:
     """
     Selecteert uit een dict van datum/value paren de juiste value
     :param dag: string van de dag format yyyy-mm-dd
-    :param options: dict van datum/value paren bijv {'2022-01-01': 0.002, '2023-03-01': 0.018}
+    :param options: dict van datum/value paren bijv. {'2022-01-01': 0.002, '2023-03-01': 0.018}
     :return: de correcte value
     """
     o_list = list(options.keys())
@@ -108,9 +104,10 @@ def get_tibber_data():
         try:
             arg_dt = datetime.datetime.strptime(arg_s, "%Y-%m-%d").timestamp()
             latest_ts = arg_dt
-        except:
+        except Exception as ex:
+            print(ex)
             pass
-    if (len(sys.argv) <= 2) or (arg_dt == None):
+    if (len(sys.argv) <= 2) or (arg_dt is None):
         for cat in ['cons', 'prod']:
             sql_latest_ts = (
                 "SELECT t1.time, from_unixtime(t1.`time`) 'begin', t1.value "
@@ -190,6 +187,22 @@ def get_tibber_data():
     db_da.savedata(tibber_df)
     db_da.disconnect()
 
+def calc_uur_index (dt: datetime, tijd: list) -> int:
+    '''
+    berekent van dt de index in lijst uur
+    :param dt: de datetime waarvan de index wordt gezocht
+    :param tijd: lijst met datetime van begin van het betreffende uur
+    :return: het indexnummer in de lijst
+    '''
+    result_index = len(tijd)
+    if (result_index == 0) or (dt < tijd[0]):
+        return result_index
+    for u in range(len(tijd)):
+        if dt < (tijd[u] + datetime.timedelta(hours=1)):
+            result_index = u
+            break
+    return result_index
+
 
 '''
 def calc_heatpump_usage
@@ -224,12 +237,12 @@ def make_data_path():
     else:
         os.symlink("/config/dao_data", "../data")
 
-def version_number(version_str:str)->int:
-    l = [int(x, 10) for x in version_str.split('.')]
-    l.reverse()
-    return sum(x * (100 ** i) for i, x in enumerate(l))
+
+def version_number(version_str: str) -> int:
+    lst = [int(x, 10) for x in version_str.split('.')]
+    lst.reverse()
+    return sum(x * (100 ** i) for i, x in enumerate(lst))
+
 
 def error_handling():
-    return ' {}. {}, regelnummer: {}'.format(sys.exc_info()[0],
-                                         sys.exc_info()[1],
-                                         sys.exc_info()[2].tb_lineno)
+    return ' {}. {}, regelnummer: {}'.format(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2].tb_lineno)

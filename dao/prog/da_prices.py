@@ -8,9 +8,10 @@ from requests import get
 from nordpool.elspot import Prices
 import pytz
 import json
+from pprint import pprint
 
 
-class DA_Prices:
+class DaPrices:
     def __init__(self, config: Config, db_da: DBmanagerObj):
         self.config = config
         self.db_da = db_da
@@ -36,7 +37,7 @@ class DA_Prices:
 
         if len(sys.argv) <= 2:
             present = self.db_da.get_time_latest_record("da")
-            if present != None:
+            if not (present is None):
                 tz = pytz.timezone("CET")
                 present = tz.normalize(tz.localize(present))
                 if present >= (end - datetime.timedelta(hours=1)):
@@ -52,11 +53,11 @@ class DA_Prices:
             api_key = self.config.get(["prices", "entsoe-api-key"])
             client = EntsoePandasClient(api_key=api_key)
             da_prices = pd.DataFrame()
-            last_time = 0
             try:
                 da_prices = client.query_day_ahead_prices(
                     'NL', start=start, end=end)
-            except Exception as e:
+            except Exception as ex:
+                print(ex)
                 print(f"Geen data van Entsoe: tussen {start} en {end}")
             if len(da_prices.index) > 0:
                 df_db = pd.DataFrame(columns=['time', 'code', 'value'])
@@ -64,8 +65,7 @@ class DA_Prices:
                 print(da_prices)
                 for row in da_prices.itertuples():
                     last_time = int(datetime.datetime.timestamp(row[1]))
-                    df_db.loc[df_db.shape[0]] = [
-                        str(last_time), 'da', row[2] / 1000]
+                    df_db.loc[df_db.shape[0]] = [str(last_time), 'da', row[2] / 1000]
                 print(df_db)
                 self.db_da.savedata(df_db)
 
@@ -78,7 +78,7 @@ class DA_Prices:
                 end_date = start
             hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=end_date)
             hourly_values = hourly_prices_spot['areas']['NL']['values']
-            print(hourly_values)
+            pprint(hourly_values)
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             for hourly_value in hourly_values:
                 time_dt = hourly_value['start']

@@ -52,7 +52,8 @@ RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 COPY requirements.txt /tmp/
-RUN pip3 install -r /tmp/requirements.txt
+RUN pip3 install uv
+RUN uv pip install -r /tmp/requirements.txt
 
 EXPOSE 5000
 WORKDIR /root/dao/prog
