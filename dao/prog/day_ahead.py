@@ -1414,7 +1414,7 @@ class DayAheadOpt(hass.Hass):
 
                 # df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
                 # df_accu[b] = df_accu[b].astype({"uur": int})
-                df_accu[b].loc["Total"] = df_accu[b].sum(axis=0, numeric_only=True)
+                # df_accu[b].loc["Total"] = df_accu[b].sum(axis=0, numeric_only=True)
                 df_accu[b].at[df_accu[b].index[-1], "uur"] = "Totaal"
                 df_accu[b].at[df_accu[b].index[-1], "eff"] = "--"
                 df_accu[b].at[df_accu[b].index[-1], "o_eff"] = "--"
