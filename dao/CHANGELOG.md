@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.3.8]
+Een soms optredende fout bij het sommeren van de accutabel zorgde voor het niet doorzetten van de berekende resultaten.
+Het sommeren is (tijdelijk) eruit gehaald.
+
 ## [V2024.3.7]
 - De installatieprocedure is verkort door over te stappen van pip naar uv als tool voor het installeren van Python modules 
 - In het laatste uur van het laden van een elektrische auto wordt geen eindtijd doorgegeven aan de entiteit **entity stop charging**
