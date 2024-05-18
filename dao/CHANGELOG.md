@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+
+## [V2024.3.9]
+Volgende fouten zijn hersteld:
+- er zat een storende fout in options_vb.json, zodat een versie installatie niet werkte.
+- er zat een fout in een de html-template die een bewerking/berekening initialiseert
+
 ## [V2024.3.8]
 Een soms optredende fout bij het sommeren van de accutabel zorgde voor het niet doorzetten van de berekende resultaten.
 Het sommeren is (tijdelijk) eruit gehaald.
