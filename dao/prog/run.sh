@@ -47,7 +47,7 @@ cd /root/dao/webserver/
 gunicorn --config gunicorn_config.py app:app &
 
 cd /root/dao/prog
-bash ./watchdog.sh python3 day_ahead.py
+bash ./watchdog.sh python3 da_scheduler.py
 # python3 day_ahead.py &
 
 

@@ -3,11 +3,17 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import math
+import logging
 
 
 class GraphBuilder:
 
     def __init__(self, backend=None):
+        plt.set_loglevel(level='warning')
+        pil_logger = logging.getLogger('PIL')
+        # override the logger logging level to INFO
+        pil_logger.setLevel(logging.INFO)
+
         if backend is None or backend == "":
             return
         else:

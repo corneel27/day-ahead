@@ -10,6 +10,7 @@ from dao.prog.da_graph import GraphBuilder
 import math
 import json
 import itertools
+import logging
 
 
 class Report:
@@ -139,7 +140,7 @@ class Report:
                  "function": "calc_cost"
                  },
         }
-        self.balance_graph_options= {
+        self.balance_graph_options = {
             "title": "Energiebalans",
             "style": self.config.get(['graphics', 'style']),
             "haxis": {
@@ -149,10 +150,10 @@ class Report:
                 "title": "kWh"
             }],
             "series_keys": ["base", "wp", "boil", "ev", "bat_in", "prod", "pv_ac", "bat_out", "cons"],
-            "series" : [],
+            "series": [],
         }
         for key in self.balance_graph_options["series_keys"]:
-            #key, serie in self.energy_balance_dict.items():
+            # key, serie in self.energy_balance_dict.items():
             serie = self.energy_balance_dict[key]
             serie["column"] = serie['name']
             serie["type"] = "stacked",
@@ -229,7 +230,7 @@ class Report:
         return
 
     def get_sensor_data(self, sensor: str, vanaf: datetime.datetime, tot: datetime.datetime,
-                        col_name: str, agg:str="uur") -> pd.DataFrame:
+                        col_name: str, agg: str = "uur") -> pd.DataFrame:
         if agg == "uur":
             sql = "SELECT FROM_UNIXTIME(t2.`start_ts`) 'tijd', " \
                   "FROM_UNIXTIME(t2.`start_ts`) 'tot', " \
@@ -256,7 +257,7 @@ class Report:
                 "AND t1.`start_ts` >= UNIX_TIMESTAMP('" + str(vanaf) + "') - 3600 " \
                 "AND t1.`start_ts` < UNIX_TIMESTAMP('" + str(tot) + "') - 3600 " \
                 "GROUP BY maand;"
-        else: # agg == "dag":
+        else:  # agg == "dag":
             sql = "SELECT date(from_unixtime(t2.`start_ts`)) AS 'dag', " \
                 "date_format(from_unixtime(t2.`start_ts`),'%Y-%m-%d 00:00:00') AS 'tijd', " \
                 "MAX(FROM_UNIXTIME(t2.`start_ts`)) AS 'tot', " \
@@ -269,7 +270,7 @@ class Report:
                 "AND t1.`start_ts` >= UNIX_TIMESTAMP('" + str(vanaf) + "') - 3600 " \
                 "AND t1.`start_ts` < UNIX_TIMESTAMP('" + str(tot) + "') - 3600  "\
                 "GROUP BY dag;"
-        #print(sql)
+        # print(sql)
         df = self.db_ha.run_select_query(sql)
         # print(df_sensor)
         return df
@@ -347,12 +348,12 @@ class Report:
             counter = + 1
         return result
 
-    def calc_cost(self, vanaf: datetime.datetime, tot: datetime.datetime, col_name: str) -> pd.DataFrame:
+    def calc_cost(self, vanaf: datetime.datetime, tot: datetime.datetime) -> pd.DataFrame:
         cons_df = self.get_sensor_sum(self.grid_dict["cons"]["sensors"], vanaf, tot, "cons")
         prod_df = self.get_sensor_sum(self.grid_dict["prod"]["sensors"], vanaf, tot, "prod")
         da_df = self.get_price_data(vanaf, tot)
         da_df.index = pd.to_datetime(da_df["time"])
-        data = self.copy_col_df(cons_df, da_df,"cons")
+        data = self.copy_col_df(cons_df, da_df, "cons")
         data = self.copy_col_df(prod_df, data, "prod")
         result = pd.DataFrame(columns=['time', 'code', 'value'])
         for row in data.itertuples():
@@ -365,7 +366,7 @@ class Report:
             print(result)
         return data
 
-    def consolidate_data(self, _start = None, _end = None)->None:
+    def consolidate_data(self, _start=None, _end=None) -> None:
         if _end is None:
             now = datetime.datetime.now()
             tot = datetime.datetime(now.year, now.month, now.day)
@@ -391,7 +392,7 @@ class Report:
                 # print(db_row)
                 df_db.loc[df_db.shape[0]] = db_row
             print(df_db)
-            #self.db_da.savedata(df_db, debug=False, tablename="values")
+            # self.db_da.savedata(df_db, debug=False, tablename="values")
         return
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
@@ -465,7 +466,7 @@ class Report:
 
         return result
 
-    def calc_base(self, df:pd.DataFrame )->pd.DataFrame:
+    def calc_base(self, df: pd.DataFrame) -> pd.DataFrame:
         base_load = []
         for row in df.itertuples():
             base_load.append(row.cons - row.prod + row.bat_out - row.bat_in + row.pv_ac - row.ev - row.wp - row.boil)
@@ -480,6 +481,7 @@ class Report:
         tot = _tot if _tot else periode_d["tot"]
         interval = periode_d["interval"]
         result = pd.DataFrame(columns=[interval, "tijd"])
+        last_realised_moment = datetime.datetime.fromtimestamp(math.floor(datetime.datetime.now().timestamp()/3600)*3600)
         moment = vanaf
         while moment < tot:
             if interval == "maand":
@@ -508,7 +510,7 @@ class Report:
                     "MAX(from_unixtime(t1.`time`)) AS 'tot', " \
                     "sum(t1.`value`) " + key + " " \
                     "FROM `values` AS t1, `variabel`AS v1  " \
-                    "WHERE (v1.`code` = '" + key +"') AND (v1.id = t1.variabel) AND  " \
+                    "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
                     "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
                     "GROUP BY maand;"
             elif interval == "dag":
@@ -517,7 +519,7 @@ class Report:
                     "MAX(from_unixtime(t1.`time`)) AS 'tot', " \
                     "sum(t1.`value`) " + key + " " \
                     "FROM `values` AS t1, `variabel`AS v1  " \
-                    "WHERE (v1.`code` = '" + key +"') AND (v1.id = t1.variabel) AND  " \
+                    "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
                     "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
                     "GROUP BY dag;"
             else:  # interval == "uur"
@@ -527,7 +529,7 @@ class Report:
                   "FROM `values` AS t1, `variabel`AS v1  " \
                   "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
                   "t1.`time`>= UNIX_TIMESTAMP('" + str(vanaf) + "') AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
-            #print(sql)
+            # print(sql)
             code_result = self.db_da.run_select_query(sql)
             code_result.index = pd.to_datetime(code_result["tijd"])
             self.add_col_df(code_result, result, key)
@@ -538,6 +540,7 @@ class Report:
             else:
                 last_moment = code_result['tot'].iloc[-1] + datetime.timedelta(hours=1)
             if last_moment < tot:
+                ha_result = None
                 if categorie["sensors"] == "calc":
                     function = categorie["function"]
                     ha_result = getattr(self, function)(result)
@@ -546,7 +549,7 @@ class Report:
                         ha_result = self.get_sensor_data(sensor, last_moment, tot, key, interval)
                         ha_result.index = pd.to_datetime(ha_result["tijd"])
                         result = self.add_col_df(ha_result, result, key)
-                if len(ha_result) > 0:
+                if ha_result is not None and len(ha_result) > 0:
                     if categorie["sensors"] == "calc":
                         now = datetime.datetime.now()
                         last_moment = max(datetime.datetime(now.year, now.month, now.day, now.hour), vanaf)
@@ -555,16 +558,18 @@ class Report:
                 else:
                     last_moment = vanaf
 
+            if last_moment < last_realised_moment:
+                last_moment = last_realised_moment
             if last_moment < tot:
                 if interval == "maand":
-                    sql = "SELECT concat(year(from_unixtime(t1.`time`)),LPAD(MONTH(from_unixtime(t1.`time`)),3, ' ')) " \
+                    sql = "SELECT concat(year(from_unixtime(t1.`time`)), LPAD(MONTH(from_unixtime(t1.`time`)),3, ' ')) " \
                           "AS 'maand', " \
                           "date_format(from_unixtime(t1.`time`),'%Y-%m-01 00:00:00') AS 'tijd', " \
                           "MAX(from_unixtime(t1.`time`)) AS 'tot', " \
                           "sum(t1.`value`) " + key + " " \
                           "FROM `prognoses` AS t1, `variabel`AS v1  " \
                           "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
-                          "t1.`time` >= UNIX_TIMESTAMP('" + str(last_moment) + ("') AND " \
+                          "t1.`time` >= UNIX_TIMESTAMP('" + str(last_moment) + ("') AND " 
                           "t1.`time` < UNIX_TIMESTAMP('") + str(tot) + "') " \
                           "GROUP BY maand;"
                 elif interval == "dag":
@@ -574,7 +579,7 @@ class Report:
                           "sum(t1.`value`) " + key + " " \
                           "FROM `prognoses` AS t1, `variabel`AS v1  " \
                           "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
-                          "t1.`time` >= UNIX_TIMESTAMP('" + str(last_moment) + ("') AND " \
+                          "t1.`time` >= UNIX_TIMESTAMP('" + str(last_moment) + ("') AND " 
                           "t1.`time` < UNIX_TIMESTAMP('") + str(tot) + "') " \
                           "GROUP BY dag;"
                 else:  # interval == "uur"
@@ -583,7 +588,7 @@ class Report:
                           "t1.`value` '" + key + "' " \
                           "FROM `prognoses` AS t1, `variabel`AS v1  " \
                           "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
-                          "t1.`time`>= UNIX_TIMESTAMP('" + str(last_moment) + ("') AND " \
+                          "t1.`time`>= UNIX_TIMESTAMP('" + str(last_moment) + ("') AND " 
                           "t1.`time` < UNIX_TIMESTAMP('") + str(tot) + "');"
                     '''
                     sql = "SELECT from_unixtime(t1.`time`) tijd,  " \
@@ -1002,8 +1007,11 @@ class Report:
         self.db_ha.connect()
         for weekday in range (7):
             baseload = self.calc_weekday_baseload(weekday)
-            print(f"baseload voor weekdag {weekday} :", end=" ")
-            print(baseload, sep=", ")
+            logging.info(f"baseload voor weekdag {weekday} :")
+            bl_str = ""
+            for x in baseload:
+                bl_str += str(x) + " "
+            logging.info(bl_str)
             out_file = "../data/baseload/baseload_" + str(weekday) +".json"
             with open(out_file, 'w') as f:
                 print(json.dumps(baseload, indent=2), file=f)

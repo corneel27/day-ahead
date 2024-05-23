@@ -45,6 +45,7 @@
     "last invoice": "2022-09-01",
     "tax refund": "True"
   },
+  "logging level" : "info",
   "use_calc_baseload": "True",
   "baseload calc periode": 56,
   "baseload": [
@@ -322,7 +323,6 @@
       ],
       "entity actual level": "sensor.wvwzzz_battery_level",
       "entity plugged in": "binary_sensor.wvwzzz_external_power",
-      "entity stop charging": "input_datetime.stop_laden_ev",
       "charge scheduler": {
         "entity set level": "input_number.gewenst_laad_niveau",
         "level margin": 1,
@@ -347,7 +347,7 @@
         ],
         "entity start window": "input_datetime.start_window_wasmachine",
         "entity end window": "input_datetime.end_window_wasmachine",
-        "entity selected program": "input_select.program_wasmachine"
+        "entity selected program": "input_select.program_wasmachine",
         "entity calculated start": "input_datetime.calculated_start_wasmachine",
         "entity calculated end": "input_datetime.calculated_stop_wasmachine"
       },
@@ -361,7 +361,7 @@
         ],
         "entity start window": "input_datetime.start_window_vaatwasser",
         "entity end window": "input_datetime.end_window_vaatwasser",
-        "entity selected program": "input_select.program_vaatwasser"
+        "entity selected program": "input_select.program_vaatwasser",
         "entity calculated start": "input_datetime.calculated_start_vaatwasser",
         "entity calculated end": "input_datetime.calculated_stop_vaatwasser"
       }

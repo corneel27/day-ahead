@@ -1,13 +1,14 @@
 from db_manager import DBmanagerObj
 from da_config import Config
-import _version
+import version
 import utils
+import logging
 
 
 class CheckDB:
     def __init__(self):
         self.config = Config("../data/options.json")
-        self.version = _version.__version__
+        self.version = version.__version__
         self.last_version = None
         db_da_server = self.config.get(['database da', "server"], None, "core-mariadb")
         db_da_port = int(self.config.get(['database da', "port"], None, 3306))
@@ -19,7 +20,7 @@ class CheckDB:
                                       db_user=db_da_user, db_password=db_da_password)
             self.db_da.connect()
         except Exception as ex:
-            print(ex, "Check your credentials")
+            logging.error(ex, "Check your credentials")
 
     def check_db_da(self):
         sql = "show tables like 'version';"
@@ -93,7 +94,7 @@ class CheckDB:
                 ]
                 for i in range(len(sql_insert)):
                     self.db_da.run_sql(sql_insert[i])
-                print("Table \"variabel\" met inhoud gecreeerd.")
+                logging.info("Table \"variabel\" met inhoud gecreeerd.")
 
                 # table "values" maken
                 sql = "CREATE TABLE IF NOT EXISTS `values` ( \
@@ -109,7 +110,7 @@ class CheckDB:
                     ENGINE=InnoDB \
                     AUTO_INCREMENT=1;"
                 self.db_da.run_sql(sql)
-                print("Table \"values\" gecreeerd.")
+                logging.info("Table \"values\" gecreeerd.")
 
                 # table "prognoses" maken
                 sql = "CREATE TABLE IF NOT EXISTS `prognoses` (  \
@@ -125,7 +126,7 @@ class CheckDB:
                     ENGINE=InnoDB \
                     AUTO_INCREMENT=1;"
                 self.db_da.run_sql(sql)
-                print("Table \"prognoses\" gecreeerd.")
+                logging.info("Table \"prognoses\" gecreeerd.")
 
         if l_version < 20240307:
             sql_insert = [
@@ -133,7 +134,7 @@ class CheckDB:
             ]
             for i in range(len(sql_insert)):
                 self.db_da.run_sql(sql_insert[i])
-            print("Table \"variabel\" geupdated.")
+            logging.info("Table \"variabel\" geupdated.")
 
 
 def main():

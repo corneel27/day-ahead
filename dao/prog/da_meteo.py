@@ -1,7 +1,7 @@
 import datetime
 import json
 import math
-
+import logging
 import pandas as pd
 import pytz
 from requests import get
@@ -232,11 +232,10 @@ class Meteo:
         return global_rad
 
     def get_meteo_data(self, show_graph=False):
-
         url = "https://data.meteoserver.nl/api/uurverwachting.php?lat=" + str(self.latitude) + \
               "&long=" + str(self.longitude) + "&key=" + self.meteoserver_key
         resp = get(url)
-        # print (resp.text)
+        logging.debug (resp.text)
         json_object = json.loads(resp.text)
         data = json_object["data"]
 
@@ -249,7 +248,7 @@ class Meteo:
         df = self.solar_rad_df(df)
 
         df1 = df[['tijd', 'tijd_nl', 'gr', 'temp', 'solar_rad']]
-        print(df1)
+        logging.info(f"Meteo data: \n{df1.to_string(index=False)}")
 
         count = 0
         df_db = pd.DataFrame(columns=['time', 'code', 'value'])
@@ -261,7 +260,7 @@ class Meteo:
             count += 1
             if count >= 48:
                 break
-        print(df_db)
+        logging.debug(f"Meteo data records \n{df_db.to_string(index=False)}")
 
         self.db_da.savedata(df_db)
         graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")

@@ -7,7 +7,14 @@ import os
 import sys
 import pandas as pd
 from requests import post
+import logging
 
+
+def make_data_path():
+    if os.path.lexists("../data"):
+        return
+    else:
+        os.symlink("/config/dao_data", "../data")
 
 def is_laagtarief(dtime, switch_hour):
     jaar = dtime.year
@@ -105,7 +112,7 @@ def get_tibber_data():
             arg_dt = datetime.datetime.strptime(arg_s, "%Y-%m-%d").timestamp()
             latest_ts = arg_dt
         except Exception as ex:
-            print(ex)
+            logging.error(ex)
             pass
     if (len(sys.argv) <= 2) or (arg_dt is None):
         for cat in ['cons', 'prod']:
@@ -118,16 +125,14 @@ def get_tibber_data():
                 "WHERE v2.`code` = '"+cat+"' AND v2.id = t2.variabel AND t1.time + 3600 = t2.time);")
             data = db_da.run_select_query(sql_latest_ts)
             if len(data.index) == 0:
-                latest = datetime.datetime.strptime(
-                    prices_options["last invoice"], "%Y-%m-%d").timestamp()
+                latest = datetime.datetime.strptime(prices_options["last invoice"], "%Y-%m-%d").timestamp()
             else:
                 latest = data['time'].values[0]
             latest_ts = min(latest_ts, latest)
     count = math.ceil((now_ts - latest_ts)/3600)
-    print("Tibber data present tot en met:", str(
-        datetime.datetime.fromtimestamp(latest_ts)))
+    logging.info(f"Tibber data present tot en met: {str(datetime.datetime.fromtimestamp(latest_ts))}")
     if count < 24:
-        print("Er zijn geen data opgehaald.")
+        logging.info("Er zijn geen data opgehaald.")
         return
     query = '{ ' \
             '"query": ' \
@@ -153,7 +158,7 @@ def get_tibber_data():
             '}" ' \
         '}'
 
-    # print(query)
+    logging.debug(query)
     resp = post(url, headers=headers, data=query)
     tibber_dict = json.loads(resp.text)
     production_nodes = tibber_dict['data']['viewer']['homes'][0]['production']['nodes']
@@ -164,26 +169,27 @@ def get_tibber_data():
         if not (node["production"] is None):
             code = "prod"
             value = float(node["production"])
-            print(node, time_stamp, value)
+            logging.info(f"{node} {time_stamp} {value}")
             tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
         if not (node["profit"] is None):
             code = 'profit'
             value = float(node["profit"])
-            # print(node, time_stamp, value)
+            logging.info(f"{node} {time_stamp} {value}")
             tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
     for node in consumption_nodes:
         time_stamp = str(int(get_datetime_from_str(node['from']).timestamp()))
         if not (node["consumption"] is None):
             code = "cons"
             value = float(node["consumption"])
-            print(node, time_stamp, value)
+            logging.info(f"{node} {time_stamp} {value}")
             tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
         if not (node["cost"] is None):
             code = "cost"
             value = float(node["cost"])
-            # print(node, time_stamp, value)
+            logging.info(f"{node} {time_stamp} {value}")
             tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
-    print(tibber_df)
+    logging.info(f"Opgehaalde data bij Tibber (database records):"
+                 f"\n{tibber_df.to_string(index=False)}")
     db_da.savedata(tibber_df)
     db_da.disconnect()
 
@@ -230,13 +236,8 @@ def calc_heatpump_usage
             usage.append(250+ (pl[u]-pl_min) * energy_cost)
 '''
 
-
-def make_data_path():
-    if os.path.lexists("../data"):
-        return
-    else:
-        os.symlink("/config/dao_data", "../data")
-
+def get_version():
+    return __version__
 
 def version_number(version_str: str) -> int:
     lst = [int(x, 10) for x in version_str.split('.')]
