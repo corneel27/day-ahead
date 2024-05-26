@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.5.1]
+- Hier en daar tekstverduidelijking in DOCS.md
+- naamgeving van log- en grafiekbestanden aangepast
 
 ## [V2024.5.0]
 - Alle output is ondergebracht in het loggingsysteem van Python. Via de instellingen kun je zelf het loglevel instellen

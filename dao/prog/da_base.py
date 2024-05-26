@@ -354,16 +354,16 @@ class DaBase(hass.Hass):
         stream_handler = None
         logging.basicConfig(level=self.log_level,
                             format='%(asctime)s %(levelname)s: %(message)s',
-                            datefmt='%Y-%m-%d_%H:%M:%S')
+                            datefmt='%Y-%m-%d %H:%M:%S')
         if logfile:
             # old_stdout = sys.stdout
             logger = logging.getLogger()
             for handler in logger.handlers[:]:  # make a copy of the list
                 logger.removeHandler(handler)
             file_handler = logging.FileHandler("../data/log/" + run_task["function"] + "_" +
-                                               datetime.datetime.now().strftime("%Y-%m-%d_%H:%M") + ".log")
+                                               datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + ".log")
             file_handler.setLevel(logging.INFO)
-            formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d_%H:%M:%S')
+            formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
             stream_handler = logging.StreamHandler(sys.stdout)

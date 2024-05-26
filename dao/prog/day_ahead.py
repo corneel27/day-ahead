@@ -1808,7 +1808,7 @@ class DaCalc(da_base.DaBase):
 
             plt.subplots_adjust(right=0.75)
             fig.tight_layout()
-            plt.savefig("../data/images/optimum_" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M") + ".png")
+            plt.savefig("../data/images/optimum_" + datetime.datetime.now().strftime("%Y-%m-%d %H-%M") + ".png")
             if show_graph:
                 plt.show()
             plt.close()
