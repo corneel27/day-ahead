@@ -1,6 +1,18 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
 
+## [V2024.5.0]
+- Alle output is ondergebracht in het loggingsysteem van Python. Via de instellingen kun je zelf het loglevel instellen
+  - debug: veel informatie
+  - info (default): wat je nu ook al kreeg
+  - warning: waarschuwing bij mogelijke (toekomstige) fouten
+  - error: alleen fouten worden gemeld
+  Alle output is voorzien van datum/tijd en het bijpassende logging level
+- Wanneer door optimalisering PV wordt uitgeschakeld (bij negatieve energieprijzen) wordt in de "niet geoptimlaiseerde grafiek" nu ook
+de verwachte PV productie getoond
+- Er zat een foutje in de balans-rapporten van het dashboard. Dit is gerepareerd.
+- De code is meer gestroomlijnd. De scheduler is ondergebracht in een aparte module net als de berekeningsmodule.
+
 ## [V2024.3.9]
 Volgende fouten zijn hersteld:
 - er zat een storende fout in options_vb.json, zodat een versie installatie niet werkte.
