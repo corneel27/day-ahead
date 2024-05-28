@@ -144,10 +144,10 @@ In het midden van het submenu kun je kiezen **hoe** je de gevraagde informatie w
  - tabel <br />
 
 Rechts kun je bladeren door de aangeboden informatie:
-- **|<** de laatste aanwezige grafiek/tabel
+- **|<** de oudste aanwezige grafiek/tabel
 - **<** de vorige
 - **>** de volgende
-- **>|** de eerste
+- **>|** de nieuwste, meest recente grafiek/tabel
 - ![delete.png](images/delete.png) met de afvalbak kun je de aangeboden informatie verwijderen
 
 **Run**<br/>
@@ -218,7 +218,7 @@ Het bestand `options.json` in de folder bevat alle instellingen voor het program
 Alle instellingen die beginnen met "!secret" komen in het bestand `secrets.json` te staan met de key die hier achter !secret staat.
 Deze bestanden staan lokaal in de map `\config`, maar zijn externe benaderbaar met Samba.<br>
 Er zijn twee manieren om bestanden aan te passen:
-* als je de HA-add-on Samba hebt geinstalleerd, krijg je met je bestandenbladeraar (bij Windows is dat de explorer, bij Mac finger) 
+* als je de HA-add-on Samba hebt geinstalleerd, krijg je met je bestandenbladeraar (bij Windows is dat de Explorer, bij Mac Finder) 
 toegang o.a. tot de folder `/add-on_configs/xxx_day_ahead_opt` van je Home Assistant machine. 
 In de submap `dao_data` staan de genoemde configuratie bestanden. Je kunt dan met je eigen teksteditor (bijv notepad) de bestanden aanpassen.<br>
  Let op gebruik geen Word of iets dergelijks, want die plaatsen opmaak codes in de tekst.<br>

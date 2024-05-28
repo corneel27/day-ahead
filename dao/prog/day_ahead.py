@@ -1431,9 +1431,9 @@ class DaCalc(da_base.DaBase):
 
                 if self.debug:
                     logging.info(f"Netto vermogen naar(+)/uit(-) batterij {bat_name} zou zijn: {netto_vermogen} W")
-                    logging.info(f"Balanceren zou zijn: {balance}")
                     if stop_victron:
-                        logging.info("tot: {stop_str}")
+                        logging.info(f"tot: {stop_str}")
+                    logging.info(f"Balanceren zou zijn: {balance}")
                 else:
                     self.set_value(self.battery_options[b]["entity set power feedin"], netto_vermogen)
                     self.select_option(self.battery_options[b]["entity set operating mode"], new_state)
@@ -1808,7 +1808,7 @@ class DaCalc(da_base.DaBase):
 
             plt.subplots_adjust(right=0.75)
             fig.tight_layout()
-            plt.savefig("../data/images/optimum_" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M") + ".png")
+            plt.savefig("../data/images/optimum_" + datetime.datetime.now().strftime("%Y-%m-%d %H-%M") + ".png")
             if show_graph:
                 plt.show()
             plt.close()
