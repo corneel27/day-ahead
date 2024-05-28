@@ -85,9 +85,17 @@ class DaPrices:
             for hourly_value in hourly_values:
                 time_dt = hourly_value['start']
                 time_ts = time_dt.timestamp()
-                value = float(hourly_value['value'])
-                df_db.loc[df_db.shape[0]] = [str(time_ts), 'da', value / 1000]
-            logging.debug(f"Day ahead prijzen (db-records): \n {df_db.to_string(index=False)}")
+                value = hourly_value['value']
+                if value == float('inf'):
+                    continue
+                else:
+                    value = value / 1000
+                df_db.loc[df_db.shape[0]] = [str(time_ts), 'da', value]
+            logging.debug(f"Day ahead prices for {end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'}"
+                          f" (db-records): \n {df_db.to_string(index=False)}")
+            if len(df_db) < 24:
+                logging.warning(f"Retrieve of day ahead prices for "
+                                f"{end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'} failed")
             self.db_da.savedata(df_db)
 
         if source.lower() == "easyenergy":

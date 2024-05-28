@@ -21,6 +21,24 @@ from da_meteo import Meteo
 from da_prices import DaPrices
 from db_manager import DBmanagerObj
 import logging
+from logging import Handler
+
+
+class NotificationHandler(Handler):
+
+    def __init__(self, _hass:hass.Hass, _entity=None):
+        """
+        Initialize the handler.
+        """
+        Handler.__init__(self)
+        self.hass = _hass
+        self.entity = _entity
+
+    def emit(self, record):
+        if self.entity and record.levelno>=logging.WARNING:
+            msg = self.format(record)
+            self.hass.set_value(self.entity, msg)
+
 
 
 class DaBase(hass.Hass):
@@ -85,7 +103,15 @@ class DaBase(hass.Hass):
         self.tibber_options = self.config.get(["tibber"], None, None)
         self.notification_entity = self.config.get(["notifications", "notification entity"], None, None)
         self.notification_opstarten = self.config.get(["notifications", "opstarten"], None, False)
+        if type(self.notification_opstarten) == str and self.notification_opstarten.lower() == "true":
+            self.notification_opstarten = True
+        else:
+            self.notification_opstarten = False
         self.notification_berekening = self.config.get(["notifications", "berekening"], None, False)
+        if type(self.notification_berekening) == str and self.notification_berekening.lower() == "true":
+            self.notification_berekening = True
+        else:
+            self.notification_berekening = False
         self.last_activity_entity = self.config.get(["notifications", "last activity entity"], None, None)
         self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
@@ -355,21 +381,25 @@ class DaBase(hass.Hass):
         logging.basicConfig(level=self.log_level,
                             format='%(asctime)s %(levelname)s: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
+        logger = logging.getLogger()
+        formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
         if logfile:
             # old_stdout = sys.stdout
-            logger = logging.getLogger()
             for handler in logger.handlers[:]:  # make a copy of the list
                 logger.removeHandler(handler)
             file_handler = logging.FileHandler("../data/log/" + run_task["function"] + "_" +
                                                datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + ".log")
-            file_handler.setLevel(logging.INFO)
-            formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+            file_handler.setLevel(self.log_level)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
             stream_handler = logging.StreamHandler(sys.stdout)
             stream_handler.setFormatter(formatter)
-            stream_handler.setLevel(logging.INFO)
+            stream_handler.setLevel(self.log_level)
             logger.addHandler(stream_handler)
+        if self.notification_entity is not None:
+            notification_handler = NotificationHandler(self, self.notification_entity)
+            notification_handler.setFormatter(formatter)
+            logger.addHandler(notification_handler)
         self.start_logging()
         try:
             logging.info(f"Day Ahead Optimalisatie gestart: "

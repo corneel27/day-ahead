@@ -387,7 +387,7 @@ def run_api(bewerking: str):
         data = proc.stdout
         err = proc.stderr
         log_content = err + data
-        filename = "../data/log/" + bewerkingen[bewerking]["task"] + \
+        filename = "../data/log/" + bewerkingen[bewerking]["task"] + " " + \
                    datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + ".log"
         with open(filename, "w") as f:
             f.write(log_content)

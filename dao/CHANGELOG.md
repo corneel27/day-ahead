@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.5.2]
+- Fixed error retrieving nordpool prices
+- There is still a small error in the naming of the logfiles. That will be fixed later.
+
 ## [V2024.5.1]
 - Hier en daar tekstverduidelijking in DOCS.md
 - naamgeving van log- en grafiekbestanden aangepast
