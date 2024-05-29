@@ -1,5 +1,16 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+
+## [V2024.5.3]
+- Fixed the calculation stop when prognose arrays are not equal. Further tests are necessay!!
+- The use of the `"entity pv switch"` in solar installations (pv_ac as well as pv_dc) is now optional. 
+When entity is not mentioned in the settings in one or more of your pv-installations, that pv-installation(s) will never be turned off. 
+- When the program encounters a warning or an error a message is placed in the `notification entity`.
+When you have installed the Home Assistant app you can get a notification with that message on your smartphone (zie DOCS.md)
+- The filenames of the loggings and the images are again (sorry) changed. After installtion of the new version
+are the old files not visible anymore in the dashboard. But you can see them with your favorite file-explorer in combination with the Samba add-on. 
+
+
 ## [V2024.5.2]
 - Fixed error retrieving nordpool prices
 - There is still a small error in the naming of the logfiles. That will be fixed later.

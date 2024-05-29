@@ -95,6 +95,7 @@ class DaBase(hass.Hass):
                                   db_user=db_ha_user, db_password=db_ha_password)
         self.meteo = Meteo(self.config, self.db_da)
         self.solar = self.config.get(["solar"])
+
         self.prices = DaPrices(self.config, self.db_da)
         self.prices_options = self.config.get(["prices"])
         self.history_options = self.config.get(["history"])
@@ -124,28 +125,32 @@ class DaBase(hass.Hass):
                     "debug",
                     "calc"],
                 "object": "DaCalc",
-                "function": "calc_optimum_met_debug"},
+                "function": "calc_optimum_met_debug",
+                "file_name": "calc_debug"},
             "calc_optimum": {
                 "name": "Optimaliseringsberekening zonder debug",
                 "cmd": [
                     "python3",
                     "../prog/day_ahead.py",
                     "calc"],
-                "function": "calc_optimum"},
+                "function": "calc_optimum",
+                "file_name": "calc"},
             "tibber": {
                 "name": "Verbruiksgegevens bij Tibber ophalen",
                 "cmd": [
                     "python3",
                     "../prog/day_ahead.py",
                     "tibber"],
-                "function": "get_tibber_data"},
+                "function": "get_tibber_data",
+                "file_name": "tibber"},
             "meteo": {
                 "name": "Meteoprognoses ophalen",
                 "cmd": [
                     "python3",
                     "day_ahead.py",
                     "meteo"],
-                "function": "get_meteo_data"},
+                "function": "get_meteo_data",
+                "file_name": "tibber"},
             "prices": {
                 "name": "Day ahead prijzen ophalen",
                 "cmd": [
@@ -153,21 +158,23 @@ class DaBase(hass.Hass):
                     "../prog/day_ahead.py",
                     "prices"],
                 "function": "get_day_ahead_prices",
-            },
+                "file_name": "prices"},
             "calc_baseloads": {
                 "name": "Bereken de baseloads",
                 "cmd": [
                     "python3",
                     "../prog/day_ahead.py",
                     "calc_baseloads"],
-                "function": "calc_baseloads"},
+                "function": "calc_baseloads",
+                "file_name": "baseloads"},
             "clean": {
                 "name": "Bestanden opschonen",
                 "cmd": [
                     "python3",
                     "../prog/day_ahead.py",
                     "clean_data"],
-                "function": "clean_data"}
+                "function": "clean_data",
+                "file_name": "clean"}
         }
 
     def start_logging(self):
@@ -387,8 +394,10 @@ class DaBase(hass.Hass):
             # old_stdout = sys.stdout
             for handler in logger.handlers[:]:  # make a copy of the list
                 logger.removeHandler(handler)
-            file_handler = logging.FileHandler("../data/log/" + run_task["function"] + "_" +
-                                               datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + ".log")
+            file_name = ("../data/log/" + run_task["file_name"] + "_" +
+                         datetime.datetime.now().strftime("%Y-%m-%d__%H:%M") + ".log")
+
+            file_handler = logging.FileHandler(file_name)
             file_handler.setLevel(self.log_level)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
@@ -424,8 +433,8 @@ class DaBase(hass.Hass):
         data = proc.stdout.decode()
         err = proc.stderr.decode()
         log_content = data + err
-        filename = ("../data/log/" + run_task["function"] + "_" +
-                    datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S") + ".log")
+        filename = ("../data/log/" + run_task["file_name"] + "_" +
+                    datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S") + ".log")
         with open(filename, "w") as f:
             f.write(log_content)
 
@@ -439,7 +448,7 @@ class DaBase(hass.Hass):
         run_task = self.tasks[task]
 
         # old_stdout = sys.stdout
-        # log_file = open("../data/log/" + run_task["task"] + "_" +
+        # log_file = open("../data/log/" + run_task["file_name"] + "_" +
         #                datetime.datetime.now().strftime("%Y-%m-%d_%H-%M") + ".log", "w")
         # sys.stdout = log_file
         try:

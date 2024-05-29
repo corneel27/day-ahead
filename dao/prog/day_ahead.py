@@ -151,10 +151,15 @@ class DaCalc(da_base.DaBase):
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
         pv_yield = []
         solar_prod = []
+        entity_pv_ac_switch = []
         solar_num = len(self.solar)
         for s in range(solar_num):
             pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
             solar_prod.append([])
+            entity = self.config.get(["entity pv switch"], self.solar[s], None)
+            if entity == "":
+                entity = None
+            entity_pv_ac_switch.append(entity)
 
         time_first_hour = datetime.datetime.fromtimestamp(prog_data["time"].iloc[0])
         first_hour = int(time_first_hour.hour)
@@ -203,18 +208,28 @@ class DaCalc(da_base.DaBase):
                 p_grl.append((gc_p_high + taxes_l) * (1 + btw / 100))
                 p_grt.append((gc_p_high + taxes_t) * (1 + btw / 100))
             first_hour = False
+        try:
+            if self.log_level == logging.INFO:
+                start_df = pd.DataFrame(
+                    {"uur": uur,
+                     "tijd": tijd,
+                     'p_l': pl,
+                     'p_t': pt,
+                     'base': b_l,
+                     'pv_ac': pv_org
+                     })
+                start_df.set_index('uur')
+                logging.info('Start waarden: \n{}'.format(start_df.to_string()))
+        except Exception as ex:
+            logging.error(ex)
+        logging.info(f"lengte prognose arrays:")
+        logging.info(f"uur: {len(uur)}")
+        logging.info(f"tijd: {len(tijd)}")
+        logging.info(f"p_l: {len(pl)}")
+        logging.info(f"p_t: {len(pt)}")
+        logging.info(f"base: {len(b_l)}")
+        logging.info(f"pv_ac: {len(pv_org)}")
 
-        if self.log_level == logging.INFO:
-            start_df = pd.DataFrame(
-                {"uur": uur,
-                 "tijd": tijd,
-                 'p_l': pl,
-                 'p_t': pt,
-                 'base': b_l,
-                 'pv_ac': pv_org
-                 })
-            start_df.set_index('uur')
-            logging.info('Start waarden: \n{}'.format(start_df.to_string()))
         # volledig salderen?
         salderen = self.prices_options['tax refund'] == "True"
 
@@ -244,14 +259,21 @@ class DaCalc(da_base.DaBase):
         # pt = p_grt
 
         ##############################################################
-        #                          pv
+        #                          pv ac
         ##############################################################
         pv_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=solar_prod[s][u] * 1.1)
                   for u in range(U)] for s in range(solar_num)]
         pv_ac_on_off = [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(solar_num)]
+
+        # constraints
+
         for s in range(solar_num):
             for u in range(U):
                 model += pv_ac[s][u] == solar_prod[s][u] * pv_ac_on_off[s][u]
+        for s in range(solar_num):
+            if entity_pv_ac_switch[s] is None:
+                for u in range(U):
+                    model += pv_ac_on_off[s][u] == 1
 
         ##############################################################
         #                          accu / batterij
@@ -482,6 +504,13 @@ class DaCalc(da_base.DaBase):
                 model += dc_from_ac[b][u] <= ac_to_dc_on[b][u] * max_charge_power[b]
                 model += ac_from_dc[b][u] <= ac_from_dc_on[b][u] * max_discharge_power[b]
                 model += (ac_to_dc_on[b][u] + ac_from_dc_on[b][u]) <= 1
+            for s in range(pv_dc_num[b]):
+                entity_pv_switch = self.config.get(["entity pv switch"], self.battery_options[b]["solar"][s], None)
+                if entity_pv_switch == "":
+                    entity_pv_switch = None
+                if entity_pv_switch is None:
+                    for u in range(U):
+                        model += pv_dc_on_off[b][s][u] == 1
 
         #####################################
         #             boiler                #
@@ -1376,23 +1405,24 @@ class DaCalc(da_base.DaBase):
             # solar
             ######################################
             for s in range(solar_num):
-                entity_pv_switch = self.config.get(["entity pv switch"], self.solar[s])
-                switch_state = self.get_state(entity_pv_switch).state
-                pv_name = self.solar[s]["name"]
-                if (pv_ac_on_off[s][0].x == 1.0) or (solar_prod[s][0] == 0.0):
-                    if switch_state == "off":
-                        if self.debug:
-                            logging.info(f"PV {pv_name} zou zijn aangezet")
-                        else:
-                            self.turn_on(entity_pv_switch)
-                            logging.info(f"PV {pv_name} aangezet")
-                else:
-                    if switch_state == "on":
-                        if self.debug:
-                            logging.info(f"PV {pv_name} zou zijn uitgezet")
-                        else:
-                            self.turn_off(entity_pv_switch)
-                            logging.info(f"PV {pv_name} uitgezet")
+                if entity_pv_ac_switch[s] is not None:
+                    entity_pv_switch = entity_pv_ac_switch[s]
+                    switch_state = self.get_state(entity_pv_switch).state
+                    pv_name = self.solar[s]["name"]
+                    if (pv_ac_on_off[s][0].x == 1.0) or (solar_prod[s][0] == 0.0):
+                        if switch_state == "off":
+                            if self.debug:
+                                logging.info(f"PV {pv_name} zou zijn aangezet")
+                            else:
+                                self.turn_on(entity_pv_switch)
+                                logging.info(f"PV {pv_name} aangezet")
+                    else:
+                        if switch_state == "on":
+                            if self.debug:
+                                logging.info(f"PV {pv_name} zou zijn uitgezet")
+                            else:
+                                self.turn_off(entity_pv_switch)
+                                logging.info(f"PV {pv_name} uitgezet")
 
             ############################################
             # battery
@@ -1448,24 +1478,27 @@ class DaCalc(da_base.DaBase):
                     self.call_service("set_datetime", entity_id=helper_id, datetime=stop_str)
 
                 for s in range(pv_dc_num[b]):
-                    entity_pv_switch = self.battery_options[b]["solar"][s]["entity pv switch"]
-                    switch_state = self.get_state(entity_pv_switch).state
-                    pv_name = self.battery_options[b]["solar"][s]["name"]
-                    if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
-                        if switch_state == "off":
-                            if self.debug:
-                                logging.info(f"PV {pv_name} zou zijn aangezet")
-                            else:
-                                self.turn_on(entity_pv_switch)
-                                logging.info(f"PV {pv_name} aangezet")
-                    else:
-                        if switch_state == "on":
-                            if self.debug:
-                                logging.info(f"PV {pv_name} zou zijn uitgezet")
-                            else:
-                                self.turn_off(entity_pv_switch)
-                                logging.info(f"PV {pv_name} uitgezet")
-                        self.turn_on(entity_pv_switch)
+                    entity_pv_switch = self.config.get(["entity pv switch"], self.battery_options[b]["solar"][s], None)
+                    if entity_pv_switch == "":
+                        entity_pv_switch = None
+                    if entity_pv_switch is not None:
+                        switch_state = self.get_state(entity_pv_switch).state
+                        pv_name = self.battery_options[b]["solar"][s]["name"]
+                        if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
+                            if switch_state == "off":
+                                if self.debug:
+                                    logging.info(f"PV {pv_name} zou zijn aangezet")
+                                else:
+                                    self.turn_on(entity_pv_switch)
+                                    logging.info(f"PV {pv_name} aangezet")
+                        else:
+                            if switch_state == "on":
+                                if self.debug:
+                                    logging.info(f"PV {pv_name} zou zijn uitgezet")
+                                else:
+                                    self.turn_off(entity_pv_switch)
+                                    logging.info(f"PV {pv_name} uitgezet")
+                            self.turn_on(entity_pv_switch)
 
             ##################################################
             # heating
@@ -1808,7 +1841,7 @@ class DaCalc(da_base.DaBase):
 
             plt.subplots_adjust(right=0.75)
             fig.tight_layout()
-            plt.savefig("../data/images/optimum_" + datetime.datetime.now().strftime("%Y-%m-%d %H-%M") + ".png")
+            plt.savefig("../data/images/calc_" + datetime.datetime.now().strftime("%Y-%m-%d__%H-%M") + ".png")
             if show_graph:
                 plt.show()
             plt.close()

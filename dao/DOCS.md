@@ -358,7 +358,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                           | orientation                  | getal            |                                    | -180(N) ..-90(W)..0(Z) ..90(W)..180(N)          |
 |                           | capacity                     | getal            |                                    | kWp                                             |
 |                           | yield                        | getal            |                                    | Wh/J/cm2                                        |
-|                           | entity pv switch             | string           |                                    | input_boolean                                   |
+|                           | entity pv switch             | string           | ""                                   | input_boolean                                   |
 | **electric vehicle**      |                              | list             |                                    | 0, 1 of meer {..}  electric vehicle             | 
 |                           | name                         | string           |                                    |                                                 |
 |                           | capacity                     | getal            |                                    | kWh                                             |
@@ -605,8 +605,8 @@ Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
 
 ### **notifications**
 
- * entity (default "")<br> 
-Maak in Home Assistant een helper (max 100 tekens) aan in de vorm van een input_text.
+ * notification entity (default "")<br> 
+Maak in Home Assistant een helper aan in de vorm van een input_text.
 Wanneer er problemen ontstaan tijdens de berekening of tijdens het ophalen van gegevens dan wordt
 hier een in betreffende helper een tekst gezet.
 Desgewenst kun je met behulp van een automatisering een notificatie starten naar analogie van onderstaand voorbeeld: <br>
@@ -739,10 +739,15 @@ Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 k
          * Zo kun je voor iedere pv installatie een eerste schatting maken.<br>
            * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
 stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50. <br>
-     * entity pv switch: een entity (meestal een helper in de vorm van een input_boolean), waarmee je
-     de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
-     (of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
-           
+     * entity pv switch: 
+       * een entity (meestal een helper in de vorm van een input_boolean), waarmee je
+       de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
+       (of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
+       * Als je deze regel weglaat of je vult ""(default waarde) in. Dan zal het programma je pv installatienooit uitzetten (ook niet bij negatoeve prijzen). 
+       Je kunt dit toepassen als je omvormer het uitzetten niet ondersteunt zodat het programma anderszins probeert een (iets minder) 
+       optimale oplossing te berekenen. 
+       
+
 ### **solar**<br> 
   Lijst van pv installaties die dmv een omvormer (of mini omvormers) direct invoeden op je ac installatie<br>
   Per pv installatie geef je de volgende gegevens op:
@@ -750,9 +755,13 @@ stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe y
 * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
 * capacity: capaciteit in kWp  
 * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2 (zie hierboven)  
-* entity pv switch: een entity (meestal een helper in de vorm van een input_boolean), waarmee je
-de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
-(of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
+* entity pv switch: 
+  * een entity (meestal een helper in de vorm van een input_boolean), waarmee je
+  de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 
+  (of beter lage of negatieve terugleververgoedingen) de pv uit te zetten.<br>
+  * Als je deze regel weglaat of je vult ""(default waarde) in. Dan zal het programma je pv installatienooit uitzetten (ook niet bij negatoeve prijzen). 
+  Je kunt dit toepassen als je omvormer het uitzetten niet ondersteunt zodat het programma anderszins probeert een (iets minder) 
+  optimale oplossing te berekenen. 
  
 ### **electric vehicle**<br> 
    Ook hier kun je kiezen uit een lege lijst (= geen auto) of een of meer auto's.
