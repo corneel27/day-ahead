@@ -31,28 +31,32 @@ bewerkingen = {
             "../prog/day_ahead.py",
             "debug",
             "calc"],
-        "task": "calc_optimum"},
+        "task": "calc_optimum",
+        "file_name" :"calc_debug"},
     "calc_zonder_debug": {
         "name": "Optimaliseringsberekening zonder debug",
         "cmd": [
             "python3",
             "../prog/day_ahead.py",
             "calc"],
-        "task": "calc_optimum"},
+        "task": "calc_optimum",
+        "file_name": "calc"},
     "get_tibber": {
         "name": "Verbruiksgegevens bij Tibber ophalen",
         "cmd": [
             "python3",
             "../prog/day_ahead.py",
             "tibber"],
-        "task": "get_tibber_data"},
+        "task": "get_tibber_data",
+        "file_name": "tibber"},
     "get_meteo": {
         "name": "Meteoprognoses ophalen",
         "cmd": [
             "python3",
             "../prog/day_ahead.py",
             "meteo"],
-        "task": "get_meteo_data"},
+        "task": "get_meteo_data",
+        "file_name": "meteo"},
     "get_prices": {
         "name": "Day ahead prijzen ophalen",
         "cmd": [
@@ -61,7 +65,8 @@ bewerkingen = {
             "prices"],
         "task": "get_day_ahead_prices",
         "parameters":
-            ["prijzen_start", "prijzen_tot"]
+            ["prijzen_start", "prijzen_tot"],
+        "file_name": "prices",
     },
     "calc_baseloads": {
         "name": "Bereken de baseloads",
@@ -69,7 +74,8 @@ bewerkingen = {
             "python3",
             "../prog/day_ahead.py",
             "calc_baseloads"],
-        "task": "calc_baseloads"},
+        "task": "calc_baseloads",
+        "file_name": "baseloads"},
 }
 
 
@@ -146,10 +152,10 @@ def home():
 
     if active_view == "grafiek":
         active_map = "/images/"
-        active_filter = "optimum*.png"
+        active_filter = "calc*.png"
     else:
         active_map = "/log/"
-        active_filter = "calc_optimum*.log"
+        active_filter = "calc*.log"
     flist = get_file_list(app_datapath + active_map, active_filter)
     index = 0
     if active_time:
@@ -214,8 +220,8 @@ def run_process():
             data = proc.stdout.decode()
             err = proc.stderr.decode()
             log_content = data + err
-            filename = ("../data/log/" + run_bewerking["task"] +
-                        datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S") + ".log")
+            filename = ("../data/log/" + run_bewerking["file_name"] + "_" +
+                        datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S") + ".log")
             with open(filename, "w") as f:
                 f.write(log_content)
         else:
@@ -386,9 +392,9 @@ def run_api(bewerking: str):
         proc = run(bewerkingen[bewerking]["cmd"], capture_output=True, text=True)
         data = proc.stdout
         err = proc.stderr
-        log_content = err + data
-        filename = "../data/log/" + bewerkingen[bewerking]["task"] + " " + \
-                   datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + ".log"
+        log_content = data + err
+        filename = "../data/log/" + bewerkingen[bewerking]["file_name"] + "_" + \
+                   datetime.datetime.now().strftime("%Y-%m-%d__%H:%M") + ".log"
         with open(filename, "w") as f:
             f.write(log_content)
         return render_template("api_run.html", log_content=log_content)

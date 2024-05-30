@@ -263,7 +263,7 @@ class Meteo:
         logging.debug(f"Meteo data records \n{df_db.to_string(index=False)}")
 
         self.db_da.savedata(df_db)
-        graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d %H-%M")
+        graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d__%H-%M")
                                           + ".png", show=show_graph)
 
         '''
