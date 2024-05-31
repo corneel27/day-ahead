@@ -231,10 +231,13 @@ class Meteo:
             global_rad.loc[(global_rad.tijd == utc_time), 'solar_rad'] = q_tot
         return global_rad
 
-    def get_meteo_data(self, show_graph=False):
-        url = "https://data.meteoserver.nl/api/uurverwachting.php?lat=" + str(self.latitude) + \
-              "&long=" + str(self.longitude) + "&key=" + self.meteoserver_key
-        resp = get(url)
+    def get_from_meteoserver (self, model: str) -> pd.DataFrame:
+        parameters = "?lat=" + str(self.latitude) + "&long=" + str(self.longitude) + "&key=" + self.meteoserver_key
+        if model == "harmonie":
+            url = "https://data.meteoserver.nl/api/uurverwachting.php"
+        else:
+            url = "https://data.meteoserver.nl/api/uurverwachting_gfs.php"
+        resp = get(url + parameters)
         logging.debug (resp.text)
         json_object = json.loads(resp.text)
         data = json_object["data"]
@@ -246,10 +249,13 @@ class Meteo:
         # Convert a List of dictionaries using from_records() method.
         df = pd.DataFrame.from_records(data)
         df = self.solar_rad_df(df)
-
         df1 = df[['tijd', 'tijd_nl', 'gr', 'temp', 'solar_rad']]
-        logging.info(f"Meteo data: \n{df1.to_string(index=False)}")
+        logging.info(f"Meteo data {model}: \n{df1.to_string(index=True)}")
+        logging.info(f"Aantal meteorecords {model}: {len(df1)}")
+        return df1
 
+    def get_meteo_data(self, show_graph=False):
+        df1 = self.get_from_meteoserver("harmonie")
         count = 0
         df_db = pd.DataFrame(columns=['time', 'code', 'value'])
         df1 = df1.reset_index()  # make sure indexes pair with number of rows
@@ -260,7 +266,17 @@ class Meteo:
             count += 1
             if count >= 48:
                 break
+
         logging.debug(f"Meteo data records \n{df_db.to_string(index=False)}")
+        if count < 39:
+            df1 = self.get_from_meteoserver("gfs")
+            for row in df1[count:].itertuples():
+                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'gr', float(row.gr)]
+                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'temp', float(row.temp)]
+                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'solar_rad', float(row.solar_rad)]
+                count += 1
+                if count >= 48:
+                    break
 
         self.db_da.savedata(df_db)
         graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d__%H-%M")
