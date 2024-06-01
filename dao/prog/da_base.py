@@ -150,7 +150,7 @@ class DaBase(hass.Hass):
                     "day_ahead.py",
                     "meteo"],
                 "function": "get_meteo_data",
-                "file_name": "tibber"},
+                "file_name": "meteo"},
             "prices": {
                 "name": "Day ahead prijzen ophalen",
                 "cmd": [

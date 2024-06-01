@@ -1,6 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
 
+## [V2024.5.4]
+- If there are not enough meteo from Meteoserver from the fineley meshed model (Harmonie), 
+then the missing data are retrieved from the coarse model (GFS).<br>
+Conclusion:the optimization calculation will now always calculate as far as the day-ahead prices are known.
+- The meteo log file was name "tibber_...", this is corrected and now they are named "meteo_..."
+- In the dashboard at the menu-option **Home** and the suboption **tabel** now all loggings (not only calc, but also meteo, prices etc)
+are showed. To begin with the most recent one. 
+- Meteograph is now showed in the style as defined in the graph-settings
+ 
 
 ## Breaking change
 The filenames of the loggings and the images are again (sorry) changed. After installtion of the new version

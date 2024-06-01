@@ -12,7 +12,7 @@ def make_graph_meteo(df, file=None, show=False):
     plt.bar(x_axis-0.1,  df['gr'].values, width=0.2, label="global rad")
     plt.bar(x_axis+0.1,  df['solar_rad'].values, width=0.2, label="netto rad")
     plt.xticks(x_axis+0.1, df['tijd_nl'].values, rotation=45)
-    if file != None:
+    if file is not None:
         plt.savefig(file)
     if show:
         plt.show()
