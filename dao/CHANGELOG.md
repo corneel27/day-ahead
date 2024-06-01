@@ -8,6 +8,7 @@ Conclusion:the optimization calculation will now always calculate as far as the 
 - The meteo log file was name "tibber_...", this is corrected and now they are named "meteo_..."
 - In the dashboard at the menu-option **Home** and the suboption **tabel** now all loggings (not only calc, but also meteo, prices etc)
 are showed. To begin with the most recent one. 
+- Meteograph is now showed in the style as defined in the graph-settings
  
 
 ## Breaking change

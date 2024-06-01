@@ -5,7 +5,7 @@ import logging
 import pandas as pd
 import pytz
 from requests import get
-
+import matplotlib.pyplot as plt
 import graphs
 # import os, sys
 # sys.path.append(os.path.abspath("../dalib"))
@@ -279,6 +279,8 @@ class Meteo:
                     break
 
         self.db_da.savedata(df_db)
+        style = self.config.get(['graphics', 'style'], None, "default")
+        plt.style.use(style)
         graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d__%H-%M")
                                           + ".png", show=show_graph)
 
