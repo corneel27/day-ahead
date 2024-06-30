@@ -80,7 +80,7 @@ class DaPrices:
                 end_date = start
             hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=end_date)
             hourly_values = hourly_prices_spot['areas']['NL']['values']
-            s = pp.pformat(hourly_values,indent=2)
+            s = pp.pformat(hourly_values, indent=2)
             logging.info(f"Day ahead prijzen van Nordpool:\n {s}")
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             for hourly_value in hourly_values:
@@ -107,7 +107,7 @@ class DaPrices:
             url = "https://mijn.easyenergy.com/nl/api/tariff/getapxtariffs?startTimestamp=" + \
                 startstr + "&endTimestamp=" + endstr
             resp = get(url)
-            logging.debug (resp.text)
+            logging.debug(resp.text)
             json_object = json.loads(resp.text)
             df = pd.DataFrame.from_records(json_object)
             logging.info(f"Day ahead prijzen van Easyenergy:\n {df.to_string(index=False)}")
@@ -165,7 +165,8 @@ class DaPrices:
             tibber_dict = json.loads(resp.text)
             today_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['today']
             tomorrow_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['tomorrow']
-            range_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['range']['nodes']
+            range_nodes = (
+                tibber_dict)['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['range']['nodes']
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             for lst in [today_nodes, tomorrow_nodes, range_nodes]:
                 for node in lst:
