@@ -227,6 +227,13 @@ class Report:
         tot = tot_g
         vanaf = tot + datetime.timedelta(days=-365)
         self.periodes.update(create_dict("365 dagen", vanaf, tot, "maand"))
+
+        '''
+        # laatste 12 maanden
+        tot = datetime.datetime(now.year, now.month, 1)
+        vanaf = datetime.datetime(now.year-1, now.month, 1)
+        self.periodes.update(create_dict("laatste 12 mnd", vanaf, tot, "uur"))
+        '''
         return
 
     def get_sensor_data(self, sensor: str, vanaf: datetime.datetime, tot: datetime.datetime,
@@ -490,7 +497,10 @@ class Report:
                 old_moment = moment
             moment_str = str(moment)
             if interval == "uur":
-                tijd_str = moment_str[10:16]
+                if periode == "laatste 12 mnd":
+                    tijd_str = moment_str
+                else:
+                    tijd_str = moment_str[10:16]
                 moment = moment + datetime.timedelta(hours=1)
             elif interval == "dag":
                 tijd_str = moment_str[0:10]
@@ -532,7 +542,10 @@ class Report:
             # print(sql)
             code_result = self.db_da.run_select_query(sql)
             code_result.index = pd.to_datetime(code_result["tijd"])
-            self.add_col_df(code_result, result, key)
+            #self.add_col_df(code_result, result, key)
+            code_result.rename(columns={key: "temp"})
+            result = pd.concat([result, code_result["temp"]], axis=0)
+            result.assign(key = key +"temp")
 
             if code_result.shape[0] == 0:
                 # datetime.datetime.combine(vanaf, datetime.time(0,0)) - datetime.timedelta(hours=1)
@@ -794,7 +807,7 @@ class Report:
         res = calendar.monthrange(input_dt.year, input_dt.month)
         return res[1]
 
-    def calc_grid_columns(self, report_df, active_interval, active_view):
+    def calc_grid_columns(self, report_df, active_interval, active_view, active_period):
         from dao.prog.utils import get_value_from_dict
         first_col = active_interval.capitalize()
         # if active_subject == "verbruik":
@@ -836,7 +849,10 @@ class Report:
                 btw = get_value_from_dict(dag_str, btw_def)
                 old_dagstr = dag_str
             if active_interval == "uur":
-                tijd_str = str(row.vanaf)[10:16]
+                if active_period == "laatste 12 mnd":
+                    tijd_str = str(row.vanaf)
+                else:
+                    tijd_str = str(row.vanaf)[10:16]
             elif active_interval == "dag":
                 tijd_str = str(row.vanaf)[0:10]
             else:

@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.5.5]
+There is fourth source added te get day-ahead prices: tibber.
+In cases as on June 25th when nordpool and entsoe have don't have epex prices you can get them from Tibber. 
 
 ## [V2024.5.4]
 - If there are not enough meteo from Meteoserver from the fineley meshed model (Harmonie), 
