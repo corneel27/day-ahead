@@ -126,6 +126,7 @@ class DaPrices:
             now_ts = datetime.datetime.now().timestamp()
             get_ts = start.timestamp()
             count = 1 + math.ceil((now_ts - get_ts) / 3600)
+            count_str = str(count)
             query = '{ ' \
                     '"query": ' \
                     ' "{ ' \
@@ -141,7 +142,7 @@ class DaPrices:
                     '            energy ' \
                     '            startsAt ' \
                     '          } ' \
-                    '          range(resolution: HOURLY, last: '+str(count)+') { ' \
+                    '          range(resolution: HOURLY, last: '+count_str+') { ' \
                     '            nodes { ' \
                     '              energy ' \
                     '              startsAt ' \
@@ -171,7 +172,7 @@ class DaPrices:
             for lst in [today_nodes, tomorrow_nodes, range_nodes]:
                 for node in lst:
                     dt = datetime.datetime.strptime(node['startsAt'], "%Y-%m-%dT%H:%M:%S.%f%z")
-                    time_stamp = dt.timestamp()
+                    time_stamp = str(int(dt.timestamp()))
                     value = float(node["energy"])
                     logging.info(f"{node} {dt} {time_stamp} {value}")
                     df_db.loc[df_db.shape[0]] = [time_stamp, 'da', value]
