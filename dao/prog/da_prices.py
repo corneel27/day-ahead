@@ -4,10 +4,11 @@ from db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
 import datetime
 import sys
-from requests import get
+from requests import get, post
 from nordpool.elspot import Prices
 import pytz
 import json
+import math
 import pprint as pp
 import logging
 
@@ -119,4 +120,59 @@ class DaPrices:
                 df_db.loc[df_db.shape[0]] = [dtime, 'da', row.TariffReturn]
 
             logging.debug(f"Day ahead prijzen (db-records): \n {df_db.to_string(index=False)}")
+            self.db_da.savedata(df_db)
+
+        if source.lower() == "tibber":
+            now_ts = datetime.datetime.now().timestamp()
+            get_ts = start.timestamp()
+            count = 1 + math.ceil((now_ts - get_ts) / 3600)
+            query = '{ ' \
+                    '"query": ' \
+                    ' "{ ' \
+                    '  viewer { ' \
+                    '    homes { ' \
+                    '      currentSubscription { ' \
+                    '        priceInfo { ' \
+                    '          today { ' \
+                    '            energy ' \
+                    '            startsAt ' \
+                    '          } ' \
+                    '          tomorrow { ' \
+                    '            energy ' \
+                    '            startsAt ' \
+                    '          } ' \
+                    '          range(resolution: HOURLY, last: '+str(count)+') { ' \
+                    '            nodes { ' \
+                    '              energy ' \
+                    '              startsAt ' \
+                    '            } ' \
+                    '          } ' \
+                    '        } ' \
+                    '      } ' \
+                    '    } ' \
+                    '  } ' \
+                    '}" ' \
+                    '}'
+
+            logging.debug(query)
+            tibber_options = self.config.get(["tibber"])
+            url = self.config.get(["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql")
+            headers = {
+                "Authorization": "Bearer " + tibber_options["api_token"],
+                "content-type": "application/json",
+            }
+            resp = post(url, headers=headers, data=query)
+            tibber_dict = json.loads(resp.text)
+            today_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['today']
+            tomorrow_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['tomorrow']
+            range_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['range']['nodes']
+            df_db = pd.DataFrame(columns=['time', 'code', 'value'])
+            for lst in [today_nodes, tomorrow_nodes, range_nodes]:
+                for node in lst:
+                    dt = datetime.datetime.strptime(node['startsAt'], "%Y-%m-%dT%H:%M:%S.%f%z")
+                    time_stamp = dt.timestamp()
+                    value = float(node["energy"])
+                    logging.info(f"{node} {dt} {time_stamp} {value}")
+                    df_db.loc[df_db.shape[0]] = [time_stamp, 'da', value]
+            logging.debug(f"Day ahead prijzen (source: tibber, db-records): \n {df_db.to_string(index=False)}")
             self.db_da.savedata(df_db)

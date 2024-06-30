@@ -265,139 +265,139 @@ dan kun je die (sub)instelling achterwege laten en zorgt het programma voor de d
 Als je de software installeert als addon op je Home Assistant machine kan de hele instelling **homeassistant** weggelaten worden. 
 Dit regelt de supervisor van Home Assistant dan voor je.
 
-| Key                       | Subkey                       | Type             | Default                            | Opmerkingen                                     |
-|---------------------------|------------------------------|------------------|------------------------------------|-------------------------------------------------|
-| **homeassistant**         | protocol api                 | string           | http                               | Alleen invullen                                 |
-|                           | ip adress                    | string           | supervisor                         | als addon op                                    |  
-|                           | ip port                      | integer          | blanco                             | andere machine                                  | 
-|                           | token                        | string           | blanco                             | draait                                          | 
-| **database ha**           | server                       | string           | core-mariadb                       | default als addon                               |
-|                           | database                     | string           | homeassistant                      |                                                 |
-|                           | username                     | string           | homeassistant                      |                                                 |
-|                           | password                     | string           |                                    |                                                 |
-| **database da**           | server                       | string           | core-mariadb                       | default als addon                               |
-|                           | database                     | string           | day_ahead                          |                                                 |
-|                           | username                     | string           | day_ahead                          |                                                 |
-|                           | password                     | string           |                                    |                                                 |
-| **meteoserver-key**       |                              | string           |                                    |                                                 |
-| **prices**                | source day ahead             | string           | nordpool                           | keuze uit nordpool / entsoe / easyenergy        |
-|                           | entsoe-api-key               | string           |                                    | alleen bij entsoe als source                    |
-|                           | regular high                 | getal            |                                    |                                                 |
-|                           | regular low                  | getal            |                                    |                                                 |
-|                           | switch to low                | integer          | 23                                 |                                                 |
-|                           | energy taxes delivery        | list             |                                    | {datum : getal}                                 |
-|                           | energy taxes redelivery      | list             |                                    | {datum : getal}                                 |
-|                           | cost supplier delivery       | list             |                                    | {datum : getal}                                 |
-|                           | cost supplier redelivery     | list             |                                    | {datum : getal}                                 |
-|                           | vat                          | list             |                                    | {datum : getal}                                 |
-|                           | last invoice                 | datum            |                                    | begindatum contract                             |
-|                           | tax refund                   | boolean          |                                    |                                                 |
-| **log level**             |                              | string           | "info"                             | keuze uit "debug", "info", "warning" of "error" |
-| **use_calc_baseload**     |                              | boolean          | "False"                            |                                                 |
-| **baseload calc periode** |                              | getal            | 56                                 | alleen als "use_calc_baseload" = True           | 
-| **baseload**              |                              | list 24 getallen |                                    | alleen als "use_calc_baseload" = False     | 
-| **graphical backend**     |                              | string           | ""                                 |                                                 |
-| **graphics**              | style                        | string           | "default"                          | kies uit lijst                                  |
-|                           | prices delivery              | boolean          | "True"                             |                                                 |
-|                           | prices redelivery            | boolean          | "True"                             |                                                 |
-|                           | average delivery             | boolean          | "True"                             |                                                 |
-|                           | show                         | boolean          | "False"                            |                                                 |
-| **strategy**              |                              | string           | "minimize cost"                    | "minimize cost" of "minimize consumption"       |
-| **notifications**         | notification entity          | string           | ""                                 |                                                 | 
+| Key                       | Subkey                       | Type             | Default                            | Opmerkingen                                       |
+|---------------------------|------------------------------|------------------|------------------------------------|---------------------------------------------------|
+| **homeassistant**         | protocol api                 | string           | http                               | Alleen invullen                                   |
+|                           | ip adress                    | string           | supervisor                         | als addon op                                      |  
+|                           | ip port                      | integer          | blanco                             | andere machine                                    | 
+|                           | token                        | string           | blanco                             | draait                                            | 
+| **database ha**           | server                       | string           | core-mariadb                       | default als addon                                 |
+|                           | database                     | string           | homeassistant                      |                                                   |
+|                           | username                     | string           | homeassistant                      |                                                   |
+|                           | password                     | string           |                                    |                                                   |
+| **database da**           | server                       | string           | core-mariadb                       | default als addon                                 |
+|                           | database                     | string           | day_ahead                          |                                                   |
+|                           | username                     | string           | day_ahead                          |                                                   |
+|                           | password                     | string           |                                    |                                                   |
+| **meteoserver-key**       |                              | string           |                                    |                                                   |
+| **prices**                | source day ahead             | string           | nordpool                           | keuze uit nordpool / entsoe / easyenergy / tibber |
+|                           | entsoe-api-key               | string           |                                    | alleen bij entsoe als source                      |
+|                           | regular high                 | getal            |                                    |                                                   |
+|                           | regular low                  | getal            |                                    |                                                   |
+|                           | switch to low                | integer          | 23                                 |                                                   |
+|                           | energy taxes delivery        | list             |                                    | {datum : getal}                                   |
+|                           | energy taxes redelivery      | list             |                                    | {datum : getal}                                   |
+|                           | cost supplier delivery       | list             |                                    | {datum : getal}                                   |
+|                           | cost supplier redelivery     | list             |                                    | {datum : getal}                                   |
+|                           | vat                          | list             |                                    | {datum : getal}                                   |
+|                           | last invoice                 | datum            |                                    | begindatum contract                               |
+|                           | tax refund                   | boolean          |                                    |                                                   |
+| **log level**             |                              | string           | "info"                             | keuze uit "debug", "info", "warning" of "error"   |
+| **use_calc_baseload**     |                              | boolean          | "False"                            |                                                   |
+| **baseload calc periode** |                              | getal            | 56                                 | alleen als "use_calc_baseload" = True             | 
+| **baseload**              |                              | list 24 getallen |                                    | alleen als "use_calc_baseload" = False            | 
+| **graphical backend**     |                              | string           | ""                                 |                                                   |
+| **graphics**              | style                        | string           | "default"                          | kies uit lijst                                    |
+|                           | prices delivery              | boolean          | "True"                             |                                                   |
+|                           | prices redelivery            | boolean          | "True"                             |                                                   |
+|                           | average delivery             | boolean          | "True"                             |                                                   |
+|                           | show                         | boolean          | "False"                            |                                                   |
+| **strategy**              |                              | string           | "minimize cost"                    | "minimize cost" of "minimize consumption"         |
+| **notifications**         | notification entity          | string           | ""                                 |                                                   | 
 |                           | opstarten                    | boolean          | "False"                            | 
-|                           | berekening                   | boolean          | "False"                            |                                                 | 
-|                           | last activity entity         | string           | ""                                 |                                                 | 
-| **grid**                  | max_power                    | getal            | 17                                 |                                                 | 
-| **history**               | save days                    | getal            | 7                                  |                                                 | 
-| **dashboard**             | port                         | getal            | 5000                               |                                                 | 
-| **boiler**                | boiler present               | boolean          | "False"                            |                                                 | 
-|                           | entity actual temp.          | string           |                                    |                                                 |
-|                           | entity setpoint              | string           |                                    |                                                 |
-|                           | entity hysterese             | string           |                                    |                                                 |
-|                           | cop                          | getal            |                                    | kWh/kWh                                         |
-|                           | cooling rate                 | getal            |                                    | K/h                                             |
-|                           | volume                       | getal            |                                    | liter                                           |
-|                           | heating allowed below        | getal            |                                    | °C                                              |
-|                           | elec. power                  | getal            |                                    | W                                               |
-|                           | activate service             | string           |                                    |                                                 |
-|                           | activate entity              | string           |                                    |                                                 |
-| **heating**               | heater present               | boolean          | "False"                            |                                                 | 
-|                           | degree days factor           | getal            |                                    | kWh/K.day                                       | 
-|                           | stages                       | list             |                                    | {max_power, cop}                                | 
-|                           | ______max_power              | getal            |                                    | W                                               | 
-|                           | ______cop                    | getal            |                                    | kWh/kWh                                         | 
-|                           | entity adjust heating curve  | string           |                                    | kWh/kWh                                         | 
-|                           | adjustment factor            | getal            |                                    | K                                               | 
-| **battery**               |                              | list             |                                    | 0, 1 of meer {..}                               | 
-|                           | name                         | string           |                                    |                                                 |
-|                           | name                         | string           |                                    |                                                 |
-|                           | entity actual level          | string           |                                    |                                                 |
-|                           | upper limit                  | getal            |                                    | %                                               |
-|                           | lower limit                  | getal            |                                    | %                                               |
-|                           | optimal lower level          | getal            |                                    | %                                               |
-|                           | entity actual level          | string           |                                    |                                                 |
-|                           | entity min soc end opt       | string           | 0                                  |                                                 |
-|                           | entity max soc end opt       | string           | 100                                |                                                 |
-|                           | charge stages                | list             |                                    | {power, efficiency}                             | 
-|                           | ______power                  | getal            |                                    | W                                               | 
-|                           | ______efficiency             | getal            |                                    | W/W (factor 0..1)                               | 
-|                           | discharge stages             | list             |                                    | {power, efficiency}                             | 
-|                           | ______power                  | getal            |                                    | W                                               | 
-|                           | ______efficiency             | getal            |                                    | W/W (factor 0..1)                               | 
-|                           | minimum power                | getal            |                                    | W                                               |
-|                           | dc_to_bat efficiency         | getal            |                                    | 0 .. 1.0                                        |
-|                           | bat_to_dc efficiency         | getal            |                                    | 0 .. 1.0                                        |
-|                           | cycle cost                   | getal            |                                    | euro                                            |
-|                           | entity set power feedin      | string           |                                    | input_number                                    |
-|                           | entity stop victron          | string           |                                    | input_datetime                                  |
-|                           | entity balance switch        | string           |                                    | input_boolean                                   |
-|                           | solar                        | list             |                                    | 0, 1 of meer {..} pv_dc, zie solar (pv_ac)      | 
-| **solar**                 |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                        | 
-|                           | name                         | string           |                                    |                                                 |
-|                           | tilt                         | getal            |                                    | helling 0 ..90                                  |
-|                           | orientation                  | getal            |                                    | -180(N) ..-90(W)..0(Z) ..90(W)..180(N)          |
-|                           | capacity                     | getal            |                                    | kWp                                             |
-|                           | yield                        | getal            |                                    | Wh/J/cm2                                        |
-|                           | entity pv switch             | string           | ""                                   | input_boolean                                   |
-| **electric vehicle**      |                              | list             |                                    | 0, 1 of meer {..}  electric vehicle             | 
-|                           | name                         | string           |                                    |                                                 |
-|                           | capacity                     | getal            |                                    | kWh                                             |
-|                           | entity position              | string           |                                    | tracker                                         |
-|                           | entity actual level          | string           |                                    |                                                 |
-|                           | entity plugged in            | string           |                                    | binary_sensor                                   |
-|                           | charging stages              | list             |                                    | 2 of meer {..}                                  | 
-|                           | ______ampere                 | getal            |                                    | A                                               | 
-|                           | ______efficiency             | getal            | 1                                  | factor 0..1                                     | 
-|                           | charge three phase           | boolean          | true                               | true of false                                   |
-|                           | charge scheduler             |                  |                                    |                                                 |
-|                           | _____entity set level        | string           |                                    | input_number                                    |
-|                           | _____level margin            | getal            | 0                                  |                                                 |
-|                           | _____entity ready datetime   | string           |                                    | input_datetime                                  |
-|                           | entity set charging ampere   | string           |                                    | input_number                                    |
-|                           | charge switch                | string           |                                    | input_boolean                                   |
-|                           | entity stop laden            | string           | ""                                 | input_datetime                                  |
-| **machines**              |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                        | 
-|                           | name                         | string           |                                    |                                                 |
-|                           | programs                     | list             |                                    | 1 of meer {..} progrma                          |
-|                           | _____name                    | string           |                                    |                                                 |
-|                           | _____power                   | list of numbers  |                                    | 0, 1 of meer numbers                            |
-|                           | entity start window          | string           |                                    | input_datetime, tijd                            |
-|                           | entity end window            | string           |                                    | input_datetime, tijd                            |
-|                           | entity selected program      | string           |                                    | input_select                                    |
-|                           | entity calculated start      | string           | ""                                 | input_datetime, datum en tijd                   |
-|                           | entity calculated end        | string           | ""                                 | input_datetime, datum en tijd                   |
-| **tibber**                | api url                      | string, url      | https://api.tibber.com/v1-beta/gql | desgewenst                                      | 
-|                           | api_token                    | string           |                                    |                                                 |
-| **report**                | entities grid consumption    | list of string   | []                                 |                                                 | 
-|                           | entities grid production     | list of string   | []                                 |                                                 | 
-|                           | entities solar production ac | list of string   | []                                 |                                                 | 
-|                           | entities solar production dc | list of string   | []                                 |                                                 | 
-|                           | entities ev consumption      | list of string   | []                                 |                                                 | 
-|                           | entities wp consumption      | list of string   | []                                 |                                                 | 
-|                           | entities boiler consumption  | list of string   | []                                 |                                                 | 
-|                           | entities battery consumption | list of string   | []                                 |                                                 | 
-|                           | entities battery production  | list of string   | []                                 |                                                 | 
-| **scheduler**             |                              | list             |                                    | {time, task}                                    | 
+|                           | berekening                   | boolean          | "False"                            |                                                   | 
+|                           | last activity entity         | string           | ""                                 |                                                   | 
+| **grid**                  | max_power                    | getal            | 17                                 |                                                   | 
+| **history**               | save days                    | getal            | 7                                  |                                                   | 
+| **dashboard**             | port                         | getal            | 5000                               |                                                   | 
+| **boiler**                | boiler present               | boolean          | "False"                            |                                                   | 
+|                           | entity actual temp.          | string           |                                    |                                                   |
+|                           | entity setpoint              | string           |                                    |                                                   |
+|                           | entity hysterese             | string           |                                    |                                                   |
+|                           | cop                          | getal            |                                    | kWh/kWh                                           |
+|                           | cooling rate                 | getal            |                                    | K/h                                               |
+|                           | volume                       | getal            |                                    | liter                                             |
+|                           | heating allowed below        | getal            |                                    | °C                                                |
+|                           | elec. power                  | getal            |                                    | W                                                 |
+|                           | activate service             | string           |                                    |                                                   |
+|                           | activate entity              | string           |                                    |                                                   |
+| **heating**               | heater present               | boolean          | "False"                            |                                                   | 
+|                           | degree days factor           | getal            |                                    | kWh/K.day                                         | 
+|                           | stages                       | list             |                                    | {max_power, cop}                                  | 
+|                           | ______max_power              | getal            |                                    | W                                                 | 
+|                           | ______cop                    | getal            |                                    | kWh/kWh                                           | 
+|                           | entity adjust heating curve  | string           |                                    | kWh/kWh                                           | 
+|                           | adjustment factor            | getal            |                                    | K                                                 | 
+| **battery**               |                              | list             |                                    | 0, 1 of meer {..}                                 | 
+|                           | name                         | string           |                                    |                                                   |
+|                           | name                         | string           |                                    |                                                   |
+|                           | entity actual level          | string           |                                    |                                                   |
+|                           | upper limit                  | getal            |                                    | %                                                 |
+|                           | lower limit                  | getal            |                                    | %                                                 |
+|                           | optimal lower level          | getal            |                                    | %                                                 |
+|                           | entity actual level          | string           |                                    |                                                   |
+|                           | entity min soc end opt       | string           | 0                                  |                                                   |
+|                           | entity max soc end opt       | string           | 100                                |                                                   |
+|                           | charge stages                | list             |                                    | {power, efficiency}                               | 
+|                           | ______power                  | getal            |                                    | W                                                 | 
+|                           | ______efficiency             | getal            |                                    | W/W (factor 0..1)                                 | 
+|                           | discharge stages             | list             |                                    | {power, efficiency}                               | 
+|                           | ______power                  | getal            |                                    | W                                                 | 
+|                           | ______efficiency             | getal            |                                    | W/W (factor 0..1)                                 | 
+|                           | minimum power                | getal            |                                    | W                                                 |
+|                           | dc_to_bat efficiency         | getal            |                                    | 0 .. 1.0                                          |
+|                           | bat_to_dc efficiency         | getal            |                                    | 0 .. 1.0                                          |
+|                           | cycle cost                   | getal            |                                    | euro                                              |
+|                           | entity set power feedin      | string           |                                    | input_number                                      |
+|                           | entity stop victron          | string           |                                    | input_datetime                                    |
+|                           | entity balance switch        | string           |                                    | input_boolean                                     |
+|                           | solar                        | list             |                                    | 0, 1 of meer {..} pv_dc, zie solar (pv_ac)        | 
+| **solar**                 |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                          | 
+|                           | name                         | string           |                                    |                                                   |
+|                           | tilt                         | getal            |                                    | helling 0 ..90                                    |
+|                           | orientation                  | getal            |                                    | -180(N) ..-90(W)..0(Z) ..90(W)..180(N)            |
+|                           | capacity                     | getal            |                                    | kWp                                               |
+|                           | yield                        | getal            |                                    | Wh/J/cm2                                          |
+|                           | entity pv switch             | string           | ""                                   | input_boolean                                     |
+| **electric vehicle**      |                              | list             |                                    | 0, 1 of meer {..}  electric vehicle               | 
+|                           | name                         | string           |                                    |                                                   |
+|                           | capacity                     | getal            |                                    | kWh                                               |
+|                           | entity position              | string           |                                    | tracker                                           |
+|                           | entity actual level          | string           |                                    |                                                   |
+|                           | entity plugged in            | string           |                                    | binary_sensor                                     |
+|                           | charging stages              | list             |                                    | 2 of meer {..}                                    | 
+|                           | ______ampere                 | getal            |                                    | A                                                 | 
+|                           | ______efficiency             | getal            | 1                                  | factor 0..1                                       | 
+|                           | charge three phase           | boolean          | true                               | true of false                                     |
+|                           | charge scheduler             |                  |                                    |                                                   |
+|                           | _____entity set level        | string           |                                    | input_number                                      |
+|                           | _____level margin            | getal            | 0                                  |                                                   |
+|                           | _____entity ready datetime   | string           |                                    | input_datetime                                    |
+|                           | entity set charging ampere   | string           |                                    | input_number                                      |
+|                           | charge switch                | string           |                                    | input_boolean                                     |
+|                           | entity stop laden            | string           | ""                                 | input_datetime                                    |
+| **machines**              |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                          | 
+|                           | name                         | string           |                                    |                                                   |
+|                           | programs                     | list             |                                    | 1 of meer {..} progrma                            |
+|                           | _____name                    | string           |                                    |                                                   |
+|                           | _____power                   | list of numbers  |                                    | 0, 1 of meer numbers                              |
+|                           | entity start window          | string           |                                    | input_datetime, tijd                              |
+|                           | entity end window            | string           |                                    | input_datetime, tijd                              |
+|                           | entity selected program      | string           |                                    | input_select                                      |
+|                           | entity calculated start      | string           | ""                                 | input_datetime, datum en tijd                     |
+|                           | entity calculated end        | string           | ""                                 | input_datetime, datum en tijd                     |
+| **tibber**                | api url                      | string, url      | https://api.tibber.com/v1-beta/gql | desgewenst                                        | 
+|                           | api_token                    | string           |                                    |                                                   |
+| **report**                | entities grid consumption    | list of string   | []                                 |                                                   | 
+|                           | entities grid production     | list of string   | []                                 |                                                   | 
+|                           | entities solar production ac | list of string   | []                                 |                                                   | 
+|                           | entities solar production dc | list of string   | []                                 |                                                   | 
+|                           | entities ev consumption      | list of string   | []                                 |                                                   | 
+|                           | entities wp consumption      | list of string   | []                                 |                                                   | 
+|                           | entities boiler consumption  | list of string   | []                                 |                                                   | 
+|                           | entities battery consumption | list of string   | []                                 |                                                   | 
+|                           | entities battery production  | list of string   | []                                 |                                                   | 
+| **scheduler**             |                              | list             |                                    | {time, task}                                      | 
 
 ### **homeassistant**<br>
 Dit onderdeel hoeft alleen ingevuld te worden als je niet werkt met een add-on.<br>
@@ -442,7 +442,8 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
      Hier bepaal je waar je je day ahead prijzen vandaan wilt halen. Je hebt de keuze uit drie bronnen:
    * nordpool
    * entsoe
-   * easyenergy<br>
+   * easyenergy
+   * tibber<br>
 
     Als je kiest voor **entsoe** dan moet je hieronder een api key invullen.
  * entsoe-api-key:  
@@ -459,6 +460,12 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
    * Klik op "Generate a new token"
    * Meer info: https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html
    Hoofdstuk 2 Authentication and Authorisation<br><br>
+ 
+   Als je kiest voor **tibber** werkt dit alleen als je:
+   * klant bent bij tibber
+   * een personal token hebt opgehaald en ingevuld bij de instellingen onder **tibber** (zie verderop)<br>
+    <br>   
+
 
  * regular high: het hoge tarief van een "reguliere" oude leverancier,
    excl. btw, kaal, euro per kWh
@@ -851,8 +858,8 @@ Per apparaat geef je de volgende instellingen mee:
  
 
  ### **tibber**<br>
- * api url : url van de api van tibber , default "https://api.tibber.com/v1-beta/gql" 
- * api_token : het token van de api van tibber  
+ * api url: url van de api van tibber, default "https://api.tibber.com/v1-beta/gql" 
+ * api_token: het token van de api van tibber  
   Deze vraag je als volgt op:  
    * log in met je account op https://developer.tibber.com/explorer  
    * de token staat boven onder de balk 
