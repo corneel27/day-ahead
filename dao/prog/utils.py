@@ -8,6 +8,7 @@ import sys
 import pandas as pd
 from requests import post
 import logging
+import traceback
 
 
 def make_data_path():
@@ -244,6 +245,28 @@ def version_number(version_str: str) -> int:
     lst.reverse()
     return sum(x * (100 ** i) for i, x in enumerate(lst))
 
+def log_exc_plus():
+    """
+    Print the usual traceback information,
+    """
+    tb = sys.exc_info()[2]
+    while 1:
+        if not tb.tb_next:
+            break
+        tb = tb.tb_next
+    stack = []
+    f = tb.tb_frame
+    while f:
+        stack.append(f)
+        f = f.f_back
+    stack.reverse()
+    traceback.print_exc()
+    for frame in stack:
+        logging.error(f"File: {frame.f_code.co_filename}, line {frame.f_lineno}, in {frame.f_code.co_name}")
 
-def error_handling():
-    return ' {}. {}, regelnummer: {}'.format(sys.exc_info()[0], sys.exc_info()[1], sys.exc_info()[2].tb_lineno)
+
+def error_handling(ex):
+    if logging.root.level == logging.DEBUG:
+        logging.exception(ex)
+    else:
+        log_exc_plus()

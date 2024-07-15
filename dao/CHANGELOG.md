@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.5.6]
+- When there is "no battery" configured in the settings the program produced an "list indexout of range".
+This error is solved.
+- The error messages are now more clear and accurate: correct filename and line nr.
+- There was an error in the dasbboard invoking a report (Report\Balans). This error is solved.
+
 ## [V2024.5.5]
 There is a fourth source added to get day-ahead prices: **tibber**.<br>
 In cases as on June 25th when Nordpool and Entsoe don't have epex prices you can get them from Tibber. 
