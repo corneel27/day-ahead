@@ -417,7 +417,7 @@ class DaBase(hass.Hass):
             self.set_last_activity()
         except Exception as ex:
             logging.error(ex)
-            logging.error(error_handling())
+            logging.error(error_handling(ex))
         if logfile:
             file_handler.flush()
             file_handler.close()

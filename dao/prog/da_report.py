@@ -543,15 +543,12 @@ class Report:
             code_result = self.db_da.run_select_query(sql)
             code_result.index = pd.to_datetime(code_result["tijd"])
             #self.add_col_df(code_result, result, key)
-            code_result.rename(columns={key: "temp"})
-            result = pd.concat([result, code_result["temp"]], axis=0)
-            result.assign(key = key +"temp")
-
-            if code_result.shape[0] == 0:
-                # datetime.datetime.combine(vanaf, datetime.time(0,0)) - datetime.timedelta(hours=1)
-                last_moment = vanaf
-            else:
+            if len(code_result)>0:
+                self.add_col_df(code_result, result, key)
                 last_moment = code_result['tot'].iloc[-1] + datetime.timedelta(hours=1)
+            else:
+                last_moment = vanaf
+
             if last_moment < tot:
                 ha_result = None
                 if categorie["sensors"] == "calc":
