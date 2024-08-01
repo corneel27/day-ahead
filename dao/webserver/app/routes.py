@@ -281,7 +281,7 @@ def reports():
     active_interval = report.periodes[active_period]["interval"]
     if active_subject == "grid":
         report_df = report.get_grid_data(active_period, _tot=tot)
-        filtered_df = report.calc_grid_columns(report_df, active_interval, active_view, active_period)
+        filtered_df = report.calc_grid_columns(report_df, active_interval, active_view)
     else:
         report_df = report.get_energy_balance_data(active_period, _tot=tot)
         filtered_df = report.calc_balance_columns(report_df, active_interval, active_view)
