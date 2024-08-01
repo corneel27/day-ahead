@@ -1391,7 +1391,7 @@ class DaCalc(da_base.DaBase):
                                         self.call_service("set_datetime", entity_id=entity_stop_laden,
                                                           datetime=new_state_stop_laden)
                     except Exception as ex:
-                        error_str = utils.error_handling(ex)
+                        error_str = utils.error_handling()
                         logging.error(ex)
                         logging.error(f"Onverwachte fout: {error_str}")
                 else:
@@ -1826,9 +1826,10 @@ class DaCalc(da_base.DaBase):
             bottom, top = axis22.get_ylim()
             if bottom > 0:
                 axis22.set_ylim([0, top])
-            lns = []
-            for b in range(B):
+            lns = ln1[0]
+            for b in range(B)[1:]:
                 lns += ln1[b]
+#            lns += ln2 + ln3 + ln4
             if ln2:
                 lns += ln2
             if ln3:

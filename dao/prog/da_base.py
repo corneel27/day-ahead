@@ -150,7 +150,7 @@ class DaBase(hass.Hass):
                     "day_ahead.py",
                     "meteo"],
                 "function": "get_meteo_data",
-                "file_name": "meteo"},
+                "file_name": "tibber"},
             "prices": {
                 "name": "Day ahead prijzen ophalen",
                 "cmd": [
@@ -416,8 +416,7 @@ class DaBase(hass.Hass):
             getattr(self, run_task["function"])()
             self.set_last_activity()
         except Exception as ex:
-            logging.error(ex)
-            logging.error(error_handling(ex))
+            error_handling(ex)
         if logfile:
             file_handler.flush()
             file_handler.close()

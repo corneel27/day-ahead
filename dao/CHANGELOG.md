@@ -1,5 +1,56 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.8.0]
+This is a major update with a lot of improvements:
+ - The addon works now with 3 possible database engines. This is for the HA database but also for the DAO-database.
+It is even possible to work with different engines for HA and DAO. <br>
+The following engines are possible:
+   - mariadb/mysql
+   - progresql
+   - sqlite3 <br>
+ 
+    To make it easy for the current users: "mysql/mariadb" is the default engine. Therefore there is for them no need to change something in the settings. 
+    Further info in DOCS.md<br><br>
+   
+ - There are 4 extra possible (=optional) entities which you can use to manage and operate your battery(ies):
+   - entity from battery: how much energy is going from the battery to the dc-bar (W)
+   - entity from pv: how much energy is going from the dc-solar system to the dc-bar (W)
+   - entity from ac: how much energy is going from the inverter to the dc-bar (W)
+   - entity calculated soc: how what is the expected value of the SoC after this hour (%)<br>
+
+   This expansion is made for customers with hybrid inverters (Deye, Growatt etc)
+so they can better manage there batteries with DAO.<br>
+Further info in DOCS.md<br><br>
+
+- DAO stops with the naming of `victron` in the settings. The name of the setting `entity stop victron` is
+"deprecated" and will change in the near future to `entity stop inverter`. <br>
+For now the old name still works, but you get a warning and a request to change in the logging.
+
+
+## [V2024.5.6]
+- When there is "no battery" configured in the settings the program produced an "list indexout of range".
+This error is solved.
+- The error messages are now more clear and accurate: correct filename and line nr.
+- There was an error in the dasbboard invoking a report (Report\Balans). This error is solved.
+
+
+## [V2024.5.5]
+There is a fourth source added to get day-ahead prices: tibber.
+In cases as on June 25th when nordpool and entsoe have don't have epex prices you can get them from Tibber. 
+
+## [V2024.5.4]
+- If there are not enough meteo from Meteoserver from the fineley meshed model (Harmonie), 
+then the missing data are retrieved from the coarse model (GFS).<br>
+Conclusion:the optimization calculation will now always calculate as far as the day-ahead prices are known.
+- The meteo log file was name "tibber_...", this is corrected and now they are named "meteo_..."
+- In the dashboard at the menu-option **Home** and the suboption **tabel** now all loggings (not only calc, but also meteo, prices etc)
+are showed. To begin with the most recent one. 
+- Meteograph is now showed in the style as defined in the graph-settings
+ 
+
+## Breaking change
+The filenames of the loggings and the images are again (sorry) changed. After installtion of the new version
+are the old files not visible anymore in the dashboard. But you can see them with your favorite file-explorer in combination with the Samba add-on. 
 ## [V2024.5.6]
 - When there is "no battery" configured in the settings the program produced an "list indexout of range".
 This error is solved.
@@ -30,6 +81,8 @@ are the old files not visible anymore in the dashboard. But you can see them wit
 When entity is not mentioned in the settings in one or more of your pv-installations, that pv-installation(s) will never be turned off. 
 - When the program encounters a warning or an error a message is placed in the `notification entity`.
 When you have installed the Home Assistant app you can get a notification with that message on your smartphone (zie DOCS.md)
+- The filenames of the loggings and the images are again (sorry) changed. After installtion of the new version
+are the old files not visible anymore in the dashboard. But you can see them with your favorite file-explorer in combination with the Samba add-on. 
 
 
 ## [V2024.5.2]
