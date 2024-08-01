@@ -1,10 +1,10 @@
 import datetime
 import sys
 import time
-import da_base
+from da_base import DaBase
 
 
-class DaScheduler(da_base.DaBase):
+class DaScheduler(DaBase):
 
     def __init__(self, file_name: str = None):
         super().__init__(file_name)

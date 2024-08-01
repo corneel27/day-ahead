@@ -8,8 +8,10 @@ class Config:
         file_json = open(file_name)
         self.options = json.load(file_json)
         datapath = os.path.dirname(file_name)
+        file_json.close()
         secrets_json = open(datapath + "/secrets.json")
         self.secrets = json.load(secrets_json)
+        secrets_json.close()
 
     def get(self, keys: list, options: dict = None, default=None) -> str | dict | list | None:
         if options is None:

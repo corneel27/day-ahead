@@ -152,10 +152,10 @@ def home():
 
     if active_view == "grafiek":
         active_map = "/images/"
-        active_filter = "calc*.png"
+        active_filter = "*.png"
     else:
         active_map = "/log/"
-        active_filter = "calc*.log"
+        active_filter = "*.log"
     flist = get_file_list(app_datapath + active_map, active_filter)
     index = 0
     if active_time:

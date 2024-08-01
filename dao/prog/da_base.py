@@ -13,20 +13,20 @@ import json
 import hassapi as hass
 import pandas as pd
 from subprocess import PIPE, run
-# import utils
+import logging
+from logging import Handler
+from sqlalchemy import Table, select, func, and_
 from utils import get_tibber_data, error_handling
 from version import __version__
 from da_config import Config
 from da_meteo import Meteo
 from da_prices import DaPrices
 from db_manager import DBmanagerObj
-import logging
-from logging import Handler
 
 
 class NotificationHandler(Handler):
 
-    def __init__(self, _hass:hass.Hass, _entity=None):
+    def __init__(self, _hass: hass.Hass, _entity=None):
         """
         Initialize the handler.
         """
@@ -35,15 +35,14 @@ class NotificationHandler(Handler):
         self.entity = _entity
 
     def emit(self, record):
-        if self.entity and record.levelno>=logging.WARNING:
+        if self.entity and record.levelno >= logging.WARNING:
             msg = self.format(record)
             self.hass.set_value(self.entity, msg)
 
 
-
 class DaBase(hass.Hass):
 
-    def __init__(self, file_name: str = None):
+    def __init__(self, file_name: str|None = None):
         self.file_name = file_name
         path = os.getcwd()
         new_path = "/".join(list(path.split('/')[0:-2]))
@@ -79,20 +78,34 @@ class DaBase(hass.Hass):
         # logging.debug(f"hass/api/config: {resp.text}")
         self.config.set("latitude", resp_dict['latitude'])
         self.config.set("longitude", resp_dict['longitude'])
+        self.config.set("time_zone", resp_dict['time_zone'])
+        db_da_engine = self.config.get(['database da', "engine"], None, "mysql")
         db_da_server = self.config.get(['database da', "server"], None, "core-mariadb")
-        db_da_port = int(self.config.get(['database da', "port"], None, 3306))
-        db_da_name = self.config.get(['database da', "database"], None, "day_ahead")
+        db_da_port = int(self.config.get(['database da', "port"], None, 0))
+        if db_da_engine == "sqlite":
+            db_da_name = self.config.get(['database da', "database"], None, "day_ahead.db")
+        else:
+            db_da_name = self.config.get(['database da', "database"], None, "day_ahead")
         db_da_user = self.config.get(['database da', "username"], None, "day_ahead")
         db_da_password = self.config.get(['database da', "password"])
-        self.db_da = DBmanagerObj(db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
-                                  db_user=db_da_user, db_password=db_da_password)
+        db_da_path = self.config.get(['database da', "db_path"], None, "../data")
+        db_time_zone = self.config.get(["time_zone"])
+        self.db_da = DBmanagerObj(db_engine=db_da_engine, db_name=db_da_name, db_server=db_da_server,
+                                  db_port=db_da_port, db_user=db_da_user, db_password=db_da_password,
+                                  db_path=db_da_path, db_time_zone=db_time_zone)
+        db_ha_engine = self.config.get(['database ha', "engine"], None, "mysql")
         db_ha_server = self.config.get(['database ha', "server"], None, "core-mariadb")
-        db_ha_port = int(self.config.get(['database ha', "port"], None, 3306))
-        db_ha_name = self.config.get(['database ha', "database"], None, "homeassistant")
+        db_ha_port = int(self.config.get(['database ha', "port"], None, 0))
+        if db_ha_engine == "sqlite":
+            db_ha_name = self.config.get(['database ha', "database"], None, "home_assistant_v2.db")
+        else:
+            db_ha_name = self.config.get(['database ha', "database"], None, "homeassistant")
         db_ha_user = self.config.get(['database ha', "username"], None, "day_ahead")
         db_ha_password = self.config.get(['database ha', "password"])
-        self.db_ha = DBmanagerObj(db_name=db_ha_name, db_server=db_ha_server, db_port=db_ha_port,
-                                  db_user=db_ha_user, db_password=db_ha_password)
+        db_ha_path = self.config.get(['database ha', "db_path"], None, "/config")
+        self.db_ha = DBmanagerObj(db_engine=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
+                                  db_port=db_ha_port, db_user=db_ha_user, db_password=db_ha_password,
+                                  db_path=db_ha_path, db_time_zone=db_time_zone)
         self.meteo = Meteo(self.config, self.db_da)
         self.solar = self.config.get(["solar"])
 
@@ -104,12 +117,12 @@ class DaBase(hass.Hass):
         self.tibber_options = self.config.get(["tibber"], None, None)
         self.notification_entity = self.config.get(["notifications", "notification entity"], None, None)
         self.notification_opstarten = self.config.get(["notifications", "opstarten"], None, False)
-        if type(self.notification_opstarten) == str and self.notification_opstarten.lower() == "true":
+        if type(self.notification_opstarten) is str and self.notification_opstarten.lower() == "true":
             self.notification_opstarten = True
         else:
             self.notification_opstarten = False
         self.notification_berekening = self.config.get(["notifications", "berekening"], None, False)
-        if type(self.notification_berekening) == str and self.notification_berekening.lower() == "true":
+        if type(self.notification_berekening) is str and self.notification_berekening.lower() == "true":
             self.notification_berekening = True
         else:
             self.notification_berekening = False
@@ -150,7 +163,7 @@ class DaBase(hass.Hass):
                     "day_ahead.py",
                     "meteo"],
                 "function": "get_meteo_data",
-                "file_name": "tibber"},
+                "file_name": "meteo"},
             "prices": {
                 "name": "Day ahead prijzen ophalen",
                 "cmd": [
@@ -174,7 +187,16 @@ class DaBase(hass.Hass):
                     "../prog/day_ahead.py",
                     "clean_data"],
                 "function": "clean_data",
-                "file_name": "clean"}
+                "file_name": "clean"},
+            "consolidate": {
+                "name": "Verbruik/productie consolideren",
+                "cmd": [
+                    "python3",
+                    "../prog/day_ahead.py",
+                    "consolidate"],
+                "function": "consolidate_data",
+                "file_name": "consolidate"}
+
         }
 
     def start_logging(self):
@@ -197,99 +219,31 @@ class DaBase(hass.Hass):
                               datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def get_meteo_data(self, show_graph: bool = False):
-        self.db_da.connect()
         self.meteo.get_meteo_data(show_graph)
-        self.db_da.disconnect()
 
     @staticmethod
     def get_tibber_data():
-        """
-        """
         get_tibber_data()
 
     @staticmethod
     def consolidate_data():
         from da_report import Report
         report = Report()
-        report.db_da.connect()
-        report.db_ha.connect()
-        report.consolidate_data()
+        start_dt = None
+        if len(sys.argv) > 2:
+            # datetime start is given
+            start_str = sys.argv[2]
+            try:
+                start_dt = datetime.datetime.strptime(start_str, "%Y-%m-%d")
+            except Exception as ex:
+                error_handling(ex)
+                return
+        report.consolidate_data(start_dt)
 
     def get_day_ahead_prices(self):
-        self.db_da.connect()
+        # self.db_da.connect()
         self.prices.get_prices(self.config.get(["source day ahead"], self.prices_options, "nordpool"))
-        self.db_da.disconnect()
-
-    def get_consumption(self, start: datetime.datetime, until=datetime.datetime.now()):
-        """
-        Berekent consumption en production tussen start en until
-        :param start: begindatum periode, meestal de ingangsdatum van het lopende contractjaar
-        :param until: einddatum periode, meestal vandaag
-        :return: een dict met consumption en production
-        """
-        # from da database
-
-        sql = (
-            "SELECT SUM(t1.`value`) as consumed, SUM(t2.`value`) as produced "
-            "FROM `values` AS t1, `values` AS t2, `variabel`AS v1, `variabel` AS v2 "
-            "WHERE (t1.`time`= t2.`time`) "
-            "AND (v1.`code` ='cons')AND (v2.`code` = 'prod') "
-            "AND (v1.id = t1.variabel) AND (v2.id = t2.variabel) "
-            "AND t1.`time` >= UNIX_TIMESTAMP('" +
-            start.strftime('%Y-%m-%d') + "') "
-            "AND t1.`time` < UNIX_TIMESTAMP('" +
-            until.strftime('%Y-%m-%d') + "');"
-        )
-        data = self.db_da.run_select_query(sql)
-        if len(data.index) == 1:
-            consumption = data['consumed'][0]
-            production = data['produced'][0]
-        else:
-            consumption = 0
-            production = 0
-
-        # from home assistant database
-        '''
-        self.db_ha.connect()
-        grid_sensors = ['sensor.grid_consumption_low', 'sensor.grid_consumption_high', 'sensor.grid_production_low',
-                        'sensor.grid_production_high']
-        today = datetime.datetime.utcnow().date()
-        consumption = 0
-        production = 0
-        sql = "FLUSH TABLES"
-        self.db_ha.run_sql(sql)
-        for sensor in grid_sensors:
-            sql = (
-                    "(SELECT CONVERT_TZ(statistics.`start_ts`, 'GMT', 'CET') moment, statistics.state "
-                    "FROM `statistics`, `statistics_meta` "
-                    "WHERE statistics_meta.`id` = statistics.`metadata_id` "
-                    "AND statistics_meta.`statistic_id` = '" + sensor + "' "
-                    "AND `state` IS NOT null "
-                    "AND (CONVERT_TZ(statistics.`start_ts`, 'GMT', 'CET') BETWEEN '" + start.strftime('%Y-%m-%d') + "' "
-                        "AND '" + until.strftime('%Y-%m-%d %H:%M') + "') "
-                    "ORDER BY `start_ts` ASC LIMIT 1) " 
-                    "UNION "
-                    "(SELECT CONVERT_TZ(statistics.`start_ts`, 'GMT', 'CET') moment, statistics.state "
-                    "FROM `statistics`, `statistics_meta` "
-                    "WHERE statistics_meta.`id` = statistics.`metadata_id` "
-                    "AND statistics_meta.`statistic_id` = '" + sensor + "' "
-                    "AND `state` IS NOT null "                    
-                    "AND (CONVERT_TZ(statistics.`start_ts`, 'GMT', 'CET') BETWEEN '" + start.strftime('%Y-%m-%d') + "' "
-                        "AND '" + until.strftime('%Y-%m-%d %H:%M') + "') "
-                    "ORDER BY `start_ts` DESC LIMIT 1); "
-            )
-            data = self.db_ha.run_select_query(sql)
-            if len(data.index) == 2:
-                value = data['state'][1] - data['state'][0]
-                if 'consumption' in sensor:
-                    consumption = consumption + value
-                elif 'production' in sensor:
-                    production = production + value
-
-        self.db_ha.disconnect()
-        '''
-        result = {"consumption": consumption, "production": production}
-        return result
+        # self.db_da.disconnect()
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """
@@ -308,7 +262,7 @@ class DaBase(hass.Hass):
                 db_row = [str(utc), c, float(df.loc[index, c])]
                 df_db.loc[df_db.shape[0]] = db_row
         logging.debug('Save calculated data:\n{}'.format(df_db.to_string()))
-        self.db_da.savedata(df_db, debug=False, tablename=tablename)
+        self.db_da.savedata(df_db, tablename=tablename)
         return
 
     @staticmethod
@@ -323,17 +277,68 @@ class DaBase(hass.Hass):
             result = json.load(f)
         return result
 
-    def calc_da_avg(self):
+    def calc_da_avg(self) -> float:
+        """
+        calculates the average of the last 24 hour values of the day ahead prices
+        :return: the calculated average
+        """
+        # old sql query
+        '''
         sql_avg = (
-            "SELECT AVG(t1.`value`) avg_da FROM "
-            "(SELECT `time`, `value`,  from_unixtime(`time`) 'begin' "
-            "FROM `values` , `variabel` "
-            "WHERE `variabel`.`code` = 'da' AND `values`.`variabel` = `variabel`.`id` "
-            "ORDER BY `time` desc LIMIT 24) t1 "
+        "SELECT AVG(t1.`value`) avg_da FROM "
+        "(SELECT `time`, `value`,  from_unixtime(`time`) 'begin' "
+        "FROM `values` , `variabel` "
+        "WHERE `variabel`.`code` = 'da' AND `values`.`variabel` = `variabel`.`id` "
+        "ORDER BY `time` desc LIMIT 24) t1 "
         )
-        data = self.db_da.run_select_query(sql_avg)
-        result = float(data['avg_da'].values[0])
-        return result
+        '''
+        # Reflect existing tables from the database
+        values_table = Table('values', self.db_da.metadata, autoload_with=self.db_da.engine)
+        variabel_table = Table('variabel', self.db_da.metadata, autoload_with=self.db_da.engine)
+
+        # Construct the inner query
+        inner_query = select(
+            values_table.c.time,
+            values_table.c.value,
+            func.from_unixtime(values_table.c.time).label('begin')
+        ).where(
+            and_(
+                variabel_table.c.code == 'da',
+                values_table.c.variabel == variabel_table.c.id,
+            )
+        ).order_by(
+            values_table.c.time.desc()
+        ).limit(24).alias('t1')
+
+        # Construct the outer query
+        outer_query = select(
+            func.avg(inner_query.c.value).label('avg_da')
+        )
+        from sqlalchemy.dialects import mysql, postgresql
+        query_str = str(inner_query.compile(dialect=mysql.dialect()))
+        logging.debug(f"inner query p_avg: {query_str}")
+        query_str = str(outer_query.compile(dialect=mysql.dialect()))
+        logging.debug(f"outer query p_avg: {query_str}")
+
+        # Execute the query and fetch the result
+        with self.db_da.engine.connect() as connection:
+            result = connection.execute(outer_query)
+            return result.scalar()
+
+    def set_entity_value(self, entity_key: str, options: dict, value: int | float| str):
+        entity_id = self.config.get([entity_key], options, None)
+        if entity_id is not None:
+            self.set_value(entity_id, value)
+
+    def set_entity_option(self, entity_key: str, options: dict, value: int | float| str):
+        entity_id = self.config.get([entity_key], options, None)
+        if entity_id is not None:
+            self.select_option(entity_id, value)
+
+    def set_entity_state(self, entity_key: str, options: dict, value: int | float| str):
+        entity_id = self.config.get([entity_key], options, None)
+        if entity_id is not None:
+            self.set_state(entity_id, value)
 
     def clean_data(self):
         """
@@ -416,8 +421,7 @@ class DaBase(hass.Hass):
             getattr(self, run_task["function"])()
             self.set_last_activity()
         except Exception as ex:
-            logging.error(ex)
-            logging.error(error_handling())
+            error_handling(ex)
         if logfile:
             file_handler.flush()
             file_handler.close()

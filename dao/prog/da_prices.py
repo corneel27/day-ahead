@@ -1,21 +1,60 @@
+import math
 from da_config import Config
 import pandas as pd
 from db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
 import datetime
 import sys
-from requests import get
+from requests import get, post
 from nordpool.elspot import Prices
 import pytz
 import json
 import pprint as pp
 import logging
+from sqlalchemy import Table, select, and_
 
 
 class DaPrices:
     def __init__(self, config: Config, db_da: DBmanagerObj):
         self.config = config
         self.db_da = db_da
+
+    def get_time_latest_record(self, code: str) -> datetime.datetime:
+        """
+        Zoekt de tijd op van het laatst aanwezige record van "code"
+        :param code: de code van het record
+        :return: datum en tijd van het laatst aanwezige record
+        """
+        '''
+        query = ("SELECT from_unixtime(`time`) tijd, `value` "
+                 "FROM `values`, `variabel` "
+                 "WHERE `variabel`.`code` = '" + code +
+                 "'  and `values`.`variabel` = `variabel`.`id` "
+                 "ORDER BY `time` desc LIMIT 1")
+        '''
+        # Reflect existing tables from the database
+        with self.db_da.engine.connect() as connection:
+            values_table = Table('values', self.db_da.metadata, autoload_with=connection)
+            variabel_table = Table('variabel', self.db_da.metadata, autoload_with=connection)
+
+        # Construct the query
+        query = select(
+            self.db_da.from_unixtime(values_table.c.time).label('tijd'),
+            values_table.c.value
+        ).where(
+            and_(
+                variabel_table.c.code == code,
+                values_table.c.variabel == variabel_table.c.id,
+            )
+        ).order_by(
+            values_table.c.time.desc()
+        ).limit(1)
+
+        # Execute the query and fetch the result
+        with self.db_da.engine.connect() as connection:
+            result = connection.execute(query)
+            result = result.scalar()
+        return result
 
     def get_prices(self, source):
         now = datetime.datetime.now()
@@ -37,7 +76,7 @@ class DaPrices:
                 end = start + datetime.timedelta(days=2)
 
         if len(sys.argv) <= 2:
-            present = self.db_da.get_time_latest_record("da")
+            present = self.get_time_latest_record("da")
             if not (present is None):
                 tz = pytz.timezone("CET")
                 present = tz.normalize(tz.localize(present))
@@ -67,7 +106,7 @@ class DaPrices:
                 for row in da_prices.itertuples():
                     last_time = int(datetime.datetime.timestamp(row[1]))
                     df_db.loc[df_db.shape[0]] = [str(last_time), 'da', row[2] / 1000]
-                logging.debug(f"Day ahead prijzen (db-records): \n{df_db.to_string(index=False)}")
+                logging.debug(f"Day ahead prijzen (source: entsoe, db-records): \n{df_db.to_string(index=False)}")
                 self.db_da.savedata(df_db)
 
         if source.lower() == "nordpool":
@@ -79,7 +118,7 @@ class DaPrices:
                 end_date = start
             hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=end_date)
             hourly_values = hourly_prices_spot['areas']['NL']['values']
-            s = pp.pformat(hourly_values,indent=2)
+            s = pp.pformat(hourly_values, indent=2)
             logging.info(f"Day ahead prijzen van Nordpool:\n {s}")
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             for hourly_value in hourly_values:
@@ -92,7 +131,7 @@ class DaPrices:
                     value = value / 1000
                 df_db.loc[df_db.shape[0]] = [str(time_ts), 'da', value]
             logging.debug(f"Day ahead prices for {end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'}"
-                          f" (db-records): \n {df_db.to_string(index=False)}")
+                          f" (source: nordpool, db-records): \n {df_db.to_string(index=False)}")
             if len(df_db) < 24:
                 logging.warning(f"Retrieve of day ahead prices for "
                                 f"{end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'} failed")
@@ -106,7 +145,7 @@ class DaPrices:
             url = "https://mijn.easyenergy.com/nl/api/tariff/getapxtariffs?startTimestamp=" + \
                 startstr + "&endTimestamp=" + endstr
             resp = get(url)
-            logging.debug (resp.text)
+            logging.debug(resp.text)
             json_object = json.loads(resp.text)
             df = pd.DataFrame.from_records(json_object)
             logging.info(f"Day ahead prijzen van Easyenergy:\n {df.to_string(index=False)}")
@@ -114,9 +153,64 @@ class DaPrices:
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             df = df.reset_index()  # make sure indexes pair with number of rows
             for row in df.itertuples():
-                dtime = str(
-                    int(datetime.datetime.fromisoformat(row.Timestamp).timestamp()))
+                dtime = str(int(datetime.datetime.fromisoformat(row.Timestamp).timestamp()))
                 df_db.loc[df_db.shape[0]] = [dtime, 'da', row.TariffReturn]
 
-            logging.debug(f"Day ahead prijzen (db-records): \n {df_db.to_string(index=False)}")
+            logging.debug(f"Day ahead prijzen (source: easy energy, db-records): \n {df_db.to_string(index=False)}")
+            self.db_da.savedata(df_db)
+
+        if source.lower() == "tibber":
+            now_ts = datetime.datetime.now().timestamp()
+            get_ts = start.timestamp()
+            count = 1 + math.ceil((now_ts - get_ts) / 3600)
+            query = '{ ' \
+                    '"query": ' \
+                    ' "{ ' \
+                    '  viewer { ' \
+                    '    homes { ' \
+                    '      currentSubscription { ' \
+                    '        priceInfo { ' \
+                    '          today { ' \
+                    '            energy ' \
+                    '            startsAt ' \
+                    '          } ' \
+                    '          tomorrow { ' \
+                    '            energy ' \
+                    '            startsAt ' \
+                    '          } ' \
+                    '          range(resolution: HOURLY, last: '+str(count)+') { ' \
+                    '            nodes { ' \
+                    '              energy ' \
+                    '              startsAt ' \
+                    '            } ' \
+                    '          } ' \
+                    '        } ' \
+                    '      } ' \
+                    '    } ' \
+                    '  } ' \
+                    '}" ' \
+                    '}'
+
+            logging.debug(query)
+            tibber_options = self.config.get(["tibber"])
+            url = self.config.get(["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql")
+            headers = {
+                "Authorization": "Bearer " + tibber_options["api_token"],
+                "content-type": "application/json",
+            }
+            resp = post(url, headers=headers, data=query)
+            tibber_dict = json.loads(resp.text)
+            today_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['today']
+            tomorrow_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['tomorrow']
+            range_nodes = (
+                tibber_dict)['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['range']['nodes']
+            df_db = pd.DataFrame(columns=['time', 'code', 'value'])
+            for lst in [today_nodes, tomorrow_nodes, range_nodes]:
+                for node in lst:
+                    dt = datetime.datetime.strptime(node['startsAt'], "%Y-%m-%dT%H:%M:%S.%f%z")
+                    time_stamp = dt.timestamp()
+                    value = float(node["energy"])
+                    logging.info(f"{node} {dt} {time_stamp} {value}")
+                    df_db.loc[df_db.shape[0]] = [time_stamp, 'da', value]
+            logging.debug(f"Day ahead prijzen (source: tibber, db-records): \n {df_db.to_string(index=False)}")
             self.db_da.savedata(df_db)
