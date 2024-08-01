@@ -397,7 +397,7 @@ Onderstaand zijn voor de drie mogelijke engines de meest voorkomende configurati
   "database ha": {
     "engine": "sqlite",
     "database": "homeassistant_v2.db",
-    "db_path": "/config"```
+    "db_path": "/homeassistant"```
   }
 
 - **mysql** (geldt ook voor mariadb) 
