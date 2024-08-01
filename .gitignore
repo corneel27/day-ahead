@@ -6,3 +6,4 @@ dao/data/options.json
 __pycache__/
 ../CODEOWNERS
 dao/webserver/prog/*
+dao/tests/*
