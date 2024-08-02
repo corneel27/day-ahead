@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.8.1]
+
+Fixed two issues:
+- when saving calculated prognoses the column "uur" couldn't be saved. This give an error.
+- the new calculated entities for battery power are now mentioned in options_vb.json
+
 ## [V2024.8.0]
 This is a major update with a lot of improvements:
  - The addon works now with 3 possible database engines. This is for the HA database but also for the DAO-database.

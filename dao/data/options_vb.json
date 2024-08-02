@@ -277,8 +277,12 @@
       "cycle cost": 0.01,
       "entity set power feedin": "input_number.feedin_grid",
       "entity set operating mode": "input_select.ess_operating_mode",
-      "entity stop victron": "input_datetime.stop_victron",
+      "entity stop invereter": "input_datetime.stop_victron",
       "entity balance switch": "input_boolean.balanceer_grid",
+      "entity from battery": "input_number.growatt_from_battery",
+      "entity from pv": "input_number.growatt_from_pv",
+      "entity from ac": "input_number.growatt_from_ac",
+      "entity calculated soc": "input_number.growatt_calculated_soc",
       "solar": [
         {
           "name": "tuinkamer",

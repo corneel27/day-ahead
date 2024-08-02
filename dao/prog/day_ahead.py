@@ -1282,7 +1282,7 @@ class DaCalc(DaBase):
                     row = row + [c_ma_sum[u]]
                 d_f.loc[d_f.shape[0]] = row
             if not self.debug:
-                d_f = d_f.drop(["b_tem"], axis=1)
+                d_f = d_f.drop(["uur", "b_tem"], axis=1)
                 self.save_df(tablename='prognoses', tijd=tijd, df=d_f)
             else:
                 logging.info("Berekende prognoses zijn niet opgeslagen.")
@@ -1483,13 +1483,6 @@ class DaCalc(DaBase):
                         if stop_omvormer:
                             logging.info(f"tot: {stop_str}")
                         logging.info(f"Balanceren zou zijn: {balance}")
-                        '''
-                        "entity from battery": "input_number.growatt_from_battery",
-                        "entity from pv": "input_number.growatt_from_pv",
-                        "entity from ac": "input_number.growatt_from_ac",
-                        "entity calculated soc": "input_number.growatt_calculated_soc"
-                        '''
-
                     else:
                         self.set_entity_value("entity set power feedin", self.battery_options[b], netto_vermogen)
                         self.set_entity_option("entity set operating mode", self.battery_options[b], new_state)
