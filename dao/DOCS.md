@@ -228,19 +228,20 @@ dan kun je die (sub)instelling achterwege laten en zorgt het programma voor de d
 Als je de software installeert als addon op je Home Assistant machine kan de hele instelling **homeassistant** weggelaten worden. 
 Dit regelt de supervisor van Home Assistant dan voor je.
 
-=======
+----------------------------
+
 | Key                       | Subkey                       | Type             | Default                            | Opmerkingen                                        |
 |---------------------------|------------------------------|------------------|------------------------------------|----------------------------------------------------|
 | **homeassistant**         | protocol api                 | string           | http                               | Alleen invullen                                    |
 |                           | ip adress                    | string           | supervisor                         | als addon op                                       |  
 |                           | ip port                      | integer          | blanco                             | andere machine                                     | 
 |                           | token                        | string           | blanco                             | draait                                             | 
-| **database ha**           | engine                       | string           | mysql                              | keuze uit: mysql / sqlite / postgresql            |
+| **database ha**           | engine                       | string           | mysql                              | keuze uit: mysql / sqlite / postgresql             |
 |                           | server                       | string           | core-mariadb                       | default als addo met mysql als engine              |
 |                           | database                     | string           | homeassistant                      |                                                    |
 |                           | username                     | string           | homeassistant                      |                                                    |
 |                           | password                     | string           |                                    |                                                    |
-| **database da**           | engine                       | string           | mysql                              | keuze uit: mysql / sqlite / postgresql            |
+| **database da**           | engine                       | string           | mysql                              | keuze uit: mysql / sqlite / postgresql             |
 | *                         | server                       | string           | core-mariadb                       | default als addon met mysql als engine             |
 |                           | database                     | string           | day_ahead                          |                                                    |
 |                           | username                     | string           | day_ahead                          |                                                    |
@@ -312,7 +313,9 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                           | ______efficiency             | getal            |                                    | W/W (factor 0..1)                                  | 
 |                           | minimum power                | getal            |                                    | W                                                  |
 |                           | dc_to_bat efficiency         | getal            |                                    | 0 .. 1.0                                           |
+|                           | dc_to_bat max power          | getal            | 2 x max power charge               | W                                                  |
 |                           | bat_to_dc efficiency         | getal            |                                    | 0 .. 1.0                                           |
+|                           | bat_to_dc max power          | getal            | 2 x max power discharge            | W                                                  |
 |                           | cycle cost                   | getal            |                                    | euro                                               |
 |                           | entity set power feedin      | string           |                                    | input_number                                       |
 |                           | entity stop inverter         | string           |                                    | input_datetime                                     |
@@ -769,8 +772,14 @@ Dit onderdeel is nog in ontwikkeling.
    * discharge stages: op dezelfde wijze als de "charge stages" vul je hier voor het ontladen een aantal stappen of schijven in voor het ontladen via je omvormer/inverter. 
    * minimum power (in W) : minimaal laad/ontlaadvermogen
    * dc_to_bat efficiency: efficiency van het laden van de batterij vanuit dc (factor van 1)
+   * dc_to_bat max power (optioneel): het maximum vermogen in W dat nooit zal worden overschreven van de energie van de dc-busbar naar de batterij. 
+Dit is met name van belang bij hybride omvormers waar naast de invoeding vanuit ac er ook invoeding kan zijn vanuit pv. 
+Wanneer deze instelling wordt weggelaten zal deze instelling 2 x het laadvermogen aan ac-zijde bedragen.
    * bat_to_dc efficiency: efficiency van het ontladen van de batterij naar dc (factor van 1)
-   * cycle cost : afschrijfkosten (in euro) van het laden of ontladen van 1 kWh  
+   * bat_to_dc max power (optioneel): het maximum vermogen in W dat nooit zal worden overschreven van de energie van de batterij naar de dc-busbar. 
+Dit is met name van belang bij hybride omvormers waar naast de invoeding vanuit ac er ook invoeding kan zijn vanuit pv. 
+Wanneer deze instelling wordt weggelaten zal deze instelling 2 x het ontlaadvermogen aan ac-zijde bedragen.
+   * cycle cost: afschrijfkosten (in euro) van het laden of ontladen van 1 kWh  
    * entity set power feedin: entiteit waar je het te laden / ontladen vermogen inzet  
    * entity set operating mode: entiteit waarmee je het ess aan/uit zet, maak hiervoor een input_select aan met minimaal de opties "Aan" en "Uit"  
  Het is aan jou of jij hiermee een automatisering wilt triggeren die de omvormer aan / uit zet.

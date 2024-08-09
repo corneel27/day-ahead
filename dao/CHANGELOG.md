@@ -1,5 +1,16 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.8.2]
+
+The following changes are implemented:
+- for hybrid inverters: you can now limit the power from dc to bat and vice versa with two (optional) settings
+(zie DOCS.md):
+  - bat_to_dc max power
+  - dc_to_bat max power
+- there was an error when pv-dc production was higher then the max power of the inverter, this is corrected.
+- the prognoses table is extended with a column with expected hourly pv-dc production
+- there was a resource leak (db-connections) which caused runtime errors; the leak is found and sealed.
+
 ## [V2024.8.1]
 
 Fixed two issues:

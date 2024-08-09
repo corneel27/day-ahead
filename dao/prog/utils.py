@@ -109,7 +109,7 @@ def get_tibber_data():
     db_da_user = config.get(['database da', "username"], None, "day_ahead")
     db_da_password = config.get(['database da', "password"])
     db_time_zone = config.get(["time_zone"])
-    db_da = DBmanagerObj(db_engine=db_da_engine, db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
+    db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
                          db_user=db_da_user, db_password=db_da_password, db_time_zone=db_time_zone)
     prices_options = config.get(["prices"])
     headers = {

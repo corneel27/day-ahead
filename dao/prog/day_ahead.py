@@ -124,6 +124,7 @@ class DaCalc(DaBase):
             price_t_notax = row.da_price
             pt_notax.append(price_t_notax)
 
+        B = len(self.battery_options)
         U = len(pl)
         if U >= 24:
             p_avg = sum(pl) / U  # max(pl) #
@@ -173,7 +174,8 @@ class DaCalc(DaBase):
         tijd = []
         ts = []
         global_rad = []  # globale straling per uur
-        pv_org = []  # opwekking zonnepanelen
+        pv_org_ac = []  # opwekking zonnepanelen[]
+        pv_org_dc = []
         p_grl = []  # prijs levering
         p_grt = []  # prijs teruglevering
         hour_fraction = []
@@ -200,7 +202,16 @@ class DaCalc(DaBase):
                     self.solar[s], row.time, row.glob_rad) * pv_yield[s] * hour_fraction[-1]
                 solar_prod[s].append(prod)
                 pv_total += prod
-            pv_org.append(pv_total)
+            pv_org_ac.append(pv_total)
+            pv_total = 0
+            for b in range(B):
+                for s in range(len(self.battery_options[b]["solar"])):
+                    prod = (self.meteo.calc_solar_rad(
+                        self.battery_options[b]["solar"][s], row.time, row.glob_rad) *
+                        self.battery_options[b]["solar"][s]["yield"] * hour_fraction[-1])
+                    pv_total += prod
+            pv_org_dc.append(pv_total)
+
             dag_str = dtime.strftime("%Y-%m-%d")
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             taxes_t = get_value_from_dict(dag_str, taxes_t_def)
@@ -221,19 +232,21 @@ class DaCalc(DaBase):
                      'p_l': pl,
                      'p_t': pt,
                      'base': b_l,
-                     'pv_ac': pv_org
+                     'pv_ac': pv_org_ac,
+                     'pv_dc': pv_org_dc
                      })
                 start_df.set_index('uur')
                 logging.info('Start waarden: \n{}'.format(start_df.to_string()))
         except Exception as ex:
             logging.error(ex)
-        logging.info(f"lengte prognose arrays:")
-        logging.info(f"uur: {len(uur)}")
-        logging.info(f"tijd: {len(tijd)}")
-        logging.info(f"p_l: {len(pl)}")
-        logging.info(f"p_t: {len(pt)}")
-        logging.info(f"base: {len(b_l)}")
-        logging.info(f"pv_ac: {len(pv_org)}")
+        logging.debug(f"lengte prognose arrays:")
+        logging.debug(f"uur: {len(uur)}")
+        logging.debug(f"tijd: {len(tijd)}")
+        logging.debug(f"p_l: {len(pl)}")
+        logging.debug(f"p_t: {len(pt)}")
+        logging.debug(f"base: {len(b_l)}")
+        logging.debug(f"pv_ac: {len(pv_org_ac)}")
+        logging.debug(f"pv_ac: {len(pv_org_dc)}")
 
         # volledig salderen?
         salderen = self.prices_options['tax refund'] == "True"
@@ -285,7 +298,6 @@ class DaCalc(DaBase):
         ##############################################################
         # accu capaciteit
         # 2 batterijen 50V 280Ah
-        B = len(self.battery_options)
         one_soc = []
         kwh_cycle_cost = []
         start_soc = []
@@ -304,6 +316,8 @@ class DaCalc(DaBase):
         DS = []
         max_charge_power = []
         max_discharge_power = []
+        max_dc_from_bat_power = []
+        max_dc_to_bat_power = []
         avg_eff_dc_to_ac = []
         pv_dc_num = []
         pv_prod_dc = []
@@ -316,6 +330,10 @@ class DaCalc(DaBase):
             # CS is aantal charge stages
             CS.append(len(self.battery_options[b]["charge stages"]))
             max_discharge_power.append(self.battery_options[b]["discharge stages"][-1]["power"]/1000)
+            max_dc_from_bat_power.append(self.config.get(["bat_to_dc max power"], self.battery_options[b],
+                                                         2000 * max_discharge_power[b])/1000)
+            max_dc_to_bat_power.append(self.config.get(["dc_to_bat max power"], self.battery_options[b],
+                                       2000 * max_discharge_power[b])/1000)
             # DS is aantal discharge stages
             DS.append(len(self.battery_options[b]["discharge stages"]))
             sum_eff = 0
@@ -372,7 +390,7 @@ class DaCalc(DaBase):
         # mppt aan/uit evt bij netto prijzen onder nul
         pv_dc_on_off = [[[model.add_var(var_type=BINARY) for _ in range(U)]
                         for _ in range(pv_dc_num[b])] for b in range(B)]
-        pv_prod_dc_sum = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b])
+        pv_prod_dc_sum = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=2 * max_charge_power[b])
                           for _ in range(U)] for b in range(B)]
 
         # ac_to_dc met aan uit #############################################################
@@ -419,9 +437,9 @@ class DaCalc(DaBase):
                        for _ in range(U)] for b in range(B)]
         dc_to_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_discharge_power[b])
                      for _ in range(U)] for b in range(B)]
-        dc_from_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=2 * max_discharge_power[b])
+        dc_from_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_dc_from_bat_power[b])
                         for _ in range(U)] for b in range(B)]
-        dc_to_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=2 * max_charge_power[b])
+        dc_to_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_dc_to_bat_power[b])
                       for _ in range(U)] for b in range(B)]
 
         # SoC
@@ -1920,6 +1938,7 @@ def main():
             if arg.lower() == "calc_baseloads":
                 da_calc.run_task_function("calc_baseloads")
                 continue
+    da_calc.db_da.log_pool_status()
 
 
 if __name__ == "__main__":

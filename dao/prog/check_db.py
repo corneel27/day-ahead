@@ -26,13 +26,13 @@ class CheckDB(DaBase):
         db_da_path = self.config.get(['database da', "db_path"], None, "../data")
         db_da_password = self.config.get(['database da', "password"])
         db_da_time_zone = self.config.get(["time_zone"])
-        self.db_url = DBmanagerObj.db_url(db_engine=db_da_engine, db_name=db_da_name, db_server=db_da_server,
+        self.db_url = DBmanagerObj.db_url(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
                                           db_user=db_da_user, db_password=db_da_password, db_port=db_da_port,
                                           db_path=db_da_path)
         if not sqlalchemy_utils.database_exists(self.db_url):
             sqlalchemy_utils.create_database(self.db_url)
         try:
-            self.db_da = DBmanagerObj(db_engine=db_da_engine, db_name=db_da_name, db_server=db_da_server,
+            self.db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
                                       db_user=db_da_user, db_password=db_da_password, db_port=db_da_port,
                                       db_path=db_da_path, db_time_zone=db_da_time_zone)
             self.engine = self.db_da.engine

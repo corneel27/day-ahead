@@ -33,9 +33,9 @@ class TestReports(unittest.TestCase):
 
     def test_da_calc(self):
         self.start_logging()
-        da_calc = dao.prog.day_ahead.DaCalc(file_name="data/options_mysql.json")
-        # da_calc.calc_optimum(_start_dt=datetime.datetime(year=2024, month=7, day=27, hour=15, minute=0), _start_soc=67.2)
-        da_calc.calc_optimum(_start_dt=datetime.datetime(year=2024, month=7, day=27, hour=15, minute=30), _start_soc=75.2)
+        da_calc = dao.prog.day_ahead.DaCalc(file_name="../data/options_george.json")
+        da_calc.calc_optimum(_start_dt=datetime.datetime(year=2024, month=7, day=28, hour=15, minute=0), _start_soc=67.2)
+        # da_calc.calc_optimum(_start_soc=67.2)
 
 
 if __name__ == '__main__':

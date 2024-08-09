@@ -265,7 +265,6 @@ class Meteo:
             df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'temp', float(row.temp)]
             df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'solar_rad', float(row.solar_rad)]
 
-        logging.debug(f"Meteo data records \n{df_db.to_string(index=False)}")
         if count < 39:
             df1 = self.get_from_meteoserver("gfs")
             for row in df1[count:].itertuples():
@@ -275,6 +274,12 @@ class Meteo:
                 count += 1
                 if count >= 48:
                     break
+
+        df_tostring = df_db
+        # df_tostring["tijd"] = pd.to_datetime(df_tostring["time"])
+        df_tostring['tijd'] = (
+            df_tostring['time'].apply(lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")))
+        logging.info(f"Meteo data records \n{df_tostring.to_string(index=False)}")
 
         self.db_da.savedata(df_db)
         style = self.config.get(['graphics', 'style'], None, "default")

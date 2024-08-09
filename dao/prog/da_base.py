@@ -60,6 +60,7 @@ class DaBase(hass.Hass):
         logging.addLevelName(logging.WARNING, 'waarschuwing')
         logging.addLevelName(logging.ERROR, 'fout')
         logging.addLevelName(logging.CRITICAL, 'kritiek')
+        logging.getLogger().setLevel(self.log_level)
         self.protocol_api = self.config.get(['homeassistant', 'protocol api'], default="http")
         self.ip_address = self.config.get(['homeassistant', 'ip adress'], default="supervisor")
         self.ip_port = self.config.get(['homeassistant', 'ip port'], default=None)
@@ -90,7 +91,7 @@ class DaBase(hass.Hass):
         db_da_password = self.config.get(['database da', "password"])
         db_da_path = self.config.get(['database da', "db_path"], None, "../data")
         db_time_zone = self.config.get(["time_zone"])
-        self.db_da = DBmanagerObj(db_engine=db_da_engine, db_name=db_da_name, db_server=db_da_server,
+        self.db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
                                   db_port=db_da_port, db_user=db_da_user, db_password=db_da_password,
                                   db_path=db_da_path, db_time_zone=db_time_zone)
         db_ha_engine = self.config.get(['database ha', "engine"], None, "mysql")
@@ -103,7 +104,7 @@ class DaBase(hass.Hass):
         db_ha_user = self.config.get(['database ha', "username"], None, "day_ahead")
         db_ha_password = self.config.get(['database ha', "password"])
         db_ha_path = self.config.get(['database ha', "db_path"], None, "/config")
-        self.db_ha = DBmanagerObj(db_engine=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
+        self.db_ha = DBmanagerObj(db_dialect=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
                                   db_port=db_ha_port, db_user=db_ha_user, db_password=db_ha_password,
                                   db_path=db_ha_path, db_time_zone=db_time_zone)
         self.meteo = Meteo(self.config, self.db_da)
@@ -129,6 +130,7 @@ class DaBase(hass.Hass):
         self.last_activity_entity = self.config.get(["notifications", "last activity entity"], None, None)
         self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
+        self.db_da.log_pool_status()
         self.tasks = {
             "calc_optimum_met_debug": {
                 "name": "Optimaliseringsberekening met debug",
@@ -196,7 +198,6 @@ class DaBase(hass.Hass):
                     "consolidate"],
                 "function": "consolidate_data",
                 "file_name": "consolidate"}
-
         }
 
     def start_logging(self):
@@ -241,9 +242,7 @@ class DaBase(hass.Hass):
         report.consolidate_data(start_dt)
 
     def get_day_ahead_prices(self):
-        # self.db_da.connect()
         self.prices.get_prices(self.config.get(["source day ahead"], self.prices_options, "nordpool"))
-        # self.db_da.disconnect()
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """
@@ -380,7 +379,7 @@ class DaBase(hass.Hass):
         report = Report()
         report.calc_save_baseloads()
 
-    def run_task_function(self, task, logfile: bool = False):
+    def run_task_function(self, task, logfile: bool = True):
         # klass = globals()["class_name"]
         # instance = klass()
 
@@ -418,8 +417,10 @@ class DaBase(hass.Hass):
         try:
             logging.info(f"Day Ahead Optimalisatie gestart: "
                          f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')} taak: {run_task['function']}")
+            self.db_da.log_pool_status()
             getattr(self, run_task["function"])()
             self.set_last_activity()
+            self.db_da.log_pool_status()
         except Exception as ex:
             error_handling(ex)
         if logfile:

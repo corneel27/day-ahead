@@ -14,13 +14,13 @@ class DBmanagerObj(object):
     Database manager class.
     """
 
-    def __init__(self, db_engine: str, db_name: str,
+    def __init__(self, db_dialect: str, db_name: str,
                  db_server=None, db_user=None, db_password=None,
                  db_port=None, db_path=None, db_time_zone: str = 'Europe/Amsterdam'):
         """
         Initializes a DBManager object
         Args:
-            db_engine    :Engine: mysql(=mariadb), sqlite, postgresql
+            db_dialect   :Dialect: mysql(=mariadb), sqlite, postgresql
             db_name      :Name of the DB
             db_server    :Server (mysql only)
             db_user      :User (mysql only)
@@ -30,7 +30,7 @@ class DBmanagerObj(object):
             db_time_zone :time_zone (postgresql only)
         """
 
-        self.engine = db_engine
+        self.db_dialect = db_dialect
         self.db_name = db_name
         self.server = db_server
         self.user = db_user
@@ -38,9 +38,9 @@ class DBmanagerObj(object):
         self.port = db_port
         self.db_path = db_path
         self.TARGET_TIMEZONE = db_time_zone
-        if self.engine == "mysql":
+        if self.db_dialect == "mysql":
             self.engine = create_engine(f"mysql+pymysql://{self.user}:{self.password}@{self.server}/{self.db_name}")
-        elif self.engine == "postgresql":
+        elif self.db_dialect == "postgresql":
             self.engine = create_engine(f"postgresql+psycopg2://{self.user}:{self.password}@"
                                         f"{self.server}/{self.db_name}")
             with self.engine.connect() as connection:
@@ -55,14 +55,14 @@ class DBmanagerObj(object):
         self.metadata = MetaData()
 
     @staticmethod
-    def db_url(db_engine: str, db_name: str, db_server=None, db_user=None, db_password=None,
+    def db_url(db_dialect: str, db_name: str, db_server=None, db_user=None, db_password=None,
                db_port=0, db_path=None) -> str:
-        if db_engine == "mysql":
+        if db_dialect == "mysql":
             if db_port == 0:
                 result = f"mysql+pymysql://{db_user}:{db_password}@{db_server}/{db_name}"
             else:
                 result = f"mysql+pymysql://{db_user}:{db_password}@{db_server}:{db_port}/{db_name}"
-        elif db_engine == "postgresql":
+        elif db_dialect == "postgresql":
             if db_port == 0:
                 result = f"postgresql+psycopg2://{db_user}:{db_password}@{db_server}/{db_name}"
             else:
@@ -75,44 +75,52 @@ class DBmanagerObj(object):
         logging.debug(f"db_url: {result}")
         return result
 
+    def log_pool_status(self):
+        from inspect import currentframe, getframeinfo
+        cf = currentframe()
+        cf = cf.f_back
+        filename = getframeinfo(cf).filename
+        lineno = getframeinfo(cf).lineno
+        logging.info(f"Connection status {self.engine.pool.status()} at line {lineno} in {filename}")
+
     # Custom function to handle from_unixtime
     def from_unixtime(self, column):
-        if self.engine == 'sqlite':
+        if self.db_dialect == 'sqlite':
             return func.datetime(column, 'unixepoch', 'localtime')
-        elif self.engine == 'postgresql':
+        elif self.db_dialect == 'postgresql':
             return func.to_char(func.to_timestamp(column), 'YYYY-MM-DD HH24:MI:SS')
         else: # mysql/mariadb
             return func.from_unixtime(column)
 
     # Custom function to handle UNIX_TIMESTAMP
     def unix_timestamp(self, date_str):
-        if self.engine == 'sqlite':
+        if self.db_dialect == 'sqlite':
             return func.strftime('%s', date_str, 'utc')
-        elif self.engine == 'postgresql':
+        elif self.db_dialect == 'postgresql':
             return func.extract('epoch', func.timezone(self.TARGET_TIMEZONE, func.cast(date_str, TIMESTAMP)))
         else: # mysql/mariadb
             return func.unix_timestamp(date_str)
 
     def month(self, column) -> func:
-        if self.engine == 'sqlite':
+        if self.db_dialect == 'sqlite':
             return func.strftime("%Y-%m", func.datetime(column, 'unixepoch', 'localtime'))
-        elif self.engine == 'postgresql':
+        elif self.db_dialect == 'postgresql':
             return func.to_char(func.to_timestamp(column), 'YYYY-MM')
         else: # mysql/mariadb
             return func.concat(func.year(func.from_unixtime(column)), '-', func.lpad(func.month(func.from_unixtime(column)), 2, '0'))
 
     def day(self, column) -> func:
-        if self.engine == 'sqlite':
+        if self.db_dialect == 'sqlite':
             return func.strftime("%Y-%m-%d", func.datetime(column, 'unixepoch', 'localtime'))
-        elif self.engine == 'postgresql':
+        elif self.db_dialect == 'postgresql':
             return func.to_char(func.to_timestamp(column), 'YYYY-MM-DD')
         else: # mysql/mariadb
             return func.date(func.from_unixtime(column))
 
     def hour(self, column) -> func:
-        if self.engine == 'sqlite':
+        if self.db_dialect == 'sqlite':
             return func.strftime("%H:%M", func.datetime(column, 'unixepoch', 'localtime'))
-        elif self.engine == 'postgresql':
+        elif self.db_dialect == 'postgresql':
             return func.to_char(func.to_timestamp(column), 'HH24:MI')
         else: # mysql/mariadb
             return func.time_format(func.time(func.from_unixtime(column)), "%H:%i")
@@ -131,7 +139,12 @@ class DBmanagerObj(object):
             tablename: values or prognoses
         """
         logging.debug(f"Opslaan dataframe:\n{df.to_string()}")
-        with self.engine.connect() as connection:
+        self.log_pool_status()
+
+        # with self.engine.connect() as connection:
+        connection = self.engine.connect()
+        try:
+            self.log_pool_status()
             # Reflect existing tables from the database
             values_table = Table(tablename, self.metadata, autoload_with=self.engine)
             variabel_table = Table('variabel', self.metadata, autoload_with=self.engine)
@@ -165,12 +178,16 @@ class DBmanagerObj(object):
                     value_id = value_result[0]
                     update_value = update(values_table).values(value=value).where(values_table.c.id == value_id)
                     connection.execute(update_value)
-                    connection.commit()
                 else:
                     # Record does not exist, perform insert
                     insert_value = insert(values_table).values(variabel=variabel_id, time=time, value=value)
                     connection.execute(insert_value)
-                    connection.commit()
+            connection.commit()
+        finally:
+            self.log_pool_status()
+            connection.close()
+        self.log_pool_status()
+
 
     def get_prognose_data(self, start, end=None):
         values_table = Table('values', self.metadata, autoload_with=self.engine)

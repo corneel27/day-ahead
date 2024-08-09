@@ -29,7 +29,7 @@ class Report:
         db_da_user = self.config.get(['database da', "username"], None, "day_ahead")
         db_da_password = self.config.get(['database da', "password"])
         db_time_zone = self.config.get(["time_zone"], None, 'Europe/Amsterdam')
-        self.db_da = DBmanagerObj(db_engine=db_da_engine, db_name=db_da_name, db_server=db_da_server,
+        self.db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
                                   db_port=db_da_port, db_user=db_da_user, db_password=db_da_password,
                                   db_time_zone=db_time_zone)
         db_ha_engine = self.config.get(['database ha', "engine"], None, "mysql")
@@ -38,7 +38,7 @@ class Report:
         db_ha_name = self.config.get(['database ha', "database"], None, "homeassistant")
         db_ha_user = self.config.get(['database ha', "username"], None, "day_ahead")
         db_ha_password = self.config.get(['database ha', "password"])
-        self.db_ha = DBmanagerObj(db_engine=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
+        self.db_ha = DBmanagerObj(db_dialect=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
                                   db_port=db_ha_port, db_user=db_ha_user, db_password=db_ha_password,
                                   db_time_zone=db_time_zone)
 
