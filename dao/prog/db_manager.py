@@ -81,7 +81,7 @@ class DBmanagerObj(object):
         cf = cf.f_back
         filename = getframeinfo(cf).filename
         lineno = getframeinfo(cf).lineno
-        logging.info(f"Connection status {self.engine.pool.status()} at line {lineno} in {filename}")
+        logging.debug(f"Connection status {self.engine.pool.status()} at line {lineno} in {filename}")
 
     # Custom function to handle from_unixtime
     def from_unixtime(self, column):
