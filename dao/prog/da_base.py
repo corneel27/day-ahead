@@ -46,7 +46,8 @@ class DaBase(hass.Hass):
         self.file_name = file_name
         path = os.getcwd()
         new_path = "/".join(list(path.split('/')[0:-2]))
-        sys.path.append(new_path)
+        if not new_path in sys.path:
+            sys.path.append(new_path)
         self.make_data_path()
         self.debug = False
         self.config = Config(self.file_name)

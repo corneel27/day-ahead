@@ -52,6 +52,7 @@ class DBmanagerObj(object):
             # self.dbname = "home-assistant_v2.db"
             # self.engine = create_engine(f'sqlite:////{abs_db_path}/{self.db_name}')
             self.engine = create_engine(f'sqlite:///{self.db_path}/{self.db_name}')
+        logging.debug(f"Dialect: {self.db_dialect}, database: {self.db_name}, server: {self.server}")
         self.metadata = MetaData()
 
     @staticmethod
@@ -149,7 +150,10 @@ class DBmanagerObj(object):
             values_table = Table(tablename, self.metadata, autoload_with=self.engine)
             variabel_table = Table('variabel', self.metadata, autoload_with=self.engine)
             df = df.reset_index()  # make sure indexes pair with number of rows
+            df["tijd"] = df['time'].apply(lambda x: datetime.datetime.fromtimestamp(int(float(x))).strftime("%Y-%m-%d %H:%M"))
             for index, dfrow in df.iterrows():
+                logging.info(f"Save record: {dfrow['tijd']} {dfrow['code']} {dfrow['time']} {dfrow['value']}")
+                # logging.info(f"Save record: {dfrow}")
                 code = dfrow['code']
                 time = dfrow['time']
                 value = dfrow['value']

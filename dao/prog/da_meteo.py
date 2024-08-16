@@ -241,6 +241,8 @@ class Meteo:
         resp = get(url + parameters)
         logging.debug (resp.text)
         json_object = json.loads(resp.text)
+        if not "data" in json_object:
+            return pd.DataFrame()
         data = json_object["data"]
 
         # for t in data:
@@ -258,6 +260,9 @@ class Meteo:
     def get_meteo_data(self, show_graph=False):
         df1 = self.get_from_meteoserver("harmonie")
         count = len(df1)
+        if count == 0:
+            logging.error("No data recieved from meteoserver")
+            return
         df_db = pd.DataFrame(columns=['time', 'code', 'value'])
         df1 = df1.reset_index()  # make sure indexes pair with number of rows
         for row in df1.itertuples():

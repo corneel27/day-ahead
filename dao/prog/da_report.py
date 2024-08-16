@@ -12,13 +12,14 @@ import json
 import itertools
 import logging
 from sqlalchemy import Table, select, and_, literal, func, case
+import matplotlib.pyplot as plt
 
 
 class Report:
     periodes = {}
 
-    def __init__(self):
-        self.config = Config("../data/options.json")
+    def __init__(self, file_name:str="../data/options.json"):
+        self.config = Config(file_name)
         db_da_engine = self.config.get(['database da', "engine"], None, "mysql")
         db_da_server = self.config.get(['database da', "server"], None, "core-mariadb")
         db_da_port = int(self.config.get(['database da', "port"], None, 3306))
@@ -309,29 +310,26 @@ class Report:
             column = self.db_ha.month(t2.c.start_ts).label('maand')
         elif agg == "dag":
             column = self.db_ha.day(t2.c.start_ts).label('dag')
-        else: # interval == "uur"
+        else:  # interval == "uur"
             column = self.db_ha.hour(t2.c.start_ts).label('uur')
 
         if agg == "uur":
             columns = [column,
-                self.db_ha.from_unixtime(t2.c.start_ts).label('tijd'),
-                self.db_ha.from_unixtime(t2.c.start_ts).label('tot'),
-                case(
-                    (t2.c.state > t1.c.state, t2.c.state - t1.c.state),
-                    else_=0
-                ).label(col_name)
-            ]
+                       self.db_ha.from_unixtime(t2.c.start_ts).label('tijd'),
+                       self.db_ha.from_unixtime(t2.c.start_ts).label('tot'),
+                       case(
+                            (t2.c.state > t1.c.state, t2.c.state - t1.c.state),
+                            else_=0
+                       ).label(col_name)
+                       ]
         else:
             columns = [column,
-                func.min(self.db_ha.from_unixtime(t2.c.start_ts)).label('tijd'),
-                func.max(self.db_ha.from_unixtime(t2.c.start_ts)).label('tot'),
-                func.sum(case(
-                    (t2.c.state > t1.c.state, t2.c.state - t1.c.state),
-                    else_=0
-                )
-                ).label(col_name)
-            ]
-
+                       func.min(self.db_ha.from_unixtime(t2.c.start_ts)).label('tijd'),
+                       func.max(self.db_ha.from_unixtime(t2.c.start_ts)).label('tot'),
+                       func.sum(case((t2.c.state > t1.c.state, t2.c.state - t1.c.state),
+                                     else_=0)
+                                ).label(col_name)
+                       ]
 
         # Build the query to retrieve raw data
         query = select(
@@ -351,8 +349,8 @@ class Report:
         if agg != "uur":
             query = query.group_by(agg)
 
-        from sqlalchemy.dialects import postgresql, sqlite, mysql
-        query_str = str(query.compile(dialect=mysql.dialect()))
+        # from sqlalchemy.dialects import postgresql, sqlite, mysql
+        # query_str = str(query.compile(dialect=mysql.dialect()))
 
         # Execute the query and load results into a DataFrame
         with self.db_ha.engine.connect() as connection:
@@ -360,7 +358,7 @@ class Report:
 
         if len(df_raw) == 0:
             df_raw = pd.DataFrame(columns=[agg, "tijd", "tot", col_name])
-        df_raw.index = df_raw[agg] # pd.to_datetime(df_raw["tijd"])
+        df_raw.index = df_raw[agg]  # pd.to_datetime(df_raw["tijd"])
 
         # Print the raw DataFrame
         logging.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
@@ -522,7 +520,7 @@ class Report:
             tot = datetime.datetime(now.year, now.month, now.day)
         else:
             tot = _end
-        for code, categorie in itertools.chain(self.grid_dict.items()): #, self.energy_balance_dict.items()):
+        for code, categorie in itertools.chain(self.grid_dict.items()):  # self.energy_balance_dict.items()):
             if _start is None:
                 start = self.get_latest_present(code) + datetime.timedelta(hours=1)
             else:
@@ -675,7 +673,7 @@ class Report:
             column = self.db_da.month(t1.c.time).label('maand')
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label('dag')
-        else: # interval == "uur"
+        else:  # interval == "uur"
             column = self.db_da.hour(t1.c.time).label('uur')
         for key, categorie in self.energy_balance_dict.items():
             result[key] = 0.0
@@ -834,7 +832,8 @@ class Report:
                 result = getattr(self, function)(result)
         return result
 
-    def get_grid_data(self, periode: str, _vanaf=None, _tot=None, _interval: str|None = None, _source: str = "all") -> (pd.DataFrame):
+    def get_grid_data(self, periode: str, _vanaf=None, _tot=None, _interval: str | None = None,
+                      _source: str = "all") -> pd.DataFrame:
 
         """
         Haalt de grid data: consumptie, productie, cost, profit op de drie tabellen:
@@ -873,11 +872,11 @@ class Report:
             column = self.db_da.month(t1.c.time).label('maand')
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label('dag')
-        else: # interval == "uur"
+        else:  # interval == "uur"
             column = self.db_da.hour(t1.c.time).label('uur')
         result = None
         if source == "all" or source == "da":
-            for cat, label in [("cons","consumption"), ("prod", "production"), ("cost","cost"), ("profit", "profit")]:
+            for cat, label in [("cons", "consumption"), ("prod", "production"), ("cost", "cost"), ("profit", "profit")]:
                 query = select(
                     column,
                     func.min(self.db_da.from_unixtime(t1.c.time)).label('vanaf'),
@@ -898,7 +897,7 @@ class Report:
 
                 with self.db_da.engine.connect() as connection:
                     result_cat = pd.read_sql_query(query, connection)
-                result_cat.index = result_cat[interval] # pd.to_datetime(result_cat["vanaf"])
+                result_cat.index = result_cat[interval]  # pd.to_datetime(result_cat["vanaf"])
                 if result is None:
                     result = result_cat
                 else:
@@ -937,10 +936,10 @@ class Report:
                 df_prices = pd.read_sql_query(query, connection)
             logging.debug(f"Prijzen \n{df_prices.to_string()}/n")
 
+            df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
                 # data uit ha ophalen
                 count = 0
-                df_ha = pd.DataFrame()
                 for sensor in self.report_options["entities grid consumption"]:
                     if count == 0:
                         df_ha = self.get_sensor_data(sensor, last_moment, tot, "consumption", "uur")
@@ -1456,4 +1455,5 @@ class Report:
         fig.savefig(buf, format="png")
         # Embed the result in the html output.
         report_data = base64.b64encode(buf.getbuffer()).decode("ascii")
+        plt.close(fig)
         return report_data

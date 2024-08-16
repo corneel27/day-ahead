@@ -1895,7 +1895,7 @@ class DaCalc(DaBase):
             plt.savefig("../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png")
             if show_graph:
                 plt.show()
-            plt.close()
+            plt.close('all')
 
     def calc_optimum_debug(self):
         self.debug = True

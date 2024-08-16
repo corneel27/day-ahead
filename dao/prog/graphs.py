@@ -16,6 +16,7 @@ def make_graph_meteo(df, file=None, show=False):
         plt.savefig(file)
     if show:
         plt.show()
+    plt.close('all')
     return
 
 
@@ -27,4 +28,5 @@ def make_graph_entsoe(df):
     plt.bar(x_axis+0.1,  df['solar_rad'].values, width=0.2, label="netto rad")
     plt.xticks(x_axis, df['tijd_nl'].values, rotation=45)
     plt.show()
+    plt.close('all')
     return

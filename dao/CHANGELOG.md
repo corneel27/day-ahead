@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimization
+## [V2024.8.3]
+- there were resource leaks in the graphical module which caused runtime warnings/errors; the leaks are found and sealed.
+
+
 ## [V2024.8.2]
 
 The following changes are implemented:
