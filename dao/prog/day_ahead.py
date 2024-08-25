@@ -1287,8 +1287,10 @@ class DaCalc(DaBase):
                     df_accu[b].at[df_accu[b].index[-1], "SoC"] = ""
                 logging.info(f"In- en uitgaande energie per uur batterij {self.battery_options[b]['name']}"
                              f"\n{df_accu[b].to_string(index=False)}")
+                '''
                 if b == 0:
                     self.save_df(df_soc[b], tijd=tijd, tablename='prognoses')
+                '''
 
             # totaal overzicht
             # pd.options.display.float_format = '{:,.3f}'.format
