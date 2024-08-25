@@ -39,7 +39,8 @@ class DBmanagerObj(object):
         self.db_path = db_path
         self.TARGET_TIMEZONE = db_time_zone
         if self.db_dialect == "mysql":
-            self.engine = create_engine(f"mysql+pymysql://{self.user}:{self.password}@{self.server}/{self.db_name}")
+            self.engine = create_engine(f"mysql+pymysql://{self.user}:{self.password}@{self.server}/{self.db_name}",
+                                        pool_recycle=3600, pool_pre_ping=True)
         elif self.db_dialect == "postgresql":
             self.engine = create_engine(f"postgresql+psycopg2://{self.user}:{self.password}@"
                                         f"{self.server}/{self.db_name}")
@@ -152,8 +153,7 @@ class DBmanagerObj(object):
             df = df.reset_index()  # make sure indexes pair with number of rows
             df["tijd"] = df['time'].apply(lambda x: datetime.datetime.fromtimestamp(int(float(x))).strftime("%Y-%m-%d %H:%M"))
             for index, dfrow in df.iterrows():
-                logging.info(f"Save record: {dfrow['tijd']} {dfrow['code']} {dfrow['time']} {dfrow['value']}")
-                # logging.info(f"Save record: {dfrow}")
+                logging.debug(f"Save record: {dfrow['tijd']} {dfrow['code']} {dfrow['time']} {dfrow['value']}")
                 code = dfrow['code']
                 time = dfrow['time']
                 value = dfrow['value']

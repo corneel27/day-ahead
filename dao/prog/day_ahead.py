@@ -1208,10 +1208,12 @@ class DaCalc(DaBase):
             # overzicht per ac-accu:
             pd.options.display.float_format = '{:6.2f}'.format
             df_accu = []
+            df_soc = []
             for b in range(B):
                 cols = [['uur', 'ac->', 'eff', '->dc', 'pv->dc', 'dc->', 'eff', '->bat', 'o_eff', 'SoC'],
                         ["", "kWh", "%", "kWh", "kWh", "kWh", "%", "kWh", "%", "%"]]
                 df_accu.append(pd.DataFrame(columns=cols))
+                df_soc.append(pd.DataFrame(columns=["tijd", "soc"]))
                 for u in range(U):
                     """
                     for cs in range(CS[b]):
@@ -1258,6 +1260,9 @@ class DaCalc(DaBase):
                     row = [str(uur[u]), ac_to_dc_netto, ac_to_dc_eff, dc_from_ac_netto,  pv_prod,
                            dc_to_bat_netto, dc_to_bat_eff, bat_from_dc_netto, overall_eff, soc[b][u + 1].x]
                     df_accu[b].loc[df_accu[b].shape[0]] = row
+                    row_soc = [tijd[u], soc[b][u + 1].x]
+                    df_soc[b].loc[df_soc[b].shape[0]] = row_soc
+
 
                 # df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
                 # df_accu[b] = df_accu[b].astype({"uur": int})
@@ -1267,8 +1272,8 @@ class DaCalc(DaBase):
                     df_accu[b].loc["Total"] = df_accu[b].sum(axis=0, numeric_only=True)
                     totals = True
                 except Exception as ex:
-                    logging.error(ex)
-                    logging.error(f"Totals of accu {self.battery_options[b]['name']} cannot be calculated")
+                    logging.info(ex)
+                    logging.info(f"Totals of accu {self.battery_options[b]['name']} cannot be calculated")
                     totals = False
 
                 # Suppress FutureWarning messages
@@ -1282,6 +1287,8 @@ class DaCalc(DaBase):
                     df_accu[b].at[df_accu[b].index[-1], "SoC"] = ""
                 logging.info(f"In- en uitgaande energie per uur batterij {self.battery_options[b]['name']}"
                              f"\n{df_accu[b].to_string(index=False)}")
+                if b == 0:
+                    self.save_df(df_soc[b], tijd=tijd, tablename='prognoses')
 
             # totaal overzicht
             # pd.options.display.float_format = '{:,.3f}'.format

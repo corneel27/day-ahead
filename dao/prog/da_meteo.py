@@ -284,7 +284,7 @@ class Meteo:
         # df_tostring["tijd"] = pd.to_datetime(df_tostring["time"])
         df_tostring['tijd'] = (
             df_tostring['time'].apply(lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")))
-        logging.info(f"Meteo data records \n{df_tostring.to_string(index=False)}")
+        logging.debug(f"Meteo data records \n{df_tostring.to_string(index=False)}")
 
         self.db_da.savedata(df_db)
         style = self.config.get(['graphics', 'style'], None, "default")
