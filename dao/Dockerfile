@@ -12,9 +12,11 @@ RUN apt-get upgrade -y
 
 #handige tools
 RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev
+RUN apt-get install -y postgresql-client sqlite3
 
 # Copy software for add-on
 RUN mkdir /root/dao
+COPY __init__.py /root/dao
 COPY prog /root/dao/prog/
 COPY webserver /root/dao/webserver/
 # COPY dao/__init__.py /root/dao
@@ -54,6 +56,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY requirements.txt /tmp/
 RUN pip3 install uv
 RUN uv pip install -r /tmp/requirements.txt
+COPY run /root/dao/prog/
 
 EXPOSE 5000
 WORKDIR /root/dao/prog

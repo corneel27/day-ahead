@@ -49,7 +49,6 @@ class GraphBuilder:
             else:
                 data_array = df[serie['name']]
             if ("negativ" in serie) or (("sign" in serie) and (serie["sign"] == "neg")):
-                negative = True
                 data_array = np.negative(data_array)
             s_type = serie["type"]
             color = serie["color"]
@@ -58,6 +57,7 @@ class GraphBuilder:
             else:
                 label = serie["column"].capitalize()
             labels.append(label)
+            plot = None
             if s_type == "bar":
                 plot = ax.bar(ind, data_array, label=label, width=width, color=color, align="edge")
             elif s_type == "line":
@@ -67,19 +67,24 @@ class GraphBuilder:
                 data_sum = np.sum(data_array)
                 if data_sum >= 0:
                     if vax == "left":
-                        plot = ax.bar(ind, data_array, width=width, bottom=stacked_plus, label=label, color=color, align="edge")
+                        plot = ax.bar(ind, data_array, width=width, bottom=stacked_plus, label=label, color=color,
+                                      align="edge")
                         stacked_plus = stacked_plus + data_array
                     else:
-                        plot = ax.bar(ind+width, data_array, width=width, bottom=stacked_plus_right, label=label, color=color, align="edge")
+                        plot = ax.bar(ind+width, data_array, width=width, bottom=stacked_plus_right, label=label,
+                                      color=color, align="edge")
                         stacked_plus_right = stacked_plus_right + data_array
                 elif data_sum < 0:
                     if vax == "left":
-                        plot = ax.bar(ind, data_array, width=width, bottom=stacked_neg, label=label, color=color, align="edge")
+                        plot = ax.bar(ind, data_array, width=width, bottom=stacked_neg, label=label, color=color,
+                                      align="edge")
                         stacked_neg = stacked_neg + data_array
                     else:
-                        plot = ax.bar(ind+width, data_array, width=width, bottom=stacked_neg_right, label=label, color=color, align="edge")
+                        plot = ax.bar(ind+width, data_array, width=width, bottom=stacked_neg_right, label=label,
+                                      color=color, align="edge")
                         stacked_neg_right = stacked_neg_right + data_array
-            handles.append(plot)
+            if plot is not None:
+                handles.append(plot)
 
         xlabels = df[options["haxis"]["values"]].values.tolist()
         axis.set_xticks(ind, labels=xlabels, )

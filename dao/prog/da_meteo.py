@@ -11,6 +11,7 @@ import graphs
 # sys.path.append(os.path.abspath("../dalib"))
 from da_config import Config
 from db_manager import DBmanagerObj
+from sqlalchemy import Table, select, func, and_
 
 
 class Meteo:
@@ -240,6 +241,8 @@ class Meteo:
         resp = get(url + parameters)
         logging.debug (resp.text)
         json_object = json.loads(resp.text)
+        if not "data" in json_object:
+            return pd.DataFrame()
         data = json_object["data"]
 
         # for t in data:
@@ -256,18 +259,17 @@ class Meteo:
 
     def get_meteo_data(self, show_graph=False):
         df1 = self.get_from_meteoserver("harmonie")
-        count = 0
+        count = len(df1)
+        if count == 0:
+            logging.error("No data recieved from meteoserver")
+            return
         df_db = pd.DataFrame(columns=['time', 'code', 'value'])
         df1 = df1.reset_index()  # make sure indexes pair with number of rows
         for row in df1.itertuples():
             df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'gr', float(row.gr)]
             df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'temp', float(row.temp)]
             df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'solar_rad', float(row.solar_rad)]
-            count += 1
-            if count >= 48:
-                break
 
-        logging.debug(f"Meteo data records \n{df_db.to_string(index=False)}")
         if count < 39:
             df1 = self.get_from_meteoserver("gfs")
             for row in df1[count:].itertuples():
@@ -277,6 +279,12 @@ class Meteo:
                 count += 1
                 if count >= 48:
                     break
+
+        df_tostring = df_db
+        # df_tostring["tijd"] = pd.to_datetime(df_tostring["time"])
+        df_tostring['tijd'] = (
+            df_tostring['time'].apply(lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")))
+        logging.debug(f"Meteo data records \n{df_tostring.to_string(index=False)}")
 
         self.db_da.savedata(df_db)
         style = self.config.get(['graphics', 'style'], None, "default")
@@ -350,6 +358,36 @@ class Meteo:
         if date is None:
             date = datetime.datetime.combine(datetime.datetime.today(), datetime.datetime.min.time())
         date_utc = int(date.timestamp())
+
+        # Reflect existing tables from the database
+        values_table = Table('values', self.db_da.metadata, autoload_with=self.db_da.engine)
+        variabel_table = Table('variabel', self.db_da.metadata, autoload_with=self.db_da.engine)
+
+        # Construct the inner query
+        inner_query = select(
+            values_table.c.time,
+            values_table.c.value,
+            func.from_unixtime(values_table.c.time).label('begin')
+        ).where(
+            and_(
+                variabel_table.c.code == 'temp',
+                values_table.c.variabel == variabel_table.c.id,
+                values_table.c.time >= date_utc
+            )
+        ).order_by(
+            values_table.c.time.asc()
+        ).limit(24).alias('t1')
+
+        # Construct the outer query
+        outer_query = select(
+            func.avg(inner_query.c.value).label('avg_temp')
+        )
+
+        # Execute the query and fetch the result
+        with self.db_da.engine.connect() as connection:
+            result = connection.execute(outer_query)
+            avg_temp = result.scalar()
+        '''
         sql_avg_temp = (
             "SELECT AVG(t1.`value`) avg_temp FROM "
             "(SELECT `time`, `value`,  from_unixtime(`time`) 'begin' "
@@ -360,6 +398,7 @@ class Meteo:
         )
         data = self.db_da.run_select_query(sql_avg_temp)
         avg_temp = float(data['avg_temp'].values[0])
+        '''
         weight_factor = 1
         if weighted:
             mon = date.month

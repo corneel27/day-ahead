@@ -9,6 +9,7 @@ import pandas as pd
 from requests import post
 import logging
 import traceback
+from sqlalchemy import Table, select, and_
 
 
 def make_data_path():
@@ -16,6 +17,7 @@ def make_data_path():
         return
     else:
         os.symlink("/config/dao_data", "../data")
+
 
 def is_laagtarief(dtime, switch_hour):
     jaar = dtime.year
@@ -37,25 +39,25 @@ def is_laagtarief(dtime, switch_hour):
     return False
 
 
-def calc_adjustment_heatcurve(price: float, price_avg: float, adjustment_factor, old_adjustment: float) -> float:
+def calc_adjustment_heatcurve(price_act: float, price_avg: float, adjustment_factor, old_adjustment: float) -> float:
     """
-    Berekent de aanpassing van de stooklijn
+    Calculate the adjustment of the heatcurve
     formule: -0,5*(price-price_avg)*10/price_avg
-    :param price: de actuele uurprijs
-    :param price_avg: de dag gemiddelde prijs
-    :param adjustment_factor: aanpassingsfactor in K/% bijv. 0,4K per 10% = 0.04 K/%
-    :param old_adjustment: huidige aanpassing
-    :return: de berekende aanpassing
+    :param price_act: the actual hourprice
+    :param price_avg: the day average of the price
+    :param adjustment_factor: factor in K/% for instance 0,4K per 10% = 0.04 K/%
+    :param old_adjustment: current/old adjustment
+    :return: the calculated adjustment
     """
     if price_avg == 0:
         adjustment = 0
     else:
-        adjustment = round(- adjustment_factor * (price - price_avg) * 100 / price_avg, 1)
+        adjustment = round(- adjustment_factor * (price_act - price_avg) * 100 / price_avg, 1)
     # toename en afname maximeren op 10 x adjustment factor
     if adjustment >= old_adjustment:
-        adjustment = min(adjustment, old_adjustment + adjustment_factor*10)
+        adjustment = min(adjustment, old_adjustment + adjustment_factor * 10)
     else:
-        adjustment = max(adjustment, old_adjustment - adjustment_factor*10)
+        adjustment = max(adjustment, old_adjustment - adjustment_factor * 10)
     return round(adjustment, 1)
 
 
@@ -86,54 +88,78 @@ def get_tibber_data():
 
     def get_datetime_from_str(s):
         # "2022-09-01T01:00:00.000+02:00"
-        result = datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f%z")
-        return result
+        return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%f%z")
+
+    # Generate the list of timestamps
+    def generate_hourly_timestamps(start_gen: float, end_gen: float) -> list:
+        all_hours = []
+        current_ts = start_gen
+        while current_ts <= end_gen:
+            all_hours.append(current_ts)
+            current_ts += 3600
+        return all_hours
+
     config = Config("../data/options.json")
     tibber_options = config.get(["tibber"])
     url = config.get(["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql")
+    db_da_engine = config.get(['database da', "engine"], None, "mysql")
     db_da_server = config.get(['database da', "server"], None, "core-mariadb")
     db_da_port = int(config.get(['database da', "port"], None, 3306))
     db_da_name = config.get(['database da', "database"], None, "day_ahead")
     db_da_user = config.get(['database da', "username"], None, "day_ahead")
     db_da_password = config.get(['database da', "password"])
-    db_da = DBmanagerObj(db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
-                         db_user=db_da_user, db_password=db_da_password)
-    db_da.connect()
+    db_time_zone = config.get(["time_zone"])
+    db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
+                         db_user=db_da_user, db_password=db_da_password, db_time_zone=db_time_zone)
     prices_options = config.get(["prices"])
     headers = {
         "Authorization": "Bearer " + tibber_options["api_token"],
         "content-type": "application/json",
     }
-    now_ts = latest_ts = math.ceil(
-        datetime.datetime.now().timestamp() / 3600) * 3600
-    arg_dt = None
+    now_ts = latest_ts = math.ceil(datetime.datetime.now().timestamp() / 3600) * 3600
+    start_ts = None
     if len(sys.argv) > 2:
-        arg_s = sys.argv[2]
+        # datetime start is given
+        start_str = sys.argv[2]
         try:
-            arg_dt = datetime.datetime.strptime(arg_s, "%Y-%m-%d").timestamp()
-            latest_ts = arg_dt
+            start_ts = datetime.datetime.strptime(start_str, "%Y-%m-%d").timestamp()
+            timestamps = generate_hourly_timestamps(start_ts, now_ts)
+            latest_ts = start_ts
         except Exception as ex:
-            logging.error(ex)
-            pass
-    if (len(sys.argv) <= 2) or (arg_dt is None):
-        for cat in ['cons', 'prod']:
-            sql_latest_ts = (
-                "SELECT t1.time, from_unixtime(t1.`time`) 'begin', t1.value "
-                "FROM `values` t1, `variabel` v1 "
-                "WHERE v1.`code` = '"+cat+"' and v1.id = t1.variabel and 1 <> "
-                "(SELECT COUNT( *) "
-                "FROM `values` t2, `variabel` v2 "
-                "WHERE v2.`code` = '"+cat+"' AND v2.id = t2.variabel AND t1.time + 3600 = t2.time);")
-            data = db_da.run_select_query(sql_latest_ts)
-            if len(data.index) == 0:
-                latest = datetime.datetime.strptime(prices_options["last invoice"], "%Y-%m-%d").timestamp()
+            error_handling(ex)
+            return
+
+    # no starttime
+    if (len(sys.argv) <= 2) or (start_ts is None):
+        # search first missing
+        start_ts = datetime.datetime.strptime(prices_options["last invoice"], "%Y-%m-%d").timestamp()
+        timestamps = generate_hourly_timestamps(start_ts, now_ts)
+        values_table = Table('values', db_da.metadata, autoload_with=db_da.engine)
+        variabel_table = Table('variabel', db_da.metadata, autoload_with=db_da.engine)
+        for code in ['cons', 'prod']:
+            # Query the existing timestamps from the values table
+            query = select(values_table.c.time).where(
+                and_(
+                    variabel_table.c.code == code,
+                    variabel_table.c.id == values_table.c.variabel,
+                    values_table.c.time.between(start_ts, now_ts),
+                )
+            )
+            with db_da.engine.connect() as connection:
+                existing_timestamps = {row[0] for row in connection.execute(query)}
+
+            # Find missing timestamps by comparing the generated list with the existing timestamps
+            missing_timestamps = [ts for ts in timestamps if ts not in existing_timestamps]
+            if len(missing_timestamps) == 0:
+                latest = start_ts
             else:
-                latest = data['time'].values[0]
+                latest = missing_timestamps[0]
             latest_ts = min(latest_ts, latest)
+
     count = math.ceil((now_ts - latest_ts)/3600)
-    logging.info(f"Tibber data present tot en met: {str(datetime.datetime.fromtimestamp(latest_ts))}")
+    logging.info(f"Tibber data present tot en met: {str(datetime.datetime.fromtimestamp(latest_ts - 3600))}")
     if count < 24:
-        logging.info("Er zijn geen data opgehaald.")
+        logging.info("Er worden geen data opgehaald.")
         return
     query = '{ ' \
             '"query": ' \
@@ -192,15 +218,15 @@ def get_tibber_data():
     logging.info(f"Opgehaalde data bij Tibber (database records):"
                  f"\n{tibber_df.to_string(index=False)}")
     db_da.savedata(tibber_df)
-    db_da.disconnect()
 
-def calc_uur_index (dt: datetime, tijd: list) -> int:
-    '''
-    berekent van dt de index in lijst uur
+
+def calc_uur_index(dt: datetime, tijd: list) -> int:
+    """
+    Berekent van parameter dt de index in lijst uur
     :param dt: de datetime waarvan de index wordt gezocht
     :param tijd: lijst met datetime van begin van het betreffende uur
     :return: het indexnummer in de lijst
-    '''
+    """
     result_index = len(tijd)
     if (result_index == 0) or (dt < tijd[0]):
         return result_index
@@ -237,13 +263,16 @@ def calc_heatpump_usage
             usage.append(250+ (pl[u]-pl_min) * energy_cost)
 '''
 
+
 def get_version():
     return __version__
+
 
 def version_number(version_str: str) -> int:
     lst = [int(x, 10) for x in version_str.split('.')]
     lst.reverse()
     return sum(x * (100 ** i) for i, x in enumerate(lst))
+
 
 def log_exc_plus():
     """

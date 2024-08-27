@@ -30,12 +30,14 @@
     "cost supplier delivery": {
       "2022-01-01": 0.002,
       "2023-03-01": 0.018,
-      "2024-04-01": 0.0175
+      "2024-04-01": 0.0175,
+      "2024-08-01": 0.020496
    },
     "cost supplier redelivery": {
       "2022-01-01": 0.002,
       "2023-03-01": 0.018,
-      "2024-04-01": 0.0175
+      "2024-04-01": 0.0175,
+      "2024-08-01": 0.020496
     },
     "vat": {
       "2022-01-01": 21,
@@ -271,12 +273,18 @@
       ],
       "minimum power": 1000,
       "dc_to_bat efficiency": 0.93,
+      "dc_to_bat max power" : 7500.0,
       "bat_to_dc efficiency": 0.93,
+      "bat_to_dc max power" : 7500.0,
       "cycle cost": 0.01,
       "entity set power feedin": "input_number.feedin_grid",
       "entity set operating mode": "input_select.ess_operating_mode",
-      "entity stop victron": "input_datetime.stop_victron",
+      "entity stop invereter": "input_datetime.stop_victron",
       "entity balance switch": "input_boolean.balanceer_grid",
+      "entity from battery": "input_number.growatt_from_battery",
+      "entity from pv": "input_number.growatt_from_pv",
+      "entity from ac": "input_number.growatt_from_ac",
+      "entity calculated soc": "input_number.growatt_calculated_soc",
       "solar": [
         {
           "name": "tuinkamer",
