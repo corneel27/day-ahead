@@ -1,4 +1,4 @@
-# DAY AHEAD OPTIMIZATION
+# DAY AHEAD OPTIMIZER
 
 ![Supports aarch64 Architecture][aarch64-shield] ![Supports amd64 Architecture][amd64-shield] ![Supports i386 Architecture][i386-shield]
 
@@ -7,7 +7,8 @@
 [i386-shield]: https://img.shields.io/badge/i386-yes-green.svg
 
 ## Inleiding
-Het programma Day Ahead Optimization (DAO) voert de volgende acties, berekeningen en bewerkingen uit: 
+Het programma Day Ahead Optimizer (DAO) voert de volgende acties, 
+berekeningen en bewerkingen uit: 
 
 * ophalen dynamische energie tarieven bij Entsoe en/of NordPool
 * ophalen van meteogegevens bij Meteoserver

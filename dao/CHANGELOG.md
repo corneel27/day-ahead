@@ -1,5 +1,5 @@
 # Changelog 刀 DAO
-# Day Ahead Optimization
+# Day Ahead Optimizer
 ## [V2024.8.4]
 - the extended logging of saving prognoses (prices, meteo-data and calculated consumptions) is moved from info to debug  
 - there were issues with "lost connections" in combination with the mysql/mariadb db-engine; 
