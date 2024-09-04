@@ -1,14 +1,13 @@
 {
   "homeassistant": { },
-  "database da": {
-    "database": "day_ahead",
-    "username": "day_ahead",
-    "password": "!secret db_da_password"
-  },
   "database ha": {
-    "database": "homeassistant",
-    "username": "homeassistant",
-    "password": "!secret db_ha_password"
+    "engine": "sqlite",
+    "database": "homeassistant_v2.db",
+    "db_path": "/homeassistant"
+  },
+  "database da": {
+    "engine": "sqlite",
+    "db_path": "../data"
   },
   "meteoserver-key": "!secret meteoserver-key",
   "prices": {
