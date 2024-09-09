@@ -1,15 +1,15 @@
 """
-Het programma Day Ahead Optimalisatie kun je je energieverbruik en energiekosten optimaliseren als je gebruik maakt
-van dynamische prijzen.
+Het programma Day Ahead Optimalisatie kun je je energieverbruik en
+energiekosten optimaliseren als je gebruik maakt van dynamische prijzen.
 Zie verder: DOCS.md
 """
-import datetime
+import datetime as dt
 import sys
 import math
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
-from utils import (get_value_from_dict, is_laagtarief, convert_timestr, calc_uur_index, error_handling,
-                   calc_adjustment_heatcurve)
+from utils import (get_value_from_dict, is_laagtarief, convert_timestr,
+                   calc_uur_index, error_handling, calc_adjustment_heatcurve)
 import logging
 from da_base import DaBase
 
@@ -24,49 +24,59 @@ class DaCalc(DaBase):
         self.prices_options = self.config.get(["prices"])
         self.ev_options = self.config.get(["electric vehicle"])
         self.heating_options = self.config.get(["heating"])
-        self.use_calc_baseload = (self.config.get(["use_calc_baseload"], None, "false").lower() == "true")
+        self.use_calc_baseload = (self.config.get(["use_calc_baseload"], None,
+                                                  "false").lower() == "true")
         self.heater_present = False
         self.boiler_present = False
         self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
         self.machines = self.config.get(["machines"], None, [])
         # self.start_logging()
 
-    def calc_optimum(self, _start_dt: datetime.datetime | None = None, _start_soc: float | None = None):
+    def calc_optimum(self, _start_dt: dt.datetime | None = None,
+                     _start_soc: float | None = None):
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
         if _start_dt is None:
-            start_dt = datetime.datetime.now()
+            start_dt = dt.datetime.now()
         else:
             start_dt = _start_dt
         start_ts = int(start_dt.timestamp())
         modulo = start_ts % 3600
         if modulo > 3550:
             start_ts = start_ts + 3600 - modulo
-        start_dt = datetime.datetime.fromtimestamp(start_ts)
+        start_dt = dt.datetime.fromtimestamp(start_ts)
         start_h = int(3600 * math.floor(start_ts / 3600))
         fraction_first_hour = 1 - (start_ts - start_h) / 3600
         prog_data = self.db_da.get_prognose_data(start=start_h, end=None)
-        # start = datetime.datetime.timestamp(datetime.datetime.strptime("2022-05-27", "%Y-%m-%d"))
-        # end = datetime.datetime.timestamp(datetime.datetime.strptime("2022-05-29", "%Y-%m-%d"))
+        # start = dt.datetime.timestamp(dt.datetime.strptime("2022-05-27",
+        # "%Y-%m-%d"))
+        # end = dt.datetime.timestamp(dt.datetime.strptime("2022-05-29",
+        # "%Y-%m-%d"))
         # prog_data = db_da.get_prognose_data(start, end)
         u = len(prog_data)
         if u <= 2:
-            logging.error("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
+            logging.error("Er ontbreken voor een aantal uur gegevens "
+                          "(meteo en/of dynamische prijzen)\n",
                           "er kan niet worden gerekend")
             if self.notification_entity is not None:
                 self.set_value(self.notification_entity,
-                               "Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend")
+                               "Er ontbreken voor een aantal uur gegevens; "
+                               "er kan niet worden gerekend")
             return
         if u <= 8:
-            logging.warning("Er ontbreken voor een aantal uur gegevens (meteo en/of dynamische prijzen)\n",
+            logging.warning("Er ontbreken voor een aantal uur gegevens "
+                            "(meteo en/of dynamische prijzen)\n",
                             "controleer of alle gegevens zijn opgehaald")
             if self.notification_entity is not None:
-                self.set_value(self.notification_entity, "Er ontbreken voor een aantal uur gegevens")
+                self.set_value(self.notification_entity,
+                               "Er ontbreken voor een aantal uur gegevens")
 
-        if self.notification_entity is not None and self.notification_berekening:
+        if (self.notification_entity is not None and
+                self.notification_berekening):
             self.set_value(self.notification_entity, "DAO calc gestart " +
-                           datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+                           dt.datetime.now().
+                           strftime('%d-%m-%Y %H:%M:%S'))
         logging.debug('Prognose data:\n{}'.format(prog_data.to_string()))
 
         '''
@@ -78,12 +88,14 @@ class DaCalc(DaBase):
             btw over het geheel 21%
         2. pt: prijs voor teruglevering
             alleen opslag voor saldering, 
-            na 6 maanden saldo levering/teruglevering , als teruglevering > levering dan geen opslag eb en ode
+            na 6 maanden saldo levering/teruglevering , als teruglevering > 
+            levering dan geen opslag eb en ode
             eb_t 0,12955
             opslag leverancier ol_t (aftrek!!) 0,0
             en btw over het geheel 21%
         '''
-        taxes_l_def = self.prices_options["energy taxes delivery"]  # eb + ode levering
+        taxes_l_def = self.prices_options["energy taxes delivery"]
+        # eb + ode levering
         # eb_l = 0.12955
         # opslag kosten leverancier
         ol_l_def = self.prices_options["cost supplier delivery"]
@@ -99,7 +111,8 @@ class DaCalc(DaBase):
         btw_def = self.prices_options["vat"]
         # btw = 0.09
 
-        # prijzen van een traditionele leverancier zijn alleen indicatief; er wordt niet mee gerekend
+        # prijzen van een traditionele leverancier zijn alleen indicatief;
+        # er wordt niet mee gerekend
         gc_p_low = self.prices_options['regular low']
         gc_p_high = self.prices_options['regular high']
         pl = []  # prijs levering day_ahead
@@ -107,7 +120,8 @@ class DaCalc(DaBase):
         pl_avg = []  # prijs levering day_ahead gemiddeld
         pt_notax = []  # prijs teruglevering day ahead zonder taxes
         uur = []  # datum_tijd van het betreffende uur
-        prog_data = prog_data.reset_index()  # make sure indexes pair with number of rows
+        prog_data = prog_data.reset_index()
+        # make sure indexes pair with number of rows
         for row in prog_data.itertuples():
             uur.append(row.tijd)
             dag_str = row.tijd.strftime("%Y-%m-%d")
@@ -116,8 +130,10 @@ class DaCalc(DaBase):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             taxes_t = get_value_from_dict(dag_str, taxes_t_def)
             btw = get_value_from_dict(dag_str, btw_def)
-            price_l = round((row.da_price + taxes_l + ol_l) * (1 + btw / 100), 5)
-            price_t = round((row.da_price + taxes_t + ol_t) * (1 + btw / 100), 5)
+            price_l = round((row.da_price + taxes_l + ol_l) *
+                            (1 + btw / 100), 5)
+            price_t = round((row.da_price + taxes_t + ol_t) *
+                            (1 + btw / 100), 5)
             pl.append(price_l)
             pt.append(price_t)
             # tarief teruglevering zonder eb en btw
@@ -129,7 +145,7 @@ class DaCalc(DaBase):
         if U >= 24:
             p_avg = sum(pl) / U  # max(pl) #
         else:
-            dag_str = datetime.datetime.now().strftime("%Y-%m-%d")
+            dag_str = dt.datetime.now().strftime("%Y-%m-%d")
             ol_l = get_value_from_dict(dag_str, ol_l_def)
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             btw = get_value_from_dict(dag_str, btw_def)
@@ -141,7 +157,7 @@ class DaCalc(DaBase):
         # base load
         if self.use_calc_baseload:
             logging.info(f"Zelf berekende baseload")
-            weekday = datetime.datetime.weekday(datetime.datetime.now())
+            weekday = dt.datetime.weekday(dt.datetime.now())
             base_cons = self.get_calculated_baseload(weekday)
             if U > 24:
                 # volgende dag ophalen
@@ -167,7 +183,7 @@ class DaCalc(DaBase):
                 entity = None
             entity_pv_ac_switch.append(entity)
 
-        time_first_hour = datetime.datetime.fromtimestamp(prog_data["time"].iloc[0])
+        time_first_hour = dt.datetime.fromtimestamp(prog_data["time"].iloc[0])
         first_hour = int(time_first_hour.hour)
         b_l = base_cons[first_hour:]
         uur = []  # hulparray met uren
@@ -181,9 +197,10 @@ class DaCalc(DaBase):
         hour_fraction = []
         first_hour = True
 
-        prog_data = prog_data.reset_index()  # make sure indexes pair with number of rows
+        prog_data = prog_data.reset_index()
+        # make sure indexes pair with number of rows
         for row in prog_data.itertuples():
-            dtime = datetime.datetime.fromtimestamp(row.time)
+            dtime = dt.datetime.fromtimestamp(row.time)
             hour = int(dtime.hour)
             uur.append(hour)
             tijd.append(dtime)
@@ -198,8 +215,9 @@ class DaCalc(DaBase):
                 hour_fraction.append(1)
                 # pv.append(pv_total)
             for s in range(solar_num):
-                prod = self.meteo.calc_solar_rad(
-                    self.solar[s], row.time, row.glob_rad) * pv_yield[s] * hour_fraction[-1]
+                prod = (self.meteo.calc_solar_rad(
+                    self.solar[s], row.time, row.glob_rad) * pv_yield[s] *
+                        hour_fraction[-1])
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org_ac.append(pv_total)
@@ -207,8 +225,10 @@ class DaCalc(DaBase):
             for b in range(B):
                 for s in range(len(self.battery_options[b]["solar"])):
                     prod = (self.meteo.calc_solar_rad(
-                        self.battery_options[b]["solar"][s], row.time, row.glob_rad) *
-                        self.battery_options[b]["solar"][s]["yield"] * hour_fraction[-1])
+                        self.battery_options[b]["solar"][s], row.time,
+                        row.glob_rad) *
+                        self.battery_options[b]["solar"][s]["yield"] *
+                        hour_fraction[-1])
                     pv_total += prod
             pv_org_dc.append(pv_total)
 
@@ -216,8 +236,10 @@ class DaCalc(DaBase):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             taxes_t = get_value_from_dict(dag_str, taxes_t_def)
             btw = get_value_from_dict(dag_str, btw_def)
-            if is_laagtarief(datetime.datetime(dtime.year, dtime.month, dtime.day, hour),
-                             self.config.get(["switch to low"], self.prices_options, 23)):
+            if is_laagtarief(
+                    dt.datetime(dtime.year, dtime.month, dtime.day, hour),
+                    self.config.get(["switch to low"], self.prices_options,
+                                    23)):
                 p_grl.append((gc_p_low + taxes_l) * (1 + btw / 100))
                 p_grt.append((gc_p_low + taxes_t) * (1 + btw / 100))
             else:
@@ -236,7 +258,7 @@ class DaCalc(DaBase):
                      'pv_dc': pv_org_dc
                      })
                 start_df.set_index('uur')
-                logging.info('Start waarden: \n{}'.format(start_df.to_string()))
+                logging.info(f"Start waarden: \n{start_df.to_string()}")
         except Exception as ex:
             logging.error(ex)
         logging.debug(f"lengte prognose arrays:")
@@ -251,24 +273,32 @@ class DaCalc(DaBase):
         # volledig salderen?
         salderen = self.prices_options['tax refund'] == "True"
 
-        last_invoice = datetime.datetime.strptime(
+        last_invoice = dt.datetime.strptime(
             self.prices_options['last invoice'], "%Y-%m-%d")
-        cons_data_history = self.db_da.get_consumption(last_invoice, datetime.datetime.today())
-        logging.info(f"Verbruik dit contractjaar: {cons_data_history['consumption']}")
-        logging.info(f"Productie dit contractjaar: {cons_data_history['production']}")
+        cons_data_history = (
+            self.db_da.get_consumption(last_invoice, dt.datetime.today()))
+        logging.info(f"Verbruik dit contractjaar: "
+                     f"{cons_data_history['consumption']}")
+        logging.info(f"Productie dit contractjaar: "
+                     f"{cons_data_history['production']}")
         if not salderen:
-            salderen = cons_data_history["production"] < cons_data_history["consumption"]
+            salderen = (
+                    cons_data_history["production"] <
+                    cons_data_history["consumption"])
 
         if salderen:
             logging.info(f"All taxes refund (alles wordt gesaldeerd)")
             consumption_today = 0
             production_today = 0
         else:
-            consumption_today = float(self.get_state("sensor.daily_grid_consumption").state)
-            production_today = float(self.get_state("sensor.daily_grid_production").state)
+            consumption_today = (
+                float(self.get_state("sensor.daily_grid_consumption").state))
+            production_today = (
+                float(self.get_state("sensor.daily_grid_production").state))
             logging.info(f"consumption today: {consumption_today} kWh")
             logging.info(f"production today: {production_today} kWh")
-            logging.info(f"verschil: {consumption_today - production_today} kWh")
+            logging.info(f"verschil: "
+                         f"{consumption_today - production_today} kWh")
 
         model = Model()
 
@@ -279,9 +309,11 @@ class DaCalc(DaBase):
         ##############################################################
         #                          pv ac
         ##############################################################
-        pv_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=solar_prod[s][u] * 1.1)
+        pv_ac = [[model.add_var(var_type=CONTINUOUS, lb=0,
+                                ub=solar_prod[s][u] * 1.1)
                   for u in range(U)] for s in range(solar_num)]
-        pv_ac_on_off = [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(solar_num)]
+        pv_ac_on_off = [[model.add_var(var_type=BINARY)
+                         for _ in range(U)] for _ in range(solar_num)]
 
         # constraints
 
@@ -304,7 +336,8 @@ class DaCalc(DaBase):
         opt_low_level = []
         # pv_dc = []  # pv bruto productie per batterij per uur
         # pv_dc_hour_sum = []
-        # pv_from_dc_hour_sum = []  # de som van pv_dc productie geleverd aan ac per uur
+        # pv_from_dc_hour_sum = []
+        #   de som van pv_dc productie geleverd aan ac per uur
         # eff_ac_to_dc = []
         # eff_dc_to_ac = []
         eff_dc_to_bat = []
@@ -326,19 +359,26 @@ class DaCalc(DaBase):
             pv_prod_ac.append([])
             pv_prod_dc.append([])
             # noinspection PyTypeChecker
-            max_charge_power.append(int(self.battery_options[b]["charge stages"][-1]["power"])/1000)
+            max_charge_power.append(int(
+                self.battery_options[b]["charge stages"][-1]["power"])/1000)
             # CS is aantal charge stages
             CS.append(len(self.battery_options[b]["charge stages"]))
-            max_discharge_power.append(self.battery_options[b]["discharge stages"][-1]["power"]/1000)
-            max_dc_from_bat_power.append(self.config.get(["bat_to_dc max power"], self.battery_options[b],
-                                                         2000 * max_discharge_power[b])/1000)
-            max_dc_to_bat_power.append(self.config.get(["dc_to_bat max power"], self.battery_options[b],
-                                       2000 * max_discharge_power[b])/1000)
+            max_discharge_power.append(
+                self.battery_options[b]["discharge stages"][-1]["power"]/1000)
+            max_dc_from_bat_power.append(
+                self.config.get(["bat_to_dc max power"],
+                                self.battery_options[b],
+                                2000 * max_discharge_power[b])/1000)
+            max_dc_to_bat_power.append(
+                self.config.get(["dc_to_bat max power"],
+                                self.battery_options[b],
+                                2000 * max_discharge_power[b])/1000)
             # DS is aantal discharge stages
             DS.append(len(self.battery_options[b]["discharge stages"]))
             sum_eff = 0
             for ds in range(DS[b])[1:]:
-                sum_eff += self.battery_options[b]["discharge stages"][ds]["efficiency"]
+                sum_eff += self.battery_options[b]["discharge stages"][
+                    ds]["efficiency"]
             avg_eff_dc_to_ac.append(sum_eff/(DS[b]-1))
 
             ac = float(self.battery_options[b]["capacity"])
@@ -346,8 +386,12 @@ class DaCalc(DaBase):
             kwh_cycle_cost.append(self.battery_options[b]["cycle cost"])
             logging.debug(f"cycle cost: {kwh_cycle_cost[b]} eur/kWh")
 
-            eff_dc_to_bat.append(float(self.battery_options[b]["dc_to_bat efficiency"]))  # fractie van 1
-            eff_bat_to_dc.append(float(self.battery_options[b]["bat_to_dc efficiency"]))  # fractie van 1
+            eff_dc_to_bat.append(float(self.battery_options[b][
+                                           "dc_to_bat efficiency"]))
+            # fractie van 1
+            eff_bat_to_dc.append(float(self.battery_options[b][
+                                           "bat_to_dc efficiency"]))
+            # fractie van 1
 
             if _start_soc is None or b > 0:
                 start_soc_str = self.get_state(self.battery_options[b]["entity actual level"]).state
@@ -633,7 +677,7 @@ class DaCalc(DaBase):
         energy_needed = []
         ev_plugged_in = []
         ev_position = []
-        #  now_dt = datetime.datetime.now()
+        #  now_dt = dt.datetime.now()
         charge_stages = []
         ampere_factor = []
         ECS = []
@@ -667,12 +711,12 @@ class DaCalc(DaBase):
             ready_str = self.get_state(self.ev_options[e]["charge scheduler"]["entity ready datetime"]).state
             if len(ready_str) > 9:
                 # dus met datum en tijd
-                ready = datetime.datetime.strptime(ready_str, '%Y-%m-%d %H:%M:%S')
+                ready = dt.datetime.strptime(ready_str, '%Y-%m-%d %H:%M:%S')
             else:
-                ready = datetime.datetime.strptime(ready_str, '%H:%M:%S')
-                ready = datetime.datetime(start_dt.year, start_dt.month, start_dt.day, ready.hour, ready.minute)
+                ready = dt.datetime.strptime(ready_str, '%H:%M:%S')
+                ready = dt.datetime(start_dt.year, start_dt.month, start_dt.day, ready.hour, ready.minute)
                 if (ready.hour == start_dt.hour and ready.minute < start_dt.minute) or (ready.hour < start_dt.hour):
-                    ready = ready + datetime.timedelta(days=1)
+                    ready = ready + dt.timedelta(days=1)
             hours_available = (ready - start_dt).total_seconds()/3600
             ev_stages = self.ev_options[e]["charge stages"]
             if ev_stages[0]["ampere"] != 0.0:
@@ -749,7 +793,7 @@ class DaCalc(DaBase):
             if (ev_plugged_in[e] and (ev_position[e] == "home") and
                     (wished_level[e] - level_margin[e] > actual_soc[e]) and (tijd[0] < ready)):
                 for u in range(U):
-                    if (tijd[u] + datetime.timedelta(hours=1)) >= ready:
+                    if (tijd[u] + dt.timedelta(hours=1)) >= ready:
                         ready_index = u
                         break
             if ready_index == U:
@@ -865,8 +909,9 @@ class DaCalc(DaBase):
         else:
             degree_days = self.meteo.calc_graaddagen()
             if U > 24:
-                degree_days += self.meteo.calc_graaddagen(date=datetime.datetime.combine(
-                    datetime.date.today() + datetime.timedelta(days=1), datetime.datetime.min.time()))
+                degree_days += self.meteo.calc_graaddagen(
+                    date=dt.datetime.combine(
+                    dt.date.today() + dt.timedelta(days=1), dt.datetime.min.time()))
             logging.info(f"Warmtepomp")
             logging.info(f"Graaddagen: {degree_days:.1f}")  # 3.6  heat factor kWh th / K.day
             degree_days_factor = self.heating_options["degree days factor"]
@@ -946,7 +991,7 @@ class DaCalc(DaBase):
                     logging.info(f"Apparaat {ma_name[m]} wordt nog niet ingepland: de planningsperiode is begonnen")
                     error = True
                 else:
-                    ready_ma_dt = ready_ma_dt + datetime.timedelta(days=1)
+                    ready_ma_dt = ready_ma_dt + dt.timedelta(days=1)
             if ready_ma_dt > tijd[U-1]:
                 logging.info(f"Machine {ma_name[m]} wordt niet ingepland, want {ready_ma_dt} "
                              f"ligt voorbij de planningshorizon {uur[U-1]}")
@@ -984,7 +1029,7 @@ class DaCalc(DaBase):
                 if uur_index < U:
                     uur_kw[uur_index].append(kw)
                 kw_dt.append(kwartier_dt)
-                kwartier_dt = kwartier_dt + datetime.timedelta(seconds=900)
+                kwartier_dt = kwartier_dt + dt.timedelta(seconds=900)
             ma_uur_kw.append(uur_kw)
             ma_kw_dt.append(kw_dt)
             R.append(min(KW[m], KW[m] - RL[m] + 1))  # aantal runs = aantal kwartieren - aantal stages + 1
@@ -1113,344 +1158,440 @@ class DaCalc(DaBase):
             return
         logging.info(f"Strategie: {strategie}")
 
+        # Suppress FutureWarning messages
+        import warnings
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+
         if model.num_solutions == 0:
             logging.error(f"Er is helaas geen oplossing gevonden, kijk naar je instellingen.")
             return
-        else:  # er is een oplossing
-            # afdrukken van de resultaten
-            logging.info("Het programma heeft een optimale oplossing gevonden.")
-            old_cost_gc = 0
-            old_cost_da = 0
-            sum_old_cons = 0
-            org_l = []
-            org_t = []
-            c_ev_sum = []
-            c_ma_sum = []
-            accu_in_sum = []
-            accu_out_sum = []
-            for u in range(U):
-                ac_to_dc_sum = 0
-                dc_to_ac_sum = 0
-                for b in range(B):
-                    ac_to_dc_sum += ac_to_dc[b][u].x  # / eff_ac_to_dc[b]
-                    dc_to_ac_sum += ac_from_dc[b][u].x  # * eff_dc_to_ac[b]
-                accu_in_sum.append(ac_to_dc_sum)
-                accu_out_sum.append(dc_to_ac_sum)
-            for u in range(U):
-                ev_sum = 0
-                for e in range(EV):
-                    ev_sum += c_ev[e][u].x
-                c_ev_sum.append(ev_sum)
-                ma_sum = 0
-                for m in range(M):
-                    ma_sum += c_ma_u[m][u].x
-                c_ma_sum.append(ma_sum)
-            pv_ac_hour_sum = []  # totale bruto pv_dc->ac productie
-            solar_hour_sum_org = []  # totale netto pv_ac productie origineel
-            solar_hour_sum_opt = []  # totale netto pv_ac productie na optimalisatie
-            for u in range(U):
-                pv_ac_hour_sum.append(0)
-                solar_hour_sum_org.append(0)
-                solar_hour_sum_opt.append(0)
-                for b in range(B):
-                    for s in range(pv_dc_num[b]):
-                        pv_ac_hour_sum[u] += pv_prod_ac[b][s][u]
-                for s in range(solar_num):
-                    solar_hour_sum_org[u] += solar_prod[s][u]  # pv_ac[s][u].x
-                    solar_hour_sum_opt[u] += pv_ac[s][u].x
-                netto = b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] \
-                    - solar_hour_sum_org[u] - pv_ac_hour_sum[u]
-                sum_old_cons += netto
-                if netto >= 0:
-                    old_cost_gc += netto * p_grl[u]
-                    old_cost_da += netto * pl[u]
-                    org_l.append(netto)
-                    org_t.append(0)
-                else:
-                    old_cost_gc += netto * p_grt[u]
-                    old_cost_da += netto * pt[u]
-                    org_l.append(0)
-                    org_t.append(netto)
-            if (not salderen) and (sum_old_cons < 0):
-                # er wordt (een deel) niet gesaldeerd
-                dag_str = datetime.datetime.now().strftime("%Y-%m-%d")
-                taxes_l = get_value_from_dict(dag_str, taxes_l_def)
-                btw = get_value_from_dict(dag_str, btw_def)
-                saldeer_corr_gc = -sum_old_cons * \
-                    (sum(p_grt) / len(p_grt) - 0.11)
-                saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw)
-                old_cost_gc += saldeer_corr_gc
-                old_cost_da += saldeer_corr_da
-                logging.info(f"Saldeercorrectie: {sum_old_cons:<6.2f} kWh")
-                logging.info(f"Saldeercorrectie niet geoptimaliseerd reg. tarieven: {saldeer_corr_gc:<6.2f} euro")
-                logging.info(f"Saldeercorrectie niet geoptimaliseerd day ahead tarieven: {saldeer_corr_da:<6.2f} euro")
-            else:
-                logging.info(f"Geen saldeer correctie")
-            logging.info(f"Niet geoptimaliseerd, kosten met reguliere tarieven: {old_cost_gc:<6.2f}")
-            logging.info(f"Niet geoptimaliseerd, kosten met day ahead tarieven: {old_cost_da:<6.2f}")
-            logging.info(f"Geoptimaliseerd, kosten met day ahead tarieven: {cost.x:<6.2f}")
-            logging.info(f"Levering: {delivery.x:<6.2f} (kWh)")
-            if self.boiler_present:
-                boiler_at_23 = ((boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) *
-                                (spec_heat_boiler / (3600 * cop_boiler)))
-                logging.info(f"Waarde boiler om 23 uur: {boiler_at_23:<0.2f} kWh")
-            if self.heater_present:
-                logging.info("\nInzet warmtepomp")
-                # df_hp = pd.DataFrame(columns=["u", "tar", "p0", "p1", "p2", p3     p4     p5     p6     p7
-                # heat   cons"])
-                logging.info(f"u     tar     p0     p1     p2     p3     p4     p5     p6     p7   heat   cons")
-                for u in range(U):
-                    logging.info(f"{uur[u]:2.0f} {pl[u]:6.4f} {p_hp[0][u].x:6.0f} {p_hp[1][u].x:6.0f} "
-                                 f"{p_hp[2][u].x:6.0f} {p_hp[3][u].x:6.0f} {p_hp[4][u].x:6.0f} "
-                                 f"{p_hp[5][u].x:6.0f} {p_hp[6][u].x:6.0f} {p_hp[7][u].x:6.0f} "
-                                 f"{h_hp[u].x:6.2f} {c_hp[u].x:6.2f}")
 
-            # overzicht per ac-accu:
-            pd.options.display.float_format = '{:6.2f}'.format
-            df_accu = []
-            df_soc = []
+        # er is een oplossing
+        # afdrukken van de resultaten
+        logging.info("Het programma heeft een optimale oplossing gevonden.")
+        old_cost_gc = 0
+        old_cost_da = 0
+        sum_old_cons = 0
+        org_l = []
+        org_t = []
+        c_ev_sum = []
+        c_ma_sum = []
+        accu_in_sum = []
+        accu_out_sum = []
+        for u in range(U):
+            ac_to_dc_sum = 0
+            dc_to_ac_sum = 0
             for b in range(B):
-                cols = [['uur', 'ac->', 'eff', '->dc', 'pv->dc', 'dc->', 'eff', '->bat', 'o_eff', 'SoC'],
-                        ["", "kWh", "%", "kWh", "kWh", "kWh", "%", "kWh", "%", "%"]]
-                df_accu.append(pd.DataFrame(columns=cols))
-                df_soc.append(pd.DataFrame(columns=["tijd", "soc"]))
-                for u in range(U):
-                    """
-                    for cs in range(CS[b]):
-                        if ac_to_dc_st_on[b][cs][u].x == 1:
-                            c_stage = cs
-                            ac_to_dc_eff = self.battery_options[b]["charge stages"][cs]["efficiency"] * 100.0
-                    """
-                    ac_to_dc_netto = (ac_to_dc[b][u].x - ac_from_dc[b][u].x) * hour_fraction[u]
-                    dc_from_ac_netto = (dc_from_ac[b][u].x - dc_to_ac[b][u].x) * hour_fraction[u]
-                    if ac_to_dc_netto > 0:
-                        ac_to_dc_eff = dc_from_ac_netto * 100.0 / ac_to_dc_netto
-                    elif ac_to_dc_netto < 0:
-                        ac_to_dc_eff = ac_to_dc_netto * 100.0 / dc_from_ac_netto
-                    else:
-                        ac_to_dc_eff = "--"
-
-                    dc_to_bat_netto = (dc_to_bat[b][u].x - dc_from_bat[b][u].x) * hour_fraction[u]
-                    bat_from_dc_netto = ((dc_to_bat[b][u].x * eff_dc_to_bat[b] - dc_from_bat[b][u].x / eff_bat_to_dc[b])
-                                         * hour_fraction[u])
-                    if dc_to_bat_netto > 0:
-                        dc_to_bat_eff = bat_from_dc_netto * 100.0/dc_to_bat_netto
-                    elif dc_to_bat_netto < 0:
-                        dc_to_bat_eff = dc_to_bat_netto * 100.0 / bat_from_dc_netto
-                    else:
-                        dc_to_bat_eff = "--"
-
-                    if ac_to_dc_netto > 0:
-                        overall_eff = bat_from_dc_netto * 100.0 / ac_to_dc_netto
-                    elif bat_from_dc_netto < 0:
-                        overall_eff = ac_to_dc_netto * 100.0 / bat_from_dc_netto
-                    else:
-                        overall_eff = "--"
-
-                    """
-                    for ds in range(DS[b]):
-                        if ac_from_dc_st_on[b][ds][u].x == 1:
-                            d_stage = ds
-                            dc_to_ac_eff = self.battery_options[b]["discharge stages"][ds]["efficiency"] * 100.0
-                    """
-
-                    pv_prod = 0
-                    for s in range(pv_dc_num[b]):
-                        pv_prod += pv_dc_on_off[b][s][u].x * pv_prod_dc[b][s][u] * hour_fraction[u]
-                    row = [str(uur[u]), ac_to_dc_netto, ac_to_dc_eff, dc_from_ac_netto,  pv_prod,
-                           dc_to_bat_netto, dc_to_bat_eff, bat_from_dc_netto, overall_eff, soc[b][u + 1].x]
-                    df_accu[b].loc[df_accu[b].shape[0]] = row
-                    row_soc = [tijd[u], soc[b][u + 1].x]
-                    df_soc[b].loc[df_soc[b].shape[0]] = row_soc
-
-
-                # df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
-                # df_accu[b] = df_accu[b].astype({"uur": int})
-                # df_accu[b].set_index(["uur"])
-                # df_accu[b][~df_accu[b].index.duplicated()]
-                try:
-                    df_accu[b].loc["Total"] = df_accu[b].sum(axis=0, numeric_only=True)
-                    totals = True
-                except Exception as ex:
-                    logging.info(ex)
-                    logging.info(f"Totals of accu {self.battery_options[b]['name']} cannot be calculated")
-                    totals = False
-
-                # Suppress FutureWarning messages
-                import warnings
-                warnings.simplefilter(action='ignore', category=FutureWarning)
-
-                if totals:
-                    df_accu[b].at[df_accu[b].index[-1], "uur"] = "Totaal"
-                    df_accu[b].at[df_accu[b].index[-1], "eff"] = "--"
-                    df_accu[b].at[df_accu[b].index[-1], "o_eff"] = "--"
-                    df_accu[b].at[df_accu[b].index[-1], "SoC"] = ""
-                logging.info(f"In- en uitgaande energie per uur batterij {self.battery_options[b]['name']}"
-                             f"\n{df_accu[b].to_string(index=False)}")
-                '''
-                if b == 0:
-                    self.save_df(df_soc[b], tijd=tijd, tablename='prognoses')
-                '''
-
-            # totaal overzicht
-            # pd.options.display.float_format = '{:,.3f}'.format
-            cols = ['uur', 'bat_in', 'bat_out']
-            cols = cols + ['cons', 'prod', 'base', 'boil', 'wp', 'ev', 'pv_ac', 'cost', 'profit', 'b_tem']
-            if M > 0:
-                cols = cols + ["mach"]
-            d_f = pd.DataFrame(columns=cols)
+                ac_to_dc_sum += ac_to_dc[b][u].x  # / eff_ac_to_dc[b]
+                dc_to_ac_sum += ac_from_dc[b][u].x  # * eff_dc_to_ac[b]
+            accu_in_sum.append(ac_to_dc_sum)
+            accu_out_sum.append(dc_to_ac_sum)
+        for u in range(U):
+            ev_sum = 0
+            for e in range(EV):
+                ev_sum += c_ev[e][u].x
+            c_ev_sum.append(ev_sum)
+            ma_sum = 0
+            for m in range(M):
+                ma_sum += c_ma_u[m][u].x
+            c_ma_sum.append(ma_sum)
+        pv_ac_hour_sum = []  # totale bruto pv_dc->ac productie
+        solar_hour_sum_org = []  # totale netto pv_ac productie origineel
+        solar_hour_sum_opt = []  # totale netto pv_ac productie na optimalisatie
+        for u in range(U):
+            pv_ac_hour_sum.append(0)
+            solar_hour_sum_org.append(0)
+            solar_hour_sum_opt.append(0)
+            for b in range(B):
+                for s in range(pv_dc_num[b]):
+                    pv_ac_hour_sum[u] += pv_prod_ac[b][s][u]
+            for s in range(solar_num):
+                solar_hour_sum_org[u] += solar_prod[s][u]  # pv_ac[s][u].x
+                solar_hour_sum_opt[u] += pv_ac[s][u].x
+            netto = b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] \
+                - solar_hour_sum_org[u] - pv_ac_hour_sum[u]
+            sum_old_cons += netto
+            if netto >= 0:
+                old_cost_gc += netto * p_grl[u]
+                old_cost_da += netto * pl[u]
+                org_l.append(netto)
+                org_t.append(0)
+            else:
+                old_cost_gc += netto * p_grt[u]
+                old_cost_da += netto * pt[u]
+                org_l.append(0)
+                org_t.append(netto)
+        if (not salderen) and (sum_old_cons < 0):
+            # er wordt (een deel) niet gesaldeerd
+            dag_str = dt.datetime.now().strftime("%Y-%m-%d")
+            taxes_l = get_value_from_dict(dag_str, taxes_l_def)
+            btw = get_value_from_dict(dag_str, btw_def)
+            saldeer_corr_gc = -sum_old_cons * \
+                (sum(p_grt) / len(p_grt) - 0.11)
+            saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw)
+            old_cost_gc += saldeer_corr_gc
+            old_cost_da += saldeer_corr_da
+            logging.info(f"Saldeercorrectie: {sum_old_cons:<6.2f} kWh")
+            logging.info(f"Saldeercorrectie niet geoptimaliseerd reg. tarieven: {saldeer_corr_gc:<6.2f} euro")
+            logging.info(f"Saldeercorrectie niet geoptimaliseerd day ahead tarieven: {saldeer_corr_da:<6.2f} euro")
+        else:
+            logging.info(f"Geen saldeer correctie")
+        logging.info(f"Niet geoptimaliseerd, kosten met reguliere tarieven: {old_cost_gc:<6.2f}")
+        logging.info(f"Niet geoptimaliseerd, kosten met day ahead tarieven: {old_cost_da:<6.2f}")
+        logging.info(f"Geoptimaliseerd, kosten met day ahead tarieven: {cost.x:<6.2f}")
+        logging.info(f"Levering: {delivery.x:<6.2f} (kWh)")
+        if self.boiler_present:
+            boiler_at_23 = ((boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) *
+                            (spec_heat_boiler / (3600 * cop_boiler)))
+            logging.info(f"Waarde boiler om 23 uur: {boiler_at_23:<0.2f} kWh")
+        if self.heater_present:
+            logging.info("\nInzet warmtepomp")
+            # df_hp = pd.DataFrame(columns=["u", "tar", "p0", "p1", "p2", p3     p4     p5     p6     p7
+            # heat   cons"])
+            logging.info(f"u     tar     p0     p1     p2     p3     p4     p5     p6     p7   heat   cons")
             for u in range(U):
-                row = [uur[u], accu_in_sum[u], accu_out_sum[u]]
-                row = row + [c_l[u].x, c_t_total[u].x, b_l[u],
-                             c_b[u].x, c_hp[u].x, c_ev_sum[u], solar_hour_sum_opt[u], c_l[u].x * pl[u],
-                             -c_t_w_tax[u].x * pt[u] - c_t_no_tax[u].x * pt_notax[u],
-                             boiler_temp[u + 1].x]
-                if M > 0:
-                    row = row + [c_ma_sum[u]]
-                d_f.loc[d_f.shape[0]] = row
-            if not self.debug:
-                d_f_save = d_f.drop(["uur", "b_tem"], axis=1)
-                self.save_df(tablename='prognoses', tijd=tijd, df=d_f_save)
-            else:
-                logging.info("Berekende prognoses zijn niet opgeslagen.")
+                logging.info(f"{uur[u]:2.0f} {pl[u]:6.4f} {p_hp[0][u].x:6.0f} {p_hp[1][u].x:6.0f} "
+                             f"{p_hp[2][u].x:6.0f} {p_hp[3][u].x:6.0f} {p_hp[4][u].x:6.0f} "
+                             f"{p_hp[5][u].x:6.0f} {p_hp[6][u].x:6.0f} {p_hp[7][u].x:6.0f} "
+                             f"{h_hp[u].x:6.2f} {c_hp[u].x:6.2f}")
 
-            d_f = d_f.astype({"uur": int})
-            d_f.loc['total'] = d_f.iloc[:, 1:].sum()
-            # d_f.loc['total'] = d_f.loc['total'].astype(object)
+        # overzicht per ac-accu:
+        pd.options.display.float_format = '{:6.2f}'.format
+        df_accu = []
+        df_soc = []
+        for b in range(B):
+            cols = [['uur', 'ac->', 'eff', '->dc', 'pv->dc', 'dc->', 'eff', '->bat', 'o_eff', 'SoC'],
+                    ["", "kWh", "%", "kWh", "kWh", "kWh", "%", "kWh", "%", "%"]]
+            df_accu.append(pd.DataFrame(columns=cols))
+            df_soc.append(pd.DataFrame(columns=["tijd", "soc_"+str(b)]))
+            for u in range(U):
+                """
+                for cs in range(CS[b]):
+                    if ac_to_dc_st_on[b][cs][u].x == 1:
+                        c_stage = cs
+                        ac_to_dc_eff = self.battery_options[b]["charge stages"][cs]["efficiency"] * 100.0
+                """
+                ac_to_dc_netto = (ac_to_dc[b][u].x - ac_from_dc[b][u].x) * hour_fraction[u]
+                dc_from_ac_netto = (dc_from_ac[b][u].x - dc_to_ac[b][u].x) * hour_fraction[u]
+                if ac_to_dc_netto > 0:
+                    ac_to_dc_eff = dc_from_ac_netto * 100.0 / ac_to_dc_netto
+                elif ac_to_dc_netto < 0:
+                    ac_to_dc_eff = ac_to_dc_netto * 100.0 / dc_from_ac_netto
+                else:
+                    ac_to_dc_eff = "--"
 
-            d_f.at[d_f.index[-1], "uur"] = "Totaal"
-            d_f.at[d_f.index[-1], "b_tem"] = ""
+                dc_to_bat_netto = (dc_to_bat[b][u].x - dc_from_bat[b][u].x) * hour_fraction[u]
+                bat_from_dc_netto = ((dc_to_bat[b][u].x * eff_dc_to_bat[b] - dc_from_bat[b][u].x / eff_bat_to_dc[b])
+                                     * hour_fraction[u])
+                if dc_to_bat_netto > 0:
+                    dc_to_bat_eff = bat_from_dc_netto * 100.0/dc_to_bat_netto
+                elif dc_to_bat_netto < 0:
+                    dc_to_bat_eff = dc_to_bat_netto * 100.0 / bat_from_dc_netto
+                else:
+                    dc_to_bat_eff = "--"
 
-            logging.info(f"Berekende prognoses: \n{d_f.to_string(index=False)}")
-            # , formatters={'uur':'{:03d}'.format}))
-            logging.info(f"Winst: {old_cost_da - cost.x:<0.2f} €")
+                if ac_to_dc_netto > 0:
+                    overall_eff = bat_from_dc_netto * 100.0 / ac_to_dc_netto
+                elif bat_from_dc_netto < 0:
+                    overall_eff = ac_to_dc_netto * 100.0 / bat_from_dc_netto
+                else:
+                    overall_eff = "--"
 
-            # doorzetten van alle settings naar HA
-            if not self.debug:
-                logging.info("Doorzetten van alle settings naar HA")
-            else:
-                logging.info("Onderstaande settings worden NIET doorgezet naar HA")
+                """
+                for ds in range(DS[b]):
+                    if ac_from_dc_st_on[b][ds][u].x == 1:
+                        d_stage = ds
+                        dc_to_ac_eff = self.battery_options[b]["discharge stages"][ds]["efficiency"] * 100.0
+                """
 
-            '''
-            set helpers output home assistant
-            boiler c_b[0].x >0 trigger boiler
-            ev     c_ev[0].x > 0 start laden auto, ==0 stop laden auto
-            battery multiplus feedin from grid = accu_in[0].x - accu_out[0].x
-            '''
+                pv_prod = 0
+                for s in range(pv_dc_num[b]):
+                    pv_prod += pv_dc_on_off[b][s][u].x * pv_prod_dc[b][s][u] * hour_fraction[u]
+                row = [str(uur[u]), ac_to_dc_netto, ac_to_dc_eff, dc_from_ac_netto,  pv_prod,
+                       dc_to_bat_netto, dc_to_bat_eff, bat_from_dc_netto, overall_eff, soc[b][u + 1].x]
+                df_accu[b].loc[df_accu[b].shape[0]] = row
+                row_soc = [tijd[u], soc[b][u + 1].x]
+                df_soc[b].loc[df_soc[b].shape[0]] = row_soc
 
-            #############################################
-            # boiler
-            ############################################
+
+            # df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
+            # df_accu[b] = df_accu[b].astype({"uur": int})
+            # df_accu[b].set_index(["uur"])
+            # df_accu[b][~df_accu[b].index.duplicated()]
             try:
-                if self.boiler_present:
-                    if float(c_b[0].x) > 0.0:
-                        if self.debug:
-                            logging.info("Boiler opwarmen zou zijn geactiveerd")
-                        else:
-                            self.call_service(self.boiler_options["activate service"],
-                                              entity_id=self.boiler_options["activate entity"])
-                            # "input_button.hw_trigger")
-                            logging.info("Boiler opwarmen geactiveerd")
-                    else:
-                        logging.info("Boiler opwarmen niet geactiveerd")
+                df_accu[b].loc["Total"] = df_accu[b].sum(axis=0, numeric_only=True)
+                totals = True
+            except Exception as ex:
+                logging.info(ex)
+                logging.info(f"Totals of accu {self.battery_options[b]['name']} cannot be calculated")
+                totals = False
 
-                ###########################################
-                # ev
-                ##########################################
-                for e in range(EV):
-                    if ready_u[e] < U:
-                        if self.log_level <= logging.INFO:
-                            logging.info(f"Inzet-factor laden {self.ev_options[e]['name']} per stap")
-                            print("uur", end=" ")
+            if totals:
+                df_accu[b].at[df_accu[b].index[-1], "uur"] = "Totaal"
+                df_accu[b].at[df_accu[b].index[-1], "eff"] = "--"
+                df_accu[b].at[df_accu[b].index[-1], "o_eff"] = "--"
+                df_accu[b].at[df_accu[b].index[-1], "SoC"] = ""
+            logging.info(f"In- en uitgaande energie per uur batterij {self.battery_options[b]['name']}"
+                         f"\n{df_accu[b].to_string(index=False)}")
+            '''
+            if b <= 3:
+                self.save_df(df_soc[b], tijd=tijd, tablename='prognoses')
+            '''
+
+        # totaal overzicht
+        # pd.options.display.float_format = '{:,.3f}'.format
+        cols = ['uur', 'bat_in', 'bat_out']
+        cols = cols + ['cons', 'prod', 'base', 'boil', 'wp', 'ev', 'pv_ac', 'cost', 'profit', 'b_tem']
+        if M > 0:
+            cols = cols + ["mach"]
+        d_f = pd.DataFrame(columns=cols)
+        for u in range(U):
+            row = [uur[u], accu_in_sum[u], accu_out_sum[u]]
+            row = row + [c_l[u].x, c_t_total[u].x, b_l[u],
+                         c_b[u].x, c_hp[u].x, c_ev_sum[u], solar_hour_sum_opt[u], c_l[u].x * pl[u],
+                         -c_t_w_tax[u].x * pt[u] - c_t_no_tax[u].x * pt_notax[u],
+                         boiler_temp[u + 1].x]
+            if M > 0:
+                row = row + [c_ma_sum[u]]
+            d_f.loc[d_f.shape[0]] = row
+        if not self.debug:
+            d_f_save = d_f.drop(["uur", "b_tem"], axis=1)
+            self.save_df(tablename='prognoses', tijd=tijd, df=d_f_save)
+        else:
+            logging.info("Berekende prognoses zijn niet opgeslagen.")
+
+        d_f = d_f.astype({"uur": int})
+        d_f.loc['total'] = d_f.iloc[:, 1:].sum()
+        # d_f.loc['total'] = d_f.loc['total'].astype(object)
+
+        d_f.at[d_f.index[-1], "uur"] = "Totaal"
+        d_f.at[d_f.index[-1], "b_tem"] = ""
+
+        logging.info(f"Berekende prognoses: \n{d_f.to_string(index=False)}")
+        # , formatters={'uur':'{:03d}'.format}))
+        logging.info(f"Winst: {old_cost_da - cost.x:<0.2f} €")
+
+        # doorzetten van alle settings naar HA
+        if not self.debug:
+            logging.info("Doorzetten van alle settings naar HA")
+        else:
+            logging.info("Onderstaande settings worden NIET doorgezet naar HA")
+
+        '''
+        set helpers output home assistant
+        boiler c_b[0].x >0 trigger boiler
+        ev     c_ev[0].x > 0 start laden auto, ==0 stop laden auto
+        battery multiplus feedin from grid = accu_in[0].x - accu_out[0].x
+        '''
+
+        #############################################
+        # boiler
+        ############################################
+        try:
+            if self.boiler_present:
+                if float(c_b[0].x) > 0.0:
+                    if self.debug:
+                        logging.info("Boiler opwarmen zou zijn geactiveerd")
+                    else:
+                        self.call_service(self.boiler_options["activate service"],
+                                          entity_id=self.boiler_options["activate entity"])
+                        # "input_button.hw_trigger")
+                        logging.info("Boiler opwarmen geactiveerd")
+                else:
+                    logging.info("Boiler opwarmen niet geactiveerd")
+
+            ###########################################
+            # ev
+            ##########################################
+            for e in range(EV):
+                if ready_u[e] < U:
+                    if self.log_level <= logging.INFO:
+                        logging.info(f"Inzet-factor laden {self.ev_options[e]['name']} per stap")
+                        print("uur", end=" ")
+                        for cs in range(ECS[0]):
+                            print(f" {charge_stages[e][cs]['ampere']:4.1f}A", end=" ")
+                        print()
+                        for u in range(ready_u[e] + 1):
+                            print(f"{uur[u]:2d}", end="    ")
                             for cs in range(ECS[0]):
-                                print(f" {charge_stages[e][cs]['ampere']:4.1f}A", end=" ")
+                                print(f"{abs(charger_factor[0][cs][u].x):.2f}", end="   ")
                             print()
-                            for u in range(ready_u[e] + 1):
-                                print(f"{uur[u]:2d}", end="    ")
-                                for cs in range(ECS[0]):
-                                    print(f"{abs(charger_factor[0][cs][u].x):.2f}", end="   ")
-                                print()
-                    entity_charge_switch = self.ev_options[e]["charge switch"]
-                    entity_charging_ampere = self.ev_options[e]["entity set charging ampere"]
-                    entity_stop_laden = self.config.get(["entity stop charging"], self.ev_options[e], None)
-                    old_switch_state = self.get_state(entity_charge_switch).state
-                    old_ampere_state = self.get_state(entity_charging_ampere).state
-                    new_ampere_state = 0
-                    new_switch_state = "off"
-                    new_state_stop_laden = None  # "2000-01-01 00:00:00"
-                    # stop_str = stop_victron.strftime('%Y-%m-%d %H:%M')
-                    # print()
+                entity_charge_switch = self.ev_options[e]["charge switch"]
+                entity_charging_ampere = self.ev_options[e]["entity set charging ampere"]
+                entity_stop_laden = self.config.get(["entity stop charging"], self.ev_options[e], None)
+                old_switch_state = self.get_state(entity_charge_switch).state
+                old_ampere_state = self.get_state(entity_charging_ampere).state
+                new_ampere_state = 0
+                new_switch_state = "off"
+                new_state_stop_laden = None  # "2000-01-01 00:00:00"
+                # stop_str = stop_victron.strftime('%Y-%m-%d %H:%M')
+                # print()
 
-                    # print(uur[0], end="  ")
-                    for cs in range(ECS[e])[1:]:
-                        # print(f"{charger_factor[e][cs][0].x:.2f}", end="  ")
-                        if charger_factor[e][cs][0].x > 0:
-                            new_ampere_state = charge_stages[e][cs]["ampere"]
-                            if new_ampere_state > 0:
-                                new_switch_state = "on"
-                            if (charger_factor[e][cs][0].x < 1) and (energy_needed[e] > (ev_accu_in[e][0].x + 0.01)):
-                                new_ts = start_dt.timestamp() + charger_factor[e][cs][0].x * 3600
-                                stop_laden = datetime.datetime.fromtimestamp(int(new_ts))
-                                new_state_stop_laden = stop_laden.strftime('%Y-%m-%d %H:%M')
-                            break
-                    ev_name = self.ev_options[e]["name"]
-                    logging.info(f"Berekeningsuitkomst voor opladen van {ev_name}:")
-                    logging.info(f"- aantal ampere {new_ampere_state}A (was {old_ampere_state}A)")
-                    logging.info(f"- stand schakelaar '{new_switch_state}' (was '{old_switch_state}')")
-                    if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
-                        logging.info(f"- stop laden op {new_state_stop_laden}")
-                    logging.info(f"- positie: {ev_position[e]}")
-                    logging.info(f"- ingeplugd: {ev_plugged_in[e]}")
+                # print(uur[0], end="  ")
+                for cs in range(ECS[e])[1:]:
+                    # print(f"{charger_factor[e][cs][0].x:.2f}", end="  ")
+                    if charger_factor[e][cs][0].x > 0:
+                        new_ampere_state = charge_stages[e][cs]["ampere"]
+                        if new_ampere_state > 0:
+                            new_switch_state = "on"
+                        if (charger_factor[e][cs][0].x < 1) and (energy_needed[e] > (ev_accu_in[e][0].x + 0.01)):
+                            new_ts = start_dt.timestamp() + charger_factor[e][cs][0].x * 3600
+                            stop_laden = dt.datetime.fromtimestamp(int(new_ts))
+                            new_state_stop_laden = stop_laden.strftime('%Y-%m-%d %H:%M')
+                        break
+                ev_name = self.ev_options[e]["name"]
+                logging.info(f"Berekeningsuitkomst voor opladen van {ev_name}:")
+                logging.info(f"- aantal ampere {new_ampere_state}A (was {old_ampere_state}A)")
+                logging.info(f"- stand schakelaar '{new_switch_state}' (was '{old_switch_state}')")
+                if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
+                    logging.info(f"- stop laden op {new_state_stop_laden}")
+                logging.info(f"- positie: {ev_position[e]}")
+                logging.info(f"- ingeplugd: {ev_plugged_in[e]}")
 
-                    if ev_position[e] == "home" and ev_plugged_in[e]:
-                        if float(new_ampere_state) > 0.0:
-                            if old_switch_state == "off":
-                                if self.debug:
-                                    logging.info(f"Laden van {ev_name} zou zijn aangezet met {new_ampere_state} ampere")
-                                else:
-                                    logging.info(f"Laden van {ev_name} aangezet met {new_ampere_state} ampere via "
-                                                 f"'{entity_charging_ampere}'")
-                                    self.set_value(entity_charging_ampere, new_ampere_state)
-                                    self.turn_on(entity_charge_switch)
-                                    if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
-                                        self.call_service("set_datetime", entity_id=entity_stop_laden,
-                                                          datetime=new_state_stop_laden)
-                            if old_switch_state == "on":
-                                if self.debug:
-                                    logging.info(f"Laden van {ev_name} zou zijn doorgegaan met {new_ampere_state} A")
-                                else:
-                                    logging.info(f"Laden van {ev_name} is doorgegaan met {new_ampere_state} A")
-                                    self.set_value(entity_charging_ampere, new_ampere_state)
-                                    if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
-                                        self.call_service("set_datetime", entity_id=entity_stop_laden,
-                                                          datetime=new_state_stop_laden)
-                        else:
-                            if old_switch_state == "on":
-                                if self.debug:
-                                    logging.info(f"Laden van {ev_name} zou zijn uitgezet")
-                                else:
-                                    self.set_value(entity_charging_ampere, 0)
-                                    self.turn_off(entity_charge_switch)
-                                    logging.info(f"Laden van {ev_name} uitgezet")
-                                    if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
-                                        self.call_service("set_datetime", entity_id=entity_stop_laden,
-                                                          datetime=new_state_stop_laden)
+                if ev_position[e] == "home" and ev_plugged_in[e]:
+                    if float(new_ampere_state) > 0.0:
+                        if old_switch_state == "off":
+                            if self.debug:
+                                logging.info(f"Laden van {ev_name} zou zijn aangezet met {new_ampere_state} ampere")
+                            else:
+                                logging.info(f"Laden van {ev_name} aangezet met {new_ampere_state} ampere via "
+                                             f"'{entity_charging_ampere}'")
+                                self.set_value(entity_charging_ampere, new_ampere_state)
+                                self.turn_on(entity_charge_switch)
+                                if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
+                                    self.call_service("set_datetime", entity_id=entity_stop_laden,
+                                                      datetime=new_state_stop_laden)
+                        if old_switch_state == "on":
+                            if self.debug:
+                                logging.info(f"Laden van {ev_name} zou zijn doorgegaan met {new_ampere_state} A")
+                            else:
+                                logging.info(f"Laden van {ev_name} is doorgegaan met {new_ampere_state} A")
+                                self.set_value(entity_charging_ampere, new_ampere_state)
+                                if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
+                                    self.call_service("set_datetime", entity_id=entity_stop_laden,
+                                                      datetime=new_state_stop_laden)
                     else:
-                        logging.info(f"{ev_name} is niet thuis of niet ingeplugd")
-                    logging.info(f"Evaluatie status laden {ev_name} op "
-                                 f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
-                    logging.info(f"- schakelaar laden: {self.get_state(entity_charge_switch).state}")
-                    logging.info(f"- aantal ampere: {self.get_state(entity_charging_ampere).state}")
+                        if old_switch_state == "on":
+                            if self.debug:
+                                logging.info(f"Laden van {ev_name} zou zijn uitgezet")
+                            else:
+                                self.set_value(entity_charging_ampere, 0)
+                                self.turn_off(entity_charge_switch)
+                                logging.info(f"Laden van {ev_name} uitgezet")
+                                if not (entity_stop_laden is None) and not (new_state_stop_laden is None):
+                                    self.call_service("set_datetime", entity_id=entity_stop_laden,
+                                                      datetime=new_state_stop_laden)
+                else:
+                    logging.info(f"{ev_name} is niet thuis of niet ingeplugd")
+                logging.info(f"Evaluatie status laden {ev_name} op "
+                             f""
+                             f"{dt.datetime.now().strftime('%Y-%m-%d %H:%M')}")
+                logging.info(f"- schakelaar laden: {self.get_state(entity_charge_switch).state}")
+                logging.info(f"- aantal ampere: {self.get_state(entity_charging_ampere).state}")
 
-                #######################################
-                # solar
-                ######################################
-                for s in range(solar_num):
-                    if entity_pv_ac_switch[s] is not None:
-                        entity_pv_switch = entity_pv_ac_switch[s]
+            #######################################
+            # solar
+            ######################################
+            for s in range(solar_num):
+                if entity_pv_ac_switch[s] is not None:
+                    entity_pv_switch = entity_pv_ac_switch[s]
+                    switch_state = self.get_state(entity_pv_switch).state
+                    pv_name = self.solar[s]["name"]
+                    if (pv_ac_on_off[s][0].x == 1.0) or (solar_prod[s][0] == 0.0):
+                        if switch_state == "off":
+                            if self.debug:
+                                logging.info(f"PV {pv_name} zou zijn aangezet")
+                            else:
+                                self.turn_on(entity_pv_switch)
+                                logging.info(f"PV {pv_name} aangezet")
+                    else:
+                        if switch_state == "on":
+                            if self.debug:
+                                logging.info(f"PV {pv_name} zou zijn uitgezet")
+                            else:
+                                self.turn_off(entity_pv_switch)
+                                logging.info(f"PV {pv_name} uitgezet")
+
+            ############################################
+            # battery
+            ############################################
+            for b in range(B):
+                # vermogen aan ac kant
+                netto_vermogen = int(1000 * (ac_to_dc[b][0].x - ac_from_dc[b][0].x))
+                minimum_power = int(self.battery_options[b]["minimum power"])
+                bat_name = self.battery_options[b]["name"]
+                if abs(netto_vermogen) <= 20:
+                    netto_vermogen = 0
+                    new_state = "Uit"
+                    stop_omvormer = None
+                    balance = False
+                elif abs(c_l[0].x - c_t_w_tax[0].x - c_t_no_tax[0].x) <= 0.01:
+                    new_state = "Aan"
+                    balance = True
+                    stop_omvormer = None
+                elif abs(netto_vermogen) < minimum_power:
+                    new_state = "Aan"
+                    balance = False
+                    new_ts = start_dt.timestamp() + (abs(netto_vermogen) / minimum_power) * 3600
+                    stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
+                    if netto_vermogen > 0:
+                        netto_vermogen = minimum_power
+                    else:
+                        netto_vermogen = -minimum_power
+                else:
+                    new_state = "Aan"
+                    balance = False
+                    stop_omvormer = None
+                if stop_omvormer is None:
+                    stop_str = "2000-01-01 00:00:00"
+                else:
+                    stop_str = stop_omvormer.strftime('%Y-%m-%d %H:%M')
+                first_row = df_accu[b].iloc[0]
+                from_battery = int(-first_row["dc->"] * 1000 / fraction_first_hour)
+                from_pv = int(first_row["pv->dc"] * 1000 / fraction_first_hour)
+                from_ac = int(first_row["->dc"] * 1000 / fraction_first_hour)
+                calculated_soc = round(soc[b][1].x, 1)
+
+                if self.debug:
+                    logging.info(f"Netto vermogen naar(+)/uit(-) batterij {bat_name} zou zijn: {netto_vermogen} W")
+                    if stop_omvormer:
+                        logging.info(f"tot: {stop_str}")
+                    logging.info(f"Balanceren zou zijn: {balance}")
+                else:
+                    self.set_entity_value("entity set power feedin", self.battery_options[b], netto_vermogen)
+                    self.set_entity_option("entity set operating mode", self.battery_options[b], new_state)
+                    balance_state = "on" if balance else "off"
+                    self.set_entity_state("entity balance switch", self.battery_options[b], balance_state)
+                    logging.info(f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: {netto_vermogen} W"
+                                 f"{' tot: '+stop_str if stop_omvormer else ''}")
+                    logging.info(f"Balanceren: {balance}{' tot: '+stop_str if stop_omvormer else ''}")
+                    helper_id = self.config.get(["entity stop victron"], self.battery_options[b], None)
+                    if helper_id is not None:
+                        logging.warning(f"The name 'entity stop victron' is deprecated, "
+                                        f"please change to 'entity stop inverter'.")
+                    if helper_id is None:
+                        helper_id = self.config.get(["entity stop inverter"], self.battery_options[b], None)
+                    if helper_id is not None:
+                        self.call_service("set_datetime", entity_id=helper_id, datetime=stop_str)
+                    self.set_entity_value("entity from battery", self.battery_options[b], from_battery)
+                    logging.info(f"Vermogen uit batterij: {from_battery}W")
+                    self.set_entity_value("entity from pv", self.battery_options[b], from_pv)
+                    logging.info(f"Vermogen dat binnenkomt van pv: {from_pv}W")
+                    self.set_entity_value("entity from ac", self.battery_options[b], from_ac)
+                    logging.info(f"Vermogen dat binnenkomt van ac: {from_ac}W")
+                    self.set_entity_value("entity calculated soc", self.battery_options[b], calculated_soc)
+                    logging.info(f"Waarde SoC na eerste uur: {calculated_soc}%")
+
+                for s in range(pv_dc_num[b]):
+                    entity_pv_switch = self.config.get(["entity pv switch"],
+                                                       self.battery_options[b]["solar"][s],
+                                                       None)
+                    if entity_pv_switch == "":
+                        entity_pv_switch = None
+                    if entity_pv_switch is not None:
                         switch_state = self.get_state(entity_pv_switch).state
-                        pv_name = self.solar[s]["name"]
-                        if (pv_ac_on_off[s][0].x == 1.0) or (solar_prod[s][0] == 0.0):
+                        pv_name = self.battery_options[b]["solar"][s]["name"]
+                        if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
                             if switch_state == "off":
                                 if self.debug:
                                     logging.info(f"PV {pv_name} zou zijn aangezet")
@@ -1464,447 +1605,353 @@ class DaCalc(DaBase):
                                 else:
                                     self.turn_off(entity_pv_switch)
                                     logging.info(f"PV {pv_name} uitgezet")
+                            self.turn_on(entity_pv_switch)
 
-                ############################################
-                # battery
-                ############################################
-                for b in range(B):
-                    # vermogen aan ac kant
-                    netto_vermogen = int(1000 * (ac_to_dc[b][0].x - ac_from_dc[b][0].x))
-                    minimum_power = int(self.battery_options[b]["minimum power"])
-                    bat_name = self.battery_options[b]["name"]
-                    if abs(netto_vermogen) <= 20:
-                        netto_vermogen = 0
-                        new_state = "Uit"
-                        stop_omvormer = None
-                        balance = False
-                    elif abs(c_l[0].x - c_t_w_tax[0].x - c_t_no_tax[0].x) <= 0.01:
-                        new_state = "Aan"
-                        balance = True
-                        stop_omvormer = None
-                    elif abs(netto_vermogen) < minimum_power:
-                        new_state = "Aan"
-                        balance = False
-                        new_ts = start_dt.timestamp() + (abs(netto_vermogen) / minimum_power) * 3600
-                        stop_omvormer = datetime.datetime.fromtimestamp(int(new_ts))
-                        if netto_vermogen > 0:
-                            netto_vermogen = minimum_power
-                        else:
-                            netto_vermogen = -minimum_power
-                    else:
-                        new_state = "Aan"
-                        balance = False
-                        stop_omvormer = None
-                    if stop_omvormer is None:
-                        stop_str = "2000-01-01 00:00:00"
-                    else:
-                        stop_str = stop_omvormer.strftime('%Y-%m-%d %H:%M')
-                    first_row = df_accu[b].iloc[0]
-                    from_battery = int(-first_row["dc->"] * 1000 / fraction_first_hour)
-                    from_pv = int(first_row["pv->dc"] * 1000 / fraction_first_hour)
-                    from_ac = int(first_row["->dc"] * 1000 / fraction_first_hour)
-                    calculated_soc = round(soc[b][1].x, 1)
+            ##################################################
+            # heating
+            ##################################################
+            if self.heater_present:
+                entity_curve_adjustment = self.heating_options["entity adjust heating curve"]
+                old_adjustment = float(self.get_state(
+                    entity_curve_adjustment).state)
+                # adjustment factor (K/%) bijv 0.4 K/10% = 0.04
+                adjustment_factor = self.heating_options["adjustment factor"]
+                adjustment = calc_adjustment_heatcurve(
+                    pl[0], p_avg, adjustment_factor, old_adjustment)
+                if self.debug:
+                    logging.info(f"Aanpassing stooklijn zou zijn: {adjustment:<0.2f}")
+                else:
+                    logging.info(f"Aanpassing stooklijn: {adjustment:<0.2f}")
+                    self.set_value(entity_curve_adjustment, adjustment)
 
-                    if self.debug:
-                        logging.info(f"Netto vermogen naar(+)/uit(-) batterij {bat_name} zou zijn: {netto_vermogen} W")
-                        if stop_omvormer:
-                            logging.info(f"tot: {stop_str}")
-                        logging.info(f"Balanceren zou zijn: {balance}")
-                    else:
-                        self.set_entity_value("entity set power feedin", self.battery_options[b], netto_vermogen)
-                        self.set_entity_option("entity set operating mode", self.battery_options[b], new_state)
-                        balance_state = "on" if balance else "off"
-                        self.set_entity_state("entity balance switch", self.battery_options[b], balance_state)
-                        logging.info(f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: {netto_vermogen} W"
-                                     f"{' tot: '+stop_str if stop_omvormer else ''}")
-                        logging.info(f"Balanceren: {balance}{' tot: '+stop_str if stop_omvormer else ''}")
-                        helper_id = self.config.get(["entity stop victron"], self.battery_options[b], None)
-                        if helper_id is not None:
-                            logging.warning(f"The name 'entity stop victron' is deprecated, "
-                                            f"please change to 'entity stop inverter'.")
-                        if helper_id is None:
-                            helper_id = self.config.get(["entity stop inverter"], self.battery_options[b], None)
-                        if helper_id is not None:
-                            self.call_service("set_datetime", entity_id=helper_id, datetime=stop_str)
-                        self.set_entity_value("entity from battery", self.battery_options[b], from_battery)
-                        logging.info(f"Vermogen uit batterij: {from_battery}W")
-                        self.set_entity_value("entity from pv", self.battery_options[b], from_pv)
-                        logging.info(f"Vermogen dat binnenkomt van pv: {from_pv}W")
-                        self.set_entity_value("entity from ac", self.battery_options[b], from_ac)
-                        logging.info(f"Vermogen dat binnenkomt van ac: {from_ac}W")
-                        self.set_entity_value("entity calculated soc", self.battery_options[b], calculated_soc)
-                        logging.info(f"Waarde SoC na eerste uur: {calculated_soc}%")
+            ########################################################################
+            # apparaten /machines
+            ########################################################################
+            for m in range(M):
+                logging.info(f"Apparaat: {ma_name[m]}")
+                logging.info(f"Programma: {program_selected[m]}")
+                if RL[m] > 0:
+                    for r in range(R[m]):
+                        if ma_start[m][r].x == 1:
+                            # print(f"ma_start: run {r} start {ma_start[m][r].x}")
+                            start_machine_str = ma_kw_dt[m][r].strftime('%Y-%m-%d %H:%M')
+                            if not (ma_entity_plan_start[m] is None):
+                                if self.debug:
+                                    logging.info(f"Zou zijn gestart op {start_machine_str}")
+                                else:
+                                    self.call_service("set_datetime", entity_id=ma_entity_plan_start[m],
+                                                      datetime=start_machine_str)
+                                    logging.info(f"Start op {start_machine_str}")
+                            end_machine_str = ma_kw_dt[m][r + RL[m]].strftime('%Y-%m-%d %H:%M')
+                            if not (ma_entity_plan_end[m] is None):
+                                if self.debug:
+                                    logging.info(f"Zou klaar zijn op {end_machine_str}")
+                                else:
+                                    self.call_service("set_datetime", entity_id=ma_entity_plan_end[m],
+                                                      datetime=end_machine_str)
+                                    logging.info(f"Is klaar op {end_machine_str}")
 
-                    for s in range(pv_dc_num[b]):
-                        entity_pv_switch = self.config.get(["entity pv switch"],
-                                                           self.battery_options[b]["solar"][s],
-                                                           None)
-                        if entity_pv_switch == "":
-                            entity_pv_switch = None
-                        if entity_pv_switch is not None:
-                            switch_state = self.get_state(entity_pv_switch).state
-                            pv_name = self.battery_options[b]["solar"][s]["name"]
-                            if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
-                                if switch_state == "off":
-                                    if self.debug:
-                                        logging.info(f"PV {pv_name} zou zijn aangezet")
-                                    else:
-                                        self.turn_on(entity_pv_switch)
-                                        logging.info(f"PV {pv_name} aangezet")
-                            else:
-                                if switch_state == "on":
-                                    if self.debug:
-                                        logging.info(f"PV {pv_name} zou zijn uitgezet")
-                                    else:
-                                        self.turn_off(entity_pv_switch)
-                                        logging.info(f"PV {pv_name} uitgezet")
-                                self.turn_on(entity_pv_switch)
+                if self.log_level == logging.DEBUG:
+                    logging.debug(f"Per kwartier het berekende verbruik, en het bijbehorende tarief")
+                    for kw in range(KW[m]):
+                        print(f"kwartier {kw:>2} tijd: {ma_kw_dt[m][kw].strftime('%H:%M')} "
+                              f"consumption: {c_ma_kw[m][kw].x:>7.3f} "
+                              f"uur: {math.floor(kw / 4)} tarief: {pl[math.floor(kw / 4)]:.4f}")
+                    logging.debug(f"Per uur het berekende verbruik, het bijbehorende tarief en de kosten")
+                    for u in range(U):
+                        print(f"uur {u:>2} tijdstip {tijd[u].strftime('%H:%M')} "
+                              f"consumption: {c_ma_u[m][u].x:>7.3f} tarief: {pl[u]:.4f}")
 
-                ##################################################
-                # heating
-                ##################################################
-                if self.heater_present:
-                    entity_curve_adjustment = self.heating_options["entity adjust heating curve"]
-                    old_adjustment = float(self.get_state(
-                        entity_curve_adjustment).state)
-                    # adjustment factor (K/%) bijv 0.4 K/10% = 0.04
-                    adjustment_factor = self.heating_options["adjustment factor"]
-                    adjustment = calc_adjustment_heatcurve(
-                        pl[0], p_avg, adjustment_factor, old_adjustment)
-                    if self.debug:
-                        logging.info(f"Aanpassing stooklijn zou zijn: {adjustment:<0.2f}")
-                    else:
-                        logging.info(f"Aanpassing stooklijn: {adjustment:<0.2f}")
-                        self.set_value(entity_curve_adjustment, adjustment)
+        except Exception as ex:
+            error_handling(ex)
+            logging.error(f"Onverwachte fout: {ex}")
 
-                ########################################################################
-                # apparaten /machines
-                ########################################################################
-                for m in range(M):
-                    logging.info(f"Apparaat: {ma_name[m]}")
-                    logging.info(f"Programma: {program_selected[m]}")
-                    if RL[m] > 0:
-                        for r in range(R[m]):
-                            if ma_start[m][r].x == 1:
-                                # print(f"ma_start: run {r} start {ma_start[m][r].x}")
-                                start_machine_str = ma_kw_dt[m][r].strftime('%Y-%m-%d %H:%M')
-                                if not (ma_entity_plan_start[m] is None):
-                                    if self.debug:
-                                        logging.info(f"Zou zijn gestart op {start_machine_str}")
-                                    else:
-                                        self.call_service("set_datetime", entity_id=ma_entity_plan_start[m],
-                                                          datetime=start_machine_str)
-                                        logging.info(f"Start op {start_machine_str}")
-                                end_machine_str = ma_kw_dt[m][r + RL[m]].strftime('%Y-%m-%d %H:%M')
-                                if not (ma_entity_plan_end[m] is None):
-                                    if self.debug:
-                                        logging.info(f"Zou klaar zijn op {end_machine_str}")
-                                    else:
-                                        self.call_service("set_datetime", entity_id=ma_entity_plan_end[m],
-                                                          datetime=end_machine_str)
-                                        logging.info(f"Is klaar op {end_machine_str}")
-
-                    if self.log_level == logging.DEBUG:
-                        logging.debug(f"Per kwartier het berekende verbruik, en het bijbehorende tarief")
-                        for kw in range(KW[m]):
-                            print(f"kwartier {kw:>2} tijd: {ma_kw_dt[m][kw].strftime('%H:%M')} "
-                                  f"consumption: {c_ma_kw[m][kw].x:>7.3f} "
-                                  f"uur: {math.floor(kw / 4)} tarief: {pl[math.floor(kw / 4)]:.4f}")
-                        logging.debug(f"Per uur het berekende verbruik, het bijbehorende tarief en de kosten")
-                        for u in range(U):
-                            print(f"uur {u:>2} tijdstip {tijd[u].strftime('%H:%M')} "
-                                  f"consumption: {c_ma_u[m][u].x:>7.3f} tarief: {pl[u]:.4f}")
-
-            except Exception as ex:
-                error_handling(ex)
-                logging.error(f"Onverwachte fout: {ex}")
-
-            #############################################
-            # graphs
-            #############################################
-            accu_in_n = []
-            accu_out_p = []
-            c_t_n = []
-            base_n = []
-            boiler_n = []
-            heatpump_n = []
-            mach_n = []
-            ev_n = []
-            c_l_p = []
-            soc_p = []
-            pv_p_org = []
-            pv_p_opt = []
-            pv_ac_p = []
-            max_y = 0
-            for u in range(U):
-                c_t_n.append(-c_t_total[u].x)
-                c_l_p.append(c_l[u].x)
-                base_n.append(-b_l[u])
-                boiler_n.append(- c_b[u].x)
-                heatpump_n.append(-c_hp[u].x)
-                ev_n.append(-c_ev_sum[u])
-                mach_n.append(-c_ma_sum[u])
-                pv_p_org.append(solar_hour_sum_org[u])
-                pv_p_opt.append(solar_hour_sum_opt[u])
-                pv_ac_p.append(pv_ac_hour_sum[u])
-                accu_in_sum = 0
-                accu_out_sum = 0
-                for b in range(B):
-                    accu_in_sum += ac_to_dc[b][u].x
-                    accu_out_sum += ac_from_dc[b][u].x
-                accu_in_n.append(-accu_in_sum * hour_fraction[u])
-                accu_out_p.append(accu_out_sum * hour_fraction[u])
-                max_y = max(max_y, (c_l_p[u] + pv_p_org[u] + pv_ac_p[u]), abs(
-                    c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] + accu_in_sum)
-                for b in range(B):
-                    if u == 0:
-                        soc_p.append([])
-                    soc_p[b].append(soc[b][u].x)
+        #############################################
+        # graphs
+        #############################################
+        accu_in_n = []
+        accu_out_p = []
+        c_t_n = []
+        base_n = []
+        boiler_n = []
+        heatpump_n = []
+        mach_n = []
+        ev_n = []
+        c_l_p = []
+        soc_p = []
+        pv_p_org = []
+        pv_p_opt = []
+        pv_ac_p = []
+        max_y = 0
+        for u in range(U):
+            c_t_n.append(-c_t_total[u].x)
+            c_l_p.append(c_l[u].x)
+            base_n.append(-b_l[u])
+            boiler_n.append(- c_b[u].x)
+            heatpump_n.append(-c_hp[u].x)
+            ev_n.append(-c_ev_sum[u])
+            mach_n.append(-c_ma_sum[u])
+            pv_p_org.append(solar_hour_sum_org[u])
+            pv_p_opt.append(solar_hour_sum_opt[u])
+            pv_ac_p.append(pv_ac_hour_sum[u])
+            accu_in_sum = 0
+            accu_out_sum = 0
             for b in range(B):
-                soc_p[b].append(soc[b][U].x)
+                accu_in_sum += ac_to_dc[b][u].x
+                accu_out_sum += ac_from_dc[b][u].x
+            accu_in_n.append(-accu_in_sum * hour_fraction[u])
+            accu_out_p.append(accu_out_sum * hour_fraction[u])
+            max_y = max(max_y, (c_l_p[u] + pv_p_org[u] + pv_ac_p[u]), abs(
+                c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] + accu_in_sum)
+            for b in range(B):
+                if u == 0:
+                    soc_p.append([])
+                soc_p[b].append(soc[b][u].x)
+        for b in range(B):
+            soc_p[b].append(soc[b][U].x)
 
-            # grafiek 1
-            import numpy as np
-            from dao.prog.da_graph import GraphBuilder
-            gr1_df = pd.DataFrame()
-            gr1_df["index"] = np.arange(U)
-            gr1_df["uur"] = uur[0:U]
-            gr1_df["verbruik"] = c_l_p
-            gr1_df["productie"] = c_t_n
-            gr1_df["baseload"] = base_n
-            gr1_df["boiler"] = boiler_n
-            gr1_df["heatpump"] = heatpump_n
-            gr1_df["ev"] = ev_n
-            gr1_df["mach"] = mach_n
-            gr1_df["pv_ac"] = pv_p_opt
-            gr1_df["pv_dc"] = pv_ac_p
-            gr1_df["accu_in"] = accu_in_n
-            gr1_df["accu_out"] = accu_out_p
-            style = self.config.get(['graphics', 'style'])
-            gr1_options = {
-                "title": "Prognose berekend op: " + start_dt.strftime('%Y-%m-%d %H:%M'),
-                "style": style,
-                "haxis": {
-                    "values": "uur",
-                    "title": "uren van de dag"
-                },
-                "vaxis": [{
-                    "title": "kWh"
-                }
-                ],
-                "series": [{"column": "verbruik",
-                            "type": "stacked",
-                            "color": '#00bfff'
-                            },
-                           {"column": "pv_ac",
-                            "title": "PV-AC",
-                            "type": "stacked",
-                            "color": 'green'
-                            },
-                           {"column": "accu_out",
-                            "title": "Accu out",
-                            "type": "stacked",
-                            "color": 'red'
-                            },
-                           {"column": "baseload",
-                            "title": "Overig verbr.",
-                            "type": "stacked",
-                            "color": "#f1a603"
-                            },
-                           {"column": "boiler",
-                            "type": "stacked",
-                            "color": '#e39ff6'
-                            },
-                           {"column": "heatpump",
-                            "title": "WP",
-                            "type": "stacked",
-                            "color": '#a32cc4'
-                            },
-                           {"column": "ev",
-                            "title": "EV",
-                            "type": "stacked",
-                            "color": 'yellow'
-                            },
-                           {"column": "mach",
-                            "title": "App.",
-                            "type": "stacked",
-                            "color": 'brown'
-                            },
-                           {"column": "productie",
-                            "title": "Teruglev.",
-                            "type": "stacked",
-                            "color": '#0080ff'
-                            },
-                           {"column": "accu_in",
-                            "title": "Accu in",
-                            "type": "stacked",
-                            "color": '#ff8000'
-                            },
-                           ]
+        # grafiek 1
+        import numpy as np
+        from dao.prog.da_graph import GraphBuilder
+        gr1_df = pd.DataFrame()
+        gr1_df["index"] = np.arange(U)
+        gr1_df["uur"] = uur[0:U]
+        gr1_df["verbruik"] = c_l_p
+        gr1_df["productie"] = c_t_n
+        gr1_df["baseload"] = base_n
+        gr1_df["boiler"] = boiler_n
+        gr1_df["heatpump"] = heatpump_n
+        gr1_df["ev"] = ev_n
+        gr1_df["mach"] = mach_n
+        gr1_df["pv_ac"] = pv_p_opt
+        gr1_df["pv_dc"] = pv_ac_p
+        gr1_df["accu_in"] = accu_in_n
+        gr1_df["accu_out"] = accu_out_p
+        style = self.config.get(['graphics', 'style'])
+        gr1_options = {
+            "title": "Prognose berekend op: " + start_dt.strftime('%Y-%m-%d %H:%M'),
+            "style": style,
+            "haxis": {
+                "values": "uur",
+                "title": "uren van de dag"
+            },
+            "vaxis": [{
+                "title": "kWh"
             }
-            backend = self.config.get(["graphical backend"], None, "")
-            gb = GraphBuilder(backend)
-            show_graph = self.config.get(['graphics', 'show'], None, "False").lower() == 'true'
-            if show_graph:
-                gb.build(gr1_df, gr1_options)
+            ],
+            "series": [{"column": "verbruik",
+                        "type": "stacked",
+                        "color": '#00bfff'
+                        },
+                       {"column": "pv_ac",
+                        "title": "PV-AC",
+                        "type": "stacked",
+                        "color": 'green'
+                        },
+                       {"column": "accu_out",
+                        "title": "Accu out",
+                        "type": "stacked",
+                        "color": 'red'
+                        },
+                       {"column": "baseload",
+                        "title": "Overig verbr.",
+                        "type": "stacked",
+                        "color": "#f1a603"
+                        },
+                       {"column": "boiler",
+                        "type": "stacked",
+                        "color": '#e39ff6'
+                        },
+                       {"column": "heatpump",
+                        "title": "WP",
+                        "type": "stacked",
+                        "color": '#a32cc4'
+                        },
+                       {"column": "ev",
+                        "title": "EV",
+                        "type": "stacked",
+                        "color": 'yellow'
+                        },
+                       {"column": "mach",
+                        "title": "App.",
+                        "type": "stacked",
+                        "color": 'brown'
+                        },
+                       {"column": "productie",
+                        "title": "Teruglev.",
+                        "type": "stacked",
+                        "color": '#0080ff'
+                        },
+                       {"column": "accu_in",
+                        "title": "Accu in",
+                        "type": "stacked",
+                        "color": '#ff8000'
+                        },
+                       ]
+        }
+        backend = self.config.get(["graphical backend"], None, "")
+        gb = GraphBuilder(backend)
+        show_graph = self.config.get(['graphics', 'show'], None, "False").lower() == 'true'
+        if show_graph:
+            gb.build(gr1_df, gr1_options)
 
-            grid0_df = pd.DataFrame()
-            grid0_df["index"] = np.arange(U)
-            grid0_df["uur"] = uur[0:U]
-            grid0_df["verbruik"] = org_l
-            grid0_df["productie"] = org_t
-            grid0_df["baseload"] = base_n
-            grid0_df["boiler"] = boiler_n
-            grid0_df["heatpump"] = heatpump_n
-            grid0_df["ev"] = ev_n
-            grid0_df["mach"] = mach_n
-            grid0_df["pv_ac"] = pv_ac_p
-            grid0_df["pv_dc"] = pv_p_org
-            style = self.config.get(['graphics', 'style'], None, "default")
-            import matplotlib.pyplot as plt
-            import matplotlib.ticker as ticker
+        grid0_df = pd.DataFrame()
+        grid0_df["index"] = np.arange(U)
+        grid0_df["uur"] = uur[0:U]
+        grid0_df["verbruik"] = org_l
+        grid0_df["productie"] = org_t
+        grid0_df["baseload"] = base_n
+        grid0_df["boiler"] = boiler_n
+        grid0_df["heatpump"] = heatpump_n
+        grid0_df["ev"] = ev_n
+        grid0_df["mach"] = mach_n
+        grid0_df["pv_ac"] = pv_ac_p
+        grid0_df["pv_dc"] = pv_p_org
+        style = self.config.get(['graphics', 'style'], None, "default")
+        import matplotlib.pyplot as plt
+        import matplotlib.ticker as ticker
 
-            plt.set_loglevel(level='warning')
-            pil_logger = logging.getLogger('PIL')
-            # override the logger logging level to INFO
-            pil_logger.setLevel(max(logging.INFO, self.log_level))
+        plt.set_loglevel(level='warning')
+        pil_logger = logging.getLogger('PIL')
+        # override the logger logging level to INFO
+        pil_logger.setLevel(max(logging.INFO, self.log_level))
 
-            plt.style.use(style)
-            fig, axis = plt.subplots(figsize=(8, 9), nrows=3)
-            ind = np.arange(U)
-            axis[0].bar(ind, np.array(org_l), label='Levering', color='#00bfff', align="edge")
-            if sum(pv_p_org) > 0:
-                axis[0].bar(ind, np.array(pv_p_org), bottom=np.array(
-                    org_l), label='PV AC', color='green', align="edge")
-            if sum(pv_ac_p) > 0:
-                axis[0].bar(ind, np.array(pv_ac_p), bottom=np.array(
-                    org_l) + np.array(pv_p_org), label='PV DC', color='lime', align="edge")
-            axis[0].bar(ind, np.array(base_n),
-                        label="Overig verbr.", color='#f1a603', align="edge")
-            if self.boiler_present:
-                axis[0].bar(ind, np.array(boiler_n), bottom=np.array(
-                    base_n), label="Boiler", color='#e39ff6', align="edge")
-            if self.heater_present:
-                axis[0].bar(ind, np.array(heatpump_n), bottom=np.array(
-                    base_n), label="WP", color='#a32cc4', align="edge")
-            axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
-                        label="EV laden", color='yellow', align="edge")
-            if M > 0:
-                axis[0].bar(ind, np.array(mach_n),
-                            bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
-                            label="Apparatuur", color='brown', align="edge")
-            axis[0].bar(ind, np.array(org_t),
-                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n) +
-                        np.array(mach_n),
-                        label="Teruglev.", color='#0080ff', align="edge")
-            axis[0].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
-            axis[0].set_ylabel('kWh')
-            ylim = math.ceil(max_y)
-            # math.ceil(max(max(accu_out_p) + max(c_l_p) + max(pv_p), -min(min(base_n), min(boiler_n),
-            # min(heatpump_n), min(ev_n), min(c_t_n), min(accu_in_n) )))
-            axis[0].set_ylim([-ylim, ylim])
-            axis[0].set_xticks(ind, labels=uur)
-            axis[0].xaxis.set_major_locator(ticker.MultipleLocator(2))
-            axis[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-            axis[0].set_title(f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\nNiet geoptimaliseerd")
+        plt.style.use(style)
+        fig, axis = plt.subplots(figsize=(8, 9), nrows=3)
+        ind = np.arange(U)
+        axis[0].bar(ind, np.array(org_l), label='Levering', color='#00bfff', align="edge")
+        if sum(pv_p_org) > 0:
+            axis[0].bar(ind, np.array(pv_p_org), bottom=np.array(
+                org_l), label='PV AC', color='green', align="edge")
+        if sum(pv_ac_p) > 0:
+            axis[0].bar(ind, np.array(pv_ac_p), bottom=np.array(
+                org_l) + np.array(pv_p_org), label='PV DC', color='lime', align="edge")
+        axis[0].bar(ind, np.array(base_n),
+                    label="Overig verbr.", color='#f1a603', align="edge")
+        if self.boiler_present:
+            axis[0].bar(ind, np.array(boiler_n), bottom=np.array(
+                base_n), label="Boiler", color='#e39ff6', align="edge")
+        if self.heater_present:
+            axis[0].bar(ind, np.array(heatpump_n), bottom=np.array(
+                base_n), label="WP", color='#a32cc4', align="edge")
+        axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
+                    label="EV laden", color='yellow', align="edge")
+        if M > 0:
+            axis[0].bar(ind, np.array(mach_n),
+                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
+                        label="Apparatuur", color='brown', align="edge")
+        axis[0].bar(ind, np.array(org_t),
+                    bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n) +
+                    np.array(mach_n),
+                    label="Teruglev.", color='#0080ff', align="edge")
+        axis[0].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
+        axis[0].set_ylabel('kWh')
+        ylim = math.ceil(max_y)
+        # math.ceil(max(max(accu_out_p) + max(c_l_p) + max(pv_p), -min(min(base_n), min(boiler_n),
+        # min(heatpump_n), min(ev_n), min(c_t_n), min(accu_in_n) )))
+        axis[0].set_ylim([-ylim, ylim])
+        axis[0].set_xticks(ind, labels=uur)
+        axis[0].xaxis.set_major_locator(ticker.MultipleLocator(2))
+        axis[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+        axis[0].set_title(f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\nNiet geoptimaliseerd")
 
-            axis[1].bar(ind, np.array(c_l_p),
-                        label='Levering', color='#00bfff', align="edge")
-            axis[1].bar(ind, np.array(pv_p_opt), bottom=np.array(
-                c_l_p), label='PV AC', color='green', align="edge")
-            axis[1].bar(ind, np.array(accu_out_p), bottom=np.array(c_l_p) + np.array(pv_p_opt), label='Accu uit',
-                        color='red', align="edge")
+        axis[1].bar(ind, np.array(c_l_p),
+                    label='Levering', color='#00bfff', align="edge")
+        axis[1].bar(ind, np.array(pv_p_opt), bottom=np.array(
+            c_l_p), label='PV AC', color='green', align="edge")
+        axis[1].bar(ind, np.array(accu_out_p), bottom=np.array(c_l_p) + np.array(pv_p_opt), label='Accu uit',
+                    color='red', align="edge")
 
-            # axis[1].bar(ind, np.array(cons_n), label="Verbruik", color='yellow')
-            axis[1].bar(ind, np.array(base_n),
-                        label="Overig verbr.", color='#f1a603', align="edge")
-            if self.boiler_present:
-                axis[1].bar(ind, np.array(boiler_n), bottom=np.array(
-                    base_n), label="Boiler", color='#e39ff6', align="edge")
-            if self.heater_present:
-                axis[1].bar(ind, np.array(heatpump_n), bottom=np.array(
-                    base_n), label="WP", color='#a32cc4', align="edge")
-            axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
-                        label="EV laden", color='yellow', align="edge")
-            if M > 0:
-                axis[1].bar(ind, np.array(mach_n),
-                            bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
-                            label="Apparatuur", color='brown', align="edge")
-            axis[1].bar(ind, np.array(c_t_n),
-                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) +
-                        np.array(ev_n) + np.array(mach_n),
-                        label="Teruglev.", color='#0080ff', align="edge")
-            axis[1].bar(ind, np.array(accu_in_n),
-                        bottom=np.array(base_n) + np.array(boiler_n) +
-                        np.array(heatpump_n) + np.array(ev_n) + np.array(mach_n) + np.array(c_t_n),
-                        label='Accu in', color='#ff8000', align="edge")
-            axis[1].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
-            axis[1].set_ylabel('kWh')
-            axis[1].set_ylim([-ylim, ylim])
-            axis[1].set_xticks(ind, labels=uur)
-            axis[1].xaxis.set_major_locator(ticker.MultipleLocator(2))
-            axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-            axis[1].set_title("Day Ahead geoptimaliseerd: " + strategie +
-                              ", winst € {:<0.2f}".format(old_cost_da - cost.x))
-            axis[1].sharex(axis[0])
+        # axis[1].bar(ind, np.array(cons_n), label="Verbruik", color='yellow')
+        axis[1].bar(ind, np.array(base_n),
+                    label="Overig verbr.", color='#f1a603', align="edge")
+        if self.boiler_present:
+            axis[1].bar(ind, np.array(boiler_n), bottom=np.array(
+                base_n), label="Boiler", color='#e39ff6', align="edge")
+        if self.heater_present:
+            axis[1].bar(ind, np.array(heatpump_n), bottom=np.array(
+                base_n), label="WP", color='#a32cc4', align="edge")
+        axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
+                    label="EV laden", color='yellow', align="edge")
+        if M > 0:
+            axis[1].bar(ind, np.array(mach_n),
+                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
+                        label="Apparatuur", color='brown', align="edge")
+        axis[1].bar(ind, np.array(c_t_n),
+                    bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) +
+                    np.array(ev_n) + np.array(mach_n),
+                    label="Teruglev.", color='#0080ff', align="edge")
+        axis[1].bar(ind, np.array(accu_in_n),
+                    bottom=np.array(base_n) + np.array(boiler_n) +
+                    np.array(heatpump_n) + np.array(ev_n) + np.array(mach_n) + np.array(c_t_n),
+                    label='Accu in', color='#ff8000', align="edge")
+        axis[1].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
+        axis[1].set_ylabel('kWh')
+        axis[1].set_ylim([-ylim, ylim])
+        axis[1].set_xticks(ind, labels=uur)
+        axis[1].xaxis.set_major_locator(ticker.MultipleLocator(2))
+        axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+        axis[1].set_title("Day Ahead geoptimaliseerd: " + strategie +
+                          ", winst € {:<0.2f}".format(old_cost_da - cost.x))
+        axis[1].sharex(axis[0])
 
-            ln1 = []
-            line_styles = ["solid", "dashed", "dotted"]
-            ind = np.arange(U+1)
-            uur.append(24)
-            for b in range(B):
-                ln1.append(axis[2].plot(ind, soc_p[b], label='SoC ' + self.battery_options[b]["name"],
-                           linestyle=line_styles[b], color='red'))
-            axis[2].set_xticks(ind, labels=uur)
-            axis[2].set_ylabel('% SoC')
-            axis[2].set_xlabel("uren van de dag")
-            axis[2].xaxis.set_major_locator(ticker.MultipleLocator(2))
-            axis[2].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-            axis[2].set_ylim([0, 100])
-            axis[2].set_title("Verloop SoC en tarieven")
-            axis[2].sharex(axis[0])
+        ln1 = []
+        line_styles = ["solid", "dashed", "dotted"]
+        ind = np.arange(U+1)
+        uur.append(24)
+        for b in range(B):
+            ln1.append(axis[2].plot(ind, soc_p[b], label='SoC ' + self.battery_options[b]["name"],
+                       linestyle=line_styles[b], color='red'))
+        axis[2].set_xticks(ind, labels=uur)
+        axis[2].set_ylabel('% SoC')
+        axis[2].set_xlabel("uren van de dag")
+        axis[2].xaxis.set_major_locator(ticker.MultipleLocator(2))
+        axis[2].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+        axis[2].set_ylim([0, 100])
+        axis[2].set_title("Verloop SoC en tarieven")
+        axis[2].sharex(axis[0])
 
-            axis22 = axis[2].twinx()
-            if self.config.get(["graphics", "prices delivery"], None, "true").lower() == "true":
-                pl.append(pl[-1])
-                ln2 = axis22.step(ind, np.array(pl), label='Tarief\nlevering', color='#00bfff', where='post')
-            else:
-                ln2 = None
-            if self.config.get(["graphics", "prices redelivery"], None, "true").lower() == "true":
-                pt_notax.append(pt_notax[-1])
-                ln3 = axis22.step(ind, np.array(pt_notax), label="Tarief terug\nno tax", color='#0080ff', where='post')
-            else:
-                ln3 = None
-            if self.config.get(["graphics", "average delivery"], None, "true").lower() == "true":
-                pl_avg.append(pl_avg[-1])
-                ln4 = axis22.plot(ind, np.array(pl_avg), label="Tarief lev.\ngemid.", linestyle="dashed",
-                                  color='#00bfff')
-            else:
-                ln4 = None
-            axis22.set_ylabel("euro/kWh")
-            axis22.yaxis.set_major_formatter(
-                ticker.FormatStrFormatter('% 1.2f'))
-            bottom, top = axis22.get_ylim()
-            if bottom > 0:
-                axis22.set_ylim([0, top])
-            lns = []
-            for b in range(B):
-                lns += ln1[b]
-            if ln2:
-                lns += ln2
-            if ln3:
-                lns += ln3
-            if ln4:
-                lns += ln4
-            labels = [line.get_label() for line in lns]
-            axis22.legend(lns, labels, loc='best', bbox_to_anchor=(1.40, 1.00))
+        axis22 = axis[2].twinx()
+        if self.config.get(["graphics", "prices delivery"], None, "true").lower() == "true":
+            pl.append(pl[-1])
+            ln2 = axis22.step(ind, np.array(pl), label='Tarief\nlevering', color='#00bfff', where='post')
+        else:
+            ln2 = None
+        if self.config.get(["graphics", "prices redelivery"], None, "true").lower() == "true":
+            pt_notax.append(pt_notax[-1])
+            ln3 = axis22.step(ind, np.array(pt_notax), label="Tarief terug\nno tax", color='#0080ff', where='post')
+        else:
+            ln3 = None
+        if self.config.get(["graphics", "average delivery"], None, "true").lower() == "true":
+            pl_avg.append(pl_avg[-1])
+            ln4 = axis22.plot(ind, np.array(pl_avg), label="Tarief lev.\ngemid.", linestyle="dashed",
+                              color='#00bfff')
+        else:
+            ln4 = None
+        axis22.set_ylabel("euro/kWh")
+        axis22.yaxis.set_major_formatter(
+            ticker.FormatStrFormatter('% 1.2f'))
+        bottom, top = axis22.get_ylim()
+        if bottom > 0:
+            axis22.set_ylim([0, top])
+        lns = []
+        for b in range(B):
+            lns += ln1[b]
+        if ln2:
+            lns += ln2
+        if ln3:
+            lns += ln3
+        if ln4:
+            lns += ln4
+        labels = [line.get_label() for line in lns]
+        axis22.legend(lns, labels, loc='best', bbox_to_anchor=(1.40, 1.00))
 
-            plt.subplots_adjust(right=0.75)
-            fig.tight_layout()
-            plt.savefig("../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png")
-            if show_graph:
-                plt.show()
-            plt.close('all')
+        plt.subplots_adjust(right=0.75)
+        fig.tight_layout()
+        plt.savefig("../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png")
+        if show_graph:
+            plt.show()
+        plt.close('all')
 
     def calc_optimum_debug(self):
         self.debug = True

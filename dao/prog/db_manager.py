@@ -251,6 +251,7 @@ class DBmanagerObj(object):
         with self.engine.connect() as connection:
             result = connection.execute(query)
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        df["tijd"] = pd.to_datetime(df["tijd"])
         return df
 
     def get_column_data(self, tablename: str, column_name: str,

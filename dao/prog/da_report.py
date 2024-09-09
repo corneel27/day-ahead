@@ -315,7 +315,7 @@ class Report:
 
         if agg == "uur":
             columns = [column,
-                       self.db_ha.from_unixtime(t2.c.start_ts).label('tijd'),
+                       self.db_da.from_unixtime(t2.c.start_ts).label('tijd'),
                        self.db_ha.from_unixtime(t2.c.start_ts).label('tot'),
                        case(
                             (t2.c.state > t1.c.state, t2.c.state - t1.c.state),
@@ -349,8 +349,8 @@ class Report:
         if agg != "uur":
             query = query.group_by(agg)
 
-        # from sqlalchemy.dialects import postgresql, sqlite, mysql
-        # query_str = str(query.compile(dialect=mysql.dialect()))
+        from sqlalchemy.dialects import postgresql, sqlite, mysql
+        query_str = str(query.compile(dialect=sqlite.dialect()))
 
         # Execute the query and load results into a DataFrame
         with self.db_ha.engine.connect() as connection:

@@ -300,7 +300,7 @@ class DaBase(hass.Hass):
         inner_query = select(
             values_table.c.time,
             values_table.c.value,
-            func.from_unixtime(values_table.c.time).label('begin')
+            self.db_da.from_unixtime(values_table.c.time).label('begin')
         ).where(
             and_(
                 variabel_table.c.code == 'da',
