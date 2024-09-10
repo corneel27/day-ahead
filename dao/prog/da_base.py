@@ -254,7 +254,7 @@ class DaBase(hass.Hass):
         :return: None
         """
         df_db = pd.DataFrame(columns=['time', 'code', 'value'])
-        df = df.reset_index()
+        df = df.reset_index(drop=True)
         columns = df.columns.values.tolist()[1:]
         for index in range(len(tijd)):
             utc = tijd[index].timestamp()

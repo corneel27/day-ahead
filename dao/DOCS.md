@@ -1403,6 +1403,14 @@ Deze reeks data bestaat uit twee onderdelen:
     Hiermee vraag je je verbruikskosten op.
 - **profit**<br/>
     Hiermee vraag je je teruglevering inkomsten op.
+- **soc** of soc_0, soc_1 enz. <br>
+    Hiermee vraag je de te verwachten SoC op van je batterij.
+    Je krijgt alleen berekende prognoses terug.
+    Als je meer dan 1 batterij hebt zijn er ook meer SoC's die je apart kunt opvragen:  
+   - **soc** is de capaciteits-gewogen gemiddelde van de SoC's van alle batterijen
+   - **soc_0** is de SoC van de eerste batterij
+   - **soc_1** is de SoC van de tweede batterij
+   - enz
 
 Bij **\<period>** kun je de periode opgeven waarover je de gevraagde gegevens wilt ontvangen. 
 Je kunt kiezen uit:

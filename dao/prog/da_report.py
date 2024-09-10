@@ -1371,6 +1371,10 @@ class Report:
                                    da_prod, row.datasoort]
         return df
 
+    def get_soc_data(self, field: str, start:datetime.datetime, end:datetime.datetime)->pd.DataFrame:
+        df = self.db_da.get_column_data('prognoses', field, start=start, end=end)
+        return df
+
     def get_api_data(self, field: str, periode: str, cumulate: bool = False):
         periode = periode.replace("_", " ")
         grid_fields = ["consumption", "production", "netto_consumption", "cost", "profit", "netto_cost"]
@@ -1390,6 +1394,8 @@ class Report:
                         df[field] = df[field].cumsum()
         elif field == 'da':
             df = self.get_price_data(self.periodes[periode]["vanaf"], self.periodes[periode]["tot"])
+        elif field[0:3] == "soc":
+            df = self.get_soc_data(field, self.periodes[periode]["vanaf"], self.periodes[periode]["tot"])
         else:
             if not (field in self.energy_balance_dict):
                 result = '{"message":"Failed"}'

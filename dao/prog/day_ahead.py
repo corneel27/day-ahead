@@ -3,6 +3,7 @@ Het programma Day Ahead Optimalisatie kun je je energieverbruik en
 energiekosten optimaliseren als je gebruik maakt van dynamische prijzen.
 Zie verder: DOCS.md
 """
+import datetime
 import datetime as dt
 import sys
 import math
@@ -414,13 +415,14 @@ class DaCalc(DaBase):
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u
                     prod_dc = self.meteo.calc_solar_rad(self.battery_options[b]["solar"][s],
-                                                        int(tijd[u].timestamp()), global_rad[u]) * pv_yield
-                    efficiency = 1
+                                                        int(tijd[u].timestamp()),
+                                                        global_rad[u]) * pv_yield
+                    eff = 1
                     for ds in range(DS[b]):
                         if self.battery_options[b]["discharge stages"][ds]["power"]/1000 > prod_dc:
-                            efficiency = self.battery_options[b]["discharge stages"][ds]["efficiency"]
+                            eff = self.battery_options[b]["discharge stages"][ds]["efficiency"]
                             break
-                    prod_ac = prod_dc * efficiency
+                    prod_ac = prod_dc * eff
                     pv_prod_dc[b][s].append(prod_dc)
                     pv_prod_ac[b][s].append(prod_ac)
 
@@ -1258,12 +1260,15 @@ class DaCalc(DaBase):
         # overzicht per ac-accu:
         pd.options.display.float_format = '{:6.2f}'.format
         df_accu = []
-        df_soc = []
+        df_soc = pd.DataFrame(columns=["tijd", "soc"])
+        df_soc.index = pd.to_datetime(df_soc["tijd"])
+        tijd_soc = tijd.copy()
+        tijd_soc.append(tijd_soc[U - 1] + datetime.timedelta(hours=1))
         for b in range(B):
+            df_soc["soc_"+str(b)] = None
             cols = [['uur', 'ac->', 'eff', '->dc', 'pv->dc', 'dc->', 'eff', '->bat', 'o_eff', 'SoC'],
                     ["", "kWh", "%", "kWh", "kWh", "kWh", "%", "kWh", "%", "%"]]
             df_accu.append(pd.DataFrame(columns=cols))
-            df_soc.append(pd.DataFrame(columns=["tijd", "soc_"+str(b)]))
             for u in range(U):
                 """
                 for cs in range(CS[b]):
@@ -1310,9 +1315,6 @@ class DaCalc(DaBase):
                 row = [str(uur[u]), ac_to_dc_netto, ac_to_dc_eff, dc_from_ac_netto,  pv_prod,
                        dc_to_bat_netto, dc_to_bat_eff, bat_from_dc_netto, overall_eff, soc[b][u + 1].x]
                 df_accu[b].loc[df_accu[b].shape[0]] = row
-                row_soc = [tijd[u], soc[b][u + 1].x]
-                df_soc[b].loc[df_soc[b].shape[0]] = row_soc
-
 
             # df_accu[b].loc['total'] = df_accu[b].select_dtypes(numpy.number).sum()
             # df_accu[b] = df_accu[b].astype({"uur": int})
@@ -1331,17 +1333,36 @@ class DaCalc(DaBase):
                 df_accu[b].at[df_accu[b].index[-1], "eff"] = "--"
                 df_accu[b].at[df_accu[b].index[-1], "o_eff"] = "--"
                 df_accu[b].at[df_accu[b].index[-1], "SoC"] = ""
-            logging.info(f"In- en uitgaande energie per uur batterij {self.battery_options[b]['name']}"
+            logging.info(f"In- en uitgaande energie per uur batterij "
+                         f"{self.battery_options[b]['name']}"
                          f"\n{df_accu[b].to_string(index=False)}")
-            '''
-            if b <= 3:
-                self.save_df(df_soc[b], tijd=tijd, tablename='prognoses')
-            '''
+            for u in range(U+1):
+                soc_value = soc[b][u].x
+                if b == 0:
+                    row_soc = [tijd_soc[u], soc_value, soc_value]
+                    df_soc.loc[df_soc.shape[0]] = row_soc
+                else:
+                    df_soc.at[tijd_soc[u], "soc_"+str(b)] = soc_value
+
+        df_soc.index = pd.to_datetime(df_soc["tijd"])
+        sum_cap = 0
+        for b in range(B):
+            sum_cap += one_soc[b]*100
+        for row in df_soc.itertuples():
+            sum_soc = 0
+            for b in range(B):
+                sum_soc += one_soc[b] * row[b+3]
+            df_soc.at[row[0], "soc"] = round(100 * sum_soc/sum_cap, 1)
+
+        if not self.debug:
+            self.save_df(tablename='prognoses', tijd=tijd_soc, df=df_soc)
+
 
         # totaal overzicht
         # pd.options.display.float_format = '{:,.3f}'.format
         cols = ['uur', 'bat_in', 'bat_out']
-        cols = cols + ['cons', 'prod', 'base', 'boil', 'wp', 'ev', 'pv_ac', 'cost', 'profit', 'b_tem']
+        cols = cols + ['cons', 'prod', 'base', 'boil', 'wp', 'ev', 'pv_ac', 'cost', 'profit',
+                       'b_tem']
         if M > 0:
             cols = cols + ["mach"]
         d_f = pd.DataFrame(columns=cols)

@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+## [V2024.8.6]
+- added saving calculated soc's
+- added api for presenting calculated soc's
+
 ## [V2024.8.5]
 - name changed to Day Ahead Optimizer (from Day Ahead Optimizing)
 - DOCS.md expanded with "DAO eerste keer opstarten"
