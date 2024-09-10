@@ -240,7 +240,12 @@ class Meteo:
             url = "https://data.meteoserver.nl/api/uurverwachting_gfs.php"
         resp = get(url + parameters)
         logging.debug (resp.text)
-        json_object = json.loads(resp.text)
+        try:
+            json_object = json.loads(resp.text)
+        except Exception as ex:
+            logging.info(ex)
+            logging.error(f"Geen meteodata via model: {model}")
+            return pd.DataFrame()
         if not "data" in json_object:
             return pd.DataFrame()
         data = json_object["data"]
@@ -259,16 +264,16 @@ class Meteo:
 
     def get_meteo_data(self, show_graph=False):
         df1 = self.get_from_meteoserver("harmonie")
+        df_db = pd.DataFrame(columns=['time', 'code', 'value'])
         count = len(df1)
         if count == 0:
             logging.error("No data recieved from meteoserver")
-            return
-        df_db = pd.DataFrame(columns=['time', 'code', 'value'])
-        df1 = df1.reset_index()  # make sure indexes pair with number of rows
-        for row in df1.itertuples():
-            df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'gr', float(row.gr)]
-            df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'temp', float(row.temp)]
-            df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'solar_rad', float(row.solar_rad)]
+        else:
+            df1 = df1.reset_index()  # make sure indexes pair with number of rows
+            for row in df1.itertuples():
+                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'gr', float(row.gr)]
+                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'temp', float(row.temp)]
+                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'solar_rad', float(row.solar_rad)]
 
         if count < 39:
             df1 = self.get_from_meteoserver("gfs")

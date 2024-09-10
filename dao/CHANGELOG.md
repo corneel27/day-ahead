@@ -3,6 +3,7 @@
 ## [V2024.8.6]
 - added saving calculated soc's
 - added api for presenting calculated soc's
+- made get meteo-data redundant, when gfs failed, take harmonie
 
 ## [V2024.8.5]
 - name changed to Day Ahead Optimizer (from Day Ahead Optimizing)
