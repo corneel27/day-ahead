@@ -9,6 +9,10 @@ class DaScheduler(DaBase):
     def __init__(self, file_name: str = None):
         super().__init__(file_name)
         self.scheduler_tasks = self.config.get(["scheduler"])
+        self.active = True
+        if "active" in self.scheduler_tasks:
+            self.active = not(self.scheduler_tasks["active"].lower() ==
+                              "false")
 
     def scheduler(self):
         # if not (self.notification_entity is None) and self.notification_opstarten:
@@ -20,6 +24,8 @@ class DaScheduler(DaBase):
             next_min = t - datetime.timedelta(minutes=-1, seconds=t.second, microseconds=t.microsecond)
             # wacht tot hele minuut 0% cpu
             time.sleep((next_min - t).total_seconds())
+            if not self.active:
+                continue
             hour = next_min.hour
             minute = next_min.minute
             key1 = str(hour).zfill(2) + str(minute).zfill(2)

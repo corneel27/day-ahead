@@ -1,5 +1,19 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+## [V2024.8.6]
+- added saving calculated soc's
+- added api for presenting calculated soc's
+- made get meteo-data redundant, when gfs failed, take harmonie
+
+## [V2024.8.5]
+- name changed to Day Ahead Optimizer (from Day Ahead Optimizing)
+- DOCS.md expanded with "DAO eerste keer opstarten"
+- fixed errors when using the db-engine sqlite
+- options_vb.json split in two options:
+  - options_example.json, with all examples
+  - options_start.json, with the minimum start settings
+
+
 ## [V2024.8.4]
 - the extended logging of saving prognoses (prices, meteo-data and calculated consumptions) is moved from info to debug  
 - there were issues with "lost connections" in combination with the mysql/mariadb db-engine; 

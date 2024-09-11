@@ -5,7 +5,7 @@ if [ ! -d "$dir" ]; then
   cp -r /tmp/daodata /config/dao_data
   file=/config/dao_data/options.json
   if [ ! -L "$file" ]; then
-    cp /config/dao_data/options_vb.json $file
+    cp /config/dao_data/options_start.json $file
   fi
   file=/config/dao_data/secrets.json
   if [ ! -L "$file" ]; then

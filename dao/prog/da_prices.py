@@ -55,6 +55,8 @@ class DaPrices:
         with self.db_da.engine.connect() as connection:
             result = connection.execute(query)
             result = result.scalar()
+            if type(result) == str:
+                result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
         return result
 
     def get_prices(self, source):

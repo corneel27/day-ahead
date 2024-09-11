@@ -1,0 +1,190 @@
+{
+  "homeassistant": { },
+  "database ha": {
+    "engine": "sqlite",
+    "database": "homeassistant_v2.db",
+    "db_path": "/homeassistant"
+  },
+  "database da": {
+    "engine": "sqlite",
+    "db_path": "../data"
+  },
+  "meteoserver-key": "!secret meteoserver-key",
+  "prices": {
+    "source day ahead": "nordpool",
+    "regular high": 0.50,
+    "regular low": 0.40,
+    "switch to low": 23,
+    "energy taxes delivery": {
+      "2022-01-01": 0.06729,
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.10880
+    },
+    "energy taxes redelivery": {
+      "2022-01-01": 0.06729,
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.10880
+    },
+    "cost supplier delivery": {
+      "2022-01-01": 0.002,
+      "2023-03-01": 0.018,
+      "2024-04-01": 0.0175,
+      "2024-08-01": 0.020496
+    },
+    "cost supplier redelivery": {
+      "2022-01-01": 0.002,
+      "2023-03-01": 0.018,
+      "2024-04-01": 0.0175,
+      "2024-08-01": 0.020496
+    },
+    "vat": {
+      "2022-01-01": 21,
+      "2022-07-01": 9,
+      "2023-01-01": 21
+    },
+    "last invoice": "2022-09-01",
+    "tax refund": "True"
+  },
+  "logging level" : "info",
+  "use_calc_baseload": "False",
+  "baseload calc periode": 56,
+  "baseload": [
+    0.14,
+    0.38,
+    0.26,
+    0.42,
+    0.15,
+    0.12,
+    0.13,
+    0.15,
+    0.23,
+    0.26,
+    0.31,
+    0.32,
+    0.31,
+    0.23,
+    0.26,
+    0.21,
+    0.21,
+    0.54,
+    0.26,
+    0.26,
+    0.22,
+    0.19,
+    0.18,
+    0.16
+  ],
+  "graphical backend": "",
+  "graphics": {
+    "style": "Solarize_Light2",
+    "show" : "true",
+    "prices delivery": "True",
+    "prices redelivery": "True",
+    "average delivery": "True"
+  },
+  "strategy": "minimize cost",
+  "notifications": {
+  },
+  "grid": {
+    "max_power": 17
+  },
+  "history": {
+    "save days": 7
+  },
+  "dashboard": {
+    "port": 5000
+  },
+  "boiler": {
+    "boiler present": "False",
+    "entity actual temp.": "sensor.boiler_gemeten",
+    "entity setpoint": "sensor.boiler_ingesteld",
+    "entity hysterese": "sensor.hysterese_hot_water",
+    "cop": 2.9,
+    "cooling rate": 0.4,
+    "volume": 180,
+    "heating allowed below": 44,
+    "elec. power": 1500,
+    "activate service": "press",
+    "activate entity": "input_button.hw_trigger"
+  },
+  "heating": {
+    "heater present": "False",
+    "degree days factor": 3.6,
+    "stages": [
+      {
+        "max_power": 225,
+        "cop": 7.1
+      },
+      {
+        "max_power": 300,
+        "cop": 7.0
+      },
+      {
+        "max_power": 400,
+        "cop": 6.5
+      },
+      {
+        "max_power": 500,
+        "cop": 6.0
+      },
+      {
+        "max_power": 600,
+        "cop": 5.5
+      },
+      {
+        "max_power": 750,
+        "cop": 5.0
+      },
+      {
+        "max_power": 1000,
+        "cop": 4.5
+      },
+      {
+        "max_power": 1250,
+        "cop": 4.0
+      }
+    ],
+    "entity adjust heating curve": "input_number.stooklijn_verschuiving_day_ahead",
+    "adjustment factor": 0.04
+  },
+  "battery": [ ],
+  "solar": [ ],
+  "electric vehicle": [ ],
+  "machines" : [ ],
+  "tibber": {
+    "api_token": "!secret tibber_api_token"
+  },
+  "report": {
+    "entities grid consumption": [
+      "sensor.grid_consumption_low",
+      "sensor.grid_consumption_high"
+    ],
+    "entities grid production": [
+      "sensor.grid_production_low",
+      "sensor.grid_production_high"
+    ],
+    "entities solar production ac": [
+      "sensor.solaredge_woning_ac_energy_kwh"
+    ],
+    "entities solar production dc": [],
+    "entities ev consumption" : ["sensor.laadpunt_total_energy"],
+    "entities wp consumption" : [],
+    "entities boiler consumption": [],
+    "entities battery consumption": ["sensor.ess_grid_consumption"],
+    "entities battery production": ["sensor.ess_grid_production"]
+  },
+  "scheduler": {
+    "active": "false",
+    "0355": "get_meteo_data",
+    "0955": "get_meteo_data",
+    "1555": "get_meteo_data",
+    "2155": "get_meteo_data",
+    "1255": "get_day_ahead_prices",
+    "1355": "get_day_ahead_prices",
+    "1455": "get_day_ahead_prices",
+    "1554": "get_day_ahead_prices",
+    "1655": "get_day_ahead_prices",
+    "xx00": "calc_optimum",
+    "2359": "clean_data"
+  }
+}
