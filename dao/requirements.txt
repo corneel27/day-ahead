@@ -13,7 +13,7 @@ entsoe-py~=0.6.8
 beautifulsoup4
 sqlalchemy
 SQLAlchemy-Utils~=0.41.2
-psycopg2-binary
+psycopg2
 pymysql~=1.1.1
 mariadb~=1.1.10
 flask~=2.3.3
