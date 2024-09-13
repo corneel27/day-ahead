@@ -1376,7 +1376,7 @@ class DaCalc(DaBase):
                 row = row + [c_ma_sum[u]]
             d_f.loc[d_f.shape[0]] = row
         if not self.debug:
-            d_f_save = d_f.drop(["uur", "b_tem"], axis=1)
+            d_f_save = d_f.drop(["b_tem"], axis=1)
             self.save_df(tablename='prognoses', tijd=tijd, df=d_f_save)
         else:
             logging.info("Berekende prognoses zijn niet opgeslagen.")

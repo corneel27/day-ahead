@@ -822,7 +822,8 @@ class Report:
 
                 prog_result['tijd'] = pd.to_datetime(prog_result['tijd'])
                 prog_result['tot'] = prog_result['tijd']
-                prog_result['tijd'] = prog_result.apply(lambda x: self.tijd_at_interval(interval, x['tijd']),
+                if len(prog_result)>0:
+                    prog_result['tijd'] = prog_result.apply(lambda x: self.tijd_at_interval(interval, x['tijd']),
                                                         axis=1)
                 prog_result.index = pd.to_datetime(prog_result["tijd"])
                 if len(prog_result) > 0:

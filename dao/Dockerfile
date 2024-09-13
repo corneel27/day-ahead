@@ -12,7 +12,7 @@ RUN apt-get upgrade -y
 
 #handige tools
 RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev
-RUN apt-get install -y postgresql-client sqlite3 libpq-dev gcc build-essential
+RUN apt-get install -y postgresql-client sqlite3 gcc
 
 # Copy software for add-on
 RUN mkdir /root/dao

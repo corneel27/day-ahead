@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+## [V2024.8.7]
+- The calculated bat-in was not saved; as a consequence the balance report was wrong or not presented 
+(error). This corrected.
+- Changed pythonmodule postgresql (psycopg2-binary -> psycopg2)
+
 ## [V2024.8.6]
 - added saving calculated soc's
 - added api for presenting calculated soc's
