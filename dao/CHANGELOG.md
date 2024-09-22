@@ -1,6 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+- there was an error in calculating start=time of engine(s), this is corrected.
+
 ## [V2024.8.7]
 - The calculated bat-in was not saved; as a consequence the balance report was wrong or not presented 
 (error). This corrected.

@@ -42,6 +42,7 @@ class DaCalc(DaBase):
             start_dt = dt.datetime.now()
         else:
             start_dt = _start_dt
+        # start_dt = dt.datetime(year=2024, month=9, day=22, hour=21, minute=0)
         start_ts = int(start_dt.timestamp())
         modulo = start_ts % 3600
         if modulo > 3550:
@@ -968,42 +969,11 @@ class DaCalc(DaBase):
         for m in range(M):
             error = False
             ma_name.append(self.machines[m]['name'])
-            # machines[m]["power"] = [0] + machines[m]["power"] + [0]
-            start_entity = self.config.get(["entity start window"], self.machines[m], None)
-            start_ma_dt = start_dt
-            ready_ma_dt = uur[U-1]
-            if start_entity is None:
-                logging.error(f"De 'entity start window' is niet gedefinieerd bij de instellingen van {ma_name[m]}.")
-                logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
-                error = True
-            else:
-                start = self.get_state(start_entity).state
-                start_ma_dt = convert_timestr(start, start_dt)
-            ready_entity = self.config.get(["entity end window"], self.machines[m], None)
-            if ready_entity is None:
-                logging.error(f"De 'entity end window' is niet gedefinieerd bij de instellingen van {ma_name[m]}.")
-                if not error:
-                    logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
-                    error = True
-            else:
-                ready = self.get_state(ready_entity).state
-                ready_ma_dt = convert_timestr(ready, start_ma_dt)
-            if not error and start_ma_dt > ready_ma_dt:
-                if ready_ma_dt > start_ma_dt:
-                    logging.info(f"Apparaat {ma_name[m]} wordt nog niet ingepland: de planningsperiode is begonnen")
-                    error = True
-                else:
-                    ready_ma_dt = ready_ma_dt + dt.timedelta(days=1)
-            if ready_ma_dt > tijd[U-1]:
-                logging.info(f"Machine {ma_name[m]} wordt niet ingepland, want {ready_ma_dt} "
-                             f"ligt voorbij de planningshorizon {uur[U-1]}")
-                error = True
-            if error:
-                kw_num = 0
-            else:
-                delta = ready_ma_dt - start_ma_dt
-                kw_num = math.ceil(delta.seconds / 900)
-            KW.append(kw_num)
+            # entities ophalen
+            start_window_entity = self.config.get(["entity start window"], self.machines[m], None)
+            end_window_entity = self.config.get(["entity end window"], self.machines[m], None)
+            ma_entity_plan_start.append(self.config.get(["entity calculated start"], self.machines[m], None))
+            ma_entity_plan_end.append(self.config.get(["entity calculated end"], self.machines[m], None))
             entity_machine_program = self.config.get(["entity selected program"], self.machines[m], None)
             if entity_machine_program:
                 try:
@@ -1014,13 +984,81 @@ class DaCalc(DaBase):
                       program_selected[m]), 0)
             program_index.append(p)
             RL.append(len(self.machines[m]["programs"][p]["power"]))  # aantal stages
+            if ma_entity_plan_start[m] is None:
+                if ma_entity_plan_end is None:
+                    error = True
+                    logging.error(
+                        f"Er zijn geen entities voor doorgeven van de planning gedefinieerd "
+                        f"bij de instellingen van {ma_name[m]}.")
+                else:
+                    planned_end_str = self.get_state(ma_entity_plan_end[m]).state
+                    planned_end_dt = dt.datetime.strptime(planned_end_str, '%Y-%m-%d %H:%M:%S')
+                    planned_start_dt = planned_end_dt - dt.timedelta(minutes = RL[m] * 15)
+            else:
+                planned_start_str = self.get_state(ma_entity_plan_start[m]).state
+                planned_start_dt = dt.datetime.strptime(planned_start_str, '%Y-%m-%d %H:%M:%S')
+                if ma_entity_plan_end is not None:
+                    planned_end_str = self.get_state(ma_entity_plan_end[m]).state
+                    planned_end_dt = dt.datetime.strptime(planned_end_str, '%Y-%m-%d %H:%M:%S')
+                else:
+                    planned_end_dt = planned_start_dt + dt.timedelta(minutes = RL[m] * 15)
+            start_ma_dt = start_dt
+            ready_ma_dt = uur[U-1]
+            if start_window_entity is None:
+                logging.error(f"De 'entity start window' is niet gedefinieerd bij de instellingen van {ma_name[m]}.")
+                logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
+                error = True
+            else:
+                start_hm = self.get_state(start_window_entity).state
+                start_ma_dt = convert_timestr(start_hm, start_dt)
+            if end_window_entity is None:
+                logging.error(f"De 'entity end window' is niet gedefinieerd bij de instellingen van {ma_name[m]}.")
+                if not error:
+                    logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
+                    error = True
+            else:
+                ready = self.get_state(end_window_entity).state
+                ready_ma_dt = convert_timestr(ready, start_dt)
+            if ready_ma_dt <= start_ma_dt:
+                ready_ma_dt += dt.timedelta(days=1)
+            if (start_dt > ready_ma_dt) or (start_dt + dt.timedelta(minutes=RL[m]*15) > ready_ma_dt):
+                start_ma_dt += dt.timedelta(days=1)
+                ready_ma_dt += dt.timedelta(days=1)
+            '''    
+            if not error and start_ma_dt > ready_ma_dt:
+                if ready_ma_dt > start_ma_dt:
+                    logging.info(f"Apparaat {ma_name[m]} wordt nog niet ingepland: de planningsperiode is begonnen")
+                    error = True
+                else:
+                    ready_ma_dt = ready_ma_dt + dt.timedelta(days=1)
+            '''
+            if ready_ma_dt > tijd[U-1]:
+                logging.info(f"Machine {ma_name[m]} wordt niet ingepland, want {ready_ma_dt} "
+                             f"ligt voorbij de planningshorizon {uur[U-1]}")
+                error = True
+            else:
+                if start_dt >= ready_ma_dt:
+                    logging.info(f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                                 f"ligt voorbij de einde planningswindow {ready_ma_dt}")
+                    error = True
+                else:
+                    if planned_start_dt > start_ma_dt and start_dt >= planned_start_dt :
+                        logging.info(f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                                     f"ligt voorbij begin vorige planning: {planned_start_dt}")
+                        error = True
+            if error:
+                kw_num = 0
+            else:
+                delta = ready_ma_dt - start_ma_dt
+                kw_num = math.ceil(delta.seconds / 900)
+            KW.append(kw_num)
             if RL[m] == 0:
-                logging.info(f"machine {ma_name[m]} wordt niet ingepland, "
+                logging.info(f"Machine {ma_name[m]} wordt niet ingepland, "
                              f"want er is gekozen voor {program_selected[m]}")
             else:
                 logging.info(f"Apparaat {ma_name[m]} met programma '{program_selected[m]}' wordt ingepland tussen "
                              f"{start_ma_dt.strftime('%Y-%m-%d %H:%M')} en {ready_ma_dt.strftime('%Y-%m-%d %H:%M')}.")
-
+            start_ma_dt = max(start_ma_dt, start_dt)
             uur_kw = []
             kw_dt = []
             kwartier_dt = start_ma_dt
@@ -1035,8 +1073,6 @@ class DaCalc(DaBase):
             ma_uur_kw.append(uur_kw)
             ma_kw_dt.append(kw_dt)
             R.append(min(KW[m], KW[m] - RL[m] + 1))  # aantal runs = aantal kwartieren - aantal stages + 1
-            ma_entity_plan_start.append(self.config.get(["entity calculated start"], self.machines[m], None))
-            ma_entity_plan_end.append(self.config.get(["entity calculated end"], self.machines[m], None))
         # ma_start : wanneer machine start = 1 anders = 0
         ma_start = [[model.add_var(var_type=BINARY) for _ in range(KW[m])] for m in range(M)]
 
