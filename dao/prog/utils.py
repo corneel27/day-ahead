@@ -267,9 +267,11 @@ def get_version():
 
 
 def version_number(version_str: str) -> int:
-    lst = [int(x, 10) for x in version_str.split('.')]
+    lst = [x for x in version_str.split('.')]
+    lst = lst[:3]
     lst.reverse()
-    return sum(x * (100 ** i) for i, x in enumerate(lst))
+    result = sum(int(x) * (100 ** i) for i, x in enumerate(lst))
+    return result
 
 
 def log_exc_plus():
