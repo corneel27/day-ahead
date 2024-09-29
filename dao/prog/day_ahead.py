@@ -42,7 +42,7 @@ class DaCalc(DaBase):
             start_dt = dt.datetime.now()
         else:
             start_dt = _start_dt
-        # start_dt = dt.datetime(year=2024, month=9, day=25, hour=18, minute=0)
+        # start_dt = dt.datetime(year=2024, month=9, day=26, hour=14, minute=0)
         start_ts = int(start_dt.timestamp())
         modulo = start_ts % 3600
         if modulo > 3550:
@@ -1153,6 +1153,7 @@ class DaCalc(DaBase):
             ma_kw_dt.append(kw_dt)
             # aantal runs = aantal kwartieren - aantal stages + 1
             R.append(min(KW[m], KW[m] - RL[m] + 1))
+
         # ma_start : wanneer machine start = 1 anders = 0
         ma_start = [[model.add_var(var_type=BINARY) for _ in range(KW[m])] for m in range(M)]
 
@@ -1203,7 +1204,23 @@ class DaCalc(DaBase):
                                for r in range(R[m])[max(0, kw - RL[m]+1): min(kw, R[m])+1]))
             for u in range(U):
                 if len(ma_uur_kw[m][u]) == 0:
-                    model += c_ma_u[m][u] == 0
+                    if (ma_planned_start_dt[m] < (tijd[u]+dt.timedelta(hours=1)) and
+                            ma_planned_end_dt[m] > tijd[u]):
+                        c_ma_sum = 0
+                        for kw in range(RL[m]):
+                            gepland_moment = ma_planned_start_dt[m] + dt.timedelta(minutes=kw * 15)
+                            if max(start_dt, tijd[u]) <= gepland_moment <= (
+                                    tijd[u] + dt.timedelta(hours=1)):
+                                verschil = gepland_moment - start_dt
+                                if start_dt > tijd[u] and verschil.seconds < 900:
+                                    fraction = verschil.seconds / 900
+                                else:
+                                    fraction = 1
+                                c_ma_sum += self.machines[m]["programs"][program_index[m]]["power"][
+                                                kw] * fraction / 4000
+                        model += c_ma_u[m][u] == c_ma_sum
+                    else:
+                        model += c_ma_u[m][u] == 0
                 else:
                     model += c_ma_u[m][u] == xsum(c_ma_kw[m][kw] for kw in ma_uur_kw[m][u])
 
@@ -1320,16 +1337,6 @@ class DaCalc(DaBase):
             ma_sum = 0
             for m in range(M):
                 ma_sum += c_ma_u[m][u].x
-                if KW[m] == 0:
-                    for kw in range(RL[m]):
-                        gepland_moment = ma_planned_start_dt[m] + dt.timedelta(minutes=(kw+1)*15)
-                        if max(start_dt, tijd[u]) <= gepland_moment <= (tijd[u] + dt.timedelta(hours=1)):
-                            verschil = gepland_moment - start_dt
-                            if start_dt > tijd[u] and verschil.seconds < 900:
-                                fraction = verschil.seconds/900
-                            else:
-                                fraction = 1
-                            ma_sum += self.machines[m]["programs"][program_index[m]]["power"][kw]*fraction/4000
             c_ma_sum.append(ma_sum)
         pv_ac_hour_sum = []  # totale bruto pv_dc->ac productie
         solar_hour_sum_org = []  # totale netto pv_ac productie origineel

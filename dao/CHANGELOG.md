@@ -1,6 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+## [V2024.8.7.dev_c]
+- the calculated use of a formerly planned engine is beter calculated and taken in account in the 
+total consumption and cost
+
 ## [V2024.8.7.dev_b]
 - there was an error in calculating start=time of engine(s), this is corrected.
 - the calculated use of a formerly planned engine is now correct reported
