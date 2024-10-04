@@ -278,7 +278,7 @@
       "cycle cost": 0.01,
       "entity set power feedin": "input_number.feedin_grid",
       "entity set operating mode": "input_select.ess_operating_mode",
-      "entity stop invereter": "input_datetime.stop_victron",
+      "entity stop inverter": "input_datetime.stop_victron",
       "entity balance switch": "input_boolean.balanceer_grid",
       "entity from battery": "input_number.growatt_from_battery",
       "entity from pv": "input_number.growatt_from_pv",
@@ -397,10 +397,10 @@
     "entities battery production": ["sensor.ess_grid_production"]
   },
   "scheduler": {
-    "0355": "get_meteo_data",
-    "0955": "get_meteo_data",
-    "1555": "get_meteo_data",
-    "2155": "get_meteo_data",
+    "0430": "get_meteo_data",
+    "1030": "get_meteo_data",
+    "1630": "get_meteo_data",
+    "2230": "get_meteo_data",
     "0950": "get_tibber_data",
     "1050": "get_tibber_data",
     "1150": "get_tibber_data",

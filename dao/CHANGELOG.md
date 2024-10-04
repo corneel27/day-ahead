@@ -1,13 +1,21 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-
-## [V2024.8.7.dev_c]
-- the calculated use of a formerly planned engine is beter calculated and taken in account in the 
+## Belangrijk
+De eerder opgenomen tijden in `options.json` voor het ophalen van meteodata via de scheduler geven regelmatig verkeerde data aan de kant van Meteoserver (in de tijd verschoven). 
+Je kunt ze beter vervangen door onderstaande tijden:
+```
+    "0430": "get_meteo_data",
+    "1030": "get_meteo_data",
+    "1630": "get_meteo_data",
+    "2230": "get_meteo_data",
+```
+## [V2024.10.0]
+- There was an error during saving the calculated soc of more than one battery. This is fixed.
+- A better report when there is a json-format error in the settings or secrets file
+- The calculated use of a formerly planned engine is beter calculated and taken in account in the 
 total consumption and cost
-
-## [V2024.8.7.dev_b]
-- there was an error in calculating start=time of engine(s), this is corrected.
-- the calculated use of a formerly planned engine is now correct reported
+- There was an error in calculating start=time of engine(s), this is corrected.
+- The calculated use of a formerly planned engine is now correct reported
 
 ## [V2024.8.7]
 - The calculated bat-in was not saved; as a consequence the balance report was wrong or not presented 

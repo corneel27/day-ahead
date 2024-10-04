@@ -19,6 +19,8 @@ class DaCalc(DaBase):
 
     def __init__(self, file_name=None):
         super().__init__(file_name=file_name)
+        if self.config is None:
+            return
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
@@ -1283,9 +1285,9 @@ class DaCalc(DaBase):
                 logging.warning(f"Geen oplossing  voor: {strategy}")
                 return
             min_delivery = max(0.0, delivery.x)
-            logging.info("Ronde 1")
-            logging.info(f"Kosten (euro): {cost.x:<6.2f}%")
-            logging.info(f"Levering (kWh): {delivery.x:<6.2f}%")
+            logging.info("Eerste berekening")
+            logging.info(f"Kosten (euro): {cost.x:<6.2f}")
+            logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
             model += (delivery <= min_delivery)
             model.objective = minimize(cost)
             model.optimize()
@@ -1293,8 +1295,8 @@ class DaCalc(DaBase):
                 logging.warning(f"Geen oplossing in na herberekening voor: {strategy}")
                 return
             logging.info("Herberekening")
-            logging.info(f"Kosten (euro): {cost.x:<6.2f}%")
-            logging.info(f"Levering (kWh): {delivery.x:<6.2f}%")
+            logging.info(f"Kosten (euro): {cost.x:<6.2f}")
+            logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
         else:
             logging.error("Kies een strategie in options")
             # strategie = 'niet gekozen'
@@ -1401,12 +1403,7 @@ class DaCalc(DaBase):
         # overzicht per ac-accu:
         pd.options.display.float_format = '{:6.2f}'.format
         df_accu = []
-        df_soc = pd.DataFrame(columns=["tijd", "soc"])
-        df_soc.index = pd.to_datetime(df_soc["tijd"])
-        tijd_soc = tijd.copy()
-        tijd_soc.append(tijd_soc[U - 1] + datetime.timedelta(hours=1))
         for b in range(B):
-            df_soc["soc_"+str(b)] = None
             cols = [['uur', 'ac->', 'eff', '->dc', 'pv->dc', 'dc->', 'eff', '->bat', 'o_eff', 'SoC'],
                     ["", "kWh", "%", "kWh", "kWh", "kWh", "%", "kWh", "%", "%"]]
             df_accu.append(pd.DataFrame(columns=cols))
@@ -1477,18 +1474,27 @@ class DaCalc(DaBase):
             logging.info(f"In- en uitgaande energie per uur batterij "
                          f"{self.battery_options[b]['name']}"
                          f"\n{df_accu[b].to_string(index=False)}")
-            for u in range(U+1):
+
+        # soc dataframe maken
+        df_soc = pd.DataFrame(columns=["tijd", "soc"])
+        df_soc.index = pd.to_datetime(df_soc["tijd"])
+        tijd_soc = tijd.copy()
+        tijd_soc.append(tijd_soc[U - 1] + datetime.timedelta(hours=1))
+        for b in range(B):
+            df_soc["soc_"+str(b)] = None
+        for u in range(U+1):
+            for b in range(B):
                 soc_value = soc[b][u].x
                 if b == 0:
                     row_soc = [tijd_soc[u], soc_value, soc_value]
-                    df_soc.loc[df_soc.shape[0]] = row_soc
                 else:
-                    df_soc.at[tijd_soc[u], "soc_"+str(b)] = soc_value
+                    row_soc += [soc_value]
+            df_soc.loc[df_soc.shape[0]] = row_soc
 
         df_soc.index = pd.to_datetime(df_soc["tijd"])
         sum_cap = 0
         for b in range(B):
-            sum_cap += one_soc[b]*100
+            sum_cap += one_soc[b] * 100
         for row in df_soc.itertuples():
             sum_soc = 0
             for b in range(B):
@@ -2126,6 +2132,8 @@ def main():
     """
 
     da_calc = DaCalc("../data/options.json")
+    if da_calc.config is None:
+        return
     if len(sys.argv) > 1:
         args = sys.argv[1:]
         for arg in args:

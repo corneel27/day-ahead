@@ -50,7 +50,14 @@ class DaBase(hass.Hass):
             sys.path.append(new_path)
         self.make_data_path()
         self.debug = False
-        self.config = Config(self.file_name)
+        self.generate_tasks()
+        self.log_level = logging.INFO
+        self.notification_entity = None
+        try:
+            self.config = Config(self.file_name)
+        except ValueError as ex:
+            self.config = None
+            return
         log_level_str = self.config.get(["logging level"], None, "info")
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
@@ -132,6 +139,8 @@ class DaBase(hass.Hass):
         self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.db_da.log_pool_status()
+
+    def generate_tasks(self):
         self.tasks = {
             "calc_optimum_met_debug": {
                 "name": "Optimaliseringsberekening met debug",
@@ -205,8 +214,9 @@ class DaBase(hass.Hass):
         logging.debug(f"python pad:{sys.path}")
         logging.info(f"Day Ahead Optimalisering versie: {__version__}")
         logging.info(f"Day Ahead Optimalisering gestart op: {datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
-        logging.debug(f"Locatie: latitude {str(self.config.get(['latitude']))} "
-                      f"longitude: {str(self.config.get(['longitude']))}")
+        if self.config is not None:
+            logging.debug(f"Locatie: latitude {str(self.config.get(['latitude']))} "
+                          f"longitude: {str(self.config.get(['longitude']))}")
 
     @staticmethod
     def make_data_path():
