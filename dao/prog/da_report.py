@@ -315,7 +315,7 @@ class Report:
 
         if agg == "uur":
             columns = [column,
-                       self.db_da.from_unixtime(t2.c.start_ts).label('tijd'),
+                       self.db_ha.from_unixtime(t2.c.start_ts).label('tijd'),
                        self.db_ha.from_unixtime(t2.c.start_ts).label('tot'),
                        case(
                             (t2.c.state > t1.c.state, t2.c.state - t1.c.state),
