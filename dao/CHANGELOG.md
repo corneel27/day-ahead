@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+## [V2024.10.1]
+- There was an error in reporting with sqlite-db, this is corrected
+
 ## Belangrijk
 De eerder opgenomen tijden in `options.json` voor het ophalen van meteodata via de scheduler geven regelmatig verkeerde data aan de kant van Meteoserver (in de tijd verschoven). 
 Je kunt ze beter vervangen door onderstaande tijden:
