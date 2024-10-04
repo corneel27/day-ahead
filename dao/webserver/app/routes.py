@@ -13,11 +13,14 @@ from dao.prog.version import __version__
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
 images_folder = os.path.join(web_datapath, 'images')
-config = Config(app_datapath + "options.json")
+try:
+    config = Config(app_datapath + "options.json")
+except ValueError as ex:
+    config = None
 
 logname = "dashboard.log"
 handler = TimedRotatingFileHandler("../data/log/" + logname, when="midnight",
-                                   backupCount=config.get(["history", "save days"]))
+                                   backupCount=1 if config is None else config.get(["history", "save days"]))
 handler.suffix = "%Y%m%d"
 handler.setLevel(logging.INFO)
 logging.basicConfig(level=logging.DEBUG, handlers=[handler],
@@ -131,9 +134,10 @@ def home():
     active_view = "grafiek"
     active_time = None
     action = None
-    battery_options = config.get(["battery"])
-    for b in range(len(battery_options)):
-        subjects.append(battery_options[b]["name"])
+    if config is not None:
+        battery_options = config.get(["battery"])
+        for b in range(len(battery_options)):
+            subjects.append(battery_options[b]["name"])
     if request.method == 'POST':
         # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
         lst = request.form.to_dict(flat=False)

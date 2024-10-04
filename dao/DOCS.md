@@ -5,7 +5,7 @@
 [Installatie](#installatie)<br> 
 [DAO starten](#dao-starten)<br>
 [Instellingen](#instellingen)<br>
-[Dashboard](#dashboard) <br>
+[Dashboard](#dashboard) <br>in
 [Configuratie](#configuratie) <br>
 [Api](#api) <br>
 [Terminal](#terminal)
@@ -1126,26 +1126,26 @@ strategie "nul op de meter", zal het programma vaker van deze mogelijkheid gebru
 ontladen (+) of geladen (-). Deze waarde (in W) wordt na de berekening opgeslagen in deze entiteit
 * entity from pv (input_number, optioneel): idem het dc-vermogen dat via mppt of anderszins door 
 pv wordt geleverd (alleen +)
-* entity from ac (input_number, optioneel):idem het dc-vermogen dat de inverter ontvangt (+) of
+* entity from ac (input_number, optioneel): idem het dc-vermogen dat de inverter ontvangt (+) of
 teruglevert (-) aan het net.
 * entity calculated soc (input_number, optioneel): de berekende waarde van de SoC (in %) 
 aan het einde van het lopende uur 
  
    * solar lijst van pv installaties die direct invoeden op je batterij (mppt)<br>
      Per pv installatie geef je de volgende gegevens op:
-       * tilt : de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
-       * orientation : orientatie in graden, 0 = zuid, -90 is oost, 90 west  
+       * tilt: de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
+       * orientation: orientatie in graden, 0 = zuid, -90 is oost, 90 west  
        * capacity: capaciteit in kWp  
-       * yield: opbrengstfactor van je panelen als er 1 J/cm2 straling op je panelen valt in kWh/J/cm2  
+       * yield: opbrengstfactor van je panelen als er 1 J/cm² straling op je panelen valt in kWh/J/cm²  
         Deze bereken je als volgt: <br> <a name="pv_yield"></a>
-         * Een eerste schatting van de jaarlijkse opbrengst van je panelen is : Wp x 0,85.
+         * Een eerste schatting van de jaarlijkse opbrengst van je panelen is: Wp x 0,85.
 Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. <br>
-         * De gemiddelde direct opvallende straling gesommeerd over een jaar is "ongeveer" 400.000 J/cm2.<br>
+         * De gemiddelde direct opvallende straling gesommeerd over een jaar is "ongeveer" 400.000 J/cm².<br>
          * Als jouw "geschatte" jaaropbrengst van je panelen stelt op 5000 kWh dan wordt de yield:
-5000 / 400.000 = 0,0125 kWh/J/cm2<br>
+5000 / 400.000 = 0,0125 kWh/J/cm²<br>
          * Zo kun je voor iedere pv installatie een eerste schatting maken.<br>
          * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
-stel geprognoticeerd/berekend = 50 kWh gemeten is : 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50. <br>
+stel geprognoticeerd/berekend = 50 kWh gemeten is: 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50. <br>
      * entity pv switch: 
        * een entity (meestal een helper in de vorm van een input_boolean), waarmee je
        de betreffende pv installatie aan/uit kunt zetten en die het programma gebruikt om bij hele lage inkoopprijzen 

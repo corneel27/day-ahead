@@ -1,17 +1,23 @@
 import json
+import logging
 import os
 
 
 class Config:
 
+    def parse(self, file_name:str):
+        with open(file_name, "r") as file_json:
+            try:
+                return json.load(file_json)
+            except ValueError as e:
+                logging.error(f"Invalid json in {file_name}: {e}")
+                raise e
+
     def __init__(self, file_name: str):
-        file_json = open(file_name)
-        self.options = json.load(file_json)
+        self.options = self.parse(file_name)
         datapath = os.path.dirname(file_name)
-        file_json.close()
-        secrets_json = open(datapath + "/secrets.json")
-        self.secrets = json.load(secrets_json)
-        secrets_json.close()
+        file_secrets = datapath + "/secrets.json"
+        self.secrets = self.parse(file_secrets)
 
     def get(self, keys: list, options: dict = None, default=None) -> str | dict | list | None:
         if options is None:

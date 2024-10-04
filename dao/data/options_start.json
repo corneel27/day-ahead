@@ -2,7 +2,7 @@
   "homeassistant": { },
   "database ha": {
     "engine": "sqlite",
-    "database": "homeassistant_v2.db",
+    "database": "home-assistant_v2.db",
     "db_path": "/homeassistant"
   },
   "database da": {
@@ -175,10 +175,10 @@
   },
   "scheduler": {
     "active": "false",
-    "0355": "get_meteo_data",
-    "0955": "get_meteo_data",
-    "1555": "get_meteo_data",
-    "2155": "get_meteo_data",
+    "0430": "get_meteo_data",
+    "1030": "get_meteo_data",
+    "1630": "get_meteo_data",
+    "2230": "get_meteo_data",
     "1255": "get_day_ahead_prices",
     "1355": "get_day_ahead_prices",
     "1455": "get_day_ahead_prices",

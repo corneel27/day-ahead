@@ -1,5 +1,27 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+## Belangrijk
+De eerder opgenomen tijden in `options.json` voor het ophalen van meteodata via de scheduler geven regelmatig verkeerde data aan de kant van Meteoserver (in de tijd verschoven). 
+Je kunt ze beter vervangen door onderstaande tijden:
+```
+    "0430": "get_meteo_data",
+    "1030": "get_meteo_data",
+    "1630": "get_meteo_data",
+    "2230": "get_meteo_data",
+```
+## [V2024.10.0]
+- There was an error during saving the calculated soc of more than one battery. This is fixed.
+- A better report when there is a json-format error in the settings or secrets file
+- The calculated use of a formerly planned engine is beter calculated and taken in account in the 
+total consumption and cost
+- There was an error in calculating start=time of engine(s), this is corrected.
+- The calculated use of a formerly planned engine is now correct reported
+
+## [V2024.8.7]
+- The calculated bat-in was not saved; as a consequence the balance report was wrong or not presented 
+(error). This corrected.
+- Changed pythonmodule postgresql (psycopg2-binary -> psycopg2)
+
 ## [V2024.8.6]
 - added saving calculated soc's
 - added api for presenting calculated soc's
@@ -31,7 +53,7 @@ The following changes are implemented:
 (zie DOCS.md):
   - bat_to_dc max power
   - dc_to_bat max power
-- there was an error when pv-dc production was higher then the max power of the inverter, this is corrected.
+- there was an error when pv-dc production was higher than the max power of the inverter, this is corrected.
 - the prognoses table is extended with a column with expected hourly pv-dc production
 - there was a resource leak (db-connections) which caused runtime errors; the leak is found and sealed.
 
@@ -50,7 +72,8 @@ The following engines are possible:
    - progresql
    - sqlite3 <br>
  
-    To make it easy for the current users: "mysql/mariadb" is the default engine. Therefore there is for them no need to change something in the settings. 
+    To make it easy for the current users: "mysql/mariadb" is the default engine. 
+    So there is for them no need to change something in the settings. 
     Further info in DOCS.md<br><br>
    
  - There are 4 extra possible (=optional) entities which you can use to manage and operate your battery(ies):
@@ -59,7 +82,7 @@ The following engines are possible:
    - entity from ac: how much energy is going from the inverter to the dc-bar (W)
    - entity calculated soc: how what is the expected value of the SoC after this hour (%)<br>
 
-   This expansion is made for customers with hybrid inverters (Deye, Growatt etc)
+   This expansion is made for customers with hybrid inverters (Deye, Growatt etc.)
 so they can better manage there batteries with DAO.<br>
 Further info in DOCS.md<br><br>
 
@@ -69,7 +92,7 @@ For now the old name still works, but you get a warning and a request to change 
 
 
 ## [V2024.5.6]
-- When there is "no battery" configured in the settings the program produced an "list indexout of range".
+- When there is "no battery" configured in the settings the program produced a "list indexout of range".
 This error is solved.
 - The error messages are now more clear and accurate: correct filename and line nr.
 - There was an error in the dasbboard invoking a report (Report\Balans). This error is solved.
@@ -83,8 +106,8 @@ In cases as on June 25th when nordpool and entsoe have don't have epex prices yo
 - If there are not enough meteo from Meteoserver from the fineley meshed model (Harmonie), 
 then the missing data are retrieved from the coarse model (GFS).<br>
 Conclusion:the optimization calculation will now always calculate as far as the day-ahead prices are known.
-- The meteo log file was name "tibber_...", this is corrected and now they are named "meteo_..."
-- In the dashboard at the menu-option **Home** and the suboption **tabel** now all loggings (not only calc, but also meteo, prices etc)
+- The meteo log file was name "tibber_...", this is corrected, and now they are named "meteo_..."
+- In the dashboard at the menu-option **Home** and the suboption **tabel** now all loggings (not only calc, but also meteo, prices etc.)
 are showed. To begin with the most recent one. 
 - Meteograph is now showed in the style as defined in the graph-settings
  
@@ -93,7 +116,7 @@ are showed. To begin with the most recent one.
 The filenames of the loggings and the images are again (sorry) changed. After installtion of the new version
 are the old files not visible anymore in the dashboard. But you can see them with your favorite file-explorer in combination with the Samba add-on. 
 ## [V2024.5.6]
-- When there is "no battery" configured in the settings the program produced an "list indexout of range".
+- When there is "no battery" configured in the settings the program produced a "list indexout of range".
 This error is solved.
 - The error messages are now more clear and accurate: correct filename and line nr.
 - There was an error in the dasbboard invoking a report (Report\Balans). This error is solved.
@@ -106,8 +129,8 @@ In cases as on June 25th when Nordpool and Entsoe don't have epex prices you can
 - If there are not enough meteo from Meteoserver from the fineley meshed model (Harmonie), 
 then the missing data are retrieved from the coarse model (GFS).<br>
 Conclusion:the optimization calculation will now always calculate as far as the day-ahead prices are known.
-- The meteo log file was name "tibber_...", this is corrected and now they are named "meteo_..."
-- In the dashboard at the menu-option **Home** and the suboption **tabel** now all loggings (not only calc, but also meteo, prices etc)
+- The meteo log file was name "tibber_...", this is corrected, and now they are named "meteo_..."
+- In the dashboard at the menu-option **Home** and the suboption **tabel** now all loggings (not only calc, but also meteo, prices etc.)
 are showed. To begin with the most recent one. 
 - Meteograph is now showed in the style as defined in the graph-settings
  
@@ -142,13 +165,13 @@ are the old files not visible anymore in the dashboard. But you can see them wit
   - error: alleen fouten worden gemeld
   Alle output is voorzien van datum/tijd en het bijpassende logging level
 - Wanneer door optimalisering PV wordt uitgeschakeld (bij negatieve energieprijzen) wordt in de "niet geoptimlaiseerde grafiek" nu ook
-de verwachte PV productie getoond
+de verwachte PV-productie getoond
 - Er zat een foutje in de balans-rapporten van het dashboard. Dit is gerepareerd.
 - De code is meer gestroomlijnd. De scheduler is ondergebracht in een aparte module net als de berekeningsmodule.
 
 ## [V2024.3.9]
 Volgende fouten zijn hersteld:
-- er zat een storende fout in options_vb.json, zodat een versie installatie niet werkte.
+- er zat een storende fout in `options_vb.json`, zodat een versie installatie niet werkte.
 - er zat een fout in een de html-template die een bewerking/berekening initialiseert
 
 ## [V2024.3.8]
@@ -166,7 +189,7 @@ Er is een optionele aanvulling te gebruiken bij het inplannen van het laden van 
 Soms komt het voor het beter is om in een uur maar een deel van dat uur met een beter rendement (en een hoger vermogen)
 de auto te laden.
 Je kunt nu bij je instellingen een entiteit opgeven (entity stop charging) waarin het programma het eindstip van het 
-berekende eindstip opslaat van de oplaadactie in het betreffende (alleen  als er niet een heel uur hoeft te worden geladen).
+berekende eindstip opslaat van de oplaadactie in het betreffende (alleen als er niet een heel uur hoeft te worden geladen).
 Je zult daar dan zelf in HA een automatisering voor moeten maken die wordt getriggerd op het betreffende tijdstip.
 Zie voor informatie en een voorbeeld DOCS.md
 
@@ -187,7 +210,7 @@ kun je steeds maar een dag tegelijk ophalen en dat doet hij dan op de ingevulde 
 Meer info in DOCS.md
 
 ## [V2024.3.2]
-Met de versie 2024.4.0 van Home Asssistant is een nieuwe attribuut geintroduceerd (last_reported).  
+Met de versie 2024.4.0 van Home Asssistant is een nieuw attribuut geintroduceerd (last_reported).  
 De nieuwe versie (0.2.1) van module hassapi gaat hier goed mee om, 
 de oude versies genereerde foutmeldingen.
 Deze versie installeert de nieuwe versie van deze module.
@@ -228,14 +251,14 @@ De schakelaar is terug voor het aan- en uitzetten van het laden van een elektris
 Enkele opmaakfoutjes zijn hersteld
 
 ## [V2024.2.2]
-- de opmaak van de tabel die een overzicht geeft van de invoer van trappen van een ev is verbetered
-- als 0 ampere ontbreekt wordt deze toegevoegd
+- De opmaak van de tabel die een overzicht geeft van de invoer van trappen van een e.v. is verbeterd.
+- Als "0 ampere" ontbreekt, wordt deze toegevoegd.
 
 ## [V2024.2.1]
 In deze versie zijn veel zaken toegevoegd en gewijzigd:
 - We stappen over op eenzelfde soort **versienummering** als Home Assistant: jaar, maand en opvolgende nummering binnen die maand.
 - Voor de rapportages is het niet meer verplicht om de data op te halen bij **Tibber**.
-Je kunt dus ook klant zijn bij een andere leverancier (bijv ANWB). Je haalt dus alle aanroepen voor het ophalen 
+Je kunt dus ook klant zijn bij een andere leverancier (bijv. ANWB). Je haalt dus alle aanroepen voor het ophalen 
 van data bij Tibber (`get_tibber_data`) uit de scheduler. In dat geval kan ook het invullen van de url en het token
 bij Tibber in de instellingen achterwege blijven. <br>
 Om toch goede rapportages te kunnen maken is het dan wel noodzakelijk dat je je verbruiksgegevens van de slimme 
@@ -261,7 +284,7 @@ waarin het programma de gewenste hoeveelheid ampere kan doorgeven waarmee in het
  **Bonus**: de baseload wordt per weekdag berekend. Met name in het weekend wijkt de baseload af van het 
 weekgemiddelde en de verwachting is dat dit de nauwkeurigheid van de voorspellingen ten goede komt.
 - Bij een flink aantal instellingen zijn "**default**" (standaard) instellingen geintroduceerd. Dat betekent dat 
-je deze instellingen kunt weglaten in het instellingen bestand als de standaard instelling voor jou voldoet.
+je deze instellingen kunt weglaten in het instellingenbestand als de standaard instelling voor jou voldoet.
 Belangrijkste instelling die weggelaten kan worden als je het programma als addon op je HomeAssistant-machine
 installeert zijn de instellingen voor de communicatiemet Home Assistant. Dit regelt dan de Home Assistant 
 supervisor voor je. In DOC.md is een tabel opgenomen van alle instellingen inclusief de default-instelling (voor zover van toepassing)
@@ -300,7 +323,7 @@ In deze versie zijn de volgende zaken gewijzigd:
 - op een aantal punten is de documentatie verhelderd
 - optioneel: <br>
   - het basisverbruik (baseload) kan berekend worden uit de geschiedenis (zie DOCS.md)
-  - voor het goed kunnen berekenen van de dient een lijst met sensoren ingevuld te worden 
+  - voor het goed kunnen berekenen van de baseload dient een lijst met sensoren ingevuld te worden 
     het verbruik/productie van inkoop, maar ook van de batterij(en) en 
     de stuurbare verbruikers/producenten registreren.
 
@@ -336,7 +359,7 @@ Addon is met volledige ondersteuning voor 64 bit Intel/AMD Processor
 ### Changed
 
 Het programma is ondergebracht in een addon van Home Assistant.<br>
-Ten behoeve van de addon is alle software geplaatst onder de directory "dao". <br>
+Voor de addon is alle software geplaatst onder de directory "dao". <br>
 Alle documentatie is verplaatst naar docs\MANUAL.md
 
 De volgende update query moet in de database "day_ahead" worden doorgevoerd:
@@ -345,9 +368,9 @@ UPDATE `day_ahead`.`variabel` SET `code`='pv_ac', `name`='Zonne energie AC' WHER
 ````
 ### Added
 De volgende variabelen worden toegevoegd aan het bestand `variabel`:
-````commandline
+```
    INSERT INTO `variabel` (`id`, `code`, `name`, `dim`) VALUES (17, 'pv_dc', 'Zonne energie DC', 'kWh');
-````
+```
 In options.json kun je nu het maximale vermogen opgeven van je netwerk aansluiting.
 Zie DOCS.md
 
@@ -410,9 +433,9 @@ AUTO_INCREMENT=1;
   grafieken kunt maken (zie DOCS.md)
   * je kunt met een api call een berekening of bewerking uitvoeren. Deze nieuwe functionaliteit zal de
   websocket interface vervangen.
-  * de "reports" zijn uitgebreid met meer perioden en bij de perioden waar ook de prognose die van toepassing zijn
-  van toepassing is kun je "prognose" aan/uit zetten (zie DOCS.md)
-  * je kunt met de web-interface alle berekeningen en bewerkingen uitvoeren en je krijgt direct 
+  * de "reports" zijn uitgebreid met meer perioden en bij de perioden waar ook de prognose van toepassing
+  van toepassing is, kun je "prognose" aan/uit zetten (zie DOCS.md)
+  * je kunt via de web-gui alle berekeningen en bewerkingen uitvoeren en je krijgt direct 
   de logging van het resultaat te zien (zie DOCS.md) 
 
 ### Fixed
@@ -430,7 +453,7 @@ Dit is hersteld.
 Dit heeft twee voordelen: <br>
   - het rekent veel sneller
   - er wordt makkelijker tussen twee "stages" geinterpoleerd. <br>
-  Als dit goed bevalt zal het ook worden geimplementeerd voor het ontladen (van dc naar ac) en van dc naar batterij en vice versa.<br>
+  Als dit goed bevalt, zal het ook worden geimplementeerd voor het ontladen (van dc naar ac) en van dc naar batterij en vice versa.<br>
 - de prijzengrafieken zijn in blokvorm en uitgelijnd met de verbruiksgrafieken
 
 
