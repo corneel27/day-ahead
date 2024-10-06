@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+## [V2024.10.1.dev_a]
+- There were configuration errors for the sqlite-dialect. These generated errors during reporting.
+These are repaired.
+- The watchdog restarted the scheduler too often. Now it only restarts the scheduler after a change 
+of "options.json" or "secrets.json".
 
 ## [V2024.10.1]
 - There was an error in reporting with sqlite-db, this is corrected

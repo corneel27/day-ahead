@@ -111,7 +111,7 @@ class DaBase(hass.Hass):
             db_ha_name = self.config.get(['database ha', "database"], None, "homeassistant")
         db_ha_user = self.config.get(['database ha', "username"], None, "day_ahead")
         db_ha_password = self.config.get(['database ha', "password"])
-        db_ha_path = self.config.get(['database ha', "db_path"], None, "/config")
+        db_ha_path = self.config.get(['database ha', "db_path"], None, "/homeassistant")
         self.db_ha = DBmanagerObj(db_dialect=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
                                   db_port=db_ha_port, db_user=db_ha_user, db_password=db_ha_password,
                                   db_path=db_ha_path, db_time_zone=db_time_zone)

@@ -29,19 +29,21 @@ class Report:
             db_da_name = self.config.get(['database da', "database"], None, "day_ahead")
         db_da_user = self.config.get(['database da', "username"], None, "day_ahead")
         db_da_password = self.config.get(['database da', "password"])
+        db_da_path = self.config.get(['database da', "db_path"], None, "../data")
         db_time_zone = self.config.get(["time_zone"], None, 'Europe/Amsterdam')
         self.db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
                                   db_port=db_da_port, db_user=db_da_user, db_password=db_da_password,
-                                  db_time_zone=db_time_zone)
+                                  db_time_zone=db_time_zone, db_path=db_da_path)
         db_ha_engine = self.config.get(['database ha', "engine"], None, "mysql")
         db_ha_server = self.config.get(['database ha', "server"], None, "core-mariadb")
         db_ha_port = int(self.config.get(['database ha', "port"], None, 3306))
         db_ha_name = self.config.get(['database ha', "database"], None, "homeassistant")
         db_ha_user = self.config.get(['database ha', "username"], None, "day_ahead")
         db_ha_password = self.config.get(['database ha', "password"])
+        db_ha_path = self.config.get(['database ha', "db_path"], None, "/homeassistant")
         self.db_ha = DBmanagerObj(db_dialect=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
                                   db_port=db_ha_port, db_user=db_ha_user, db_password=db_ha_password,
-                                  db_time_zone=db_time_zone)
+                                  db_time_zone=db_time_zone, db_path=db_ha_path)
 
         self.prices_options = self.config.get(["prices"])
         # eb + ode levering
@@ -1114,8 +1116,16 @@ class Report:
             fi_df.loc["Total"] = fi_df.sum(axis=0, numeric_only=True)
             fi_df.at[fi_df.index[-1], first_col] = "Totaal"
             row = fi_df.iloc[-1]
-            fi_df.at[fi_df.index[-1], "Tarief verbr."] = row.Kosten / row.Verbruik
-            fi_df.at[fi_df.index[-1], "Tarief prod."] = row.Opbrengst / row.Productie
+            if row.Verbruik == 0:
+                tarief = 0
+            else:
+                tarief = row.Kosten / row.Verbruik
+            fi_df.at[fi_df.index[-1], "Tarief verbr."] = tarief
+            if row.Productie == 0:
+                tarief = 0
+            else:
+                tarief = row.Opbrengst / row.Productie
+            fi_df.at[fi_df.index[-1], "Tarief prod."] = tarief
             # value = fi_df.iloc[-1][7]
             # fi_df.at[fi_df.index[-1], "Tarief"] = value / (len(fi_df.index)-1)
 
