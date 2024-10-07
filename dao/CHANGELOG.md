@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+## [V2024.10.1.dev_b]
+A new installation with sqlite  gave a failure,
+This is corrected.
 ## [V2024.10.1.dev_a]
 - There were configuration errors for the sqlite-dialect. These generated errors during reporting.
 These are repaired.
