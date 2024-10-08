@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 ## [V2024.10.1.dev_b]
+- There was a malformed string in an error-message, this is corrected
+
+## [V2024.10.1.dev_b]
 A new installation with sqlite  gave a failure,
 This is corrected.
 ## [V2024.10.1.dev_a]
