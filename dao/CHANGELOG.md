@@ -1,12 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-## [V2024.10.1.dev_b]
+## [V2024.10.2]
+- New version of entsoe-py module fixed entsoe-issue
+- New optional feature is introduced: "reduced hours". With this feature you can limit the max power
+(charge and discharge) of your inverter/battery. You can use this to prevent too much noise. (zie DOCS.md)  
 - There was a malformed string in an error-message, this is corrected
-
-## [V2024.10.1.dev_b]
-A new installation with sqlite  gave a failure,
-This is corrected.
-## [V2024.10.1.dev_a]
+A new installation with sqlite had a failure, this is corrected.
 - There were configuration errors for the sqlite-dialect. These generated errors during reporting.
 These are repaired.
 - The watchdog restarted the scheduler too often. Now it only restarts the scheduler after a change 

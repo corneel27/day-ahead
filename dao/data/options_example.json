@@ -270,6 +270,12 @@
           "efficiency": 0.885
         }
       ],
+      "reduced hours":
+       {  "1": 2000,
+          "2": 2000,
+         "18": 2000,
+         "19": 2000
+       },
       "minimum power": 1000,
       "dc_to_bat efficiency": 0.93,
       "dc_to_bat max power" : 7500.0,

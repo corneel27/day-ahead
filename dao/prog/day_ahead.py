@@ -370,19 +370,32 @@ class DaCalc(DaBase):
             CS.append(len(self.battery_options[b]["charge stages"]))
             max_discharge_power.append(
                 self.battery_options[b]["discharge stages"][-1]["power"]/1000)
+
             # reduced power
-            red_hours = self.config.get(["reduced hours"], self.battery_options[b], [])
+            red_hours = self.config.get(["reduced hours"], self.battery_options[b], {})
             red_power = []
+            reduced = False
             for u in range(U):
                 red_power.append(max(max_charge_power[b], max_discharge_power[b]))
-            for item in red_hours:
-                for key, value in item.items():
-                    hour = int(key)
-                    power = value/1000
-                    for u in range(U):
-                        if uur[u] == hour:
-                            red_power[u] = power
+            for key, value in red_hours.items():
+                reduced = True
+                hour = int(key)
+                power = value/1000
+                for u in range(U):
+                    if uur[u] == hour:
+                        red_power[u] = power
             reduced_power.append(red_power)
+            if reduced:
+                if self.log_level == logging.DEBUG:
+                    logging.debug(f"Reduced hours for {self.battery_options[b]['name']}")
+                    print(f"hour max-power(kW)")
+                    for u in range(U):
+                        print(f"{uur[u]:2.0f} {red_power[u]:6.3f}")
+                else:
+                    logging.info(f"Reduced hours applied for {self.battery_options[b]['name']}")
+            else:
+                logging.info(f"No reduced hours applied for {self.battery_options[b]['name']}")
+
             max_dc_from_bat_power.append(
                 self.config.get(["bat_to_dc max power"],
                                 self.battery_options[b],

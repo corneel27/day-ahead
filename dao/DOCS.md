@@ -643,6 +643,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | discharge stages             | list             |                                    | {power, efficiency}                                | 
 |                          | ______power                  | getal            |                                    | W                                                  | 
 |                          | ______efficiency             | getal            |                                    | W/W (factor 0..1)                                  | 
+|                          | reduced hours                | uur-waarde paren | {}                                 | W                                                  |
 |                          | minimum power                | getal            |                                    | W                                                  |
 |                          | dc_to_bat efficiency         | getal            |                                    | 0 .. 1.0                                           |
 |                          | dc_to_bat max power          | getal            | 2 x max power charge               | W                                                  |
@@ -1100,10 +1101,20 @@ Dit onderdeel is nog in ontwikkeling.
        Voor de duidelijkheid: je vult hier de efficiency van omvormer van ac naar dc in. 
        Het rendement van de batterij (dc to bat) vul je hieronder in.<br>
    Bijvoorbeeld: {"power": 300.0, "efficiency": 0.949} <br>
-   De eerste schijf is altijd:  {"power": 0.0, "efficiency": 1},
+   De eerste schijf is altijd: {"power": 0.0, "efficiency": 1},
    De "power" van de laatste schijf geeft ook het maximale vermogen van de omvormer
    * discharge stages: op dezelfde wijze als de "charge stages" vul je hier voor het ontladen een aantal stappen of schijven in voor het ontladen via je omvormer/inverter. 
-   * minimum power (in W) : minimaal laad/ontlaadvermogen
+   * reduced hours: wanneer je op een of meer uren van de dag het maximale laad- of ontlaadvermogen van
+     de omvormer wilt beperken tot een bepaald maximum (bijvoorbeeld omdat de omvormer dan te veel lawaai 
+     maakt) dan geef je hier die uren op met het maximaal toegestane vermogen in dat uur in W. Bijvoorbeeld:
+````
+     "reduced hours":
+       {  "1": 2000,
+          "2": 2000,
+         "18": 2000,
+         "19": 2000},
+````
+   * minimum power (in W): minimaal laad-/ontlaadvermogen
    * dc_to_bat efficiency: efficiency van het laden van de batterij vanuit dc (factor van 1)
    * dc_to_bat max power (optioneel): het maximum vermogen in W dat nooit zal worden overschreven van de energie van de dc-busbar naar de batterij. 
 Dit is met name van belang bij hybride omvormers waar naast de invoeding vanuit ac er ook invoeding kan zijn vanuit pv. 
