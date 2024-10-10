@@ -1,5 +1,6 @@
 from db_manager import DBmanagerObj
-from da_base import DaBase
+# from da_base import DaBase
+from da_config import Config
 import version
 import datetime
 from utils import version_number, error_handling
@@ -10,9 +11,11 @@ import sqlalchemy_utils
 import pandas as pd
 
 
-class CheckDB(DaBase):
+class CheckDB():
     def __init__(self, file_name: str | None = None):
-        super().__init__(file_name)
+        # super().__init__(file_name)
+        self.file_name = file_name
+        self.config = Config(self.file_name)
         self.version = version.__version__
         self.last_version = None
         db_da_engine = self.config.get(['database da', "engine"], None, "mysql")

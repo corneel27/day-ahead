@@ -2,7 +2,7 @@
 while true; do
   $@ &
   PID=$!
-  inotifywait "../data/" -e modify
+  inotifywait "../data/options.json" "../data/secrets.json" -e modify
   kill $PID
 done
 

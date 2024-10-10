@@ -60,13 +60,13 @@ class DaCalc(DaBase):
         # prog_data = db_da.get_prognose_data(start, end)
         u = len(prog_data)
         if u <= 2:
-            logging.error("Er ontbreken voor een aantal uur gegevens "
-                          "(meteo en/of dynamische prijzen)\n",
-                          "er kan niet worden gerekend")
+            logging.error(f"Er ontbreken voor een aantal uur gegevens "
+                          f"(meteo en/of dynamische prijzen) "
+                          f"er kan niet worden gerekend")
             if self.notification_entity is not None:
                 self.set_value(self.notification_entity,
-                               "Er ontbreken voor een aantal uur gegevens; "
-                               "er kan niet worden gerekend")
+                               f"Er ontbreken voor een aantal uur gegevens; "
+                               f"er kan niet worden gerekend")
             return
         if u <= 8:
             logging.warning("Er ontbreken voor een aantal uur gegevens "
@@ -353,6 +353,7 @@ class DaCalc(DaBase):
         DS = []
         max_charge_power = []
         max_discharge_power = []
+        reduced_power = []
         max_dc_from_bat_power = []
         max_dc_to_bat_power = []
         avg_eff_dc_to_ac = []
@@ -369,6 +370,32 @@ class DaCalc(DaBase):
             CS.append(len(self.battery_options[b]["charge stages"]))
             max_discharge_power.append(
                 self.battery_options[b]["discharge stages"][-1]["power"]/1000)
+
+            # reduced power
+            red_hours = self.config.get(["reduced hours"], self.battery_options[b], {})
+            red_power = []
+            reduced = False
+            for u in range(U):
+                red_power.append(max(max_charge_power[b], max_discharge_power[b]))
+            for key, value in red_hours.items():
+                reduced = True
+                hour = int(key)
+                power = value/1000
+                for u in range(U):
+                    if uur[u] == hour:
+                        red_power[u] = power
+            reduced_power.append(red_power)
+            if reduced:
+                if self.log_level == logging.DEBUG:
+                    logging.debug(f"Reduced hours for {self.battery_options[b]['name']}")
+                    print(f"hour max-power(kW)")
+                    for u in range(U):
+                        print(f"{uur[u]:2.0f} {red_power[u]:6.3f}")
+                else:
+                    logging.info(f"Reduced hours applied for {self.battery_options[b]['name']}")
+            else:
+                logging.info(f"No reduced hours applied for {self.battery_options[b]['name']}")
+
             max_dc_from_bat_power.append(
                 self.config.get(["bat_to_dc max power"],
                                 self.battery_options[b],
@@ -463,15 +490,19 @@ class DaCalc(DaBase):
         dc_from_ac_samples = [[(self.battery_options[b]["charge stages"][cs]["efficiency"] *
                                self.battery_options[b]["charge stages"][cs]["power"] / 1000)
                                for cs in range(CS[b])] for b in range(B)]
-        ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b])
-                     for _ in range(U)] for b in range(B)]
+        ac_to_dc = [[model.add_var(var_type=CONTINUOUS,
+                                   lb=0,
+                                   ub=min(reduced_power[b][u], max_charge_power[b]))
+                     for u in range(U)] for b in range(B)]
         ac_to_dc_on = [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(B)]
         ac_to_dc_w = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=1)
                         for _ in range(CS[b])] for _ in range(U)] for b in range(B)]
         # tot hier met sos
         # '''
-        ac_from_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_discharge_power[b])
-                       for _ in range(U)] for b in range(B)]
+        ac_from_dc = [[model.add_var(var_type=CONTINUOUS,
+                                     lb=0,
+                                     ub=min(reduced_power[b][u], max_discharge_power[b]))
+                       for u in range(U)] for b in range(B)]
         ac_from_dc_on = [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(B)]
 
         # elektra per vermogensklasse van busbar naar ac, ieder uur

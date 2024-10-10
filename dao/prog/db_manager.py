@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import datetime
 from sqlalchemy import create_engine, Table, MetaData, select, insert, update, func, and_, text, TIMESTAMP
+import sqlalchemy_utils
 from sqlalchemy.sql import sqltypes
 import pytz
 import os
@@ -53,7 +54,22 @@ class DBmanagerObj(object):
             # self.dbname = "home-assistant_v2.db"
             # self.engine = create_engine(f'sqlite:////{abs_db_path}/{self.db_name}')
             self.engine = create_engine(f'sqlite:///{self.db_path}/{self.db_name}')
-        logging.debug(f"Dialect: {self.db_dialect}, database: {self.db_name}, server: {self.server}")
+        if self.db_dialect == "sqlite":
+            logging.debug(
+                f"Dialect: {self.db_dialect}, database: {self.db_name}, db_path: {self.db_path}")
+        else:
+            logging.debug(
+                f"Dialect: {self.db_dialect}, database: {self.db_name}, server: {self.server}")
+        db_url = self.db_url(
+            db_dialect=self.db_dialect,
+            db_name=self.db_name,
+            db_server=self.server,
+            db_user=self.user,
+            db_password=self.password,
+            db_port=self.port,
+            db_path=self.db_path)
+        if not sqlalchemy_utils.database_exists(db_url):
+            raise ConnectionAbortedError
         self.metadata = MetaData()
 
     @staticmethod
