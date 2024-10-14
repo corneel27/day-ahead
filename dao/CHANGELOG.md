@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+## [V2024.10.2.dev_a]
+- For users with dc-coupled PV there is (after the optimum calculation) an extra graph (for each battery one) which shows the energybalance of the battery(ies).
+
 ## [V2024.10.2]
 - New version of entsoe-py module fixed entsoe-issue
 - New optional feature is introduced: "reduced hours". With this feature you can limit the max power

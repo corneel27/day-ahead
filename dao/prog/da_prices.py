@@ -119,7 +119,13 @@ class DaPrices:
                 end_date = None
             else:
                 end_date = start
-            hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=end_date)
+            try:
+                hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=end_date)
+            except Exception as ex:
+                # logging.error(ex)
+                logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
+                return
+
             hourly_values = hourly_prices_spot['areas']['NL']['values']
             s = pp.pformat(hourly_values, indent=2)
             logging.info(f"Day ahead prijzen van Nordpool:\n {s}")
