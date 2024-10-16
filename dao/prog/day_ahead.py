@@ -1511,29 +1511,30 @@ class DaCalc(DaBase):
         df_soc.index = pd.to_datetime(df_soc["tijd"])
         tijd_soc = tijd.copy()
         tijd_soc.append(tijd_soc[U - 1] + datetime.timedelta(hours=1))
-        for b in range(B):
-            df_soc["soc_"+str(b)] = None
-        for u in range(U+1):
+        if B > 0:
             for b in range(B):
-                soc_value = soc[b][u].x
-                if b == 0:
-                    row_soc = [tijd_soc[u], soc_value, soc_value]
-                else:
-                    row_soc += [soc_value]
-            df_soc.loc[df_soc.shape[0]] = row_soc
+                df_soc["soc_"+str(b)] = None
+            for u in range(U+1):
+                for b in range(B):
+                    soc_value = soc[b][u].x
+                    if b == 0:
+                        row_soc = [tijd_soc[u], soc_value, soc_value]
+                    else:
+                        row_soc += [soc_value]
+                df_soc.loc[df_soc.shape[0]] = row_soc
 
-        df_soc.index = pd.to_datetime(df_soc["tijd"])
-        sum_cap = 0
-        for b in range(B):
-            sum_cap += one_soc[b] * 100
-        for row in df_soc.itertuples():
-            sum_soc = 0
+            df_soc.index = pd.to_datetime(df_soc["tijd"])
+            sum_cap = 0
             for b in range(B):
-                sum_soc += one_soc[b] * row[b+3]
-            df_soc.at[row[0], "soc"] = round(100 * sum_soc/sum_cap, 1)
+                sum_cap += one_soc[b] * 100
+            for row in df_soc.itertuples():
+                sum_soc = 0
+                for b in range(B):
+                    sum_soc += one_soc[b] * row[b+3]
+                df_soc.at[row[0], "soc"] = round(100 * sum_soc/sum_cap, 1)
 
-        if not self.debug:
-            self.save_df(tablename='prognoses', tijd=tijd_soc, df=df_soc)
+            if not self.debug:
+                self.save_df(tablename='prognoses', tijd=tijd_soc, df=df_soc)
 
 
         # totaal overzicht
@@ -1877,7 +1878,8 @@ class DaCalc(DaBase):
         mach_n = []
         ev_n = []
         c_l_p = []
-        soc_p = []
+        soc = []
+        soc_b = []
         pv_p_org = []
         pv_p_opt = []
         pv_ac_p = []
@@ -1902,12 +1904,17 @@ class DaCalc(DaBase):
             accu_out_p.append(accu_out_sum * hour_fraction[u])
             max_y = max(max_y, (c_l_p[u] + pv_p_org[u] + pv_ac_p[u]), abs(
                 c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] + accu_in_sum)
-            for b in range(B):
+            if B >0:
+                soc_t = list(df_soc["soc"])
+                for b in range(B):
+                    soc_b.append(list(df_soc["soc_"+str(b)]))
+            '''
                 if u == 0:
                     soc_p.append([])
                 soc_p[b].append(soc[b][u].x)
         for b in range(B):
             soc_p[b].append(soc[b][U].x)
+            '''
 
         # grafiek 1
         import numpy as np
@@ -2009,14 +2016,21 @@ class DaCalc(DaBase):
         style = self.config.get(['graphics', 'style'], None, "default")
         import matplotlib.pyplot as plt
         import matplotlib.ticker as ticker
+        import matplotlib.lines as mlines
 
         plt.set_loglevel(level='warning')
         pil_logger = logging.getLogger('PIL')
         # override the logger logging level to INFO
         pil_logger.setLevel(max(logging.INFO, self.log_level))
 
+        show_battery_balance = self.config.get(["graphics", "battery balance"],
+                                               None,
+                                               "true").lower() == "true"
         plt.style.use(style)
-        fig, axis = plt.subplots(figsize=(8, 9), nrows=3)
+        nrows = 3
+        if show_battery_balance and B>0:
+            nrows += 1
+        fig, axis = plt.subplots(figsize=(8, 3 * nrows), nrows=nrows)
         ind = np.arange(U)
         axis[0].bar(ind, np.array(org_l), label='Levering', color='#00bfff', align="edge")
         if sum(pv_p_org) > 0:
@@ -2046,8 +2060,6 @@ class DaCalc(DaBase):
         axis[0].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
         axis[0].set_ylabel('kWh')
         ylim = math.ceil(max_y)
-        # math.ceil(max(max(accu_out_p) + max(c_l_p) + max(pv_p), -min(min(base_n), min(boiler_n),
-        # min(heatpump_n), min(ev_n), min(c_t_n), min(accu_in_n) )))
         axis[0].set_ylim([-ylim, ylim])
         axis[0].set_xticks(ind, labels=uur)
         axis[0].xaxis.set_major_locator(ticker.MultipleLocator(2))
@@ -2090,27 +2102,95 @@ class DaCalc(DaBase):
         axis[1].set_xticks(ind, labels=uur)
         axis[1].xaxis.set_major_locator(ticker.MultipleLocator(2))
         axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-        axis[1].set_title("Day Ahead geoptimaliseerd: " + strategie +
-                          ", winst € {:<0.2f}".format(old_cost_da - cost.x))
+        axis[1].set_title(f"Day Ahead geoptimaliseerd\nStrategie: {strategie}"
+                          f" winst € {(old_cost_da - cost.x):0.2f}")
         axis[1].sharex(axis[0])
 
+        gr_no = 1
+        if show_battery_balance:
+            for b in range(B):
+                # make graph of battery
+                gr_no += 1
+                ac_p = []
+                ac_n = []
+                pv_p = []
+                bat_p = []
+                bat_n = []
+                ind = np.arange(U+1)
+                uur.append(24)
+                for u in range(U):
+                    # model += (dc_from_ac[b][u] + dc_from_bat[b][u] + pv_prod_dc_sum[b][u] ==
+                    #           dc_to_ac[b][u] + dc_to_bat[b][u])
+                    ac_p.append(dc_from_ac[b][u].x)
+                    ac_n.append(-dc_to_ac[b][u].x)
+                    if pv_dc_num[b] > 0:
+                        pv_p.append(pv_prod_dc_sum[b][u].x)
+                    else:
+                        pv_p.append(0)
+                    bat_p.append(dc_from_bat[b][u].x)
+                    bat_n.append(-dc_to_bat[b][u].x)
+                # extra uur voor sync aantal uur met laatste soc-waarde
+                ac_p.append(0)
+                ac_n.append(0)
+                pv_p.append(0)
+                bat_p.append(0)
+                bat_n.append(0)
+                legs = []
+                leg1 = axis[gr_no].bar(ind, np.array(ac_p), label='AC<->',
+                                       color='red', align="edge")
+                leg2 = axis[gr_no].bar(ind, np.array(bat_p), label='BAT<->',
+                                       bottom=np.array(ac_p),
+                                       color='blue', align="edge")
+                if pv_dc_num[b] > 0:
+                    leg3 = axis[gr_no].bar(ind, np.array(pv_p), label='PV->',
+                                           bottom=np.array(ac_p) + np.array(bat_p),
+                                           color='lime', align="edge")
+                else:
+                    leg3 = None
+                axis[gr_no].bar(ind, np.array(ac_n), color='red', align="edge")
+                axis[gr_no].bar(ind, np.array(bat_n),
+                                bottom=np.array(ac_n),
+                                color='blue', align="edge")
+                # axis[gr_no].legend(loc='best', bbox_to_anchor=(1.30, 1.00))
+                axis[gr_no].set_ylabel('kWh')
+                axis[gr_no].set_ylim([-ylim, ylim])
+                axis[gr_no].set_xticks(ind, labels=uur)
+                axis[gr_no].xaxis.set_major_locator(ticker.MultipleLocator(2))
+                axis[gr_no].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+                axis[gr_no].set_title(f"Energiebalans per uur voor {self.battery_options[b]['name']}")
+                axis[gr_no].sharex(axis[0])
+                axis_20 = axis[gr_no].twinx()
+                leg4 = axis_20.plot(ind, soc_b[b], label='% SoC', linestyle="solid", color='olive')
+                axis_20.set_ylabel('% SoC')
+                axis_20.set_ylim([0, 100])
+                soc_line = mlines.Line2D([], [], color='olive', label='SoC %')
+                if pv_dc_num[b] > 0:
+                    labels = ["AC<->", 'BAT<->', "PV->", '% SoC']
+                    handles =[leg1, leg2, leg3, soc_line]
+                else:
+                    labels = ["AC<->", 'BAT<->', '% SoC']
+                    handles =[leg1, leg2, soc_line]
+                axis[gr_no].legend(handles=handles, labels=labels, loc='best', bbox_to_anchor=(1.35, 1.00))
+
+
+        gr_no += 1
         ln1 = []
         line_styles = ["solid", "dashed", "dotted"]
         ind = np.arange(U+1)
-        uur.append(24)
-        for b in range(B):
-            ln1.append(axis[2].plot(ind, soc_p[b], label='SoC ' + self.battery_options[b]["name"],
-                       linestyle=line_styles[b], color='red'))
-        axis[2].set_xticks(ind, labels=uur)
-        axis[2].set_ylabel('% SoC')
-        axis[2].set_xlabel("uren van de dag")
-        axis[2].xaxis.set_major_locator(ticker.MultipleLocator(2))
-        axis[2].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-        axis[2].set_ylim([0, 100])
-        axis[2].set_title("Verloop SoC en tarieven")
-        axis[2].sharex(axis[0])
+        if len(uur) < U+1:
+            uur.append(24)
+        if B > 0:
+            ln1.append(axis[gr_no].plot(ind, soc_t, label='SoC', linestyle=line_styles[0], color='olive'))
+        axis[gr_no].set_xticks(ind, labels=uur)
+        axis[gr_no].set_ylabel('% SoC')
+        axis[gr_no].set_xlabel("uren van de dag")
+        axis[gr_no].xaxis.set_major_locator(ticker.MultipleLocator(2))
+        axis[gr_no].xaxis.set_minor_locator(ticker.MultipleLocator(1))
+        axis[gr_no].set_ylim([0, 100])
+        axis[gr_no].set_title("Verloop SoC en tarieven")
+        axis[gr_no].sharex(axis[0])
 
-        axis22 = axis[2].twinx()
+        axis22 = axis[gr_no].twinx()
         if self.config.get(["graphics", "prices delivery"], None, "true").lower() == "true":
             pl.append(pl[-1])
             ln2 = axis22.step(ind, np.array(pl), label='Tarief\nlevering', color='#00bfff', where='post')

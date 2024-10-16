@@ -79,6 +79,7 @@
   "graphics": {
     "style": "dark_background",
     "show" : "true",
+    "battery balance": "True",
     "prices delivery": "True",
     "prices redelivery": "True",
     "average delivery": "True"

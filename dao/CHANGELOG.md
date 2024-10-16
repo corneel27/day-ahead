@@ -1,5 +1,19 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+## [V2024.10.4]
+- When there are no batteries configured there was a soc-calculation error. This is corrected.
+- The color of all the soc-lines are changed to "olive"
+
+## [V2024.10.3]
+- There is an extra optionalgraph (for each battery one) which shows the energybalance of the battery(ies).
+You can omit this graph with a setting in the "graphics"-section": <br> 
+`"battery balance": "False",`
+- There was in the dasboard during an optimum calculation sometimes an **internal server error** caused by a too low timeout (30 sec).
+The new timeout is raised to 60 sec. 
+- When Nordpool data were not present there was a json-error message. This is corrected: there is now a not present message.
+- The Nordpool source didn't work anymore. The module with the api library for Nordpool is updated.
+
+
 ## [V2024.10.2]
 - New version of entsoe-py module fixed entsoe-issue
 - New optional feature is introduced: "reduced hours". With this feature you can limit the max power

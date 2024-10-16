@@ -7,8 +7,8 @@ mysql~=0.0.3
 mysql-connector-python~=9.0.0
 hassapi~=0.2.1
 mip~=1.16rc0
-python-dateutil~=2.8.2
-nordpool~=0.3.3
+python-dateutil~=2.9.0.post0
+nordpool~=0.4.1
 entsoe-py~=0.6.11
 beautifulsoup4
 sqlalchemy
