@@ -11,7 +11,7 @@ You can omit this graph with a setting in the "graphics"-section": <br>
 - There was in the dasboard during an optimum calculation sometimes an **internal server error** caused by a too low timeout (30 sec).
 The new timeout is raised to 60 sec. 
 - When Nordpool data were not present there was a json-error message. This is corrected: there is now a not present message.
-- The Nordpool source didn't work ane more. The module with the api library for Nordpool is updated.
+- The Nordpool source didn't work anymore. The module with the api library for Nordpool is updated.
 
 
 ## [V2024.10.2]
