@@ -1511,29 +1511,30 @@ class DaCalc(DaBase):
         df_soc.index = pd.to_datetime(df_soc["tijd"])
         tijd_soc = tijd.copy()
         tijd_soc.append(tijd_soc[U - 1] + datetime.timedelta(hours=1))
-        for b in range(B):
-            df_soc["soc_"+str(b)] = None
-        for u in range(U+1):
+        if B > 0:
             for b in range(B):
-                soc_value = soc[b][u].x
-                if b == 0:
-                    row_soc = [tijd_soc[u], soc_value, soc_value]
-                else:
-                    row_soc += [soc_value]
-            df_soc.loc[df_soc.shape[0]] = row_soc
+                df_soc["soc_"+str(b)] = None
+            for u in range(U+1):
+                for b in range(B):
+                    soc_value = soc[b][u].x
+                    if b == 0:
+                        row_soc = [tijd_soc[u], soc_value, soc_value]
+                    else:
+                        row_soc += [soc_value]
+                df_soc.loc[df_soc.shape[0]] = row_soc
 
-        df_soc.index = pd.to_datetime(df_soc["tijd"])
-        sum_cap = 0
-        for b in range(B):
-            sum_cap += one_soc[b] * 100
-        for row in df_soc.itertuples():
-            sum_soc = 0
+            df_soc.index = pd.to_datetime(df_soc["tijd"])
+            sum_cap = 0
             for b in range(B):
-                sum_soc += one_soc[b] * row[b+3]
-            df_soc.at[row[0], "soc"] = round(100 * sum_soc/sum_cap, 1)
+                sum_cap += one_soc[b] * 100
+            for row in df_soc.itertuples():
+                sum_soc = 0
+                for b in range(B):
+                    sum_soc += one_soc[b] * row[b+3]
+                df_soc.at[row[0], "soc"] = round(100 * sum_soc/sum_cap, 1)
 
-        if not self.debug:
-            self.save_df(tablename='prognoses', tijd=tijd_soc, df=df_soc)
+            if not self.debug:
+                self.save_df(tablename='prognoses', tijd=tijd_soc, df=df_soc)
 
 
         # totaal overzicht
@@ -1903,9 +1904,10 @@ class DaCalc(DaBase):
             accu_out_p.append(accu_out_sum * hour_fraction[u])
             max_y = max(max_y, (c_l_p[u] + pv_p_org[u] + pv_ac_p[u]), abs(
                 c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] + accu_in_sum)
-            soc_t = list(df_soc["soc"])
-            for b in range(B):
-                soc_b.append(list(df_soc["soc_"+str(b)]))
+            if B >0:
+                soc_t = list(df_soc["soc"])
+                for b in range(B):
+                    soc_b.append(list(df_soc["soc_"+str(b)]))
             '''
                 if u == 0:
                     soc_p.append([])
@@ -2026,9 +2028,8 @@ class DaCalc(DaBase):
                                                "true").lower() == "true"
         plt.style.use(style)
         nrows = 3
-        if show_battery_balance:
-            for b in range(B):
-                nrows += 1
+        if show_battery_balance and B>0:
+            nrows += 1
         fig, axis = plt.subplots(figsize=(8, 3 * nrows), nrows=nrows)
         ind = np.arange(U)
         axis[0].bar(ind, np.array(org_l), label='Levering', color='#00bfff', align="edge")
@@ -2178,7 +2179,8 @@ class DaCalc(DaBase):
         ind = np.arange(U+1)
         if len(uur) < U+1:
             uur.append(24)
-        ln1.append(axis[gr_no].plot(ind, soc_t, label='SoC', linestyle=line_styles[0], color='red'))
+        if B > 0:
+            ln1.append(axis[gr_no].plot(ind, soc_t, label='SoC', linestyle=line_styles[0], color='red'))
         axis[gr_no].set_xticks(ind, labels=uur)
         axis[gr_no].set_ylabel('% SoC')
         axis[gr_no].set_xlabel("uren van de dag")

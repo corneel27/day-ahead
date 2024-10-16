@@ -8,6 +8,7 @@ You can omit this graph with a setting in the "graphics"-section": <br>
 The new timeout is raised to 60 sec. 
 - When Nordpool data were not present there was a json-error message. This is corrected: there is now a not present message.
 - The Nordpool source didn't work ane more. The module with the api library for Nordpool is updated.
+- When there are no batteries configured there was a soc-calculation error. This is corrected.
 
 ## [V2024.10.2]
 - New version of entsoe-py module fixed entsoe-issue
