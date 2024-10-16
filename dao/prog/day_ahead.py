@@ -2157,7 +2157,7 @@ class DaCalc(DaBase):
                 axis[gr_no].set_xticks(ind, labels=uur)
                 axis[gr_no].xaxis.set_major_locator(ticker.MultipleLocator(2))
                 axis[gr_no].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-                axis[gr_no].set_title(f"Energiebelans per uur voor {self.battery_options[b]['name']}")
+                axis[gr_no].set_title(f"Energiebalans per uur voor {self.battery_options[b]['name']}")
                 axis[gr_no].sharex(axis[0])
                 axis_20 = axis[gr_no].twinx()
                 leg4 = axis_20.plot(ind, soc_b[b], label='% SoC', linestyle="solid", color='olive')
