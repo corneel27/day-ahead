@@ -2014,16 +2014,20 @@ class DaCalc(DaBase):
         style = self.config.get(['graphics', 'style'], None, "default")
         import matplotlib.pyplot as plt
         import matplotlib.ticker as ticker
+        import matplotlib.lines as mlines
 
         plt.set_loglevel(level='warning')
         pil_logger = logging.getLogger('PIL')
         # override the logger logging level to INFO
         pil_logger.setLevel(max(logging.INFO, self.log_level))
 
+        show_battery_balance = self.config.get(["graphics", "battery balance"],
+                                               None,
+                                               "true").lower() == "true"
         plt.style.use(style)
         nrows = 3
-        for b in range(B):
-            if pv_dc_num[b] > 0:
+        if show_battery_balance:
+            for b in range(B):
                 nrows += 1
         fig, axis = plt.subplots(figsize=(8, 3 * nrows), nrows=nrows)
         ind = np.arange(U)
@@ -2102,8 +2106,8 @@ class DaCalc(DaBase):
         axis[1].sharex(axis[0])
 
         gr_no = 1
-        for b in range(B):
-            if pv_dc_num[b] > 0:
+        if show_battery_balance:
+            for b in range(B):
                 # make graph of battery
                 gr_no += 1
                 ac_p = []
@@ -2118,10 +2122,13 @@ class DaCalc(DaBase):
                     #           dc_to_ac[b][u] + dc_to_bat[b][u])
                     ac_p.append(dc_from_ac[b][u].x)
                     ac_n.append(-dc_to_ac[b][u].x)
-                    pv_p.append(pv_prod_dc_sum[b][u].x)
+                    if pv_dc_num[b] > 0:
+                        pv_p.append(pv_prod_dc_sum[b][u].x)
+                    else:
+                        pv_p.append(0)
                     bat_p.append(dc_from_bat[b][u].x)
                     bat_n.append(-dc_to_bat[b][u].x)
-                # extra uur voor soc
+                # extra uur voor sync aantal uur met laatste soc-waarde
                 ac_p.append(0)
                 ac_n.append(0)
                 pv_p.append(0)
@@ -2133,9 +2140,12 @@ class DaCalc(DaBase):
                 leg2 = axis[gr_no].bar(ind, np.array(bat_p), label='BAT<->',
                                        bottom=np.array(ac_p),
                                        color='blue', align="edge")
-                leg3 = axis[gr_no].bar(ind, np.array(pv_p), label='PV->',
-                                       bottom=np.array(ac_p) + np.array(bat_p),
-                                       color='lime', align="edge")
+                if pv_dc_num[b] > 0:
+                    leg3 = axis[gr_no].bar(ind, np.array(pv_p), label='PV->',
+                                           bottom=np.array(ac_p) + np.array(bat_p),
+                                           color='lime', align="edge")
+                else:
+                    leg3 = None
                 axis[gr_no].bar(ind, np.array(ac_n), color='red', align="edge")
                 axis[gr_no].bar(ind, np.array(bat_n),
                                 bottom=np.array(ac_n),
@@ -2152,8 +2162,14 @@ class DaCalc(DaBase):
                 leg4 = axis_20.plot(ind, soc_b[b], label='% SoC', linestyle="solid", color='blue')
                 axis_20.set_ylabel('% SoC')
                 axis_20.set_ylim([0, 100])
-                labels = ["AC<->", 'BAT<->', "PV->", '% SoC']
-                axis[gr_no].legend(labels=labels, loc='best', bbox_to_anchor=(1.35, 1.00))
+                soc_line = mlines.Line2D([], [], color='blue', label='SoC %')
+                if pv_dc_num[b] > 0:
+                    labels = ["AC<->", 'BAT<->', "PV->", '% SoC']
+                    handles =[leg1, leg2, leg3, soc_line]
+                else:
+                    labels = ["AC<->", 'BAT<->', '% SoC']
+                    handles =[leg1, leg2, soc_line]
+                axis[gr_no].legend(handles=handles, labels=labels, loc='best', bbox_to_anchor=(1.35, 1.00))
 
 
         gr_no += 1

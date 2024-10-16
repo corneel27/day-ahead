@@ -1,7 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-## [V2024.10.2.dev_a]
-- For users with dc-coupled PV there is (after the optimum calculation) an extra graph (for each battery one) which shows the energybalance of the battery(ies).
+## [V2024.10.3]
+- There is an extra optionalgraph (for each battery one) which shows the energybalance of the battery(ies).
+You can omit this graph with a setting in the "graphics"-section": <br> 
+`"battery balance": "False",`
+- There was in the dasboard during an optimum calculation sometimes an **internal server error** caused by a too low timeout (30 sec).
+The new timeout is raised to 60 sec. 
+- When Nordpool data were not present there was a json-error message. This is corrected: there is now a not present message.
+- The Nordpool source didn't work ane more. The module with the api library for Nordpool is updated.
 
 ## [V2024.10.2]
 - New version of entsoe-py module fixed entsoe-issue

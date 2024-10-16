@@ -111,6 +111,13 @@ class DaPrices:
                     df_db.loc[df_db.shape[0]] = [str(last_time), 'da', row[2] / 1000]
                 logging.debug(f"Day ahead prijzen (source: entsoe, db-records): \n{df_db.to_string(index=False)}")
                 self.db_da.savedata(df_db)
+                end_dt = datetime.datetime(end.year, end.month, end.day, 23)
+                last_time_dt = datetime.datetime.fromtimestamp(last_time)
+                if last_time_dt < end_dt:
+                    if len(df_db) == 0:
+                        logging.error(f"Geen data van Entsoe tot en met {end_dt}")
+                    else:
+                        logging.warning(f"Geen data van Entsoe tussen {last_time_dt} en {end_dt}")
 
         if source.lower() == "nordpool":
             # ophalen bij Nordpool
