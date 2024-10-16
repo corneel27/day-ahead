@@ -2160,10 +2160,10 @@ class DaCalc(DaBase):
                 axis[gr_no].set_title(f"Energiebelans per uur voor {self.battery_options[b]['name']}")
                 axis[gr_no].sharex(axis[0])
                 axis_20 = axis[gr_no].twinx()
-                leg4 = axis_20.plot(ind, soc_b[b], label='% SoC', linestyle="solid", color='blue')
+                leg4 = axis_20.plot(ind, soc_b[b], label='% SoC', linestyle="solid", color='olive')
                 axis_20.set_ylabel('% SoC')
                 axis_20.set_ylim([0, 100])
-                soc_line = mlines.Line2D([], [], color='blue', label='SoC %')
+                soc_line = mlines.Line2D([], [], color='olive', label='SoC %')
                 if pv_dc_num[b] > 0:
                     labels = ["AC<->", 'BAT<->', "PV->", '% SoC']
                     handles =[leg1, leg2, leg3, soc_line]
@@ -2180,7 +2180,7 @@ class DaCalc(DaBase):
         if len(uur) < U+1:
             uur.append(24)
         if B > 0:
-            ln1.append(axis[gr_no].plot(ind, soc_t, label='SoC', linestyle=line_styles[0], color='red'))
+            ln1.append(axis[gr_no].plot(ind, soc_t, label='SoC', linestyle=line_styles[0], color='olive'))
         axis[gr_no].set_xticks(ind, labels=uur)
         axis[gr_no].set_ylabel('% SoC')
         axis[gr_no].set_xlabel("uren van de dag")
