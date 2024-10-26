@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+## [V2024.10.5]
+- Correct error change to winter-time
+  
 ## [V2024.10.4]
 - When there are no batteries configured there was a soc-calculation error. This is corrected.
 - The color of all the soc-lines are changed to "olive"
