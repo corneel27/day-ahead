@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+## [V2024.10.6]
+- Fixed a few errors in the graphics for users with more than one battery
+
 ## [V2024.10.5]
 - Correct error change to winter-time
   
