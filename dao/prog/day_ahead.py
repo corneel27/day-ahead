@@ -21,6 +21,8 @@ class DaCalc(DaBase):
         super().__init__(file_name=file_name)
         if self.config is None:
             return
+        self.interval = self.config.get(["interval"], None, "hour").lower()
+        self.interval_s = 3600 if self.interval == "hour" else 900
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
@@ -46,18 +48,13 @@ class DaCalc(DaBase):
             start_dt = _start_dt
         # start_dt = dt.datetime(year=2024, month=9, day=26, hour=14, minute=0)
         start_ts = int(start_dt.timestamp())
-        modulo = start_ts % 3600
-        if modulo > 3550:
-            start_ts = start_ts + 3600 - modulo
+        modulo = start_ts % self.interval_s
+        if modulo > (self.interval_s-10):
+            start_ts = start_ts + self.interval_s - modulo
         start_dt = dt.datetime.fromtimestamp(start_ts)
-        start_h = int(3600 * math.floor(start_ts / 3600))
-        fraction_first_hour = 1 - (start_ts - start_h) / 3600
+        start_h = int(self.interval_s * math.floor(start_ts / self.interval_s))
+        fraction_first_interval = 1 - (start_ts - start_h) / self.interval_s
         prog_data = self.db_da.get_prognose_data(start=start_h, end=None)
-        # start = dt.datetime.timestamp(dt.datetime.strptime("2022-05-27",
-        # "%Y-%m-%d"))
-        # end = dt.datetime.timestamp(dt.datetime.strptime("2022-05-29",
-        # "%Y-%m-%d"))
-        # prog_data = db_da.get_prognose_data(start, end)
         u = len(prog_data)
         if u <= 2:
             logging.error(f"Er ontbreken voor een aantal uur gegevens "
@@ -69,12 +66,12 @@ class DaCalc(DaBase):
                                f"er kan niet worden gerekend")
             return
         if u <= 8:
-            logging.warning("Er ontbreken voor een aantal uur gegevens "
-                            "(meteo en/of dynamische prijzen)\n",
-                            "controleer of alle gegevens zijn opgehaald")
+            logging.warning(f"Er ontbreken voor een aantal uur gegevens "
+                            f"(meteo en/of dynamische prijzen)\n"
+                            f"controleer of alle gegevens zijn opgehaald")
             if self.notification_entity is not None:
                 self.set_value(self.notification_entity,
-                               "Er ontbreken voor een aantal uur gegevens")
+                               f"Er ontbreken voor een aantal uur gegevens")
 
         if (self.notification_entity is not None and
                 self.notification_berekening):
@@ -212,8 +209,8 @@ class DaCalc(DaBase):
             pv_total = 0
             if first_hour:
                 ts.append(start_ts)
-                hour_fraction.append(fraction_first_hour)
-                # pv.append(pv_total * fraction_first_hour)
+                hour_fraction.append(fraction_first_interval)
+                # pv.append(pv_total * fraction_first_interval)
             else:
                 ts.append(row.time)
                 hour_fraction.append(1)
@@ -242,14 +239,15 @@ class DaCalc(DaBase):
             btw = get_value_from_dict(dag_str, btw_def)
             if is_laagtarief(
                     dt.datetime(dtime.year, dtime.month, dtime.day, hour),
-                    self.config.get(["switch to low"], self.prices_options,
-                                    23)):
+                    self.config.get(["switch to low"], self.prices_options, 23)):
                 p_grl.append((gc_p_low + taxes_l) * (1 + btw / 100))
                 p_grt.append((gc_p_low + taxes_t) * (1 + btw / 100))
             else:
                 p_grl.append((gc_p_high + taxes_l) * (1 + btw / 100))
                 p_grt.append((gc_p_high + taxes_t) * (1 + btw / 100))
             first_hour = False
+        while len(b_l) < len(uur):
+            b_l.append(b_l[-1])
         try:
             if self.log_level == logging.INFO:
                 start_df = pd.DataFrame(
@@ -264,17 +262,15 @@ class DaCalc(DaBase):
                 start_df.set_index('uur')
                 logging.info(f"Start waarden: \n{start_df.to_string()}")
         except Exception as ex:
-            logging.error(ex)
-        while len(b_l) < len(uur):
-          b_l.append(b_l[-1])
-        logging.debug(f"lengte prognose arrays:")
-        logging.debug(f"uur: {len(uur)}")
-        logging.debug(f"tijd: {len(tijd)}")
-        logging.debug(f"p_l: {len(pl)}")
-        logging.debug(f"p_t: {len(pt)}")
-        logging.debug(f"base: {len(b_l)}")
-        logging.debug(f"pv_ac: {len(pv_org_ac)}")
-        logging.debug(f"pv_ac: {len(pv_org_dc)}")
+            logging.warning(ex)
+            logging.info(f"lengte prognose arrays:")
+            logging.info(f"uur: {len(uur)}")
+            logging.info(f"tijd: {len(tijd)}")
+            logging.info(f"p_l: {len(pl)}")
+            logging.info(f"p_t: {len(pt)}")
+            logging.info(f"base: {len(b_l)}")
+            logging.info(f"pv_ac: {len(pv_org_ac)}")
+            logging.info(f"pv_ac: {len(pv_org_dc)}")
 
         # volledig salderen?
         salderen = self.prices_options['tax refund'] == "True"
@@ -1002,7 +998,7 @@ class DaCalc(DaBase):
             logging.info(f"Graaddagen: {degree_days:.1f}")  # 3.6  heat factor kWh th / K.day
             degree_days_factor = self.heating_options["degree days factor"]
             heat_produced = float(self.get_state("sensor.daily_heat_production_heating").state)
-            heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)  # heet needed
+            heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)  # heat needed
             stages = self.heating_options["stages"]
             S = len(stages)
             c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10)
@@ -1749,9 +1745,9 @@ class DaCalc(DaBase):
                 else:
                     stop_str = stop_omvormer.strftime('%Y-%m-%d %H:%M')
                 first_row = df_accu[b].iloc[0]
-                from_battery = int(-first_row["dc->"] * 1000 / fraction_first_hour)
-                from_pv = int(first_row["pv->dc"] * 1000 / fraction_first_hour)
-                from_ac = int(first_row["->dc"] * 1000 / fraction_first_hour)
+                from_battery = int(-first_row["dc->"] * 1000 / fraction_first_interval)
+                from_pv = int(first_row["pv->dc"] * 1000 / fraction_first_interval)
+                from_ac = int(first_row["->dc"] * 1000 / fraction_first_interval)
                 calculated_soc = round(soc[b][1].x, 1)
 
                 if self.debug:
@@ -2031,7 +2027,7 @@ class DaCalc(DaBase):
         plt.style.use(style)
         nrows = 3
         if show_battery_balance and B>0:
-            nrows += 1
+            nrows += B
         fig, axis = plt.subplots(figsize=(8, 3 * nrows), nrows=nrows)
         ind = np.arange(U)
         axis[0].bar(ind, np.array(org_l), label='Levering', color='#00bfff', align="edge")
@@ -2110,6 +2106,8 @@ class DaCalc(DaBase):
 
         gr_no = 1
         if show_battery_balance:
+            ind = np.arange(U + 1)
+            uur.append(24)
             for b in range(B):
                 # make graph of battery
                 gr_no += 1
@@ -2118,8 +2116,6 @@ class DaCalc(DaBase):
                 pv_p = []
                 bat_p = []
                 bat_n = []
-                ind = np.arange(U+1)
-                uur.append(24)
                 for u in range(U):
                     # model += (dc_from_ac[b][u] + dc_from_bat[b][u] + pv_prod_dc_sum[b][u] ==
                     #           dc_to_ac[b][u] + dc_to_bat[b][u])
@@ -2176,13 +2172,13 @@ class DaCalc(DaBase):
 
 
         gr_no += 1
-        ln1 = []
+        ln1 = None
         line_styles = ["solid", "dashed", "dotted"]
         ind = np.arange(U+1)
         if len(uur) < U+1:
             uur.append(24)
         if B > 0:
-            ln1.append(axis[gr_no].plot(ind, soc_t, label='SoC', linestyle=line_styles[0], color='olive'))
+            ln1 = axis[gr_no].plot(ind, soc_t, label='SoC', linestyle=line_styles[0], color='olive')
         axis[gr_no].set_xticks(ind, labels=uur)
         axis[gr_no].set_ylabel('% SoC')
         axis[gr_no].set_xlabel("uren van de dag")
@@ -2216,8 +2212,8 @@ class DaCalc(DaBase):
         if bottom > 0:
             axis22.set_ylim([0, top])
         lns = []
-        for b in range(B):
-            lns += ln1[b]
+        if B > 0:
+            lns += ln1
         if ln2:
             lns += ln2
         if ln3:
