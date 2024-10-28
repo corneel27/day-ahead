@@ -8,6 +8,8 @@
 
 ## Inleiding
 Het programma Day Ahead Optimizer (DAO) voert de volgende acties, 
+Aangepast door Stijn
+
 berekeningen en bewerkingen uit: 
 
 * ophalen dynamische energie tarieven bij Entsoe en/of NordPool
