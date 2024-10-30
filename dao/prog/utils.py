@@ -299,3 +299,52 @@ def error_handling(ex):
         logging.exception(ex)
     else:
         log_exc_plus()
+
+def interpolate(org_x: list[datetime.datetime], org_y:list[float],
+                start_x:datetime.datetime, end_x:datetime.datetime,
+                interval:int) -> tuple:
+    new_y =[]
+    new_x = []
+    calc_x = start_x
+    while calc_x <= end_x:
+        new_x.append(calc_x)
+        calc_x += datetime.timedelta(minutes=interval)
+
+    for i in range(len(new_x)):
+        x = new_x[i]
+        for j in range(len(org_x)-1):
+            if (j==0 and x < org_x[j]) or  org_x[j] <= x < org_x[j+1]:
+                break
+        delta_x = (org_x[j+1] - org_x[j]).seconds/60 # in minuten
+        delta_y = org_y[j + 1] - org_y[j]
+        offset_y = -delta_y/3
+        slope = delta_y / delta_x
+        if x >= org_x[j]:
+            y = org_y[j] + (x - org_x[j]).seconds * slope / 60 + offset_y
+        else:
+            y = org_y[j] - (org_x[j] - x).seconds * slope /60 + offset_y
+        new_y.append(y)
+    return new_x, new_y
+
+def prnt_xy(x:list, y:list):
+    for i in range(len(x)):
+        print (f"{i} {x[i]}  {y[i]}")
+    print()
+
+
+def tst_interpolate():
+    x = [datetime.datetime(year=2024, month=10, day=19, hour=hour) for hour in range(4)]
+    y = [1 + 1*i*i for i in range(4)]
+    prnt_xy(x,y)
+    start_x = datetime.datetime(year=2024, month=10, day=19, hour=0)
+    end_x = datetime.datetime(year=2024, month=10, day=19, hour=4)
+    interval = 15
+    new_x, new_y = interpolate(x, y, start_x, end_x, interval)
+    prnt_xy(new_x, new_y)
+
+    df_tst = pd.DataFrame(new_y,new_x, columns=["x", "y"])
+    print(df_tst.to_string())
+
+
+
+

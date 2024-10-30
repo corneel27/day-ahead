@@ -208,8 +208,46 @@ class DBmanagerObj(object):
             connection.close()
         self.log_pool_status()
 
+    def get_prognose_field(self, field:str, start, end=None, interval="hour"):
+        values_table = Table('values', self.metadata, autoload_with=self.engine)
+        t1 = values_table.alias('t1')
+        variabel_table = Table('variabel', self.metadata, autoload_with=self.engine)
+        v1 = variabel_table.alias('v1')
+        # Build the SQLAlchemy query
+        query = select(
+            t1.c.time.label('time'),
+            self.from_unixtime(t1.c.time).label('tijd'),
+            t1.c.value.label(field),
+        ).where(
+            and_(
+                t1.c.variabel == v1.c.id,
+                v1.c.code == field,
+                t1.c.time >= start  # self.unix_timestamp(start.strftime('%Y-%m-%d %H:%M:%S'))
+            )
+        )
+        if end is not None:
+            query = query.where(t1.c.time < self.unix_timestamp(end.strftime('%Y-%m-%d %H:%M:%S')))
+        else:
+            start_dt = datetime.datetime.fromtimestamp(start)
+            if start_dt.hour < 13:
+                num_days = 1
+            else:
+                num_days = 2
+            end_dt = start_dt + datetime.timedelta(days=num_days)
+            end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
+            end_ts = end_dt.timestamp()
+            query = query.where(t1.c.time < self.unix_timestamp(end_dt.strftime('%Y-%m-%d %H:%M:%S')))
 
-    def get_prognose_data(self, start, end=None):
+        query = query.order_by(t1.c.time)
+
+        # Execute the query and fetch the result into a pandas DataFrame
+        with self.engine.connect() as connection:
+            result = connection.execute(query)
+        df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        df["tijd"] = pd.to_datetime(df["tijd"])
+        return df
+
+    def get_prognose_data(self, start, end=None, interval="hour"):
         values_table = Table('values', self.metadata, autoload_with=self.engine)
         # Aliases for the values table
         t1 = values_table.alias('t1')

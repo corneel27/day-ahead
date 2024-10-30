@@ -2,7 +2,7 @@
   "homeassistant": { },
   "database ha": {
     "engine": "sqlite",
-    "database": "homeassistant_v2.db",
+    "database": "home-assistant_v2.db",
     "db_path": "/homeassistant"
   },
   "database da": {
