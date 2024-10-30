@@ -1004,7 +1004,8 @@ class DaCalc(DaBase):
                     date=dt.datetime.combine(dt.date.today() + dt.timedelta(days=1),
                                              dt.datetime.min.time()),
                     weighted=True)
-            logging.info(f"Gewogen graaddagen: {degree_days:.1f} K.day")   # heat factor kWh th / K.day
+            logging.info(f"Gewogen graaddagen: {degree_days:.1f} K.day")
+            # degree days factor kWh th / K.day
             degree_days_factor = self.heating_options["degree days factor"]
             entity_heat_produced = self.config.get(["entity hp heat produced"],
                                                    self.heating_options,
