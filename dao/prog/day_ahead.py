@@ -983,22 +983,41 @@ class DaCalc(DaBase):
         #####################################
 
         self.heater_present = self.heating_options["heater present"].lower() == "true"
-        if not self.heater_present:
+        if self.heater_present:
+            entity_hp_enabled = self.config.get(["entity hp enabled"], self.heating_options, None)
+            hp_enabled = ((entity_hp_enabled is None) or
+                          (self.get_state(entity_hp_enabled).state == "on"))
+            if not hp_enabled:
+                logging.info("Geen warmtepomp vraag - warmtepomp wordt niet ingepland")
+        else:
+            hp_enabled = False
+        if not hp_enabled:
             c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0)
                     for _ in range(U)]  # elektriciteitsverbruik in kWh/h
             p_hp = None
             h_hp = None
         else:
-            degree_days = self.meteo.calc_graaddagen()
+            logging.info(f"Warmtepomp wordt ingepland")
+            degree_days = self.meteo.calc_graaddagen(weighted=True)
             if U > 24:
                 degree_days += self.meteo.calc_graaddagen(
                     date=dt.datetime.combine(dt.date.today() + dt.timedelta(days=1),
-                                             dt.datetime.min.time()))
-            logging.info(f"Warmtepomp")
-            logging.info(f"Graaddagen: {degree_days:.1f}")  # 3.6  heat factor kWh th / K.day
+                                             dt.datetime.min.time()),
+                    weighted=True)
+            logging.info(f"Gewogen graaddagen: {degree_days:.1f} K.day")   # heat factor kWh th / K.day
             degree_days_factor = self.heating_options["degree days factor"]
-            heat_produced = float(self.get_state("sensor.daily_heat_production_heating").state)
+            entity_heat_produced = self.config.get(["entity hp heat produced"],
+                                                   self.heating_options,
+                                                   None)
+            if entity_heat_produced is not None:
+                heat_produced = float(self.get_state(entity_heat_produced).state)
+            else:
+                heat_produced = 0
             heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)  # heat needed
+            logging.info(f"Reeds geproduceerde warmte: {heat_produced:.1f} kWh")
+            logging.info(f"Benodigde warmte: {heat_needed:.1f} kWh")
+
+
             stages = self.heating_options["stages"]
             S = len(stages)
             c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10)

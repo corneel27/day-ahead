@@ -115,6 +115,7 @@
   },
   "heating": {
     "heater present": "True",
+    "entity hp enabled": "binary_sensor.heatpump_heating",
     "degree days factor": 3.6,
     "stages": [
       {

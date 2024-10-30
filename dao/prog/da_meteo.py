@@ -352,12 +352,11 @@ class Meteo:
         self.db_da.savedata(df_db)
         '''
 
-    def calc_graaddagen(self, date: datetime.datetime = None, weighted: bool = False) -> float:
+    def get_avg_temperature(self, date: datetime.datetime = None) -> float:
         """
         Berekent gewogen met temperatuur grens van 16 oC
         :param date: de datum waarvoor de berekening wordt gevraagd
         als None: vandaag
-        :param weighted : boolean, berekenen met (true) of zonder (false) weegfactor
         :return: berekende gewogen graaddagen
         """
         if date is None:
@@ -404,13 +403,33 @@ class Meteo:
         data = self.db_da.run_select_query(sql_avg_temp)
         avg_temp = float(data['avg_temp'].values[0])
         '''
+        return avg_temp
+
+
+    def calc_graaddagen(self,
+                        date: datetime.datetime = None,
+                        avg_temp: float|None = None,
+                        weighted: bool = False) -> float:
+        """
+        Berekent graaddagen met temperatuur grens van 16 oC
+        :param date: de datum waarvoor de berekening wordt gevraagd
+                    als None: vandaag
+        :param avg_temp: de gemiddelde temperatuur, default None
+        :param weighted: boolean, gewogen als true, default false
+        :return: berekende evt gewogen graaddagen
+        """
+        if date is None:
+            date = datetime.datetime.combine(datetime.datetime.today(),
+                                             datetime.datetime.min.time())
+        if avg_temp is None:
+            avg_temp = self.get_avg_temperature(date)
         weight_factor = 1
         if weighted:
             mon = date.month
             if mon <= 2 or mon >= 11:
                 weight_factor = 1.1
-            elif mon >= 4 or mon <= 9:
-                weight_factor = 0.9
+            elif mon >= 4 and mon <= 9:
+                weight_factor = 0.8
         if avg_temp >= 16:
             result = 0
         else:
