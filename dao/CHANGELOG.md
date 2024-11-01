@@ -1,5 +1,7 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+## [V2024.11.0]
+- Fixed a db-error when getting Tibber-data with the default sqlite-db
 
 ## [V2024.10.6]
 - Fixed a few errors in the graphics for users with more than one battery
