@@ -14,7 +14,7 @@ import hassapi as hass
 import pandas as pd
 from subprocess import PIPE, run
 import logging
-from logging import Handler
+from logging import Handler, raiseExceptions
 from sqlalchemy import Table, select, func, and_
 from utils import get_tibber_data, error_handling
 from version import __version__
@@ -22,6 +22,8 @@ from da_config import Config
 from da_meteo import Meteo
 from da_prices import DaPrices
 from db_manager import DBmanagerObj
+from typing import Union
+from hassapi.models import StateList
 
 
 class NotificationHandler(Handler):
@@ -139,6 +141,23 @@ class DaBase(hass.Hass):
         self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.db_da.log_pool_status()
+
+    def set_value(self, entity_id: str, value: Union[int, float, str]) -> StateList:
+        try:
+            result = super().set_value(entity_id, value)
+            state = self.get_state(entity_id).state
+            if isinstance(value, (int, float)):
+                if round(float(state),5) != round(float(value),5):
+                    raise ValueError
+            else:
+                if state != value:
+                    raise ValueError
+        except Exception as ex:
+            logging.error(f"Fout bij schrijven naar {entity_id}, waarde {value}")
+            # error_handling(ex)
+            raise
+        return result
+
 
     def generate_tasks(self):
         self.tasks = {
