@@ -102,13 +102,18 @@ def get_tibber_data():
     url = config.get(["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql")
     db_da_engine = config.get(['database da', "engine"], None, "mysql")
     db_da_server = config.get(['database da', "server"], None, "core-mariadb")
-    db_da_port = int(config.get(['database da', "port"], None, 3306))
-    db_da_name = config.get(['database da', "database"], None, "day_ahead")
+    db_da_port = int(config.get(['database da', "port"], None, 0))
+    if db_da_engine == "sqlite":
+        db_da_name = config.get(['database da', "database"], None, "day_ahead.db")
+    else:
+        db_da_name = config.get(['database da', "database"], None, "day_ahead")
     db_da_user = config.get(['database da', "username"], None, "day_ahead")
     db_da_password = config.get(['database da', "password"])
+    db_da_path = config.get(['database da', "db_path"], None, "../data")
     db_time_zone = config.get(["time_zone"])
-    db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server, db_port=db_da_port,
-                         db_user=db_da_user, db_password=db_da_password, db_time_zone=db_time_zone)
+    db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
+                              db_port=db_da_port, db_user=db_da_user, db_password=db_da_password,
+                              db_path=db_da_path, db_time_zone=db_time_zone)
     prices_options = config.get(["prices"])
     headers = {
         "Authorization": "Bearer " + tibber_options["api_token"],

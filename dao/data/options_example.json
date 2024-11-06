@@ -117,6 +117,8 @@
     "heater present": "True",
     "entity hp enabled": "binary_sensor.heatpump_heating",
     "degree days factor": 3.6,
+    "adjustment" : "power",
+    "//adjustment" : "on/off | power | heating curve",
     "stages": [
       {
         "max_power": 225,

@@ -428,7 +428,7 @@ class Meteo:
             mon = date.month
             if mon <= 2 or mon >= 11:
                 weight_factor = 1.1
-            elif mon >= 4 and mon <= 9:
+            elif 4 <= mon <= 9:
                 weight_factor = 0.8
         if avg_temp >= 16:
             result = 0
