@@ -1,8 +1,3 @@
-"""
-Het programma Day Ahead Optimalisatie kun je je energieverbruik en energiekosten optimaliseren als je gebruik maakt
-van dynamische prijzen.
-Zie verder: DOCS.md
-"""
 import datetime
 import sys
 import os
@@ -14,7 +9,7 @@ import hassapi as hass
 import pandas as pd
 from subprocess import PIPE, run
 import logging
-from logging import Handler, raiseExceptions
+from logging import Handler
 from sqlalchemy import Table, select, func, and_
 from utils import get_tibber_data, error_handling
 from version import __version__

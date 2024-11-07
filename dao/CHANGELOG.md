@@ -1,13 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-## [V2024.11.0.dev_a]
-- Scheduling of heatpump can be set via a ha-entity
-- Scheduling of heatpump can be achieved in three ways:
-  - on/off
-  - heat curve adjustment
-  - calculated power
-- When setting a state of an entity failed then an error message is written in the log 
-  (name of the entity, new failed value)
+## [V2024.11.1]
+- Fixed an error when getting Tibber-data when using a Tibber pulse: 
+only data before today are stored
 
 ## [V2024.11.0]
 - Fixed a db-error when getting Tibber-data with the default sqlite-db

@@ -1,6 +1,6 @@
 """
-Het programma Day Ahead Optimalisatie kun je je energieverbruik en
-energiekosten optimaliseren als je gebruik maakt van dynamische prijzen.
+Met het programma Day Ahead Optimizer kun je je energieverbruik en energiekosten optimaliseren als
+je gebruik maakt van dynamische prijzen.
 Zie verder: DOCS.md
 """
 import datetime
