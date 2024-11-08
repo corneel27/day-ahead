@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+## [V2024.11.1]
+- Fixed an error when getting Tibber-data when using a Tibber pulse: 
+only data before today are stored
+
 ## [V2024.11.0]
 - Fixed a db-error when getting Tibber-data with the default sqlite-db
 

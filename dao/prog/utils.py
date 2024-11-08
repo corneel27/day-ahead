@@ -188,6 +188,8 @@ def get_tibber_data():
             '}" ' \
         '}'
 
+    now = datetime.datetime.now()
+    today_ts = datetime.datetime(year=now.year,month=now.month, day=now.day).timestamp()
     logging.debug(query)
     resp = post(url, headers=headers, data=query)
     tibber_dict = json.loads(resp.text)
@@ -195,29 +197,33 @@ def get_tibber_data():
     consumption_nodes = tibber_dict['data']['viewer']['homes'][0]['consumption']['nodes']
     tibber_df = pd.DataFrame(columns=['time', 'code', 'value'])
     for node in production_nodes:
-        time_stamp = str(int(get_datetime_from_str(node['from']).timestamp()))
-        if not (node["production"] is None):
-            code = "prod"
-            value = float(node["production"])
-            logging.info(f"{node} {time_stamp} {value}")
-            tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
-        if not (node["profit"] is None):
-            code = 'profit'
-            value = float(node["profit"])
-            logging.info(f"{node} {time_stamp} {value}")
-            tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
+        timestamp = int(get_datetime_from_str(node['from']).timestamp())
+        if timestamp < today_ts:
+            time_stamp = str(timestamp)
+            if not (node["production"] is None):
+                code = "prod"
+                value = float(node["production"])
+                logging.info(f"{node} {time_stamp} {value}")
+                tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
+            if not (node["profit"] is None):
+                code = 'profit'
+                value = float(node["profit"])
+                logging.info(f"{node} {time_stamp} {value}")
+                tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
     for node in consumption_nodes:
-        time_stamp = str(int(get_datetime_from_str(node['from']).timestamp()))
-        if not (node["consumption"] is None):
-            code = "cons"
-            value = float(node["consumption"])
-            logging.info(f"{node} {time_stamp} {value}")
-            tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
-        if not (node["cost"] is None):
-            code = "cost"
-            value = float(node["cost"])
-            logging.info(f"{node} {time_stamp} {value}")
-            tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
+        timestamp = int(get_datetime_from_str(node['from']).timestamp())
+        if timestamp < today_ts:
+            time_stamp = str(timestamp)
+            if not (node["consumption"] is None):
+                code = "cons"
+                value = float(node["consumption"])
+                logging.info(f"{node} {time_stamp} {value}")
+                tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
+            if not (node["cost"] is None):
+                code = "cost"
+                value = float(node["cost"])
+                logging.info(f"{node} {time_stamp} {value}")
+                tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
     logging.info(f"Opgehaalde data bij Tibber (database records):"
                  f"\n{tibber_df.to_string(index=False)}")
     db_da.savedata(tibber_df)
