@@ -1,4 +1,3 @@
-import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -6,7 +5,7 @@ import numpy as np
 
 
 def make_graph_meteo(df, file=None, show=False):
-    fig = plt.figure(figsize=(15, 10))
+    plt.figure(figsize=(15, 10))
     df['gr'] = df['gr'].astype(float)
     x_axis = np.arange(len(df['tijd_nl'].values))
     plt.bar(x_axis-0.1,  df['gr'].values, width=0.2, label="global rad")
@@ -21,7 +20,7 @@ def make_graph_meteo(df, file=None, show=False):
 
 
 def make_graph_entsoe(df):
-    fig = plt.figure(figsize=(15, 10))
+    plt.figure(figsize=(15, 10))
     df['gr'] = df['gr'].astype(float)
     x_axis = np.arange(len(df['tijd_nl'].values))
     plt.bar(x_axis-0.1,  df['gr'].values, width=0.2, label="global rad")

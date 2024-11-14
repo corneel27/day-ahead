@@ -11,7 +11,7 @@ import sqlalchemy_utils
 import pandas as pd
 
 
-class CheckDB():
+class CheckDB:
     def __init__(self, file_name: str | None = None):
         # super().__init__(file_name)
         self.file_name = file_name

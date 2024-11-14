@@ -62,25 +62,30 @@ class GraphBuilder:
                 plot = ax.bar(ind, data_array, label=label, width=width, color=color, align="edge")
             elif s_type == "line":
                 linestyle = serie["linestyle"]
-                plot = ax.plot(ind, data_array, label=label, linestyle=linestyle, color=color, align="edge")
+                plot = ax.plot(ind, data_array, label=label, linestyle=linestyle,
+                               color=color, align="edge")
             else:  # stacked bar
                 data_sum = np.sum(data_array)
                 if data_sum >= 0:
                     if vax == "left":
-                        plot = ax.bar(ind, data_array, width=width, bottom=stacked_plus, label=label, color=color,
+                        plot = ax.bar(ind, data_array, width=width, bottom=stacked_plus,
+                                      label=label, color=color,
                                       align="edge")
                         stacked_plus = stacked_plus + data_array
                     else:
-                        plot = ax.bar(ind+width, data_array, width=width, bottom=stacked_plus_right, label=label,
+                        plot = ax.bar(ind+width, data_array, width=width,
+                                      bottom=stacked_plus_right, label=label,
                                       color=color, align="edge")
                         stacked_plus_right = stacked_plus_right + data_array
                 elif data_sum < 0:
                     if vax == "left":
-                        plot = ax.bar(ind, data_array, width=width, bottom=stacked_neg, label=label, color=color,
+                        plot = ax.bar(ind, data_array, width=width, bottom=stacked_neg,
+                                      label=label, color=color,
                                       align="edge")
                         stacked_neg = stacked_neg + data_array
                     else:
-                        plot = ax.bar(ind+width, data_array, width=width, bottom=stacked_neg_right, label=label,
+                        plot = ax.bar(ind+width, data_array, width=width,
+                                      bottom=stacked_neg_right, label=label,
                                       color=color, align="edge")
                         stacked_neg_right = stacked_neg_right + data_array
             if plot is not None:
@@ -107,8 +112,6 @@ class GraphBuilder:
 
         if axis_right:
             ylim = math.ceil(max(np.max(stacked_plus_right), - np.min(stacked_neg_right)))
-            # math.ceil(max(max(accu_out_p) + max(c_l_p) + max(pv_p), -min(min(base_n), min(boiler_n),
-            # min(heatpump_n), min(ev_n), min(c_t_n), min(accu_in_n) )))
             if np.min(stacked_neg_right) < 0:
                 axis_right.set_ylim([-ylim, ylim])
             else:

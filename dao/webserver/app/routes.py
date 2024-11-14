@@ -20,7 +20,8 @@ except ValueError as ex:
 
 logname = "dashboard.log"
 handler = TimedRotatingFileHandler("../data/log/" + logname, when="midnight",
-                                   backupCount=1 if config is None else config.get(["history", "save days"]))
+                                   backupCount=1 if config is None else
+                                   config.get(["history", "save days"]))
 handler.suffix = "%Y%m%d"
 handler.setLevel(logging.INFO)
 logging.basicConfig(level=logging.DEBUG, handlers=[handler],
@@ -195,8 +196,11 @@ def home():
 
     return render_template('home.html', title='Optimization', active_menu="home",
                            subjects=subjects, views=views,
-                           active_subject=active_subject, active_view=active_view, image=image, tabel=tabel,
-                           active_time=active_time, version=__version__)
+                           active_subject=active_subject,
+                           active_view=active_view,
+                           image=image, tabel=tabel,
+                           active_time=active_time,
+                           version=__version__)
 
 
 @app.route('/run', methods=['POST', 'GET'])
@@ -242,9 +246,11 @@ def run_process():
                     break
 
     return render_template('run.html', title='Run', active_menu="run",
-                           bewerkingen=bewerkingen, bewerking=bewerking, current_bewerking=current_bewerking,
+                           bewerkingen=bewerkingen, bewerking=bewerking,
+                           current_bewerking=current_bewerking,
                            parameters=parameters,
-                           log_content=log_content, version=__version__)
+                           log_content=log_content,
+                           version=__version__)
 
 
 @app.route('/reports', methods=['POST', 'GET'])
@@ -275,7 +281,9 @@ def reports():
         if "met_prognose" in lst:
             met_prognose = lst["met_prognose"][0]
     tot = None
-    if (active_period == "vandaag" or active_period == "deze week" or active_period == "deze maand" or
+    if (active_period == "vandaag" or
+            active_period == "deze week" or
+            active_period == "deze maand" or
             active_period == "dit contractjaar"):
         if not met_prognose:
             now = datetime.datetime.now()
@@ -291,18 +299,22 @@ def reports():
         filtered_df = report.calc_balance_columns(report_df, active_interval, active_view)
     filtered_df.round(3)
     if active_view == "tabel":
-        report_data = [filtered_df.to_html(index=False, justify="right", decimal=",", classes="data", border=0,
+        report_data = [filtered_df.to_html(index=False, justify="right", decimal=",",
+                                           classes="data", border=0,
                                            float_format='{:.3f}'.format)]
     else:
         if active_subject == "grid":
             report_data = report.make_graph(filtered_df, active_period)
         else:
-            report_data = report.make_graph(filtered_df, active_period, report.balance_graph_options)
+            report_data = report.make_graph(filtered_df, active_period,
+                                            report.balance_graph_options)
 
     return render_template('report.html', title='Rapportage', active_menu="reports",
                            subjects=subjects, views=views, periode_options=periode_options,
                            active_period=active_period, met_prognose=met_prognose,
-                           active_subject=active_subject, active_view=active_view, report_data=report_data,
+                           active_subject=active_subject,
+                           active_view=active_view,
+                           report_data=report_data,
                            version=__version__)
 
 
@@ -384,7 +396,7 @@ def api_report(fld: str, periode: str):
     try:
         cumulate = int(cumulate)
         cumulate = cumulate == 1
-    except Exception:
+    except ValueError:
         cumulate = False
     result = report.get_api_data(fld, periode, cumulate=cumulate)
     return result

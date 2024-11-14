@@ -5,7 +5,8 @@ import os
 
 class Config:
 
-    def parse(self, file_name:str):
+    @staticmethod
+    def parse(file_name: str):
         with open(file_name, "r") as file_json:
             try:
                 return json.load(file_json)

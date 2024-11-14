@@ -35,6 +35,7 @@ class DaCalc(DaBase):
         self.hp_enabled = False
         self.hp_adjustment = None
         self.boiler_present = False
+        self.boiler_enabled = False
         self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
         self.machines = self.config.get(["machines"], None, [])
         # self.start_logging()
@@ -463,7 +464,7 @@ class DaCalc(DaBase):
         # totaal elektra van ac naar de busbar, ieder uur
 
         # alle variabelen definieren alles in W tenzij aangegeven
-        # mppt aan/uit evt bij netto prijzen onder nul
+        # mppt aan/uit eventueel bij netto prijzen onder nul
         pv_dc_on_off = [[[model.add_var(var_type=BINARY) for _ in range(U)]
                         for _ in range(pv_dc_num[b])] for b in range(B)]
         pv_prod_dc_sum = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=2 * max_charge_power[b])
@@ -638,7 +639,18 @@ class DaCalc(DaBase):
         boiler_on = [model.add_var(var_type=BINARY) for _ in range(U)]
         self.boiler_present = self.config.get(["boiler present"], self.boiler_options,
                                               "true").lower() == "true"
-        if not self.boiler_present:
+        boiler_heated_by_heatpump = False
+        if self.boiler_present:
+            entity_boiler_enabled = self.config.get(["entity boiler enabled"],
+                                                    self.boiler_options,
+                                                    None)
+            if entity_boiler_enabled is None:
+                self.boiler_enabled = False
+            else:
+                self.boiler_enabled = self.get_state(entity_boiler_enabled).state == "on"
+        else:
+            self.boiler_enabled = False
+        if not self.boiler_present or not self.boiler_enabled:
             # default values
             boiler_setpoint = 50
             boiler_hysterese = 10
@@ -649,7 +661,7 @@ class DaCalc(DaBase):
             # consumption boiler
             c_b = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for _ in range(U)]
             model += xsum(boiler_on[j] for j in range(U)) == 0
-            logging.info(f"Geen boiler aanwezig")
+            logging.info(f"Boiler niet aanwezig of staat uit, boiler wordt niet ingepland")
         else:
             # 50 huidige boilertemperatuur ophalen uit ha
             boiler_act_temp = (
@@ -668,7 +680,9 @@ class DaCalc(DaBase):
             spec_heat_boiler = vol * 4.2 + 200 * 0.5  # kJ/K
             cop_boiler = self.boiler_options["cop"]
             power = self.boiler_options["elec. power"]  # W
-
+            boiler_heated_by_heatpump = self.config.get(["boiler heated by heatpump"],
+                                                        self.boiler_options,
+                                                        "True").lower() == "true"
             # tijdstip index waarop boiler kan worden verwarmd
             boiler_start = (
                 int(max(0, min(23, int((boiler_act_temp - boiler_bovengrens) / boiler_cooling)))))
@@ -688,7 +702,7 @@ class DaCalc(DaBase):
                        for _ in range(U)]  # consumption boiler
                 model += xsum(boiler_on[j] for j in range(U)
                               [boiler_start:boiler_end + 1]) == 0
-                logging.debug(f"Boiler: geen opwarming")
+                logging.debug(f"Boiler: er  wordt geen opwarming inpland")
                 boiler_end_temp = boiler_act_temp - boiler_cooling * U
                 logging.debug(f"Boiler eind temperatuur: {boiler_end_temp}")
                 for u in range(U):
@@ -760,7 +774,7 @@ class DaCalc(DaBase):
                 logging.error(ex)
                 soc_state = 100.0
 
-            # onderstaande regel evt voor testen
+            # onderstaande regel eventueel voor testen
             # soc_state = min(soc_state, 90.0)
 
             actual_soc.append(soc_state)
@@ -806,7 +820,7 @@ class DaCalc(DaBase):
             logging.info(f" Ampere  Effic. Grid kW Accu kW")
             for cs in range(ECS[e]):
                 if not ("efficiency" in charge_stages[e][cs]):
-                    charge_stages[e][cs]["efficiency"] = 1.0
+                    charge_stages[e][cs]["efficiency"] = 1
                 charge_stages[e][cs]["power"] = (charge_stages[e][cs]["ampere"] * 230 *
                                                  ampere_factor[e]/1000)
                 charge_stages[e][cs]["accu_power"] = (charge_stages[e][cs]["power"] *
@@ -983,7 +997,9 @@ class DaCalc(DaBase):
         #####################################
         #              heatpump             #
         #####################################
-
+        c_hp = None
+        p_hp = None
+        h_hp = None
         self.heater_present = self.heating_options["heater present"].lower() == "true"
         if self.heater_present:
             entity_hp_enabled = self.config.get(["entity hp enabled"], self.heating_options, None)
@@ -996,8 +1012,6 @@ class DaCalc(DaBase):
         if not self.hp_enabled:
             c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0)
                     for _ in range(U)]  # elektriciteitsverbruik in kWh/h
-            p_hp = None
-            h_hp = None
         else:
             logging.info(f"Warmtepomp wordt ingepland")
             degree_days = self.meteo.calc_graaddagen(weighted=True)
@@ -1042,13 +1056,13 @@ class DaCalc(DaBase):
                 else:
                     self.set_value(entity_avg_temp, round(avg_temp,1))
                 '''
-                # tot hier code ronalc
+                # tot hier code ronald
             else:
                 # vanaf hier code cees
                 # hp_adjustment == "power" or "heating curve"
                 stages = self.heating_options["stages"]
                 S = len(stages)
-                c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10)
+                c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=stages[-1]["max_power"])
                         for _ in range(U)]  # elektriciteitsverbruik in kWh/h
                 # p_hp[s][u]: het gevraagde vermogen in W in dat uur
                 p_hp = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=stages[s]["max_power"])
@@ -1060,7 +1074,7 @@ class DaCalc(DaBase):
                 # verbruik per uur
                 for u in range(U):
                     # verbruik in kWh is totaal vermogen in W/1000
-                    model += c_hp[u] == (xsum(p_hp[s][u] for s in range(S))) * hour_fraction[u] / 1000
+                    model += c_hp[u] == (xsum(p_hp[s][u] for s in range(S))) * hour_fraction[u]/1000
                     # kosten
                     # model += k_hp[u] == c_hp[u] * pl[u]  # kosten = verbruik x tarief
 
@@ -1072,7 +1086,10 @@ class DaCalc(DaBase):
                     for s in range(S):
                         model += p_hp[s][u] <= stages[s]["max_power"] * hp_on[s][u]
                     # ieder uur maar een aan
-                    model += (xsum(hp_on[s][u] for s in range(S))) + boiler_on[u] == 1
+                    if boiler_heated_by_heatpump:
+                        model += (xsum(hp_on[s][u] for s in range(S))) + boiler_on[u] == 1
+                    else:
+                        model += (xsum(hp_on[s][u] for s in range(S))) == 1
                     # geproduceerde warmte = vermogen in W * COP_schijf /1000 in kWh
                     model += h_hp[u] == xsum((p_hp[s][u] * stages[s]["cop"]/1000)
                                              for s in range(S)) * hour_fraction[u]
@@ -1569,6 +1586,7 @@ class DaCalc(DaBase):
             for b in range(B):
                 df_soc["soc_"+str(b)] = None
             for u in range(U+1):
+                row_soc = []
                 for b in range(B):
                     soc_value = soc[b][u].x
                     if b == 0:
@@ -1833,24 +1851,32 @@ class DaCalc(DaBase):
                     self.set_entity_state("entity balance switch",
                                           self.battery_options[b],
                                           balance_state)
-                    logging.info(f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: {netto_vermogen} W"
+                    logging.info(f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: "
+                                 f"{netto_vermogen} W"
                                  f"{' tot: '+stop_str if stop_omvormer else ''}")
-                    logging.info(f"Balanceren: {balance}{' tot: '+stop_str if stop_omvormer else ''}")
-                    helper_id = self.config.get(["entity stop victron"], self.battery_options[b], None)
+                    logging.info(f"Balanceren: {balance}"
+                                 f"{' tot: '+stop_str if stop_omvormer else ''}")
+                    helper_id = self.config.get(["entity stop victron"],
+                                                self.battery_options[b], None)
                     if helper_id is not None:
                         logging.warning(f"The name 'entity stop victron' is deprecated, "
                                         f"please change to 'entity stop inverter'.")
                     if helper_id is None:
-                        helper_id = self.config.get(["entity stop inverter"], self.battery_options[b], None)
+                        helper_id = self.config.get(["entity stop inverter"],
+                                                    self.battery_options[b], None)
                     if helper_id is not None:
-                        self.call_service("set_datetime", entity_id=helper_id, datetime=stop_str)
-                    self.set_entity_value("entity from battery", self.battery_options[b], from_battery)
+                        self.call_service("set_datetime",
+                                          entity_id=helper_id, datetime=stop_str)
+                    self.set_entity_value("entity from battery",
+                                          self.battery_options[b], from_battery)
                     logging.info(f"Vermogen uit batterij: {from_battery}W")
-                    self.set_entity_value("entity from pv", self.battery_options[b], from_pv)
-                    logging.info(f"Vermogen dat binnenkomt van pv: {from_pv}W")
+                    self.set_entity_value("entity from pv",
+                                          self.battery_options[b], from_pv)
+                    logging.info(f"Vermogen dat binnenkomt van pv: {from_pv} W")
                     self.set_entity_value("entity from ac", self.battery_options[b], from_ac)
-                    logging.info(f"Vermogen dat binnenkomt van ac: {from_ac}W")
-                    self.set_entity_value("entity calculated soc", self.battery_options[b], calculated_soc)
+                    logging.info(f"Vermogen dat binnenkomt van ac: {from_ac} W")
+                    self.set_entity_value("entity calculated soc",
+                                          self.battery_options[b], calculated_soc)
                     logging.info(f"Waarde SoC na eerste uur: {calculated_soc}%")
 
                 for s in range(pv_dc_num[b]):
@@ -1928,7 +1954,8 @@ class DaCalc(DaBase):
                                 if self.debug:
                                     logging.info(f"Zou zijn gestart op {start_machine_str}")
                                 else:
-                                    self.call_service("set_datetime", entity_id=ma_entity_plan_start[m],
+                                    self.call_service("set_datetime",
+                                                      entity_id=ma_entity_plan_start[m],
                                                       datetime=start_machine_str)
                                     logging.info(f"Start op {start_machine_str}")
                             end_machine_str = ma_kw_dt[m][r + RL[m]].strftime('%Y-%m-%d %H:%M')
@@ -1936,17 +1963,19 @@ class DaCalc(DaBase):
                                 if self.debug:
                                     logging.info(f"Zou klaar zijn op {end_machine_str}")
                                 else:
-                                    self.call_service("set_datetime", entity_id=ma_entity_plan_end[m],
+                                    self.call_service("set_datetime",
+                                                      entity_id=ma_entity_plan_end[m],
                                                       datetime=end_machine_str)
                                     logging.info(f"Is klaar op {end_machine_str}")
 
                 if self.log_level == logging.DEBUG:
-                    logging.debug(f"Per kwartier het berekende verbruik, en het bijbehorende tarief")
+                    logging.debug(f"Per kwartier het berekende verbruik en het bijbehorende tarief")
                     for kw in range(KW[m]):
                         print(f"kwartier {kw:>2} tijd: {ma_kw_dt[m][kw].strftime('%H:%M')} "
                               f"consumption: {c_ma_kw[m][kw].x:>7.3f} "
                               f"uur: {math.floor(kw / 4)} tarief: {pl[math.floor(kw / 4)]:.4f}")
-                    logging.debug(f"Per uur het berekende verbruik, het bijbehorende tarief en de kosten")
+                    logging.debug(f"Per uur het berekende verbruik, "
+                                  f"het bijbehorende tarief en de kosten")
                     for u in range(U):
                         print(f"uur {u:>2} tijdstip {tijd[u].strftime('%H:%M')} "
                               f"consumption: {c_ma_u[m][u].x:>7.3f} tarief: {pl[u]:.4f}")
@@ -1967,7 +1996,6 @@ class DaCalc(DaBase):
         mach_n = []
         ev_n = []
         c_l_p = []
-        soc = []
         soc_b = []
         pv_p_org = []
         pv_p_opt = []
@@ -1992,11 +2020,13 @@ class DaCalc(DaBase):
             accu_in_n.append(-accu_in_sum * hour_fraction[u])
             accu_out_p.append(accu_out_sum * hour_fraction[u])
             max_y = max(max_y, (c_l_p[u] + pv_p_org[u] + pv_ac_p[u]), abs(
-                c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] + accu_in_sum)
-            if B >0:
-                soc_t = list(df_soc["soc"])
-                for b in range(B):
-                    soc_b.append(list(df_soc["soc_"+str(b)]))
+                c_t_total[u].x) + b_l[u] + c_b[u].x + c_hp[u].x + c_ev_sum[u] + c_ma_sum[u] +
+                        accu_in_sum)
+        soc_t = []
+        if B > 0:
+            soc_t = list(df_soc["soc"])
+            for b in range(B):
+                soc_b.append(list(df_soc["soc_"+str(b)]))
             '''
                 if u == 0:
                     soc_p.append([])
@@ -2117,7 +2147,7 @@ class DaCalc(DaBase):
                                                "true").lower() == "true"
         plt.style.use(style)
         nrows = 3
-        if show_battery_balance and B>0:
+        if show_battery_balance and B > 0:
             nrows += B
         fig, axis = plt.subplots(figsize=(8, 3 * nrows), nrows=nrows)
         ind = np.arange(U)
@@ -2136,16 +2166,23 @@ class DaCalc(DaBase):
         if self.heater_present:
             axis[0].bar(ind, np.array(heatpump_n), bottom=np.array(
                 base_n), label="WP", color='#a32cc4', align="edge")
-        axis[0].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
+        axis[0].bar(ind, np.array(ev_n),
+                    bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
                     label="EV laden", color='yellow', align="edge")
         if M > 0:
-            axis[0].bar(ind, np.array(mach_n),
-                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
-                        label="Apparatuur", color='brown', align="edge")
+            axis[0].bar(ind,
+                        np.array(mach_n),
+                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) +
+                        np.array(ev_n),
+                        label="Apparatuur",
+                        color='brown',
+                        align="edge")
         axis[0].bar(ind, np.array(org_t),
-                    bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n) +
-                    np.array(mach_n),
-                    label="Teruglev.", color='#0080ff', align="edge")
+                    bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) +
+                    np.array(ev_n) + np.array(mach_n),
+                    label="Teruglev.",
+                    color='#0080ff',
+                    align="edge")
         axis[0].legend(loc='best', bbox_to_anchor=(1.05, 1.00))
         axis[0].set_ylabel('kWh')
         ylim = math.ceil(max_y)
@@ -2153,14 +2190,19 @@ class DaCalc(DaBase):
         axis[0].set_xticks(ind, labels=uur)
         axis[0].xaxis.set_major_locator(ticker.MultipleLocator(2))
         axis[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-        axis[0].set_title(f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\nNiet geoptimaliseerd")
+        axis[0].set_title(f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\n"
+                          f"Niet geoptimaliseerd")
 
         axis[1].bar(ind, np.array(c_l_p),
                     label='Levering', color='#00bfff', align="edge")
         axis[1].bar(ind, np.array(pv_p_opt), bottom=np.array(
             c_l_p), label='PV AC', color='green', align="edge")
-        axis[1].bar(ind, np.array(accu_out_p), bottom=np.array(c_l_p) + np.array(pv_p_opt), label='Accu uit',
-                    color='red', align="edge")
+        axis[1].bar(ind,
+                    np.array(accu_out_p),
+                    bottom=np.array(c_l_p) + np.array(pv_p_opt),
+                    label='Accu uit',
+                    color='red',
+                    align="edge")
 
         # axis[1].bar(ind, np.array(cons_n), label="Verbruik", color='yellow')
         axis[1].bar(ind, np.array(base_n),
@@ -2171,12 +2213,20 @@ class DaCalc(DaBase):
         if self.heater_present:
             axis[1].bar(ind, np.array(heatpump_n), bottom=np.array(
                 base_n), label="WP", color='#a32cc4', align="edge")
-        axis[1].bar(ind, np.array(ev_n), bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
-                    label="EV laden", color='yellow', align="edge")
+        axis[1].bar(ind,
+                    np.array(ev_n),
+                    bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
+                    label="EV laden",
+                    color='yellow',
+                    align="edge")
         if M > 0:
-            axis[1].bar(ind, np.array(mach_n),
-                        bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) + np.array(ev_n),
-                        label="Apparatuur", color='brown', align="edge")
+            axis[1].bar(ind,
+                        np.array(mach_n),
+                        bottom=np.array(base_n) + np.array(boiler_n) +
+                        np.array(heatpump_n) + np.array(ev_n),
+                        label="Apparatuur",
+                        color='brown',
+                        align="edge")
         axis[1].bar(ind, np.array(c_t_n),
                     bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n) +
                     np.array(ev_n) + np.array(mach_n),
@@ -2224,7 +2274,6 @@ class DaCalc(DaBase):
                 pv_p.append(0)
                 bat_p.append(0)
                 bat_n.append(0)
-                legs = []
                 leg1 = axis[gr_no].bar(ind, np.array(ac_p), label='AC<->',
                                        color='red', align="edge")
                 leg2 = axis[gr_no].bar(ind, np.array(bat_p), label='BAT<->',
@@ -2246,21 +2295,23 @@ class DaCalc(DaBase):
                 axis[gr_no].set_xticks(ind, labels=uur)
                 axis[gr_no].xaxis.set_major_locator(ticker.MultipleLocator(2))
                 axis[gr_no].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-                axis[gr_no].set_title(f"Energiebalans per uur voor {self.battery_options[b]['name']}")
+                axis[gr_no].set_title(f"Energiebalans per uur voor "
+                                      f"{self.battery_options[b]['name']}")
                 axis[gr_no].sharex(axis[0])
                 axis_20 = axis[gr_no].twinx()
-                leg4 = axis_20.plot(ind, soc_b[b], label='% SoC', linestyle="solid", color='olive')
+                # leg4 = axis_20.plot(ind, soc_b[b], label='% SoC',
+                #                     linestyle="solid", color='olive')
                 axis_20.set_ylabel('% SoC')
                 axis_20.set_ylim([0, 100])
                 soc_line = mlines.Line2D([], [], color='olive', label='SoC %')
                 if pv_dc_num[b] > 0:
                     labels = ["AC<->", 'BAT<->', "PV->", '% SoC']
-                    handles =[leg1, leg2, leg3, soc_line]
+                    handles = [leg1, leg2, leg3, soc_line]
                 else:
                     labels = ["AC<->", 'BAT<->', '% SoC']
-                    handles =[leg1, leg2, soc_line]
-                axis[gr_no].legend(handles=handles, labels=labels, loc='best', bbox_to_anchor=(1.35, 1.00))
-
+                    handles = [leg1, leg2, soc_line]
+                axis[gr_no].legend(handles=handles, labels=labels,
+                                   loc='best', bbox_to_anchor=(1.35, 1.00))
 
         gr_no += 1
         ln1 = None
@@ -2282,17 +2333,20 @@ class DaCalc(DaBase):
         axis22 = axis[gr_no].twinx()
         if self.config.get(["graphics", "prices delivery"], None, "true").lower() == "true":
             pl.append(pl[-1])
-            ln2 = axis22.step(ind, np.array(pl), label='Tarief\nlevering', color='#00bfff', where='post')
+            ln2 = axis22.step(ind, np.array(pl), label='Tarief\nlevering',
+                              color='#00bfff', where='post')
         else:
             ln2 = None
         if self.config.get(["graphics", "prices redelivery"], None, "true").lower() == "true":
             pt_notax.append(pt_notax[-1])
-            ln3 = axis22.step(ind, np.array(pt_notax), label="Tarief terug\nno tax", color='#0080ff', where='post')
+            ln3 = axis22.step(ind, np.array(pt_notax), label="Tarief terug\nno tax",
+                              color='#0080ff', where='post')
         else:
             ln3 = None
         if self.config.get(["graphics", "average delivery"], None, "true").lower() == "true":
             pl_avg.append(pl_avg[-1])
-            ln4 = axis22.plot(ind, np.array(pl_avg), label="Tarief lev.\ngemid.", linestyle="dashed",
+            ln4 = axis22.plot(ind, np.array(pl_avg), label="Tarief lev.\ngemid.",
+                              linestyle="dashed",
                               color='#00bfff')
         else:
             ln4 = None

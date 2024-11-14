@@ -1,4 +1,3 @@
-import math
 from da_config import Config
 import pandas as pd
 from db_manager import DBmanagerObj
@@ -55,7 +54,7 @@ class DaPrices:
         with self.db_da.engine.connect() as connection:
             result = connection.execute(query)
             result = result.scalar()
-            if type(result) == str:
+            if type(result) is str:
                 result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
         return result
 
@@ -106,10 +105,12 @@ class DaPrices:
                 df_db = pd.DataFrame(columns=['time', 'code', 'value'])
                 da_prices = da_prices.reset_index()  # make sure indexes pair with number of rows
                 logging.info(f"Day ahead prijzen van Entsoe: \n{da_prices.to_string(index=False)}")
+                last_time = start
                 for row in da_prices.itertuples():
                     last_time = int(datetime.datetime.timestamp(row[1]))
                     df_db.loc[df_db.shape[0]] = [str(last_time), 'da', row[2] / 1000]
-                logging.debug(f"Day ahead prijzen (source: entsoe, db-records): \n{df_db.to_string(index=False)}")
+                logging.debug(f"Day ahead prijzen (source: entsoe, db-records): \n"
+                              f"{df_db.to_string(index=False)}")
                 self.db_da.savedata(df_db)
                 end_dt = datetime.datetime(end.year, end.month, end.day, 23)
                 last_time_dt = datetime.datetime.fromtimestamp(last_time)
@@ -128,8 +129,11 @@ class DaPrices:
                 end_date = start
             try:
                 hourly_prices_spot = prices_spot.hourly(areas=['NL'], end_date=end_date)
+            except ConnectionError:
+                logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
+                return
             except Exception as ex:
-                # logging.error(ex)
+                logging.exception(ex)
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
                 return
 
@@ -146,11 +150,13 @@ class DaPrices:
                 else:
                     value = value / 1000
                 df_db.loc[df_db.shape[0]] = [str(time_ts), 'da', value]
-            logging.debug(f"Day ahead prices for {end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'}"
+            logging.debug(f"Day ahead prices for "
+                          f"{end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'}"
                           f" (source: nordpool, db-records): \n {df_db.to_string(index=False)}")
             if len(df_db) < 24:
                 logging.warning(f"Retrieve of day ahead prices for "
-                                f"{end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'} failed")
+                                f"{end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'} "
+                                f"failed")
             self.db_da.savedata(df_db)
 
         if source.lower() == "easyenergy":
@@ -172,7 +178,8 @@ class DaPrices:
                 dtime = str(int(datetime.datetime.fromisoformat(row.Timestamp).timestamp()))
                 df_db.loc[df_db.shape[0]] = [dtime, 'da', row.TariffReturn]
 
-            logging.debug(f"Day ahead prijzen (source: easy energy, db-records): \n {df_db.to_string(index=False)}")
+            logging.debug(f"Day ahead prijzen (source: easy energy, db-records): \n "
+                          f"{df_db.to_string(index=False)}")
             self.db_da.savedata(df_db)
 
         if source.lower() == "tibber":
@@ -216,10 +223,12 @@ class DaPrices:
             }
             resp = post(url, headers=headers, data=query)
             tibber_dict = json.loads(resp.text)
-            today_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['today']
-            tomorrow_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['tomorrow']
-            range_nodes = (
-                tibber_dict)['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['range']['nodes']
+            today_nodes = (tibber_dict['data']['viewer']['homes'][0]['currentSubscription']
+                           ['priceInfo']['today'])
+            tomorrow_nodes = (tibber_dict['data']['viewer']['homes'][0]['currentSubscription']
+                              ['priceInfo']['tomorrow'])
+            range_nodes = (tibber_dict['data']['viewer']['homes'][0]['currentSubscription']
+                           ['priceInfo']['range']['nodes'])
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             for lst in [today_nodes, tomorrow_nodes, range_nodes]:
                 for node in lst:
@@ -228,7 +237,8 @@ class DaPrices:
                     value = float(node["energy"])
                     logging.info(f"{node} {dt} {time_stamp} {value}")
                     df_db.loc[df_db.shape[0]] = [time_stamp, 'da', value]
-            logging.debug(f"Day ahead prijzen (source: tibber, db-records): \n {df_db.to_string(index=False)}")
+            logging.debug(f"Day ahead prijzen (source: tibber, db-records): \n "
+                          f"{df_db.to_string(index=False)}")
             self.db_da.savedata(df_db)
 
         if source.lower() == "tibber":
@@ -273,10 +283,12 @@ class DaPrices:
             }
             resp = post(url, headers=headers, data=query)
             tibber_dict = json.loads(resp.text)
-            today_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['today']
-            tomorrow_nodes = tibber_dict['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['tomorrow']
-            range_nodes = (
-                tibber_dict)['data']['viewer']['homes'][0]['currentSubscription']['priceInfo']['range']['nodes']
+            today_nodes = (tibber_dict['data']['viewer']['homes'][0]['currentSubscription']
+                           ['priceInfo']['today'])
+            tomorrow_nodes = (tibber_dict['data']['viewer']['homes'][0]['currentSubscription']
+                              ['priceInfo']['tomorrow'])
+            range_nodes = (tibber_dict['data']['viewer']['homes'][0]['currentSubscription']
+                           ['priceInfo']['range']['nodes'])
             df_db = pd.DataFrame(columns=['time', 'code', 'value'])
             for lst in [today_nodes, tomorrow_nodes, range_nodes]:
                 for node in lst:
@@ -285,5 +297,6 @@ class DaPrices:
                     value = float(node["energy"])
                     logging.info(f"{node} {dt} {time_stamp} {value}")
                     df_db.loc[df_db.shape[0]] = [time_stamp, 'da', value]
-            logging.debug(f"Day ahead prijzen (source: tibber, db-records): \n {df_db.to_string(index=False)}")
+            logging.debug(f"Day ahead prijzen (source: tibber, db-records): \n "
+                          f"{df_db.to_string(index=False)}")
             self.db_da.savedata(df_db)

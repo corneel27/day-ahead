@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
 import datetime
-from sqlalchemy import create_engine, Table, MetaData, select, insert, update, func, and_, text, TIMESTAMP
+from sqlalchemy import (create_engine, Table, MetaData, select, insert, update,
+                        func, and_, text, TIMESTAMP)
 import sqlalchemy_utils
-from sqlalchemy.sql import sqltypes
-import pytz
 import os
 import logging
 # import utils as utils
@@ -40,7 +39,8 @@ class DBmanagerObj(object):
         self.db_path = db_path
         self.TARGET_TIMEZONE = db_time_zone
         if self.db_dialect == "mysql":
-            self.engine = create_engine(f"mysql+pymysql://{self.user}:{self.password}@{self.server}/{self.db_name}",
+            self.engine = create_engine(f"mysql+pymysql://{self.user}:{self.password}@"
+                                        f"{self.server}/{self.db_name}",
                                         pool_recycle=3600, pool_pre_ping=True)
         elif self.db_dialect == "postgresql":
             self.engine = create_engine(f"postgresql+psycopg2://{self.user}:{self.password}@"
@@ -84,7 +84,8 @@ class DBmanagerObj(object):
             if db_port == 0:
                 result = f"postgresql+psycopg2://{db_user}:{db_password}@{db_server}/{db_name}"
             else:
-                result = f"postgresql+psycopg2://{db_user}:{db_password}@{db_server}:{db_port}/{db_name}"
+                result = (f"postgresql+psycopg2://{db_user}:{db_password}@{db_server}:"
+                          f"{db_port}/{db_name}")
         else:  # sqlite3
             if db_path is None:
                 db_path = "../data"
@@ -99,7 +100,8 @@ class DBmanagerObj(object):
         cf = cf.f_back
         filename = getframeinfo(cf).filename
         lineno = getframeinfo(cf).lineno
-        logging.debug(f"Connection status {self.engine.pool.status()} at line {lineno} in {filename}")
+        logging.debug(f"Connection status {self.engine.pool.status()} at line "
+                      f"{lineno} in {filename}")
 
     # Custom function to handle from_unixtime
     def from_unixtime(self, column):
@@ -107,7 +109,7 @@ class DBmanagerObj(object):
             return func.datetime(column, 'unixepoch', 'localtime')
         elif self.db_dialect == 'postgresql':
             return func.to_char(func.to_timestamp(column), 'YYYY-MM-DD HH24:MI:SS')
-        else: # mysql/mariadb
+        else:  # mysql/mariadb
             return func.from_unixtime(column)
 
     # Custom function to handle UNIX_TIMESTAMP
@@ -115,8 +117,9 @@ class DBmanagerObj(object):
         if self.db_dialect == 'sqlite':
             return func.strftime('%s', date_str, 'utc')
         elif self.db_dialect == 'postgresql':
-            return func.extract('epoch', func.timezone(self.TARGET_TIMEZONE, func.cast(date_str, TIMESTAMP)))
-        else: # mysql/mariadb
+            return func.extract('epoch', func.timezone(self.TARGET_TIMEZONE,
+                                                       func.cast(date_str, TIMESTAMP)))
+        else:  # mysql/mariadb
             return func.unix_timestamp(date_str)
 
     def month(self, column) -> func:
@@ -124,15 +127,16 @@ class DBmanagerObj(object):
             return func.strftime("%Y-%m", func.datetime(column, 'unixepoch', 'localtime'))
         elif self.db_dialect == 'postgresql':
             return func.to_char(func.to_timestamp(column), 'YYYY-MM')
-        else: # mysql/mariadb
-            return func.concat(func.year(func.from_unixtime(column)), '-', func.lpad(func.month(func.from_unixtime(column)), 2, '0'))
+        else:  # mysql/mariadb
+            return func.concat(func.year(func.from_unixtime(column)), '-',
+                               func.lpad(func.month(func.from_unixtime(column)), 2, '0'))
 
     def day(self, column) -> func:
         if self.db_dialect == 'sqlite':
             return func.strftime("%Y-%m-%d", func.datetime(column, 'unixepoch', 'localtime'))
         elif self.db_dialect == 'postgresql':
             return func.to_char(func.to_timestamp(column), 'YYYY-MM-DD')
-        else: # mysql/mariadb
+        else:  # mysql/mariadb
             return func.date(func.from_unixtime(column))
 
     def hour(self, column) -> func:
@@ -140,7 +144,7 @@ class DBmanagerObj(object):
             return func.strftime("%H:%M", func.datetime(column, 'unixepoch', 'localtime'))
         elif self.db_dialect == 'postgresql':
             return func.to_char(func.to_timestamp(column), 'HH24:MI')
-        else: # mysql/mariadb
+        else:  # mysql/mariadb
             return func.time_format(func.time(func.from_unixtime(column)), "%H:%i")
 
     def savedata(self, df: pd.DataFrame, tablename: str = "values"):
@@ -167,9 +171,11 @@ class DBmanagerObj(object):
             values_table = Table(tablename, self.metadata, autoload_with=self.engine)
             variabel_table = Table('variabel', self.metadata, autoload_with=self.engine)
             df = df.reset_index()  # make sure indexes pair with number of rows
-            df["tijd"] = df['time'].apply(lambda x: datetime.datetime.fromtimestamp(int(float(x))).strftime("%Y-%m-%d %H:%M"))
+            df["tijd"] = df['time'].apply(lambda x: datetime.datetime.fromtimestamp(
+                int(float(x))).strftime("%Y-%m-%d %H:%M"))
             for index, dfrow in df.iterrows():
-                logging.debug(f"Save record: {dfrow['tijd']} {dfrow['code']} {dfrow['time']} {dfrow['value']}")
+                logging.debug(f"Save record: {dfrow['tijd']} {dfrow['code']} "
+                              f"{dfrow['time']} {dfrow['value']}")
                 code = dfrow['code']
                 time = dfrow['time']
                 value = dfrow['value']
@@ -196,11 +202,13 @@ class DBmanagerObj(object):
                 if value_result:
                     # Update existing record
                     value_id = value_result[0]
-                    update_value = update(values_table).values(value=value).where(values_table.c.id == value_id)
+                    update_value = (update(values_table).values(value=value)
+                                    .where(values_table.c.id == value_id))
                     connection.execute(update_value)
                 else:
                     # Record does not exist, perform insert
-                    insert_value = insert(values_table).values(variabel=variabel_id, time=time, value=value)
+                    insert_value = (insert(values_table)
+                                    .values(variabel=variabel_id, time=time, value=value))
                     connection.execute(insert_value)
             connection.commit()
         finally:
@@ -208,7 +216,7 @@ class DBmanagerObj(object):
             connection.close()
         self.log_pool_status()
 
-    def get_prognose_field(self, field:str, start, end=None, interval="hour"):
+    def get_prognose_field(self, field: str, start, end=None, interval="hour"):
         values_table = Table('values', self.metadata, autoload_with=self.engine)
         t1 = values_table.alias('t1')
         variabel_table = Table('variabel', self.metadata, autoload_with=self.engine)
@@ -236,7 +244,8 @@ class DBmanagerObj(object):
             end_dt = start_dt + datetime.timedelta(days=num_days)
             end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
             end_ts = end_dt.timestamp()
-            query = query.where(t1.c.time < self.unix_timestamp(end_dt.strftime('%Y-%m-%d %H:%M:%S')))
+            query = (query
+                     .where(t1.c.time < self.unix_timestamp(end_dt.strftime('%Y-%m-%d %H:%M:%S'))))
 
         query = query.order_by(t1.c.time)
 
@@ -297,7 +306,8 @@ class DBmanagerObj(object):
             end_dt = start_dt + datetime.timedelta(days=num_days)
             end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
             end_ts = end_dt.timestamp()
-            query = query.where(t1.c.time < self.unix_timestamp(end_dt.strftime('%Y-%m-%d %H:%M:%S')))
+            query = query.where(t1.c.time <
+                                self.unix_timestamp(end_dt.strftime('%Y-%m-%d %H:%M:%S')))
 
         query = query.order_by(t1.c.time)
 
@@ -358,7 +368,8 @@ class DBmanagerObj(object):
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
         now_ts = datetime.datetime.now().timestamp()
         df["datasoort"] = np.where(df['time'] <= now_ts, "recorded", "expected")
-        df['time'] = df['time'].apply(lambda x: datetime.datetime.fromtimestamp(x).strftime("%Y-%m-%d %H:%M"))
+        df['time'] = df['time'].apply(lambda x:
+                                      datetime.datetime.fromtimestamp(x).strftime("%Y-%m-%d %H:%M"))
         return df
 
     def get_consumption(self, start: datetime.datetime, end=datetime.datetime.now()):

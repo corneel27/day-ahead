@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 class Report:
     periodes = {}
 
-    def __init__(self, file_name:str="../data/options.json"):
+    def __init__(self, file_name: str = "../data/options.json"):
         self.config = Config(file_name)
         db_da_engine = self.config.get(['database da', "engine"], None, "mysql")
         db_da_server = self.config.get(['database da', "server"], None, "core-mariadb")
@@ -31,9 +31,14 @@ class Report:
         db_da_password = self.config.get(['database da', "password"])
         db_da_path = self.config.get(['database da', "db_path"], None, "../data")
         db_time_zone = self.config.get(["time_zone"], None, 'Europe/Amsterdam')
-        self.db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
-                                  db_port=db_da_port, db_user=db_da_user, db_password=db_da_password,
-                                  db_time_zone=db_time_zone, db_path=db_da_path)
+        self.db_da = DBmanagerObj(db_dialect=db_da_engine,
+                                  db_name=db_da_name,
+                                  db_server=db_da_server,
+                                  db_port=db_da_port,
+                                  db_user=db_da_user,
+                                  db_password=db_da_password,
+                                  db_time_zone=db_time_zone,
+                                  db_path=db_da_path)
         db_ha_engine = self.config.get(['database ha', "engine"], None, "mysql")
         db_ha_server = self.config.get(['database ha', "server"], None, "core-mariadb")
         db_ha_port = int(self.config.get(['database ha', "port"], None, 3306))
@@ -41,9 +46,14 @@ class Report:
         db_ha_user = self.config.get(['database ha', "username"], None, "day_ahead")
         db_ha_password = self.config.get(['database ha', "password"])
         db_ha_path = self.config.get(['database ha', "db_path"], None, "/homeassistant")
-        self.db_ha = DBmanagerObj(db_dialect=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
-                                  db_port=db_ha_port, db_user=db_ha_user, db_password=db_ha_password,
-                                  db_time_zone=db_time_zone, db_path=db_ha_path)
+        self.db_ha = DBmanagerObj(db_dialect=db_ha_engine,
+                                  db_name=db_ha_name,
+                                  db_server=db_ha_server,
+                                  db_port=db_ha_port,
+                                  db_user=db_ha_user,
+                                  db_password=db_ha_password,
+                                  db_time_zone=db_time_zone,
+                                  db_path=db_ha_path)
 
         self.prices_options = self.config.get(["prices"])
         # eb + ode levering
@@ -76,28 +86,32 @@ class Report:
                 {"dim": "kWh",
                  "sign": "pos",
                  "name": "Accu_uit",
-                 "sensors": self.config.get(["entities battery production"], self.report_options, []),
+                 "sensors": self.config.get(["entities battery production"],
+                                            self.report_options, []),
                  "color": 'red'
                  },
             "bat_in":
                 {"dim": "kWh",
                  "sign": "neg",
                  "name": "Accu in",
-                 "sensors": self.config.get(["entities battery consumption"], self.report_options, []),
+                 "sensors": self.config.get(["entities battery consumption"],
+                                            self.report_options, []),
                  "color": '#ff8000'
                  },
             "pv_ac":
                 {"dim": "kWh",
                  "sign": "pos",
                  "name": "PV ac",
-                 "sensors": self.config.get(["entities solar production ac"], self.report_options, []),
+                 "sensors": self.config.get(["entities solar production ac"],
+                                            self.report_options, []),
                  "color": 'green'
                  },
             "ev":
                 {"dim": "kWh",
                  "sign": "neg",
                  "name": "Elec. vehicle",
-                 "sensors": self.config.get(["entities ev consumption"], self.report_options, []),
+                 "sensors": self.config.get(["entities ev consumption"],
+                                            self.report_options, []),
                  "color": 'yellow'
                  },
 
@@ -105,14 +119,16 @@ class Report:
                 {"dim": "kWh",
                  "sign": "neg",
                  "name": "WP",
-                 "sensors": self.config.get(["entities wp consumption"], self.report_options, []),
+                 "sensors": self.config.get(["entities wp consumption"],
+                                            self.report_options, []),
                  "color": '#a32cc4'
                  },
             "boil":
                 {"dim": "kWh",
                  "sign": "neg",
                  "name": "Boiler",
-                 "sensors": self.config.get(["entities boiler consumption"], self.report_options, []),
+                 "sensors": self.config.get(["entities boiler consumption"],
+                                            self.report_options, []),
                  "color": '#e39ff6'
                  },
             "base":
@@ -161,7 +177,8 @@ class Report:
             "vaxis": [{
                 "title": "kWh"
             }],
-            "series_keys": ["base", "wp", "boil", "ev", "bat_in", "prod", "pv_ac", "bat_out", "cons"],
+            "series_keys": ["base", "wp", "boil", "ev", "bat_in", "prod", "pv_ac",
+                            "bat_out", "cons"],
             "series": [],
         }
         for key in self.balance_graph_options["series_keys"]:
@@ -258,7 +275,8 @@ class Report:
                   "FROM_UNIXTIME(t2.`start_ts`) 'tot', " \
               "round(greatest(t2.`state` - t1.`state`, 0),3) '" + col_name + "' " \
               "FROM `statistics` t1,`statistics` t2, `statistics_meta` " \
-              "WHERE statistics_meta.`id` = t1.`metadata_id` AND statistics_meta.`id` = t2.`metadata_id` " \
+              "WHERE statistics_meta.`id` = t1.`metadata_id` 
+                AND statistics_meta.`id` = t2.`metadata_id` " \
               "AND statistics_meta.`statistic_id` = '" + sensor + "' " \
               "AND (t2.`start_ts` = t1.`start_ts` + 3600) " \
               "AND t1.`state` IS NOT null AND t2.`state` IS NOT null " \
@@ -272,7 +290,8 @@ class Report:
                 "MAX(FROM_UNIXTIME(t2.`start_ts`)) 'tot', " \
                 "ROUND(sum(greatest(t2.`state` - t1.`state`, 0)),3) '" + col_name + "' " \
                 "FROM `statistics` t1,`statistics` t2, `statistics_meta` " \
-                "WHERE statistics_meta.`id` = t1.`metadata_id` AND statistics_meta.`id` = t2.`metadata_id` " \
+                "WHERE statistics_meta.`id` = t1.`metadata_id` 
+                AND statistics_meta.`id` = t2.`metadata_id` " \
                 "AND statistics_meta.`statistic_id` = '" + sensor + "' " \
                 "AND (t2.`start_ts` = t1.`start_ts` + 3600) " \
                 "AND t1.`state` IS NOT null AND t2.`state` IS NOT null " \
@@ -285,7 +304,8 @@ class Report:
                 "MAX(FROM_UNIXTIME(t2.`start_ts`)) AS 'tot', " \
                 "ROUND(sum(greatest(t2.`state` - t1.`state`, 0)),3) '" + col_name + "' " \
                 "FROM `statistics` t1,`statistics` t2, `statistics_meta` " \
-                "WHERE statistics_meta.`id` = t1.`metadata_id` AND statistics_meta.`id` = t2.`metadata_id` " \
+                "WHERE statistics_meta.`id` = t1.`metadata_id` 
+                AND statistics_meta.`id` = t2.`metadata_id` " \
                 "AND statistics_meta.`statistic_id` = '" + sensor + "' " \
                 "AND (t2.`start_ts` = t1.`start_ts` + 3600) " \
                 "AND t1.`state` IS NOT null AND t2.`state` IS NOT null " \
@@ -298,8 +318,10 @@ class Report:
         return df
         '''
 
-        statistics = Table('statistics', self.db_ha.metadata, autoload_with=self.db_ha.engine)
-        statistics_meta = Table('statistics_meta', self.db_ha.metadata, autoload_with=self.db_ha.engine)
+        statistics = Table('statistics', self.db_ha.metadata,
+                           autoload_with=self.db_ha.engine)
+        statistics_meta = Table('statistics_meta', self.db_ha.metadata,
+                                autoload_with=self.db_ha.engine)
 
         # Define aliases for the tables
         t1 = statistics.alias('t1')
@@ -351,9 +373,9 @@ class Report:
         if agg != "uur":
             query = query.group_by(agg)
 
-        from sqlalchemy.dialects import postgresql, sqlite, mysql
+        from sqlalchemy.dialects import sqlite  # , postgresql,  mysql
         query_str = str(query.compile(dialect=sqlite.dialect()))
-
+        logging.debug(f"query get sensor data:/n {query_str}")
         # Execute the query and load results into a DataFrame
         with self.db_ha.engine.connect() as connection:
             df_raw = pd.read_sql(query, connection)
@@ -382,7 +404,8 @@ class Report:
             elif agg == "dag":
                 df_raw['dag'] = df_raw['start_ts_t2'].dt.to_period('D')
                 df_aggregated = df_raw.groupby('dag').agg(
-                    dag=('start_ts_t2', lambda x: f"{x.dt.year.iloc[0]}-{x.dt.month.iloc[0]:2}-{x.dt.day.iloc[0]:2}"),
+                    dag=('start_ts_t2', lambda x: f"{x.dt.year.iloc[0]}-{x.dt.month.iloc[0]:2}-"
+                                                  f"{x.dt.day.iloc[0]:2}"),
                     tijd=('start_ts_t2', lambda x: x.dt.strftime('%Y-%m-01 00:00:00').iloc[0]),
                     tot=('start_ts_t2', 'max'),
                     col_name=(col_name, 'sum')
@@ -419,7 +442,8 @@ class Report:
         return copy_to
 
     @staticmethod
-    def add_col_df(add_from: pd.DataFrame, add_to: pd.DataFrame, col_name_from: str, col_name_to: str = None,
+    def add_col_df(add_from: pd.DataFrame, add_to: pd.DataFrame, col_name_from: str,
+                   col_name_to: str = None,
                    negation: bool = False) -> pd.DataFrame:
         # add_from = add_from.reset_index()
         if add_from is None:
@@ -433,8 +457,9 @@ class Report:
         #    add_to[col_name_to] =add_to[col_name_to] + add_from[col_name_from]
         col_index = add_from.columns.get_loc(col_name_from) + 1
         for row in add_from.itertuples():
+            # add_from.at[row.tijd, col_name_from])
             add_to.at[row.tijd, col_name_to] = (
-                    add_to.at[row.tijd, col_name_to] + factor * row[col_index])  # add_from.at[row.tijd, col_name_from])
+                    add_to.at[row.tijd, col_name_to] + factor * row[col_index])
         return add_to
 
     def get_latest_present(self, code: str) -> datetime.datetime:
@@ -498,7 +523,7 @@ class Report:
             counter = + 1
         return result
 
-    def calc_cost(self, vanaf: datetime.datetime, tot: datetime.datetime, code: str) -> pd.DataFrame:
+    def calc_cost(self, vanaf: datetime.datetime, tot: datetime.datetime) -> pd.DataFrame:
         cons_df = self.get_sensor_sum(self.grid_dict["cons"]["sensors"], vanaf, tot, "cons")
         prod_df = self.get_sensor_sum(self.grid_dict["prod"]["sensors"], vanaf, tot, "prod")
         da_df = self.get_price_data(vanaf, tot)
@@ -522,7 +547,7 @@ class Report:
             tot = datetime.datetime(now.year, now.month, now.day)
         else:
             tot = _end
-        for code, categorie in itertools.chain(self.grid_dict.items()):  # self.energy_balance_dict.items()):
+        for code, categorie in itertools.chain(self.grid_dict.items()):
             if _start is None:
                 start = self.get_latest_present(code) + datetime.timedelta(hours=1)
             else:
@@ -549,7 +574,8 @@ class Report:
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
         from dao.prog.utils import get_value_from_dict
         fi_df = pd.DataFrame(
-            columns=[interval, "vanaf", "tot", "consumption", "production", "cost", "profit", "datasoort"])
+            columns=[interval, "vanaf", "tot", "consumption", "production", "cost",
+                     "profit", "datasoort"])
         if len(org_data_df.index) == 0:
             return fi_df
         old_dagstr = ""
@@ -583,10 +609,14 @@ class Report:
             col_4 = (row.production * (row.price + taxes_t + ol_t)) * (1 + btw / 100)
             col_5 = row.datasoort
             fi_df.loc[fi_df.shape[0]] = [tijd_str, row.tijd, row.tijd +
-                                         datetime.timedelta(hours=1), col_1, col_2, col_3, col_4, col_5]
+                                         datetime.timedelta(hours=1),
+                                         col_1, col_2, col_3, col_4, col_5]
         if interval != "uur":
-            fi_df = fi_df.groupby([interval], as_index=False).agg({"vanaf": 'min', "tot": 'max', "consumption": 'sum',
-                                                                   "production": 'sum', "cost": 'sum', "profit": 'sum'})
+            fi_df = fi_df.groupby([interval], as_index=False).agg({"vanaf": 'min', "tot": 'max',
+                                                                   "consumption": 'sum',
+                                                                   "production": 'sum',
+                                                                   "cost": 'sum',
+                                                                   "profit": 'sum'})
         return fi_df
 
     def aggregate_balance_df(self, df: pd.DataFrame, interval: str):
@@ -605,8 +635,10 @@ class Report:
                 tijd_str = str(row.vanaf)[0:10]
             else:
                 tijd_str = str(row.vanaf)[0:7]  # jaar maand
-            result.loc[result.shape[0]] = [tijd_str, row.vanaf, row.vanaf + datetime.timedelta(hours=1), row.datasoort,
-                                           row.cons, row.prod, row.bat_out, row.bat_in, row.pv_ac, row.ev, row.wp,
+            result.loc[result.shape[0]] = [tijd_str, row.vanaf,
+                                           row.vanaf + datetime.timedelta(hours=1), row.datasoort,
+                                           row.cons, row.prod, row.bat_out, row.bat_in, row.pv_ac,
+                                           row.ev, row.wp,
                                            row.boil, row.base]
 
         if interval != "uur":
@@ -621,7 +653,8 @@ class Report:
     def calc_base(df: pd.DataFrame) -> pd.DataFrame:
         base_load = []
         for row in df.itertuples():
-            base_load.append(row.cons - row.prod + row.bat_out - row.bat_in + row.pv_ac - row.ev - row.wp - row.boil)
+            base_load.append(row.cons - row.prod + row.bat_out - row.bat_in + row.pv_ac -
+                             row.ev - row.wp - row.boil)
         result = df.assign(base=base_load)
         return result
 
@@ -645,8 +678,9 @@ class Report:
         tot = _tot if _tot else periode_d["tot"]
         interval = periode_d["interval"]
         result = pd.DataFrame(columns=[interval, "tijd"])
-        last_realised_moment = datetime.datetime.fromtimestamp(math.floor(datetime.datetime.now().
-                                                                          timestamp() / 3600) * 3600)
+        last_realised_moment = (
+            datetime.datetime.fromtimestamp(math.floor(datetime.datetime.now().timestamp()
+                                                       / 3600) * 3600))
         moment = vanaf
         while moment < tot:
             if interval == "maand":
@@ -681,14 +715,16 @@ class Report:
             result[key] = 0.0
             '''
             if interval == "maand":
-                sql = "SELECT concat(year(from_unixtime(t1.`time`)),LPAD(MONTH(from_unixtime(t1.`time`)),3, ' ')) "\
+                sql = "SELECT concat(year(from_unixtime(t1.`time`)),
+                LPAD(MONTH(from_unixtime(t1.`time`)),3, ' ')) "\
                       "AS 'maand', " \
                     "date_format(from_unixtime(t1.`time`),'%Y-%m-01 00:00:00') AS 'tijd', " \
                     "MAX(from_unixtime(t1.`time`)) AS 'tot', " \
                     "sum(t1.`value`) " + key + " " \
                     "FROM `values` AS t1, `variabel`AS v1  " \
                     "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
-                    "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
+                    "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') 
+                    AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
                     "GROUP BY maand;"
             elif interval == "dag":
                 sql = "SELECT date(from_unixtime(t1.`time`)) AS 'dag', " \
@@ -697,7 +733,8 @@ class Report:
                     "sum(t1.`value`) " + key + " " \
                     "FROM `values` AS t1, `variabel`AS v1  " \
                     "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
-                    "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
+                    "t1.`time` >= UNIX_TIMESTAMP('"+str(vanaf)+"') 
+                    AND t1.`time` < UNIX_TIMESTAMP('"+str(tot)+"') " \
                     "GROUP BY dag;"
             else:  # interval == "uur"
                 sql = "SELECT from_unixtime(t1.`time`) AS 'uur', " \
@@ -705,7 +742,8 @@ class Report:
                   "t1.`value` '" + key + "' " \
                   "FROM `values` AS t1, `variabel`AS v1  " \
                   "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
-                  "t1.`time`>= UNIX_TIMESTAMP('" + str(vanaf) + "') AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
+                  "t1.`time`>= UNIX_TIMESTAMP('" + str(vanaf) + "') 
+                  AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
             # print(sql)
             code_result = self.db_da.run_select_query(sql)
             '''
@@ -731,7 +769,8 @@ class Report:
             code_result['tot'] = pd.to_datetime(code_result['tot'])
 
             # if len(code_result) > 0:
-            #     code_result['tijd'] = code_result.apply(lambda x: self.tijd_at_interval(interval, x['tijd']), axis=1)
+            #     code_result['tijd'] = code_result.apply(lambda x: self.tijd_at_interval(interval,
+            #     x['tijd']), axis=1)
             code_result.index = code_result[interval]
 
             if code_result.shape[0] == 0:
@@ -756,7 +795,8 @@ class Report:
                 if ha_result is not None and len(ha_result) > 0:
                     if categorie["sensors"] == "calc":
                         now = datetime.datetime.now()
-                        last_moment = max(datetime.datetime(now.year, now.month, now.day, now.hour), vanaf)
+                        last_moment = max(datetime.datetime(now.year, now.month, now.day, now.hour),
+                                          vanaf)
                     else:
                         last_moment = ha_result['tot'].iloc[-1] + datetime.timedelta(hours=1)
                 else:
@@ -789,7 +829,7 @@ class Report:
                           "GROUP BY dag;"
                 else:  # interval == "uur"
                     sql = "SELECT from_unixtime(t1.`time`) AS 'uur', " \
-                          "from_unixtime(t1.`time`) AS 'tijd', from_unixtime(t1.`time`) AS 'tot', " \
+                          "from_unixtime(t1.`time`) AS 'tijd', from_unixtime(t1.`time`) AS 'tot'," \
                           "t1.`value` '" + key + "' " \
                           "FROM `prognoses` AS t1, `variabel`AS v1  " \
                           "WHERE (v1.`code` = '" + key + "') AND (v1.id = t1.variabel) AND  " \
@@ -804,7 +844,8 @@ class Report:
                           "AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
                 prog_result = self.db_da.run_select_query(sql)
                 '''
-                prog_table = Table('prognoses', self.db_da.metadata, autoload_with=self.db_da.engine)
+                prog_table = Table('prognoses', self.db_da.metadata,
+                                   autoload_with=self.db_da.engine)
                 p1 = prog_table.alias('p1')
                 # Build the SQLAlchemy query
                 query = select(
@@ -815,7 +856,8 @@ class Report:
                     and_(
                         p1.c.variabel == v1.c.id,
                         v1.c.code == key,
-                        p1.c.time >= self.db_da.unix_timestamp(last_moment.strftime('%Y-%m-%d %H:%M:%S')),
+                        p1.c.time >=
+                        self.db_da.unix_timestamp(last_moment.strftime('%Y-%m-%d %H:%M:%S')),
                         p1.c.time < self.db_da.unix_timestamp(tot.strftime('%Y-%m-%d %H:%M:%S'))
                     )
                 )
@@ -824,9 +866,11 @@ class Report:
 
                 prog_result['tijd'] = pd.to_datetime(prog_result['tijd'])
                 prog_result['tot'] = prog_result['tijd']
-                if len(prog_result)>0:
-                    prog_result['tijd'] = prog_result.apply(lambda x: self.tijd_at_interval(interval, x['tijd']),
-                                                        axis=1)
+                if len(prog_result) > 0:
+                    prog_result['tijd'] = prog_result.apply(lambda x:
+                                                            self.tijd_at_interval(interval,
+                                                                                  x['tijd']),
+                                                            axis=1)
                 prog_result.index = pd.to_datetime(prog_result["tijd"])
                 if len(prog_result) > 0:
                     self.add_col_df(prog_result, result, key)
@@ -845,8 +889,9 @@ class Report:
         db_ha: sensoren Home Assistant tot het laatste uur
         voor prognoses (expected):
         db_da: progoses
-        :param periode: dus een van alle gedefinieerde perioden: vandaag, gisteren enz
-        :param _vanaf: als != None dan geldt dit als begintijdstip en overrullt begintijdstip van periode
+        :param periode: dus een van alle gedefinieerde perioden: vandaag, gisteren enz.
+        :param _vanaf: als != None dan geldt dit als begintijdstip en overrullt
+            begintijdstip van periode
         :param _tot: als  != None dan hier het eindtijdstip
         :param _interval: als != None dan hier het gewenste interval
         :param _source: als != None dan hier de source all, da of ha
@@ -879,7 +924,8 @@ class Report:
             column = self.db_da.hour(t1.c.time).label('uur')
         result = None
         if source == "all" or source == "da":
-            for cat, label in [("cons", "consumption"), ("prod", "production"), ("cost", "cost"), ("profit", "profit")]:
+            for cat, label in [("cons", "consumption"), ("prod", "production"), ("cost", "cost"),
+                               ("profit", "profit")]:
                 query = select(
                     column,
                     func.min(self.db_da.from_unixtime(t1.c.time)).label('vanaf'),
@@ -906,7 +952,8 @@ class Report:
                 else:
                     result[label] = result_cat[label]
         else:
-            result = pd.DataFrame(columns=["uur", "vanaf", "tot", "consumption", "production", "cost", "profit"])
+            result = pd.DataFrame(columns=["uur", "vanaf", "tot", "consumption", "production",
+                                           "cost", "profit"])
             result.index = result["uur"]  # vanaf
 
         result["datasoort"] = "recorded"
@@ -927,7 +974,8 @@ class Report:
                 and_(
                     v1.c.code == 'da',
                     t1.c.variabel == v1.c.id,
-                    t1.c.time >= self.db_da.unix_timestamp(last_moment.strftime('%Y-%m-%d %H:%M:%S')),
+                    t1.c.time >=
+                    self.db_da.unix_timestamp(last_moment.strftime('%Y-%m-%d %H:%M:%S')),
                     t1.c.time < self.db_da.unix_timestamp(tot.strftime('%Y-%m-%d %H:%M:%S'))
                 )
             ).order_by(t1.c.time)
@@ -972,7 +1020,8 @@ class Report:
             if source == "all" or source == "da":
                 if last_moment < tot:
                     # get prognose consumption and production:
-                    prog_table = Table('prognoses', self.db_da.metadata, autoload_with=self.db_da.engine)
+                    prog_table = Table('prognoses', self.db_da.metadata,
+                                       autoload_with=self.db_da.engine)
                     p1 = prog_table.alias('p1')
                     p2 = prog_table.alias('p2')
                     # Build the SQLAlchemy query
@@ -988,13 +1037,15 @@ class Report:
                             v1.c.code == 'cons',
                             p2.c.variabel == v2.c.id,
                             v2.c.code == 'prod',
-                            p1.c.time >= self.db_da.unix_timestamp(last_moment.strftime('%Y-%m-%d %H:%M:%S')),
+                            p1.c.time >=
+                            self.db_da.unix_timestamp(last_moment.strftime('%Y-%m-%d %H:%M:%S')),
                             p1.c.time < self.db_da.unix_timestamp(tot.strftime('%Y-%m-%d %H:%M:%S'))
                         )
                     )
 
                     from sqlalchemy.dialects import postgresql
                     query_str = str(query.compile(dialect=postgresql.dialect()))
+                    logging.debug(f"query get prognose data:/n {query_str}")
                     with self.db_da.engine.connect() as connection:
                         df_prog = pd.read_sql_query(query, connection)
 
@@ -1105,9 +1156,12 @@ class Report:
         # , "Tarief verbr.":'mean', "Tarief prod.":"mean"
         # fi_df.set_index([columns[0][0]])
         if active_interval != "uur":
-            fi_df = fi_df.groupby([first_col], as_index=False).agg({"Verbruik": 'sum', "Productie": 'sum',
-                                                                    "Netto verbr.": 'sum', "Kosten": 'sum',
-                                                                    "Opbrengst": 'sum', "Netto kosten": 'sum'})
+            fi_df = fi_df.groupby([first_col], as_index=False).agg({"Verbruik": 'sum',
+                                                                    "Productie": 'sum',
+                                                                    "Netto verbr.": 'sum',
+                                                                    "Kosten": 'sum',
+                                                                    "Opbrengst": 'sum',
+                                                                    "Netto kosten": 'sum'})
         fi_df['Tarief verbr.'] = fi_df.apply(
             lambda rw: rw.Kosten / rw.Verbruik if rw.Verbruik != 0.0 else rw.Verbruik, axis=1)
         fi_df['Tarief prod.'] = fi_df.apply(
@@ -1129,7 +1183,8 @@ class Report:
             # value = fi_df.iloc[-1][7]
             # fi_df.at[fi_df.index[-1], "Tarief"] = value / (len(fi_df.index)-1)
 
-            # fi_df.loc[fi_df.shape[0]] = ["Totaal", col_1_tot, col_2_tot, col_3_tot, col_4_tot, col_5_tot, col_6_tot,
+            # fi_df.loc[fi_df.shape[0]] = ["Totaal", col_1_tot, col_2_tot, col_3_tot, col_4_tot,
+            #                         col_5_tot, col_6_tot,
             #                         col_7_tot / count_tot]
             columns = fi_df.columns.values.tolist()
             # columns.append(["", "kWh", "kWh", "kWh", "eur", "eur", "eur", "eur/kWh",  "eur/kWh"])
@@ -1178,7 +1233,8 @@ class Report:
             WEEKDAY(FROM_UNIXTIME(t2.`start_ts`))  'weekdag', \
             HOUR(FROM_UNIXTIME(t2.`start_ts`)) 'uur' \
             FROM `statistics` t1,`statistics` t2, `statistics_meta`  \
-            WHERE statistics_meta.`id` = t1.`metadata_id` AND statistics_meta.`id` = t2.`metadata_id`   \
+            WHERE statistics_meta.`id` = t1.`metadata_id` 
+            AND statistics_meta.`id` = t2.`metadata_id`   \
             AND statistics_meta.`statistic_id` = '" + sensor + "'  \
             AND (t2.`start_ts` = t1.`start_ts` + 3600)   \
             AND t1.`state` IS NOT null AND t2.`state` IS NOT null   \
@@ -1187,8 +1243,10 @@ class Report:
             ORDER BY t1.`start_ts`;"
         df = self.db_ha.run_select_query(sql)
         '''
-        statistics = Table('statistics', self.db_ha.metadata, autoload_with=self.db_ha.engine)
-        statistics_meta = Table('statistics_meta', self.db_ha.metadata, autoload_with=self.db_ha.engine)
+        statistics = Table('statistics', self.db_ha.metadata,
+                           autoload_with=self.db_ha.engine)
+        statistics_meta = Table('statistics_meta', self.db_ha.metadata,
+                                autoload_with=self.db_ha.engine)
 
         # Define aliases for the tables
         t1 = statistics.alias('t1')
@@ -1219,11 +1277,15 @@ class Report:
             df_raw = pd.read_sql(query, connection)
         if len(df_raw) > 0:
             # Convert UNIX timestamps to datetime
-            df_raw['tijd'] = df_raw.apply(lambda x: datetime.datetime.fromtimestamp(x['tijd']), axis=1)
+            df_raw['tijd'] = df_raw.apply(lambda x: datetime.datetime.fromtimestamp(x['tijd']),
+                                          axis=1)
             # Calculate the value
-            df_raw[col_name] = df_raw.apply(lambda row: round(max(row['state_t2'] - row['state_t1'], 0), 3), axis=1)
-            df_raw['weekdag'] = df_raw.apply(lambda x: self.tijd_at_interval('weekdag', x['tijd']), axis=1)
-            df_raw['uur'] = df_raw.apply(lambda x: self.tijd_at_interval('heel_uur', x['tijd']), axis=1)
+            df_raw[col_name] = df_raw.apply(lambda row: round(max(row['state_t2']
+                                                                  - row['state_t1'], 0), 3), axis=1)
+            df_raw['weekdag'] = df_raw.apply(lambda x: self.tijd_at_interval('weekdag',
+                                                                             x['tijd']), axis=1)
+            df_raw['uur'] = df_raw.apply(lambda x: self.tijd_at_interval('heel_uur',
+                                                                         x['tijd']), axis=1)
 
         else:
             df_raw = pd.DataFrame(columns=["weekdag", "tijd", "tot", col_name])
@@ -1253,32 +1315,50 @@ class Report:
         config = Config("../data/options.json")
 
         calc_periode = config.get(["baseload calc periode"], None, 56)
-        calc_start = datetime.datetime.combine((datetime.datetime.now() - datetime.timedelta(days=calc_periode)).date(),
+        calc_start = datetime.datetime.combine((datetime.datetime.now()
+                                                - datetime.timedelta(days=calc_periode)).date(),
                                                datetime.time())
 
-        grid_consumption = self.get_sensor_week_sum(config.get(['report', "entities grid consumption"]), wd,
-                                                    calc_start, "grid_consumption")
-        grid_production = self.get_sensor_week_sum(config.get(['report', "entities grid production"]), wd, calc_start,
-                                                   "grid_production")
-        solar_production = self.get_sensor_week_sum(config.get(['report', "entities solar production ac"]), wd,
-                                                    calc_start, "solar_production")
-        ev_consumption = self.get_sensor_week_sum(config.get(['report', "entities ev consumption"]), wd, calc_start,
+        grid_consumption = (
+            self.get_sensor_week_sum(config.get(['report', "entities grid consumption"]),
+                                     wd,
+                                     calc_start,
+                                     "grid_consumption"))
+        grid_production = (
+            self.get_sensor_week_sum(config.get(['report', "entities grid production"]),
+                                     wd,
+                                     calc_start,
+                                     "grid_production"))
+        solar_production = (
+            self.get_sensor_week_sum(config.get(['report', "entities solar production ac"]),
+                                     wd,
+                                     calc_start,
+                                     "solar_production"))
+        ev_consumption = self.get_sensor_week_sum(config.get(['report', "entities ev consumption"]),
+                                                  wd, calc_start,
                                                   "ev_consumption")
-        wp_consumption = self.get_sensor_week_sum(config.get(['report', "entities wp consumption"]), wd, calc_start,
+        wp_consumption = self.get_sensor_week_sum(config.get(['report', "entities wp consumption"]),
+                                                  wd, calc_start,
                                                   "wp_consumption")
-        boiler_consumption = self.get_sensor_week_sum(config.get(['report', "entities boiler consumption"]), wd,
-                                                      calc_start, "boiler_consumption")
-        battery_consumption = self.get_sensor_week_sum(config.get(['report', "entities battery consumption"]), wd,
-                                                       calc_start, "battery_consumption")
-        battery_production = self.get_sensor_week_sum(config.get(['report', "entities battery production"]), wd,
-                                                      calc_start, "battery_production")
+        boiler_consumption = (
+            self.get_sensor_week_sum(config.get(['report', "entities boiler consumption"]), wd,
+                                     calc_start,
+                                     "boiler_consumption"))
+        battery_consumption = (
+            self.get_sensor_week_sum(config.get(['report', "entities battery consumption"]), wd,
+                                     calc_start,
+                                     "battery_consumption"))
+        battery_production = (
+            self.get_sensor_week_sum(config.get(['report', "entities battery production"]), wd,
+                                     calc_start,
+                                     "battery_production"))
 
-        # baseload = grid_consumption - grid_production + solar_production - ev_consumption - wp_consumption -
-        #            battery_consumption + battery_production
-        # baseload = grid_consumption
+        # baseload = grid_consumption - grid_production + solar_production - ev_consumption
+        # - wp_consumption - battery_consumption + battery_production
         grid_consumption = grid_consumption.rename(columns={'grid_consumption': 'baseload'})
         # baseload - grid_production
-        result = Report.add_col_df(grid_production, grid_consumption, "grid_production", "baseload", True)
+        result = Report.add_col_df(grid_production, grid_consumption, "grid_production",
+                                   "baseload", True)
         # baseload + solar_production
         result = Report.add_col_df(solar_production, result, "solar_production", "baseload")
         # baseload - ev_consumption
@@ -1286,13 +1366,17 @@ class Report:
         # baseload - wp_consumption
         result = Report.add_col_df(wp_consumption, result, "wp_consumption", "baseload", True)
         # baseload - boiler_consumption
-        result = Report.add_col_df(boiler_consumption, result, "boiler_consumption", "baseload", True)
+        result = Report.add_col_df(boiler_consumption, result, "boiler_consumption",
+                                   "baseload", True)
         # baseload - battery_consumption
-        result = Report.add_col_df(battery_consumption, result, "battery_consumption", "baseload", True)
+        result = Report.add_col_df(battery_consumption, result, "battery_consumption",
+                                   "baseload", True)
         # baseload - battery_production
         result = Report.add_col_df(battery_production, result, "battery_production", "baseload")
 
-        result = result.groupby("uur", as_index=False).agg({"tijd": 'min', "weekdag": 'mean', "baseload": 'mean'})
+        result = result.groupby("uur", as_index=False).agg({"tijd": 'min',
+                                                            "weekdag": 'mean',
+                                                            "baseload": 'mean'})
         result.baseload = result.baseload.round(3)
         result = result['baseload'].values.tolist()
         return result
@@ -1341,10 +1425,12 @@ class Report:
             df_ha_result = df_ha_result.rename(columns={"tijd": "time"})
             if len(df_ha_result) > 0:
                 last_moment = df_ha_result['time'].iloc[-1] + datetime.timedelta(hours=1)
-            df_ha_result['time'] = df_ha_result['time'].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+            df_ha_result['time'] = (
+                df_ha_result['time'].apply(lambda x: x.strftime("%Y-%m-%d %H:%M")))
 
         if last_moment < self.periodes[periode]["tot"]:
-            df_prog = self.db_da.get_column_data('prognoses', field, start=last_moment, end=period["tot"])
+            df_prog = self.db_da.get_column_data('prognoses', field,
+                                                 start=last_moment, end=period["tot"])
             df_prog.index = pd.to_datetime(df_prog["time"])
             df_prog = df_prog.rename(columns={"value": field})
             df_prog['datasoort'] = 'expected'
@@ -1378,21 +1464,25 @@ class Report:
                 old_dagstr = dag_str
             da_cons = (row.value + taxes_l + ol_l) * (1 + btw / 100)
             da_prod = (row.value + taxes_t + ol_t) * (1 + btw / 100)
-            df.loc[df.shape[0]] = [datetime.datetime.strptime(row.time, "%Y-%m-%d %H:%M"), row.value, da_cons,
+            df.loc[df.shape[0]] = [datetime.datetime.strptime(row.time, "%Y-%m-%d %H:%M"),
+                                   row.value, da_cons,
                                    da_prod, row.datasoort]
         return df
 
-    def get_soc_data(self, field: str, start:datetime.datetime, end:datetime.datetime)->pd.DataFrame:
+    def get_soc_data(self, field: str, start: datetime.datetime, end: datetime.datetime) -> (
+            pd.DataFrame):
         df = self.db_da.get_column_data('prognoses', field, start=start, end=end)
         return df
 
     def get_api_data(self, field: str, periode: str, cumulate: bool = False):
         periode = periode.replace("_", " ")
-        grid_fields = ["consumption", "production", "netto_consumption", "cost", "profit", "netto_cost"]
+        grid_fields = ["consumption", "production", "netto_consumption", "cost",
+                       "profit", "netto_cost"]
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode)
-            df_grid['time'] = df_grid['vanaf'].apply(lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M"))
+            df_grid['time'] = (
+                df_grid['vanaf'].apply(lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")))
             if field in grid_fields:
                 df = df_grid[['time', field, "datasoort"]].copy()
                 if cumulate:
@@ -1406,7 +1496,8 @@ class Report:
         elif field == 'da':
             df = self.get_price_data(self.periodes[periode]["vanaf"], self.periodes[periode]["tot"])
         elif field[0:3] == "soc":
-            df = self.get_soc_data(field, self.periodes[periode]["vanaf"], self.periodes[periode]["tot"])
+            df = self.get_soc_data(field, self.periodes[periode]["vanaf"],
+                                   self.periodes[periode]["tot"])
         else:
             if not (field in self.energy_balance_dict):
                 result = '{"message":"Failed"}'
@@ -1419,7 +1510,8 @@ class Report:
         expected_df = df[df['datasoort'] == 'expected']
         expected_df = expected_df.drop('datasoort', axis=1)
         expected_json = expected_df.to_json(orient='records')
-        result = '{ "message":"Success", "recorded": ' + history_json + ', "expected" : ' + expected_json + ' }'
+        result = ('{ "message":"Success", "recorded": ' + history_json + ', "expected" : '
+                  + expected_json + ' }')
         return result
 
     def make_graph(self, df, period, _options=None):
