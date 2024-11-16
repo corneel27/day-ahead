@@ -1925,7 +1925,7 @@ class DaCalc(DaBase):
                 else:
                     logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
                     switch_state = self.get_state(entity_hp_switch).state
-                    if self.hp_enabled == "on":             
+                    if self.hp_enabled:             
                       if hp_on[0].x == 1:
                         if switch_state == "off":
                           if self.debug:
