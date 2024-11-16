@@ -1027,7 +1027,8 @@ class DaCalc(DaBase):
             if self.hp_adjustment == "on/off":
                 # vanaf hier code ronald
                 # hp_adjustment == "on/off"
-                '''
+                logging.debug("Heat pump Ronald")
+                ''' 
                 avg_temp = self.meteo.get_avg_temperature()
                 if U > 24:
                     avg_temp += self.meteo.get_avg_temperature(
@@ -1042,7 +1043,7 @@ class DaCalc(DaBase):
                 else:
                     self.set_value(entity_avg_temp, round(avg_temp,1))
                 '''
-                # tot hier code ronalc
+                # tot hier code ronald
             else:
                 # vanaf hier code cees
                 # hp_adjustment == "power" or "heating curve"
