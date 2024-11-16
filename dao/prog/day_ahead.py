@@ -988,7 +988,7 @@ class DaCalc(DaBase):
         if self.heater_present:
             entity_hp_enabled = self.config.get(["entity hp enabled"], self.heating_options, None)
             self.hp_enabled = ((entity_hp_enabled is None) or
-                               (self.get_state(entity_hp_enabled).state == "on"))
+                               (self.get_state(entity_hp_enabled).state == 1))
             if not self.hp_enabled:
                 logging.info("Geen warmtepomp vraag - warmtepomp wordt niet ingepland")
         else:
@@ -1028,7 +1028,6 @@ class DaCalc(DaBase):
                 # vanaf hier code ronald
                 # hp_adjustment == "on/off"
                 logging.debug("Heat pump Ronald")
-                ''' 
                 avg_temp = self.meteo.get_avg_temperature()
                 if U > 24:
                     avg_temp += self.meteo.get_avg_temperature(
@@ -1042,8 +1041,26 @@ class DaCalc(DaBase):
                     logging.warning(f"Geen entity om gem. temperatuur te exporteren")
                 else:
                     self.set_value(entity_avg_temp, round(avg_temp,1))
-                '''
-                # tot hier code ronald
+                logging.debug(f"Outside temp: {avg_temp}")
+              
+                # Get COP and heatpump power from HA
+                entity_hp_cop = self.config.get(["entity hp cop"],
+                                                   self.heating_options,
+                                                   None)
+                if entity_hp_cop is not None:
+                  hp_cop = float(self.get_state(entity_hp_cop).state)
+                else:
+                  hp_cop = 4
+
+                entity_hp_power = self.config.get(["entity hp power"],
+                                                   self.heating_options,
+                                                   None)
+                if entity_hp_cop is not None:
+                  hp_power = float(self.get_state(entity_hp_power).state)
+                else:
+                  hp_power = 1.5
+                logging.debug(f"COP: {hp_cop}, power: {hp_power}")
+              
             else:
                 # vanaf hier code cees
                 # hp_adjustment == "power" or "heating curve"
