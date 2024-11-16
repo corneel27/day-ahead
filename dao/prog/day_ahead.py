@@ -1058,7 +1058,7 @@ class DaCalc(DaBase):
                   hp_power = float(self.get_state(entity_hp_power).state)
                 else:
                   hp_power = 1.5                                                                                                     # Default power in kW if no entity from HA
-                logging.debug(f"COP: {hp_cop}, power: {hp_power}")
+                logging.debug(f"COP: {cop}, power: {hp_power}")
               
                 e_needed = heat_needed/cop                                                                                           # Elektrical energy needed in kWh
                 hp_hours = math.ceil(e_needed/hp_power)                                                                              # Number of hours the heat pump still has to run
