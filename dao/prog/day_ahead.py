@@ -1041,7 +1041,7 @@ class DaCalc(DaBase):
             if self.hp_adjustment == "on/off":
                 # vanaf hier code ronald
                 # hp_adjustment == "on/off"
-                '''
+                logging.info("Implementatie on/off warmtepomp")
                 avg_temp = self.meteo.get_avg_temperature()
                 if U > 24:
                     avg_temp += self.meteo.get_avg_temperature(
@@ -1055,8 +1055,38 @@ class DaCalc(DaBase):
                     logging.warning(f"Geen entity om gem. temperatuur te exporteren")
                 else:
                     self.set_value(entity_avg_temp, round(avg_temp,1))
-                '''
-                # tot hier code ronald
+                logging.debug(f"Outside temp: {avg_temp}")
+
+                # Get COP and heatpump power from HA
+                entity_hp_cop = self.config.get(["entity hp cop"],
+                                                   self.heating_options,
+                                                   None)
+                if entity_hp_cop is not None:
+                  cop = float(self.get_state(entity_hp_cop).state)
+                else:
+                  cop = 4                                                                                                            # Default COP if no entity from HA
+                entity_hp_power = self.config.get(["entity hp power"],
+                                                   self.heating_options,
+                                                   None)
+                if entity_hp_cop is not None:
+                  hp_power = float(self.get_state(entity_hp_power).state)
+                else:
+                  hp_power = 1.5                                                                                                     # Default power in kW if no entity from HA
+
+                e_needed = heat_needed/cop                                                                                           # Elektrical energy needed in kWh
+                hp_hours = math.ceil(e_needed/hp_power)                                                                              # Number of hours the heat pump still has to run
+                e_needed = hp_hours*hp_power                                                                                         # Elektrical energy to be optimized in kWh
+                logging.info(f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, vermogen:{hp_power:.1f} kW, warmtepomp draait: {hp_hours} uren")
+
+                # Add the vars
+                c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
+                hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
+
+                # Add the contraints
+                for u in range(U):
+                  model += c_hp[u] == hp_power * hp_on[u]                                                                            # Energy consumption per hour is equal to power if it runs in that hour
+                model += xsum(hp_on[u] for u in range(U)) == hp_hours                                                                # Ensure pump is running for designated number of hours
+
             else:
                 # vanaf hier code cees
                 # hp_adjustment == "power" or "heating curve"
@@ -1488,9 +1518,14 @@ class DaCalc(DaBase):
             logging.info(f"Waarde boiler om 23 uur: {boiler_at_23:<0.2f} kWh")
         if self.heater_present and self.hp_enabled:
             logging.info("\nInzet warmtepomp")
-            logging.info(f"u     tar     p0     p1     p2     p3     p4     p5     p6     p7   "
-                         f"heat   cons")
-            for u in range(U):
+            if self.hp_adjustment == "on/off":
+              logging.info(f"u     tar    cons")
+              for u in range(U):
+                logging.info(f"{uur[u]:2.0f} {pl[u]:6.4f} {c_hp[u].x:6.2f}")
+            else:
+              logging.info(f"u     tar     p0     p1     p2     p3     p4     p5     p6     p7   "
+                           f"heat   cons")
+              for u in range(U):
                 logging.info(f"{uur[u]:2.0f} {pl[u]:6.4f} {p_hp[0][u].x:6.0f} {p_hp[1][u].x:6.0f} "
                              f"{p_hp[2][u].x:6.0f} {p_hp[3][u].x:6.0f} {p_hp[4][u].x:6.0f} "
                              f"{p_hp[5][u].x:6.0f} {p_hp[6][u].x:6.0f} {p_hp[7][u].x:6.0f} "
@@ -1865,18 +1900,14 @@ class DaCalc(DaBase):
                         helper_id = self.config.get(["entity stop inverter"],
                                                     self.battery_options[b], None)
                     if helper_id is not None:
-                        self.call_service("set_datetime",
-                                          entity_id=helper_id, datetime=stop_str)
-                    self.set_entity_value("entity from battery",
-                                          self.battery_options[b], from_battery)
+                        self.call_service("set_datetime", entity_id=helper_id, datetime=stop_str)
+                    self.set_entity_value("entity from battery", self.battery_options[b], from_battery)
                     logging.info(f"Vermogen uit batterij: {from_battery}W")
-                    self.set_entity_value("entity from pv",
-                                          self.battery_options[b], from_pv)
-                    logging.info(f"Vermogen dat binnenkomt van pv: {from_pv} W")
+                    self.set_entity_value("entity from pv", self.battery_options[b], from_pv)
+                    logging.info(f"Vermogen dat binnenkomt van pv: {from_pv}W")
                     self.set_entity_value("entity from ac", self.battery_options[b], from_ac)
-                    logging.info(f"Vermogen dat binnenkomt van ac: {from_ac} W")
-                    self.set_entity_value("entity calculated soc",
-                                          self.battery_options[b], calculated_soc)
+                    logging.info(f"Vermogen dat binnenkomt van ac: {from_ac}W")
+                    self.set_entity_value("entity calculated soc", self.battery_options[b], calculated_soc)
                     logging.info(f"Waarde SoC na eerste uur: {calculated_soc}%")
 
                 for s in range(pv_dc_num[b]):
@@ -1907,7 +1938,35 @@ class DaCalc(DaBase):
             ##################################################
             # heatpump
             ##################################################
-            if self.heater_present and self.hp_enabled:
+            if self.heater_present:
+              # Implementatie aan/uit warmtepomp
+              if self.hp_adjustment == "on/off":
+                entity_hp_switch = self.heating_options["entity hp switch"]
+                if entity_hp_switch is None:
+                    logging.warning(f"Geen entity om warmtepomp in/uit te schakelen")
+                else:
+                    logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
+                    switch_state = self.get_state(entity_hp_switch).state
+                    if self.hp_enabled:
+                      if hp_on[0].x == 1:
+                        if switch_state == "off":
+                          if self.debug:
+                            logging.info(f"Warmtepomp zou zijn ingeschakeld")
+                          else:
+                            logging.info(f"Warmtepomp ingeschakeld")
+                            self.turn_on(entity_hp_switch)
+                      else:
+                        if switch_state == "on":
+                          if self.debug:
+                            logging.info(f"Warmtepomp zou zijn uitgeschakeld")
+                          else:
+                            logging.info(f"Warmtepomp uitgeschakeld")
+                            self.turn_off(entity_hp_switch)
+                    else:
+                      self.turn_off(entity_hp_switch)
+                      logging.info("Geen warmte vraag. Warmtepomp uitgeschakeld")
+
+              else:
                 # power
                 entity_hp_power = self.config.get(["entity hp power"],
                                                   self.heating_options, None)
@@ -1921,8 +1980,6 @@ class DaCalc(DaBase):
                         self.set_value(entity_hp_power, hp_power)
                         logging.info(f"Elektrisch vermogen warmtepomp ingesteld "
                                      f"op {hp_power:<0.0f} W")
-                # ronald nog aanvullen met code voor on/off
-
                 # adjustment
                 entity_curve_adjustment = self.config.get(["entity adjust heating curve"],
                                                           self.heating_options, None)
