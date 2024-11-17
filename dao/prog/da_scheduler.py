@@ -20,8 +20,9 @@ class DaScheduler(DaBase):
 
         while True:
             t = datetime.datetime.now()
-            next_min = t - datetime.timedelta(minutes=-1, seconds=t.second,
-                                              microseconds=t.microsecond)
+            next_min = t - datetime.timedelta(
+                minutes=-1, seconds=t.second, microseconds=t.microsecond
+            )
             # wacht tot hele minuut 0% cpu
             time.sleep((next_min - t).total_seconds())
             if not self.active:
