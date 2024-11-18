@@ -991,6 +991,11 @@ class DaCalc(DaBase):
                                (self.get_state(entity_hp_enabled).state == "on"))
             if not self.hp_enabled:
                 logging.info("Geen warmtepomp vraag - warmtepomp wordt niet ingepland")
+            
+            # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
+            self.hp_adjustment = self.config.get(["adjustment"],
+                                                 self.heating_options,
+                                                 "power").lower()
         else:
             self.hp_enabled = False
         if not self.hp_enabled:
@@ -1020,10 +1025,6 @@ class DaCalc(DaBase):
             logging.info(f"Reeds geproduceerde warmte: {heat_produced:.1f} kWh")
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
 
-            # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
-            self.hp_adjustment = self.config.get(["adjustment"],
-                                                 self.heating_options,
-                                                 "power").lower()
             if self.hp_adjustment == "on/off":
                 # vanaf hier code ronald
                 # hp_adjustment == "on/off"
