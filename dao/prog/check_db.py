@@ -1,10 +1,5 @@
-from db_manager import DBmanagerObj
-
-# from da_base import DaBase
-from da_config import Config
-import version
+import sys
 import datetime
-from utils import version_number, error_handling
 import logging
 from sqlalchemy import (
     Table,
@@ -22,6 +17,12 @@ from sqlalchemy import (
     update,
 )
 import pandas as pd
+#  from da_base import DaBase
+#  sys.path.append("../")
+from da_config import Config
+from version import __version__
+from utils import version_number, error_handling
+from db_manager import DBmanagerObj
 
 
 class CheckDB:
@@ -29,7 +30,7 @@ class CheckDB:
         # super().__init__(file_name)
         self.file_name = file_name
         self.config = Config(self.file_name)
-        self.version = version.__version__
+        self.version = __version__
         self.last_version = None
         self.db_da = self.config.get_db_da(check_create=True)
         self.engine = self.db_da.engine

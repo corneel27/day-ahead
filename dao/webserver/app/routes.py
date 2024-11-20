@@ -16,6 +16,8 @@ images_folder = os.path.join(web_datapath, 'images')
 try:
     config = Config(app_datapath + "options.json")
 except ValueError as ex:
+    logging.error(app_datapath)
+    logging.error(ex)
     config = None
 
 logname = "dashboard.log"
@@ -255,7 +257,7 @@ def run_process():
 
 @app.route('/reports', methods=['POST', 'GET'])
 def reports():
-    report = dao.prog.da_report.Report()
+    report = dao.prog.da_report.Report(app_datapath+"/options.json")
     subjects = ["grid", "balans"]
     active_subject = "grid"
     views = ["grafiek", "tabel"]
@@ -390,14 +392,17 @@ def api_report(fld: str, periode: str):
     :return: de gevraagde data in json formaat
     """
     cumulate = request.args.get('cumulate')
-    report = dao.prog.da_report.Report()
+    report = dao.prog.da_report.Report(app_datapath+"/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
-    try:
-        cumulate = int(cumulate)
-        cumulate = cumulate == 1
-    except ValueError:
+    if cumulate is None:
         cumulate = False
+    else:
+        try:
+            cumulate = int(cumulate)
+            cumulate = cumulate == 1
+        except ValueError:
+            cumulate = False
     result = report.get_api_data(fld, periode, cumulate=cumulate)
     return result
 

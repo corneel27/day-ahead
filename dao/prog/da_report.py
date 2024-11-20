@@ -1161,6 +1161,8 @@ class Report:
                         df_2.index = pd.to_datetime(df_2["tijd"])
                         df_ha = self.add_col_df(df_2, df_ha, "consumption")
                         # df_cons = df_cons.merge(df_2, on=['tijd']).set_index(['tijd']).sum(axis=1)
+                    if len(df_ha) > 0:
+                        df_ha["datasoort"] = "recorded"
                     count = +1
                 count = 0
                 for sensor in self.report_options["entities grid production"]:
@@ -1241,7 +1243,7 @@ class Report:
                     result = pd.concat([result, df_ha])
 
         result["netto_consumption"] = result["consumption"] - result["production"]
-        result["netto_const"] = result["cost"] - result["profit"]
+        result["netto_cost"] = result["cost"] - result["profit"]
 
         return result
 

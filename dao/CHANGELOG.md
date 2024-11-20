@@ -1,7 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2024.11.1.dev_c]
+- There is an error reported in a api-call: `http://<ip-adres>:5000/api/report/cost/deze_maand`. <br>This error is fixed?
+- Fixed error api call "netto_cost"
+
 # [V2024.11.1.dev_b]
-- Scheduling of boiler can be set via a ha-entity
+- Scheduling of boiler can be postponed via a ha-entity
 - when boiler is heated bij the heat pump for room-heating then there can only be "one" heating 
 function in an hour, therefore is a new setting introduced in the boiler-section: "boiler heated 
 by heatpump". This setting can be "True" or "False"
