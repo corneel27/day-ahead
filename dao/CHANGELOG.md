@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2024.11.1.dev_d]
+There was a general error in api-calls, fixed.
+
 # [V2024.11.1.dev_c]
 - There is an error reported in a api-call: `http://<ip-adres>:5000/api/report/cost/deze_maand`. <br>This error is fixed?
 - Fixed error api call "netto_cost"
