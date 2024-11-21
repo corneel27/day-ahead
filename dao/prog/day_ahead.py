@@ -1460,7 +1460,6 @@ class DaCalc(DaBase):
                 model += (
                     xsum(hp_on[u] for u in range(U)) == hp_hours
                 )  # Ensure pump is running for designated number of hours
-
             else:
                 # vanaf hier code cees
                 # hp_adjustment == "power" or "heating curve"
@@ -2047,7 +2046,6 @@ class DaCalc(DaBase):
                         f"{p_hp[5][u].x:6.0f} {p_hp[6][u].x:6.0f} {p_hp[7][u].x:6.0f} "
                         f"{h_hp[u].x:6.2f} {c_hp[u].x:6.2f}"
                     )
-
         # overzicht per ac-accu:
         pd.options.display.float_format = "{:6.2f}".format
         df_accu = []
@@ -2574,16 +2572,60 @@ class DaCalc(DaBase):
             ##################################################
             # heatpump
             ##################################################
-            if self.hp_present:
-                # Implementatie aan/uit warmtepomp
-                if self.hp_adjustment == "on/off":
-                    entity_hp_switch = self.config.get(
-                        ["entity hp switch"], self.heating_options, None
-                    )
-                    if entity_hp_switch is None:
-                        logging.warning(
-                            f"Geen entity om warmtepomp in/uit te schakelen"
-                        )
+            if self.heater_present:
+              # Implementatie aan/uit warmtepomp
+              if self.hp_adjustment == "on/off":
+                entity_hp_switch = self.heating_options["entity hp switch"]
+                if entity_hp_switch is None:
+                    logging.warning(f"Geen entity om warmtepomp in/uit te schakelen")
+                else:
+                    logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
+                    switch_state = self.get_state(entity_hp_switch).state
+                    if self.hp_enabled:             
+                      if hp_on[0].x == 1:
+                        if switch_state == "off":
+                          if self.debug:
+                            logging.info(f"Warmtepomp zou zijn ingeschakeld")
+                          else:
+                            logging.info(f"Warmtepomp ingeschakeld")
+                            self.turn_on(entity_hp_switch)
+                      else:
+                        if switch_state == "on":
+                          if self.debug:
+                            logging.info(f"Warmtepomp zou zijn uitgeschakeld")
+                          else:
+                            logging.info(f"Warmtepomp uitgeschakeld")
+                            self.turn_off(entity_hp_switch)
+                    else:
+                      self.turn_off(entity_hp_switch)
+                      logging.info("Geen warmte vraag. Warmtepomp uitgeschakeld")
+             
+              else:
+                # power
+                entity_hp_power = self.config.get(["entity hp power"],
+                                                  self.heating_options, None)
+                # elektrisch vermogen in W
+                hp_power = 1000 * c_hp[0].x / hour_fraction[0]
+                if entity_hp_power is not None:
+                    if self.debug:
+                        logging.info(f"Elektrisch vermogen warmtepomp zou zijn ingesteld "
+                                     f"op {hp_power:<0.0f} W")
+                    else:
+                        self.set_value(entity_hp_power, hp_power)
+                        logging.info(f"Elektrisch vermogen warmtepomp ingesteld "
+                                     f"op {hp_power:<0.0f} W")
+                # adjustment
+                entity_curve_adjustment = self.config.get(["entity adjust heating curve"],
+                                                          self.heating_options, None)
+                if entity_curve_adjustment is not None:
+                    old_adjustment = float(self.get_state(entity_curve_adjustment).state)
+                    # adjustment factor (K/%) bijv 0.4 K/10% = 0.04
+                    adjustment_factor = self.config.get(["adjustment factor"],
+                                                        self.heating_options, 0.0)
+                    adjustment = calc_adjustment_heatcurve(
+                        pl[0], p_avg, adjustment_factor, old_adjustment)
+                    if self.debug:
+                        logging.info(f"Aanpassing stooklijn zou zijn: {adjustment:<0.2f}")
                     else:
                         logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
                         switch_state = self.get_state(entity_hp_switch).state
