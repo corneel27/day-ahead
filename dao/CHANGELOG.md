@@ -1,6 +1,20 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-## [V2024.11.0.dev_a]
+# [V2024.11.1.dev_d]
+There was a general error in api-calls, fixed.
+
+# [V2024.11.1.dev_c]
+- There is an error reported in a api-call: `http://<ip-adres>:5000/api/report/cost/deze_maand`. <br>This error is fixed?
+- Fixed error api call "netto_cost"
+
+# [V2024.11.1.dev_b]
+- Scheduling of boiler can be postponed via a ha-entity
+- when boiler is heated bij the heat pump for room-heating then there can only be "one" heating 
+function in an hour, therefore is a new setting introduced in the boiler-section: "boiler heated 
+by heatpump". This setting can be "True" or "False"
+- the code is brought inline with PEP 8 (Style Guide for Python Code)
+
+## [V2024.11.1.dev_a]
 - Scheduling of heatpump can be set via a ha-entity
 - Scheduling of heatpump can be achieved in three ways:
   - on/off
@@ -8,6 +22,10 @@
   - calculated power
 - When setting a state of an entity failed then an error message is written in the log 
   (name of the entity, new failed value)
+
+## [V2024.11.1]
+- Fixed an error when getting Tibber-data when using a Tibber pulse: 
+only data before today are stored
 
 ## [V2024.11.0]
 - Fixed a db-error when getting Tibber-data with the default sqlite-db
@@ -424,7 +442,7 @@ Zie DOCS.md
 
 ### Removed
 De functionaliteit om via de websocket in HA een berekening te starten is verwijderd.
-Dat kan nu via een rest-command: /api/run
+Dat kan nu via een rest-command: `/api/run`
 
 
 ## [v0.3.1] - 2023-09-12
@@ -499,7 +517,7 @@ Dit is hersteld.
 Dit heeft twee voordelen: <br>
   - het rekent veel sneller
   - er wordt makkelijker tussen twee "stages" geinterpoleerd. <br>
-  Als dit goed bevalt, zal het ook worden geimplementeerd voor het ontladen (van dc naar ac) en van dc naar batterij en vice versa.<br>
+  Als dit goed bevalt, zal het ook worden geimplementeerd voor het ontladen (van `dc` naar `ac`) en van `dc` naar batterij en vice versa.<br>
 - de prijzengrafieken zijn in blokvorm en uitgelijnd met de verbruiksgrafieken
 
 
@@ -535,7 +553,7 @@ De loggings zijn te vinden in data\log\dashboard.log.
 - versienummer in bestand _version.py
 - check op voldoende aantal rijen bij prognose data (dynamische prijzen en meteo)
     - bij 2 rijen of minder wordt er niet gerekend<br>
-    - bij 3 tot 8 rijen wordt er wel gerekend maar wordt er wel een waarschuwing afgegeven 
+    - bij 3 tot 8 rijen wordt er wel gerekend, maar wordt er wel een waarschuwing afgegeven 
     
 - een changelog
 - naar keuze datum-tijd of alleen tijd input helper voor aangeven wanneer een elektrische auto geladen moet zijn
@@ -552,7 +570,7 @@ gaf het programma verkeerde resultaten voor dat eerste uur. Dit is gefixed.
 - laden auto wordt alleen uitgezet als auto thuis is (en aangesloten) 
 - ongebruikte instellingen uit DOCS.md gehaald
 - navigatieknoppen in webserver bij "home" omgezet
-- menu optie **Meteo** in webserver voorzien van toelichting "in ontwikkeling"
+- menuoptie **Meteo** in webserver voorzien van toelichting "in ontwikkeling"
 - notificatie via Home Assistant toegevoegd. Zie voor meer informatie DOCS.md bij **notification entity**
 - in het instellingenbestand options.json is de naam van de entity aanduiding veranderd: <br>
 `"entity ready time"` wordt `"entity ready datetime"`
@@ -561,8 +579,8 @@ gaf het programma verkeerde resultaten voor dat eerste uur. Dit is gefixed.
 
 ### Issues
 Als het programma draait in scheduler-mode wordt een websocket geopend naar HA zodat vanuit HA een 
-optimaliserings berekening kan worden gestart.
-Als HA stopt (bijv voor een update) dan blijft de websocket "in de lucht" maar is niet meer effectief.
+optimaliseringsberekening kan worden gestart.
+Als HA stopt (bijv. voor een update) dan blijft de websocket "in de lucht" maar is niet meer effectief.
 
 ### Removed
 

@@ -1,11 +1,16 @@
 import json
 import logging
 import os
+from logging import raiseExceptions
+
+from dao.prog.db_manager import DBmanagerObj
+import sqlalchemy_utils
 
 
 class Config:
 
-    def parse(self, file_name:str):
+    @staticmethod
+    def parse(file_name: str):
         with open(file_name, "r") as file_json:
             try:
                 return json.load(file_json)
@@ -19,7 +24,9 @@ class Config:
         file_secrets = datapath + "/secrets.json"
         self.secrets = self.parse(file_secrets)
 
-    def get(self, keys: list, options: dict = None, default=None) -> str | dict | list | None:
+    def get(
+        self, keys: list, options: dict = None, default=None
+    ) -> str | dict | list | None:
         if options is None:
             options = self.options
         if keys[0] in options:
@@ -38,6 +45,72 @@ class Config:
 
     def set(self, key, value):
         self.options[key] = value
+
+    def get_db_da(self, check_create: bool = False):
+        db_da_engine = self.get(["database da", "engine"], None, "mysql")
+        db_da_server = self.get(["database da", "server"], None, "core-mariadb")
+        db_da_port = int(self.get(["database da", "port"], None, 0))
+        if db_da_engine == "sqlite":
+            db_da_name = self.get(["database da", "database"], None, "day_ahead.db")
+        else:
+            db_da_name = self.get(["database da", "database"], None, "day_ahead")
+        db_da_user = self.get(["database da", "username"], None, "day_ahead")
+        db_da_password = self.get(["database da", "password"])
+        db_da_path = self.get(["database da", "db_path"], None, "../data")
+        db_time_zone = self.get(["time_zone"])
+        if check_create:
+            db_url = DBmanagerObj.db_url(
+                db_dialect=db_da_engine,
+                db_name=db_da_name,
+                db_server=db_da_server,
+                db_user=db_da_user,
+                db_password=db_da_password,
+                db_port=db_da_port,
+                db_path=db_da_path,
+            )
+            if not sqlalchemy_utils.database_exists(db_url):
+                sqlalchemy_utils.create_database(db_url)
+        try:
+            db_da = DBmanagerObj(
+                db_dialect=db_da_engine,
+                db_name=db_da_name,
+                db_server=db_da_server,
+                db_user=db_da_user,
+                db_password=db_da_password,
+                db_port=db_da_port,
+                db_path=db_da_path,
+                db_time_zone=db_time_zone,
+            )
+        except Exception as ex:
+            logging.error("Check your settings for day_ahead database")
+        return db_da
+
+    def get_db_ha(self):
+        db_ha_engine = self.get(["database ha", "engine"], None, "mysql")
+        db_ha_server = self.get(["database ha", "server"], None, "core-mariadb")
+        db_ha_port = int(self.get(["database ha", "port"], None, 0))
+        if db_ha_engine == "sqlite":
+            db_ha_name = self.get(["database ha", "database"], None, "home-assistant_v2.db")
+        else:
+            db_ha_name = self.get(["database ha", "database"], None, "homeassistant")
+        db_ha_user = self.get(["database ha", "username"], None, "homeassistant")
+        db_ha_password = self.get(["database ha", "password"])
+        db_ha_path = self.get(["database ha", "db_path"], None, "/homeassistant")
+        db_time_zone = self.get(["time_zone"])
+        try:
+            db_ha = DBmanagerObj(
+                db_dialect=db_ha_engine,
+                db_name=db_ha_name,
+                db_server=db_ha_server,
+                db_user=db_ha_user,
+                db_password=db_ha_password,
+                db_port=db_ha_port,
+                db_path=db_ha_path,
+                db_time_zone=db_time_zone,
+            )
+        except Exception as ex:
+            logging.error("Check your settings for Home Assitant database")
+        return db_ha
 
 
 def get_config(file_name: str, keys: list, default=None):
