@@ -990,7 +990,7 @@ class DaCalc(DaBase):
             self.hp_enabled = ((entity_hp_enabled is None) or
                                (self.get_state(entity_hp_enabled).state == "on"))
             if not self.hp_enabled:
-                logging.info("Geen warmtepomp vraag - warmtepomp wordt niet ingepland")
+                logging.info("Warmtepomp niet enabled - warmtepomp wordt niet ingepland")
         else:
             self.hp_enabled = False
         if not self.hp_enabled:
@@ -999,7 +999,11 @@ class DaCalc(DaBase):
             p_hp = None
             h_hp = None
         else:
-            logging.info(f"Warmtepomp wordt ingepland")
+            # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
+            self.hp_adjustment = self.config.get(["adjustment"],
+                                                 self.heating_options,
+                                                 "power").lower()
+            
             degree_days = self.meteo.calc_graaddagen(weighted=True)
             if U > 24:
                 degree_days += self.meteo.calc_graaddagen(
@@ -1020,62 +1024,67 @@ class DaCalc(DaBase):
             logging.info(f"Reeds geproduceerde warmte: {heat_produced:.1f} kWh")
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
 
-            # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
-            self.hp_adjustment = self.config.get(["adjustment"],
-                                                 self.heating_options,
-                                                 "power").lower()
             if self.hp_adjustment == "on/off":
                 # vanaf hier code ronald
                 # hp_adjustment == "on/off"
-                logging.info("Implementatie on/off warmtepomp")
-                avg_temp = self.meteo.get_avg_temperature()
-                if U > 24:
-                    avg_temp += self.meteo.get_avg_temperature(
-                        date=dt.datetime.combine(dt.date.today() + dt.timedelta(days=1),
-                                                 dt.datetime.min.time()))
-                    avg_temp = avg_temp/2
-                entity_avg_temp = self.config.get(["entity avg outside temp"], 
+                logging.debug("Implementatie on/off warmtepomp")
+                entity_hp_heat_demand = self.config.get(["entity hp heat demand"], self.heating_options, None)              # Is er warmte vraag - zo ja, dan inplannen
+                self.hp_heat_demand = ((entity_hp_heat_demand is None) or
+                               (self.get_state(entity_hp_heat_demand).state == "on"))
+          
+                if self.hp_heat_demand:
+                  logging.info(f"On/off warmtepomp wordt ingepland")
+                  avg_temp = self.meteo.get_avg_temperature()
+                  if U > 24:
+                      avg_temp += self.meteo.get_avg_temperature(
+                          date=dt.datetime.combine(dt.date.today() + dt.timedelta(days=1), 
+                                                   dt.datetime.min.time()))
+                      avg_temp = avg_temp/2
+                  entity_avg_temp = self.config.get(["entity avg outside temp"], 
                                                   self.heating_options, 
                                                   None)
-                if entity_avg_temp is None:
+                  if entity_avg_temp is None:
                     logging.warning(f"Geen entity om gem. temperatuur te exporteren")
-                else:
+                  else:
                     self.set_value(entity_avg_temp, round(avg_temp,1))
-                logging.debug(f"Outside temp: {avg_temp}")
+
+                  logging.debug(f"Voorspelde buiten temperatuur: {avg_temp}")
               
-                # Get COP and heatpump power from HA
-                entity_hp_cop = self.config.get(["entity hp cop"],
+                  # Get COP and heatpump power from HA
+                  entity_hp_cop = self.config.get(["entity hp cop"],
                                                    self.heating_options,
                                                    None)
-                if entity_hp_cop is not None:
-                  cop = float(self.get_state(entity_hp_cop).state)
-                else:
-                  cop = 4                                                                                                            # Default COP if no entity from HA
-                entity_hp_power = self.config.get(["entity hp power"],
+                  if entity_hp_cop is not None:
+                    cop = float(self.get_state(entity_hp_cop).state)
+                  else:
+                    cop = 4                                                                                                            # Default COP if no entity from HA
+                  entity_hp_power = self.config.get(["entity hp power"],
                                                    self.heating_options,
                                                    None)
-                if entity_hp_cop is not None:
-                  hp_power = float(self.get_state(entity_hp_power).state)
-                else:
-                  hp_power = 1.5                                                                                                     # Default power in kW if no entity from HA
+                  if entity_hp_cop is not None:
+                    hp_power = float(self.get_state(entity_hp_power).state)
+                  else:
+                    hp_power = 1.5                                                                                                     # Default power in kW if no entity from HA
                            
-                e_needed = heat_needed/cop                                                                                           # Elektrical energy needed in kWh
-                hp_hours = math.ceil(e_needed/hp_power)                                                                              # Number of hours the heat pump still has to run
-                e_needed = hp_hours*hp_power                                                                                         # Elektrical energy to be optimized in kWh
-                logging.info(f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, vermogen:{hp_power:.1f} kW, warmtepomp draait: {hp_hours} uren")
+                  e_needed = heat_needed/cop                                                                                           # Elektrical energy needed in kWh
+                  hp_hours = math.ceil(e_needed/hp_power)                                                                              # Number of hours the heat pump still has to run
+                  e_needed = hp_hours*hp_power                                                                                         # Elektrical energy to be optimized in kWh
+                  logging.info(f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, vermogen:{hp_power:.1f} kW, warmtepomp draait: {hp_hours} uren")
                 
-                # Add the vars
-                c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
-                hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
+                  # Add the vars
+                  c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
+                  hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
   
-                # Add the contraints
-                for u in range(U):
-                  model += c_hp[u] == hp_power * hp_on[u]                                                                            # Energy consumption per hour is equal to power if it runs in that hour
-                model += xsum(hp_on[u] for u in range(U)) == hp_hours                                                                # Ensure pump is running for designated number of hours
-          
+                  # Add the contraints
+                  for u in range(U):
+                    model += c_hp[u] == hp_power * hp_on[u]                                                                            # Energy consumption per hour is equal to power if it runs in that hour
+                  model += xsum(hp_on[u] for u in range(U)) == hp_hours                                                                # Ensure pump is running for designated number of hours
+                else:
+                  logging.info(f"Geen warmtevraag - warmtepomp wordt niet ingepland")
             else:
                 # vanaf hier code cees
                 # hp_adjustment == "power" or "heating curve"
+                logging.info(f"Warmtepomp wordt ingepland")
                 stages = self.heating_options["stages"]
                 S = len(stages)
                 c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10)
@@ -1502,9 +1511,10 @@ class DaCalc(DaBase):
         if self.heater_present and self.hp_enabled:
             logging.info("\nInzet warmtepomp")
             if self.hp_adjustment == "on/off":
-              logging.info(f"u     tar    cons")
-              for u in range(U):
-                logging.info(f"{uur[u]:2.0f} {pl[u]:6.4f} {c_hp[u].x:6.2f}")
+              if self.hp_heat_demand:
+                logging.info(f"u     tar    cons")
+                for u in range(U):
+                  logging.info(f"{uur[u]:2.0f} {pl[u]:6.4f} {c_hp[u].x:6.2f}")
             else:
               logging.info(f"u     tar     p0     p1     p2     p3     p4     p5     p6     p7   "
                            f"heat   cons")
@@ -1916,16 +1926,16 @@ class DaCalc(DaBase):
             ##################################################
             # heatpump
             ##################################################
-            if self.heater_present:
-              # Implementatie aan/uit warmtepomp
+            if self.heater_present and self.hp_enabled:
               if self.hp_adjustment == "on/off":
+                # Implementatie aan/uit warmtepomp
                 entity_hp_switch = self.heating_options["entity hp switch"]
                 if entity_hp_switch is None:
                     logging.warning(f"Geen entity om warmtepomp in/uit te schakelen")
                 else:
                     logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
                     switch_state = self.get_state(entity_hp_switch).state
-                    if self.hp_enabled:             
+                    if self.hp_heat_demand:             
                       if hp_on[0].x == 1:
                         if switch_state == "off":
                           if self.debug:
