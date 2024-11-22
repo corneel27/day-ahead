@@ -1037,8 +1037,8 @@ class DaCalc(DaBase):
                   avg_temp = self.meteo.get_avg_temperature()
                   if U > 24:
                       avg_temp += self.meteo.get_avg_temperature(
-                          date=dt.datetime.combine(dt.date.today() + dt.timedelta(days=1),
-                                                 dt.datetime.min.time()))
+                          date=dt.datetime.combine(dt.date.today() + dt.timedelta(days=1), 
+                                                   dt.datetime.min.time()))
                       avg_temp = avg_temp/2
                   entity_avg_temp = self.config.get(["entity avg outside temp"], 
                                                   self.heating_options, 
@@ -1047,6 +1047,7 @@ class DaCalc(DaBase):
                     logging.warning(f"Geen entity om gem. temperatuur te exporteren")
                   else:
                     self.set_value(entity_avg_temp, round(avg_temp,1))
+
                   logging.debug(f"Voorspelde buiten temperatuur: {avg_temp}")
               
                   # Get COP and heatpump power from HA
