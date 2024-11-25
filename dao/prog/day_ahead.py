@@ -2570,7 +2570,7 @@ class DaCalc(DaBase):
             ##################################################
             # heatpump
             ##################################################
-            if self.heater_present and self.hp_enabled:
+            if self.hp_present and self.hp_enabled:
               if self.hp_adjustment == "on/off":
                 # Implementatie aan/uit warmtepomp
                 entity_hp_switch = self.heating_options["entity hp switch"]
