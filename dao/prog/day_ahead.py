@@ -1393,6 +1393,7 @@ class DaCalc(DaBase):
             )  # heat needed
             logging.info(f"Reeds geproduceerde warmte: {heat_produced:.1f} kWh")
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
+
             if self.hp_adjustment == "on/off":
                 # vanaf hier code ronald
                 # hp_adjustment == "on/off"
@@ -1400,6 +1401,10 @@ class DaCalc(DaBase):
                 entity_hp_heat_demand = self.config.get(["entity hp heat demand"], self.heating_options, None)              # Is er warmte vraag - zo ja, dan inplannen
                 self.hp_heat_demand = ((entity_hp_heat_demand is None) or
                                (self.get_state(entity_hp_heat_demand).state == "on"))
+
+                # Add the vars
+                c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
+                hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
           
                 if self.hp_heat_demand:
                   logging.info(f"On/off warmtepomp wordt ingepland")
@@ -1441,8 +1446,9 @@ class DaCalc(DaBase):
                   logging.info(f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, vermogen:{hp_power:.1f} kW, warmtepomp draait: {hp_hours} uren")
                 
                   # Add the vars
-                  c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
-                  hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
+
+    #              c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
+    #              hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
   
                   # Add the contraints
                   for u in range(U):
