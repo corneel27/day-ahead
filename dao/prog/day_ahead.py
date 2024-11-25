@@ -1445,11 +1445,6 @@ class DaCalc(DaBase):
                   e_needed = hp_hours*hp_power                                                                                         # Elektrical energy to be optimized in kWh
                   logging.info(f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, vermogen:{hp_power:.1f} kW, warmtepomp draait: {hp_hours} uren")
                 
-                  # Add the vars
-
-    #              c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
-    #              hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
-  
                   # Add the contraints
                   for u in range(U):
                     model += c_hp[u] == hp_power * hp_on[u]                                                                            # Energy consumption per hour is equal to power if it runs in that hour
