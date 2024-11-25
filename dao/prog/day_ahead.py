@@ -1402,7 +1402,7 @@ class DaCalc(DaBase):
                 self.hp_heat_demand = ((entity_hp_heat_demand is None) or
                                (self.get_state(entity_hp_heat_demand).state == "on"))
 
-                min_run_length = self.config.get(["min run length"], self.heating_options, 1)                                        # Minimum run lengte hp in uren - 1h als niet gedefinieerd
+                min_run_length = int(self.config.get(["min run length"], self.heating_options, 1))                                   # Minimum run lengte hp in uren - 1h als niet gedefinieerd
                 min_run_length = min(max(min_run_length,1),5)                                                                        # Alleen waarde tussen 1 en 5 uur mogelijk
                 logging.debug(f"Warmtepomp draait minimaal {min_run_length} uren")
                
