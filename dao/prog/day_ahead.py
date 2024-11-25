@@ -1393,13 +1393,22 @@ class DaCalc(DaBase):
             )  # heat needed
             logging.info(f"Reeds geproduceerde warmte: {heat_produced:.1f} kWh")
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
+
             if self.hp_adjustment == "on/off":
                 # vanaf hier code ronald
                 # hp_adjustment == "on/off"
                 logging.debug("Implementatie on/off warmtepomp")
-                entity_hp_heat_demand = self.config.get(["entity hp heat demand"], self.heating_options, None)              # Is er warmte vraag - zo ja, dan inplannen
+                entity_hp_heat_demand = self.config.get(["entity hp heat demand"], self.heating_options, None)                       # Is er warmte vraag - zo ja, dan inplannen
                 self.hp_heat_demand = ((entity_hp_heat_demand is None) or
                                (self.get_state(entity_hp_heat_demand).state == "on"))
+
+                min_run_length = int(self.config.get(["min run length"], self.heating_options, 1))                                   # Minimum run lengte hp in uren - 1h als niet gedefinieerd
+                min_run_length = min(max(min_run_length,1),5)                                                                        # Alleen waarde tussen 1 en 5 uur mogelijk
+                logging.debug(f"Warmtepomp draait minimaal {min_run_length} uren")
+               
+                # Add the vars
+                c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
+                hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
           
                 if self.hp_heat_demand:
                   logging.info(f"On/off warmtepomp wordt ingepland")
@@ -1437,17 +1446,27 @@ class DaCalc(DaBase):
                            
                   e_needed = heat_needed/cop                                                                                           # Elektrical energy needed in kWh
                   hp_hours = math.ceil(e_needed/hp_power)                                                                              # Number of hours the heat pump still has to run
+                  hours_to_add = (min_run_length - (hp_hours % min_run_length))                                                        # Hours to add to ensure optimization horizon is multiple of min_run_length
+                  hp_hours += hours_to_add
                   e_needed = hp_hours*hp_power                                                                                         # Elektrical energy to be optimized in kWh
                   logging.info(f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, vermogen:{hp_power:.1f} kW, warmtepomp draait: {hp_hours} uren")
                 
-                  # Add the vars
-                  c_hp = [model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)]                                           # Electricity consumption per hour
-                  hp_on = [model.add_var(var_type=BINARY) for _ in range(U)]                                                           # If on the pump will run in that hour
-  
                   # Add the contraints
                   for u in range(U):
                     model += c_hp[u] == hp_power * hp_on[u]                                                                            # Energy consumption per hour is equal to power if it runs in that hour
                   model += xsum(hp_on[u] for u in range(U)) == hp_hours                                                                # Ensure pump is running for designated number of hours
+
+                  # Additional constraints to ensure the minimum run length (range 1-5 hours)
+                  for u in range(0,U,min_run_length):
+                    if u < U-min_run_length+1:
+                      if min_run_length > 1:
+                        model += hp_on[u] == hp_on[u+1]
+                      if min_run_length > 2:
+                        model += hp_on[u+1] == hp_on[u+2]
+                      if min_run_length > 3:
+                        model += hp_on[u+2] == hp_on[u+3]
+                      if min_run_length > 4:
+                        model += hp_on[u+3] == hp_on[u+4]
                 else:
                   logging.info(f"Geen warmtevraag - warmtepomp wordt niet ingepland")
             else:
@@ -2564,7 +2583,7 @@ class DaCalc(DaBase):
             ##################################################
             # heatpump
             ##################################################
-            if self.heater_present and self.hp_enabled:
+            if self.hp_present and self.hp_enabled:
               if self.hp_adjustment == "on/off":
                 # Implementatie aan/uit warmtepomp
                 entity_hp_switch = self.heating_options["entity hp switch"]
