@@ -7,26 +7,32 @@ sys.path.append("../../../dao/prog")
 import dao.prog.da_report
 import dao.prog.day_ahead
 
+
 def test_get_grid_data_sqlite():
     report = dao.prog.da_report.Report(file_name="../data/options_sqlite.json")
     for day in [datetime.datetime(2024, 7, 9), datetime.datetime(2024, 7, 10)]:
         vanaf = day  # datetime.datetime(2024, 7, 9)
         tot = day + datetime.timedelta(days=1)  # datetime.datetime(2024, 7, 10)
 
-        df_ha = report.get_grid_data(periode='', _vanaf=vanaf, _tot=tot, _interval="uur", _source="ha")
+        df_ha = report.get_grid_data(periode='', _vanaf=vanaf, _tot=tot, _interval="uur",
+                                     _source="ha")
         df_ha = report.calc_grid_columns(df_ha, "uur", "tabel")
         print(f"Eigen meterstanden op {day.strftime('%Y-%m-%d')}:\n{df_ha.to_string(index=False)}")
-        df_da = report.get_grid_data(periode='', _vanaf=vanaf, _tot=tot, _interval="uur", _source="da")
+        df_da = report.get_grid_data(periode='', _vanaf=vanaf, _tot=tot, _interval="uur",
+                                     _source="da")
         df_da = report.calc_grid_columns(df_da, "uur", "tabel")
-        print(f"Verbruiken gecorrigeerd door Tibber op {day.strftime('%Y-%m-%d')}:\n{df_da.to_string(index=False)}")
+        print(f"Verbruiken gecorrigeerd door Tibber op {day.strftime('%Y-%m-%d')}:\n"
+              f"{df_da.to_string(index=False)}")
         # print(df_ha.equals(df_da))
+
 
 def start_logging():
     logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s %(levelname)s: %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
+                        format='%(asctime)s %(levelname)s: %(message)s',
+                        datefmt='%Y-%m-%d %H:%M:%S')
     logging.info(f"Testen Day Ahead Optimalisatie gestart: "
-             f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
+                 f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
+
 
 def test_da_calc():
     start_logging()
@@ -39,17 +45,19 @@ def test_da_calc():
 
 
 def get_grid_data(engine: str, source: str, vanaf: datetime.datetime, tot: datetime.datetime = None,
-              interval: str = "uur") -> tuple:
+                  interval: str = "uur") -> tuple:
     file_name = "../data/options_" + engine + ".json"
     report = dao.prog.da_report.Report(file_name)
     if tot is None:
         tot = vanaf + datetime.timedelta(days=1)
-    df = report.get_grid_data(periode='', _vanaf=vanaf, _tot=tot, _interval=interval, _source=source)
+    df = report.get_grid_data(periode='', _vanaf=vanaf, _tot=tot, _interval=interval,
+                              _source=source)
     df = report.calc_grid_columns(df, interval, "tabel")
     row = df.iloc[-1]
     netto_consumption = row.Verbruik[0] - row.Productie[0]
     netto_kosten = row.Kosten[0] - row.Opbrengst[0]
     return df, netto_consumption, netto_kosten
+
 
 def test_grid_reporting():
     engines = ["mysql", "sqlite", "postgresql"]
@@ -65,8 +73,10 @@ def test_grid_reporting():
     print(f"Result from DA:\n{result[0].to_string(index=False)}")
     print(f"Result from HA:\n{result[1].to_string(index=False)}")
 
+
 def test_main():
     test_get_grid_data_sqlite()
+
 
 if __name__ == '__main__':
     test_main()

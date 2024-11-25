@@ -34,7 +34,9 @@ COPY miplib.tar.gz /tmp/
 WORKDIR /root/dao/prog
 RUN echo 'platform: "$ENV_BUILD_ARCH"' \
   && export BUILD_ARCH="$ENV_BUILD_ARCH" \
-  && echo 'export BUILD_ARCH="$ENV_BUILD_ARCH"' >> ~/.bashrc
+  && echo 'export BUILD_ARCH="$ENV_BUILD_ARCH"' >> ~/.bashrc \
+  && export PYTHONPATH="/root:/root/dao:/root/dao/prog" \
+  && echo 'export PYTHONPATH="/root:/root/dao:/root/dao/prog"' >> ~/.bashrc
 
 RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
       tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
