@@ -1446,7 +1446,10 @@ class DaCalc(DaBase):
                            
                   e_needed = heat_needed/cop                                                                                           # Elektrical energy needed in kWh
                   hp_hours = math.ceil(e_needed/hp_power)                                                                              # Number of hours the heat pump still has to run
-                  hours_to_add = (min_run_length - (hp_hours % min_run_length))                                                        # Hours to add to ensure optimization horizon is multiple of min_run_length
+                  if (hp_hours % min_run_length) != 0:
+                     hours_to_add = (min_run_length - (hp_hours % min_run_length))                                                     # Hours to add to ensure optimization horizon is multiple of min_run_length
+                  else
+                     hours_to_add = 0
                   hp_hours += hours_to_add
                   e_needed = hp_hours*hp_power                                                                                         # Elektrical energy to be optimized in kWh
                   logging.info(f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, vermogen:{hp_power:.1f} kW, warmtepomp draait: {hp_hours} uren")
