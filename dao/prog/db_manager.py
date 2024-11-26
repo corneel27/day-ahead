@@ -325,69 +325,71 @@ class DBmanagerObj(object):
 
     def get_prognose_data(self, start, end=None, interval="hour"):
         values_table = Table("values", self.metadata, autoload_with=self.engine)
-        # Aliases for the values table
-        t1 = values_table.alias("t1")
-        t2 = values_table.alias("t2")
-        t3 = values_table.alias("t3")
-        t0 = values_table.alias("t0")
-
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
-        # Aliases for the variabel table
-        v1 = variabel_table.alias("v1")
-        v2 = variabel_table.alias("v2")
-        v3 = variabel_table.alias("v3")
-        v0 = variabel_table.alias("v0")
+        if interval == "hour":
+            # Aliases for the values table
+            t1 = values_table.alias("t1")
+            t2 = values_table.alias("t2")
+            t3 = values_table.alias("t3")
+            t0 = values_table.alias("t0")
 
-        # Build the SQLAlchemy query
-        query = select(
-            t1.c.time.label("time"),
-            self.from_unixtime(t1.c.time).label("tijd"),
-            t0.c.value.label("temp"),
-            t1.c.value.label("glob_rad"),
-            t2.c.value.label("pv_rad"),
-            t3.c.value.label("da_price"),
-        ).where(
-            and_(
-                t1.c.time == t2.c.time,
-                t1.c.time == t3.c.time,
-                t1.c.time == t0.c.time,
-                t1.c.variabel == v1.c.id,
-                v1.c.code == "gr",
-                t2.c.variabel == v2.c.id,
-                v2.c.code == "solar_rad",
-                t3.c.variabel == v3.c.id,
-                v3.c.code == "da",
-                t0.c.variabel == v0.c.id,
-                v0.c.code == "temp",
-                t1.c.time
-                >= start,  # self.unix_timestamp(start.strftime('%Y-%m-%d %H:%M:%S'))
+            # Aliases for the variabel table
+            v1 = variabel_table.alias("v1")
+            v2 = variabel_table.alias("v2")
+            v3 = variabel_table.alias("v3")
+            v0 = variabel_table.alias("v0")
+
+            # Build the SQLAlchemy query
+            query = select(
+                t1.c.time.label("time"),
+                self.from_unixtime(t1.c.time).label("tijd"),
+                t0.c.value.label("temp"),
+                t1.c.value.label("glob_rad"),
+                t2.c.value.label("pv_rad"),
+                t3.c.value.label("da_price"),
+            ).where(
+                and_(
+                    t1.c.time == t2.c.time,
+                    t1.c.time == t3.c.time,
+                    t1.c.time == t0.c.time,
+                    t1.c.variabel == v1.c.id,
+                    v1.c.code == "gr",
+                    t2.c.variabel == v2.c.id,
+                    v2.c.code == "solar_rad",
+                    t3.c.variabel == v3.c.id,
+                    v3.c.code == "da",
+                    t0.c.variabel == v0.c.id,
+                    v0.c.code == "temp",
+                    t1.c.time
+                    >= start,  # self.unix_timestamp(start.strftime('%Y-%m-%d %H:%M:%S'))
+                )
             )
-        )
-        if end is not None:
-            query = query.where(
-                t1.c.time < end #  self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
-            )
-        else:
-            start_dt = datetime.datetime.fromtimestamp(start)
-            if start_dt.hour < 13:
-                num_days = 1
+            if end is not None:
+                query = query.where(
+                    t1.c.time < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                )
             else:
-                num_days = 2
-            end_dt = start_dt + datetime.timedelta(days=num_days)
-            end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
-            end_ts = end_dt.timestamp()
-            query = query.where(
-                t1.c.time < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
-            )
+                start_dt = datetime.datetime.fromtimestamp(start)
+                if start_dt.hour < 13:
+                    num_days = 1
+                else:
+                    num_days = 2
+                end_dt = start_dt + datetime.timedelta(days=num_days)
+                end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
+                end_ts = end_dt.timestamp()
+                query = query.where(
+                    t1.c.time < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
+                )
 
-        query = query.order_by(t1.c.time)
+            query = query.order_by(t1.c.time)
 
-        # Execute the query and fetch the result into a pandas DataFrame
-        with self.engine.connect() as connection:
-            result = connection.execute(query)
-        df = pd.DataFrame(result.fetchall(), columns=result.keys())
-        df["tijd"] = pd.to_datetime(df["tijd"])
-        return df
+            # Execute the query and fetch the result into a pandas DataFrame
+            with self.engine.connect() as connection:
+                result = connection.execute(query)
+            df = pd.DataFrame(result.fetchall(), columns=result.keys())
+            df["tijd"] = pd.to_datetime(df["tijd"])
+            return df
+        # else: #  interval == "kwartier"
 
     def get_column_data(
         self,
