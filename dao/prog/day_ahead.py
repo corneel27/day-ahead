@@ -47,7 +47,7 @@ class DaCalc(DaBase):
         self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
         self.machines = self.config.get(["machines"], None, [])
         # self.start_logging()
-
+    
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
@@ -1380,7 +1380,13 @@ class DaCalc(DaBase):
                 )
             logging.info(f"Gewogen graaddagen: {degree_days:.1f} K.day")
             # degree days factor kWh th / K.day
-            degree_days_factor = self.heating_options["degree days factor"]
+            entity_degree_days = self.heating_options["degree days factor"]                                
+            try:
+                degree_days_factor = float(entity_degree_days)                                                # if just a number is speficied use this number
+            except ValueError:
+                degree_days_factor = float(self.get_state(entity_degree_days).state)                          # if en entity is specified get it from HA
+            logging.debug(f"Degree days factor: {degree_days_factor:.1f}")
+            
             entity_heat_produced = self.config.get(
                 ["entity hp heat produced"], self.heating_options, None
             )
