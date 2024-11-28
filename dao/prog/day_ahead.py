@@ -48,7 +48,7 @@ class DaCalc(DaBase):
         self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
         self.machines = self.config.get(["machines"], None, [])
         # self.start_logging()
-
+    
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
@@ -1367,7 +1367,13 @@ class DaCalc(DaBase):
                 )
             logging.info(f"Gewogen graaddagen: {degree_days:.1f} K.day")
             # degree days factor kWh th / K.day
-            degree_days_factor = self.heating_options["degree days factor"]
+            entity_degree_days = self.heating_options["degree days factor"]                                
+            try:
+                degree_days_factor = float(entity_degree_days)                                                # if just a number is speficied use this number
+            except ValueError:
+                degree_days_factor = float(self.get_state(entity_degree_days).state)                          # if en entity is specified get it from HA
+            logging.debug(f"Degree days factor: {degree_days_factor:.1f}")
+            
             entity_heat_produced = self.config.get(
                 ["entity hp heat produced"], self.heating_options, None
             )
@@ -1434,8 +1440,10 @@ class DaCalc(DaBase):
                            
                   e_needed = heat_needed/cop                                                                                           # Elektrical energy needed in kWh
                   hp_hours = math.ceil(e_needed/hp_power)                                                                              # Number of hours the heat pump still has to run
-                  hours_to_add = (min_run_length - (hp_hours % min_run_length))                                                        # Hours to add to ensure optimization horizon is multiple of min_run_length
-                  hp_hours += hours_to_add
+                  if (hp_hours < min_run_length):                                                                                      # Ensure pump runs for at least min_run_length hours
+                     hp_hours = min_run_length
+                  if (hp_hours % min_run_length) != 0:
+                     hp_hours += (min_run_length - (hp_hours % min_run_length))                                                        # Ensure hp_hours is multiple of min_run_length
                   e_needed = hp_hours*hp_power                                                                                         # Elektrical energy to be optimized in kWh
                   logging.info(f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, vermogen:{hp_power:.1f} kW, warmtepomp draait: {hp_hours} uren")
                 
@@ -2591,9 +2599,9 @@ class DaCalc(DaBase):
                 entity_hp_switch = self.config.get(
                     ["entity hp switch"], self.heating_options, None
                 )
-
                 if entity_hp_switch is None:
-                    logging.warning(f"Geen entity om warmtepomp in/uit te schakelen")
+                    if self.hp_adjustment == "on/off":
+                        logging.warning(f"Geen entity om warmtepomp in/uit te schakelen")
                 else:
                     logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
                     switch_state = self.get_state(entity_hp_switch).state
