@@ -2599,8 +2599,9 @@ class DaCalc(DaBase):
                 entity_hp_switch = self.config.get(
                     ["entity hp switch"], self.heating_options, None
                 )
-                if entity_hp_switch is None and self.hp_adjustment == "on/off":
-                    logging.warning(f"Geen entity om warmtepomp in/uit te schakelen")
+                if entity_hp_switch is None:
+                    if self.hp_adjustment == "on/off":
+                        logging.warning(f"Geen entity om warmtepomp in/uit te schakelen")
                 else:
                     logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
                     switch_state = self.get_state(entity_hp_switch).state
