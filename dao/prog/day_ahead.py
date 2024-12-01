@@ -2631,7 +2631,7 @@ class DaCalc(DaBase):
                             f"op {hp_power:<0.0f} W"
                         )
                     else:
-                        self.set_value(entity_hp_power, hp_power)
+ #                       self.set_value(entity_hp_power, hp_power)
                         logging.info(
                             f"Elektrisch vermogen warmtepomp ingesteld "
                             f"op {hp_power:<0.0f} W"
