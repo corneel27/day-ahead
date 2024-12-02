@@ -1769,13 +1769,12 @@ class Report:
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode)
-            logging.debug(f"rs: dfgrid: {df_grid}")
-            logging.debug(f"rs: dfgrid[0]: {df_grid[0]}")
+            logging.debug(f"rs: dfgrid: {df_grid.to_string()}")
             df_grid["time"] = df_grid["vanaf"].apply(
                 lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")
             )
-            logging.debug(f"rs: dfgrid2: {df_grid}")
-            logging.debug(f"rs: dfgrid2[0]: {df_grid[0]}")
+            logging.debug(f"rs: dfgrid2: {df_grid.to_string()}")
+           
             for i in range(len(df_grid[0])):
                 logging.debug(f"df_gr[i]: {df_grid[0][i]}")
             if field in grid_fields:
