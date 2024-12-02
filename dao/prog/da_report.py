@@ -1775,8 +1775,6 @@ class Report:
             )
             logging.debug(f"rs: dfgrid2: {df_grid.to_string()}")
            
-            for i in range(len(df_grid[0])):
-                logging.debug(f"df_gr[i]: {df_grid[0][i]}")
             if field in grid_fields:
                 df = df_grid[["time", field, "datasoort"]].copy()
                 if cumulate:
