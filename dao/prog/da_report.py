@@ -329,6 +329,7 @@ class Report:
         start_ts_param1 = vanaf.strftime("%Y-%m-%d %H:%M:%S")  # '2024-01-01 00:00:00'
         start_ts_param2 = tot.strftime("%Y-%m-%d %H:%M:%S")  # '2024-05-23 00:00:00'
         if agg == "maand":
+            logging.debug("maand")
             column = self.db_ha.month(t2.c.start_ts).label("maand")
         elif agg == "dag":
             column = self.db_ha.day(t2.c.start_ts).label("dag")
@@ -401,6 +402,7 @@ class Report:
         if len(df_raw) > 0:
             # Extract year and month or day
             if agg == "maand":
+                logging.debug("maand2")
                 df_raw["maand"] = df_raw["start_ts_t2"].dt.to_period("M")
                 df_aggregated = (
                     df_raw.groupby("maand")
@@ -804,6 +806,7 @@ class Report:
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         if interval == "maand":
+            logging.debug("maand3")
             column = self.db_da.month(t1.c.time).label("maand")
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
@@ -1041,6 +1044,7 @@ class Report:
 
         source = _source
         if interval == "maand":
+            logging.debug("maand3")
             column = self.db_da.month(t1.c.time).label("maand")
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
@@ -1048,6 +1052,7 @@ class Report:
             column = self.db_da.hour(t1.c.time).label("uur")
         result = None
         if source == "all" or source == "da":
+            logging.debug("data uit da ophalen")
             for cat, label in [
                 ("cons", "consumption"),
                 ("prod", "production"),
@@ -1092,6 +1097,7 @@ class Report:
                 else:
                     result[label] = result_cat[label]
         else:
+            logging.debug("pd.dataframe")
             result = pd.DataFrame(
                 columns=[
                     "uur",
@@ -1146,6 +1152,7 @@ class Report:
             df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
                 # data uit ha ophalen
+                logging.debug("data uit ha ophalen")
                 count = 0
                 for sensor in self.report_options["entities grid consumption"]:
                     if count == 0:
@@ -1743,12 +1750,15 @@ class Report:
             "profit",
             "netto_cost",
         ]
+        logging.debug(f"field; {field}, period: {periode}")
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode)
+            logging.debug(f"dfgrid: {df_grid}")
             df_grid["time"] = df_grid["vanaf"].apply(
                 lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")
             )
+            logging.debug(f"dfgrid2: {df_grid}")
             if field in grid_fields:
                 df = df_grid[["time", field, "datasoort"]].copy()
                 if cumulate:
