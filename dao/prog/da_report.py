@@ -1194,6 +1194,7 @@ class Report:
                     df_ha["datasoort"] = "recorded"
                 else:
                     last_moment = vanaf
+                logging.debug(f"rs df_ha: {df_ha.to_string()}")
 
             if source == "all" or source == "da":
                 if last_moment < tot:
@@ -1243,6 +1244,7 @@ class Report:
                             df_ha = df_prog
                         else:
                             df_ha = pd.concat([df_ha, df_prog])
+                    logging.debug(f"df_ha_tot: {df_ha.to_string()}")
 
             df_prices.index = pd.to_datetime(df_prices["tijd"])
             df_ha = self.copy_col_df(df_prices, df_ha, "price")
@@ -1250,11 +1252,14 @@ class Report:
             df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
             df_ha = self.recalc_df_ha(df_ha, interval)
 
+            logging.debug(f"df_ha_tot2: {df_ha.to_string()}")
+
             if len(result) == 0:
                 result = df_ha
             else:
                 if len(df_ha) > 0:
                     result = pd.concat([result, df_ha])
+                    logging.debug(f"df_ha_tot3: {df_ha.to_string()}")
 
         result["netto_consumption"] = result["consumption"] - result["production"]
         result["netto_cost"] = result["cost"] - result["profit"]
