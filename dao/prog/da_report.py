@@ -634,7 +634,7 @@ class Report:
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
         from dao.prog.utils import get_value_from_dict
-
+        logging.debug(f"rs: recalc: interval: {interval}")
         fi_df = pd.DataFrame(
             columns=[
                 interval,
@@ -1247,9 +1247,13 @@ class Report:
                     logging.debug(f"df_ha_tot: {df_ha.to_string()}")
 
             df_prices.index = pd.to_datetime(df_prices["tijd"])
+            logging.debug(f"df_ha_totx: {df_ha.to_string()}")
             df_ha = self.copy_col_df(df_prices, df_ha, "price")
+            logging.debug(f"df_ha_toty: {df_ha.to_string()}")
             df_ha = self.copy_col_df(df_prices, df_ha, "tijd")
+            logging.debug(f"df_ha_totz: {df_ha.to_string()}")
             df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
+            logging.debug(f"df_ha_totq: {df_ha.to_string()}")
             df_ha = self.recalc_df_ha(df_ha, interval)
 
             logging.debug(f"df_ha_tot2: {df_ha.to_string()}")
