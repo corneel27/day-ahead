@@ -17,6 +17,8 @@ import matplotlib.pyplot as plt
 
 class Report:
     periodes = {}
+    logging.basicConfig(level=logging.DEBUG) ###
+
 
     def __init__(self, file_name: str = "../data/options.json"):
         self.config = Config(file_name)
@@ -313,7 +315,7 @@ class Report:
         # print(df_sensor)
         return df
         """
-
+        logging.basicConfig(level=logging.DEBUG)   ###
         statistics = Table(
             "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
         )
@@ -399,6 +401,7 @@ class Report:
         df_raw["tot"] = df_raw.apply(
             lambda x: datetime.datetime.fromtimestamp(x["tijd"]), axis=1
         )
+        logging.basicConfig(level=logging.DEBUG)   ###
         if len(df_raw) > 0:
             # Extract year and month or day
             if agg == "maand":
@@ -577,6 +580,8 @@ class Report:
         prod_df = self.get_sensor_sum(
             self.grid_dict["prod"]["sensors"], vanaf, tot, "prod"
         )
+        logging.basicConfig(level=logging.DEBUG)   ###
+        logging.debug("calc_cost")
         da_df = self.get_price_data(vanaf, tot)
         da_df.index = pd.to_datetime(da_df["time"])
         data = self.copy_col_df(cons_df, da_df, "cons")
@@ -1020,6 +1025,8 @@ class Report:
         :param _source: als != None dan hier de source all, da of ha
         :return: een dataframe met de gevraagde griddata
         """
+        logging.basicConfig(level=logging.DEBUG)   ###
+        logging.debug("get grid data")
         values_table = Table(
             "values", self.db_da.metadata, autoload_with=self.db_da.engine
         )
@@ -1278,6 +1285,8 @@ class Report:
             "Opbrengst",
             "Netto kosten",
         ]
+        logging.basicConfig(level=logging.DEBUG)   ###
+        logging.debug("calc grid cols")
         # columns.extend(ext_columns)
         fi_df = pd.DataFrame(columns=columns)
         if len(report_df.index) == 0:
@@ -1650,6 +1659,8 @@ class Report:
 
     # ------------------------------------------------
     def get_field_data(self, field: str, periode: str):
+        logging.basicConfig(level=logging.DEBUG)   ###
+        logging.debug("get field data")
         period = self.periodes[periode]
         if not (field in self.energy_balance_dict):
             result = None
@@ -1702,6 +1713,8 @@ class Report:
 
     def get_price_data(self, start, end):
         from dao.prog.utils import get_value_from_dict
+        logging.basicConfig(level=logging.DEBUG)   ###
+        logging.debug("get price data")
 
         df_da = self.db_da.get_column_data("values", "da", start=start, end=end)
         old_dagstr = ""
@@ -1741,6 +1754,8 @@ class Report:
         return df
 
     def get_api_data(self, field: str, periode: str, cumulate: bool = False):
+        logging.basicConfig(level=logging.DEBUG)   ###
+        logging.debug("get api data")
         periode = periode.replace("_", " ")
         grid_fields = [
             "consumption",
