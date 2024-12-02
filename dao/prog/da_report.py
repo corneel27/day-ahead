@@ -1755,7 +1755,7 @@ class Report:
 
     def get_api_data(self, field: str, periode: str, cumulate: bool = False):
         logging.basicConfig(level=logging.DEBUG)   ###
-        logging.debug(f"{datetime.datetime.now()}: rs: get api data")
+        logging.debug(f"{datetime.datetime.now()}: rs: get api data") ###
         periode = periode.replace("_", " ")
         grid_fields = [
             "consumption",
@@ -1770,10 +1770,14 @@ class Report:
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode)
             logging.debug(f"rs: dfgrid: {df_grid}")
+            logging.debug(f"rs: dfgrid[0]: {df_grid[0]}")
             df_grid["time"] = df_grid["vanaf"].apply(
                 lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")
             )
             logging.debug(f"rs: dfgrid2: {df_grid}")
+            logging.debug(f"rs: dfgrid2[0]: {df_grid[0]}")
+            for i in range(len(df_grid[0])):
+                logging.debug(f"df_gr[i]: {df_grid[0][i]}")
             if field in grid_fields:
                 df = df_grid[["time", field, "datasoort"]].copy()
                 if cumulate:
