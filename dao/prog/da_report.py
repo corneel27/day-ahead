@@ -1260,7 +1260,7 @@ class Report:
             logging.debug(f"df_ha_totz: {df_ha.to_string()}")
             df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
             logging.debug(f"df_ha_totq: {df_ha.to_string()}")
-            df_ha = self._df_ha(df_ha, interval)
+            df_ha = self.recalc_df_ha(df_ha, interval)
 
             logging.debug(f"df_ha_tot2: {df_ha.to_string()}")
 
