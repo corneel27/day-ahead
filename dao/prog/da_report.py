@@ -315,7 +315,7 @@ class Report:
         # print(df_sensor)
         return df
         """
-        logging.basicConfig(level=logging.DEBUG)   ###
+        logging.basicConfig(level=logging)   ###
         statistics = Table(
             "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
         )
@@ -331,7 +331,6 @@ class Report:
         start_ts_param1 = vanaf.strftime("%Y-%m-%d %H:%M:%S")  # '2024-01-01 00:00:00'
         start_ts_param2 = tot.strftime("%Y-%m-%d %H:%M:%S")  # '2024-05-23 00:00:00'
         if agg == "maand":
-            logging.debug("rs: maand")
             column = self.db_ha.month(t2.c.start_ts).label("maand")
         elif agg == "dag":
             column = self.db_ha.day(t2.c.start_ts).label("dag")
@@ -381,7 +380,7 @@ class Report:
         from sqlalchemy.dialects import sqlite  # , postgresql,  mysql
 
         query_str = str(query.compile(dialect=sqlite.dialect()))
-        logging.debug(f"query get sensor data:/n {query_str}")
+        logging.debug(f"query get sensor data:\n {query_str}")
         # Execute the query and load results into a DataFrame
         with self.db_ha.engine.connect() as connection:
             df_raw = pd.read_sql(query, connection)
@@ -405,7 +404,6 @@ class Report:
         if len(df_raw) > 0:
             # Extract year and month or day
             if agg == "maand":
-                logging.debug("rs:maand2")
                 df_raw["maand"] = df_raw["start_ts_t2"].dt.to_period("M")
                 df_aggregated = (
                     df_raw.groupby("maand")
@@ -581,7 +579,6 @@ class Report:
             self.grid_dict["prod"]["sensors"], vanaf, tot, "prod"
         )
         logging.basicConfig(level=logging.DEBUG)   ###
-        logging.debug("rs:calc_cost")
         da_df = self.get_price_data(vanaf, tot)
         da_df.index = pd.to_datetime(da_df["time"])
         data = self.copy_col_df(cons_df, da_df, "cons")
@@ -634,7 +631,6 @@ class Report:
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
         from dao.prog.utils import get_value_from_dict
-        logging.debug(f"rs: recalc: interval: {interval}")
         fi_df = pd.DataFrame(
             columns=[
                 interval,
@@ -816,7 +812,6 @@ class Report:
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         if interval == "maand":
-            logging.debug("rs:maand3")
             column = self.db_da.month(t1.c.time).label("maand")
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
@@ -1031,7 +1026,6 @@ class Report:
         :return: een dataframe met de gevraagde griddata
         """
         logging.basicConfig(level=logging.DEBUG)   ###
-        logging.debug("rs:get grid data")
         values_table = Table(
             "values", self.db_da.metadata, autoload_with=self.db_da.engine
         )
@@ -1056,7 +1050,6 @@ class Report:
 
         source = _source
         if interval == "maand":
-            logging.debug("rs:maand3")
             column = self.db_da.month(t1.c.time).label("maand")
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
@@ -1064,7 +1057,6 @@ class Report:
             column = self.db_da.hour(t1.c.time).label("uur")
         result = None
         if source == "all" or source == "da":
-            logging.debug("rs: data uit da ophalen")
             for cat, label in [
                 ("cons", "consumption"),
                 ("prod", "production"),
@@ -1109,7 +1101,6 @@ class Report:
                 else:
                     result[label] = result_cat[label]
         else:
-            logging.debug("rs: pd.dataframe")
             result = pd.DataFrame(
                 columns=[
                     "uur",
@@ -1164,7 +1155,6 @@ class Report:
             df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
                 # data uit ha ophalen
-                logging.debug("rs: data uit ha ophalen")
                 count = 0
                 for sensor in self.report_options["entities grid consumption"]:
                     if count == 0:
@@ -1199,10 +1189,10 @@ class Report:
                     df_ha["datasoort"] = "recorded"
                 else:
                     last_moment = vanaf
-                logging.debug(f"rs df_ha: {df_ha.to_string()}")
+           #     logging.debug(f"rs df_ha: {df_ha.to_string()}")
 
             if source == "all" or source == "da":
-                logging.debug(f"interval: {interval}")
+             #   logging.debug(f"interval: {interval}")
                 if last_moment < tot and interval == "uur":
                     # get prognose consumption and production:
                     prog_table = Table(
@@ -1239,7 +1229,7 @@ class Report:
                     from sqlalchemy.dialects import postgresql
 
                     query_str = str(query.compile(dialect=postgresql.dialect()))
-                    logging.debug(f"query get prognose data:/n {query_str}")
+                    logging.debug(f"query get prognose data:\n {query_str}")
                     with self.db_da.engine.connect() as connection:
                         df_prog = pd.read_sql_query(query, connection)
 
@@ -1250,26 +1240,19 @@ class Report:
                             df_ha = df_prog
                         else:
                             df_ha = pd.concat([df_ha, df_prog])
-                    logging.debug(f"df_ha_tot: {df_ha.to_string()}")
+          #          logging.debug(f"df_ha_tot: {df_ha.to_string()}")
 
             df_prices.index = pd.to_datetime(df_prices["tijd"])
-            logging.debug(f"df_ha_totx: {df_ha.to_string()}")
             df_ha = self.copy_col_df(df_prices, df_ha, "price")
-            logging.debug(f"df_ha_toty: {df_ha.to_string()}")
             df_ha = self.copy_col_df(df_prices, df_ha, "tijd")
-            logging.debug(f"df_ha_totz: {df_ha.to_string()}")
             df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
-            logging.debug(f"df_ha_totq: {df_ha.to_string()}")
             df_ha = self.recalc_df_ha(df_ha, interval)
-
-            logging.debug(f"df_ha_tot2: {df_ha.to_string()}")
 
             if len(result) == 0:
                 result = df_ha
             else:
                 if len(df_ha) > 0:
                     result = pd.concat([result, df_ha])
-                    logging.debug(f"df_ha_tot3: {df_ha.to_string()}")
 
         result["netto_consumption"] = result["consumption"] - result["production"]
         result["netto_cost"] = result["cost"] - result["profit"]
@@ -1300,8 +1283,6 @@ class Report:
             "Opbrengst",
             "Netto kosten",
         ]
-        logging.basicConfig(level=logging.DEBUG)   ###
-        logging.debug("rs: calc grid cols")
         # columns.extend(ext_columns)
         fi_df = pd.DataFrame(columns=columns)
         if len(report_df.index) == 0:
@@ -1675,7 +1656,7 @@ class Report:
     # ------------------------------------------------
     def get_field_data(self, field: str, periode: str):
         logging.basicConfig(level=logging.DEBUG)   ###
-        logging.debug("rs: get field data")
+   #     logging.debug("rs: get field data")
         period = self.periodes[periode]
         if not (field in self.energy_balance_dict):
             result = None
@@ -1780,15 +1761,15 @@ class Report:
             "profit",
             "netto_cost",
         ]
-        logging.debug(f"rs: field; {field}, period: {periode}")
+ #       logging.debug(f"rs: field; {field}, period: {periode}")
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode)
-            logging.debug(f"rs: dfgrid: {df_grid.to_string()}")
+   #         logging.debug(f"rs: dfgrid: {df_grid.to_string()}")
             df_grid["time"] = df_grid["vanaf"].apply(
                 lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")
             )
-            logging.debug(f"rs: dfgrid2: {df_grid.to_string()}")
+  #          logging.debug(f"rs: dfgrid2: {df_grid.to_string()}")
            
             if field in grid_fields:
                 df = df_grid[["time", field, "datasoort"]].copy()
