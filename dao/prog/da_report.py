@@ -700,7 +700,7 @@ class Report:
                     "profit": "sum",
                 }
             )
-            logging.debug(f"fi_df: {fi_df.tostring()}")
+            logging.debug(f"fi_df: {fi_df.to_string()}")
             ds_help = []
             for i in range(len(fi_df.index)):
                 ds_help.append('recorded')
@@ -1159,7 +1159,7 @@ class Report:
 
             with self.db_da.engine.connect() as connection:
                 df_prices = pd.read_sql_query(query, connection)
-            logging.debug(f"Prijzen \n{df_prices.to_string()}/n")
+            logging.debug(f"Prijzen \n{df_prices.to_string()}\n")
 
             df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
