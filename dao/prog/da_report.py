@@ -700,6 +700,11 @@ class Report:
                     "profit": "sum",
                 }
             )
+            logging.debug(f"fi_df: {fi_df.tostring()}")
+            ds_help = []
+            for i in range(len(fi_df.index)):
+                ds_help.append('recorded')
+            fi_df['datasoort'] = ds_help
         return fi_df
 
     def aggregate_balance_df(self, df: pd.DataFrame, interval: str):
@@ -782,7 +787,7 @@ class Report:
         last_realised_moment = datetime.datetime.fromtimestamp(
             math.floor(datetime.datetime.now().timestamp() / 3600) * 3600
         )
-        moment = vanaf
+        moment = vanaff
         while moment < tot:
             if interval == "maand":
                 old_moment = datetime.datetime(moment.year, moment.month, day=1)
@@ -1197,7 +1202,8 @@ class Report:
                 logging.debug(f"rs df_ha: {df_ha.to_string()}")
 
             if source == "all" or source == "da":
-                if last_moment < tot:
+                logging.debug(f"interval: {interval}")
+                if last_moment < tot and interval == "uur":
                     # get prognose consumption and production:
                     prog_table = Table(
                         "prognoses",
@@ -1254,7 +1260,7 @@ class Report:
             logging.debug(f"df_ha_totz: {df_ha.to_string()}")
             df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
             logging.debug(f"df_ha_totq: {df_ha.to_string()}")
-            df_ha = self.recalc_df_ha(df_ha, interval)
+            df_ha = self._df_ha(df_ha, interval)
 
             logging.debug(f"df_ha_tot2: {df_ha.to_string()}")
 
