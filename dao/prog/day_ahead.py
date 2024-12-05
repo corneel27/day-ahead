@@ -2512,6 +2512,14 @@ class DaCalc(DaBase):
                         logging.info(f"tot: {stop_str}")
                     logging.info(f"Balanceren zou zijn: {balance}")
                 else:
+                    helper_id = self.config.get(
+                        ["entity ess grid setpoint"], self.battery_options[b], None
+                    )
+                    if helper_id is not None:
+                        self.set_entity_value(
+                             "entity ess grid setpoint", self.battery_options[b], round(1000*(c_l[0].x-c_t_total[0].x),0)  # export the ess grid setpoint in W
+                        )
+                    
                     self.set_entity_value(
                         "entity set power feedin",
                         self.battery_options[b],
@@ -2590,7 +2598,7 @@ class DaCalc(DaBase):
                                     self.turn_off(entity_pv_switch)
                                     logging.info(f"PV {pv_name} uitgezet")
                             self.turn_on(entity_pv_switch)
-
+            
             ##################################################
             # heatpump
             ##################################################
@@ -2623,7 +2631,7 @@ class DaCalc(DaBase):
                 entity_hp_power = self.config.get(
                     ["entity hp power"], self.heating_options, None
                 )
-                if entity_hp_power is not None:
+                if entity_hp_power is not None and self.hp_adjustment != "on/off":
                     #  elektrisch vermogen in W
                     hp_power = 1000 * c_hp[0].x / hour_fraction[0]
                     if self.debug:

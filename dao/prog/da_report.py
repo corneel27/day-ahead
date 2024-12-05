@@ -313,7 +313,6 @@ class Report:
         # print(df_sensor)
         return df
         """
-
         statistics = Table(
             "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
         )
@@ -378,7 +377,7 @@ class Report:
         from sqlalchemy.dialects import sqlite  # , postgresql,  mysql
 
         query_str = str(query.compile(dialect=sqlite.dialect()))
-        logging.debug(f"query get sensor data:/n {query_str}")
+        logging.debug(f"query get sensor data:\n {query_str}")
         # Execute the query and load results into a DataFrame
         with self.db_ha.engine.connect() as connection:
             df_raw = pd.read_sql(query, connection)
@@ -398,6 +397,7 @@ class Report:
         df_raw["tot"] = df_raw.apply(
             lambda x: datetime.datetime.fromtimestamp(x["tijd"]), axis=1
         )
+
         if len(df_raw) > 0:
             # Extract year and month or day
             if agg == "maand":
@@ -575,6 +575,7 @@ class Report:
         prod_df = self.get_sensor_sum(
             self.grid_dict["prod"]["sensors"], vanaf, tot, "prod"
         )
+
         da_df = self.get_price_data(vanaf, tot)
         da_df.index = pd.to_datetime(da_df["time"])
         data = self.copy_col_df(cons_df, da_df, "cons")
@@ -627,7 +628,6 @@ class Report:
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
         from dao.prog.utils import get_value_from_dict
-
         fi_df = pd.DataFrame(
             columns=[
                 interval,
@@ -693,6 +693,10 @@ class Report:
                     "profit": "sum",
                 }
             )
+            ds_help = []
+            for _ in range(len(fi_df.index)):            # Add the recorded datasoort if interval != uur and hence aggregated data is used
+                ds_help.append('recorded')
+            fi_df['datasoort'] = ds_help
         return fi_df
 
     def aggregate_balance_df(self, df: pd.DataFrame, interval: str):
@@ -1017,6 +1021,7 @@ class Report:
         :param _source: als != None dan hier de source all, da of ha
         :return: een dataframe met de gevraagde griddata
         """
+
         values_table = Table(
             "values", self.db_da.metadata, autoload_with=self.db_da.engine
         )
@@ -1141,7 +1146,7 @@ class Report:
 
             with self.db_da.engine.connect() as connection:
                 df_prices = pd.read_sql_query(query, connection)
-            logging.debug(f"Prijzen \n{df_prices.to_string()}/n")
+            logging.debug(f"Prijzen \n{df_prices.to_string()}\n")
 
             df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
@@ -1180,9 +1185,9 @@ class Report:
                     df_ha["datasoort"] = "recorded"
                 else:
                     last_moment = vanaf
-
+           
             if source == "all" or source == "da":
-                if last_moment < tot:
+                if last_moment < tot and interval == "uur":                # no prognoses if interval != uur
                     # get prognose consumption and production:
                     prog_table = Table(
                         "prognoses",
@@ -1218,7 +1223,7 @@ class Report:
                     from sqlalchemy.dialects import postgresql
 
                     query_str = str(query.compile(dialect=postgresql.dialect()))
-                    logging.debug(f"query get prognose data:/n {query_str}")
+                    logging.debug(f"query get prognose data:\n {query_str}")
                     with self.db_da.engine.connect() as connection:
                         df_prog = pd.read_sql_query(query, connection)
 
@@ -1749,6 +1754,7 @@ class Report:
             df_grid["time"] = df_grid["vanaf"].apply(
                 lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")
             )
+           
             if field in grid_fields:
                 df = df_grid[["time", field, "datasoort"]].copy()
                 if cumulate:
