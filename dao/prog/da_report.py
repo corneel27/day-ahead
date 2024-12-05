@@ -313,7 +313,6 @@ class Report:
         # print(df_sensor)
         return df
         """
-        logging.basicConfig(level=logging)   ###
         statistics = Table(
             "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
         )
