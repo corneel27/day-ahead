@@ -17,8 +17,6 @@ import matplotlib.pyplot as plt
 
 class Report:
     periodes = {}
-#    logging.basicConfig(level=logging.DEBUG) ###
-
 
     def __init__(self, file_name: str = "../data/options.json"):
         self.config = Config(file_name)
@@ -400,7 +398,7 @@ class Report:
         df_raw["tot"] = df_raw.apply(
             lambda x: datetime.datetime.fromtimestamp(x["tijd"]), axis=1
         )
-#        logging.basicConfig(level=logging.DEBUG)   ###
+
         if len(df_raw) > 0:
             # Extract year and month or day
             if agg == "maand":
@@ -578,7 +576,7 @@ class Report:
         prod_df = self.get_sensor_sum(
             self.grid_dict["prod"]["sensors"], vanaf, tot, "prod"
         )
-#        logging.basicConfig(level=logging.DEBUG)   ###
+
         da_df = self.get_price_data(vanaf, tot)
         da_df.index = pd.to_datetime(da_df["time"])
         data = self.copy_col_df(cons_df, da_df, "cons")
@@ -696,9 +694,8 @@ class Report:
                     "profit": "sum",
                 }
             )
-            logging.debug(f"fi_df: {fi_df.to_string()}")
             ds_help = []
-            for i in range(len(fi_df.index)):
+            for _ in range(len(fi_df.index)):            # Add the recorded datasoort if interval != uur and hence aggregated data is used
                 ds_help.append('recorded')
             fi_df['datasoort'] = ds_help
         return fi_df
@@ -1025,7 +1022,7 @@ class Report:
         :param _source: als != None dan hier de source all, da of ha
         :return: een dataframe met de gevraagde griddata
         """
- #       logging.basicConfig(level=logging.DEBUG)   ###
+
         values_table = Table(
             "values", self.db_da.metadata, autoload_with=self.db_da.engine
         )
@@ -1189,11 +1186,9 @@ class Report:
                     df_ha["datasoort"] = "recorded"
                 else:
                     last_moment = vanaf
-           #     logging.debug(f"rs df_ha: {df_ha.to_string()}")
-
+           
             if source == "all" or source == "da":
-             #   logging.debug(f"interval: {interval}")
-                if last_moment < tot and interval == "uur":
+                if last_moment < tot and interval == "uur":                # no prognoses if interval != uur
                     # get prognose consumption and production:
                     prog_table = Table(
                         "prognoses",
@@ -1240,7 +1235,6 @@ class Report:
                             df_ha = df_prog
                         else:
                             df_ha = pd.concat([df_ha, df_prog])
-          #          logging.debug(f"df_ha_tot: {df_ha.to_string()}")
 
             df_prices.index = pd.to_datetime(df_prices["tijd"])
             df_ha = self.copy_col_df(df_prices, df_ha, "price")
@@ -1655,8 +1649,6 @@ class Report:
 
     # ------------------------------------------------
     def get_field_data(self, field: str, periode: str):
-   #     logging.basicConfig(level=logging.DEBUG)   ###
-   #     logging.debug("rs: get field data")
         period = self.periodes[periode]
         if not (field in self.energy_balance_dict):
             result = None
@@ -1709,8 +1701,6 @@ class Report:
 
     def get_price_data(self, start, end):
         from dao.prog.utils import get_value_from_dict
- #       logging.basicConfig(level=logging.DEBUG)   ###
-        logging.debug("rs: get price data")
 
         df_da = self.db_da.get_column_data("values", "da", start=start, end=end)
         old_dagstr = ""
@@ -1750,8 +1740,6 @@ class Report:
         return df
 
     def get_api_data(self, field: str, periode: str, cumulate: bool = False):
-  #      logging.basicConfig(level=logging.DEBUG)   ###
-        logging.debug(f"{datetime.datetime.now()}: rs: get api data") ###
         periode = periode.replace("_", " ")
         grid_fields = [
             "consumption",
@@ -1761,15 +1749,12 @@ class Report:
             "profit",
             "netto_cost",
         ]
- #       logging.debug(f"rs: field; {field}, period: {periode}")
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode)
-   #         logging.debug(f"rs: dfgrid: {df_grid.to_string()}")
             df_grid["time"] = df_grid["vanaf"].apply(
                 lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")
             )
-  #          logging.debug(f"rs: dfgrid2: {df_grid.to_string()}")
            
             if field in grid_fields:
                 df = df_grid[["time", field, "datasoort"]].copy()
