@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2024.11.1.dev_e]
+- "optimal lower level" is not used anymore: it was too difficult and too complex to understand and
+didn't give enough good results
+- The calculated cycle costs  are (per battery) logged (level info).
+
 # [V2024.11.1.dev_d]
 There was a general error in api-calls, fixed.
 
