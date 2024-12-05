@@ -2517,7 +2517,7 @@ class DaCalc(DaBase):
                     )
                     if helper_id is not None:
                         self.set_entity_value(
-                             "entity ess grid setpoint", self.battery_options[b], 1000*(c_l[0].x-c_t_total[0].x)  # export the ess grid setpoint in W
+                             "entity ess grid setpoint", self.battery_options[b], round(1000*(c_l[0].x-c_t_total[0].x),0)  # export the ess grid setpoint in W
                         )
                     
                     self.set_entity_value(
