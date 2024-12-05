@@ -783,7 +783,7 @@ class Report:
         last_realised_moment = datetime.datetime.fromtimestamp(
             math.floor(datetime.datetime.now().timestamp() / 3600) * 3600
         )
-        moment = vanaff
+        moment = vanaf
         while moment < tot:
             if interval == "maand":
                 old_moment = datetime.datetime(moment.year, moment.month, day=1)
