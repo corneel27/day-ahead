@@ -71,6 +71,10 @@ class DaCalc(DaBase):
             prog_data = self.db_da.get_prognose_data(
                 start=start_h, end=None, interval=self.interval
             )
+        elif self.interval == "quater":
+            prog_data = self.db_da.get_prognose_data(
+                start=start_h, end=None, interval=self.interval
+            )
 
         u = len(prog_data)
         if u <= 2:

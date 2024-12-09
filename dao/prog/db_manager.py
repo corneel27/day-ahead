@@ -17,6 +17,9 @@ import sqlalchemy_utils
 import os
 import logging
 
+from sqlalchemy.dialects.mssql.information_schema import columns
+
+
 # import utils as utils
 
 
@@ -389,7 +392,18 @@ class DBmanagerObj(object):
             df = pd.DataFrame(result.fetchall(), columns=result.keys())
             df["tijd"] = pd.to_datetime(df["tijd"])
             return df
-        # else: #  interval == "kwartier"
+        else:  # interval == "quater"
+            fields = ["temp", "gr", "da"]
+            result_df = None
+            for field in fields:
+                fld_df = self.get_prognose_field(field, start, end, interval)
+                fld_df.index = pd.to_datetime(fld_df["tijd"])
+                if result_df is None:
+                    result_df = fld_df
+                else:
+                    result_df[field] = fld_df[field]
+            return result_df
+
 
     def get_column_data(
         self,
@@ -447,6 +461,7 @@ class DBmanagerObj(object):
             lambda x: datetime.datetime.fromtimestamp(x).strftime("%Y-%m-%d %H:%M")
         )
         return df
+
 
     def get_consumption(self, start: datetime.datetime, end=datetime.datetime.now()):
         """
