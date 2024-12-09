@@ -4,7 +4,6 @@ import pandas as pd
 import base64
 from io import BytesIO
 from dateutil.relativedelta import relativedelta
-from dao.prog.db_manager import DBmanagerObj
 from dao.prog.da_config import Config
 from dao.prog.da_graph import GraphBuilder
 import math
@@ -628,6 +627,13 @@ class Report:
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
         from dao.prog.utils import get_value_from_dict
+
+        def get_datasoort(ds):
+            for s in ds:
+                if s == "expected":
+                    return "expected"
+            return "recorded"
+
         fi_df = pd.DataFrame(
             columns=[
                 interval,
@@ -683,7 +689,7 @@ class Report:
                 col_5,
             ]
         if interval != "uur":
-            fi_df = fi_df.groupby([interval], as_index=False).agg(
+           fi_df = fi_df.groupby([interval], as_index=False).agg(
                 {
                     "vanaf": "min",
                     "tot": "max",
@@ -691,12 +697,9 @@ class Report:
                     "production": "sum",
                     "cost": "sum",
                     "profit": "sum",
+                    "datasoort": get_datasoort
                 }
             )
-            ds_help = []
-            for _ in range(len(fi_df.index)):            # Add the recorded datasoort if interval != uur and hence aggregated data is used
-                ds_help.append('recorded')
-            fi_df['datasoort'] = ds_help
         return fi_df
 
     def aggregate_balance_df(self, df: pd.DataFrame, interval: str):
@@ -1185,9 +1188,9 @@ class Report:
                     df_ha["datasoort"] = "recorded"
                 else:
                     last_moment = vanaf
-           
+
             if source == "all" or source == "da":
-                if last_moment < tot and interval == "uur":                # no prognoses if interval != uur
+                if last_moment < tot:
                     # get prognose consumption and production:
                     prog_table = Table(
                         "prognoses",
@@ -1201,7 +1204,7 @@ class Report:
                         self.db_da.from_unixtime(p1.c.time).label("tijd"),
                         p1.c.value.label("consumption"),
                         p2.c.value.label("production"),
-                        literal("recorded").label("datasoort"),
+                        literal("expected").label("datasoort"),
                     ).where(
                         and_(
                             p1.c.time == p2.c.time,
@@ -1647,14 +1650,15 @@ class Report:
         return
 
     # ------------------------------------------------
-    def get_field_data(self, field: str, periode: str):
+    def get_field_data(self, field: str, periode: str, tot= None):
         period = self.periodes[periode]
         if not (field in self.energy_balance_dict):
             result = None
             return result
         categorie = self.energy_balance_dict[field]
         df = self.db_da.get_column_data(
-            "values", field, start=period["vanaf"], end=period["tot"]
+            "values", field,
+            start=period["vanaf"], end=period["tot"] if tot is None else tot
         )
         df.index = pd.to_datetime(df["time"])
         df = df.rename(columns={"value": field})
@@ -1738,7 +1742,7 @@ class Report:
         df = self.db_da.get_column_data("prognoses", field, start=start, end=end)
         return df
 
-    def get_api_data(self, field: str, periode: str, cumulate: bool = False):
+    def get_api_data(self, field: str, periode: str, cumulate: bool = False, expected: bool = False):
         periode = periode.replace("_", " ")
         grid_fields = [
             "consumption",
@@ -1748,13 +1752,19 @@ class Report:
             "profit",
             "netto_cost",
         ]
+        tot = None
+        if not expected:
+            now = datetime.datetime.now()
+            tot = datetime.datetime(now.year, now.month, now.day, now.hour)
+        else:
+            tot = self.periodes[periode]["tot"]
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
-            df_grid = self.get_grid_data(periode)
+            df_grid = self.get_grid_data(periode, _tot=tot)
             df_grid["time"] = df_grid["vanaf"].apply(
                 lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")
             )
-           
+
             if field in grid_fields:
                 df = df_grid[["time", field, "datasoort"]].copy()
                 if cumulate:
@@ -1771,7 +1781,7 @@ class Report:
             )
         elif field[0:3] == "soc":
             df = self.get_soc_data(
-                field, self.periodes[periode]["vanaf"], self.periodes[periode]["tot"]
+                field, self.periodes[periode]["vanaf"], tot
             )
         else:
             if not (field in self.energy_balance_dict):

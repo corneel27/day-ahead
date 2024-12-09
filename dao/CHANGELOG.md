@@ -1,5 +1,36 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# LET OP
+De energiebelasting wijzigt per 1 januari 2025.<br>
+Neem deze over van onderstaande lijst in je instellingen:<br>
+```
+    "energy taxes delivery": {
+      "2022-01-01": 0.06729,
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.10880,
+      "2025-01-01": 0.10154
+    },
+    "energy taxes redelivery": {
+      "2022-01-01": 0.06729,
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.10880,
+      "2025-01-01": 0.10154
+    },
+```
+# Breaking change
+There is an extra optional parameter when calling an api-report: **expected**.<br>
+When you call the api without `expected` or `expected=0` (default value) then only **recorded** values 
+are reported and the expected part of the json-result will be empty.
+When you call with the parameter `expected=1` then the expected values are reported in the expected 
+part of the json-result.<br>
+For periods with the interval "hour", there will be no change.
+But for periodes with the interval "day" or "month" this can lead to new results. 
+For instance when you call the api for period "deze_week", without the parameter "expected" you get this result:<br>
+```{ "message":"Success", "recorded": [{"time":"2024-12-02 00:00","value":36.7450000558},{"time":"2024-12-03 00:00","value":19.1840000708},{"time":"2024-12-04 00:00","value":36.8009995644},{"time":"2024-12-05 00:00","value":19.7590002147},{"time":"2024-12-06 00:00","value":43.3299993972},{"time":"2024-12-07 00:00","value":24.9570001736},{"time":"2024-12-08 00:00","value":6.462}], "expected" : [] }```<br>
+But when you call it with "expected=1" then you get:<br>
+```{ "message":"Success", "recorded": [{"time":"2024-12-02 00:00","value":36.7450000558},{"time":"2024-12-03 00:00","value":19.1840000708},{"time":"2024-12-04 00:00","value":36.8009995644},{"time":"2024-12-05 00:00","value":19.7590002147},{"time":"2024-12-06 00:00","value":43.3299993972},{"time":"2024-12-07 00:00","value":24.9570001736}], "expected" : [{"time":"2024-12-08 00:00","value":14.282395}] }```<br>
+The total consumption of "2024-12-08" is now mentioned in the expexted part, because a part of the consumption is expected.
+
 # [V2024.11.1.dev_e]
 - "optimal lower level" is not used anymore: it was too difficult and too complex to understand and
 didn't give enough good results

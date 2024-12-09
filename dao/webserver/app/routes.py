@@ -1,4 +1,7 @@
 import datetime
+
+from sqlalchemy.sql.coercions import expect_col_expression_collection
+
 from dao.webserver.app import app
 from flask import render_template, request
 import fnmatch
@@ -392,6 +395,7 @@ def api_report(fld: str, periode: str):
     :return: de gevraagde data in json formaat
     """
     cumulate = request.args.get('cumulate')
+    expected = request.args.get('expected')
     report = dao.prog.da_report.Report(app_datapath+"/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
@@ -403,7 +407,16 @@ def api_report(fld: str, periode: str):
             cumulate = cumulate == 1
         except ValueError:
             cumulate = False
-    result = report.get_api_data(fld, periode, cumulate=cumulate)
+
+    if expected is None:
+        expected = False
+    else:
+        try:
+            expected = int(expected)
+            expected = expected == 1
+        except ValueError:
+            expected = False
+    result = report.get_api_data(fld, periode, cumulate=cumulate, expected=expected)
     return result
 
 
