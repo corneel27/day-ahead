@@ -689,7 +689,7 @@ class Report:
                 col_5,
             ]
         if interval != "uur":
-           fi_df = fi_df.groupby([interval], as_index=False).agg(
+            fi_df = fi_df.groupby([interval], as_index=False).agg(
                 {
                     "vanaf": "min",
                     "tot": "max",
@@ -697,7 +697,7 @@ class Report:
                     "production": "sum",
                     "cost": "sum",
                     "profit": "sum",
-                    "datasoort": get_datasoort
+                    "datasoort": get_datasoort,
                 }
             )
         return fi_df
@@ -1650,15 +1650,17 @@ class Report:
         return
 
     # ------------------------------------------------
-    def get_field_data(self, field: str, periode: str, tot= None):
+    def get_field_data(self, field: str, periode: str, tot=None):
         period = self.periodes[periode]
         if not (field in self.energy_balance_dict):
             result = None
             return result
         categorie = self.energy_balance_dict[field]
         df = self.db_da.get_column_data(
-            "values", field,
-            start=period["vanaf"], end=period["tot"] if tot is None else tot
+            "values",
+            field,
+            start=period["vanaf"],
+            end=period["tot"] if tot is None else tot,
         )
         df.index = pd.to_datetime(df["time"])
         df = df.rename(columns={"value": field})
@@ -1742,7 +1744,9 @@ class Report:
         df = self.db_da.get_column_data("prognoses", field, start=start, end=end)
         return df
 
-    def get_api_data(self, field: str, periode: str, cumulate: bool = False, expected: bool = False):
+    def get_api_data(
+        self, field: str, periode: str, cumulate: bool = False, expected: bool = False
+    ):
         periode = periode.replace("_", " ")
         grid_fields = [
             "consumption",
@@ -1780,9 +1784,7 @@ class Report:
                 self.periodes[periode]["vanaf"], self.periodes[periode]["tot"]
             )
         elif field[0:3] == "soc":
-            df = self.get_soc_data(
-                field, self.periodes[periode]["vanaf"], tot
-            )
+            df = self.get_soc_data(field, self.periodes[periode]["vanaf"], tot)
         else:
             if not (field in self.energy_balance_dict):
                 result = '{"message":"Failed"}'
