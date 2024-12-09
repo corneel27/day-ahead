@@ -1491,7 +1491,6 @@ class DaCalc(DaBase):
                     # Ensure pump is running for designated number of hours
 
                     # Additional constraints to ensure the minimum run length (range 1-5 hours)
-
                     for u in range(0, U, min_run_length):
                         if u < U - min_run_length + 1:
                             if min_run_length > 1:
