@@ -10,6 +10,8 @@ import sys
 import math
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
+
+from dao.prog.utils import interpolate
 from utils import (
     get_value_from_dict,
     is_laagtarief,
@@ -30,6 +32,7 @@ class DaCalc(DaBase):
             return
         self.interval = self.config.get(["interval"], None, "hour").lower()
         self.interval_s = 3600 if self.interval == "hour" else 900
+        self.steps_day = 24 if self.interval == "hour" else 96
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
@@ -66,16 +69,10 @@ class DaCalc(DaBase):
             start_ts = start_ts + self.interval_s - modulo
         start_dt = dt.datetime.fromtimestamp(start_ts)
         start_h = int(self.interval_s * math.floor(start_ts / self.interval_s))
-        fraction_first_interval = 1 - (start_ts - start_h) / self.interval_s
-        if self.interval == "hour":
-            prog_data = self.db_da.get_prognose_data(
-                start=start_h, end=None, interval=self.interval
-            )
-        elif self.interval == "quater":
-            prog_data = self.db_da.get_prognose_data(
-                start=start_h, end=None, interval=self.interval
-            )
-
+        fraction_first_interval = 1 - (start_ts - start_h) / 3600
+        prog_data = self.db_da.get_prognose_data(
+            start=start_h, end=None, interval=self.interval
+        )
         u = len(prog_data)
         if u <= 2:
             logging.error(
@@ -150,7 +147,7 @@ class DaCalc(DaBase):
         pl_avg = []  # prijs levering day_ahead gemiddeld
         pt_notax = []  # prijs teruglevering day ahead zonder taxes
         uur = []  # datum_tijd van het betreffende uur
-        prog_data = prog_data.reset_index()
+        prog_data = prog_data.reset_index(drop=True)
         # make sure indexes pair with number of rows
         for row in prog_data.itertuples():
             uur.append(row.tijd)
@@ -170,7 +167,7 @@ class DaCalc(DaBase):
 
         B = len(self.battery_options)
         U = len(pl)
-        if U >= 24:
+        if U >= self.steps_day:
             p_avg = sum(pl) / U  # max(pl) #
         else:
             dag_str = dt.datetime.now().strftime("%Y-%m-%d")
@@ -187,7 +184,7 @@ class DaCalc(DaBase):
             logging.info(f"Zelf berekende baseload")
             weekday = dt.datetime.weekday(dt.datetime.now())
             base_cons = self.get_calculated_baseload(weekday)
-            if U > 24:
+            if U > self.steps_day:
                 # volgende dag ophalen
                 weekday += 1
                 weekday = weekday % 7
@@ -195,8 +192,14 @@ class DaCalc(DaBase):
         else:
             logging.info(f"Baseload uit instellingen")
             base_cons = self.config.get(["baseload"])
-            if U >= 24:
+            if U >= self.steps_day:
                 base_cons = base_cons + base_cons
+        if self.interval == 'quater':
+            start = datetime.datetime(year=start_dt.year, month=start_dt.month, day=start_dt.day)
+            tijd = [start + datetime.timedelta(hours=i) for i in range(len(base_cons))]
+            base_cons_df = pd.DataFrame({"tijd": tijd, "base_cons": base_cons})
+            base_cons_df = interpolate(base_cons_df,"base_cons", 15, quantity=True)
+            base_cons = base_cons_df["base_cons"].tolist()
 
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
         pv_yield = []
@@ -240,7 +243,7 @@ class DaCalc(DaBase):
                 # pv.append(pv_total * fraction_first_interval)
             else:
                 ts.append(row.time)
-                hour_fraction.append(1)
+                hour_fraction.append(self.interval_s/3600)
                 # pv.append(pv_total)
             for s in range(solar_num):
                 prod = (
@@ -868,8 +871,8 @@ class DaCalc(DaBase):
             boiler_hysterese = float(
                 self.get_state(self.boiler_options["entity hysterese"]).state
             )
-            # 0.4 #K/uur instelbaar
-            boiler_cooling = self.boiler_options["cooling rate"]
+            # 0.4 #K/uur instelbaar afkoeling per interval
+            boiler_cooling = self.boiler_options["cooling rate"] * self.interval_s / 3600
             # 45 # oC instelbaar daaronder kan worden verwarmd
             boiler_bovengrens = self.boiler_options["heating allowed below"]
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
@@ -878,8 +881,18 @@ class DaCalc(DaBase):
             vol = self.boiler_options["volume"]  # liter
             # spec heat in kJ/K = vol in liter * 4,2 J/liter + 100 kg * 0,5 J/kg
             spec_heat_boiler = vol * 4.2 + 200 * 0.5  # kJ/K
-            cop_boiler = self.boiler_options["cop"]
-            power = self.boiler_options["elec. power"]  # W
+            # cop
+            cop_boiler = float(
+                    self.config.get(
+                        ["cop"], self.boiler_options, 3
+                    )
+            )
+            # elektrisch vermogen in W
+            power = float( # self.boiler_options["elec. power"]  # W
+                    self.config.get(
+                        ["elec. power"], self.boiler_options, 1000
+                    )
+            )
             boiler_heated_by_heatpump = (
                 self.config.get(
                     ["boiler heated by heatpump"], self.boiler_options, "True"
@@ -891,7 +904,7 @@ class DaCalc(DaBase):
                 max(
                     0,
                     min(
-                        23, int((boiler_act_temp - boiler_bovengrens) / boiler_cooling)
+                        self.steps_day-1, int((boiler_act_temp - boiler_bovengrens) / boiler_cooling)
                     ),
                 )
             )

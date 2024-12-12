@@ -308,50 +308,76 @@ def prnt_xy(x: list, y: list):
     print()
 
 
-def interpolate(
-    org_x: list[datetime.datetime],
-    org_y: list[float],
-    start_x: datetime.datetime,
-    end_x: datetime.datetime,
-    interval: int,
-) -> tuple:
-    new_y = []
+def interpol_rows(row, new_row, old_val, field, interval, quantity, result_df)->pd.DataFrame:
     new_x = []
-    calc_x = start_x
-    while calc_x <= end_x:
+    calc_x = row["tijd"]
+    end_x = new_row["tijd"]
+    while calc_x < end_x:
         new_x.append(calc_x)
         calc_x += datetime.timedelta(minutes=interval)
+    delta_x = (new_row["tijd"] - row["tijd"]).seconds * 2 / 60  # in minuten
+    if old_val is None:
+        delta_y = new_row[field]-row[field]
+    else:
+        delta_y = new_row[field] - old_val
+    delta_x_ref = datetime.timedelta(minutes=(delta_x/2 - interval)/2)
+    x_ref = row["tijd"] + delta_x_ref
+    a = delta_y / (delta_x + delta_x_ref.seconds / 60)  # a = value/minuut
+    # een andere offset zorgt voor een gelijke integraal
 
-    #  print(f"new x:\n {'\n'.join(new_x)}")
-    for i in range(len(new_x)):
-        x = new_x[i]
-        j = 0
-        for j in range(len(org_x) - 1):
-            if (j == 0 and x < org_x[j]) or org_x[j] <= x < org_x[j + 1]:
-                break
-        delta_x = (org_x[j + 1] - org_x[j]).seconds / 60  # in minuten
-        delta_y = org_y[j + 1] - org_y[j]
-        #   b = org_y[j] - a * 90
-        a = delta_y / delta_x  # a = value/minuut
-        b = -a * 90 / 4
-        if x >= org_x[j]:
-            y = org_y[j] + (x - org_x[j]).seconds * a / 60 + b
+    factor = interval/delta_x if quantity else 1
+    for x in new_x:
+        if x_ref > x:
+            d_x = x_ref - x
+            d_x_min = - d_x.seconds / 60
         else:
-            y = org_y[j] - (org_x[j] - x).seconds * a / 60 + b
-        new_y.append(y)
-        print(x, y, a, b)
-    return new_x, new_y
+            d_x = x - x_ref
+            d_x_min = d_x.seconds / 60
+        y = (row[field] + a * d_x_min) * factor
+        result_df.loc[result_df.shape[0]] = [x, y]
+    return result_df
+
+
+def interpolate(
+    # org_x: list[datetime.datetime],
+    # org_y: list[float],
+    # start_x: datetime.datetime,
+    # end_x: datetime.datetime,
+    org_df: pd.DataFrame,
+    field: str,
+    interval: int,
+    quantity: bool = False
+) -> pd.DataFrame:
+    result_df = pd.DataFrame(columns=["tijd", field])
+    row = None
+    old_val = None
+    now_val = None
+    for new_index, new_row in org_df.iterrows():
+        if row is None:
+            row = new_row
+            continue
+        old_val = now_val
+        now_val = row[field]
+        result_df = interpol_rows(row, new_row, old_val, field, interval, quantity, result_df)
+        row = new_row
+    delta_x = org_df.iloc[-1]["tijd"] - org_df.iloc[-2]["tijd"]
+    new_row = pd.Series({"tijd": row["tijd"] + delta_x, field: row[field]})
+    result_df = interpol_rows(row, new_row, old_val, field, interval, quantity, result_df)
+    result_df.index = pd.to_datetime(result_df["tijd"])
+    return result_df
 
 
 def tst_interpolate():
     x = [datetime.datetime(year=2024, month=10, day=19, hour=hour) for hour in range(4)]
     y = [1 + 1 * i * i for i in range(4)]
-    prnt_xy(x, y)
-    start_x = datetime.datetime(year=2024, month=10, day=19, hour=0)
-    end_x = datetime.datetime(year=2024, month=10, day=19, hour=4)
+    df_dict = {'tijd': x, 'temp': y}
+    df_start = pd.DataFrame(df_dict)
+    df_start.index = pd.to_datetime(df_start["tijd"])
+    print(f"Start: \n {df_start.to_string()}\n")
     interval = 15
-    new_x, new_y = interpolate(x, y, start_x, end_x, interval)
-    prnt_xy(new_x, new_y)
+    result_df = interpolate(df_start, "temp", interval, quantity=False)
+    print(f"\nResultaat: \n{result_df.to_string()}\n")
+    # prnt_xy(result["tijd"], result["value"])
 
 
 def interpolate_prognose_data():
@@ -365,5 +391,5 @@ def interpolate_prognose_data():
     print(prognose_data.to_string())
 
 
-#  tst_interpolate()
+# tst_interpolate()
 #  interpolate_prognose_data()

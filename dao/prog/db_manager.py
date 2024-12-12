@@ -19,6 +19,8 @@ import logging
 
 from sqlalchemy.dialects.mssql.information_schema import columns
 
+from dao.prog.utils import interpolate
+
 
 # import utils as utils
 
@@ -326,6 +328,7 @@ class DBmanagerObj(object):
         df["tijd"] = pd.to_datetime(df["tijd"])
         return df
 
+
     def get_prognose_data(self, start, end=None, interval="hour"):
         values_table = Table("values", self.metadata, autoload_with=self.engine)
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
@@ -393,15 +396,17 @@ class DBmanagerObj(object):
             df["tijd"] = pd.to_datetime(df["tijd"])
             return df
         else:  # interval == "quater"
-            fields = ["temp", "gr", "da"]
+            fields = [("temp", "temp"), ("gr", "glob_rad"), ("da", "da_price")]
             result_df = None
-            for field in fields:
+            for field, new_field in fields:
                 fld_df = self.get_prognose_field(field, start, end, interval)
                 fld_df.index = pd.to_datetime(fld_df["tijd"])
+                fld_df = interpolate(fld_df, field,15, (field == "gr"))
                 if result_df is None:
                     result_df = fld_df
                 else:
-                    result_df[field] = fld_df[field]
+                    result_df[new_field] = fld_df[field]
+            result_df['time'] = result_df['tijd'].astype(int)//1e9
             return result_df
 
 
