@@ -878,9 +878,10 @@ class DaCalc(DaBase):
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
             # 41 #C instelbaar daaronder moet worden verwarmd
             boiler_ondergrens = boiler_setpoint - boiler_hysterese
-            vol = self.boiler_options["volume"]  # liter
-            # spec heat in kJ/K = vol in liter * 4,2 J/liter + 100 kg * 0,5 J/kg
-            spec_heat_boiler = vol * 4.2 + 200 * 0.5  # kJ/K
+            # volume in  liter
+            vol = float(self.get_entity_state("volume", self.boiler_options))
+            # spec heat in kJ/K = vol in liter * 4,2 J/liter + 200 kg boiler * 0,5 J/kg
+            spec_heat_boiler = vol * 4.2 + 200 * 0.5  # J/K
             # cop
             cop_boiler = float(
                     self.config.get(
@@ -899,7 +900,7 @@ class DaCalc(DaBase):
                 ).lower()
                 == "true"
             )
-            # tijdstip index waarop boiler kan worden verwarmd
+            # interval-index waarop boiler kan worden verwarmd
             boiler_start = int(
                 max(
                     0,
@@ -909,7 +910,7 @@ class DaCalc(DaBase):
                 )
             )
 
-            # tijdstip index waarop boiler nog aan kan
+            # interval-index waarop boiler nog aan kan
             # (41-40)/0.4=2.5
             boiler_end = int(
                 min(
@@ -947,6 +948,7 @@ class DaCalc(DaBase):
                 )
                 needed_elec = [0.0 for _ in range(U)]
                 needed_time = [0 for _ in range(U)]
+                # needed_heat = sp * (setpoint - act_temp - 4 - cooling*plan_periode)/3600 in kWh
                 needed_heat = max(
                     0.0,
                     float(
@@ -964,12 +966,14 @@ class DaCalc(DaBase):
                 )
                 for u in range(boiler_start, boiler_end + 1):
                     needed_elec[u] = needed_heat / cop_boiler  # kWh
-                    needed_time[u] = needed_elec[u] * 1000 / power  # hour
+                    # neededtime in interval's
+                    needed_time[u] = (needed_elec[u] * 1000 / power) * 3600 / self.interval_s
 
+                # cons. boiler in kWh
                 c_b = [
                     model.add_var(var_type=CONTINUOUS, lb=0, ub=needed_elec[u])
                     for u in range(U)
-                ]  # cons. boiler
+                ]
                 for u in range(U):
                     model += c_b[u] == boiler_on[u] * needed_elec[u]
                     if u < boiler_start:
@@ -978,7 +982,7 @@ class DaCalc(DaBase):
                         model += boiler_on[u] == 0
                 model += (
                     xsum(boiler_on[j] for j in range(U)[boiler_start : boiler_end + 1])
-                    == 1
+                    == needed_time[boiler_start]
                 )
                 model += boiler_temp[0] == boiler_act_temp
                 for u in range(U):

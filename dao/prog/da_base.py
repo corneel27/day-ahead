@@ -374,6 +374,16 @@ class DaBase(hass.Hass):
         if entity_id is not None:
             self.set_state(entity_id, value)
 
+    def get_entity_state(
+            self, entity_key: str, options: dict
+    ) -> int | float | str:
+        entity_id = self.config.get([entity_key], options, None)
+        if entity_id is not None:
+            result = self.get_state(entity_id).state
+        else:
+            result = None
+        return result
+
     def clean_data(self):
         """
         takes care for cleaning folders data/log and data/images
