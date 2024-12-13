@@ -1587,8 +1587,14 @@ class DaCalc(DaBase):
                         )
                         * hour_fraction[u]
                     )
+                # max heat power in kW
+                max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
+                # max_heat_prod = sum(max_heat_power
+                # een uur minder vanwege de boiler
+                max_heat_prod = sum(max_heat_power * hour_fraction[u] for u in range(U-1))
                 # som van alle geproduceerde warmte == benodigde warmte
-                model += xsum(h_hp[u] for u in range(U)) == heat_needed
+                model += xsum(h_hp[u] for u in range(U)) == min(heat_needed, max_heat_prod)
+
 
         ########################################################################
         # apparaten /machines
