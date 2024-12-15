@@ -1603,19 +1603,21 @@ class DaCalc(DaBase):
         ########################################################################
         # apparaten /machines
         ########################################################################
-        program_selected = []  # "kleur 30", "eco"]
-        M = len(self.machines)
+        program_selected = []  # naam geselecteerd programma
+        M = len(self.machines)  # aantal geconfigureerde machines
         R = []  # aantal mogelijke runs
-        RL = []  # lengte van een run
-        KW = []  # aantal kwartieren
+        RL = []  # lengte van een run = aantal stappen van een kwartie
+        KW = []  # aantal kwartieren in een planningswindow
         ma_uur_kw = []  # per machine een list met beschikbare kwartieren
         ma_kw_dt = []  # per machine een list op welk tijdstip een kwartier begint
-        program_index = []
-        ma_name = []
+        program_index = []  # nummer in de lijst welk programma van een machine gaat draaien
+        ma_name = []  # naam van de machine
+        # entity voor opvragen vorig en teruggeven berekend nieuw start-tijdstip
         ma_entity_plan_start = []
+        # entity voor opvragen vorig en teruggeven berekend nieuw eind-tijdstip
         ma_entity_plan_end = []
-        ma_planned_start_dt = []
-        ma_planned_end_dt = []
+        ma_planned_start_dt = []  # start tijdstip planning window
+        ma_planned_end_dt = []  # eind tijdstip planning window
         for m in range(M):
             error = False
             ma_name.append(self.machines[m]["name"])
@@ -1651,7 +1653,7 @@ class DaCalc(DaBase):
                 0,
             )
             program_index.append(p)
-            RL.append(len(self.machines[m]["programs"][p]["power"]))  # aantal stages
+            RL.append(len(self.machines[m]["programs"][p]["power"]))  # aantal stappen
             # initialize yesterday
             planned_start_dt = dt.datetime(
                 start_dt.year, start_dt.month, start_dt.day
@@ -1682,10 +1684,10 @@ class DaCalc(DaBase):
                     )
                 else:
                     planned_end_dt = planned_start_dt + dt.timedelta(minutes=RL[m] * 15)
-            ma_planned_start_dt.append(planned_start_dt)
+            ma_planned_start_dt.append(planned_start_dt) # de planning van de vorige geslaagde run
             ma_planned_end_dt.append(planned_end_dt)
-            start_ma_dt = start_dt
-            ready_ma_dt = uur[U - 1]
+            start_ma_dt = start_dt  # now
+            ready_ma_dt = uur[U - 1] # het laatste moment van planningshorizon
             if start_window_entity is None:
                 logging.error(
                     f"De 'entity start window' is niet gedefinieerd bij de instellingen "
@@ -1739,7 +1741,7 @@ class DaCalc(DaBase):
                 if start_dt <= planned_end_dt:
                     logging.info(
                         f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                        f"ligt voorbij begin vorige planning(1): {planned_start_dt}"
+                        f"ligt voor het einde van de vorige planning(1): {planned_start_dt}"
                     )
                     error = True
                 elif start_dt <= ready_ma_dt:
@@ -1761,6 +1763,7 @@ class DaCalc(DaBase):
                 kw_num = 0
             else:
                 delta = ready_ma_dt - start_ma_dt
+                # aantal kwartieren in planningsperiode
                 kw_num = math.ceil(delta.seconds / 900)
             KW.append(kw_num)
             if RL[m] == 0:
@@ -1775,15 +1778,20 @@ class DaCalc(DaBase):
                         f"wordt ingepland tussen {start_ma_dt.strftime('%Y-%m-%d %H:%M')} "
                         f"en {ready_ma_dt.strftime('%Y-%m-%d %H:%M')}."
                     )
+            # het eerste tijdstip waarop de run kan beginnen
             start_ma_dt = dt.datetime.fromtimestamp(
                 900 * math.ceil(max(start_ma_dt, start_dt).timestamp() / 900)
             )
+
+            # ma_uur_kw: per machine per uur een lijst van kwartiernummers in het betreffende uur
             uur_kw = []
+            # ma_kw_dt: per machine een lijst van kwartiertijdstippen
             kw_dt = []
             kwartier_dt = start_ma_dt
             for u in range(U):
                 uur_kw.append([])
             for kw in range(kw_num):
+                # index in uur-lijst
                 uur_index = calc_uur_index(kwartier_dt, tijd)
                 if uur_index < U:
                     uur_kw[uur_index].append(kw)
@@ -1791,7 +1799,7 @@ class DaCalc(DaBase):
                 kwartier_dt = kwartier_dt + dt.timedelta(seconds=900)
             ma_uur_kw.append(uur_kw)
             ma_kw_dt.append(kw_dt)
-            # aantal runs = aantal kwartieren - aantal stages + 1
+            # R = aantal mogelijke runs = aantal kwartieren - aantal stages + 1
             R.append(min(KW[m], KW[m] - RL[m] + 1))
 
         # ma_start : wanneer machine start = 1 anders = 0
@@ -1803,7 +1811,7 @@ class DaCalc(DaBase):
         # ma_on = [[[model.add_var(var_type=BINARY) for kw in range(KW[m])]
         #           for r in range(R[m])] for m in range(M)]
 
-        # consumption per kwartier
+        # consumption per machine per kwartier
         c_ma_kw = [
             [
                 model.add_var(
@@ -1821,6 +1829,7 @@ class DaCalc(DaBase):
             for m in range(M)
         ]
 
+        # consumption per uur
         c_ma_u = [
             [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(U)]
             for _ in range(M)
@@ -1835,8 +1844,10 @@ class DaCalc(DaBase):
         for m in range(M):
             # maar 1 start
             if KW[m] == 0:
+                # als er geen kwartieren zijn dan geen start
                 model += xsum(ma_start[m][kw] for kw in range(KW[m])) == 0
             else:
+                # machine kan maar op een kwartier starten
                 model += xsum(ma_start[m][kw] for kw in range(KW[m])) == 1
 
             # kan niet starten als je de run niet kan afmaken
@@ -1863,7 +1874,9 @@ class DaCalc(DaBase):
                 model += c_ma_kw[m][kw] == xsum(
                     self.machines[m]["programs"][program_index[m]]["power"][kw - r]
                     * ma_start[m][r]
+                    # 4000 = omrekenen van kwartier vermogen in W naar verbruik in kWh
                     / 4000
+                    # van alle mogelijke runs de kwartieren
                     for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]
                 )
             for u in range(U):
