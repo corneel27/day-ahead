@@ -1087,7 +1087,7 @@ rekening houden met het gebruik van de wp door de boiler en vive versa. De wp za
 Dit onderdeel is nog in ontwikkeling. 
    * `heater present` : True of False (default False). Als je False invult worden onderstaande heater-instellingen genegeerd en wordt een warmtepomp niet ingepland.
    * `entity hp enabled`: entiteit in ha die aangeeft of je warmtepomp is ingeschakeld. Tijdens vakantie kun je hiermee richting
-DAO aangeven dat de warmtepomp niet hoeft te worden ingepland.
+DAO aangeven dat de warmtepomp niet hoeft te worden ingepland. Ook kun je deze entiteit gebruiken om aan DAO te melden of de thermostaat van een on/off warmtepomp in/uitgeschakeld is.
    * `degree days factor`: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag<br>
      zet deze op 0 als je geen wp hebt zodat er ook geen warmtevraag is. <br>
 Behalve een getal kun je hier ook een entiteit (bijv een input_number) 
