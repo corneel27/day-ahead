@@ -712,6 +712,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | entities battery production  | list of string   | []                                 |                                                    | 
 | **scheduler**            | active                       | boolean          | True                               | 
 |                          |                              | list             | {time, task}                       |                                                    | 
+
  
 
 ### **homeassistant**<br>
@@ -1118,7 +1119,7 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
    * `adjustment factor`: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
       da prijs 10% afwijkt van het daggemiddelde (niet voor on/off warmtepomp).
    * `min run length` : minimaal aantal uren [1-5] dat de warmtepomp achter elkaar moet draaien (alleen voor on/off warmtepomp en om te voorkomen dat de warmtepomp teveel schakelt).
-   * `entity avg outside temp` : HA 'input_number' entiteit die de door DAO voorspelde buitentemperatuur in °C bevat (hiermee kun je mbv een automation in HA de COP en het vermogen van een on/off warmtepomp in berekenen).
+   * `entity avg outside temp` : HA 'input_number' entiteit die de door DAO voorspelde buitentemperatuur in °C bevat (hiermee kun je de COP en vermogen van een on/off warmtepomp in HA berekenen).
    * `entity hp cop` : HA 'sensor' entiteit die aangeeft wat de COP van de warmtepomp is bij een gegeven buitentemperatuur (alleen voor on/off warmtepomp). Bijvoorbeeld voor een Daikin Altherma 8kW: <br>
     ![cop.png](images/COP.png)
    * `entity hp switch` : HA 'input_boolean' entiteit die de warmtepomp middels een automation in HA in- of uitschakelt.
