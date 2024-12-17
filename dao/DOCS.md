@@ -625,7 +625,15 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                           | activate entity              | string           |                                    |                                                    |
 | **heating**               | heater present               | boolean          | "False"                            |                                                    | 
 |                           | entity hp enabled            | string           |                                    | bij afwezigheid wordt heatpump ingepland           |
-|                           | degree days factor           | getal            |                                    | kWh/K.day                                          | 
+|                           | degree days factor           | getal of string  |                                    | kWh/K.day of HA 'sensor' entity                    | 
+|                           | adjustment                   | string           | "power"                            | type besturing warmtepomp                          |
+|                           | entity hp heat demand        | string           |                                    |                                                    |
+|                           | entity hp heat produced      | string           |                                    |                                                    |
+|                           | entity hp switch             | string           |                                    |                                                    |
+|                           | entity hp avg outside temp   | string           |                                    |                                                    |
+|                           | entity hp cop                | string           |                                    |                                                    |
+|                           | entity hp power              | string           |                                    |                                                    |
+|                           | min run length               | getal            | 1                                  |                                                    |
 |                           | stages                       | list             |                                    | {max_power, cop}                                   | 
 |                           | ______max_power              | getal            |                                    | W                                                  | 
 |                           | ______cop                    | getal            |                                    | kWh/kWh                                            | 
@@ -1107,12 +1115,12 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
    * `entity adjust heating curve`: entiteit waarmee de stooklijn kan worden verschoven (niet voor on/off warmtepomp).
    * `adjustment factor`: float K/10% Het aantal graden voor de verschuiving van de stooklijn als de actuele 
       da prijs 10% afwijkt van het daggemiddelde (niet voor on/off warmtepomp).
-  
    * `min run length` : minimaal aantal uren [1-5] dat de warmtepomp achter elkaar moet draaien (alleen voor on/off warmtepomp en om te voorkomen dat de warmtepomp teveel schakelt).
    * `entity avg outside temp` : HA 'input_number' entiteit die de door DAO voorspelde buitentemperatuur in °C bevat (hiermee kun je de COP en vermogen van een on/off warmtepomp in HA berekenen).
-   * `entity hp cop` : HA 'sensor' entiteit die aangeeft wat de COP van de warmtepomp is bij een gegeven buitentemperatuur (alleen voor on/off warmtepomp).
+   * `entity hp cop` : HA 'sensor' entiteit die aangeeft wat de COP van de warmtepomp is bij een gegeven buitentemperatuur (alleen voor on/off warmtepomp). Bijvoorbeeld voor een Daikin Altherma 8kW:
+   ![cop.png](images/cop.png)
    * `entity hp switch` : HA 'input_boolean' entiteit die de warmtepomp middels een automation in HA in- of uitschakelt.
-   * `entity hp power` : Bij on/off warmtepomp: HA 'sensor' entiteit die aangeeft op welk vermogen in kW de warmtepomp zal draaien bij een gegeven buitentemperatuur. Bij "power" warmtepomp: HA 'input_number' entiteit waarin DAO 
+   * `entity hp power` : Bij "on/off" warmtepomp: HA 'sensor' entiteit die aangeeft op welk vermogen in kW de warmtepomp zal draaien bij een gegeven buitentemperatuur. Bij "power" warmtepomp: HA 'input_number' entiteit waarin DAO 
    het optimaal berekende vermogen in kW zet.
 
 ### **battery**<br> 
