@@ -630,7 +630,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                           | entity hp heat demand        | string           |                                    |                                                    |
 |                           | entity hp heat produced      | string           |                                    |                                                    |
 |                           | entity hp switch             | string           |                                    |                                                    |
-|                           | entity hp avg outside temp   | string           |                                    |                                                    |
+|                           | entity avg outside temp      | string           |                                    |                                                    |
 |                           | entity hp cop                | string           |                                    |                                                    |
 |                           | entity hp power              | string           |                                    |                                                    |
 |                           | min run length               | getal            | 1                                  |                                                    |
