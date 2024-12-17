@@ -712,6 +712,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | entities battery production  | list of string   | []                                 |                                                    | 
 | **scheduler**            | active                       | boolean          | True                               | 
 |                          |                              | list             | {time, task}                       |                                                    | 
+
  
 
 ### **homeassistant**<br>
