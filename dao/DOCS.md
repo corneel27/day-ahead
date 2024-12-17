@@ -1121,7 +1121,8 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
    ![cop.png](images/COP.png)
    * `entity hp switch` : HA 'input_boolean' entiteit die de warmtepomp middels een automation in HA in- of uitschakelt.
    * `entity hp power` : Bij "on/off" warmtepomp: HA 'sensor' entiteit die aangeeft op welk vermogen in kW de warmtepomp zal draaien bij een gegeven buitentemperatuur. Bij "power" warmtepomp: HA 'input_number' entiteit waarin DAO 
-   het optimaal berekende vermogen in kW zet.
+   het optimaal berekende vermogen in kW zet. Bijvoorbeeld voor een Daikin Altherma 8kW: <br>
+    ![power.png](images/power.png)
 
 ### **battery**<br> 
   De gegevens en de instellingen van geen, een of meer batterijen
