@@ -1094,6 +1094,7 @@ rekening houden met het gebruik van de wp door de boiler en vive versa. De wp za
 ### **heating**<br>
 Dit onderdeel is nog in ontwikkeling. 
    * `heater present` : True of False (default False). Als je False invult worden onderstaande heater-instellingen genegeerd en wordt een warmtepomp niet ingepland.
+
    * `entity hp enabled`: HA 'input_boolean' entiteit die aangeeft of je warmtepomp moet worden ingepland. Als False zal de warmtepomp nooit worden ingepland. Tijdens vakantie kun je hiermee richting
 DAO aangeven dat de warmtepomp niet hoeft te worden ingepland.
    * `degree days factor`: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag (met 16°C als referentietemperatuur).<br>
@@ -1109,6 +1110,7 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
      * "power" :
      * "heating curve" :
   * `stages` : een lijst met vermogens schijven van de wp: hoe hoger het vermogen hoe lager de cop (niet voor on/off warmtepomp)
+
      * `max_power`: het maximum elektrische vermogen van de betreffende schijf in W
      * `cop`: de cop van de wp behorende bij deze schijf. Dus een cop van 7 met een vermogen van 225 W 
         betekent een thermisch vermogen van 7 x 225 = 1575 W
