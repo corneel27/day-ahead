@@ -308,7 +308,9 @@ def prnt_xy(x: list, y: list):
     print()
 
 
-def interpol_rows(row, new_row, old_val, field, interval, quantity, result_df)->pd.DataFrame:
+def interpol_rows(
+    row, new_row, old_val, field, interval, quantity, result_df
+) -> pd.DataFrame:
     new_x = []
     calc_x = row["tijd"]
     end_x = new_row["tijd"]
@@ -317,19 +319,19 @@ def interpol_rows(row, new_row, old_val, field, interval, quantity, result_df)->
         calc_x += datetime.timedelta(minutes=interval)
     delta_x = (new_row["tijd"] - row["tijd"]).seconds * 2 / 60  # in minuten
     if old_val is None:
-        delta_y = new_row[field]-row[field]
+        delta_y = new_row[field] - row[field]
     else:
         delta_y = new_row[field] - old_val
-    delta_x_ref = datetime.timedelta(minutes=(delta_x/2 - interval)/2)
+    delta_x_ref = datetime.timedelta(minutes=(delta_x / 2 - interval) / 2)
     x_ref = row["tijd"] + delta_x_ref
     a = delta_y / (delta_x + delta_x_ref.seconds / 60)  # a = value/minuut
     # een andere offset zorgt voor een gelijke integraal
 
-    factor = interval/delta_x if quantity else 1
+    factor = interval / delta_x if quantity else 1
     for x in new_x:
         if x_ref > x:
             d_x = x_ref - x
-            d_x_min = - d_x.seconds / 60
+            d_x_min = -d_x.seconds / 60
         else:
             d_x = x - x_ref
             d_x_min = d_x.seconds / 60
@@ -346,7 +348,7 @@ def interpolate(
     org_df: pd.DataFrame,
     field: str,
     interval: int,
-    quantity: bool = False
+    quantity: bool = False,
 ) -> pd.DataFrame:
     result_df = pd.DataFrame(columns=["tijd", field])
     row = None
@@ -358,11 +360,15 @@ def interpolate(
             continue
         old_val = now_val
         now_val = row[field]
-        result_df = interpol_rows(row, new_row, old_val, field, interval, quantity, result_df)
+        result_df = interpol_rows(
+            row, new_row, old_val, field, interval, quantity, result_df
+        )
         row = new_row
     delta_x = org_df.iloc[-1]["tijd"] - org_df.iloc[-2]["tijd"]
     new_row = pd.Series({"tijd": row["tijd"] + delta_x, field: row[field]})
-    result_df = interpol_rows(row, new_row, old_val, field, interval, quantity, result_df)
+    result_df = interpol_rows(
+        row, new_row, old_val, field, interval, quantity, result_df
+    )
     result_df.index = pd.to_datetime(result_df["tijd"])
     return result_df
 
@@ -370,7 +376,7 @@ def interpolate(
 def tst_interpolate():
     x = [datetime.datetime(year=2024, month=10, day=19, hour=hour) for hour in range(4)]
     y = [1 + 1 * i * i for i in range(4)]
-    df_dict = {'tijd': x, 'temp': y}
+    df_dict = {"tijd": x, "temp": y}
     df_start = pd.DataFrame(df_dict)
     df_start.index = pd.to_datetime(df_start["tijd"])
     print(f"Start: \n {df_start.to_string()}\n")
@@ -383,6 +389,7 @@ def tst_interpolate():
 def interpolate_prognose_data():
     from da_config import Config
     from db_manager import DBmanagerObj
+
     config = Config("../data/options.json")
     db_da = config.get_db_da()
     start_ts = datetime.datetime(year=2024, month=11, day=12).timestamp()

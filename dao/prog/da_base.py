@@ -22,7 +22,6 @@ from hassapi.models import StateList
 
 
 class NotificationHandler(Handler):
-
     def __init__(self, _hass: hass.Hass, _entity=None):
         """
         Initialize the handler.
@@ -38,7 +37,6 @@ class NotificationHandler(Handler):
 
 
 class DaBase(hass.Hass):
-
     def __init__(self, file_name: str = None):
         self.file_name = file_name
         path = os.getcwd()
@@ -374,9 +372,7 @@ class DaBase(hass.Hass):
         if entity_id is not None:
             self.set_state(entity_id, value)
 
-    def get_entity_state(
-            self, entity_key: str, options: dict
-    ) -> int | float | str:
+    def get_entity_state(self, entity_key: str, options: dict) -> int | float | str:
         entity_id = self.config.get([entity_key], options, None)
         if entity_id is not None:
             result = self.get_state(entity_id).state

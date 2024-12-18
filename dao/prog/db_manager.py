@@ -328,7 +328,6 @@ class DBmanagerObj(object):
         df["tijd"] = pd.to_datetime(df["tijd"])
         return df
 
-
     def get_prognose_data(self, start, end=None, interval="hour"):
         values_table = Table("values", self.metadata, autoload_with=self.engine)
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
@@ -372,7 +371,8 @@ class DBmanagerObj(object):
             )
             if end is not None:
                 query = query.where(
-                    t1.c.time < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                    t1.c.time
+                    < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
                 )
             else:
                 start_dt = datetime.datetime.fromtimestamp(start)
@@ -384,7 +384,8 @@ class DBmanagerObj(object):
                 end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
                 end_ts = end_dt.timestamp()
                 query = query.where(
-                    t1.c.time < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
+                    t1.c.time
+                    < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
                 )
 
             query = query.order_by(t1.c.time)
@@ -401,14 +402,13 @@ class DBmanagerObj(object):
             for field, new_field in fields:
                 fld_df = self.get_prognose_field(field, start, end, interval)
                 fld_df.index = pd.to_datetime(fld_df["tijd"])
-                fld_df = interpolate(fld_df, field,15, (field == "gr"))
+                fld_df = interpolate(fld_df, field, 15, (field == "gr"))
                 if result_df is None:
                     result_df = fld_df
                 else:
                     result_df[new_field] = fld_df[field]
-            result_df['time'] = result_df['tijd'].astype(int)//1e9
+            result_df["time"] = result_df["tijd"].astype(int) // 1e9
             return result_df
-
 
     def get_column_data(
         self,
@@ -466,7 +466,6 @@ class DBmanagerObj(object):
             lambda x: datetime.datetime.fromtimestamp(x).strftime("%Y-%m-%d %H:%M")
         )
         return df
-
 
     def get_consumption(self, start: datetime.datetime, end=datetime.datetime.now()):
         """
