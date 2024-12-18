@@ -10,7 +10,7 @@
   },
   "database ha": {
     "engine": "sqlite",
-    "database": "homea-ssistant_v2.db",
+    "database": "home-assistant_v2.db",
     "db_path": "../data"
   },
 

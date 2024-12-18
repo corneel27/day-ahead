@@ -1,3 +1,5 @@
+from calendar import month
+
 from dateutil import easter
 import datetime
 import bisect
@@ -10,6 +12,7 @@ from requests import post
 import logging
 import traceback
 from sqlalchemy import Table, select, and_
+from dao.prog.version import __version__
 
 
 def make_data_path():
@@ -26,8 +29,12 @@ def is_laagtarief(dtime, switch_hour):
         return True
     if (dtime.hour < 7) or (dtime.hour >= switch_hour):  # door de week van 7 tot 21/23
         return True
-    feestdagen = [datetime.datetime(jaar, 1, 1), datetime.datetime(jaar, 4, 27), datetime.datetime(jaar, 12, 25),
-                  datetime.datetime(jaar, 12, 26)]
+    feestdagen = [
+        datetime.datetime(jaar, 1, 1),
+        datetime.datetime(jaar, 4, 27),
+        datetime.datetime(jaar, 12, 25),
+        datetime.datetime(jaar, 12, 26),
+    ]
     pasen = easter.easter(jaar)
     feestdagen.append(pasen + datetime.timedelta(days=1))  # 2e paasdag
     feestdagen.append(pasen + datetime.timedelta(days=39))  # hemelvaart
@@ -39,7 +46,9 @@ def is_laagtarief(dtime, switch_hour):
     return False
 
 
-def calc_adjustment_heatcurve(price_act: float, price_avg: float, adjustment_factor, old_adjustment: float) -> float:
+def calc_adjustment_heatcurve(
+    price_act: float, price_avg: float, adjustment_factor, old_adjustment: float
+) -> float:
     """
     Calculate the adjustment of the heatcurve
     formule: -0,5*(price-price_avg)*10/price_avg
@@ -52,7 +61,9 @@ def calc_adjustment_heatcurve(price_act: float, price_avg: float, adjustment_fac
     if price_avg == 0:
         adjustment = 0
     else:
-        adjustment = round(- adjustment_factor * (price_act - price_avg) * 100 / price_avg, 1)
+        adjustment = round(
+            -adjustment_factor * (price_act - price_avg) * 100 / price_avg, 1
+        )
     # toename en afname maximeren op 10 x adjustment factor
     if adjustment >= old_adjustment:
         adjustment = min(adjustment, old_adjustment + adjustment_factor * 10)
@@ -69,14 +80,15 @@ def get_value_from_dict(dag: str, options: dict) -> float:
     :return: de correcte value
     """
     o_list = list(options.keys())
-    result = options.get(
-        dag, options[o_list[bisect.bisect_left(o_list, dag) - 1]])
+    result = options.get(dag, options[o_list[bisect.bisect_left(o_list, dag) - 1]])
     return result
 
 
 def convert_timestr(time_str: str, now_dt: datetime.datetime) -> datetime.datetime:
-    result_hm = datetime.datetime.strptime(time_str, '%H:%M:%S')
-    result = datetime.datetime(now_dt.year, now_dt.month, now_dt.day, result_hm.hour, result_hm.minute)
+    result_hm = datetime.datetime.strptime(time_str, "%H:%M:%S")
+    result = datetime.datetime(
+        now_dt.year, now_dt.month, now_dt.day, result_hm.hour, result_hm.minute
+    )
     return result
 
 
@@ -100,20 +112,7 @@ def get_tibber_data():
     config = Config("../data/options.json")
     tibber_options = config.get(["tibber"])
     url = config.get(["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql")
-    db_da_engine = config.get(['database da', "engine"], None, "mysql")
-    db_da_server = config.get(['database da', "server"], None, "core-mariadb")
-    db_da_port = int(config.get(['database da', "port"], None, 0))
-    if db_da_engine == "sqlite":
-        db_da_name = config.get(['database da', "database"], None, "day_ahead.db")
-    else:
-        db_da_name = config.get(['database da', "database"], None, "day_ahead")
-    db_da_user = config.get(['database da', "username"], None, "day_ahead")
-    db_da_password = config.get(['database da', "password"])
-    db_da_path = config.get(['database da', "db_path"], None, "../data")
-    db_time_zone = config.get(["time_zone"])
-    db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
-                              db_port=db_da_port, db_user=db_da_user, db_password=db_da_password,
-                              db_path=db_da_path, db_time_zone=db_time_zone)
+    db_da = config.get_db_da()
     prices_options = config.get(["prices"])
     headers = {
         "Authorization": "Bearer " + tibber_options["api_token"],
@@ -135,11 +134,13 @@ def get_tibber_data():
     # no starttime
     if (len(sys.argv) <= 2) or (start_ts is None):
         # search first missing
-        start_ts = datetime.datetime.strptime(prices_options["last invoice"], "%Y-%m-%d").timestamp()
+        start_ts = datetime.datetime.strptime(
+            prices_options["last invoice"], "%Y-%m-%d"
+        ).timestamp()
         timestamps = generate_hourly_timestamps(start_ts, now_ts)
-        values_table = Table('values', db_da.metadata, autoload_with=db_da.engine)
-        variabel_table = Table('variabel', db_da.metadata, autoload_with=db_da.engine)
-        for code in ['cons', 'prod']:
+        values_table = Table("values", db_da.metadata, autoload_with=db_da.engine)
+        variabel_table = Table("variabel", db_da.metadata, autoload_with=db_da.engine)
+        for code in ["cons", "prod"]:
             # Query the existing timestamps from the values table
             query = select(values_table.c.time).where(
                 and_(
@@ -152,51 +153,64 @@ def get_tibber_data():
                 existing_timestamps = {row[0] for row in connection.execute(query)}
 
             # Find missing timestamps by comparing the generated list with the existing timestamps
-            missing_timestamps = [ts for ts in timestamps if ts not in existing_timestamps]
+            missing_timestamps = [
+                ts for ts in timestamps if ts not in existing_timestamps
+            ]
             if len(missing_timestamps) == 0:
                 latest = start_ts
             else:
                 latest = missing_timestamps[0]
             latest_ts = min(latest_ts, latest)
 
-    count = math.ceil((now_ts - latest_ts)/3600)
-    logging.info(f"Tibber data present tot en met: {str(datetime.datetime.fromtimestamp(latest_ts - 3600))}")
+    count = math.ceil((now_ts - latest_ts) / 3600)
+    logging.info(
+        f"Tibber data present tot en met: "
+        f"{str(datetime.datetime.fromtimestamp(latest_ts - 3600))}"
+    )
     if count < 24:
         logging.info("Er worden geen data opgehaald.")
         return
-    query = '{ ' \
-            '"query": ' \
-            ' "{ ' \
-            '   viewer { ' \
-            '     homes { ' \
-            '      production(resolution: HOURLY, last: '+str(count)+') { ' \
-            '        nodes { ' \
-            '          from ' \
-            '          profit ' \
-            '          production ' \
-            '        } ' \
-            '      } ' \
-            '    consumption(resolution: HOURLY, last: '+str(count)+') { ' \
-            '        nodes { ' \
-            '          from ' \
-            '          cost ' \
-            '          consumption ' \
-            '        } ' \
-            '      } ' \
-            '    } ' \
-            '  } ' \
-            '}" ' \
-        '}'
+      
+    query = (
+        "{ "
+        '"query": '
+        ' "{ '
+        "   viewer { "
+        "     homes { "
+        "      production(resolution: HOURLY, last: " + str(count) + ") { "
+        "        nodes { "
+        "          from "
+        "          profit "
+        "          production "
+        "        } "
+        "      } "
+        "    consumption(resolution: HOURLY, last: " + str(count) + ") { "
+        "        nodes { "
+        "          from "
+        "          cost "
+        "          consumption "
+        "        } "
+        "      } "
+        "    } "
+        "  } "
+        '}" '
+        "}"
+    )
 
     now = datetime.datetime.now()
-    today_ts = datetime.datetime(year=now.year,month=now.month, day=now.day).timestamp()
+    today_ts = datetime.datetime(
+        year=now.year, month=now.month, day=now.day
+    ).timestamp()
     logging.debug(query)
     resp = post(url, headers=headers, data=query)
     tibber_dict = json.loads(resp.text)
-    production_nodes = tibber_dict['data']['viewer']['homes'][0]['production']['nodes']
-    consumption_nodes = tibber_dict['data']['viewer']['homes'][0]['consumption']['nodes']
-    tibber_df = pd.DataFrame(columns=['time', 'code', 'value'])
+    production_nodes = tibber_dict["data"]["viewer"]["homes"][0]["production"]["nodes"]
+    consumption_nodes = tibber_dict["data"]["viewer"]["homes"][0]["consumption"][
+        "nodes"
+    ]
+    tibber_df = pd.DataFrame(columns=["time", "code", "value"])
     for node in production_nodes:
+        timestamp = int(get_datetime_from_str(node["from"]).timestamp())
         timestamp = int(get_datetime_from_str(node['from']).timestamp())
         if timestamp < today_ts:
             time_stamp = str(timestamp)
@@ -206,12 +220,12 @@ def get_tibber_data():
                 logging.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
             if not (node["profit"] is None):
-                code = 'profit'
+                code = "profit"
                 value = float(node["profit"])
                 logging.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
     for node in consumption_nodes:
-        timestamp = int(get_datetime_from_str(node['from']).timestamp())
+        timestamp = int(get_datetime_from_str(node["from"]).timestamp())
         if timestamp < today_ts:
             time_stamp = str(timestamp)
             if not (node["consumption"] is None):
@@ -224,8 +238,10 @@ def get_tibber_data():
                 value = float(node["cost"])
                 logging.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
-    logging.info(f"Opgehaalde data bij Tibber (database records):"
-                 f"\n{tibber_df.to_string(index=False)}")
+    logging.info(
+        f"Opgehaalde data bij Tibber (database records):"
+        f"\n{tibber_df.to_string(index=False)}"
+    )
     db_da.savedata(tibber_df)
 
 
@@ -246,42 +262,15 @@ def calc_uur_index(dt: datetime, tijd: list) -> int:
     return result_index
 
 
-'''
-def calc_heatpump_usage
-    (pl : [], needed : float) ->[]:
-    """
-    berekent inzet van de wp per uur
-    :param pl: een list van de inkoop prijzen
-    :param needed:  benodige Wh aan energie
-    :return: een list van Wh in de betreffende uren
-    """
-    U = len(pl) # aantal uur
-    pl_min = min(pl)
-    sum_cost = 0
-    max_low = U * 250
-    usage = []
-    if max_low >= needed:
-        #alleen de goedkopere uren inzetten
-    else:
-        #alle uren minimum inzetten plus nog wat extra
-        for u in range(U):
-            sum_cost += pl[u]-pl_min
-        extra_energy = needed - max_low
-        energy_cost = sum_cost/extra_energy
-        for u in range(U):
-            usage.append(250+ (pl[u]-pl_min) * energy_cost)
-'''
-
-
 def get_version():
     return __version__
 
 
 def version_number(version_str: str) -> int:
-    lst = [x for x in version_str.split('.')]
+    lst = [x for x in version_str.split(".")]
     lst = lst[:3]
     lst.reverse()
-    result = sum(int(x) * (100 ** i) for i, x in enumerate(lst))
+    result = sum(int(x) * (100**i) for i, x in enumerate(lst))
     return result
 
 
@@ -302,7 +291,10 @@ def log_exc_plus():
     stack.reverse()
     traceback.print_exc()
     for frame in stack:
-        logging.error(f"File: {frame.f_code.co_filename}, line {frame.f_lineno}, in {frame.f_code.co_name}")
+        logging.error(
+            f"File: {frame.f_code.co_filename}, line {frame.f_lineno}, "
+            f"in {frame.f_code.co_name}"
+        )
 
 
 def error_handling(ex):
@@ -311,51 +303,69 @@ def error_handling(ex):
     else:
         log_exc_plus()
 
-def interpolate(org_x: list[datetime.datetime], org_y:list[float],
-                start_x:datetime.datetime, end_x:datetime.datetime,
-                interval:int) -> tuple:
-    new_y =[]
+
+def prnt_xy(x: list, y: list):
+    for i in range(len(x)):
+        print(f"{i} {x[i]}  {y[i]}")
+    print()
+
+
+def interpolate(
+    org_x: list[datetime.datetime],
+    org_y: list[float],
+    start_x: datetime.datetime,
+    end_x: datetime.datetime,
+    interval: int,
+) -> tuple:
+    new_y = []
     new_x = []
     calc_x = start_x
     while calc_x <= end_x:
         new_x.append(calc_x)
         calc_x += datetime.timedelta(minutes=interval)
 
+    #  print(f"new x:\n {'\n'.join(new_x)}")
     for i in range(len(new_x)):
         x = new_x[i]
-        for j in range(len(org_x)-1):
-            if (j==0 and x < org_x[j]) or  org_x[j] <= x < org_x[j+1]:
+        j = 0
+        for j in range(len(org_x) - 1):
+            if (j == 0 and x < org_x[j]) or org_x[j] <= x < org_x[j + 1]:
                 break
-        delta_x = (org_x[j+1] - org_x[j]).seconds/60 # in minuten
+        delta_x = (org_x[j + 1] - org_x[j]).seconds / 60  # in minuten
         delta_y = org_y[j + 1] - org_y[j]
-        offset_y = -delta_y/3
-        slope = delta_y / delta_x
+        #   b = org_y[j] - a * 90
+        a = delta_y / delta_x  # a = value/minuut
+        b = -a * 90 / 4
         if x >= org_x[j]:
-            y = org_y[j] + (x - org_x[j]).seconds * slope / 60 + offset_y
+            y = org_y[j] + (x - org_x[j]).seconds * a / 60 + b
         else:
-            y = org_y[j] - (org_x[j] - x).seconds * slope /60 + offset_y
+            y = org_y[j] - (org_x[j] - x).seconds * a / 60 + b
         new_y.append(y)
+        print(x, y, a, b)
     return new_x, new_y
-
-def prnt_xy(x:list, y:list):
-    for i in range(len(x)):
-        print (f"{i} {x[i]}  {y[i]}")
-    print()
 
 
 def tst_interpolate():
     x = [datetime.datetime(year=2024, month=10, day=19, hour=hour) for hour in range(4)]
-    y = [1 + 1*i*i for i in range(4)]
-    prnt_xy(x,y)
+    y = [1 + 1 * i * i for i in range(4)]
+    prnt_xy(x, y)
     start_x = datetime.datetime(year=2024, month=10, day=19, hour=0)
     end_x = datetime.datetime(year=2024, month=10, day=19, hour=4)
     interval = 15
     new_x, new_y = interpolate(x, y, start_x, end_x, interval)
     prnt_xy(new_x, new_y)
 
-    df_tst = pd.DataFrame(new_y,new_x, columns=["x", "y"])
-    print(df_tst.to_string())
+
+def interpolate_prognose_data():
+    from da_config import Config
+    from db_manager import DBmanagerObj
+    config = Config("../data/options.json")
+    db_da = config.get_db_da()
+    start_ts = datetime.datetime(year=2024, month=11, day=12).timestamp()
+    end_ts = datetime.datetime(year=2024, month=11, day=14).timestamp()
+    prognose_data = db_da.get_prognose_data(start=start_ts, end=end_ts)
+    print(prognose_data.to_string())
 
 
-
-
+#  tst_interpolate()
+#  interpolate_prognose_data()

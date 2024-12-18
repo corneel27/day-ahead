@@ -4,9 +4,11 @@ import math
 import logging
 import pandas as pd
 import pytz
+import ephem
 from requests import get
 import matplotlib.pyplot as plt
 import graphs
+
 # import os, sys
 # sys.path.append(os.path.abspath("../dalib"))
 from da_config import Config
@@ -14,6 +16,7 @@ from db_manager import DBmanagerObj
 from sqlalchemy import Table, select, func, and_
 
 
+# noinspection PyUnresolvedReferences
 class Meteo:
     def __init__(self, config: Config, db_da: DBmanagerObj):
         self.config = config
@@ -35,7 +38,9 @@ class Meteo:
         return datetime.datetime.timestamp(date_ref)
 
     @staticmethod
-    def direct_radiation_factor(hcol: float, acol: float, hzon: float, azon: float) -> float:
+    def direct_radiation_factor(
+        hcol: float, acol: float, hzon: float, azon: float
+    ) -> float:
         """
         berekent de omrekenfacor van directe zon straling op het collectorvlak
         alle parameters in radialen
@@ -48,8 +53,13 @@ class Meteo:
         if hzon <= 0:
             return 0
         else:
-            return max(0.0, (math.cos(hcol) * math.sin(hzon) + math.sin(hcol) * math.cos(hzon) * math.cos(
-                acol - azon))) / math.sin(hzon)
+            return max(
+                0.0,
+                (
+                    math.cos(hcol) * math.sin(hzon)
+                    + math.sin(hcol) * math.cos(hzon) * math.cos(acol - azon)
+                ),
+            ) / math.sin(hzon)
 
     def sun_position(self, utc_time):
         """
@@ -59,7 +69,7 @@ class Meteo:
         """
         # param nb: latitude: noorderbreed in graden
         # param ol: longitude: oosterlengte in graden
-        '''
+        """
         # oude methode
 
         jd = (float(utc_time) / 86400.0) + 2440587.5
@@ -74,8 +84,8 @@ class Meteo:
 
         alfa_zon = lamda_zon_deg - 2.468 * math.sin(2 * lamda_zon_rad) + 0.053 * math.sin(
             4 * lamda_zon_rad) - 0.0014 * math.sin(6 * lamda_zon_rad)  # in graden
-        delta_zon = 22.8008 * math.sin(lamda_zon_rad) + 0.5999 * pow(math.sin(lamda_zon_rad), 3) + 0.0493 * pow(
-            math.sin(lamda_zon_rad), 5)
+        delta_zon = 22.8008 * math.sin(lamda_zon_rad) + 0.5999 * pow(math.sin(lamda_zon_rad), 3) 
+                    + 0.0493 * pow(math.sin(lamda_zon_rad), 5)
         delta_zon_rad = math.radians(delta_zon)
         noorder_breedte = self.latitude
         ooster_lengte = self.longitude
@@ -91,43 +101,53 @@ class Meteo:
 
         # hoogte boven horizon
         h_rad = math.asin(math.sin(noorder_breedte_rad) * math.sin(delta_zon_rad)
-                          + math.cos(noorder_breedte_rad) * math.cos(delta_zon_rad) * math.cos(h_rad))
+                          + math.cos(noorder_breedte_rad) * math.cos(delta_zon_rad) * 
+                          math.cos(h_rad))
         a_rad = math.atan2(math.sin(h_rad),
-                           math.cos(h_rad) * math.sin(noorder_breedte_rad) - math.tan(delta_zon_rad) * math.cos(
-                               noorder_breedte_rad))  # links of rechts van zuid
+                           math.cos(h_rad) * math.sin(noorder_breedte_rad) - 
+                           math.tan(delta_zon_rad) * math.cos(noorder_breedte_rad))  
+                           # links of rechts van zuid
         result = {'h': h_rad, 'A': a_rad}
 
         # tot hier oude methode
-        '''
+        """
         # vanaf hier nieuwe methode
-        '''
+        """
    
         Declinatie en uurhoek
-        De in de afbeelding over deklinatie en uurhoek getekende hoeken zoals u en d leggen de stralingsrichting vast. 
-        Op iedere datum geldt: d = constant. Deze constante kan op de n- de dag van het jaar met grote nauwkeurigheid 
+        De in de afbeelding over deklinatie en uurhoek getekende hoeken zoals u en d leggen 
+        de stralingsrichting vast. 
+        Op iedere datum geldt: d = constant. Deze constante kan op de n- de dag van het jaar 
+        met grote nauwkeurigheid 
         worden berekend met behulp van formule 1:
         d = 23,44° sin {360°(284 + n)/365} (1)
         Eveneens op iedere datum geldt, dat:
         u = t x 15° (2)
-        met t gelijk aan de tijd in uren volgens Z.T. Met gehulp van (1) en (2) kan nu de stralingsrichting worden 
+        met t gelijk aan de tijd in uren volgens Z.T. Met gehulp van (1) en (2) kan nu de 
+        stralingsrichting worden 
         gevonden op ieder gewenst tijdstip op iedere gewenste datum.
 
         Azimut en zonshoogte
-        De stralingsrichting is ook vast te leggen met behulp van de hoeken a en h. Zie de figuur over Azimut en  
-        zonshoogte. In appendix A is afgeleid, hoe deze hoeken kunnen worden geschreven als functie van de zojuist 
-        genoemde hoeken u en d. Het blijkt handiger om h te schrijven als functie van u en d en om a te schrijven als 
+        De stralingsrichting is ook vast te leggen met behulp van de hoeken a en h. Zie de figuur 
+        over Azimut en  
+        zonshoogte. In appendix A is afgeleid, hoe deze hoeken kunnen worden geschreven als functie 
+        van de zojuist 
+        genoemde hoeken u en d. Het blijkt handiger om h te schrijven als functie van u en d en 
+        om a te schrijven als 
         functie van u, d en h. Gevonden wordt:
         h = arcsin (sin ф sin d – cos ф cos d cos u) (3)
         a = arcsin { (cos d sin u) / cos h } (4)
-        De hoek ф is gelijk aan de breedtegraad van de plaats op aarde, waar a en h moeten worden bepaald. 
+        De hoek ф is gelijk aan de breedtegraad van de plaats op aarde, waar a en h moeten 
+        worden bepaald. 
         De waarden, die a en h aannemen, zijn nu dus plaatsafhankelijk. 
-        '''
-        '''
+        """
+        """
         dt = datetime.datetime.fromtimestamp(utc_time)
         dt_start = datetime.datetime(dt.year,1,1)
         dif = dt - dt_start
         n = dif.days
-        d = math.radians(23.44 *  math.sin(math.radians(360*(284 + n) / 365))) # declinatie in radialen
+        d = math.radians(23.44 *  math.sin(math.radians(360*(284 + n) / 365))) # declinatie 
+        in radialen
         dtz = datetime.datetime.fromtimestamp(utc_time, tz=pytz.utc)
         t = dtz.hour
         u = t * math.radians(15) #uurhoek in radialen
@@ -137,9 +157,8 @@ class Meteo:
         h_degrees = math.degrees(h)
         a_degrees = math.degrees(a)
         result = {'d': math.degrees(d), 'u': math.degrees(u), 'h': h, 'A': a}
-        '''
+        """
 
-        import ephem
         observer = ephem.Observer()
         observer.lat = math.radians(self.latitude)  # breedtegraad
         observer.lon = math.radians(self.longitude)
@@ -154,7 +173,7 @@ class Meteo:
         cor_utc_time = float(utc_time) + 1800
         # 52 graden noorderbreedte, 5 graden oosterlengte
         sunpos = self.sun_position(cor_utc_time)
-        sun_h = sunpos['h']  # hoogte boven horizon in rad
+        sun_h = sunpos["h"]  # hoogte boven horizon in rad
         if sun_h > 0:
             # maximale theoretische straling op hor vlak
             value = 360 * 1.37 * math.sin(sun_h)
@@ -162,7 +181,9 @@ class Meteo:
             value = 0.0
         return value
 
-    def solar_rad(self, utc_time: float, radiation: float, h_col: float, a_col: float) -> float:
+    def solar_rad(
+        self, utc_time: float, radiation: float, h_col: float, a_col: float
+    ) -> float:
         """
         :param utc_time: utc tijd in sec
         :param radiation: globale straling in J/cm²
@@ -176,8 +197,10 @@ class Meteo:
             q_tot = radiation
         else:
             sun_pos = self.sun_position(utc_time)
-            dir_rad_factor = min(2.0, self.direct_radiation_factor(
-                h_col, a_col, sun_pos['h'], sun_pos['A']))
+            dir_rad_factor = min(
+                2.0,
+                self.direct_radiation_factor(h_col, a_col, sun_pos["h"], sun_pos["A"]),
+            )
 
             # maximale straling op horz.vlak
             q_oz = self.get_dif_rad_factor(utc_time)
@@ -222,31 +245,38 @@ class Meteo:
         tilt = min(90, max(0, tilt))
         hcol = math.radians(tilt)
         acol = math.radians(orientation)
-        global_rad['solar_rad'] = ''  # new column empty
+        global_rad["solar_rad"] = ""  # new column empty
         # make sure indexes pair with number of rows
         global_rad = global_rad.reset_index()
         for row in global_rad.itertuples():
             utc_time = row.tijd
             radiation = float(row.gr)
             q_tot = self.solar_rad(int(utc_time) - 3600, radiation, hcol, acol)
-            global_rad.loc[(global_rad.tijd == utc_time), 'solar_rad'] = q_tot
+            global_rad.loc[(global_rad.tijd == utc_time), "solar_rad"] = q_tot
         return global_rad
 
-    def get_from_meteoserver (self, model: str) -> pd.DataFrame:
-        parameters = "?lat=" + str(self.latitude) + "&long=" + str(self.longitude) + "&key=" + self.meteoserver_key
+    def get_from_meteoserver(self, model: str) -> pd.DataFrame:
+        parameters = (
+            "?lat="
+            + str(self.latitude)
+            + "&long="
+            + str(self.longitude)
+            + "&key="
+            + self.meteoserver_key
+        )
         if model == "harmonie":
             url = "https://data.meteoserver.nl/api/uurverwachting.php"
         else:
             url = "https://data.meteoserver.nl/api/uurverwachting_gfs.php"
         resp = get(url + parameters)
-        logging.debug (resp.text)
+        logging.debug(resp.text)
         try:
             json_object = json.loads(resp.text)
         except Exception as ex:
             logging.info(ex)
             logging.error(f"Geen meteodata via model: {model}")
             return pd.DataFrame()
-        if not "data" in json_object:
+        if "data" not in json_object:
             return pd.DataFrame()
         data = json_object["data"]
 
@@ -257,49 +287,81 @@ class Meteo:
         # Convert a List of dictionaries using from_records() method.
         df = pd.DataFrame.from_records(data)
         df = self.solar_rad_df(df)
-        df1 = df[['tijd', 'tijd_nl', 'gr', 'temp', 'solar_rad']]
+        df1 = df[["tijd", "tijd_nl", "gr", "temp", "solar_rad"]]
         logging.info(f"Meteo data {model}: \n{df1.to_string(index=True)}")
         logging.info(f"Aantal meteorecords {model}: {len(df1)}")
         return df1
 
     def get_meteo_data(self, show_graph=False):
         df1 = self.get_from_meteoserver("harmonie")
-        df_db = pd.DataFrame(columns=['time', 'code', 'value'])
+        df_db = pd.DataFrame(columns=["time", "code", "value"])
         count = len(df1)
         if count == 0:
             logging.error("No data recieved from meteoserver")
         else:
             df1 = df1.reset_index()  # make sure indexes pair with number of rows
             for row in df1.itertuples():
-                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'gr', float(row.gr)]
-                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'temp', float(row.temp)]
-                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'solar_rad', float(row.solar_rad)]
+                df_db.loc[df_db.shape[0]] = [
+                    str(int(row.tijd) - 3600),
+                    "gr",
+                    float(row.gr),
+                ]
+                df_db.loc[df_db.shape[0]] = [
+                    str(int(row.tijd) - 3600),
+                    "temp",
+                    float(row.temp),
+                ]
+                df_db.loc[df_db.shape[0]] = [
+                    str(int(row.tijd) - 3600),
+                    "solar_rad",
+                    float(row.solar_rad),
+                ]
 
         if count < 39:
             df1 = self.get_from_meteoserver("gfs")
             for row in df1[count:].itertuples():
-                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'gr', float(row.gr)]
-                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'temp', float(row.temp)]
-                df_db.loc[df_db.shape[0]] = [str(int(row.tijd) - 3600), 'solar_rad', float(row.solar_rad)]
+                df_db.loc[df_db.shape[0]] = [
+                    str(int(row.tijd) - 3600),
+                    "gr",
+                    float(row.gr),
+                ]
+                df_db.loc[df_db.shape[0]] = [
+                    str(int(row.tijd) - 3600),
+                    "temp",
+                    float(row.temp),
+                ]
+                df_db.loc[df_db.shape[0]] = [
+                    str(int(row.tijd) - 3600),
+                    "solar_rad",
+                    float(row.solar_rad),
+                ]
                 count += 1
                 if count >= 48:
                     break
 
         df_tostring = df_db
         # df_tostring["tijd"] = pd.to_datetime(df_tostring["time"])
-        df_tostring['tijd'] = (
-            df_tostring['time'].apply(lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")))
+        df_tostring["tijd"] = df_tostring["time"].apply(
+            lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")
+        )
         logging.debug(f"Meteo data records \n{df_tostring.to_string(index=False)}")
 
         self.db_da.savedata(df_db)
-        style = self.config.get(['graphics', 'style'], None, "default")
+        style = self.config.get(["graphics", "style"], None, "default")
         plt.style.use(style)
-        graphs.make_graph_meteo(df1, file="../data/images/meteo_" + datetime.datetime.now().strftime("%Y-%m-%d__%H-%M")
-                                          + ".png", show=show_graph)
+        graphs.make_graph_meteo(
+            df1,
+            file="../data/images/meteo_"
+            + datetime.datetime.now().strftime("%Y-%m-%d__%H-%M")
+            + ".png",
+            show=show_graph,
+        )
 
-        '''
-        url = "https://api.forecast.solar/estimate/watthours/"+str(self.latitude)+"/"+str(self.longitude)+"/45/5/5.5"
+        """
+        url = "https://api.forecast.solar/estimate/watthours/"+str(self.latitude)+"/"
+                +str(self.longitude)+"/45/5/5.5"
         resp = get(url)
+        
         print (resp.text)
         json_object = json.loads(resp.text)
         data = json_object["result"]
@@ -317,107 +379,150 @@ class Meteo:
             if (day != last_day): # or (last_hour < hour-1):
                 if last_day == -1:
                     for h in range(last_hour+1, hour):
-                        time_h = dt.datetime(datetime_obj.year, datetime_obj.month, datetime_obj.day, h,0,0 )
+                        time_h = dt.datetime(datetime_obj.year, datetime_obj.month, 
+                        datetime_obj.day, h,0,0 )
                         time_utc = dt.datetime.timestamp(time_h) - 3600
-                        df_db.loc[df_db.shape[0]] = [str(int(time_utc)), time_h.strftime("%Y-%m-%d %H:%M"), 'pv', 0]
+                        df_db.loc[df_db.shape[0]] = [str(int(time_utc)), 
+                        time_h.strftime("%Y-%m-%d %H:%M"), 'pv', 0]
                 else:
                     for h in range(last_hour + 1, 24):
-                        time_h = dt.datetime(last_datetime_obj.year,last_datetime_obj.month,last_datetime_obj.day,h,0,0)
+                        time_h = dt.datetime(last_datetime_obj.year,last_datetime_obj.month,
+                        last_datetime_obj.day,h,0,0)
                         time_utc = dt.datetime.timestamp(time_h) - 3600
-                        df_db.loc[df_db.shape[0]] = [str(int(time_utc)), time_h.strftime("%Y-%m-%d %H:%M"), 'pv', 0]
+                        df_db.loc[df_db.shape[0]] = [str(int(time_utc)), 
+                        time_h.strftime("%Y-%m-%d %H:%M"), 'pv', 0]
                     for h in range(0, hour):
-                        time_h = dt.datetime(datetime_obj.year, datetime_obj.month, datetime_obj.day, h, 0, 0)
+                        time_h = dt.datetime(datetime_obj.year, datetime_obj.month, 
+                        datetime_obj.day, h, 0, 0)
                         time_utc = dt.datetime.timestamp(time_h) - 3600
-                        df_db.loc[df_db.shape[0]] = [str(int(time_utc)), time_h.strftime("%Y-%m-%d %H:%M"), 'pv', 0]
+                        df_db.loc[df_db.shape[0]] = [str(int(time_utc)), 
+                        time_h.strftime("%Y-%m-%d %H:%M"), 'pv', 0]
                     last_value = 0
-            time_h = dt.datetime(datetime_obj.year, datetime_obj.month, datetime_obj.day, hour, 0, 0)
+            time_h = dt.datetime(datetime_obj.year, datetime_obj.month, d
+            atetime_obj.day, hour, 0, 0)
             time_utc = dt.datetime.timestamp(time_h) -3600
-            df_db.loc[df_db.shape[0]] = [str(int(time_utc)), time_h.strftime("%Y-%m-%d %H:%M"), 'pv', pv_w - last_value]
+            df_db.loc[df_db.shape[0]] = [str(int(time_utc)), time_h.strftime("%Y-%m-%d %H:%M"), 
+            'pv', pv_w - last_value]
             last_hour = hour
             last_value = pv_w
             last_day = day
             last_datetime_obj = datetime_obj
         for h in range(last_hour + 1, 24):
-            time_h = dt.datetime(last_datetime_obj.year, last_datetime_obj.month, last_datetime_obj.day, h, 0, 0)
+            time_h = dt.datetime(last_datetime_obj.year, last_datetime_obj.month, 
+            last_datetime_obj.day, h, 0, 0)
             time_utc = dt.datetime.timestamp(time_h) - 3600
-            df_db.loc[df_db.shape[0]] = [str(int(time_utc)), time_h.strftime("%Y-%m-%d %H:%M"), 'pv', 0]
+            df_db.loc[df_db.shape[0]] = [str(int(time_utc)), 
+            time_h.strftime("%Y-%m-%d %H:%M"), 'pv', 0]
 
         print(df_db)
 
-        graphs.make_graph_meteo(df_db, file = "../data/images/meteo" + datetime.datetime.now().strftime("%H%M") + 
+        graphs.make_graph_meteo(df_db, file = "../data/images/meteo" + 
+                                              datetime.datetime.now().strftime("%H%M") + 
                                              ".png", show=show_graph)
                                
         del df_db["time_str"]
         print(df_db)
         self.db_da.savedata(df_db)
-        '''
+        """
 
-    def calc_graaddagen(self, date: datetime.datetime = None, weighted: bool = False) -> float:
+    def get_avg_temperature(self, date: datetime.datetime = None) -> float:
         """
         Berekent gewogen met temperatuur grens van 16 oC
         :param date: de datum waarvoor de berekening wordt gevraagd
         als None: vandaag
-        :param weighted : boolean, berekenen met (true) of zonder (false) weegfactor
         :return: berekende gewogen graaddagen
         """
         if date is None:
-            date = datetime.datetime.combine(datetime.datetime.today(), datetime.datetime.min.time())
+            date = datetime.datetime.combine(
+                datetime.datetime.today(), datetime.datetime.min.time()
+            )
         date_utc = int(date.timestamp())
 
         # Reflect existing tables from the database
-        values_table = Table('values', self.db_da.metadata, autoload_with=self.db_da.engine)
-        variabel_table = Table('variabel', self.db_da.metadata, autoload_with=self.db_da.engine)
+        values_table = Table(
+            "values", self.db_da.metadata, autoload_with=self.db_da.engine
+        )
+        variabel_table = Table(
+            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
+        )
 
         # Construct the inner query
-        inner_query = select(
-            values_table.c.time,
-            values_table.c.value,
-            self.db_da.from_unixtime(values_table.c.time).label('begin')
-        ).where(
-            and_(
-                variabel_table.c.code == 'temp',
-                values_table.c.variabel == variabel_table.c.id,
-                values_table.c.time >= date_utc
+        inner_query = (
+            select(
+                values_table.c.time,
+                values_table.c.value,
+                self.db_da.from_unixtime(values_table.c.time).label("begin"),
             )
-        ).order_by(
-            values_table.c.time.asc()
-        ).limit(24).alias('t1')
+            .where(
+                and_(
+                    variabel_table.c.code == "temp",
+                    values_table.c.variabel == variabel_table.c.id,
+                    values_table.c.time >= date_utc,
+                )
+            )
+            .order_by(values_table.c.time.asc())
+            .limit(24)
+            .alias("t1")
+        )
 
         # Construct the outer query
-        outer_query = select(
-            func.avg(inner_query.c.value).label('avg_temp')
-        )
+        outer_query = select(func.avg(inner_query.c.value).label("avg_temp"))
 
         # Execute the query and fetch the result
         with self.db_da.engine.connect() as connection:
             result = connection.execute(outer_query)
             avg_temp = result.scalar()
-        '''
+        """
         sql_avg_temp = (
             "SELECT AVG(t1.`value`) avg_temp FROM "
             "(SELECT `time`, `value`,  from_unixtime(`time`) 'begin' "
             "FROM `values` , `variabel` "
-            "WHERE `variabel`.`code` = 'temp' AND `values`.`variabel` = `variabel`.`id` AND time >= " +
-            str(date_utc) + " "
+            "WHERE `variabel`.`code` = 'temp' 
+                AND `values`.`variabel` = `variabel`.`id` 
+                AND time >= " + str(date_utc) + " "
             "ORDER BY `time` ASC LIMIT 24) t1 "
         )
         data = self.db_da.run_select_query(sql_avg_temp)
         avg_temp = float(data['avg_temp'].values[0])
-        '''
+        """
+        return avg_temp
+
+    def calc_graaddagen(
+        self,
+        date: datetime.datetime = None,
+        avg_temp: float | None = None,
+        weighted: bool = False,
+    ) -> float:
+        """
+        Berekent graaddagen met temperatuur grens van 16 oC
+        :param date: de datum waarvoor de berekening wordt gevraagd
+                    als None: vandaag
+        :param avg_temp: de gemiddelde temperatuur, default None
+        :param weighted: boolean, gewogen als true, default false
+        :return: berekende eventueel gewogen graaddagen
+        """
+        if date is None:
+            date = datetime.datetime.combine(
+                datetime.datetime.today(), datetime.datetime.min.time()
+            )
+        if avg_temp is None:
+            avg_temp = self.get_avg_temperature(date)
         weight_factor = 1
         if weighted:
             mon = date.month
             if mon <= 2 or mon >= 11:
                 weight_factor = 1.1
-            elif mon >= 4 or mon <= 9:
-                weight_factor = 0.9
+            elif 4 <= mon <= 9:
+                weight_factor = 0.8
         if avg_temp >= 16:
             result = 0
         else:
             result = weight_factor * (16 - avg_temp)
         return result
 
-    def calc_solar_rad(self, solar_opt: dict, utc_time: int, global_rad: float) -> float:
+    def calc_solar_rad(
+        self, solar_opt: dict, utc_time: int, global_rad: float
+    ) -> float:
         """
         :param solar_opt: definitie van paneel met
             tilt: helling t.o.v. plat vlak in graden, 0 = vlak (horizontaal), 90 = verticaal

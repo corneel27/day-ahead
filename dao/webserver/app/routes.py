@@ -1,4 +1,7 @@
 import datetime
+
+from sqlalchemy.sql.coercions import expect_col_expression_collection
+
 from dao.webserver.app import app
 from flask import render_template, request
 import fnmatch
@@ -16,11 +19,14 @@ images_folder = os.path.join(web_datapath, 'images')
 try:
     config = Config(app_datapath + "options.json")
 except ValueError as ex:
+    logging.error(app_datapath)
+    logging.error(ex)
     config = None
 
 logname = "dashboard.log"
 handler = TimedRotatingFileHandler("../data/log/" + logname, when="midnight",
-                                   backupCount=1 if config is None else config.get(["history", "save days"]))
+                                   backupCount=1 if config is None else
+                                   config.get(["history", "save days"]))
 handler.suffix = "%Y%m%d"
 handler.setLevel(logging.INFO)
 logging.basicConfig(level=logging.DEBUG, handlers=[handler],
@@ -195,8 +201,11 @@ def home():
 
     return render_template('home.html', title='Optimization', active_menu="home",
                            subjects=subjects, views=views,
-                           active_subject=active_subject, active_view=active_view, image=image, tabel=tabel,
-                           active_time=active_time, version=__version__)
+                           active_subject=active_subject,
+                           active_view=active_view,
+                           image=image, tabel=tabel,
+                           active_time=active_time,
+                           version=__version__)
 
 
 @app.route('/run', methods=['POST', 'GET'])
@@ -242,14 +251,16 @@ def run_process():
                     break
 
     return render_template('run.html', title='Run', active_menu="run",
-                           bewerkingen=bewerkingen, bewerking=bewerking, current_bewerking=current_bewerking,
+                           bewerkingen=bewerkingen, bewerking=bewerking,
+                           current_bewerking=current_bewerking,
                            parameters=parameters,
-                           log_content=log_content, version=__version__)
+                           log_content=log_content,
+                           version=__version__)
 
 
 @app.route('/reports', methods=['POST', 'GET'])
 def reports():
-    report = dao.prog.da_report.Report()
+    report = dao.prog.da_report.Report(app_datapath+"/options.json")
     subjects = ["grid", "balans"]
     active_subject = "grid"
     views = ["grafiek", "tabel"]
@@ -275,7 +286,9 @@ def reports():
         if "met_prognose" in lst:
             met_prognose = lst["met_prognose"][0]
     tot = None
-    if (active_period == "vandaag" or active_period == "deze week" or active_period == "deze maand" or
+    if (active_period == "vandaag" or
+            active_period == "deze week" or
+            active_period == "deze maand" or
             active_period == "dit contractjaar"):
         if not met_prognose:
             now = datetime.datetime.now()
@@ -291,18 +304,22 @@ def reports():
         filtered_df = report.calc_balance_columns(report_df, active_interval, active_view)
     filtered_df.round(3)
     if active_view == "tabel":
-        report_data = [filtered_df.to_html(index=False, justify="right", decimal=",", classes="data", border=0,
+        report_data = [filtered_df.to_html(index=False, justify="right", decimal=",",
+                                           classes="data", border=0,
                                            float_format='{:.3f}'.format)]
     else:
         if active_subject == "grid":
             report_data = report.make_graph(filtered_df, active_period)
         else:
-            report_data = report.make_graph(filtered_df, active_period, report.balance_graph_options)
+            report_data = report.make_graph(filtered_df, active_period,
+                                            report.balance_graph_options)
 
     return render_template('report.html', title='Rapportage', active_menu="reports",
                            subjects=subjects, views=views, periode_options=periode_options,
                            active_period=active_period, met_prognose=met_prognose,
-                           active_subject=active_subject, active_view=active_view, report_data=report_data,
+                           active_subject=active_subject,
+                           active_view=active_view,
+                           report_data=report_data,
                            version=__version__)
 
 
@@ -378,15 +395,28 @@ def api_report(fld: str, periode: str):
     :return: de gevraagde data in json formaat
     """
     cumulate = request.args.get('cumulate')
-    report = dao.prog.da_report.Report()
+    expected = request.args.get('expected')
+    report = dao.prog.da_report.Report(app_datapath+"/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
-    try:
-        cumulate = int(cumulate)
-        cumulate = cumulate == 1
-    except Exception:
+    if cumulate is None:
         cumulate = False
-    result = report.get_api_data(fld, periode, cumulate=cumulate)
+    else:
+        try:
+            cumulate = int(cumulate)
+            cumulate = cumulate == 1
+        except ValueError:
+            cumulate = False
+
+    if expected is None:
+        expected = False
+    else:
+        try:
+            expected = int(expected)
+            expected = expected == 1
+        except ValueError:
+            expected = False
+    result = report.get_api_data(fld, periode, cumulate=cumulate, expected=expected)
     return result
 
 

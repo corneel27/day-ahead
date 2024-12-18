@@ -50,7 +50,8 @@
       </select>
       {% if active_period == "vandaag" or active_period == "deze week" or active_period == "deze maand" or
         active_period == "dit contractjaar" %}
-        <input type="checkbox" id="id_met_prognose" name="met_prognose" onchange="this.form.submit()"
+        <input type="checkbox" id="id_met_prognose"
+               name="met_prognose" onchange="this.form.submit()"
                {{ 'checked' if met_prognose else '' }} />
         <label for="id_met_prognose">Met prognose </label>
       {% endif %}

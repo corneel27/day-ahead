@@ -1,8 +1,3 @@
-"""
-Het programma Day Ahead Optimalisatie kun je je energieverbruik en energiekosten optimaliseren als je gebruik maakt
-van dynamische prijzen.
-Zie verder: DOCS.md
-"""
 import datetime
 import sys
 import os
@@ -22,6 +17,8 @@ from da_config import Config
 from da_meteo import Meteo
 from da_prices import DaPrices
 from db_manager import DBmanagerObj
+from typing import Union
+from hassapi.models import StateList
 
 
 class NotificationHandler(Handler):
@@ -45,38 +42,51 @@ class DaBase(hass.Hass):
     def __init__(self, file_name: str = None):
         self.file_name = file_name
         path = os.getcwd()
-        new_path = "/".join(list(path.split('/')[0:-2]))
-        if not new_path in sys.path:
+        new_path = "/".join(list(path.split("/")[0:-2]))
+        if new_path not in sys.path:
             sys.path.append(new_path)
         self.make_data_path()
         self.debug = False
-        self.generate_tasks()
+        self.tasks = self.generate_tasks()
         self.log_level = logging.INFO
         self.notification_entity = None
         try:
             self.config = Config(self.file_name)
-        except ValueError as ex:
+        except ValueError:
             self.config = None
             return
         log_level_str = self.config.get(["logging level"], None, "info")
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
-            raise ValueError('Invalid log level: %s' % _log_level)
+            raise ValueError("Invalid log level: %s" % _log_level)
         self.log_level = _log_level
-        logging.addLevelName(logging.DEBUG, 'debug')
-        logging.addLevelName(logging.INFO, 'info')
-        logging.addLevelName(logging.WARNING, 'waarschuwing')
-        logging.addLevelName(logging.ERROR, 'fout')
-        logging.addLevelName(logging.CRITICAL, 'kritiek')
+        logging.addLevelName(logging.DEBUG, "debug")
+        logging.addLevelName(logging.INFO, "info")
+        logging.addLevelName(logging.WARNING, "waarschuwing")
+        logging.addLevelName(logging.ERROR, "fout")
+        logging.addLevelName(logging.CRITICAL, "kritiek")
         logging.getLogger().setLevel(self.log_level)
-        self.protocol_api = self.config.get(['homeassistant', 'protocol api'], default="http")
-        self.ip_address = self.config.get(['homeassistant', 'ip adress'], default="supervisor")
-        self.ip_port = self.config.get(['homeassistant', 'ip port'], default=None)
+        self.protocol_api = self.config.get(
+            ["homeassistant", "protocol api"], default="http"
+        )
+        self.ip_address = self.config.get(
+            ["homeassistant", "ip adress"], default="supervisor"
+        )
+        self.ip_port = self.config.get(["homeassistant", "ip port"], default=None)
         if self.ip_port is None:
             self.hassurl = self.protocol_api + "://" + self.ip_address + "/core/"
         else:
-            self.hassurl = self.protocol_api + "://" + self.ip_address + ":" + str(self.ip_port) + "/"
-        self.hasstoken = self.config.get(['homeassistant', 'token'], default=os.environ.get("SUPERVISOR_TOKEN"))
+            self.hassurl = (
+                self.protocol_api
+                + "://"
+                + self.ip_address
+                + ":"
+                + str(self.ip_port)
+                + "/"
+            )
+        self.hasstoken = self.config.get(
+            ["homeassistant", "token"], default=os.environ.get("SUPERVISOR_TOKEN")
+        )
         super().__init__(hassurl=self.hassurl, token=self.hasstoken)
         headers = {
             "Authorization": "Bearer " + self.hasstoken,
@@ -85,36 +95,11 @@ class DaBase(hass.Hass):
         resp = get(self.hassurl + "api/config", headers=headers)
         resp_dict = json.loads(resp.text)
         # logging.debug(f"hass/api/config: {resp.text}")
-        self.config.set("latitude", resp_dict['latitude'])
-        self.config.set("longitude", resp_dict['longitude'])
-        self.config.set("time_zone", resp_dict['time_zone'])
-        db_da_engine = self.config.get(['database da', "engine"], None, "mysql")
-        db_da_server = self.config.get(['database da', "server"], None, "core-mariadb")
-        db_da_port = int(self.config.get(['database da', "port"], None, 0))
-        if db_da_engine == "sqlite":
-            db_da_name = self.config.get(['database da', "database"], None, "day_ahead.db")
-        else:
-            db_da_name = self.config.get(['database da', "database"], None, "day_ahead")
-        db_da_user = self.config.get(['database da', "username"], None, "day_ahead")
-        db_da_password = self.config.get(['database da', "password"])
-        db_da_path = self.config.get(['database da', "db_path"], None, "../data")
-        db_time_zone = self.config.get(["time_zone"])
-        self.db_da = DBmanagerObj(db_dialect=db_da_engine, db_name=db_da_name, db_server=db_da_server,
-                                  db_port=db_da_port, db_user=db_da_user, db_password=db_da_password,
-                                  db_path=db_da_path, db_time_zone=db_time_zone)
-        db_ha_engine = self.config.get(['database ha', "engine"], None, "mysql")
-        db_ha_server = self.config.get(['database ha', "server"], None, "core-mariadb")
-        db_ha_port = int(self.config.get(['database ha', "port"], None, 0))
-        if db_ha_engine == "sqlite":
-            db_ha_name = self.config.get(['database ha', "database"], None, "home_assistant_v2.db")
-        else:
-            db_ha_name = self.config.get(['database ha', "database"], None, "homeassistant")
-        db_ha_user = self.config.get(['database ha', "username"], None, "day_ahead")
-        db_ha_password = self.config.get(['database ha', "password"])
-        db_ha_path = self.config.get(['database ha', "db_path"], None, "/homeassistant")
-        self.db_ha = DBmanagerObj(db_dialect=db_ha_engine, db_name=db_ha_name, db_server=db_ha_server,
-                                  db_port=db_ha_port, db_user=db_ha_user, db_password=db_ha_password,
-                                  db_path=db_ha_path, db_time_zone=db_time_zone)
+        self.config.set("latitude", resp_dict["latitude"])
+        self.config.set("longitude", resp_dict["longitude"])
+        self.config.set("time_zone", resp_dict["time_zone"])
+        self.db_da = self.config.get_db_da()
+        self.db_ha = self.config.get_db_ha()
         self.meteo = Meteo(self.config, self.db_da)
         self.solar = self.config.get(["solar"])
 
@@ -124,99 +109,119 @@ class DaBase(hass.Hass):
 
         self.strategy = self.config.get(["strategy"])
         self.tibber_options = self.config.get(["tibber"], None, None)
-        self.notification_entity = self.config.get(["notifications", "notification entity"], None, None)
-        self.notification_opstarten = self.config.get(["notifications", "opstarten"], None, False)
-        if type(self.notification_opstarten) is str and self.notification_opstarten.lower() == "true":
+        self.notification_entity = self.config.get(
+            ["notifications", "notification entity"], None, None
+        )
+        self.notification_opstarten = self.config.get(
+            ["notifications", "opstarten"], None, False
+        )
+        if (
+            type(self.notification_opstarten) is str
+            and self.notification_opstarten.lower() == "true"
+        ):
             self.notification_opstarten = True
         else:
             self.notification_opstarten = False
-        self.notification_berekening = self.config.get(["notifications", "berekening"], None, False)
-        if type(self.notification_berekening) is str and self.notification_berekening.lower() == "true":
+        self.notification_berekening = self.config.get(
+            ["notifications", "berekening"], None, False
+        )
+        if (
+            type(self.notification_berekening) is str
+            and self.notification_berekening.lower() == "true"
+        ):
             self.notification_berekening = True
         else:
             self.notification_berekening = False
-        self.last_activity_entity = self.config.get(["notifications", "last activity entity"], None, None)
+        self.last_activity_entity = self.config.get(
+            ["notifications", "last activity entity"], None, None
+        )
         self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.db_da.log_pool_status()
 
-    def generate_tasks(self):
-        self.tasks = {
+    def set_value(self, entity_id: str, value: Union[int, float, str]) -> StateList:
+        try:
+            result = super().set_value(entity_id, value)
+            state = self.get_state(entity_id).state
+            if isinstance(value, (int, float)):
+                if round(float(state), 5) != round(float(value), 5):
+                    raise ValueError
+            else:
+                if state != value:
+                    raise ValueError
+        except Exception:
+            logging.error(f"Fout bij schrijven naar {entity_id}, waarde {value}")
+            # error_handling(ex)
+            raise
+        return result
+
+    @staticmethod
+    def generate_tasks():
+        tasks = {
             "calc_optimum_met_debug": {
                 "name": "Optimaliseringsberekening met debug",
-                "cmd": [
-                    "python3",
-                    "../prog/day_ahead.py",
-                    "debug",
-                    "calc"],
+                "cmd": ["python3", "../prog/day_ahead.py", "debug", "calc"],
                 "object": "DaCalc",
                 "function": "calc_optimum_met_debug",
-                "file_name": "calc_debug"},
+                "file_name": "calc_debug",
+            },
             "calc_optimum": {
                 "name": "Optimaliseringsberekening zonder debug",
-                "cmd": [
-                    "python3",
-                    "../prog/day_ahead.py",
-                    "calc"],
+                "cmd": ["python3", "../prog/day_ahead.py", "calc"],
                 "function": "calc_optimum",
-                "file_name": "calc"},
+                "file_name": "calc",
+            },
             "tibber": {
                 "name": "Verbruiksgegevens bij Tibber ophalen",
-                "cmd": [
-                    "python3",
-                    "../prog/day_ahead.py",
-                    "tibber"],
+                "cmd": ["python3", "../prog/day_ahead.py", "tibber"],
                 "function": "get_tibber_data",
-                "file_name": "tibber"},
+                "file_name": "tibber",
+            },
             "meteo": {
                 "name": "Meteoprognoses ophalen",
-                "cmd": [
-                    "python3",
-                    "day_ahead.py",
-                    "meteo"],
+                "cmd": ["python3", "day_ahead.py", "meteo"],
                 "function": "get_meteo_data",
-                "file_name": "meteo"},
+                "file_name": "meteo",
+            },
             "prices": {
                 "name": "Day ahead prijzen ophalen",
-                "cmd": [
-                    "python3",
-                    "../prog/day_ahead.py",
-                    "prices"],
+                "cmd": ["python3", "../prog/day_ahead.py", "prices"],
                 "function": "get_day_ahead_prices",
-                "file_name": "prices"},
+                "file_name": "prices",
+            },
             "calc_baseloads": {
                 "name": "Bereken de baseloads",
-                "cmd": [
-                    "python3",
-                    "../prog/day_ahead.py",
-                    "calc_baseloads"],
+                "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],
                 "function": "calc_baseloads",
-                "file_name": "baseloads"},
+                "file_name": "baseloads",
+            },
             "clean": {
                 "name": "Bestanden opschonen",
-                "cmd": [
-                    "python3",
-                    "../prog/day_ahead.py",
-                    "clean_data"],
+                "cmd": ["python3", "../prog/day_ahead.py", "clean_data"],
                 "function": "clean_data",
-                "file_name": "clean"},
+                "file_name": "clean",
+            },
             "consolidate": {
                 "name": "Verbruik/productie consolideren",
-                "cmd": [
-                    "python3",
-                    "../prog/day_ahead.py",
-                    "consolidate"],
+                "cmd": ["python3", "../prog/day_ahead.py", "consolidate"],
                 "function": "consolidate_data",
-                "file_name": "consolidate"}
+                "file_name": "consolidate",
+            },
         }
+        return tasks
 
     def start_logging(self):
         logging.debug(f"python pad:{sys.path}")
         logging.info(f"Day Ahead Optimalisering versie: {__version__}")
-        logging.info(f"Day Ahead Optimalisering gestart op: {datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}")
+        logging.info(
+            f"Day Ahead Optimalisering gestart op: "
+            f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
+        )
         if self.config is not None:
-            logging.debug(f"Locatie: latitude {str(self.config.get(['latitude']))} "
-                          f"longitude: {str(self.config.get(['longitude']))}")
+            logging.debug(
+                f"Locatie: latitude {str(self.config.get(['latitude']))} "
+                f"longitude: {str(self.config.get(['longitude']))}"
+            )
 
     @staticmethod
     def make_data_path():
@@ -227,8 +232,11 @@ class DaBase(hass.Hass):
 
     def set_last_activity(self):
         if self.last_activity_entity is not None:
-            self.call_service("set_datetime", entity_id=self.last_activity_entity,
-                              datetime=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            self.call_service(
+                "set_datetime",
+                entity_id=self.last_activity_entity,
+                datetime=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            )
 
     def get_meteo_data(self, show_graph: bool = False):
         self.meteo.get_meteo_data(show_graph)
@@ -240,6 +248,7 @@ class DaBase(hass.Hass):
     @staticmethod
     def consolidate_data():
         from da_report import Report
+
         report = Report()
         start_dt = None
         if len(sys.argv) > 2:
@@ -253,7 +262,9 @@ class DaBase(hass.Hass):
         report.consolidate_data(start_dt)
 
     def get_day_ahead_prices(self):
-        self.prices.get_prices(self.config.get(["source day ahead"], self.prices_options, "nordpool"))
+        self.prices.get_prices(
+            self.config.get(["source day ahead"], self.prices_options, "nordpool")
+        )
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """
@@ -263,7 +274,7 @@ class DaBase(hass.Hass):
         :param df: het dataframe met de code van de variabelen in de kolomheader
         :return: None
         """
-        df_db = pd.DataFrame(columns=['time', 'code', 'value'])
+        df_db = pd.DataFrame(columns=["time", "code", "value"])
         df = df.reset_index(drop=True)
         columns = df.columns.values.tolist()[1:]
         for index in range(len(tijd)):
@@ -271,7 +282,7 @@ class DaBase(hass.Hass):
             for c in columns:
                 db_row = [str(utc), c, float(df.loc[index, c])]
                 df_db.loc[df_db.shape[0]] = db_row
-        logging.debug('Save calculated data:\n{}'.format(df_db.to_string()))
+        logging.debug("Save calculated data:\n{}".format(df_db.to_string()))
         self.db_da.savedata(df_db, tablename=tablename)
         return
 
@@ -283,17 +294,17 @@ class DaBase(hass.Hass):
         :return: een lijst van eerder berekende baseload van 24uurvoor de betreffende dag
         """
         in_file = "../data/baseload/baseload_" + str(weekday) + ".json"
-        with open(in_file, 'r') as f:
+        with open(in_file, "r") as f:
             result = json.load(f)
         return result
 
     def calc_da_avg(self) -> float:
         """
-        calculates the average of the last 24 hour values of the day ahead prices
+        calculates the average of the last '24' hour values of the day ahead prices
         :return: the calculated average
         """
         # old sql query
-        '''
+        """
         sql_avg = (
         "SELECT AVG(t1.`value`) avg_da FROM "
         "(SELECT `time`, `value`,  from_unixtime(`time`) 'begin' "
@@ -301,30 +312,37 @@ class DaBase(hass.Hass):
         "WHERE `variabel`.`code` = 'da' AND `values`.`variabel` = `variabel`.`id` "
         "ORDER BY `time` desc LIMIT 24) t1 "
         )
-        '''
+        """
         # Reflect existing tables from the database
-        values_table = Table('values', self.db_da.metadata, autoload_with=self.db_da.engine)
-        variabel_table = Table('variabel', self.db_da.metadata, autoload_with=self.db_da.engine)
+        values_table = Table(
+            "values", self.db_da.metadata, autoload_with=self.db_da.engine
+        )
+        variabel_table = Table(
+            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
+        )
 
         # Construct the inner query
-        inner_query = select(
-            values_table.c.time,
-            values_table.c.value,
-            self.db_da.from_unixtime(values_table.c.time).label('begin')
-        ).where(
-            and_(
-                variabel_table.c.code == 'da',
-                values_table.c.variabel == variabel_table.c.id,
+        inner_query = (
+            select(
+                values_table.c.time,
+                values_table.c.value,
+                self.db_da.from_unixtime(values_table.c.time).label("begin"),
             )
-        ).order_by(
-            values_table.c.time.desc()
-        ).limit(24).alias('t1')
+            .where(
+                and_(
+                    variabel_table.c.code == "da",
+                    values_table.c.variabel == variabel_table.c.id,
+                )
+            )
+            .order_by(values_table.c.time.desc())
+            .limit(24)
+            .alias("t1")
+        )
 
         # Construct the outer query
-        outer_query = select(
-            func.avg(inner_query.c.value).label('avg_da')
-        )
-        from sqlalchemy.dialects import mysql, postgresql
+        outer_query = select(func.avg(inner_query.c.value).label("avg_da"))
+        from sqlalchemy.dialects import mysql  # , postgresql
+
         query_str = str(inner_query.compile(dialect=mysql.dialect()))
         logging.debug(f"inner query p_avg: {query_str}")
         query_str = str(outer_query.compile(dialect=mysql.dialect()))
@@ -335,17 +353,23 @@ class DaBase(hass.Hass):
             result = connection.execute(outer_query)
             return result.scalar()
 
-    def set_entity_value(self, entity_key: str, options: dict, value: int | float| str):
+    def set_entity_value(
+        self, entity_key: str, options: dict, value: int | float | str
+    ):
         entity_id = self.config.get([entity_key], options, None)
         if entity_id is not None:
             self.set_value(entity_id, value)
 
-    def set_entity_option(self, entity_key: str, options: dict, value: int | float| str):
+    def set_entity_option(
+        self, entity_key: str, options: dict, value: int | float | str
+    ):
         entity_id = self.config.get([entity_key], options, None)
         if entity_id is not None:
             self.select_option(entity_id, value)
 
-    def set_entity_state(self, entity_key: str, options: dict, value: int | float| str):
+    def set_entity_state(
+        self, entity_key: str, options: dict, value: int | float | str
+    ):
         entity_id = self.config.get([entity_key], options, None)
         if entity_id is not None:
             self.set_state(entity_id, value)
@@ -354,6 +378,7 @@ class DaBase(hass.Hass):
         """
         takes care for cleaning folders data/log and data/images
         """
+
         def clean_folder(folder: str, pattern: str):
             current_time = time.time()
             day = 24 * 60 * 60
@@ -364,22 +389,27 @@ class DaBase(hass.Hass):
             for f in list_files:
                 if fnmatch.fnmatch(f, pattern):
                     creation_time = os.path.getctime(f)
-                    if (current_time - creation_time) >= self.config.get(["save days"], self.history_options, 7) * day:
+                    if (current_time - creation_time) >= self.config.get(
+                        ["save days"], self.history_options, 7
+                    ) * day:
                         os.remove(f)
                         logging.info(f"{f} removed")
             os.chdir(current_dir)
+
         clean_folder("../data/log", "*.log")
         clean_folder("../data/log", "dashboard.log.*")
         clean_folder("../data/images", "*.png")
 
     def calc_optimum_met_debug(self):
         from day_ahead import DaCalc
+
         dacalc = DaCalc(self.file_name)
         dacalc.debug = True
         dacalc.calc_optimum()
 
     def calc_optimum(self):
         from day_ahead import DaCalc
+
         dacalc = DaCalc(self.file_name)
         dacalc.debug = False
         dacalc.calc_optimum()
@@ -387,6 +417,7 @@ class DaBase(hass.Hass):
     @staticmethod
     def calc_baseloads():
         from da_report import Report
+
         report = Report()
         report.calc_save_baseloads()
 
@@ -400,17 +431,26 @@ class DaBase(hass.Hass):
         run_task = self.tasks[task]
         file_handler = None
         stream_handler = None
-        logging.basicConfig(level=self.log_level,
-                            format='%(asctime)s %(levelname)s: %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
+        logging.basicConfig(
+            level=self.log_level,
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
         logger = logging.getLogger()
-        formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        formatter = logging.Formatter(
+            "%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
         if logfile:
             # old_stdout = sys.stdout
             for handler in logger.handlers[:]:  # make a copy of the list
                 logger.removeHandler(handler)
-            file_name = ("../data/log/" + run_task["file_name"] + "_" +
-                         datetime.datetime.now().strftime("%Y-%m-%d__%H:%M") + ".log")
+            file_name = (
+                "../data/log/"
+                + run_task["file_name"]
+                + "_"
+                + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M")
+                + ".log"
+            )
 
             file_handler = logging.FileHandler(file_name)
             file_handler.setLevel(self.log_level)
@@ -426,8 +466,11 @@ class DaBase(hass.Hass):
             logger.addHandler(notification_handler)
         self.start_logging()
         try:
-            logging.info(f"Day Ahead Optimalisatie gestart: "
-                         f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')} taak: {run_task['function']}")
+            logging.info(
+                f"Day Ahead Optimalisatie gestart: "
+                f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')} "
+                f"taak: {run_task['function']}"
+            )
             self.db_da.log_pool_status()
             getattr(self, run_task["function"])()
             self.set_last_activity()
@@ -449,12 +492,17 @@ class DaBase(hass.Hass):
         data = proc.stdout.decode()
         err = proc.stderr.decode()
         log_content = data + err
-        filename = ("../data/log/" + run_task["file_name"] + "_" +
-                    datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S") + ".log")
+        filename = (
+            "../data/log/"
+            + run_task["file_name"]
+            + "_"
+            + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
+            + ".log"
+        )
         with open(filename, "w") as f:
             f.write(log_content)
 
-        '''
+        """
         # klass = globals()["class_name"]
         # instance = klass()
 
@@ -469,7 +517,8 @@ class DaBase(hass.Hass):
         # sys.stdout = log_file
         try:
             logging.info(f"Day Ahead Optimalisatie gestart: "
-                         f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')} taak: {run_task['task']}")
+                         f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')} "
+                         f" taak: {run_task['task']}")
             getattr(self, run_task["task"])()
             self.set_last_activity()
         except Exception as ex:
@@ -478,4 +527,4 @@ class DaBase(hass.Hass):
         # log_file.flush()
         # sys.stdout = old_stdout
         # log_file.close()
-        '''
+        """
