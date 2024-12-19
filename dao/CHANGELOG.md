@@ -1,7 +1,6 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
-
 # [V2024.12.0] 
 # LET OP
 De energiebelasting wijzigt per 1 januari 2025.<br>
