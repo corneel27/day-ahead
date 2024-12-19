@@ -40,6 +40,7 @@ if [ -d "$dir" ]; then
   export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
 fi
 
+export PYTHONPATH="/root:/root/dao:/root/dao/prog"
 cd /root/dao/prog
 python3 check_db.py
 

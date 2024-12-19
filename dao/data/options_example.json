@@ -19,12 +19,14 @@
     "energy taxes delivery": {
       "2022-01-01": 0.06729,
       "2023-01-01": 0.12599,
-      "2024-01-01": 0.10880
+      "2024-01-01": 0.10880,
+      "2025-01-01": 0.10154
     },
     "energy taxes redelivery": {
       "2022-01-01": 0.06729,
       "2023-01-01": 0.12599,
-      "2024-01-01": 0.10880
+      "2024-01-01": 0.10880,
+      "2025-01-01": 0.10154
     },
     "cost supplier delivery": {
       "2022-01-01": 0.002,
@@ -43,7 +45,7 @@
       "2022-07-01": 9,
       "2023-01-01": 21
     },
-    "last invoice": "2022-09-01",
+    "last invoice": "2024-09-01",
     "tax refund": "True"
   },
   "logging level" : "info",
@@ -115,7 +117,10 @@
   },
   "heating": {
     "heater present": "True",
+    "entity hp enabled": "binary_sensor.heatpump_heating",
     "degree days factor": 3.6,
+    "adjustment" : "power",
+    "//adjustment" : "on/off | power | heating curve",
     "stages": [
       {
         "max_power": 225,
