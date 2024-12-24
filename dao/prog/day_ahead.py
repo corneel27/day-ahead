@@ -1925,7 +1925,7 @@ class DaCalc(DaBase):
                 c_l[u] * pl[u] - c_t_w_tax[u] * pt[u] - c_t_no_tax[u] * pt_notax[u]
                 for u in range(U)
             )
-            + xsum(cycle_cost[b] for b in range(b))
+            + xsum(cycle_cost[b] for b in range(B))
             + xsum(
                 (soc[b][0] - soc[b][U])
                 * one_soc[b]
