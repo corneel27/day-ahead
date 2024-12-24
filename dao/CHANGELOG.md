@@ -1,7 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
 # [V2024.12.1] 
-Fixed error: cycle costs (last) battery were not taken into account 
+Fixed error: cycle costs (last) battery were not taken into account
 
 # [V2024.12.0] 
 # LET OP
@@ -54,6 +55,8 @@ by heatpump". This setting can be "True" or "False"
   - calculated power
 - When setting a state of an entity failed then an error message is written in the log 
   (name of the entity, new failed value)
+
+
 
 ## [V2024.11.1]
 - Fixed an error when getting Tibber-data when using a Tibber pulse: 
