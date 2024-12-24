@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# [V2024.12.2] 
+Fixed typo in utils.py
+
 # [V2024.12.1] 
 Fixed error: cycle costs (last) battery were not taken into account
 

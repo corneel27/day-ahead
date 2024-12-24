@@ -210,7 +210,7 @@ def get_tibber_data():
     ]
     tibber_df = pd.DataFrame(columns=["time", "code", "value"])
     for node in production_nodes:
-        timestamp = int(get_datetime_from_str(node["from"]).timestamp()
+        timestamp = int(get_datetime_from_str(node["from"]).timestamp())
         if timestamp < today_ts:
             time_stamp = str(timestamp)
             if not (node["production"] is None):
@@ -223,6 +223,7 @@ def get_tibber_data():
                 value = float(node["profit"])
                 logging.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
+
     for node in consumption_nodes:
         timestamp = int(get_datetime_from_str(node["from"]).timestamp())
         if timestamp < today_ts:
