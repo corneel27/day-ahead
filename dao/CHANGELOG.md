@@ -59,6 +59,8 @@ by heatpump". This setting can be "True" or "False"
 - When setting a state of an entity failed then an error message is written in the log 
   (name of the entity, new failed value)
 
+
+
 ## [V2024.11.1]
 - Fixed an error when getting Tibber-data when using a Tibber pulse: 
 only data before today are stored
