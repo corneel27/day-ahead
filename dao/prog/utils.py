@@ -170,7 +170,7 @@ def get_tibber_data():
     if count < 24:
         logging.info("Er worden geen data opgehaald.")
         return
-      
+
     query = (
         "{ "
         '"query": '
@@ -210,8 +210,7 @@ def get_tibber_data():
     ]
     tibber_df = pd.DataFrame(columns=["time", "code", "value"])
     for node in production_nodes:
-        timestamp = int(get_datetime_from_str(node["from"]).timestamp())
-        timestamp = int(get_datetime_from_str(node['from']).timestamp())
+        timestamp = int(get_datetime_from_str(node["from"]).timestamp()
         if timestamp < today_ts:
             time_stamp = str(timestamp)
             if not (node["production"] is None):
