@@ -327,7 +327,7 @@ def interpol_rows(
     a = delta_y / (delta_x + delta_x_ref.seconds / 60)  # a = value/minuut
     # een andere offset zorgt voor een gelijke integraal
 
-    factor = interval / delta_x if quantity else 1
+    factor = interval * 2 / delta_x if quantity else 1
     for x in new_x:
         if x_ref > x:
             d_x = x_ref - x
@@ -375,13 +375,13 @@ def interpolate(
 
 def tst_interpolate():
     x = [datetime.datetime(year=2024, month=10, day=19, hour=hour) for hour in range(4)]
-    y = [1 + 1 * i * i for i in range(4)]
+    y = [2, 3, 4, 3]
     df_dict = {"tijd": x, "temp": y}
     df_start = pd.DataFrame(df_dict)
     df_start.index = pd.to_datetime(df_start["tijd"])
     print(f"Start: \n {df_start.to_string()}\n")
     interval = 15
-    result_df = interpolate(df_start, "temp", interval, quantity=False)
+    result_df = interpolate(df_start, "temp", interval, quantity=True)
     print(f"\nResultaat: \n{result_df.to_string()}\n")
     # prnt_xy(result["tijd"], result["value"])
 

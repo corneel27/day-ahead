@@ -71,6 +71,8 @@ class DaCalc(DaBase):
         start_hour = int(3600 * math.floor(start_ts / 3600))
         start_interval = int(self.interval_s * math.floor(start_ts / self.interval_s))
         start_interval_dt = datetime.datetime.fromtimestamp(start_interval)
+        # loopt af van 1 (starts_ds == start_interval) naar
+        # 0 (start_interval is bijna bij begin volgend interval)
         fraction_first_interval = 1 - (start_ts - start_interval) / self.interval_s
         prog_data = self.db_da.get_prognose_data(
             start=start_hour, end=None, interval=self.interval
@@ -221,8 +223,6 @@ class DaCalc(DaBase):
                 entity = None
             entity_pv_ac_switch.append(entity)
 
-        time_first_hour = dt.datetime.fromtimestamp(prog_data["time"].iloc[0])
-        first_hour = int(time_first_hour.hour)
         b_l = base_cons[-U:]
         tijd = []
         ts = []
@@ -915,7 +915,9 @@ class DaCalc(DaBase):
                     0,
                     min(
                         self.steps_day - 1,
-                        math.floor((boiler_act_temp - boiler_bovengrens) / boiler_cooling),
+                        math.floor(
+                            (boiler_act_temp - boiler_bovengrens) / boiler_cooling
+                        ),
                     ),
                 )
             )
@@ -926,7 +928,12 @@ class DaCalc(DaBase):
             boiler_end_index = int(
                 min(
                     U,
-                    max(0, math.floor((boiler_act_temp - boiler_ondergrens) / boiler_cooling)),
+                    max(
+                        0,
+                        math.floor(
+                            (boiler_act_temp - boiler_ondergrens) / boiler_cooling
+                        ),
+                    ),
                 )
             )
             boiler_temp = [
@@ -953,7 +960,9 @@ class DaCalc(DaBase):
                 model += xsum(boiler_st[j] for j in range(U)) == 0
                 logging.debug(f"Boiler: er  wordt geen opwarming inpland")
                 boiler_end_temp = boiler_act_temp - boiler_cooling * U
-                logging.debug(f"Boiler eind temperatuur zonder opwarmen: {boiler_end_temp:.2f}")
+                logging.debug(
+                    f"Boiler eind temperatuur zonder opwarmen: {boiler_end_temp:.2f}"
+                )
                 model += boiler_temp[0] == boiler_act_temp
                 for u in range(U):
                     # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
@@ -962,7 +971,7 @@ class DaCalc(DaBase):
                 logging.info(
                     f"Boiler opwarmen wordt ingepland tussen: "
                     f"{tijd[boiler_start_index].strftime('%Y-%m-%d %H:%M')} en "
-                    f"{tijd[min(boiler_end_index,U-1)].strftime('%Y-%m-%d %H:%M')}"
+                    f"{tijd[min(boiler_end_index, U-1)].strftime('%Y-%m-%d %H:%M')}"
                 )
                 est_boiler_temp = [
                     (boiler_act_temp - boiler_cooling * u) for u in range(U)
@@ -998,7 +1007,9 @@ class DaCalc(DaBase):
                     # opstart elektra in kWh
                     start_needed_elec = 0.1
                     # benogde elektra bij opwarmen vanaf interval u in kWh
-                    est_needed_elec[u] = start_needed_elec + est_needed_heat[u] / cop_boiler
+                    est_needed_elec[u] = (
+                        start_needed_elec + est_needed_heat[u] / cop_boiler
+                    )
                     # benodigde aantallen intervallen
                     est_needed_intv[u] = math.ceil(
                         (est_needed_elec[u] * 1000 / power_boiler)
@@ -1008,11 +1019,20 @@ class DaCalc(DaBase):
                     # verdelen van benodigde elektra over de intervallen
                     est_needed_elec_st.append([])
                     for j in range(est_needed_intv[u]):
-                        use = min(est_needed_elec[u]-sum(est_needed_elec_st[u]), cons_interval)
-                        est_elec_cost[u] += use * pl[min(u+j,U-1)]
+                        use = min(
+                            est_needed_elec[u] - sum(est_needed_elec_st[u]),
+                            cons_interval,
+                        )
+                        est_elec_cost[u] += use * pl[min(u + j, U - 1)]
                         est_needed_elec_st[u].append(use)
-                    est_boiler_endtemp[u] = boiler_setpoint - boiler_cooling * (U - u - est_needed_intv[u])
-                    est_boiler_endvalue[u] = (est_boiler_endtemp[u] - boiler_ondergrens) * (spec_heat_boiler / (3600 * cop_boiler)) * p_avg
+                    est_boiler_endtemp[u] = boiler_setpoint - boiler_cooling * (
+                        U - u - est_needed_intv[u]
+                    )
+                    est_boiler_endvalue[u] = (
+                        (est_boiler_endtemp[u] - boiler_ondergrens)
+                        * (spec_heat_boiler / (3600 * cop_boiler))
+                        * p_avg
+                    )
                     est_netto_cost[u] = est_elec_cost[u] - est_boiler_endvalue[u]
                 df_boiler = pd.DataFrame(
                     {
@@ -1024,7 +1044,7 @@ class DaCalc(DaBase):
                         "cost": est_elec_cost,
                         "end_temp": est_boiler_endtemp,
                         "end_value": est_boiler_endvalue,
-                        "netto_cost": est_netto_cost
+                        "netto_cost": est_netto_cost,
                     }
                 )
                 logging.info(f"Prognose boiler:\n{df_boiler.to_string()}\n")
@@ -1037,44 +1057,39 @@ class DaCalc(DaBase):
                     model.add_var(var_type=CONTINUOUS, lb=0, ub=cons_interval)
                     for _ in range(U)
                 ]
-                model += (
-                    xsum(
-                        boiler_st[u]
-                        for u in range(U)
-                    )
-                    == 1
-                )
+                model += xsum(boiler_st[u] for u in range(U)) == 1
                 for u in range(U):
                     if u < boiler_start_index:
                         model += c_b[u] == 0
                         model += boiler_on[u] == 0
                         model += boiler_st[u] == 0
-                    elif u >= boiler_end_index + est_needed_intv[boiler_end_index-1]:
+                    elif u >= boiler_end_index + est_needed_intv[boiler_end_index - 1]:
                         model += c_b[u] == 0
                         model += boiler_on[u] == 0
                     else:
-                        model += (
-                            c_b[u]
-                            == xsum(boiler_st[j] * est_needed_elec_st[j][u-j]
-                                 for j in range(U)[u-est_needed_intv[u]+1:u+1]
-                                    if u - j < len(est_needed_elec_st[j]) )
+                        model += c_b[u] == xsum(
+                            boiler_st[j] * est_needed_elec_st[j][u - j]
+                            for j in range(U)[u - est_needed_intv[u] + 1 : u + 1]
+                            if u - j < len(est_needed_elec_st[j])
                         )
-                        model += (
-                            boiler_on[u]
-                            == xsum(boiler_st[j]
-                                for j in range(U)[max(boiler_start_index, u - est_needed_intv[u] + 1):u + 1]
-                                    if u - j < len(est_needed_elec_st[j]) )
+                        model += boiler_on[u] == xsum(
+                            boiler_st[j]
+                            for j in range(U)[
+                                max(boiler_start_index, u - est_needed_intv[u] + 1) : u
+                                + 1
+                            ]
+                            if u - j < len(est_needed_elec_st[j])
                         )
-                    ''' 
+                    """ 
                     if u < boiler_start_index:
                         model += boiler_on[u] == 0
                     elif u >= (boiler_end_index + est_needed_intv[u]):
                         model += boiler_on[u] == 0
-                    '''
-                for u in range(U)[boiler_end_index :]:
+                    """
+                for u in range(U)[boiler_end_index:]:
                     model += boiler_st[u] == 0
 
-                '''
+                """
                 for u in range(U)[
                     boiler_start_index : min(
                         boiler_end_index, U - est_needed_intv[U - 1]
@@ -1098,7 +1113,7 @@ class DaCalc(DaBase):
                         boiler_st[u1] * ((u1 + est_needed_intv[u1] - 1) >= u >= u1)
                         for u1 in range(U)[u - est_needed_intv[u] + 1 : u+1]
                     )
-                '''
+                """
                 model += boiler_temp[0] == boiler_act_temp
                 for u in range(U):
                     # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
@@ -1106,8 +1121,7 @@ class DaCalc(DaBase):
                         boiler_temp[u + 1]
                         == boiler_temp[u]
                         # - mix_los * boiler_st[u]
-                        - boiler_cooling
-                        + c_b[u] * cop_boiler * 3600 / spec_heat_boiler
+                        - boiler_cooling + c_b[u] * cop_boiler * 3600 / spec_heat_boiler
                     )
 
         ################################################
@@ -1712,7 +1726,7 @@ class DaCalc(DaBase):
                 # max_heat_prod = sum(max_heat_power
                 # een uur minder vanwege de boiler
                 if boiler_heated_by_heatpump and boiler_start_index < U:
-                    boiler_int = est_needed_intv[U-1]
+                    boiler_int = est_needed_intv[U - 1]
                 else:
                     boiler_int = 0
                 max_heat_prod = sum(
@@ -2051,12 +2065,9 @@ class DaCalc(DaBase):
             model += (
                 c_l[u]
                 == c_t_total[u]
-                + b_l[u] * hour_fraction[u]
-                + xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B))
-                * hour_fraction[u]
-                +
-                # xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B)) +
-                c_b[u]
+                + b_l[u] * ( 1 if u > 0 else fraction_first_interval)
+                + xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B)) * hour_fraction[u]
+                + c_b[u]
                 + xsum(c_ev[e][u] for e in range(EV))
                 + c_hp[u]
                 + xsum(c_ma_u[m][u] for m in range(M))
@@ -2169,6 +2180,8 @@ class DaCalc(DaBase):
         old_cost_gc = 0
         old_cost_da = 0
         sum_old_cons = 0
+        sum_opt_cons = 0
+        sum_opt_cost = 0
         org_l = []
         org_t = []
         c_ev_sum = []
@@ -2179,8 +2192,8 @@ class DaCalc(DaBase):
             ac_to_dc_sum = 0
             dc_to_ac_sum = 0
             for b in range(B):
-                ac_to_dc_sum += ac_to_dc[b][u].x  # / eff_ac_to_dc[b]
-                dc_to_ac_sum += ac_from_dc[b][u].x  # * eff_dc_to_ac[b]
+                ac_to_dc_sum += ac_to_dc[b][u].x  * hour_fraction[u]
+                dc_to_ac_sum += ac_from_dc[b][u].x * hour_fraction[u]
             accu_in_sum.append(ac_to_dc_sum)
             accu_out_sum.append(dc_to_ac_sum)
         for u in range(U):
@@ -2214,7 +2227,6 @@ class DaCalc(DaBase):
                 - solar_hour_sum_org[u]
                 - pv_ac_hour_sum[u]
             )
-            sum_old_cons += netto
             if netto >= 0:
                 old_cost_gc += netto * p_grl[u]
                 old_cost_da += netto * pl[u]
@@ -2225,6 +2237,11 @@ class DaCalc(DaBase):
                 old_cost_da += netto * pt[u]
                 org_l.append(0)
                 org_t.append(netto)
+            opt_cons = c_l[u].x - c_t_total[u].x
+            sum_old_cons += netto
+            sum_opt_cons += opt_cons
+            opt_cost = c_l[u].x * pl[u] - c_t_total[u].x * pt[u]
+            sum_opt_cost += opt_cost
         if (not salderen) and (sum_old_cons < 0):
             # er wordt (een deel) niet gesaldeerd
             dag_str = dt.datetime.now().strftime("%Y-%m-%d")
@@ -2251,7 +2268,9 @@ class DaCalc(DaBase):
         logging.info(
             f"Niet geoptimaliseerd, kosten met day ahead tarieven: {old_cost_da:<6.2f}"
         )
-        logging.info(f"Geoptimaliseerd, kosten met day ahead tarieven: {cost.x:<6.2f}")
+        logging.info(
+            f"Geoptimaliseerd, kosten met day ahead tarieven: {sum_opt_cost:<6.2f}, {cost.x:<6.2f}"
+        )
         logging.info(f"Levering: {delivery.x:<6.2f} (kWh)")
         if self.boiler_present:
             boiler_at_23 = (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (
@@ -2473,6 +2492,8 @@ class DaCalc(DaBase):
 
         logging.info(f"Berekende prognoses: \n{d_f.to_string(index=False)}")
         # , formatters={'uur':'{:03d}'.format}))
+        logging.info(f"Kosten zonder optimalisering: € {old_cost_da:<0.2f}")
+        logging.info(f"Kosten met optimalisering: € {cost.x:<0.2f}")
         logging.info(f"Winst: € {old_cost_da - cost.x:<0.2f}")
 
         # doorzetten van alle settings naar HA
@@ -2493,7 +2514,9 @@ class DaCalc(DaBase):
         ############################################
         # debug logging boiler results
         for u in range(U):
-            logging.info(f"{uur[u]} {boiler_st[u].x:.0f} {boiler_on[u].x:.0f} {c_b[u].x:.2f} {boiler_temp[u].x:.2f}")
+            logging.info(
+                f"{uur[u]} {boiler_st[u].x:.0f} {boiler_on[u].x:.0f} {c_b[u].x:.2f} {boiler_temp[u].x:.2f}"
+            )
         try:
             if self.boiler_present:
                 if float(c_b[0].x) > 0.0:
@@ -3226,7 +3249,9 @@ class DaCalc(DaBase):
         else:
             ticker_multi = 4
             ticker_offset = U % 4
-        axis[0].xaxis.set_major_locator(ticker.MultipleLocator(ticker_multi, offset=ticker_offset))
+        axis[0].xaxis.set_major_locator(
+            ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
+        )
         axis[0].xaxis.set_minor_locator(ticker.MultipleLocator(1))
         axis[0].set_title(
             f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\n"
@@ -3324,7 +3349,9 @@ class DaCalc(DaBase):
         axis[1].set_ylabel("kWh")
         axis[1].set_ylim([-ylim, ylim])
         axis[1].set_xticks(ind, labels=uur_labels)
-        axis[1].xaxis.set_major_locator(ticker.MultipleLocator(ticker_multi, offset=ticker_offset))
+        axis[1].xaxis.set_major_locator(
+            ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
+        )
         axis[1].xaxis.set_minor_locator(ticker.MultipleLocator(1))
         axis[1].set_title(
             f"Day Ahead geoptimaliseerd\nStrategie: {strategie}"
@@ -3396,8 +3423,9 @@ class DaCalc(DaBase):
                 axis[gr_no].set_ylabel("kWh")
                 axis[gr_no].set_ylim([-ylim, ylim])
                 axis[gr_no].set_xticks(ind, labels=uur_labels)
-                axis[gr_no].xaxis.set_major_locator(ticker.MultipleLocator(ticker_multi,
-                                                                           offset=ticker_offset))
+                axis[gr_no].xaxis.set_major_locator(
+                    ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
+                )
                 axis[gr_no].xaxis.set_minor_locator(ticker.MultipleLocator(1))
                 axis[gr_no].set_title(
                     f"Energiebalans per uur voor " f"{self.battery_options[b]['name']}"
@@ -3437,8 +3465,9 @@ class DaCalc(DaBase):
         axis[gr_no].set_xticks(ind, labels=uur_labels)
         axis[gr_no].set_ylabel("% SoC")
         axis[gr_no].set_xlabel("uren van de dag")
-        axis[gr_no].xaxis.set_major_locator(ticker.MultipleLocator(ticker_multi,
-                                                                   offset=ticker_offset))
+        axis[gr_no].xaxis.set_major_locator(
+            ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
+        )
         axis[gr_no].xaxis.set_minor_locator(ticker.MultipleLocator(1))
         axis[gr_no].set_ylim([0, 100])
         axis[gr_no].set_title("Verloop SoC en tarieven")
