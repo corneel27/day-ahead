@@ -10,9 +10,10 @@ import sys
 import math
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
-
-from dao.prog.utils import interpolate
+from pandas.core.dtypes.inference import is_number
+from dao.prog.da_report import Report
 from utils import (
+    interpolate,
     get_value_from_dict,
     is_laagtarief,
     convert_timestr,
@@ -253,7 +254,8 @@ class DaCalc(DaBase):
                 # pv.append(pv_total)
             for s in range(solar_num):
                 prod = (
-                    self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad)
+                    self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad*3600/self.interval_s
+                    )
                     * pv_yield[s]
                     * hour_fraction[-1]
                 )
@@ -265,7 +267,7 @@ class DaCalc(DaBase):
                 for s in range(len(self.battery_options[b]["solar"])):
                     prod = (
                         self.meteo.calc_solar_rad(
-                            self.battery_options[b]["solar"][s], row.time, row.glob_rad
+                            self.battery_options[b]["solar"][s], row.time, row.glob_rad * 3600 /self.interval_s
                         )
                         * self.battery_options[b]["solar"][s]["yield"]
                         * hour_fraction[-1]
@@ -318,34 +320,42 @@ class DaCalc(DaBase):
         # volledig salderen?
         salderen = self.prices_options["tax refund"] == "True"
 
+        '''
         last_invoice = dt.datetime.strptime(
             self.prices_options["last invoice"], "%Y-%m-%d"
         )
+
         cons_data_history = self.db_da.get_consumption(
             last_invoice, dt.datetime.today()
         )
+        '''
+        report = Report()
+        # df.loc[df['a'] == 1, 'b'].sum()
+        # df.query("a == 1")['b'].sum()
+        # df[df['a']==1]['b'].sum()
+        cons_df = report.get_grid_data(periode="dit contractjaar", _tot=start_dt)
+        consumption_his = cons_df[cons_df['datasoort'] == 'recorded']["consumption"].sum()
+        production_his = cons_df[cons_df["datasoort"] == "recorded"]["production"].sum()
         logging.info(
-            f"Verbruik dit contractjaar: " f"{cons_data_history['consumption']:.3f} kWh"
+            f"Verbruik dit contractjaar: " f"{consumption_his:.3f} kWh"
         )
         logging.info(
-            f"Productie dit contractjaar: " f"{cons_data_history['production']:.3f} kWh"
+            f"Productie dit contractjaar: " f"{production_his:.3f} kWh"
         )
-        if not salderen:
+        if not salderen and is_number(consumption_his) and is_number(production_his):
             salderen = (
-                cons_data_history["production"] < cons_data_history["consumption"]
+                production_his < consumption_his
             )
-
         if salderen:
             logging.info(f"All taxes refund (alles wordt gesaldeerd)")
             consumption_today = 0
             production_today = 0
         else:
-            consumption_today = float(
-                self.get_state("sensor.daily_grid_consumption").state
-            )
-            production_today = float(
-                self.get_state("sensor.daily_grid_production").state
-            )
+            cons_today_df = report.get_grid_data(periode="vandaag")
+            consumption_today = cons_today_df[cons_today_df['datasoort'] == 'recorded'][
+                "consumption"].sum()
+            production_today = cons_today_df[cons_today_df['datasoort'] == 'recorded'][
+                "production"].sum()
             logging.info(f"consumption today: {consumption_today} kWh")
             logging.info(f"production today: {production_today} kWh")
             logging.info(f"verschil: " f"{consumption_today - production_today} kWh")
@@ -388,6 +398,7 @@ class DaCalc(DaBase):
         one_soc = []
         kwh_cycle_cost = []
         start_soc = []
+        opt_low_level = []
         # pv_dc = []  # pv bruto productie per batterij per uur
         # pv_dc_hour_sum = []
         # pv_from_dc_hour_sum = []
@@ -686,6 +697,9 @@ class DaCalc(DaBase):
         upper_limit = float(
             self.config.get(["upper limit"], self.battery_options[b], 100)
         )
+        opt_low_lvl = float(self.config.get(["optimal lower level"], self.battery_options[b], lower_limit))
+        opt_low_level.append(opt_low_lvl)
+
         soc = [
             [
                 model.add_var(
@@ -697,6 +711,13 @@ class DaCalc(DaBase):
             ]
             for b in range(B)
         ]
+        soc_low = [[model.add_var(var_type=CONTINUOUS,
+                    lb=min(start_soc[b], lower_limit),
+                    ub=opt_low_level[b]) for _ in range(U + 1)] for b in range(B)]
+        soc_mid = [[model.add_var(var_type=CONTINUOUS, lb=0,
+                    ub=-opt_low_level[b] + max(start_soc[b],
+                                               upper_limit))
+                    for _ in range(U + 1)] for b in range(B)]
 
         # alle constraints
         for b in range(B):
@@ -771,6 +792,8 @@ class DaCalc(DaBase):
                 )
 
         for b in range(B):
+            for u in range(U + 1):
+                model += soc[b][u] == soc_low[b][u] + soc_mid[b][u]
             model += soc[b][0] == start_soc[b]
 
             entity_min_soc_end = self.config.get(
@@ -796,7 +819,7 @@ class DaCalc(DaBase):
                 )
                 return
 
-            model += soc[b][U] >= min_soc_end_opt
+            model += soc[b][U] >= max(opt_low_level[b] / 2, min_soc_end_opt)
             model += soc[b][U] <= max_soc_end_opt
             for u in range(U):
                 model += soc[b][u + 1] == soc[b][u] + (
@@ -2065,7 +2088,7 @@ class DaCalc(DaBase):
             model += (
                 c_l[u]
                 == c_t_total[u]
-                + b_l[u] * ( 1 if u > 0 else fraction_first_interval)
+                + b_l[u] * (1 if u > 0 else fraction_first_interval)
                 + xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B)) * hour_fraction[u]
                 + c_b[u]
                 + xsum(c_ev[e][u] for e in range(EV))
@@ -2100,9 +2123,11 @@ class DaCalc(DaBase):
                 c_l[u] * pl[u] - c_t_w_tax[u] * pt[u] - c_t_no_tax[u] * pt_notax[u]
                 for u in range(U)
             )
-            + xsum(cycle_cost[b] for b in range(B))
+            + xsum(cycle_cost[b] +
+                   xsum((opt_low_level[b] - soc_low[b][u]) * 0.0025 for u in range(U))
+                   for b in range(B))
             + xsum(
-                (soc[b][0] - soc[b][U])
+                (soc_mid[b][0] - soc_mid[b][U])
                 * one_soc[b]
                 * eff_bat_to_dc[b]
                 * avg_eff_dc_to_ac[b]
@@ -2192,7 +2217,7 @@ class DaCalc(DaBase):
             ac_to_dc_sum = 0
             dc_to_ac_sum = 0
             for b in range(B):
-                ac_to_dc_sum += ac_to_dc[b][u].x  * hour_fraction[u]
+                ac_to_dc_sum += ac_to_dc[b][u].x * hour_fraction[u]
                 dc_to_ac_sum += ac_from_dc[b][u].x * hour_fraction[u]
             accu_in_sum.append(ac_to_dc_sum)
             accu_out_sum.append(dc_to_ac_sum)
@@ -3247,7 +3272,7 @@ class DaCalc(DaBase):
             ticker_multi = 2
             ticker_offset = 0
         else:
-            ticker_multi = 4
+            ticker_multi = 8
             ticker_offset = U % 4
         axis[0].xaxis.set_major_locator(
             ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
@@ -3375,14 +3400,14 @@ class DaCalc(DaBase):
                 for u in range(U):
                     # model += (dc_from_ac[b][u] + dc_from_bat[b][u] + pv_prod_dc_sum[b][u] ==
                     #           dc_to_ac[b][u] + dc_to_bat[b][u])
-                    ac_p.append(dc_from_ac[b][u].x)
-                    ac_n.append(-dc_to_ac[b][u].x)
+                    ac_p.append(dc_from_ac[b][u].x * hour_fraction[u])
+                    ac_n.append(-dc_to_ac[b][u].x * hour_fraction[u])
                     if pv_dc_num[b] > 0:
-                        pv_p.append(pv_prod_dc_sum[b][u].x)
+                        pv_p.append(pv_prod_dc_sum[b][u].x * hour_fraction[u])
                     else:
                         pv_p.append(0)
-                    bat_p.append(dc_from_bat[b][u].x)
-                    bat_n.append(-dc_to_bat[b][u].x)
+                    bat_p.append(dc_from_bat[b][u].x * hour_fraction[u])
+                    bat_n.append(-dc_to_bat[b][u].x * hour_fraction[u])
                 # extra uur voor sync aantal uur met laatste soc-waarde
                 ac_p.append(0)
                 ac_n.append(0)
