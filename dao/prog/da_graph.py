@@ -7,7 +7,6 @@ import logging
 
 
 class GraphBuilder:
-
     def __init__(self, backend=None):
         plt.set_loglevel(level="warning")
         pil_logger = logging.getLogger("PIL")

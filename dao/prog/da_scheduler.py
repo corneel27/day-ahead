@@ -5,7 +5,6 @@ from da_base import DaBase
 
 
 class DaScheduler(DaBase):
-
     def __init__(self, file_name: str = None):
         super().__init__(file_name)
         self.scheduler_tasks = self.config.get(["scheduler"])
