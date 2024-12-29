@@ -170,6 +170,7 @@ def get_tibber_data():
     if count < 24:
         logging.info("Er worden geen data opgehaald.")
         return
+
     query = (
         "{ "
         '"query": '
@@ -222,6 +223,7 @@ def get_tibber_data():
                 value = float(node["profit"])
                 logging.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
+
     for node in consumption_nodes:
         timestamp = int(get_datetime_from_str(node["from"]).timestamp())
         if timestamp < today_ts:

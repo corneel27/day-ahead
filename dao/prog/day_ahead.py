@@ -26,6 +26,7 @@ from da_base import DaBase
 
 
 class DaCalc(DaBase):
+
     def __init__(self, file_name=None):
         super().__init__(file_name=file_name)
         if self.config is None:

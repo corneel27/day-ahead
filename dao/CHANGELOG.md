@@ -1,5 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# [V2024.12.2] 
+Fixed typo in utils.py
+
+# [V2024.12.1] 
+Fixed error: cycle costs (last) battery were not taken into account
+
+# [V2024.12.0] 
 # LET OP
 De energiebelasting wijzigt per 1 januari 2025.<br>
 Neem deze over van onderstaande lijst in je instellingen:<br>
@@ -31,26 +39,18 @@ But when you call it with "expected=1" then you get:<br>
 ```{ "message":"Success", "recorded": [{"time":"2024-12-02 00:00","value":36.7450000558},{"time":"2024-12-03 00:00","value":19.1840000708},{"time":"2024-12-04 00:00","value":36.8009995644},{"time":"2024-12-05 00:00","value":19.7590002147},{"time":"2024-12-06 00:00","value":43.3299993972},{"time":"2024-12-07 00:00","value":24.9570001736}], "expected" : [{"time":"2024-12-08 00:00","value":14.282395}] }```<br>
 The total consumption of "2024-12-08" is now mentioned in the expexted part, because a part of the consumption is expected.
 
-# [V2024.11.1.dev_e]
+# Other changes
 - "optimal lower level" is not used anymore: it was too difficult and too complex to understand and
 didn't give enough good results
 - The calculated cycle costs  are (per battery) logged (level info).
-
-# [V2024.11.1.dev_d]
-There was a general error in api-calls, fixed.
-
-# [V2024.11.1.dev_c]
+- There was a general error in api-calls, fixed.
 - There is an error reported in a api-call: `http://<ip-adres>:5000/api/report/cost/deze_maand`. <br>This error is fixed?
 - Fixed error api call "netto_cost"
-
-# [V2024.11.1.dev_b]
 - Scheduling of boiler can be postponed via a ha-entity
 - when boiler is heated bij the heat pump for room-heating then there can only be "one" heating 
 function in an hour, therefore is a new setting introduced in the boiler-section: "boiler heated 
 by heatpump". This setting can be "True" or "False"
 - the code is brought inline with PEP 8 (Style Guide for Python Code)
-
-## [V2024.11.1.dev_a]
 - Scheduling of heatpump can be set via a ha-entity
 - Scheduling of heatpump can be achieved in three ways:
   - on/off
