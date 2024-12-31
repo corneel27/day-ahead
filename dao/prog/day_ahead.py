@@ -691,34 +691,35 @@ class DaCalc(DaBase):
             for b in range(B)
         ]
 
-        # SoC
-        lower_limit = float(
-            self.config.get(["lower limit"], self.battery_options[b], 20)
-        )
-        upper_limit = float(
-            self.config.get(["upper limit"], self.battery_options[b], 100)
-        )
-        opt_low_lvl = float(self.config.get(["optimal lower level"], self.battery_options[b], lower_limit))
-        opt_low_level.append(opt_low_lvl)
+        for b in range(B):
+            # SoC
+            lower_limit = float(
+                self.config.get(["lower limit"], self.battery_options[b], 20)
+            )
+            upper_limit = float(
+                self.config.get(["upper limit"], self.battery_options[b], 100)
+            )
+            opt_low_lvl = float(self.config.get(["optimal lower level"], self.battery_options[b], lower_limit))
+            opt_low_level.append(opt_low_lvl)
 
-        soc = [
-            [
-                model.add_var(
-                    var_type=CONTINUOUS,
-                    lb=min(start_soc[b], lower_limit),
-                    ub=max(start_soc[b], upper_limit),
-                )
-                for _ in range(U + 1)
+            soc = [
+                [
+                    model.add_var(
+                        var_type=CONTINUOUS,
+                        lb=min(start_soc[b], lower_limit),
+                        ub=max(start_soc[b], upper_limit),
+                    )
+                    for _ in range(U + 1)
+                ]
+                for b in range(B)
             ]
-            for b in range(B)
-        ]
-        soc_low = [[model.add_var(var_type=CONTINUOUS,
-                    lb=min(start_soc[b], lower_limit),
-                    ub=opt_low_level[b]) for _ in range(U + 1)] for b in range(B)]
-        soc_mid = [[model.add_var(var_type=CONTINUOUS, lb=0,
-                    ub=-opt_low_level[b] + max(start_soc[b],
-                                               upper_limit))
-                    for _ in range(U + 1)] for b in range(B)]
+            soc_low = [[model.add_var(var_type=CONTINUOUS,
+                        lb=min(start_soc[b], lower_limit),
+                        ub=opt_low_level[b]) for _ in range(U + 1)] for b in range(B)]
+            soc_mid = [[model.add_var(var_type=CONTINUOUS, lb=0,
+                        ub=-opt_low_level[b] + max(start_soc[b],
+                                                   upper_limit))
+                        for _ in range(U + 1)] for b in range(B)]
 
         # alle constraints
         for b in range(B):
@@ -1071,10 +1072,7 @@ class DaCalc(DaBase):
                         "netto_cost": est_netto_cost,
                     }
                 )
-                logging.info(f"Prognose boiler:\n{df_boiler.to_string()}\n")
-                # logging.info(f"Boiler benodigde warmte: {needed_heat} kWh")
-                # logging.info(f"Boiler benodigde elektricteit: {needed_elec} kWh")
-                # logging.info(f"Boiler benodigde intervals {needed_intervals}")
+                logging.debug(f"Prognose boiler:\n{df_boiler.to_string()}\n")
 
                 # c_b = consumption boiler in kWh per interval
                 c_b = [
@@ -1698,7 +1696,7 @@ class DaCalc(DaBase):
                     for s in range(S)
                 ]
 
-                # schijven aan/uit, iedere schijf kan maar een keer in een uur
+                # schijven aan/uit, iedere schijf kan maar een keer in een interval
                 hp_s_on = [
                     [model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(S)
                 ]
@@ -1747,8 +1745,8 @@ class DaCalc(DaBase):
                     )
                 # max heat power in kW
                 max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
-                # max_heat_prod = sum(max_heat_power
-                # een uur minder vanwege de boiler
+
+                # een of meer intervallen minder als boiler via wp gaat
                 if boiler_heated_by_heatpump and boiler_start_index < U:
                     boiler_int = est_needed_intv[U - 1]
                 else:
@@ -2539,10 +2537,14 @@ class DaCalc(DaBase):
         # boiler
         ############################################
         # debug logging boiler results
+        logging.debug("\n")
+        logging.debug("  uur st on  cons   temp")
         for u in range(U):
-            logging.info(
-                f"{uur[u]} {boiler_st[u].x:.0f} {boiler_on[u].x:.0f} {c_b[u].x:.2f} {boiler_temp[u].x:.2f}"
+            logging.debug(
+                f"{uur[u]}  {boiler_st[u].x:.0f}  {boiler_on[u].x:.0f}  {c_b[u].x:.2f}  {boiler_temp[u].x:.2f}"
             )
+        logging.debug("\n")
+
         try:
             if self.boiler_present:
                 if float(c_b[0].x) > 0.0:

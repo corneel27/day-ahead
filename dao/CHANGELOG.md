@@ -1,5 +1,7 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.1.0] 
+Programma kan rekenen met kwartier interval.
 
 # [V2024.12.2] 
 Fixed typo in utils.py
