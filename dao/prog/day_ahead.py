@@ -375,6 +375,8 @@ class DaCalc(DaBase):
         one_soc = []
         kwh_cycle_cost = []
         start_soc = []
+        lower_limit = []
+        upper_limit = []
         # pv_dc = []  # pv bruto productie per batterij per uur
         # pv_dc_hour_sum = []
         # pv_from_dc_hour_sum = []
@@ -473,6 +475,13 @@ class DaCalc(DaBase):
             # fractie van 1
             eff_bat_to_dc.append(float(self.battery_options[b]["bat_to_dc efficiency"]))
             # fractie van 1
+
+            lower_limit.append(float(
+                self.config.get(["lower limit"], self.battery_options[b], 20)
+            ))
+            upper_limit.append(float(
+                self.config.get(["upper limit"], self.battery_options[b], 100)
+            ))
 
             if _start_soc is None or b > 0:
                 start_soc_str = self.get_state(
@@ -667,18 +676,12 @@ class DaCalc(DaBase):
         ]
 
         # SoC
-        lower_limit = float(
-            self.config.get(["lower limit"], self.battery_options[b], 20)
-        )
-        upper_limit = float(
-            self.config.get(["upper limit"], self.battery_options[b], 100)
-        )
         soc = [
             [
                 model.add_var(
                     var_type=CONTINUOUS,
-                    lb=min(start_soc[b], lower_limit),
-                    ub=max(start_soc[b], upper_limit),
+                    lb=min(start_soc[b], lower_limit[b]),
+                    ub=max(start_soc[b], upper_limit[b]),
                 )
                 for _ in range(U + 1)
             ]
