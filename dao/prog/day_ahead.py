@@ -255,7 +255,8 @@ class DaCalc(DaBase):
                 # pv.append(pv_total)
             for s in range(solar_num):
                 prod = (
-                    self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad*3600/self.interval_s
+                    self.meteo.calc_solar_rad(
+                        self.solar[s], row.time, row.glob_rad * 3600 / self.interval_s
                     )
                     * pv_yield[s]
                     * hour_fraction[-1]
@@ -268,7 +269,9 @@ class DaCalc(DaBase):
                 for s in range(len(self.battery_options[b]["solar"])):
                     prod = (
                         self.meteo.calc_solar_rad(
-                            self.battery_options[b]["solar"][s], row.time, row.glob_rad * 3600 /self.interval_s
+                            self.battery_options[b]["solar"][s],
+                            row.time,
+                            row.glob_rad * 3600 / self.interval_s,
                         )
                         * self.battery_options[b]["solar"][s]["yield"]
                         * hour_fraction[-1]
@@ -321,7 +324,7 @@ class DaCalc(DaBase):
         # volledig salderen?
         salderen = self.prices_options["tax refund"] == "True"
 
-        '''
+        """
         last_invoice = dt.datetime.strptime(
             self.prices_options["last invoice"], "%Y-%m-%d"
         )
@@ -329,34 +332,32 @@ class DaCalc(DaBase):
         cons_data_history = self.db_da.get_consumption(
             last_invoice, dt.datetime.today()
         )
-        '''
+        """
         report = Report()
         # df.loc[df['a'] == 1, 'b'].sum()
         # df.query("a == 1")['b'].sum()
         # df[df['a']==1]['b'].sum()
         cons_df = report.get_grid_data(periode="dit contractjaar", _tot=start_dt)
-        consumption_his = cons_df[cons_df['datasoort'] == 'recorded']["consumption"].sum()
+        consumption_his = cons_df[cons_df["datasoort"] == "recorded"][
+            "consumption"
+        ].sum()
         production_his = cons_df[cons_df["datasoort"] == "recorded"]["production"].sum()
-        logging.info(
-            f"Verbruik dit contractjaar: " f"{consumption_his:.3f} kWh"
-        )
-        logging.info(
-            f"Productie dit contractjaar: " f"{production_his:.3f} kWh"
-        )
+        logging.info(f"Verbruik dit contractjaar: " f"{consumption_his:.3f} kWh")
+        logging.info(f"Productie dit contractjaar: " f"{production_his:.3f} kWh")
         if not salderen and is_number(consumption_his) and is_number(production_his):
-            salderen = (
-                production_his < consumption_his
-            )
+            salderen = production_his < consumption_his
         if salderen:
             logging.info(f"All taxes refund (alles wordt gesaldeerd)")
             consumption_today = 0
             production_today = 0
         else:
             cons_today_df = report.get_grid_data(periode="vandaag")
-            consumption_today = cons_today_df[cons_today_df['datasoort'] == 'recorded'][
-                "consumption"].sum()
-            production_today = cons_today_df[cons_today_df['datasoort'] == 'recorded'][
-                "production"].sum()
+            consumption_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
+                "consumption"
+            ].sum()
+            production_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
+                "production"
+            ].sum()
             logging.info(f"consumption today: {consumption_today} kWh")
             logging.info(f"production today: {production_today} kWh")
             logging.info(f"verschil: " f"{consumption_today - production_today} kWh")
@@ -399,6 +400,8 @@ class DaCalc(DaBase):
         one_soc = []
         kwh_cycle_cost = []
         start_soc = []
+        lower_limit = []
+        upper_limit = []
         opt_low_level = []
         # pv_dc = []  # pv bruto productie per batterij per uur
         # pv_dc_hour_sum = []
@@ -498,6 +501,19 @@ class DaCalc(DaBase):
             # fractie van 1
             eff_bat_to_dc.append(float(self.battery_options[b]["bat_to_dc efficiency"]))
             # fractie van 1
+
+            lower_limit.append(
+                float(self.config.get(["lower limit"], self.battery_options[b], 20))
+            )
+            upper_limit.append(
+                float(self.config.get(["upper limit"], self.battery_options[b], 100))
+            )
+            opt_low_lvl = float(
+                self.config.get(
+                    ["optimal lower level"], self.battery_options[b], lower_limit[b]
+                )
+            )
+            opt_low_level.append(opt_low_lvl)
 
             if _start_soc is None or b > 0:
                 start_soc_str = self.get_state(
@@ -691,35 +707,41 @@ class DaCalc(DaBase):
             for b in range(B)
         ]
 
-        for b in range(B):
-            # SoC
-            lower_limit = float(
-                self.config.get(["lower limit"], self.battery_options[b], 20)
-            )
-            upper_limit = float(
-                self.config.get(["upper limit"], self.battery_options[b], 100)
-            )
-            opt_low_lvl = float(self.config.get(["optimal lower level"], self.battery_options[b], lower_limit))
-            opt_low_level.append(opt_low_lvl)
-
-            soc = [
-                [
-                    model.add_var(
-                        var_type=CONTINUOUS,
-                        lb=min(start_soc[b], lower_limit),
-                        ub=max(start_soc[b], upper_limit),
-                    )
-                    for _ in range(U + 1)
-                ]
-                for b in range(B)
+        # SoC
+        soc = [
+            [
+                model.add_var(
+                    var_type=CONTINUOUS,
+                    lb=min(start_soc[b], lower_limit[b]),
+                    ub=max(start_soc[b], upper_limit[b]),
+                )
+                for _ in range(U + 1)
             ]
-            soc_low = [[model.add_var(var_type=CONTINUOUS,
-                        lb=min(start_soc[b], lower_limit),
-                        ub=opt_low_level[b]) for _ in range(U + 1)] for b in range(B)]
-            soc_mid = [[model.add_var(var_type=CONTINUOUS, lb=0,
-                        ub=-opt_low_level[b] + max(start_soc[b],
-                                                   upper_limit))
-                        for _ in range(U + 1)] for b in range(B)]
+            for b in range(B)
+        ]
+
+        soc_low = [
+            [
+                model.add_var(
+                    var_type=CONTINUOUS,
+                    lb=min(start_soc[b], lower_limit[b]),
+                    ub=opt_low_level[b],
+                )
+                for _ in range(U + 1)
+            ]
+            for b in range(B)
+        ]
+        soc_mid = [
+            [
+                model.add_var(
+                    var_type=CONTINUOUS,
+                    lb=0,
+                    ub=-opt_low_level[b] + max(start_soc[b], upper_limit[b]),
+                )
+                for _ in range(U + 1)
+            ]
+            for b in range(B)
+        ]
 
         # alle constraints
         for b in range(B):
@@ -2084,16 +2106,22 @@ class DaCalc(DaBase):
         # alle verbruiken in de totaal balans in kWh
         #####################################################
         for u in range(U):
-            model += (
-                c_l[u]
-                == c_t_total[u]
-                + b_l[u] * (1 if u > 0 else fraction_first_interval)
-                + xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B)) * hour_fraction[u]
-                + c_b[u]
-                + xsum(c_ev[e][u] for e in range(EV))
-                + c_hp[u]
-                + xsum(c_ma_u[m][u] for m in range(M))
-                - xsum(pv_ac[s][u] for s in range(solar_num))
+            model += c_l[u] == c_t_total[u] + b_l[u] * (
+                1 if u > 0 else fraction_first_interval
+            ) + xsum(
+                ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B)
+            ) * hour_fraction[
+                u
+            ] + c_b[
+                u
+            ] + xsum(
+                c_ev[e][u] for e in range(EV)
+            ) + c_hp[
+                u
+            ] + xsum(
+                c_ma_u[m][u] for m in range(M)
+            ) - xsum(
+                pv_ac[s][u] for s in range(solar_num)
             )
 
         # cost variabele
@@ -2122,9 +2150,11 @@ class DaCalc(DaBase):
                 c_l[u] * pl[u] - c_t_w_tax[u] * pt[u] - c_t_no_tax[u] * pt_notax[u]
                 for u in range(U)
             )
-            + xsum(cycle_cost[b] +
-                   xsum((opt_low_level[b] - soc_low[b][u]) * 0.0025 for u in range(U))
-                   for b in range(B))
+            + xsum(
+                cycle_cost[b]
+                + xsum((opt_low_level[b] - soc_low[b][u]) * 0.0025 for u in range(U))
+                for b in range(B)
+            )
             + xsum(
                 (soc_mid[b][0] - soc_mid[b][U])
                 * one_soc[b]

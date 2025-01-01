@@ -276,7 +276,7 @@ class DaBase(hass.Hass):
         df = df.reset_index(drop=True)
         columns = df.columns.values.tolist()[1:]
         for index in range(len(tijd)):
-            utc = tijd[index].timestamp()
+            utc = int(tijd[index].timestamp())
             for c in columns:
                 db_row = [str(utc), c, float(df.loc[index, c])]
                 df_db.loc[df_db.shape[0]] = db_row
