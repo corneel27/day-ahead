@@ -311,7 +311,7 @@ class DaCalc(DaBase):
         last_invoice = dt.datetime.strptime(
             self.prices_options["last invoice"], "%Y-%m-%d"
         )
-
+        
         cons_data_history = self.db_da.get_consumption(
             last_invoice, dt.datetime.today()
         )
