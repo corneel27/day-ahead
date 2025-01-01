@@ -10,6 +10,8 @@ import sys
 import math
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
+from pandas.core.dtypes.inference import is_number
+from dao.prog.da_report import Report
 from utils import (
     get_value_from_dict,
     is_laagtarief,
@@ -305,34 +307,40 @@ class DaCalc(DaBase):
         # volledig salderen?
         salderen = self.prices_options["tax refund"] == "True"
 
+        """
         last_invoice = dt.datetime.strptime(
             self.prices_options["last invoice"], "%Y-%m-%d"
         )
+
         cons_data_history = self.db_da.get_consumption(
             last_invoice, dt.datetime.today()
         )
-        logging.info(
-            f"Verbruik dit contractjaar: " f"{cons_data_history['consumption']}"
-        )
-        logging.info(
-            f"Productie dit contractjaar: " f"{cons_data_history['production']}"
-        )
-        if not salderen:
-            salderen = (
-                cons_data_history["production"] < cons_data_history["consumption"]
-            )
-
+        """
+        report = Report()
+        # df.loc[df['a'] == 1, 'b'].sum()
+        # df.query("a == 1")['b'].sum()
+        # df[df['a']==1]['b'].sum()
+        cons_df = report.get_grid_data(periode="dit contractjaar", _tot=start_dt)
+        consumption_his = cons_df[cons_df["datasoort"] == "recorded"][
+            "consumption"
+        ].sum()
+        production_his = cons_df[cons_df["datasoort"] == "recorded"]["production"].sum()
+        logging.info(f"Verbruik dit contractjaar: " f"{consumption_his:.3f} kWh")
+        logging.info(f"Productie dit contractjaar: " f"{production_his:.3f} kWh")
+        if not salderen and is_number(consumption_his) and is_number(production_his):
+            salderen = production_his < consumption_his
         if salderen:
             logging.info(f"All taxes refund (alles wordt gesaldeerd)")
             consumption_today = 0
             production_today = 0
         else:
-            consumption_today = float(
-                self.get_state("sensor.daily_grid_consumption").state
-            )
-            production_today = float(
-                self.get_state("sensor.daily_grid_production").state
-            )
+            cons_today_df = report.get_grid_data(periode="vandaag")
+            consumption_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
+                "consumption"
+            ].sum()
+            production_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
+                "production"
+            ].sum()
             logging.info(f"consumption today: {consumption_today} kWh")
             logging.info(f"production today: {production_today} kWh")
             logging.info(f"verschil: " f"{consumption_today - production_today} kWh")
@@ -377,6 +385,7 @@ class DaCalc(DaBase):
         start_soc = []
         lower_limit = []
         upper_limit = []
+        opt_low_level = []
         # pv_dc = []  # pv bruto productie per batterij per uur
         # pv_dc_hour_sum = []
         # pv_from_dc_hour_sum = []
@@ -476,12 +485,18 @@ class DaCalc(DaBase):
             eff_bat_to_dc.append(float(self.battery_options[b]["bat_to_dc efficiency"]))
             # fractie van 1
 
-            lower_limit.append(float(
-                self.config.get(["lower limit"], self.battery_options[b], 20)
-            ))
-            upper_limit.append(float(
-                self.config.get(["upper limit"], self.battery_options[b], 100)
-            ))
+            lower_limit.append(
+                float(self.config.get(["lower limit"], self.battery_options[b], 20))
+            )
+            upper_limit.append(
+                float(self.config.get(["upper limit"], self.battery_options[b], 100))
+            )
+            opt_low_lvl = float(
+                self.config.get(
+                    ["optimal lower level"], self.battery_options[b], lower_limit[b]
+                )
+            )
+            opt_low_level.append(opt_low_lvl)
 
             if _start_soc is None or b > 0:
                 start_soc_str = self.get_state(
@@ -688,6 +703,29 @@ class DaCalc(DaBase):
             for b in range(B)
         ]
 
+        soc_low = [
+            [
+                model.add_var(
+                    var_type=CONTINUOUS,
+                    lb=min(start_soc[b], lower_limit[b]),
+                    ub=opt_low_level[b],
+                )
+                for _ in range(U + 1)
+            ]
+            for b in range(B)
+        ]
+        soc_mid = [
+            [
+                model.add_var(
+                    var_type=CONTINUOUS,
+                    lb=0,
+                    ub=-opt_low_level[b] + max(start_soc[b], upper_limit[b]),
+                )
+                for _ in range(U + 1)
+            ]
+            for b in range(B)
+        ]
+
         # alle constraints
         for b in range(B):
             for u in range(U):
@@ -761,6 +799,8 @@ class DaCalc(DaBase):
                 )
 
         for b in range(B):
+            for u in range(U + 1):
+                model += soc[b][u] == soc_low[b][u] + soc_mid[b][u]
             model += soc[b][0] == start_soc[b]
 
             entity_min_soc_end = self.config.get(
@@ -786,7 +826,7 @@ class DaCalc(DaBase):
                 )
                 return
 
-            model += soc[b][U] >= min_soc_end_opt
+            model += soc[b][U] >= max(opt_low_level[b] / 2, min_soc_end_opt)
             model += soc[b][U] <= max_soc_end_opt
             for u in range(U):
                 model += soc[b][u + 1] == soc[b][u] + (
@@ -1928,9 +1968,13 @@ class DaCalc(DaBase):
                 c_l[u] * pl[u] - c_t_w_tax[u] * pt[u] - c_t_no_tax[u] * pt_notax[u]
                 for u in range(U)
             )
-            + xsum(cycle_cost[b] for b in range(B))
             + xsum(
-                (soc[b][0] - soc[b][U])
+                cycle_cost[b]
+                + xsum((opt_low_level[b] - soc_low[b][u]) * 0.0025 for u in range(U))
+                for b in range(B)
+            )
+            + xsum(
+                (soc_mid[b][0] - soc_mid[b][U])
                 * one_soc[b]
                 * eff_bat_to_dc[b]
                 * avg_eff_dc_to_ac[b]
@@ -1953,20 +1997,19 @@ class DaCalc(DaBase):
         model.check_optimization_results()
 
         # kosten optimalisering
-        strategy = self.strategy.lower()
-        if strategy == "minimize cost":
+        if self.strategy == "minimize cost":
             strategie = "minimale kosten"
             model.objective = minimize(cost)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing  voor: {strategy}")
+                logging.warning(f"Geen oplossing  voor: {self.strategy}")
                 return
-        elif strategy == "minimize consumption":
+        elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
             model.objective = minimize(delivery)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing  voor: {strategy}")
+                logging.warning(f"Geen oplossing  voor: {self.strategy}")
                 return
             min_delivery = max(0.0, delivery.x)
             logging.info("Eerste berekening")
@@ -1976,8 +2019,11 @@ class DaCalc(DaBase):
             model.objective = minimize(cost)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing in na herberekening voor: {strategy}")
-                return
+                model.objective = minimize(delivery)
+                model.optimize()
+                if model.num_solutions == 0:
+                    logging.warning(f"Geen oplossing in na herberekening voor: {self.strategy}")
+                    return
             logging.info("Herberekening")
             logging.info(f"Kosten (euro): {cost.x:<6.2f}")
             logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
