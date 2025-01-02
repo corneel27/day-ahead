@@ -1,6 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# [V2025.1.0] 
+- Fixed error saving prognoses with postgresql database
+- Fixed error getting history consumption data: also data in ha-db are taken in account
+- Optimum low level for the battery is back again
+- When choosen for strategy "minimize consumption", there was sometimes "no solution",
+this is corrected
+
 # [V2024.12.3] 
 Fixed error getting battery limits when no battery is configured
 

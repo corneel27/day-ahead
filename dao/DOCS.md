@@ -645,6 +645,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | entity actual level          | string           |                                    |                                                    |
 |                          | upper limit                  | getal            |                                    | %                                                  |
 |                          | lower limit                  | getal            |                                    | %                                                  |
+|                          | optimal lower level          | getal            |                                    | %                                                  |
 |                          | entity actual level          | string           |                                    |                                                    |
 |                          | entity min soc end opt       | string           | 0                                  |                                                    |
 |                          | entity max soc end opt       | string           | 100                                |                                                    |
@@ -1135,6 +1136,7 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
    * capacity: capaciteit van de batterij in kWh  
    * lower limit: onderste SoC limiet (tijdelijk)  
    * upper limit: bovenste SoC limiet  
+   * optimal lower level: onderste SoC limiet voor langere tijd  
    * entity min soc end opt: (default 0) entity in home assistant (input_number), waarmee je de 
      minimale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben 
    * entity max soc end opt: (default 100) entity in home assistant (input_number), waarmee je de
