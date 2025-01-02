@@ -497,7 +497,7 @@ class DaCalc(DaBase):
                 )
             )
             opt_low_level.append(opt_low_lvl)
-
+            
             if _start_soc is None or b > 0:
                 start_soc_str = self.get_state(
                     self.battery_options[b]["entity actual level"]
