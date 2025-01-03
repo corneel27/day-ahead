@@ -316,31 +316,43 @@ class DaCalc(DaBase):
             last_invoice, dt.datetime.today()
         )
         """
-        report = Report()
-        # df.loc[df['a'] == 1, 'b'].sum()
-        # df.query("a == 1")['b'].sum()
-        # df[df['a']==1]['b'].sum()
-        cons_df = report.get_grid_data(periode="dit contractjaar", _tot=start_dt)
-        consumption_his = cons_df[cons_df["datasoort"] == "recorded"][
-            "consumption"
-        ].sum()
-        production_his = cons_df[cons_df["datasoort"] == "recorded"]["production"].sum()
+        report = None
+        try:
+            report = Report(file_name=self.file_name, db_da=self.db_da, db_ha=self.db_ha)
+            # df.loc[df['a'] == 1, 'b'].sum()
+            # df.query("a == 1")['b'].sum()
+            # df[df['a']==1]['b'].sum()
+            cons_df = report.get_grid_data(periode="dit contractjaar", _tot=start_dt)
+            consumption_his = cons_df[cons_df["datasoort"] == "recorded"][
+                "consumption"
+            ].sum()
+            production_his = cons_df[cons_df["datasoort"] == "recorded"]["production"].sum()
+        except Exception as ex:
+            logging.error('Failed.', exc_info=ex)
+            logging.warning(f"Verbruik laatste contractjaar kon niet wordt vastgesteld")
+            consumption_his = 0
+            production_his = 0
         logging.info(f"Verbruik dit contractjaar: " f"{consumption_his:.3f} kWh")
         logging.info(f"Productie dit contractjaar: " f"{production_his:.3f} kWh")
         if not salderen and is_number(consumption_his) and is_number(production_his):
             salderen = production_his < consumption_his
+        consumption_today = 0
+        production_today = 0
         if salderen:
             logging.info(f"All taxes refund (alles wordt gesaldeerd)")
-            consumption_today = 0
-            production_today = 0
         else:
-            cons_today_df = report.get_grid_data(periode="vandaag")
-            consumption_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
-                "consumption"
-            ].sum()
-            production_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
-                "production"
-            ].sum()
+            if report is not None:
+                try:
+                    cons_today_df = report.get_grid_data(periode="vandaag")
+                    consumption_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
+                        "consumption"
+                    ].sum()
+                    production_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
+                        "production"
+                    ].sum()
+                except Exception as ex:
+                    logging.error('Failed.', exc_info=ex)
+                    logging.warning(f"Verbruik vandaag kon niet wordt vastgesteld")
             logging.info(f"consumption today: {consumption_today} kWh")
             logging.info(f"production today: {production_today} kWh")
             logging.info(f"verschil: " f"{consumption_today - production_today} kWh")
@@ -1624,7 +1636,7 @@ class DaCalc(DaBase):
         ########################################################################
         # apparaten /machines
         ########################################################################
-        program_selected = []  # "kleur 30", "eco"]
+        program_selected = []  # "kleur 30", "eco"
         M = len(self.machines)
         R = []  # aantal mogelijke runs
         RL = []  # lengte van een run

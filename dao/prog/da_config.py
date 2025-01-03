@@ -1,8 +1,7 @@
 import json
 import logging
 import os
-from logging import raiseExceptions
-
+# from logging import raiseExceptions
 from dao.prog.db_manager import DBmanagerObj
 import sqlalchemy_utils
 
@@ -83,6 +82,7 @@ class Config:
             )
         except Exception as ex:
             logging.error("Check your settings for day_ahead database")
+            return None
         return db_da
 
     def get_db_ha(self):
@@ -110,6 +110,7 @@ class Config:
             )
         except Exception as ex:
             logging.error("Check your settings for Home Assitant database")
+            return None
         return db_ha
 
 
