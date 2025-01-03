@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# [V2025.1.1] 
+Fixed errors when consumption-data in last contractyear could not be calculated.
+
 # [V2025.1.0] 
 - Fixed error saving prognoses with postgresql database
 - Fixed error getting history consumption data: also data in ha-db are taken in account
