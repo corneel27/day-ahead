@@ -14,9 +14,6 @@ this is corrected
 # [V2024.12.3] 
 Fixed error getting battery limits when no battery is configured
 
-# [V2024.12.3] 
-Fixed error getting battery limits when no battery is configured
-
 # [V2024.12.2] 
 Fixed typo in utils.py
 

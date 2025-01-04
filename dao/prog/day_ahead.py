@@ -311,7 +311,6 @@ class DaCalc(DaBase):
         last_invoice = dt.datetime.strptime(
             self.prices_options["last invoice"], "%Y-%m-%d"
         )
-        
         cons_data_history = self.db_da.get_consumption(
             last_invoice, dt.datetime.today()
         )
@@ -332,6 +331,7 @@ class DaCalc(DaBase):
             logging.warning(f"Verbruik laatste contractjaar kon niet wordt vastgesteld")
             consumption_his = 0
             production_his = 0
+
         logging.info(f"Verbruik dit contractjaar: " f"{consumption_his:.3f} kWh")
         logging.info(f"Productie dit contractjaar: " f"{production_his:.3f} kWh")
         if not salderen and is_number(consumption_his) and is_number(production_his):
