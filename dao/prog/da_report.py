@@ -17,10 +17,16 @@ import matplotlib.pyplot as plt
 class Report:
     periodes = {}
 
-    def __init__(self, file_name: str = "../data/options.json"):
+    def __init__(self, file_name: str = "../data/options.json", db_da=None, db_ha=None):
         self.config = Config(file_name)
-        self.db_da = self.config.get_db_da()
-        self.db_ha = self.config.get_db_ha()
+        if db_da is None:
+            self.db_da = self.config.get_db_da()
+        else:
+            self.db_da = db_da
+        if db_ha is None:
+            self.db_ha = self.config.get_db_ha()
+        else:
+            self.db_ha = db_ha
         self.prices_options = self.config.get(["prices"])
         # eb + ode levering
         self.taxes_l_def = self.prices_options["energy taxes delivery"]
