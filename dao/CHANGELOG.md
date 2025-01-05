@@ -1,7 +1,18 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# [V2025.1.1] 
+Fixed errors when consumption-data in last contractyear could not be calculated.
+
 # [V2025.1.0] 
-Programma kan rekenen met kwartier interval.
+- Fixed error saving prognoses with postgresql database
+- Fixed error getting history consumption data: also data in ha-db are taken in account
+- Optimum low level for the battery is back again
+- When choosen for strategy "minimize consumption", there was sometimes "no solution",
+this is corrected
+
+# [V2024.12.3] 
+Fixed error getting battery limits when no battery is configured
 
 # [V2024.12.2] 
 Fixed typo in utils.py
