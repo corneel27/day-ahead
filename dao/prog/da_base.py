@@ -13,7 +13,7 @@ from logging import Handler
 from sqlalchemy import Table, select, func, and_
 from utils import get_tibber_data, error_handling
 from version import __version__
-from da_config import Config
+from dao.prog.da_config import Config
 from da_meteo import Meteo
 from da_prices import DaPrices
 from db_manager import DBmanagerObj
@@ -343,13 +343,12 @@ class DaBase(hass.Hass):
         outer_query = select(func.avg(inner_query.c.value).label("avg_da"))
         from sqlalchemy.dialects import mysql  # , postgresql
 
-        query_str = str(inner_query.compile(dialect=mysql.dialect()))
-        logging.debug(f"inner query p_avg: {query_str}")
-        query_str = str(outer_query.compile(dialect=mysql.dialect()))
-        logging.debug(f"outer query p_avg: {query_str}")
-
         # Execute the query and fetch the result
         with self.db_da.engine.connect() as connection:
+            query_str = str(inner_query.compile(connection))
+            logging.debug(f"inner query p_avg: {query_str}")
+            query_str = str(outer_query.compile(connection))
+            logging.debug(f"outer query p_avg: {query_str}")
             result = connection.execute(outer_query)
             return result.scalar()
 

@@ -12,6 +12,7 @@ import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
 from pandas.core.dtypes.inference import is_number
 from dao.prog.da_report import Report
+from dao.prog.da_config import Config
 from utils import (
     get_value_from_dict,
     is_laagtarief,
@@ -317,7 +318,7 @@ class DaCalc(DaBase):
         """
         report = None
         try:
-            report = Report(file_name=self.file_name, db_da=self.db_da, db_ha=self.db_ha)
+            report = Report(file_name=self.file_name)
             # df.loc[df['a'] == 1, 'b'].sum()
             # df.query("a == 1")['b'].sum()
             # df[df['a']==1]['b'].sum()
