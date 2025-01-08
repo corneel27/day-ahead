@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.1.2] 
+- Fixed errors when postgresql db-engine is used
+- Fixed error calculating report/balance with period "vorige maand"
 
 # [V2025.1.1] 
 Fixed errors when consumption-data in last contractyear could not be calculated.

@@ -10,7 +10,7 @@ from subprocess import PIPE, run
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from dao.prog.da_config import Config
-import dao.prog.da_report
+from dao.prog.da_report import Report
 from dao.prog.version import __version__
 
 web_datapath = "static/data/"
@@ -260,7 +260,7 @@ def run_process():
 
 @app.route('/reports', methods=['POST', 'GET'])
 def reports():
-    report = dao.prog.da_report.Report(app_datapath+"/options.json")
+    report = Report(app_datapath+"/options.json")
     subjects = ["grid", "balans"]
     active_subject = "grid"
     views = ["grafiek", "tabel"]
@@ -396,7 +396,7 @@ def api_report(fld: str, periode: str):
     """
     cumulate = request.args.get('cumulate')
     expected = request.args.get('expected')
-    report = dao.prog.da_report.Report(app_datapath+"/options.json")
+    report = Report(app_datapath+"/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
     if cumulate is None:

@@ -69,8 +69,8 @@ class DBmanagerObj(object):
                 f"postgresql+psycopg2://{self.user}:{self.password}@"
                 f"{self.server}/{self.db_name}"
             )
-            with self.engine.connect() as connection:
-                connection.execute(text(f"SET timezone = '{self.TARGET_TIMEZONE}';"))
+#             with self.engine.connect() as connection:
+#                connection.execute(text(f"SET timezone = '{self.TARGET_TIMEZONE}';"))
         else:  # sqlite3
             if self.db_path is None:
                 self.db_path = "../data"
@@ -160,7 +160,9 @@ class DBmanagerObj(object):
         elif self.db_dialect == "postgresql":
             return func.extract(
                 "epoch",
-                func.timezone(self.TARGET_TIMEZONE, func.cast(date_str, TIMESTAMP)),
+                func.to_timestamp(date_str, 'YYYY-MM-DD hh24:mi:ss')
+                # func.timezone(self.TARGET_TIMEZONE, func.cast(date_str, TIMESTAMP)),
+                #EXTRACT(epoch FROM to_timestamp('2025-01-07 00:07:00', 'YYYY-MM-DD hh24:mi:ss'))
             )
         else:  # mysql/mariadb
             return func.unix_timestamp(date_str)
