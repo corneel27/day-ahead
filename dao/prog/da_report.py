@@ -17,16 +17,10 @@ import matplotlib.pyplot as plt
 class Report:
     periodes = {}
 
-    def __init__(self, file_name: str = "../data/options.json", db_da=None, db_ha=None):
+    def __init__(self, file_name: str = "../data/options.json"):
         self.config = Config(file_name)
-        if db_da is None:
-            self.db_da = self.config.get_db_da()
-        else:
-            self.db_da = db_da
-        if db_ha is None:
-            self.db_ha = self.config.get_db_ha()
-        else:
-            self.db_ha = db_ha
+        self.db_da = self.config.get_db_da()
+        self.db_ha = self.config.get_db_ha()
         self.prices_options = self.config.get(["prices"])
         # eb + ode levering
         self.taxes_l_def = self.prices_options["energy taxes delivery"]
@@ -496,8 +490,9 @@ class Report:
         col_index = add_from.columns.get_loc(col_name_from) + 1
         for row in add_from.itertuples():
             # add_from.at[row.tijd, col_name_from])
-            add_to.at[row.tijd, col_name_to] = (
-                add_to.at[row.tijd, col_name_to] + factor * row[col_index]
+            if row.tijd in add_to.index:
+                add_to.at[row.tijd, col_name_to] = (
+                    add_to.at[row.tijd, col_name_to] + factor * row[col_index]
             )
         return add_to
 
@@ -1092,11 +1087,9 @@ class Report:
                     .group_by(interval)
                 )
 
-                # from sqlalchemy.dialects import postgresql, mysql
-                # query_str = str(query.compile(engine=mysql.engine()))
-                # print(query_str)
-
                 with self.db_da.engine.connect() as connection:
+                    query_str = str(query.compile(connection))
+                    logging.debug(f"Query: \n {query_str}")
                     result_cat = pd.read_sql_query(query, connection)
                 result_cat.index = result_cat[
                     interval
@@ -1150,10 +1143,9 @@ class Report:
                 .order_by(t1.c.time)
             )
 
-            # from sqlalchemy.dialects import postgresql
-            # query_str = str(query.compile(engine=postgresql.engine()))
-
             with self.db_da.engine.connect() as connection:
+                query_str = str(query.compile(connection))
+                logging.debug(query_str)
                 df_prices = pd.read_sql_query(query, connection)
             logging.debug(f"Prijzen \n{df_prices.to_string()}\n")
 
@@ -1229,11 +1221,9 @@ class Report:
                         )
                     )
 
-                    from sqlalchemy.dialects import postgresql
-
-                    query_str = str(query.compile(dialect=postgresql.dialect()))
-                    logging.debug(f"query get prognose data:\n {query_str}")
                     with self.db_da.engine.connect() as connection:
+                        query_str = str(query.compile(connection))
+                        logging.debug(f"query get prognose data:\n {query_str}")
                         df_prog = pd.read_sql_query(query, connection)
 
                     df_prog.index = pd.to_datetime(df_prog["tijd"])
