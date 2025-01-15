@@ -10,7 +10,7 @@ from subprocess import PIPE, run
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from dao.prog.da_config import Config
-import dao.prog.da_report
+from dao.prog.da_report import Report
 from dao.prog.version import __version__
 
 web_datapath = "static/data/"
@@ -268,8 +268,14 @@ def run_process():
 
 @app.route("/reports", methods=["POST", "GET"])
 def reports():
-    report = dao.prog.da_report.Report(app_datapath + "/options.json")
+    report = Report(app_datapath + "/options.json")
+    if config is not None:
+        sensor_co2_intensity = config.get(["report", "entity co2-intensity"], None, None)
+    else:
+        sensor_co2_intensity = None
     subjects = ["grid", "balans"]
+    if sensor_co2_intensity is not None:
+        subjects += ["CO2"]
     active_subject = "grid"
     views = ["grafiek", "tabel"]
     active_view = "tabel"
@@ -309,9 +315,16 @@ def reports():
     if active_subject == "grid":
         report_df = report.get_grid_data(active_period, _tot=tot)
         filtered_df = report.calc_grid_columns(report_df, active_interval, active_view)
-    else:
+    elif active_subject == "balans":
         report_df = report.get_energy_balance_data(active_period, _tot=tot)
         filtered_df = report.calc_balance_columns(
+            report_df, active_interval, active_view
+        )
+    else: # co2
+        report_df = report.get_energy_balance_data(active_period, _tot=tot,
+                                                   col_dict=report.co2_dict,
+                                                   _interval="uur")
+        filtered_df = report.calc_co2_columns(
             report_df, active_interval, active_view
         )
     filtered_df.round(3)
@@ -329,7 +342,11 @@ def reports():
     else:
         if active_subject == "grid":
             report_data = report.make_graph(filtered_df, active_period)
-        else:
+        elif active_subject == "balance":
+            report_data = report.make_graph(
+                filtered_df, active_period, report.balance_graph_options
+            )
+        else: # co2
             report_data = report.make_graph(
                 filtered_df, active_period, report.balance_graph_options
             )
@@ -429,9 +446,9 @@ def api_report(fld: str, periode: str):
     :param periode: de periode van de gevraagde data
     :return: de gevraagde data in json formaat
     """
-    cumulate = request.args.get("cumulate")
-    expected = request.args.get("expected")
-    report = dao.prog.da_report.Report(app_datapath + "/options.json")
+    cumulate = request.args.get('cumulate')
+    expected = request.args.get('expected')
+    report = Report(app_datapath+"/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
     if cumulate is None:

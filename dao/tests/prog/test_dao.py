@@ -46,17 +46,19 @@ def start_logging():
 
 def test_da_calc():
     start_logging()
-    da_calc = dao.prog.day_ahead.DaCalc(file_name="../data/options_mysql.json")
+    # da_calc = dao.prog.day_ahead.DaCalc(file_name="../data/options_mysql.json")
+    da_calc = dao.prog.day_ahead.DaCalc(file_name="../data/vincent.json")
     da_calc.calc_optimum(
-        _start_dt=datetime.datetime(year=2024, month=9, day=21, hour=10, minute=0),
-        _start_soc=35.0,
+        _start_dt=datetime.datetime(year=2025, month=1, day=15, hour=9, minute=0),
+        _start_soc=100.0,
     )
+    '''
     da_calc.calc_optimum(
         _start_dt=datetime.datetime(year=2024, month=9, day=21, hour=14, minute=0),
         _start_soc=35.0,
     )
     # da_calc.calc_optimum(_start_soc=67.2)
-
+    '''
 
 def get_grid_data(
     engine: str,
