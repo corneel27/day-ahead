@@ -1,6 +1,6 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# [V2025.1.3]  
+# [V2025.1.3] 
 - Fixed "no optimal solution" when no zero-power stage is configured with a battery
 
 # [V2025.1.2] 
