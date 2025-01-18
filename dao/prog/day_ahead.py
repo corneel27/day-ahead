@@ -442,14 +442,21 @@ class DaCalc(DaBase):
         for b in range(B):
             pv_prod_ac.append([])
             pv_prod_dc.append([])
+            charge_stages = self.battery_options[b]["charge stages"]
+            if float(charge_stages[0]["power"]) != 0.0:
+                charge_stages = [{"power": 0.0, "efficiency": 1}] + charge_stages
+            discharge_stages = self.battery_options[b]["discharge stages"]
+            if float(discharge_stages[0]["power"]) != 0.0:
+                discharge_stages = [{"power": 0.0, "efficiency": 1}] + discharge_stages
+
             # noinspection PyTypeChecker
             max_charge_power.append(
-                int(self.battery_options[b]["charge stages"][-1]["power"]) / 1000
+                int(charge_stages[-1]["power"]) / 1000
             )
             # CS is aantal charge stages
-            CS.append(len(self.battery_options[b]["charge stages"]))
+            CS.append(len(charge_stages))
             max_discharge_power.append(
-                self.battery_options[b]["discharge stages"][-1]["power"] / 1000
+                discharge_stages[-1]["power"] / 1000
             )
 
             # reduced power
@@ -500,10 +507,10 @@ class DaCalc(DaBase):
                 / 1000
             )
             # DS is aantal discharge stages
-            DS.append(len(self.battery_options[b]["discharge stages"]))
+            DS.append(len(discharge_stages))
             sum_eff = 0
             for ds in range(DS[b])[1:]:
-                sum_eff += self.battery_options[b]["discharge stages"][ds]["efficiency"]
+                sum_eff += discharge_stages[ds]["efficiency"]
             avg_eff_dc_to_ac.append(sum_eff / (DS[b] - 1))
 
             ac = float(self.battery_options[b]["capacity"])
@@ -563,11 +570,11 @@ class DaCalc(DaBase):
                     eff = 1
                     for ds in range(DS[b]):
                         if (
-                            self.battery_options[b]["discharge stages"][ds]["power"]
+                            discharge_stages[ds]["power"]
                             / 1000
                             > prod_dc
                         ):
-                            eff = self.battery_options[b]["discharge stages"][ds][
+                            eff = discharge_stages[ds][
                                 "efficiency"
                             ]
                             break
@@ -607,7 +614,7 @@ class DaCalc(DaBase):
 
         # elektra per vermogensklasse van ac naar de busbar, ieder uur
         ac_to_dc_st = [[[model.add_var(var_type=CONTINUOUS, lb=0,
-                        ub=self.battery_options[b]["charge stages"][cs]["power"]/1000)
+                        ub=charge_stages[cs]["power"]/1000)
                         for u in range(U)] for cs in range(CS[b])] for b in range(B)]
         # vermogens klasse aan/uit
         ac_to_dc_st_on = [[[model.add_var(var_type=BINARY)
@@ -616,7 +623,7 @@ class DaCalc(DaBase):
         # met sos ###################################################################
         ac_to_dc_samples = [
             [
-                self.battery_options[b]["charge stages"][cs]["power"] / 1000
+                charge_stages[cs]["power"] / 1000
                 for cs in range(CS[b])
             ]
             for b in range(B)
@@ -624,8 +631,8 @@ class DaCalc(DaBase):
         dc_from_ac_samples = [
             [
                 (
-                    self.battery_options[b]["charge stages"][cs]["efficiency"]
-                    * self.battery_options[b]["charge stages"][cs]["power"]
+                    charge_stages[cs]["efficiency"]
+                    * charge_stages[cs]["power"]
                     / 1000
                 )
                 for cs in range(CS[b])
@@ -677,7 +684,7 @@ class DaCalc(DaBase):
                     model.add_var(
                         var_type=CONTINUOUS,
                         lb=0,
-                        ub=self.battery_options[b]["discharge stages"][ds]["power"]
+                        ub=discharge_stages[ds]["power"]
                         / 1000,
                     )
                     for _ in range(U)
@@ -765,17 +772,17 @@ class DaCalc(DaBase):
                 """
                 for cs in range(CS[b]):
                     model += (ac_to_dc_st[b][cs][u] <=
-                        self.battery_options[b]["charge stages"][cs]["power"] * 
+                        charge_stages[cs]["power"] * 
                         ac_to_dc_st_on[b][cs][u]/1000)
                 for cs in range(CS[b])[1:]:
                     model += (ac_to_dc_st[b][cs][u] >=
-                        self.battery_options[b]["charge stages"][cs - 1]["power"] * 
+                        charge_stages[cs - 1]["power"] * 
                         ac_to_dc_st_on[b][cs][u]/1000)
 
                 model += ac_to_dc[b][u] == xsum(ac_to_dc_st[b][cs][u] for cs in range(CS[b]))
                 model += (xsum(ac_to_dc_st_on[b][cs][u] for cs in range(CS[b]))) <= 1
                 model += dc_from_ac[b][u] == xsum(ac_to_dc_st[b][cs][u] * \
-                                    self.battery_options[b]["charge stages"][cs]["efficiency"] 
+                                    charge_stages[cs]["efficiency"] 
                                     for cs in range(CS[b]))
                 """
                 # met sos
@@ -807,14 +814,14 @@ class DaCalc(DaBase):
                 for ds in range(DS[b]):
                     model += (
                         ac_from_dc_st[b][ds][u]
-                        <= self.battery_options[b]["discharge stages"][ds]["power"]
+                        <= discharge_stages[ds]["power"]
                         * ac_from_dc_st_on[b][ds][u]
                         / 1000
                     )
                 for ds in range(DS[b])[1:]:
                     model += (
                         ac_from_dc_st[b][ds][u]
-                        >= self.battery_options[b]["discharge stages"][ds - 1]["power"]
+                        >= discharge_stages[ds - 1]["power"]
                         * ac_from_dc_st_on[b][ds][u]
                         / 1000
                     )
@@ -825,7 +832,7 @@ class DaCalc(DaBase):
                 model += (xsum(ac_from_dc_st_on[b][ds][u] for ds in range(DS[b]))) <= 1
                 model += dc_to_ac[b][u] == xsum(
                     ac_from_dc_st[b][ds][u]
-                    / self.battery_options[b]["discharge stages"][ds]["efficiency"]
+                    / discharge_stages[ds]["efficiency"]
                     for ds in range(DS[b])
                 )
 

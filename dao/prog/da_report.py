@@ -563,10 +563,6 @@ class Report:
         factor = -1 if negation else +1
         if col_name_to is None:
             col_name_to = col_name_from
-        # if negation:
-        #    add_to[col_name_to] = add_to[col_name_to] - add_from[col_name_from]
-        # else:
-        #    add_to[col_name_to] =add_to[col_name_to] + add_from[col_name_from]
         col_index = add_from.columns.get_loc(col_name_from) + 1
         for row in add_from.itertuples():
             # add_from.at[row.tijd, col_name_from])
@@ -842,26 +838,38 @@ class Report:
 
     @staticmethod
     def calc_netto_cons(df: pd.DataFrame) -> pd.DataFrame:
+        '''
         netto = []
         for row in df.itertuples():
             netto.append(row.cons - row.prod)
         result = df.assign(netto_cons=netto)
-        return result
+        '''
+        df["netto_cons"] = df["cons"] - df["prod"]
+        return df
 
     @staticmethod
     def calc_emissie(df: pd.DataFrame) -> pd.DataFrame:
+        '''
         emissie = []
         for row in df.itertuples():
             emissie.append(row.netto_cons * row.co2_intensity / 1000)
         result = df.assign(emissie=emissie)
-        return result
+        '''
+        df["emissie"] = df["netto_cons"] * df["co2_intensity"] / 1000
+        return df
 
     @staticmethod
-    def tijd_at_interval(interval: str, moment: datetime.datetime) -> str | int:
+    def tijd_at_interval(interval: str, moment: datetime.datetime,
+                         as_index: bool=False
+                         ) -> str | int:
         if interval == "maand":
             result = datetime.datetime(moment.year, moment.month, day=1)
+            if as_index:
+                return result.strftime("%Y-%m")
         elif interval == "dag":
             result = datetime.datetime(moment.year, moment.month, moment.day)
+            if as_index:
+                return result.strftime("%Y-%m-%d")
         elif interval == "weekdag":
             return moment.weekday()
         elif interval == "heel_uur":
@@ -1749,7 +1757,7 @@ class Report:
         if active_interval != "uur":
             report_df["uur"] = pd.to_datetime(report_df["uur"])
             report_df["uur"] = report_df.apply(
-                lambda x: self.tijd_at_interval(active_interval, x["uur"]), axis=1
+                lambda x: self.tijd_at_interval(active_interval, x["uur"], as_index=True), axis=1
             )
             report_df = report_df.groupby(["uur"], as_index=False).agg(
                 {

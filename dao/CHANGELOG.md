@@ -1,5 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.1.3] 
+- Fixed "no optimal solution" when no zero-power stage is configured with a battery
+- Implemented calculation and report of CO2-emission
+
+# [V2025.1.2] 
+- Fixed errors when postgresql db-engine is used
+- Fixed error calculating report/balance with period "vorige maand"
 
 # [V2025.1.1] 
 Fixed errors when consumption-data in last contractyear could not be calculated.
