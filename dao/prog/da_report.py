@@ -115,6 +115,7 @@ class Report:
                 "color": "#f1a603",
             },
         }
+
         self.grid_dict = {
             "cons": {
                 "dim": "kWh",
@@ -147,6 +148,52 @@ class Report:
                 "function": "calc_cost",
             },
         }
+
+        self.co2_dict = {
+            "cons": {
+                "dim": "kWh",
+                "sign": "pos",
+                "name": "Verbruik",
+                "sensors": self.config.get(
+                    ["entities grid consumption"], self.report_options, []
+                ),
+                "color": "#00bfff",
+            },
+            "prod": {
+                "dim": "kWh",
+                "sign": "neg",
+                "name": "Productie",
+                "sensors": self.config.get(
+                    ["entities grid production"], self.report_options, []
+                ),
+                "color": "#0080ff",
+            },
+            "netto_cons": {
+                "dim": "kWh",
+                "sign": "pos",
+                "name": "Netto verbr.",
+                "sensors": "calc",
+                "function": "calc_netto_cons",
+            },
+            "co2_intensity": {
+                "dim": "g CO2 eq/kWh",
+                "sign": "neg",
+                "name": "CO2_Intensity",
+                "sensor_type": "factor",
+                "sensors": self.config.get(
+                    ["entity co2-intensity"], self.report_options, []
+                ),
+                "color": "#0080ff",
+            },
+            "emissie": {
+                "dim": "kg CO2",
+                "sign": "pos",
+                "name": "CO2 emissie",
+                "sensors": "calc",
+                "function": "calc_emissie",
+            },
+        }
+
         self.balance_graph_options = {
             "title": "Energiebalans",
             "style": self.config.get(["graphics", "style"]),
@@ -254,6 +301,7 @@ class Report:
         tot: datetime.datetime,
         col_name: str,
         agg: str = "uur",
+        sensor_type: str = "quantity",
     ) -> pd.DataFrame:
         """
         Retrieves and aggregates sensordata from ha database
@@ -321,68 +369,98 @@ class Report:
 
         # Define aliases for the tables
         t1 = statistics.alias("t1")
-        t2 = statistics.alias("t2")
+        v1 = statistics_meta.alias("v1")
 
         # Define parameters
         start_ts_param1 = vanaf.strftime("%Y-%m-%d %H:%M:%S")  # '2024-01-01 00:00:00'
         start_ts_param2 = tot.strftime("%Y-%m-%d %H:%M:%S")  # '2024-05-23 00:00:00'
-        if agg == "maand":
-            column = self.db_ha.month(t2.c.start_ts).label("maand")
-        elif agg == "dag":
-            column = self.db_ha.day(t2.c.start_ts).label("dag")
-        else:  # interval == "uur"
-            column = self.db_ha.hour(t2.c.start_ts).label("uur")
+        if sensor_type == "quantity":
+            t2 = statistics.alias("t2")
+            if agg == "maand":
+                column = self.db_ha.month(t2.c.start_ts).label("maand")
+            elif agg == "dag":
+                column = self.db_ha.day(t2.c.start_ts).label("dag")
+            else:  # interval == "uur"
+                column = self.db_ha.hour(t2.c.start_ts).label("uur")
 
-        if agg == "uur":
-            columns = [
-                column,
-                self.db_ha.from_unixtime(t2.c.start_ts).label("tijd"),
-                self.db_ha.from_unixtime(t2.c.start_ts).label("tot"),
-                case((t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0).label(
-                    col_name
-                ),
-            ]
-        else:
-            columns = [
-                column,
-                func.min(self.db_ha.from_unixtime(t2.c.start_ts)).label("tijd"),
-                func.max(self.db_ha.from_unixtime(t2.c.start_ts)).label("tot"),
-                func.sum(
-                    case((t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0)
-                ).label(col_name),
-            ]
+            if agg == "uur":
+                columns = [
+                    column,
+                    self.db_ha.from_unixtime(t2.c.start_ts).label("tijd"),
+                    self.db_ha.from_unixtime(t2.c.start_ts).label("tot"),
+                    case(
+                        (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
+                    ).label(col_name),
+                ]
+            else:
+                columns = [
+                    column,
+                    func.min(self.db_ha.from_unixtime(t2.c.start_ts)).label("tijd"),
+                    func.max(self.db_ha.from_unixtime(t2.c.start_ts)).label("tot"),
+                    func.sum(
+                        case(
+                            (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
+                        )
+                    ).label(col_name),
+                ]
 
-        # Build the query to retrieve raw data
-        query = (
-            select(*columns)
-            .select_from(
-                t1.join(t2, t2.c.start_ts == t1.c.start_ts + 3600).join(
-                    statistics_meta,
-                    (statistics_meta.c.id == t1.c.metadata_id)
-                    & (statistics_meta.c.id == t2.c.metadata_id),
+            # Build the query to retrieve raw data
+            query = (
+                select(*columns)
+                .select_from(
+                    t1.join(t2, t2.c.start_ts == t1.c.start_ts + 3600).join(
+                        v1,
+                        (v1.c.id == t1.c.metadata_id) & (v1.c.id == t2.c.metadata_id),
+                    )
+                )
+                .where(
+                    (v1.c.statistic_id == sensor)
+                    & (t1.c.state.isnot(None))
+                    & (t2.c.state.isnot(None))
+                    & (
+                        t1.c.start_ts
+                        >= self.db_ha.unix_timestamp(start_ts_param1) - 3600
+                    )
+                    & (
+                        t1.c.start_ts
+                        < self.db_ha.unix_timestamp(start_ts_param2) - 3600
+                    )
                 )
             )
-            .where(
-                (statistics_meta.c.statistic_id == sensor)
-                & (t1.c.state.isnot(None))
-                & (t2.c.state.isnot(None))
-                & (t1.c.start_ts >= self.db_ha.unix_timestamp(start_ts_param1) - 3600)
-                & (t1.c.start_ts < self.db_ha.unix_timestamp(start_ts_param2) - 3600)
+            if agg != "uur":
+                query = query.group_by(agg)
+        else:
+            columns = [
+                self.db_ha.hour(t1.c.start_ts).label("uur"),
+                self.db_ha.from_unixtime(t1.c.start_ts).label("tijd"),
+                self.db_ha.from_unixtime(t1.c.start_ts).label("tot"),
+                t1.c.mean.label(col_name),
+            ]
+            query = (
+                select(*columns)
+                .select_from(
+                    t1.join(
+                        v1,
+                        (v1.c.id == t1.c.metadata_id),
+                    )
+                )
+                .where(
+                    (v1.c.statistic_id == sensor)
+                    & (t1.c.mean.isnot(None))
+                    & (t1.c.start_ts >= self.db_ha.unix_timestamp(start_ts_param1))
+                    & (t1.c.start_ts < self.db_ha.unix_timestamp(start_ts_param2))
+                )
             )
-        )
-        if agg != "uur":
-            query = query.group_by(agg)
 
-        from sqlalchemy.dialects import sqlite  # , postgresql,  mysql
-
-        query_str = str(query.compile(dialect=sqlite.dialect()))
-        logging.debug(f"query get sensor data:\n {query_str}")
         # Execute the query and load results into a DataFrame
         with self.db_ha.engine.connect() as connection:
+            query_str = str(query.compile(connection))
+            logging.debug(f"query get sensor data:\n {query_str}")
             df_raw = pd.read_sql(query, connection)
 
         if len(df_raw) == 0:
             df_raw = pd.DataFrame(columns=[agg, "tijd", "tot", col_name])
+
         df_raw.index = df_raw[agg]  # pd.to_datetime(df_raw["tijd"])
 
         # Print the raw DataFrame
@@ -483,17 +561,13 @@ class Report:
         factor = -1 if negation else +1
         if col_name_to is None:
             col_name_to = col_name_from
-        # if negation:
-        #    add_to[col_name_to] = add_to[col_name_to] - add_from[col_name_from]
-        # else:
-        #    add_to[col_name_to] =add_to[col_name_to] + add_from[col_name_from]
         col_index = add_from.columns.get_loc(col_name_from) + 1
         for row in add_from.itertuples():
             # add_from.at[row.tijd, col_name_from])
             if row.tijd in add_to.index:
                 add_to.at[row.tijd, col_name_to] = (
                     add_to.at[row.tijd, col_name_to] + factor * row[col_index]
-            )
+                )
         return add_to
 
     def get_latest_present(self, code: str) -> datetime.datetime:
@@ -761,11 +835,39 @@ class Report:
         return result
 
     @staticmethod
-    def tijd_at_interval(interval: str, moment: datetime.datetime) -> str | int:
+    def calc_netto_cons(df: pd.DataFrame) -> pd.DataFrame:
+        '''
+        netto = []
+        for row in df.itertuples():
+            netto.append(row.cons - row.prod)
+        result = df.assign(netto_cons=netto)
+        '''
+        df["netto_cons"] = df["cons"] - df["prod"]
+        return df
+
+    @staticmethod
+    def calc_emissie(df: pd.DataFrame) -> pd.DataFrame:
+        '''
+        emissie = []
+        for row in df.itertuples():
+            emissie.append(row.netto_cons * row.co2_intensity / 1000)
+        result = df.assign(emissie=emissie)
+        '''
+        df["emissie"] = df["netto_cons"] * df["co2_intensity"] / 1000
+        return df
+
+    @staticmethod
+    def tijd_at_interval(interval: str, moment: datetime.datetime,
+                         as_index: bool=False
+                         ) -> str | int:
         if interval == "maand":
             result = datetime.datetime(moment.year, moment.month, day=1)
+            if as_index:
+                return result.strftime("%Y-%m")
         elif interval == "dag":
             result = datetime.datetime(moment.year, moment.month, moment.day)
+            if as_index:
+                return result.strftime("%Y-%m-%d")
         elif interval == "weekdag":
             return moment.weekday()
         elif interval == "heel_uur":
@@ -774,11 +876,30 @@ class Report:
             result = moment
         return result.strftime("%Y-%m-%d %H:%M:%S")
 
-    def get_energy_balance_data(self, periode, _vanaf=None, _tot=None):
+    def get_energy_balance_data(
+        self,
+        periode: str,
+        col_dict: dict = None,
+        _vanaf: datetime.datetime = None,
+        _tot: datetime.datetime = None,
+        _interval: str = None
+    ):
+        """
+        berekent een report conform de col_dict configuratie
+        :param periode: key van een van de self.periodes
+        :param col_dict: of self.energy_balance_dict of self.co2_dict
+        :param _vanaf: als afwijkt van periode.vanaf
+        :param _tot: als afwijkt van periode.tot
+        :param _interval: als afwijkt van periode.interval
+        :return:
+        """
         periode_d = self.periodes[periode]
         vanaf = _vanaf if _vanaf else periode_d["vanaf"]
         tot = _tot if _tot else periode_d["tot"]
-        interval = periode_d["interval"]
+        interval = periode_d["interval"] if _interval is None else _interval
+        if col_dict is None:
+            col_dict = self.energy_balance_dict
+
         result = pd.DataFrame(columns=[interval, "tijd"])
         last_realised_moment = datetime.datetime.fromtimestamp(
             math.floor(datetime.datetime.now().timestamp() / 3600) * 3600
@@ -799,6 +920,8 @@ class Report:
             else:
                 tijd_str = moment_str[0:7]  # jaar maand
                 moment = old_moment + relativedelta(months=1)
+            if interval != periode_d["interval"]:
+                tijd_str = moment_str
             result.loc[result.shape[0]] = [tijd_str, old_moment]
         result.index = pd.to_datetime(result["tijd"])
         values_table = Table(
@@ -811,13 +934,18 @@ class Report:
         )
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
+        groupby_str = interval
         if interval == "maand":
             column = self.db_da.month(t1.c.time).label("maand")
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
         else:  # interval == "uur"
-            column = self.db_da.hour(t1.c.time).label("uur")
-        for key, categorie in self.energy_balance_dict.items():
+            if interval == periode_d["interval"]:
+                column = self.db_da.hour(t1.c.time).label("uur")
+            else:
+                column = self.db_da.from_unixtime(t1.c.time).label("tijd")
+                groupby_str = "tijd"
+        for key, categorie in col_dict.items():
             result[key] = 0.0
             """
             if interval == "maand":
@@ -873,7 +1001,7 @@ class Report:
                         < self.db_da.unix_timestamp(tot.strftime("%Y-%m-%d %H:%M:%S")),
                     )
                 )
-                .group_by(interval)
+                .group_by(groupby_str)
             )
 
             with self.db_da.engine.connect() as connection:
@@ -885,7 +1013,8 @@ class Report:
             # if len(code_result) > 0:
             #     code_result['tijd'] = code_result.apply(lambda x: self.tijd_at_interval(interval,
             #     x['tijd']), axis=1)
-            code_result.index = code_result[interval]
+
+            code_result.index = code_result["tijd"]
 
             if code_result.shape[0] == 0:
                 # datetime.datetime.combine(vanaf, datetime.time(0,0)) - datetime.timedelta(hours=1)
@@ -900,8 +1029,17 @@ class Report:
                     ha_result = getattr(self, function)(result)
                 else:
                     for sensor in categorie["sensors"]:
+                        if "sensor_type" in categorie:
+                            sensor_type = categorie["sensor_type"]
+                        else:
+                            sensor_type = "quantity"
                         ha_result = self.get_sensor_data(
-                            sensor, last_moment, tot, key, interval
+                            sensor,
+                            last_moment,
+                            tot,
+                            key,
+                            agg=interval,
+                            sensor_type=sensor_type,
                         )
                         ha_result["tot"] = pd.to_datetime(ha_result["tijd"])
                         if interval == "maand":
@@ -1418,6 +1556,50 @@ class Report:
         if active_view == "tabel":
             report_df.loc["Total"] = report_df.sum(axis=0, numeric_only=True)
             report_df.at["Total", active_interval] = "Totaal"
+            columns = [columns_1, columns_2]
+            report_df.columns = columns
+        else:
+            report_df.columns = columns_1
+
+        return report_df
+
+    def calc_co2_columns(self, report_df, active_interval, active_view):
+        first_col = active_interval.capitalize()
+        # report_df = report_df.drop('vanaf', axis=1)
+        report_df.style.format("{:.3f}")
+        report_df = report_df.drop("tijd", axis=1)
+        # report_df =  report_df.drop('datasoort', axis=1)
+        key_columns = report_df.columns.values.tolist()[1:]
+        columns_1 = [first_col]
+        columns_2 = [""]
+        for key in key_columns:
+            columns_1 = columns_1 + [self.co2_dict[key]["name"]]
+            columns_2 = columns_2 + [self.co2_dict[key]["dim"]]
+        if active_interval != "uur":
+            report_df["uur"] = pd.to_datetime(report_df["uur"])
+            report_df["uur"] = report_df.apply(
+                lambda x: self.tijd_at_interval(active_interval, x["uur"], as_index=True), axis=1
+            )
+            report_df = report_df.groupby(["uur"], as_index=False).agg(
+                {
+                    "cons": "sum",
+                    "prod": "sum",
+                    "netto_cons": "sum",
+                    "co2_intensity": "mean",
+                    "emissie": "sum",
+                }
+            )
+
+        if active_view == "tabel":
+            report_df.loc["Total"] = report_df.sum(axis=0, numeric_only=True)
+            report_df.at["Total", "uur"] = "Totaal"
+            row = report_df.iloc[-1]
+            if row.netto_cons == 0:
+                co2_intensity = 0
+            else:
+                co2_intensity = row.emissie * 1000 / row.netto_cons
+            report_df.at[report_df.index[-1], "co2_intensity"] = co2_intensity
+
             columns = [columns_1, columns_2]
             report_df.columns = columns
         else:

@@ -100,11 +100,11 @@ def get_file_list(path: str, pattern: str) -> list:
             fullname = os.path.join(path, f)
             flist.append({"name": f, "time": os.path.getmtime(fullname)})
             # print(f, time.ctime(os.path.getmtime(f)))
-    flist.sort(key=lambda x: x.get('time'), reverse=True)
+    flist.sort(key=lambda x: x.get("time"), reverse=True)
     return flist
 
 
-@app.route('/', methods=['POST', 'GET'])
+@app.route("/", methods=["POST", "GET"])
 def menu():
     lst = request.form.to_dict(flat=False)
     if "current_menu" in lst:
@@ -132,7 +132,7 @@ def menu():
             return home()
 
 
-@app.route('/home', methods=['POST', 'GET'])
+@app.route("/home", methods=["POST", "GET"])
 def home():
     subjects = ["balans"]
     views = ["grafiek", "tabel"]
@@ -144,7 +144,7 @@ def home():
         battery_options = config.get(["battery"])
         for b in range(len(battery_options)):
             subjects.append(battery_options[b]["name"])
-    if request.method == 'POST':
+    if request.method == "POST":
         # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
         lst = request.form.to_dict(flat=False)
         if "cur_subject" in lst:
@@ -192,30 +192,36 @@ def home():
             tabel = None
         else:
             image = None
-            with open(app_datapath + active_map + flist[index]["name"], 'r') as f:
+            with open(app_datapath + active_map + flist[index]["name"], "r") as f:
                 tabel = f.read()
     else:
         active_time = None
         image = None
         tabel = None
 
-    return render_template('home.html', title='Optimization', active_menu="home",
-                           subjects=subjects, views=views,
-                           active_subject=active_subject,
-                           active_view=active_view,
-                           image=image, tabel=tabel,
-                           active_time=active_time,
-                           version=__version__)
+    return render_template(
+        "home.html",
+        title="Optimization",
+        active_menu="home",
+        subjects=subjects,
+        views=views,
+        active_subject=active_subject,
+        active_view=active_view,
+        image=image,
+        tabel=tabel,
+        active_time=active_time,
+        version=__version__,
+    )
 
 
-@app.route('/run', methods=['POST', 'GET'])
+@app.route("/run", methods=["POST", "GET"])
 def run_process():
     bewerking = ""
     current_bewerking = ""
     log_content = ""
     parameters = {}
 
-    if request.method in ['POST', 'GET']:
+    if request.method in ["POST", "GET"]:
         dct = request.form.to_dict(flat=False)
         if "current_bewerking" in dct:
             current_bewerking = dct["current_bewerking"][0]
@@ -233,8 +239,13 @@ def run_process():
             data = proc.stdout.decode()
             err = proc.stderr.decode()
             log_content = data + err
-            filename = ("../data/log/" + run_bewerking["file_name"] + "_" +
-                        datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S") + ".log")
+            filename = (
+                "../data/log/"
+                + run_bewerking["file_name"]
+                + "_"
+                + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
+                + ".log"
+            )
             with open(filename, "w") as f:
                 f.write(log_content)
         else:
@@ -246,29 +257,42 @@ def run_process():
                         for j in range(len(bewerkingen[bewerking]["parameters"])):
                             if bewerkingen[bewerking]["parameters"][j] in dct:
                                 param_str = bewerkingen[bewerking]["parameters"][j]
-                                param_value = dct[bewerkingen[bewerking]["parameters"][j]][0]
+                                param_value = dct[
+                                    bewerkingen[bewerking]["parameters"][j]
+                                ][0]
                                 parameters[param_str] = param_value
                     break
 
-    return render_template('run.html', title='Run', active_menu="run",
-                           bewerkingen=bewerkingen, bewerking=bewerking,
-                           current_bewerking=current_bewerking,
-                           parameters=parameters,
-                           log_content=log_content,
-                           version=__version__)
+    return render_template(
+        "run.html",
+        title="Run",
+        active_menu="run",
+        bewerkingen=bewerkingen,
+        bewerking=bewerking,
+        current_bewerking=current_bewerking,
+        parameters=parameters,
+        log_content=log_content,
+        version=__version__,
+    )
 
 
-@app.route('/reports', methods=['POST', 'GET'])
+@app.route("/reports", methods=["POST", "GET"])
 def reports():
-    report = Report(app_datapath+"/options.json")
+    report = Report(app_datapath + "/options.json")
+    if config is not None:
+        sensor_co2_intensity = config.get(["report", "entity co2-intensity"], None, None)
+    else:
+        sensor_co2_intensity = None
     subjects = ["grid", "balans"]
+    if sensor_co2_intensity is not None:
+        subjects += ["CO2"]
     active_subject = "grid"
     views = ["grafiek", "tabel"]
     active_view = "tabel"
     periode_options = report.periodes.keys()
     active_period = "vandaag"
     met_prognose = False
-    if request.method in ['POST', 'GET']:
+    if request.method in ["POST", "GET"]:
         # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
         lst = request.form.to_dict(flat=False)
         if "cur_subject" in lst:
@@ -286,10 +310,12 @@ def reports():
         if "met_prognose" in lst:
             met_prognose = lst["met_prognose"][0]
     tot = None
-    if (active_period == "vandaag" or
-            active_period == "deze week" or
-            active_period == "deze maand" or
-            active_period == "dit contractjaar"):
+    if (
+        active_period == "vandaag"
+        or active_period == "deze week"
+        or active_period == "deze maand"
+        or active_period == "dit contractjaar"
+    ):
         if not met_prognose:
             now = datetime.datetime.now()
             tot = datetime.datetime(now.year, now.month, now.day, now.hour)
@@ -299,40 +325,69 @@ def reports():
     if active_subject == "grid":
         report_df = report.get_grid_data(active_period, _tot=tot)
         filtered_df = report.calc_grid_columns(report_df, active_interval, active_view)
-    else:
+    elif active_subject == "balans":
         report_df = report.get_energy_balance_data(active_period, _tot=tot)
-        filtered_df = report.calc_balance_columns(report_df, active_interval, active_view)
+        filtered_df = report.calc_balance_columns(
+            report_df, active_interval, active_view
+        )
+    else: # co2
+        report_df = report.get_energy_balance_data(active_period, _tot=tot,
+                                                   col_dict=report.co2_dict,
+                                                   _interval="uur")
+        filtered_df = report.calc_co2_columns(
+            report_df, active_interval, active_view
+        )
     filtered_df.round(3)
     if active_view == "tabel":
-        report_data = [filtered_df.to_html(index=False, justify="right", decimal=",",
-                                           classes="data", border=0,
-                                           float_format='{:.3f}'.format)]
+        report_data = [
+            filtered_df.to_html(
+                index=False,
+                justify="right",
+                decimal=",",
+                classes="data",
+                border=0,
+                float_format="{:.3f}".format,
+            )
+        ]
     else:
         if active_subject == "grid":
             report_data = report.make_graph(filtered_df, active_period)
-        else:
-            report_data = report.make_graph(filtered_df, active_period,
-                                            report.balance_graph_options)
+        elif active_subject == "balance":
+            report_data = report.make_graph(
+                filtered_df, active_period, report.balance_graph_options
+            )
+        else: # co2
+            report_data = report.make_graph(
+                filtered_df, active_period, report.balance_graph_options
+            )
 
-    return render_template('report.html', title='Rapportage', active_menu="reports",
-                           subjects=subjects, views=views, periode_options=periode_options,
-                           active_period=active_period, met_prognose=met_prognose,
-                           active_subject=active_subject,
-                           active_view=active_view,
-                           report_data=report_data,
-                           version=__version__)
+    return render_template(
+        "report.html",
+        title="Rapportage",
+        active_menu="reports",
+        subjects=subjects,
+        views=views,
+        periode_options=periode_options,
+        active_period=active_period,
+        met_prognose=met_prognose,
+        active_subject=active_subject,
+        active_view=active_view,
+        report_data=report_data,
+        version=__version__,
+    )
 
 
-@app.route('/settings/<filename>', methods=['POST', 'GET'])
+@app.route("/settings/<filename>", methods=["POST", "GET"])
 def settings():
     def get_file(fname):
-        with open(fname, 'r') as file:
+        with open(fname, "r") as file:
             return file.read()
+
     settngs = ["options", "secrets"]
     active_setting = "options"
     cur_setting = ""
     lst = request.form.to_dict(flat=False)
-    if request.method in ['POST', 'GET']:
+    if request.method in ["POST", "GET"]:
         if "cur_setting" in lst:
             active_setting = lst["cur_setting"][0]
             cur_setting = active_setting
@@ -354,20 +409,27 @@ def settings():
                     try:
                         # json_data = json.loads(updated_data)
                         # Update the JSON data
-                        with open(filename_ext, 'w') as f:
+                        with open(filename_ext, "w") as f:
                             f.write(updated_data)
-                        message = 'JSON data updated successfully'
+                        message = "JSON data updated successfully"
                     except Exception as err:
-                        message = 'Error: ' + err.args[0]
+                        message = "Error: " + err.args[0]
                     options = updated_data
                 if action == "cancel":
                     options = get_file(filename_ext)
         else:
             # Load initial JSON data from a file
             options = get_file(filename_ext)
-    return render_template('settings.html', title='Instellingen', active_menu="settings",
-                           settings=settngs, active_setting=active_setting, options_data=options,
-                           message=message, version=__version__)
+    return render_template(
+        "settings.html",
+        title="Instellingen",
+        active_menu="settings",
+        settings=settngs,
+        active_setting=active_setting,
+        options_data=options,
+        message=message,
+        version=__version__,
+    )
 
 
 '''
@@ -386,7 +448,7 @@ def api_prognose(fld: str):
 '''
 
 
-@app.route('/api/report/<string:fld>/<string:periode>', methods=['GET'])
+@app.route("/api/report/<string:fld>/<string:periode>", methods=["GET"])
 def api_report(fld: str, periode: str):
     """
     Retourneert in json de data van
@@ -420,15 +482,20 @@ def api_report(fld: str, periode: str):
     return result
 
 
-@app.route('/api/run/<string:bewerking>', methods=['GET', 'POST'])
+@app.route("/api/run/<string:bewerking>", methods=["GET", "POST"])
 def run_api(bewerking: str):
     if bewerking in bewerkingen.keys():
         proc = run(bewerkingen[bewerking]["cmd"], capture_output=True, text=True)
         data = proc.stdout
         err = proc.stderr
         log_content = data + err
-        filename = "../data/log/" + bewerkingen[bewerking]["file_name"] + "_" + \
-                   datetime.datetime.now().strftime("%Y-%m-%d__%H:%M") + ".log"
+        filename = (
+            "../data/log/"
+            + bewerkingen[bewerking]["file_name"]
+            + "_"
+            + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M")
+            + ".log"
+        )
         with open(filename, "w") as f:
             f.write(log_content)
         return render_template("api_run.html", log_content=log_content)

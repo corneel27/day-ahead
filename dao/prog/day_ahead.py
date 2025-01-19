@@ -12,7 +12,6 @@ import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
 from pandas.core.dtypes.inference import is_number
 from dao.prog.da_report import Report
-from dao.prog.da_config import Config
 from utils import (
     get_value_from_dict,
     is_laagtarief,
@@ -312,6 +311,7 @@ class DaCalc(DaBase):
         last_invoice = dt.datetime.strptime(
             self.prices_options["last invoice"], "%Y-%m-%d"
         )
+
         cons_data_history = self.db_da.get_consumption(
             last_invoice, dt.datetime.today()
         )
@@ -1187,7 +1187,7 @@ class DaCalc(DaBase):
             time_needed = energy_needed[e] / (
                 max_power[e] * charge_stages[e][-1]["efficiency"]
             )
-            logging.info(f"Tijd nodig om te laden: {time_needed} uur")
+            logging.info(f"Tijd nodig om te laden: {time_needed:.2f} uur")
             old_switch_state = self.get_state(self.ev_options[e]["charge switch"]).state
             old_ampere_state = self.get_state(
                 self.ev_options[e]["entity set charging ampere"]
@@ -1586,7 +1586,7 @@ class DaCalc(DaBase):
                     for s in range(S)
                 ]
 
-                # schijven aan/uit, iedere schijf kan maar een keer in een uur
+                # schijven aan/uit, iedere schijf kan maar een keer in een interval
                 hp_s_on = [
                     [model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(S)
                 ]
@@ -1644,19 +1644,23 @@ class DaCalc(DaBase):
         ########################################################################
         # apparaten /machines
         ########################################################################
-        program_selected = []  # "kleur 30", "eco"
-        M = len(self.machines)
+        program_selected = []  # naam geselecteerd programma
+        M = len(self.machines)  # aantal geconfigureerde machines
         R = []  # aantal mogelijke runs
-        RL = []  # lengte van een run
-        KW = []  # aantal kwartieren
+        RL = []  # lengte van een run = aantal stappen van een kwartier
+        KW = []  # aantal kwartieren in een planningswindow
         ma_uur_kw = []  # per machine een list met beschikbare kwartieren
         ma_kw_dt = []  # per machine een list op welk tijdstip een kwartier begint
-        program_index = []
-        ma_name = []
+        program_index = (
+            []
+        )  # nummer in de lijst welk programma van een machine gaat draaien
+        ma_name = []  # naam van de machine
+        # entity voor opvragen vorig en teruggeven berekend nieuw start-tijdstip
         ma_entity_plan_start = []
+        # entity voor opvragen vorig en teruggeven berekend nieuw eind-tijdstip
         ma_entity_plan_end = []
-        ma_planned_start_dt = []
-        ma_planned_end_dt = []
+        ma_planned_start_dt = []  # start tijdstip planning window
+        ma_planned_end_dt = []  # eind tijdstip planning window
         for m in range(M):
             error = False
             ma_name.append(self.machines[m]["name"])
@@ -1692,7 +1696,7 @@ class DaCalc(DaBase):
                 0,
             )
             program_index.append(p)
-            RL.append(len(self.machines[m]["programs"][p]["power"]))  # aantal stages
+            RL.append(len(self.machines[m]["programs"][p]["power"]))  # aantal stappen
             # initialize yesterday
             planned_start_dt = dt.datetime(
                 start_dt.year, start_dt.month, start_dt.day
@@ -1723,10 +1727,12 @@ class DaCalc(DaBase):
                     )
                 else:
                     planned_end_dt = planned_start_dt + dt.timedelta(minutes=RL[m] * 15)
-            ma_planned_start_dt.append(planned_start_dt)
+            ma_planned_start_dt.append(
+                planned_start_dt
+            )  # de planning van de vorige geslaagde run
             ma_planned_end_dt.append(planned_end_dt)
-            start_ma_dt = start_dt
-            ready_ma_dt = uur[U - 1]
+            start_ma_dt = start_dt  # now
+            ready_ma_dt = uur[U - 1]  # het laatste moment van planningshorizon
             if start_window_entity is None:
                 logging.error(
                     f"De 'entity start window' is niet gedefinieerd bij de instellingen "
@@ -1780,7 +1786,7 @@ class DaCalc(DaBase):
                 if start_dt <= planned_end_dt:
                     logging.info(
                         f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                        f"ligt voorbij begin vorige planning(1): {planned_start_dt}"
+                        f"ligt voor het einde van de vorige planning(1): {planned_start_dt}"
                     )
                     error = True
                 elif start_dt <= ready_ma_dt:
@@ -1802,6 +1808,7 @@ class DaCalc(DaBase):
                 kw_num = 0
             else:
                 delta = ready_ma_dt - start_ma_dt
+                # aantal kwartieren in planningsperiode
                 kw_num = math.ceil(delta.seconds / 900)
             KW.append(kw_num)
             if RL[m] == 0:
@@ -1816,15 +1823,20 @@ class DaCalc(DaBase):
                         f"wordt ingepland tussen {start_ma_dt.strftime('%Y-%m-%d %H:%M')} "
                         f"en {ready_ma_dt.strftime('%Y-%m-%d %H:%M')}."
                     )
+            # het eerste tijdstip waarop de run kan beginnen
             start_ma_dt = dt.datetime.fromtimestamp(
                 900 * math.ceil(max(start_ma_dt, start_dt).timestamp() / 900)
             )
+
+            # ma_uur_kw: per machine per uur een lijst van kwartiernummers in het betreffende uur
             uur_kw = []
+            # ma_kw_dt: per machine een lijst van kwartiertijdstippen
             kw_dt = []
             kwartier_dt = start_ma_dt
             for u in range(U):
                 uur_kw.append([])
             for kw in range(kw_num):
+                # index in uur-lijst
                 uur_index = calc_uur_index(kwartier_dt, tijd)
                 if uur_index < U:
                     uur_kw[uur_index].append(kw)
@@ -1832,7 +1844,7 @@ class DaCalc(DaBase):
                 kwartier_dt = kwartier_dt + dt.timedelta(seconds=900)
             ma_uur_kw.append(uur_kw)
             ma_kw_dt.append(kw_dt)
-            # aantal runs = aantal kwartieren - aantal stages + 1
+            # R = aantal mogelijke runs = aantal kwartieren - aantal stages + 1
             R.append(min(KW[m], KW[m] - RL[m] + 1))
 
         # ma_start : wanneer machine start = 1 anders = 0
@@ -1844,7 +1856,7 @@ class DaCalc(DaBase):
         # ma_on = [[[model.add_var(var_type=BINARY) for kw in range(KW[m])]
         #           for r in range(R[m])] for m in range(M)]
 
-        # consumption per kwartier
+        # consumption per machine per kwartier
         c_ma_kw = [
             [
                 model.add_var(
@@ -1862,6 +1874,7 @@ class DaCalc(DaBase):
             for m in range(M)
         ]
 
+        # consumption per uur
         c_ma_u = [
             [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(U)]
             for _ in range(M)
@@ -1876,8 +1889,10 @@ class DaCalc(DaBase):
         for m in range(M):
             # maar 1 start
             if KW[m] == 0:
+                # als er geen kwartieren zijn dan geen start
                 model += xsum(ma_start[m][kw] for kw in range(KW[m])) == 0
             else:
+                # machine kan maar op een kwartier starten
                 model += xsum(ma_start[m][kw] for kw in range(KW[m])) == 1
 
             # kan niet starten als je de run niet kan afmaken
@@ -1904,12 +1919,16 @@ class DaCalc(DaBase):
                 model += c_ma_kw[m][kw] == xsum(
                     self.machines[m]["programs"][program_index[m]]["power"][kw - r]
                     * ma_start[m][r]
+                    # 4000 = omrekenen van kwartier vermogen in W naar verbruik in kWh
                     / 4000
+                    # van alle mogelijke runs de kwartieren
                     for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]
                 )
             for u in range(U):
                 if len(ma_uur_kw[m][u]) == 0:
+                    # er zijn geen "window" kwartieren in dit uur
                     if (
+                        # het verbruik uit een eerdere planning berekenen en meenemen
                         ma_planned_start_dt[m] < (tijd[u] + dt.timedelta(hours=1))
                         and ma_planned_end_dt[m] > tijd[u]
                     ):
@@ -2080,8 +2099,8 @@ class DaCalc(DaBase):
             ac_to_dc_sum = 0
             dc_to_ac_sum = 0
             for b in range(B):
-                ac_to_dc_sum += ac_to_dc[b][u].x  # / eff_ac_to_dc[b]
-                dc_to_ac_sum += ac_from_dc[b][u].x  # * eff_dc_to_ac[b]
+                ac_to_dc_sum += ac_to_dc[b][u].x * hour_fraction[u]
+                dc_to_ac_sum += ac_from_dc[b][u].x * hour_fraction[u]
             accu_in_sum.append(ac_to_dc_sum)
             accu_out_sum.append(dc_to_ac_sum)
         for u in range(U):
@@ -2173,7 +2192,7 @@ class DaCalc(DaBase):
                 )
                 for u in range(U):
                     logging.info(
-                        f"{uur[u]:2.0f} {pl[u]:6.4f} {p_hp[0][u].x:6.0f} {p_hp[1][u].x:6.0f} "
+                        f"{uur[u]} {pl[u]:6.4f} {p_hp[0][u].x:6.0f} {p_hp[1][u].x:6.0f} "
                         f"{p_hp[2][u].x:6.0f} {p_hp[3][u].x:6.0f} {p_hp[4][u].x:6.0f} "
                         f"{p_hp[5][u].x:6.0f} {p_hp[6][u].x:6.0f} {p_hp[7][u].x:6.0f} "
                         f"{h_hp[u].x:6.2f} {c_hp[u].x:6.2f}"
@@ -3217,14 +3236,14 @@ class DaCalc(DaBase):
                 for u in range(U):
                     # model += (dc_from_ac[b][u] + dc_from_bat[b][u] + pv_prod_dc_sum[b][u] ==
                     #           dc_to_ac[b][u] + dc_to_bat[b][u])
-                    ac_p.append(dc_from_ac[b][u].x)
-                    ac_n.append(-dc_to_ac[b][u].x)
+                    ac_p.append(dc_from_ac[b][u].x * hour_fraction[u])
+                    ac_n.append(-dc_to_ac[b][u].x * hour_fraction[u])
                     if pv_dc_num[b] > 0:
-                        pv_p.append(pv_prod_dc_sum[b][u].x)
+                        pv_p.append(pv_prod_dc_sum[b][u].x * hour_fraction[u])
                     else:
                         pv_p.append(0)
-                    bat_p.append(dc_from_bat[b][u].x)
-                    bat_n.append(-dc_to_bat[b][u].x)
+                    bat_p.append(dc_from_bat[b][u].x * hour_fraction[u])
+                    bat_n.append(-dc_to_bat[b][u].x * hour_fraction[u])
                 # extra uur voor sync aantal uur met laatste soc-waarde
                 ac_p.append(0)
                 ac_n.append(0)
