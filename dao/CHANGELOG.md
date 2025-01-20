@@ -3,7 +3,8 @@
 # [V2025.1.3] 
 - Fixed "no optimal solution" when no zero-power stage is configured with a battery
 - Implemented calculation and report of CO2-emission
-
+- Fixed year with copyright/license
+- 
 # [V2025.1.2] 
 - Fixed errors when postgresql db-engine is used
 - Fixed error calculating report/balance with period "vorige maand"
