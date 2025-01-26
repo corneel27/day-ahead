@@ -3293,16 +3293,15 @@ class DaCalc(DaBase):
                 axis_20 = axis[gr_no].twinx()
                 leg4 = axis_20.plot(
                     ind, soc_b[b], label="% SoC", linestyle="solid", color="olive"
-                )
+                )[0]
                 axis_20.set_ylabel("% SoC")
                 axis_20.set_ylim([0, 100])
-                soc_line = mlines.Line2D([], [], color="olive", label="SoC %")
                 if pv_dc_num[b] > 0:
                     labels = ["AC<->", "BAT<->", "PV->", "% SoC"]
-                    handles = [leg1, leg2, leg3, soc_line]
+                    handles = [leg1, leg2, leg3, leg4]
                 else:
                     labels = ["AC<->", "BAT<->", "% SoC"]
-                    handles = [leg1, leg2, soc_line]
+                    handles = [leg1, leg2, leg4]
                 axis[gr_no].legend(
                     handles=handles,
                     labels=labels,

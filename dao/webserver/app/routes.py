@@ -352,13 +352,13 @@ def reports():
     else:
         if active_subject == "grid":
             report_data = report.make_graph(filtered_df, active_period)
-        elif active_subject == "balance":
+        elif active_subject == "balans":
             report_data = report.make_graph(
                 filtered_df, active_period, report.balance_graph_options
             )
         else: # co2
             report_data = report.make_graph(
-                filtered_df, active_period, report.balance_graph_options
+                filtered_df, active_period, report.co2_graph_options
             )
 
     return render_template(

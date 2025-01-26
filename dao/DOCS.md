@@ -5,8 +5,9 @@
 [Installatie](#installatie)<br> 
 [DAO starten](#dao-starten)<br>
 [Instellingen](#instellingen)<br>
-[Dashboard](#dashboard) <br>in
+[Dashboard](#dashboard) <br>
 [Configuratie](#configuratie) <br>
+[CO2 emissie](#co2-emissie) <br>
 [Api](#api) <br>
 [Terminal](#terminal)
 
@@ -711,6 +712,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | entities boiler consumption  | list of string   | []                                 |                                                    | 
 |                          | entities battery consumption | list of string   | []                                 |                                                    | 
 |                          | entities battery production  | list of string   | []                                 |                                                    | 
+|                          | entity co2-intensity         | list of string   | []                                 |                                                    | 
 | **scheduler**            | active                       | boolean          | True                               | 
 |                          |                              | list             | {time, task}                       |                                                    | 
 
@@ -1329,10 +1331,10 @@ Per apparaat geef je de volgende instellingen mee:
  
  ### report
 Via het dashboard kun je met het programma diverse rapportages genereren.
-DVan de meeste sensoren houdt Home Assistant het verbruik bij in de historische database.
+Van de meeste sensoren houdt Home Assistant het verbruik bij in de historische database.
 Dat geldt met name voor de sensoren die je hebt opgegeven (of kunt opgeven) bij de configuratie van het energiedashboard van HA.
 Het programma gebruikt deze sensoren ook voor het berekenen van de baseload (basisverbruik) van je woning.
-Default []
+Default waarde is een lege lijst: []
 
 Je kunt de volgende onderdelen invullen
 * entities grid consumption 
@@ -1343,7 +1345,8 @@ Je kunt de volgende onderdelen invullen
 * entities wp consumption
 * entities boiler consumption
 * entities battery consumption
-* entities battery production<br>
+* entities battery production
+* entity co2-intensity<br>
 
 Als voorbeeld: zo heb ik deze lijst ingevuld:
 ``` 
@@ -1364,9 +1367,26 @@ Als voorbeeld: zo heb ik deze lijst ingevuld:
     "entities wp consumption" : ["sensor.youless_meterstand"],
     "entities boiler consumption": [],
     "entities battery consumption": ["sensor.ess_grid_consumption"],
-    "entities battery production": ["sensor.ess_grid_production"]
+    "entities battery production": ["sensor.ess_grid_production"],
+    "entity co2-intensity": ["sensor.co2_intensity"]
   },
 ```
+
+#### CO2-emissie
+Het programma beschikt over een mogelijkheid om je CO2-emissie te berekenen en te rapporteren.
+Deze mogelijkheid moet je zelf activeren in enkele stappen:
+1.  Activeer en configureer in Home Assistant de integratie: "Electricity Maps" (free tier, account).
+2. Als het goed is gegaan komen er in HA twee sensoren bij, maar het gaat om de sensor **CO2-intensity** (g CO2 eq/kWh). <br>
+Vul de naam van die sensor in bij report:<br> `"entity co2-intensity": ["sensor.co2_intensity"]` (zie hierboven).
+3. Herstart DAO via Instellingen/Add-ons/DAO
+4. Ga naar het dashboard van DAO en klik op Report.
+5. Je krijgt nu (naast grid en balans) een extra rapportage item: **CO2**
+![img_co2.png](images/img_co2.png) <br />
+
+**Opmerkingen**<br>
+1. Helaas krijg je met een gratis account bij Electricity Maps geen historische data. HA slaat wel elk uur de gemiddelde waarde van de CO2intensiteit op in zijn database, dus je krijgt zo vanzelf historie in je HA-database.
+2. Je krijgt met een gratis account ook geen prognoses van CO2-intensiteit in de komende uren dus een prognose
+van de CO2-emissie (of nog mooier een optimalisering met als doelstelling "minimize CO2-emissie") zit er voorlopig niet in.
 
 ### **Scheduler**<br>
  Het programma maakt gebruik van een eenvoudige takenplanner. <br/>

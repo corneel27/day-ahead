@@ -157,7 +157,7 @@ class Report:
                 "sensors": self.config.get(
                     ["entities grid consumption"], self.report_options, []
                 ),
-                "color": "#00bfff",
+                "color": "red",
             },
             "prod": {
                 "dim": "kWh",
@@ -166,7 +166,7 @@ class Report:
                 "sensors": self.config.get(
                     ["entities grid production"], self.report_options, []
                 ),
-                "color": "#0080ff",
+                "color": "green",
             },
             "netto_cons": {
                 "dim": "kWh",
@@ -177,20 +177,24 @@ class Report:
             },
             "co2_intensity": {
                 "dim": "g CO2 eq/kWh",
-                "sign": "neg",
-                "name": "CO2_Intensity",
+                "name": "CO2 Intensity",
+                "type": "step",
                 "sensor_type": "factor",
                 "sensors": self.config.get(
                     ["entity co2-intensity"], self.report_options, []
                 ),
-                "color": "#0080ff",
+                "color": "olive",
             },
             "emissie": {
                 "dim": "kg CO2",
                 "sign": "pos",
+                "type": "bar",
+                "width": 0.7,
                 "name": "CO2 emissie",
                 "sensors": "calc",
                 "function": "calc_emissie",
+                "vaxis" : "right",
+                "color": "blue",
             },
         }
 
@@ -198,27 +202,65 @@ class Report:
             "title": "Energiebalans",
             "style": self.config.get(["graphics", "style"]),
             "haxis": {"values": "#interval"},
-            "vaxis": [{"title": "kWh"}],
-            "series_keys": [
-                "base",
-                "wp",
-                "boil",
-                "ev",
-                "bat_in",
-                "prod",
-                "pv_ac",
-                "bat_out",
-                "cons",
-            ],
-            "series": [],
+            "graphs": [{
+                "vaxis": [{"title": "kWh"}],
+                "series_keys": [
+                    "base",
+                    "wp",
+                    "boil",
+                    "ev",
+                    "bat_in",
+                    "prod",
+                    "pv_ac",
+                    "bat_out",
+                    "cons",
+                ],
+                "series": [],
+                }
+            ]
         }
-        for key in self.balance_graph_options["series_keys"]:
+        for key in self.balance_graph_options["graphs"][0]["series_keys"]:
             # key, serie in self.energy_balance_dict.items():
             serie = self.energy_balance_dict[key]
             serie["column"] = serie["name"]
-            serie["type"] = ("stacked",)
+            serie["type"] = "stacked"
             serie["title"] = serie["name"]
-            self.balance_graph_options["series"].append(serie)
+            self.balance_graph_options["graphs"][0]["series"].append(serie)
+
+        self.co2_graph_options = {
+            "title": "CO2 Emissie",
+            "style": self.config.get(["graphics", "style"]),
+            "haxis": {"values": "#interval"},
+            "graphs": [
+                {
+                    "vaxis": [{"title": "kWh"}],
+                    "series_keys": [
+                        "cons",
+                        "prod",
+                    ],
+                    "series": [],
+                },
+                {
+                    "vaxis": [{"title": "g CO2/kWh"}, {"title": "kg CO2"}],
+                    "series_keys": [
+                        "co2_intensity",
+                        "emissie",
+                    ],
+                    "series": [],
+                }
+            ],
+        }
+
+        for graph_num in range(len(self.co2_graph_options["graphs"])):
+            # key, serie in self.energy_balance_dict.items():
+            for key in self.co2_graph_options["graphs"][graph_num]["series_keys"]:
+                serie = self.co2_dict[key]
+                serie["column"] = serie["name"]
+                if not "type" in serie:
+                    serie["type"] = "stacked"
+                serie["title"] = serie["name"]
+                self.co2_graph_options["graphs"][graph_num]["series"].append(serie)
+
         return
 
     def make_periodes(self):
@@ -836,23 +878,11 @@ class Report:
 
     @staticmethod
     def calc_netto_cons(df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        netto = []
-        for row in df.itertuples():
-            netto.append(row.cons - row.prod)
-        result = df.assign(netto_cons=netto)
-        '''
         df["netto_cons"] = df["cons"] - df["prod"]
         return df
 
     @staticmethod
     def calc_emissie(df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        emissie = []
-        for row in df.itertuples():
-            emissie.append(row.netto_cons * row.co2_intensity / 1000)
-        result = df.assign(emissie=emissie)
-        '''
         df["emissie"] = df["netto_cons"] * df["co2_intensity"] / 1000
         return df
 
@@ -1989,43 +2019,49 @@ class Report:
             options = _options
         else:
             options = {
-                "title": "Grafiek verbruik",
+                "title": "Verbruik en kosten",
                 "style": self.config.get(["graphics", "style"]),
-                "vaxis": [{"title": "kWh"}, {"title": "euro"}],
-                "series": [
-                    {
-                        "column": "Verbruik",
-                        "title": "Verbruik",
-                        "type": "stacked",
-                        "color": "#00bfff",
-                    },
-                    {
-                        "column": "Productie",
-                        "title": "Productie",
-                        "negativ": "true",
-                        "type": "stacked",
-                        "color": "green",
-                    },
-                    {
-                        "column": "Kosten",
-                        "label": "Kosten",
-                        "type": "stacked",
-                        "color": "red",
-                        "vaxis": "right",
-                    },
-                    {
-                        "column": "Opbrengst",
-                        "label": "Opbrengst",
-                        "negativ": "true",
-                        "type": "stacked",
-                        "color": "#ff8000",
-                        "vaxis": "right",
-                    },
-                ],
+                "graphs":[{
+                    "vaxis": [{"title": "kWh"}, {"title": "euro"}],
+                    "align_zeros" : "True",
+                    "series": [
+                        {
+                            "column": "Verbruik",
+                            "title": "Verbruik",
+                            "type": "stacked",
+                            "color": "#00bfff",
+                        },
+                        {
+                            "column": "Productie",
+                            "title": "Productie",
+                            "negativ": "true",
+                            "type": "stacked",
+                            "color": "green",
+                        },
+                        {
+                            "column": "Kosten",
+                            "title": "Kosten",
+                            "type": "stacked",
+                            "color": "red",
+                            "vaxis": "right",
+                        },
+                        {
+                            "column": "Opbrengst",
+                            "title": "Opbrengst",
+                            "negativ": "true",
+                            "type": "stacked",
+                            "color": "#ff8000",
+                            "vaxis": "right",
+                        }
+
+                    ]
+                }
+                ]
             }
+        options["title"] = options["title"] + " " + period
         options["haxis"] = {
             "values": self.periodes[period]["interval"].capitalize(),
-            "title": self.periodes[period]["interval"] + " van " + period,
+            "title": self.periodes[period]["interval"],
         }
 
         gb = GraphBuilder()
