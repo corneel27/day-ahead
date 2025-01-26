@@ -3001,8 +3001,8 @@ class DaCalc(DaBase):
         show_graph = (
             self.config.get(["graphics", "show"], None, "False").lower() == "true"
         )
-        if show_graph:
-            gb.build(gr1_df, gr1_options)
+        # if show_graph:
+        #     gb.build(gr1_df, gr1_options)
 
         grid0_df = pd.DataFrame()
         grid0_df["index"] = np.arange(U)
