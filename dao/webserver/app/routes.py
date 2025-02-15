@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy.sql.coercions import expect_col_expression_collection
+# from sqlalchemy.sql.coercions import expect_col_expression_collection
 
 from dao.webserver.app import app
 from flask import render_template, request
@@ -31,6 +31,113 @@ handler.suffix = "%Y%m%d"
 handler.setLevel(logging.INFO)
 logging.basicConfig(level=logging.DEBUG, handlers=[handler],
                     format=f'%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
+browse = {
+
+}
+
+views = {
+    "grafiek": {
+        "name": "Grafiek",
+        "icon": "grafiek.png"
+    },
+    "tabel": {
+        "name": "Tabel",
+        "icon": "tabel.png"
+    }
+}
+
+actions = {
+    "first": {
+        "icon": "first.png"
+    },
+    "prev": {
+        "icon": "prev.png"
+    },
+    "next": {
+        "icon": "next.png"
+    },
+    "last": {
+        "ison": "last.png"
+    }
+}
+
+periods = {
+    "options": {
+        "vandaag", "morgen", "vandaag en morgen", "gisteren", "deze week", "vorige week",
+        "deze maand", "vorige maand", "dit jaar", "vorig jaar", "dit contractjaar", "365 dagen"
+    },
+    "checkbox": "prognose"
+}
+
+web_menu = {
+    "home": {
+        "name": "Home",
+        "submenu": {},
+        "views": views,
+        "actions": actions,
+        "function": "home"
+    },
+    "run": {
+        "name": "Run",
+    },
+    "report": {
+        "name": "Reports",
+        "submenu": {
+            "grid": {
+                "name": "Grid",
+                "views": views,
+                "periods": periods
+            },
+            "balans": {
+                "name": "Balans",
+                "views": views,
+                "periods": periods
+            },
+            "co2": {
+                "name": "CO2",
+                "views": views,
+                "periods": periods
+
+            }
+        }
+    },
+    "advanced": {
+        "name": "Advanced",
+        "submenu": {
+            "met_bat": {
+                "name": "Met batterij",
+                "views": views,
+                "periods": periods
+            },
+            "zonder_bat": {
+                "name": "Zonder batterij",
+                "views": views,
+                "periods": periods
+            },
+            "besparing": {
+                "name": "Besparing",
+                "views": views,
+                "periods": periods
+            },
+
+        }
+    },
+    "settings": {
+        "name": "Config",
+        "submenu": {
+            "options": {
+                "name": "Options",
+                "views": "json-editor"
+            },
+            "secrets": {
+                "name": "Secrets",
+                "views": "json-editor"
+            }
+
+        }
+    }
+
+}
 
 bewerkingen = {
     "calc_met_debug": {
@@ -115,6 +222,8 @@ def menu():
             return run_process()
         elif current_menu == "reports":
             return reports()
+        elif current_menu == "advanced":
+            return advanced()
         elif current_menu == "settings":
             return settings()
         else:
@@ -126,6 +235,8 @@ def menu():
             return run_process()
         elif "menu_reports" in lst:
             return reports()
+        elif "menu_advanced" in lst:
+            return advanced()
         elif "menu_settings" in lst:
             return settings()
         else:
@@ -275,7 +386,6 @@ def run_process():
         version=__version__,
     )
 
-
 @app.route("/reports", methods=["POST", "GET"])
 def reports():
     report = Report(app_datapath + "/options.json")
@@ -330,7 +440,7 @@ def reports():
         filtered_df = report.calc_balance_columns(
             report_df, active_interval, active_view
         )
-    else: # co2
+    else:  # co2
         report_df = report.get_energy_balance_data(active_period, _tot=tot,
                                                    col_dict=report.co2_dict,
                                                    _interval="uur")
@@ -356,7 +466,9 @@ def reports():
             report_data = report.make_graph(
                 filtered_df, active_period, report.balance_graph_options
             )
-        else: # co2
+        elif active_subject == "effect accu":
+            report_data = report.make_graph(filtered_df, active_period)
+        else:  # co2
             report_data = report.make_graph(
                 filtered_df, active_period, report.co2_graph_options
             )
@@ -375,6 +487,85 @@ def reports():
         report_data=report_data,
         version=__version__,
     )
+
+@app.route("/advanced", methods=["POST", "GET"])
+def advanced():
+    report = Report(app_datapath + "/options.json")
+    subjects = ["met batterij", "zonder batterij", "besparing"]
+    active_subject = "met batterij"
+    views = ["grafiek", "tabel"]
+    active_view = "tabel"
+    periode_options = report.periodes.keys()
+    active_period = "vandaag"
+    met_prognose = False
+    if request.method in ["POST", "GET"]:
+        # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
+        lst = request.form.to_dict(flat=False)
+        if "cur_subject" in lst:
+            active_subject = lst["cur_subject"][0]
+        if "cur_view" in lst:
+            active_view = lst["cur_view"][0]
+        if "cur_periode" in lst:
+            active_period = lst["cur_periode"]
+        if "subject" in lst:
+            active_subject = lst["subject"][0]
+        if "view" in lst:
+            active_view = lst["view"][0]
+        if "periode-select" in lst:
+            active_period = lst["periode-select"][0]
+        if "met_prognose" in lst:
+            met_prognose = lst["met_prognose"][0]
+    tot = None
+    if (
+        active_period == "vandaag"
+        or active_period == "deze week"
+        or active_period == "deze maand"
+        or active_period == "dit contractjaar"
+    ):
+        if not met_prognose:
+            now = datetime.datetime.now()
+            tot = datetime.datetime(now.year, now.month, now.day, now.hour)
+    else:
+        met_prognose = False
+    active_interval = report.periodes[active_period]["interval"]
+    if active_subject == "met batterij":
+        report_df = report.get_grid_data(active_period, _tot=tot)
+        filtered_df = report.calc_grid_columns(report_df, active_interval, active_view)
+    else:
+        # active_subject == "zonder batterij" of "besparing"):
+        grid_df = report.get_grid_data(active_period, _tot=tot, _interval="uur")
+        balans_df = report.get_energy_balance_data(active_period, _tot=tot, _interval="uur")
+        filtered_df = report.calc_accu_effect_columns(grid_df, balans_df, active_subject,
+                                                      active_interval, active_view)
+    filtered_df.round(3)
+    if active_view == "tabel":
+        report_data = [
+            filtered_df.to_html(
+                index=False,
+                justify="right",
+                decimal=",",
+                classes="data",
+                border=0,
+                float_format="{:.3f}".format,
+            )
+        ]
+    else:
+        report_data = report.make_graph(filtered_df, active_period)
+    return render_template(
+        "report.html",
+        title="Rapportage",
+        active_menu="advanced",
+        subjects=subjects,
+        views=views,
+        periode_options=periode_options,
+        active_period=active_period,
+        met_prognose=met_prognose,
+        active_subject=active_subject,
+        active_view=active_view,
+        report_data=report_data,
+        version=__version__,
+    )
+
 
 
 @app.route("/settings/<filename>", methods=["POST", "GET"])

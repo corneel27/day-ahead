@@ -22,10 +22,10 @@ def start_logging():
 def debug_da_calc():
     start_logging()
     # da_calc = dao.prog.day_ahead.DaCalc(file_name="../data/options_mysql.json")
-    da_calc = dao.prog.day_ahead.DaCalc(file_name="../data/vincent.json")
+    da_calc = dao.prog.day_ahead.DaCalc(file_name="../data/options_hetzerha.json")
     da_calc.calc_optimum(
-        _start_dt=datetime.datetime(year=2025, month=1, day=15, hour=9, minute=0),
-        _start_soc=100.0,
+        _start_dt=datetime.datetime(year=2025, month=2, day=11, hour=9, minute=0),
+        _start_soc=0.0,
     )
 
 if __name__ == "__main__":

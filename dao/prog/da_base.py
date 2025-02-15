@@ -16,7 +16,7 @@ from version import __version__
 from dao.prog.da_config import Config
 from da_meteo import Meteo
 from da_prices import DaPrices
-from db_manager import DBmanagerObj
+# from db_manager import DBmanagerObj
 from typing import Union
 from hassapi.models import StateList
 
@@ -30,10 +30,14 @@ class NotificationHandler(Handler):
         Handler.__init__(self)
         self.hass = _hass
         self.entity = _entity
+        self.count = 0
 
     def emit(self, record):
-        if self.entity and record.levelno >= logging.WARNING:
+        if self.entity and record.levelno >= logging.WARNING and self.count == 0:
+            if record.levelno >= logging.ERROR:
+                self.count += 1
             msg = self.format(record)
+            msg = msg.partition('\n')[0]
             self.hass.set_value(self.entity, msg)
 
 
@@ -341,7 +345,6 @@ class DaBase(hass.Hass):
 
         # Construct the outer query
         outer_query = select(func.avg(inner_query.c.value).label("avg_da"))
-        from sqlalchemy.dialects import mysql  # , postgresql
 
         # Execute the query and fetch the result
         with self.db_da.engine.connect() as connection:
@@ -460,7 +463,8 @@ class DaBase(hass.Hass):
             stream_handler.setLevel(self.log_level)
             logger.addHandler(stream_handler)
         if self.notification_entity is not None:
-            notification_handler = NotificationHandler(self, self.notification_entity)
+            notification_handler = NotificationHandler(_hass=super(),
+                                                       _entity=self.notification_entity)
             notification_handler.setFormatter(formatter)
             logger.addHandler(notification_handler)
         self.start_logging()
@@ -474,8 +478,10 @@ class DaBase(hass.Hass):
             getattr(self, run_task["function"])()
             self.set_last_activity()
             self.db_da.log_pool_status()
-        except Exception as ex:
-            error_handling(ex)
+        except Exception:
+            logging.exception('Er is een fout opgetreden, zie de fout-tracering')
+            raise
+
         if logfile:
             file_handler.flush()
             file_handler.close()

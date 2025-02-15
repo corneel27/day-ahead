@@ -302,17 +302,17 @@ class Meteo:
             df1 = df1.reset_index()  # make sure indexes pair with number of rows
             for row in df1.itertuples():
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "gr",
                     float(row.gr),
                 ]
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "temp",
                     float(row.temp),
                 ]
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "solar_rad",
                     float(row.solar_rad),
                 ]
@@ -321,17 +321,17 @@ class Meteo:
             df1 = self.get_from_meteoserver("gfs")
             for row in df1[count:].itertuples():
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "gr",
                     float(row.gr),
                 ]
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "temp",
                     float(row.temp),
                 ]
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "solar_rad",
                     float(row.solar_rad),
                 ]

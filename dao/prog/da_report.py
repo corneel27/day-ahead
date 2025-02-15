@@ -6,6 +6,7 @@ from io import BytesIO
 from dateutil.relativedelta import relativedelta
 from dao.prog.da_config import Config
 from dao.prog.da_graph import GraphBuilder
+from dao.prog.utils import get_value_from_dict
 import math
 import json
 import itertools
@@ -256,7 +257,7 @@ class Report:
             for key in self.co2_graph_options["graphs"][graph_num]["series_keys"]:
                 serie = self.co2_dict[key]
                 serie["column"] = serie["name"]
-                if not "type" in serie:
+                if not ("type" in serie):
                     serie["type"] = "stacked"
                 serie["title"] = serie["name"]
                 self.co2_graph_options["graphs"][graph_num]["series"].append(serie)
@@ -352,6 +353,7 @@ class Report:
         :param tot: end date/time
         :param col_name: name off the column in the df
         :param agg: "maand", "dag" or "uur"
+        :param sensor_type: "quantity" of "factor"
         :return: dataframe with the data
         """
         """
@@ -504,6 +506,8 @@ class Report:
             df_raw = pd.DataFrame(columns=[agg, "tijd", "tot", col_name])
 
         df_raw.index = df_raw[agg]  # pd.to_datetime(df_raw["tijd"])
+        # when NaN in result replace with zero (0)
+        df_raw[col_name] = df_raw[col_name].fillna(0)
 
         # Print the raw DataFrame
         logging.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
@@ -743,7 +747,6 @@ class Report:
         return
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
-        from dao.prog.utils import get_value_from_dict
 
         def get_datasoort(ds):
             for s in ds:
@@ -765,17 +768,20 @@ class Report:
         )
         if len(org_data_df.index) == 0:
             return fi_df
+        '''
         old_dagstr = ""
         taxes_l = 0
         taxes_t = 0
         ol_l = 0
         ol_t = 0
         btw = 0
+        '''
         for row in org_data_df.itertuples():
             if pd.isnull(row.tijd):
                 continue
             if not isinstance(row.tijd, datetime.datetime):
                 print(row)
+            '''
             dag_str = row.tijd.strftime("%Y-%m-%d")
             if dag_str != old_dagstr:
                 ol_l = get_value_from_dict(dag_str, self.ol_l_def)
@@ -784,6 +790,7 @@ class Report:
                 taxes_t = get_value_from_dict(dag_str, self.taxes_t_def)
                 btw = get_value_from_dict(dag_str, self.btw_def)
                 old_dagstr = dag_str
+            '''
             if interval == "uur":
                 tijd_str = str(row.tijd)[10:16]
             elif interval == "dag":
@@ -792,8 +799,8 @@ class Report:
                 tijd_str = str(row.tijd)[0:7]  # jaar maand
             col_1 = row.consumption
             col_2 = row.production
-            col_3 = (row.consumption * (row.price + taxes_l + ol_l)) * (1 + btw / 100)
-            col_4 = (row.production * (row.price + taxes_t + ol_t)) * (1 + btw / 100)
+            col_3 = row.consumption * row.da_cons
+            col_4 = row.production * row.da_prod
             col_5 = row.datasoort
             fi_df.loc[fi_df.shape[0]] = [
                 tijd_str,
@@ -888,7 +895,7 @@ class Report:
 
     @staticmethod
     def tijd_at_interval(interval: str, moment: datetime.datetime,
-                         as_index: bool=False
+                         as_index: bool = False
                          ) -> str | int:
         if interval == "maand":
             result = datetime.datetime(moment.year, moment.month, day=1)
@@ -1290,6 +1297,7 @@ class Report:
             result["tot"] = pd.to_datetime(result["tot"])
             last_moment = result["tot"].iloc[-1] + datetime.timedelta(hours=1)
         if last_moment < tot:
+            '''
             # get the prices:
             query = (
                 select(
@@ -1316,6 +1324,8 @@ class Report:
                 logging.debug(query_str)
                 df_prices = pd.read_sql_query(query, connection)
             logging.debug(f"Prijzen \n{df_prices.to_string()}\n")
+            '''
+            df_prices = self.get_price_data(last_moment, tot) #  +datetime.timedelta(hours=1))
 
             df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
@@ -1402,9 +1412,10 @@ class Report:
                         else:
                             df_ha = pd.concat([df_ha, df_prog])
 
+            df_prices.rename(columns={"time": "tijd"},inplace=True)
             df_prices.index = pd.to_datetime(df_prices["tijd"])
-            df_ha = self.copy_col_df(df_prices, df_ha, "price")
-            df_ha = self.copy_col_df(df_prices, df_ha, "tijd")
+            df_ha = self.copy_col_df(df_prices, df_ha, "da_cons")
+            df_ha = self.copy_col_df(df_prices, df_ha, "da_prod")
             df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
             df_ha = self.recalc_df_ha(df_ha, interval)
 
@@ -1426,7 +1437,6 @@ class Report:
         return res[1]
 
     def calc_grid_columns(self, report_df, active_interval, active_view):
-        from dao.prog.utils import get_value_from_dict
 
         first_col = active_interval.capitalize()
         # if active_subject == "verbruik":
@@ -1637,6 +1647,56 @@ class Report:
 
         return report_df
 
+    def calc_accu_effect_columns(self, grid_df: pd.DataFrame, balans_df: pd.DataFrame,
+                                 active_subject, active_interval: str, active_view: str):
+        # Suppress FutureWarning messages
+        import warnings
+        warnings.simplefilter(action="ignore", category=FutureWarning)
+
+        grid_df.reset_index(drop=True)
+        balans_df.reset_index(drop=True)
+        grid_df["bat_in"] = balans_df["bat_in"].values
+        grid_df["bat_out"] = balans_df["bat_out"].values
+        start = grid_df.iloc[0][2]
+        end = grid_df.iloc[-1][2] + datetime.timedelta(hours=1)
+        price_df = self.get_price_data(start=start, end=end)
+        grid_df["da_cons"] = price_df["da_cons"].values
+        grid_df["da_prod"] = price_df["da_prod"].values
+        if active_subject == "besparing":
+            new_columns = ["uur", "vanaf", "netto_cost_org", "netto_cost_bat", "saving"]
+        else:  # zonder batterij
+            new_columns = ["uur", "vanaf", "consumption", "production", "netto_cons", "cost", "profit", "netto_cost", "price_cons", "price_prod"]
+        result_df = pd.DataFrame(columns=new_columns)
+        for index, row in grid_df.iterrows():
+            #                5          10         2                 = -7
+            # cons = max(0, org_cons - accu_in -org_prod + accu_out)
+            #           2                     5          10 = 7
+            # prod = org_prod - accu_out + -org_cons + accu_in
+            # dus generiek: grid_netto = org_cons - accu_in -org_prod + accu_out
+            # if grid_netto >= 0
+            #   cons = grid_netto, prod = 0
+            # else:
+            #   cons = 0 prod = -grid_netto
+
+            grid_netto = row["consumption"] - row["bat_in"] - row["production"] + row["bat_out"]
+            if grid_netto >= 0:
+                cons = grid_netto
+                prod = 0
+                cost = cons * row["da_cons"]
+                profit = 0
+            else:
+                cons = 0
+                prod = -grid_netto
+                cost = 0
+                profit = prod * row["da_prod"]
+            if active_subject == "besparing":
+                new_row = [row["uur"], row["vanaf"], row["netto_cost"], cost-profit, cost-profit - row["netto_cost"]]
+            else:
+                new_row = [row["uur"], row["vanaf"], cons, prod, cons-prod, cost, profit, cost - profit, row["da_cons"], row["da_prod"]]
+            result_df.loc[len(result_df)] = new_row
+        result_df.set_index([pd.to_datetime(result_df['vanaf'])], drop=True)
+        return(result_df)
+
     #  ------------------------------------------------
     def get_sensor_week_data(
         self, sensor: str, weekday: int, vanaf: datetime.datetime, col_name: str
@@ -1723,6 +1783,8 @@ class Report:
         else:
             df_raw = pd.DataFrame(columns=["weekdag", "tijd", "tot", col_name])
         df_raw.index = pd.to_datetime(df_raw["tijd"])
+        # when NaN in result replace with zero (0)
+        df_raw[col_name] = df_raw[col_name].fillna(0)
         df_wd = df_raw.loc[df_raw["weekdag"] == weekday]
         return df_wd
 
@@ -1913,8 +1975,6 @@ class Report:
         return df
 
     def get_price_data(self, start, end):
-        from dao.prog.utils import get_value_from_dict
-
         df_da = self.db_da.get_column_data("values", "da", start=start, end=end)
         old_dagstr = ""
         taxes_l = 0
@@ -2021,7 +2081,7 @@ class Report:
             options = {
                 "title": "Verbruik en kosten",
                 "style": self.config.get(["graphics", "style"]),
-                "graphs":[{
+                "graphs": [{
                     "vaxis": [{"title": "kWh"}, {"title": "euro"}],
                     "align_zeros" : "True",
                     "series": [
