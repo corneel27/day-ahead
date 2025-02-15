@@ -1,5 +1,6 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
 # [V2025.2.0] 
 - Fixed error calculating historic consumption and production since last invoice day
 - Fixed error calculating baseload and balance with no/zero values sensor growatt inverter
