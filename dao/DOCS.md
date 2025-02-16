@@ -85,7 +85,7 @@ Er zijn drie mogelijke enginess om te verbinden met de db van Home
     ```
       "database ha": {
         "engine": "sqlite",
-        "database": "homeassistant_v2.db",
+        "database": "home-assistant_v2.db",
         "db_path": "/homeassistant"
       }
     ```
@@ -748,7 +748,7 @@ Onderstaand zijn voor de drie mogelijke engines de meest voorkomende configurati
   ```
   "database ha": {
     "engine": "sqlite",
-    "database": "homeassistant_v2.db",
+    "database": "home-assistant_v2.db",
     "db_path": "/homeassistant"```
   }
 

@@ -323,10 +323,8 @@ class DaCalc(DaBase):
             # df.query("a == 1")['b'].sum()
             # df[df['a']==1]['b'].sum()
             cons_df = report.get_grid_data(periode="dit contractjaar", _tot=start_dt)
-            consumption_his = cons_df[cons_df["datasoort"] == "recorded"][
-                "consumption"
-            ].sum()
-            production_his = cons_df[cons_df["datasoort"] == "recorded"]["production"].sum()
+            consumption_his = cons_df["consumption"].sum()
+            production_his = cons_df["production"].sum()
         except Exception as ex:
             logging.error('Failed.', exc_info=ex)
             logging.warning(f"Verbruik laatste contractjaar kon niet wordt vastgesteld")
@@ -518,7 +516,7 @@ class DaCalc(DaBase):
             )
             opt_low_level.append(opt_low_lvl)
 
-            if _start_soc is None or b > 0:
+            if _start_soc is None:
                 start_soc_str = self.get_state(
                     self.battery_options[b]["entity actual level"]
                 ).state
@@ -2074,7 +2072,6 @@ class DaCalc(DaBase):
 
         # Suppress FutureWarning messages
         import warnings
-
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
         if model.num_solutions == 0:
@@ -2947,55 +2944,59 @@ class DaCalc(DaBase):
             "title": "Prognose berekend op: " + start_dt.strftime("%Y-%m-%d %H:%M"),
             "style": style,
             "haxis": {"values": "uur", "title": "uren van de dag"},
-            "vaxis": [{"title": "kWh"}],
-            "series": [
-                {"column": "verbruik", "type": "stacked", "color": "#00bfff"},
-                {
-                    "column": "pv_ac",
-                    "title": "PV-AC",
-                    "type": "stacked",
-                    "color": "green",
-                },
-                {
-                    "column": "accu_out",
-                    "title": "Accu out",
-                    "type": "stacked",
-                    "color": "red",
-                },
-                {
-                    "column": "baseload",
-                    "title": "Overig verbr.",
-                    "type": "stacked",
-                    "color": "#f1a603",
-                },
-                {"column": "boiler", "type": "stacked", "color": "#e39ff6"},
-                {
-                    "column": "heatpump",
-                    "title": "WP",
-                    "type": "stacked",
-                    "color": "#a32cc4",
-                },
-                {"column": "ev", "title": "EV", "type": "stacked", "color": "yellow"},
-                {
-                    "column": "mach",
-                    "title": "App.",
-                    "type": "stacked",
-                    "color": "brown",
-                },
-                {
-                    "column": "productie",
-                    "title": "Teruglev.",
-                    "type": "stacked",
-                    "color": "#0080ff",
-                },
-                {
-                    "column": "accu_in",
-                    "title": "Accu in",
-                    "type": "stacked",
-                    "color": "#ff8000",
-                },
-            ],
+            "graphs": [{
+                    "vaxis": [{"title": "kWh"}],
+                    "series": [
+                        {"column": "verbruik", "type": "stacked", "color": "#00bfff"},
+                        {
+                            "column": "pv_ac",
+                            "title": "PV-AC",
+                            "type": "stacked",
+                            "color": "green",
+                        },
+                        {
+                            "column": "accu_out",
+                            "title": "Accu out",
+                            "type": "stacked",
+                            "color": "red",
+                        },
+                        {
+                            "column": "baseload",
+                            "title": "Overig verbr.",
+                            "type": "stacked",
+                            "color": "#f1a603",
+                        },
+                        {"column": "boiler", "type": "stacked", "color": "#e39ff6"},
+                        {
+                            "column": "heatpump",
+                            "title": "WP",
+                            "type": "stacked",
+                            "color": "#a32cc4",
+                        },
+                        {"column": "ev", "title": "EV", "type": "stacked", "color": "yellow"},
+                        {
+                            "column": "mach",
+                            "title": "App.",
+                            "type": "stacked",
+                            "color": "brown",
+                        },
+                        {
+                            "column": "productie",
+                            "title": "Teruglev.",
+                            "type": "stacked",
+                            "color": "#0080ff",
+                        },
+                        {
+                            "column": "accu_in",
+                            "title": "Accu in",
+                            "type": "stacked",
+                            "color": "#ff8000",
+                        },
+                    ],
+            }
+            ]
         }
+
         backend = self.config.get(["graphical backend"], None, "")
         gb = GraphBuilder(backend)
         show_graph = (

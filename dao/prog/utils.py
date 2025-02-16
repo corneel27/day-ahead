@@ -296,13 +296,11 @@ def log_exc_plus():
             f"in {frame.f_code.co_name}"
         )
 
-
 def error_handling(ex):
     if logging.root.level == logging.DEBUG:
         logging.exception(ex)
     else:
         log_exc_plus()
-
 
 def prnt_xy(x: list, y: list):
     for i in range(len(x)):

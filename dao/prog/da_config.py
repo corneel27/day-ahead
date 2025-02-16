@@ -114,7 +114,7 @@ class Config:
                     db_time_zone=db_time_zone,
                 )
             except Exception as ex:
-                logging.error("Check your settings for Home Assitant database")
+                logging.error("Check your settings for Home Assistant database")
                 return None
             Config.db_ha = db_ha
         return Config.db_ha

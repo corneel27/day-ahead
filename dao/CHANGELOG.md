@@ -1,5 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# [V2025.2.0] 
+- Fixed error calculating historic consumption and production since last invoice day
+- Fixed error calculating baseload and balance with no/zero values sensor growatt inverter
+- Better log and notification of errors, warnings and exceptions, also when you use a notification entity
+- Correct a few typos in DOCS.md (o.a. homeassistant_v2.db -> home-assistant_v2.db)
+- Time correction of one hour in meteo-data is removed
+
 # [V2025.1.3] 
 - Fixed "no optimal solution" when no zero-power stage is configured with a battery
 - Implemented calculation and report of CO2-emission (see [DOCS.md](https://github.com/corneel27/day-ahead/blob/main/dao/DOCS.md#co2-emissie))

@@ -3,7 +3,7 @@
 {% block selectie %}
 <form method="post" id="content_form">
 <div class="selector-container">
-  <input type="hidden" id="current_menu" name="current_menu" value="reports">
+  <input type="hidden" id="current_menu" name="current_menu" value={{ active_menu }}>
   <div class="spacer">
     <div class="select subject">
      <input type="hidden" id="cur_subject" name="cur_subject" value="{{active_subject}}">
