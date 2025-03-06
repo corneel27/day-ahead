@@ -48,8 +48,7 @@
         {% endif %}
         {% endfor %}
       </select>
-      {% if active_period == "vandaag" or active_period == "deze week" or active_period == "deze maand" or
-        active_period == "dit contractjaar" %}
+      {% if show_prognose %}
         <input type="checkbox" id="id_met_prognose"
                name="met_prognose" onchange="this.form.submit()"
                {{ 'checked' if met_prognose else '' }} />
@@ -75,6 +74,10 @@
 </div>
 {% else %}
 <div class="show table">
+  <style>
+    table th[colspan='3'] {text-align: center;}
+  </style>
+
   {% for table in report_data %}
      {{ table|safe }}
   {% endfor %}
