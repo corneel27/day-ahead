@@ -151,8 +151,8 @@ else:
     sensor_co2_intensity = None
 
 if sensor_co2_intensity is None:
-    web_menu["report"]["submenu"].remove("co2")
-    web_menu["savings"]["submenu"].remove("co2")
+    del web_menu["reports"]["submenu"]["co2"]
+    del web_menu["savings"]["submenu"]["co2"]
 else:
     web_menu["reports"]["submenu"]["co2"]["periods"]["prognose"] = []
     web_menu["reports"]["submenu"]["co2"]["periods"]["list"] = periods["list"].copy()
