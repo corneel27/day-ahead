@@ -10,10 +10,10 @@
   - CO2-emission; only available when you have activated the integration **Electricity Maps** 
   and when you have configured the sensor CO2-intensity in your settings
 - All reports of CO2-emissions are restricted till the current hour, because the sensor CO2-intensity
-only have values till the current hour. You cannot you the checbox "met prognose" and also the periods "morgen"
+only have values till the current hour. You cannot use the checbox "met prognose" and also the periods "morgen"
 and "vandaag_en_morgen" are deleted.
 - Introduction of generic calculating routines. With these routines new reports can easily be programmed.
-In the near future the calculation off all reports will based on these routines.
+In the near future the calculation of all reports will based on these routines.
 - Introduction of a new type of graph (Waterfall-type) to present calculated savings.
 For instance:
  ![saving_cost_graph.png](images/saving_cost_graph.png) <br />
