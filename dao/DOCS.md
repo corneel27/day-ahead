@@ -1201,12 +1201,12 @@ aan het einde van het lopende uur
        * orientation: orientatie in graden, 0 = zuid, -90 is oost, 90 west  
        * capacity: capaciteit in kWp  
        * yield: opbrengstfactor van je panelen als er 1 J/cm² straling op je panelen valt in kWh/J/cm²  
-        Deze bereken je als volgt: <br> <a name="pv_yield"></a>
+        Deze bereken je als volgt:  <a name="pv_yield"></a> `yield = kWh/400000` waarbij `kWh` de werkelijke opbrengst is in een jaar.  
          * Een eerste schatting van de jaarlijkse opbrengst van je panelen is: Wp x 0,85.
-Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. <br>
+Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. De `yield` wordt dan 0,01275 kWh/J/cm² <br>
          * De gemiddelde direct opvallende straling gesommeerd over een jaar is "ongeveer" 400.000 J/cm².<br>
-         * Als jouw "geschatte" jaaropbrengst van je panelen stelt op 5000 kWh dan wordt de yield:
-5000 / 400.000 = 0,0125 kWh/J/cm²<br>
+         * Als jouw "geschatte" jaaropbrengst van je panelen stelt op 5100 kWh dan wordt de yield:
+5100 / 400.000 = 0,01275 kWh/J/cm². Let op, de yield is afhankelijk van de capaciteit van jouw installatie<br>
          * Zo kun je voor iedere pv installatie een eerste schatting maken.<br>
          * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
 stel geprognoticeerd/berekend = 50 kWh gemeten is: 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50. <br>
