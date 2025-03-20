@@ -1,9 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# [V2025.3.0.rc2] 
-- Fixed error when no co2-sensor is configured in the settings
 
-# [V2025.3.0.rc1] 
+# [V2025.3.0] 
+- Fixed error when one use postgresql and get prices from Nordpool
+- Fixed error when no co2-sensor is configured in the settings
 - Introduction of new reports of **Savings** when you use one or more home baterries:
   - consumption (most of the time this saving wil be negative, because the use of the battery cost energy)
   - cost
