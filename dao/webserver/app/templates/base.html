@@ -48,6 +48,13 @@
                         class="menubtn menubtn_mid "
                     {% endif %}
                     >Reports</button>
+                <button name="menu_savings" value="savings"
+                    {% if active_menu == "savings" %}
+                        class="menubtn menubtn_mid active"
+                    {% else %}
+                        class="menubtn menubtn_mid "
+                    {% endif %}
+                    >Savings</button>
                 <button name="menu_settings" value="settings"
                     {% if active_menu == "settings" %}
                         class="menubtn menubtn_right active"

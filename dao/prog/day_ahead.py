@@ -34,7 +34,7 @@ class DaCalc(DaBase):
             return
         self.interval = self.config.get(["interval"], None, "hour").lower()
         self.interval_s = 3600 if self.interval == "hour" else 900
-        self.interval_name = "uur" if self.interval == "hour" else "kwartier"
+        self.interval_name = "uur" if self.interval == "hour" else "15min"
         self.steps_day = 24 if self.interval == "hour" else 96
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
@@ -202,7 +202,7 @@ class DaCalc(DaBase):
             base_cons = self.config.get(["baseload"])
             if U >= self.steps_day:
                 base_cons = base_cons + base_cons
-        if self.interval == "quater":
+        if self.interval == "15min":
             start = datetime.datetime(
                 year=start_dt.year, month=start_dt.month, day=start_dt.day
             )
@@ -3156,62 +3156,66 @@ class DaCalc(DaBase):
             "title": "Prognose berekend op: " + start_dt.strftime("%Y-%m-%d %H:%M"),
             "style": style,
             "haxis": {"values": "uur", "title": "uren van de dag"},
-            "vaxis": [{"title": "kWh"}],
-            "series": [
-                {"column": "verbruik", "type": "stacked", "color": "#00bfff"},
-                {
-                    "column": "pv_ac",
-                    "title": "PV-AC",
-                    "type": "stacked",
-                    "color": "green",
-                },
-                {
-                    "column": "accu_out",
-                    "title": "Accu out",
-                    "type": "stacked",
-                    "color": "red",
-                },
-                {
-                    "column": "baseload",
-                    "title": "Overig verbr.",
-                    "type": "stacked",
-                    "color": "#f1a603",
-                },
-                {"column": "boiler", "type": "stacked", "color": "#e39ff6"},
-                {
-                    "column": "heatpump",
-                    "title": "WP",
-                    "type": "stacked",
-                    "color": "#a32cc4",
-                },
-                {"column": "ev", "title": "EV", "type": "stacked", "color": "yellow"},
-                {
-                    "column": "mach",
-                    "title": "App.",
-                    "type": "stacked",
-                    "color": "brown",
-                },
-                {
-                    "column": "productie",
-                    "title": "Teruglev.",
-                    "type": "stacked",
-                    "color": "#0080ff",
-                },
-                {
-                    "column": "accu_in",
-                    "title": "Accu in",
-                    "type": "stacked",
-                    "color": "#ff8000",
-                },
-            ],
+            "graphs": [{
+                    "vaxis": [{"title": "kWh"}],
+                    "series": [
+                        {"column": "verbruik", "type": "stacked", "color": "#00bfff"},
+                        {
+                            "column": "pv_ac",
+                            "title": "PV-AC",
+                            "type": "stacked",
+                            "color": "green",
+                        },
+                        {
+                            "column": "accu_out",
+                            "title": "Accu out",
+                            "type": "stacked",
+                            "color": "red",
+                        },
+                        {
+                            "column": "baseload",
+                            "title": "Overig verbr.",
+                            "type": "stacked",
+                            "color": "#f1a603",
+                        },
+                        {"column": "boiler", "type": "stacked", "color": "#e39ff6"},
+                        {
+                            "column": "heatpump",
+                            "title": "WP",
+                            "type": "stacked",
+                            "color": "#a32cc4",
+                        },
+                        {"column": "ev", "title": "EV", "type": "stacked", "color": "yellow"},
+                        {
+                            "column": "mach",
+                            "title": "App.",
+                            "type": "stacked",
+                            "color": "brown",
+                        },
+                        {
+                            "column": "productie",
+                            "title": "Teruglev.",
+                            "type": "stacked",
+                            "color": "#0080ff",
+                        },
+                        {
+                            "column": "accu_in",
+                            "title": "Accu in",
+                            "type": "stacked",
+                            "color": "#ff8000",
+                        },
+                    ],
+            }
+            ]
         }
+
         backend = self.config.get(["graphical backend"], None, "")
         gb = GraphBuilder(backend)
         show_graph = (
             self.config.get(["graphics", "show"], None, "False").lower() == "true"
         )
-        if show_graph:
-            gb.build(gr1_df, gr1_options)
+        # if show_graph:
+        #     gb.build(gr1_df, gr1_options)
 
         grid0_df = pd.DataFrame()
         grid0_df["index"] = np.arange(U)

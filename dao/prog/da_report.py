@@ -1,13 +1,12 @@
 import calendar
 import datetime
-from unicodedata import category
-
 import pandas as pd
 import base64
 from io import BytesIO
 from dateutil.relativedelta import relativedelta
 from dao.prog.da_config import Config
 from dao.prog.da_graph import GraphBuilder
+from dao.prog.utils import get_value_from_dict
 import math
 import json
 import itertools
@@ -32,9 +31,424 @@ class Report:
         self.taxes_t_def = self.prices_options["energy taxes redelivery"]
         self.ol_t_def = self.prices_options["cost supplier redelivery"]
         self.btw_def = self.prices_options["vat"]
-        #
+
         self.report_options = self.config.get(["report"])
         self.make_periodes()
+
+        self.saving_consumption_dict = {
+            "calc_interval": "uur",
+            "series": {
+                "cons_zonder": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "header": "Zonder batterij",
+                    "name": "Verbruik",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid consumption"], self.report_options, []
+                    ),
+                    "tabel": True,
+                    "agg" : "sum",
+                    "color": "#00bfff",
+                },
+                "prod_zonder": {
+                    "dim": "kWh",
+                    "sign": "neg",
+                    "header": "Zonder batterij",
+                    "name": "Productie",
+                    "source": "calc",
+                    "sensors": self.config.get(
+                        ["entities grid production"], self.report_options, []
+                    ),
+                    "tabel": True,
+                    "agg" : "sum",
+                    "color": "#0080ff",
+                },
+                "netto_cons_zonder": {
+                    "dim": "kWh",
+                    "header": "Zonder batterij",
+                    "name": "Netto verbruik",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "cons": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "header": "Met batterij",
+                    "name": "Verbruik",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid consumption"], self.report_options, []
+                    ),
+                    "tabel": True,
+                    "agg" : "sum",
+                    "color": "#00bfff",
+                },
+                "prod": {
+                    "dim": "kWh",
+                    "sign": "neg",
+                    "header": "Met batterij",
+                    "name": "Productie",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid production"], self.report_options, []
+                    ),
+                    "tabel": True,
+                    "agg" : "sum",
+                    "color": "#0080ff",
+                },
+                "netto_cons_met": {
+                    "dim": "kWh",
+                    "header": "Met batterij",
+                    "name": "Netto verbruik",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "saving": {
+                    "dim": "kWh",
+                    "header": "Besparing(+)",
+                    "name": "Extra(-)",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "bat_out": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "name": "Accu_uit",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities battery production"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg" : "sum",
+                    "color": "red",
+                },
+                "bat_in": {
+                    "dim": "kWh",
+                    "sign": "neg",
+                    "name": "Accu in",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities battery consumption"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg": "sum",
+                },
+            }
+        }
+
+        self.saving_cost_dict = {
+            "calc_interval" : "uur",
+            "series": {
+                "cons": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "name": "Verbruik",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid consumption"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg" : "sum",
+                    "color": "#00bfff",
+                },
+                "prod": {
+                    "dim": "kWh",
+                    "sign": "neg",
+                    "name": "Productie",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid production"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg" : "sum",
+                    "color": "#0080ff",
+                },
+                "bat_out": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "name": "Accu_uit",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities battery production"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg" : "sum",
+                    "color": "red",
+                },
+                "bat_in": {
+                    "dim": "kWh",
+                    "sign": "neg",
+                    "name": "Accu in",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities battery consumption"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg": "sum",
+                },
+                "da_cons": {
+                    "dim": "eur/kWh",
+                    "sign": "pos",
+                    "name": "Tarief verbruik",
+                    "source": "prices",
+                    "sensors": [],
+                    "tabel": False,
+                    "agg": "sum",
+                },
+                "da_prod": {
+                    "dim": "eur/kWh",
+                    "sign": "pos",
+                    "name": "Tarief productie",
+                    "source": "prices",
+                    "sensors": [],
+                    "tabel": False,
+                    "agg": "sum",
+                },
+                "cost_zonder": {
+                    "dim": "eur",
+                    "header": "Zonder batterij",
+                    "name": "Kosten",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "profit_zonder": {
+                    "dim": "eur",
+                    "header": "Zonder batterij",
+                    "name": "Opbrengst",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "netto_cost_zonder": {
+                    "dim": "eur",
+                    "header": "Zonder batterij",
+                    "name": "Netto kosten",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "cost": {
+                    "dim": "eur",
+                    "header": "Met batterij",
+                    "name": "Kosten",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "profit": {
+                    "dim": "eur",
+                    "header": "Met batterij",
+                    "name": "Opbrengst",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "netto_cost": {
+                    "dim": "eur",
+                    "header": "Met batterij",
+                    "name": "Netto kosten",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                },
+                "saving": {
+                    "dim": "eur",
+                    "header": "Besparing(+)",
+                    "name": "Extra(-)",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                }
+            }
+        }
+
+        self.saving_co2_dict = {
+            "calc_interval" : "uur",
+            "series": {
+                "netto_cons_zonder": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "header": "Zonder batterij",
+                    "name": "Netto verbr.",
+                    "source": "calc",
+                    "sensors": "calc",
+                    "agg": "sum",
+                },
+                "emissie_zonder": {
+                    "dim": "kg CO2",
+                    "header": "Zonder batterij",
+                    "sign": "pos",
+                    "type": "bar",
+                    "width": 0.7,
+                    "name": "CO2 emissie",
+                    "source": "calc",
+                    "agg": "sum",
+                },
+                "cons": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "name": "Verbruik",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid consumption"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg" : "sum",
+                    "color": "#00bfff",
+                },
+                "prod": {
+                    "dim": "kWh",
+                    "sign": "neg",
+                    "name": "Productie",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid production"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg" : "sum",
+                    "color": "#0080ff",
+                },
+                "netto_cons": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "header": "Met batterij",
+                    "name": "Netto verbr.",
+                    "source": "calc",
+                    "sensors": "calc",
+                    "agg": "sum",
+                },
+                "bat_out": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "name": "Accu_uit",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities battery production"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg": "sum",
+                    "color": "red",
+                },
+                "bat_in": {
+                    "dim": "kWh",
+                    "sign": "neg",
+                    "name": "Accu in",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities battery consumption"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg": "sum",
+                },
+                "co2_intensity": {
+                    "dim": "g CO2 eq/kWh",
+                    "header": "",
+                    "name": "CO2 Intensity",
+                    "source": "db",
+                    "type": "step",
+                    "sensor_type": "factor",
+                    "sensors": self.config.get(
+                        ["entity co2-intensity"], self.report_options, []
+                    ),
+                    "agg": "mean",
+                },
+                "emissie_met": {
+                    "dim": "kg CO2",
+                    "header": "Met batterij",
+                    "sign": "pos",
+                    "type": "bar",
+                    "width": 0.7,
+                    "name": "CO2 emissie",
+                    "source": "calc",
+                    "agg" : "sum"
+                },
+                "saving": {
+                    "dim": "kg CO2",
+                    "header": "Besparing(+)",
+                    "name": "Extra(-)",
+                    "source": "calc",
+                    "color": "#ff8000",
+                    "tabel": True,
+                    "agg": "sum",
+                }
+            }
+        }
+
+        self.calc_co2_emission_dict = {
+            "calc_interval" : "uur",
+            "with header": False,
+            "series": {
+                "cons": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "name": "Verbruik",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid consumption"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg" : "sum",
+                    "color": "#00bfff",
+                },
+                "prod": {
+                    "dim": "kWh",
+                    "sign": "neg",
+                    "name": "Productie",
+                    "source": "db",
+                    "sensors": self.config.get(
+                        ["entities grid production"], self.report_options, []
+                    ),
+                    "tabel": False,
+                    "agg" : "sum",
+                    "color": "#0080ff",
+                },
+                "netto_cons": {
+                    "dim": "kWh",
+                    "sign": "pos",
+                    "header": "Met batterij",
+                    "name": "Netto verbr.",
+                    "source": "calc",
+                    "sensors": "calc",
+                    "agg": "sum",
+                },
+                "co2_intensity": {
+                    "dim": "g CO2 eq/kWh",
+                    "header": "",
+                    "name": "CO2 Intensity",
+                    "source": "db",
+                    "type": "step",
+                    "sensor_type": "factor",
+                    "sensors": self.config.get(
+                        ["entity co2-intensity"], self.report_options, []
+                    ),
+                    "agg": "mean",
+                },
+                "emissie": {
+                    "dim": "kg CO2",
+                    "sign": "pos",
+                    "type": "bar",
+                    "name": "CO2 emissie",
+                    "source": "calc",
+                    "agg" : "sum"
+                },
+            }
+        }
+
         self.energy_balance_dict = {
             "cons": {
                 "dim": "kWh",
@@ -159,7 +573,7 @@ class Report:
                 "sensors": self.config.get(
                     ["entities grid consumption"], self.report_options, []
                 ),
-                "color": "#00bfff",
+                "color": "red",
             },
             "prod": {
                 "dim": "kWh",
@@ -168,7 +582,7 @@ class Report:
                 "sensors": self.config.get(
                     ["entities grid production"], self.report_options, []
                 ),
-                "color": "#0080ff",
+                "color": "green",
             },
             "netto_cons": {
                 "dim": "kWh",
@@ -179,20 +593,24 @@ class Report:
             },
             "co2_intensity": {
                 "dim": "g CO2 eq/kWh",
-                "sign": "neg",
-                "name": "CO2_Intensity",
+                "name": "CO2 Intensity",
+                "type": "step",
                 "sensor_type": "factor",
                 "sensors": self.config.get(
                     ["entity co2-intensity"], self.report_options, []
                 ),
-                "color": "#0080ff",
+                "color": "olive",
             },
             "emissie": {
                 "dim": "kg CO2",
                 "sign": "pos",
+                "type": "bar",
+                "width": 0.7,
                 "name": "CO2 emissie",
                 "sensors": "calc",
                 "function": "calc_emissie",
+                "vaxis": "right",
+                "color": "blue",
             },
         }
 
@@ -200,27 +618,129 @@ class Report:
             "title": "Energiebalans",
             "style": self.config.get(["graphics", "style"]),
             "haxis": {"values": "#interval"},
-            "vaxis": [{"title": "kWh"}],
-            "series_keys": [
-                "base",
-                "wp",
-                "boil",
-                "ev",
-                "bat_in",
-                "prod",
-                "pv_ac",
-                "bat_out",
-                "cons",
+            "graphs": [
+                {
+                    "vaxis": [{"title": "kWh"}],
+                    "series_keys": [
+                        "base",
+                        "wp",
+                        "boil",
+                        "ev",
+                        "bat_in",
+                        "prod",
+                        "pv_ac",
+                        "bat_out",
+                        "cons",
+                    ],
+                    "series": [],
+                }
             ],
-            "series": [],
         }
-        for key in self.balance_graph_options["series_keys"]:
+        for key in self.balance_graph_options["graphs"][0]["series_keys"]:
             # key, serie in self.energy_balance_dict.items():
             serie = self.energy_balance_dict[key]
             serie["column"] = serie["name"]
-            serie["type"] = ("stacked",)
+            serie["type"] = "stacked"
             serie["title"] = serie["name"]
-            self.balance_graph_options["series"].append(serie)
+            self.balance_graph_options["graphs"][0]["series"].append(serie)
+
+        self.co2_graph_options = {
+            "title": "CO2 Emissie",
+            "style": self.config.get(["graphics", "style"]),
+            "haxis": {"values": "#interval"},
+            "graphs": [
+                {
+                    "vaxis": [{"title": "kWh"}],
+                    "series_keys": [
+                        "cons",
+                        "prod",
+                    ],
+                    "series": [],
+                },
+                {
+                    "vaxis": [{"title": "g CO2/kWh"}, {"title": "kg CO2"}],
+                    "series_keys": [
+                        "co2_intensity",
+                        "emissie",
+                    ],
+                    "series": [],
+                },
+            ],
+        }
+
+        for graph_num in range(len(self.co2_graph_options["graphs"])):
+            for key in self.co2_graph_options["graphs"][graph_num]["series_keys"]:
+                serie = self.co2_dict[key]
+                serie["column"] = key
+                if not ("type" in serie):
+                    serie["type"] = "stacked"
+                serie["title"] = serie["name"]
+                self.co2_graph_options["graphs"][graph_num]["series"].append(serie)
+
+        self.saving_cons_graph_options = {
+            "title": "Besparing verbruik door batterij",
+            "style": self.config.get(["graphics", "style"]),
+            "graphs": [
+                {
+                    "graph_type": "waterfall",
+                    "vaxis": [{"title": "kWh"}],
+                    "align_zeros": "True",
+                    "series": [
+                        {
+                            "column": "saving",
+                            "title": "Besparing",
+                            "name": "Besparing"
+                        }
+                    ]
+                }
+            ]
+        }
+
+        self.saving_cost_graph_options = {
+            "title": "Besparing kosten door batterij",
+            "style": self.config.get(["graphics", "style"]),
+            "graphs": [
+                {
+                    "graph_type": "waterfall",
+                    "vaxis": [{"title": "eur"}],
+                    "align_zeros": "True",
+                    "series": [
+                        {
+                            "column": "saving",
+                            "title": "Besparing",
+                            "name": "Besparing"
+                        }
+                    ]
+                }
+            ]
+        }
+
+        self.saving_co2_graph_options = {
+            "title": "Besparing CO2-emissie door batterij",
+            "style": self.config.get(["graphics", "style"]),
+            "graphs": [
+                {
+                    "graph_type": "waterfall",
+                    "vaxis": [{"title": "kg CO2"}],
+                    "align_zeros": "True",
+                    "series": [
+                        {
+                            "column": "saving",
+                            "title": "Besparing",
+                            "name": "Besparing"
+                        }
+                    ]
+                }
+            ]
+        }
+        '''
+        self.saving_cost_graph_options = self.saving_cons_graph_options.copy()
+        self.saving_cost_graph_options['title'] = "Besparing kosten door batterij"
+        self.saving_cost_graph_options["graphs"][0]["vaxis"] = [{"title": "eur"}]
+        self.saving_co2_graph_options = self.saving_cons_graph_options.copy()
+        self.saving_co2_graph_options['title'] = "Besparing CO2-emissie door batterij"
+        self.saving_co2_graph_options["graphs"][0]["vaxis"] = [{"title": "kg CO2"}]
+        '''
         return
 
     def make_periodes(self):
@@ -231,6 +751,10 @@ class Report:
         now = datetime.datetime.now()
         vanaf = datetime.datetime(now.year, now.month, now.day)
         tot = vanaf + datetime.timedelta(days=1)
+        if now.hour < 13:
+            max_tot = tot
+        else:
+            max_tot = tot + datetime.timedelta(days=1)
         self.periodes.update(create_dict("vandaag", vanaf, tot, interval="uur"))
 
         # morgen
@@ -251,7 +775,7 @@ class Report:
         # deze week
         delta = vanaf.weekday()
         vanaf = vanaf + datetime.timedelta(days=-delta)
-        tot = vanaf + datetime.timedelta(days=7)
+        tot = min(vanaf + datetime.timedelta(days=7), max_tot)
         self.periodes.update(create_dict("deze week", vanaf, tot, "dag"))
 
         # vorige week
@@ -261,7 +785,7 @@ class Report:
 
         # deze maand
         vanaf = datetime.datetime(now.year, now.month, 1)
-        tot = vanaf + relativedelta(months=1)
+        tot = min(vanaf + relativedelta(months=1), max_tot)
         self.periodes.update(create_dict("deze maand", vanaf, tot, "dag"))
 
         # vorige maand
@@ -271,9 +795,7 @@ class Report:
 
         # dit jaar
         vanaf = datetime.datetime(now.year, 1, 1)
-        tot = datetime.datetime(now.year, now.month, now.day) + datetime.timedelta(
-            days=1
-        )
+        tot = max_tot
         self.periodes.update(create_dict("dit jaar", vanaf, tot, "maand"))
 
         # vorig jaar
@@ -285,9 +807,7 @@ class Report:
         vanaf = datetime.datetime.strptime(
             self.prices_options["last invoice"], "%Y-%m-%d"
         )
-        now = datetime.datetime.now()
-        tot = datetime.datetime(now.year, now.month, now.day)
-        tot = tot + datetime.timedelta(days=1)
+        tot = max_tot
         self.periodes.update(create_dict("dit contractjaar", vanaf, tot, "maand"))
 
         # 365 dagen
@@ -312,6 +832,7 @@ class Report:
         :param tot: end date/time
         :param col_name: name off the column in the df
         :param agg: "maand", "dag" or "uur"
+        :param sensor_type: "quantity" of "factor"
         :return: dataframe with the data
         """
         """
@@ -380,15 +901,18 @@ class Report:
             t2 = statistics.alias("t2")
             if agg == "maand":
                 column = self.db_ha.month(t2.c.start_ts).label("maand")
+                column2 = self.db_da.month_start(t2.c.start_ts).label("tijd")
             elif agg == "dag":
                 column = self.db_ha.day(t2.c.start_ts).label("dag")
+                column2 = self.db_da.day_start(t2.c.start_ts).label("tijd")
             else:  # interval == "uur"
                 column = self.db_ha.hour(t2.c.start_ts).label("uur")
+                column2 = self.db_ha.from_unixtime(t2.c.start_ts).label("tijd")
 
             if agg == "uur":
                 columns = [
                     column,
-                    self.db_ha.from_unixtime(t2.c.start_ts).label("tijd"),
+                    column2,
                     self.db_ha.from_unixtime(t2.c.start_ts).label("tot"),
                     case(
                         (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
@@ -397,7 +921,7 @@ class Report:
             else:
                 columns = [
                     column,
-                    func.min(self.db_ha.from_unixtime(t2.c.start_ts)).label("tijd"),
+                    column2,
                     func.max(self.db_ha.from_unixtime(t2.c.start_ts)).label("tot"),
                     func.sum(
                         case(
@@ -462,8 +986,11 @@ class Report:
 
         if len(df_raw) == 0:
             df_raw = pd.DataFrame(columns=[agg, "tijd", "tot", col_name])
+        df_raw["tijd"] = pd.to_datetime(df_raw["tijd"])
+        df_raw.index = df_raw["tijd"]
 
-        df_raw.index = df_raw[agg]  # pd.to_datetime(df_raw["tijd"])
+        # when NaN in result replace with zero (0)
+        df_raw[col_name] = df_raw[col_name].fillna(0)
 
         # Print the raw DataFrame
         logging.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
@@ -703,7 +1230,6 @@ class Report:
         return
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
-        from dao.prog.utils import get_value_from_dict
 
         def get_datasoort(ds):
             for s in ds:
@@ -725,17 +1251,20 @@ class Report:
         )
         if len(org_data_df.index) == 0:
             return fi_df
+        """
         old_dagstr = ""
         taxes_l = 0
         taxes_t = 0
         ol_l = 0
         ol_t = 0
         btw = 0
+        """
         for row in org_data_df.itertuples():
             if pd.isnull(row.tijd):
                 continue
             if not isinstance(row.tijd, datetime.datetime):
                 print(row)
+            """
             dag_str = row.tijd.strftime("%Y-%m-%d")
             if dag_str != old_dagstr:
                 ol_l = get_value_from_dict(dag_str, self.ol_l_def)
@@ -744,6 +1273,7 @@ class Report:
                 taxes_t = get_value_from_dict(dag_str, self.taxes_t_def)
                 btw = get_value_from_dict(dag_str, self.btw_def)
                 old_dagstr = dag_str
+            """
             if interval == "uur":
                 tijd_str = str(row.tijd)[10:16]
             elif interval == "dag":
@@ -752,8 +1282,8 @@ class Report:
                 tijd_str = str(row.tijd)[0:7]  # jaar maand
             col_1 = row.consumption
             col_2 = row.production
-            col_3 = (row.consumption * (row.price + taxes_l + ol_l)) * (1 + btw / 100)
-            col_4 = (row.production * (row.price + taxes_t + ol_t)) * (1 + btw / 100)
+            col_3 = row.consumption * row.da_cons
+            col_4 = row.production * row.da_prod
             col_5 = row.datasoort
             fi_df.loc[fi_df.shape[0]] = [
                 tijd_str,
@@ -838,30 +1368,18 @@ class Report:
 
     @staticmethod
     def calc_netto_cons(df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        netto = []
-        for row in df.itertuples():
-            netto.append(row.cons - row.prod)
-        result = df.assign(netto_cons=netto)
-        '''
         df["netto_cons"] = df["cons"] - df["prod"]
         return df
 
     @staticmethod
     def calc_emissie(df: pd.DataFrame) -> pd.DataFrame:
-        '''
-        emissie = []
-        for row in df.itertuples():
-            emissie.append(row.netto_cons * row.co2_intensity / 1000)
-        result = df.assign(emissie=emissie)
-        '''
         df["emissie"] = df["netto_cons"] * df["co2_intensity"] / 1000
         return df
 
     @staticmethod
-    def tijd_at_interval(interval: str, moment: datetime.datetime,
-                         as_index: bool=False
-                         ) -> str | int:
+    def tijd_at_interval(
+        interval: str, moment: datetime.datetime, as_index: bool = False
+    ) -> str | int:
         if interval == "maand":
             result = datetime.datetime(moment.year, moment.month, day=1)
             if as_index:
@@ -878,13 +1396,51 @@ class Report:
             result = moment
         return result.strftime("%Y-%m-%d %H:%M:%S")
 
+    @staticmethod
+    def generate_df(
+        vanaf: datetime.datetime,
+        tot: datetime.datetime,
+        rep_interval: str,
+        get_interval: str | None = None,
+        column: str | None = None,
+    ) -> pd.DataFrame:
+        result = pd.DataFrame(columns=[rep_interval, "tijd"])
+        moment = vanaf
+        if get_interval is None:
+            step_interval = rep_interval
+        else:
+            step_interval = get_interval
+        while moment < tot:
+            if get_interval == "maand":
+                old_moment = datetime.datetime(moment.year, moment.month, day=1)
+            else:
+                old_moment = moment
+            moment_str = str(moment)
+            if rep_interval == "uur":
+                tijd_str = moment_str[10:16]
+            elif rep_interval == "dag":
+                tijd_str = moment_str[0:10]
+            else:  # maand
+                tijd_str = moment_str[0:7]  # jaar maand
+            if step_interval == "uur":
+                moment = moment + datetime.timedelta(hours=1)
+            elif step_interval == "dag":
+                moment = moment + datetime.timedelta(days=1)
+            else:  # "maand":
+                moment = old_moment + relativedelta(months=1)
+            result.loc[result.shape[0]] = [tijd_str, old_moment]
+        result.index = pd.to_datetime(result["tijd"])
+        if column is not None:
+            result[column] = 0.0
+        return result
+
     def get_energy_balance_data(
         self,
         periode: str,
         col_dict: dict = None,
         _vanaf: datetime.datetime = None,
         _tot: datetime.datetime = None,
-        _interval: str = None
+        _interval: str = None,
     ):
         """
         berekent een report conform de col_dict configuratie
@@ -902,30 +1458,11 @@ class Report:
         if col_dict is None:
             col_dict = self.energy_balance_dict
 
-        result = pd.DataFrame(columns=[interval, "tijd"])
         last_realised_moment = datetime.datetime.fromtimestamp(
             math.floor(datetime.datetime.now().timestamp() / 3600) * 3600
         )
-        moment = vanaf
-        while moment < tot:
-            if interval == "maand":
-                old_moment = datetime.datetime(moment.year, moment.month, day=1)
-            else:
-                old_moment = moment
-            moment_str = str(moment)
-            if interval == "uur":
-                tijd_str = moment_str[10:16]
-                moment = moment + datetime.timedelta(hours=1)
-            elif interval == "dag":
-                tijd_str = moment_str[0:10]
-                moment = moment + datetime.timedelta(days=1)
-            else:
-                tijd_str = moment_str[0:7]  # jaar maand
-                moment = old_moment + relativedelta(months=1)
-            if interval != periode_d["interval"]:
-                tijd_str = moment_str
-            result.loc[result.shape[0]] = [tijd_str, old_moment]
-        result.index = pd.to_datetime(result["tijd"])
+        result = self.generate_df(vanaf, tot, periode_d["interval"], interval)
+
         values_table = Table(
             "values", self.db_da.metadata, autoload_with=self.db_da.engine
         )
@@ -1142,6 +1679,141 @@ class Report:
                 result = getattr(self, function)(result)
         return result
 
+    def get_da_data(
+        self,
+        key: str,
+        vanaf: datetime.datetime,
+        tot: datetime.datetime,
+        get_interval: str,
+        rep_interval: str,
+        table: str = "values"
+    ) -> pd.DataFrame:
+        """
+        genereert een dataframe van de data in de da-database
+        :param key: code van de data
+        :param vanaf:
+        :param tot:
+        :param get_interval: interval resulting dataframe
+        :param rep_interval: aggregatie interval
+        :param table: str name of database table: values (default) or prognoses
+        :return:  resulting dataframe
+        """
+        values_table = Table(
+            table, self.db_da.metadata, autoload_with=self.db_da.engine
+        )
+        # Aliases for the values table
+        t1 = values_table.alias("t1")
+        variabel_table = Table(
+            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
+        )
+        # Aliases for the variabel table
+        v1 = variabel_table.alias("v1")
+        column = self.db_da.hour(t1.c.time).label("uur")
+        column2 = func.min(self.db_da.from_unixtime(t1.c.time)).label("tijd")
+        if rep_interval == "maand":
+            column = self.db_da.month(t1.c.time).label("maand")
+            column2 = self.db_da.month_start(t1.c.time).label("tijd")
+        elif rep_interval == "dag":
+            column = self.db_da.day(t1.c.time).label("dag")
+            column2 = self.db_da.day_start(t1.c.time).label("tijd")
+        else:  # rep_interval == "uur"
+            column = self.db_da.hour(t1.c.time).label("uur")
+            column2 = self.db_da.hour_start(t1.c.time).label("tijd")
+
+        if get_interval == "uur" and rep_interval != "uur":
+            column = self.db_da.hour_start(t1.c.time).label("uur")
+            groupby_str = "uur"
+        else:
+            groupby_str = rep_interval
+
+        query = (
+            select(
+                column,
+                column2,
+                func.min(self.db_da.from_unixtime(t1.c.time)).label("vanaf"),
+                func.max(self.db_da.from_unixtime(t1.c.time)).label("tot"),
+                func.sum(t1.c.value).label(key),
+            )
+            .where(
+                and_(
+                    v1.c.code == key,
+                    t1.c.variabel == v1.c.id,
+                    t1.c.time
+                    >= self.db_da.unix_timestamp(vanaf.strftime("%Y-%m-%d %H:%M:%S")),
+                    t1.c.time
+                    < self.db_da.unix_timestamp(tot.strftime("%Y-%m-%d %H:%M:%S")),
+                )
+            )
+           .group_by(groupby_str)
+        )
+
+        with self.db_da.engine.connect() as connection:
+            code_result = pd.read_sql(query, connection)
+        code_result["tijd"] = pd.to_datetime(code_result["vanaf"])
+        code_result["tot"] = pd.to_datetime(code_result["tot"])
+        code_result.index = code_result["tijd"]
+        return code_result
+
+    def get_columns(
+        self, calc_dict, active_period: str, _tot: datetime.datetime | None = None
+    ) -> pd.DataFrame:
+        if "calc_interval" in calc_dict:
+            get_interval = calc_dict["calc_interval"]
+        else:
+            get_interval = None
+        columns = list(calc_dict["series"].keys())
+        periode_d = self.periodes[active_period]
+        vanaf = periode_d["vanaf"]
+        if _tot is None:
+            tot = periode_d["tot"]
+        else:
+            tot = _tot
+        rep_interval = periode_d["interval"]
+        if get_interval is None:
+            interval = rep_interval
+        else:
+            interval = get_interval
+        result = self.generate_df(vanaf, tot, rep_interval, get_interval)
+        for key in columns:
+            if calc_dict["series"][key]["source"] == "db":
+                result[key] = 0.0
+                df_column = self.get_da_data(key, vanaf, tot, get_interval=get_interval,
+                                             rep_interval=rep_interval)
+                if len(df_column) == 0:
+                    last_moment = vanaf
+                else:
+                    last_moment = df_column["tot"].iloc[-1] + datetime.timedelta(hours=1)
+                self.add_col_df(df_column, result, key)
+                if last_moment < tot:
+                    if "sensor_type" in calc_dict["series"][key]:
+                        sensor_type = calc_dict["series"][key]["sensor_type"]
+                    else:
+                        sensor_type = "quantity"
+                    vanaf_ha = last_moment
+                    for sensor in calc_dict["series"][key]["sensors"]:
+                        ha_data = self.get_sensor_data(sensor, vanaf_ha, tot, key,
+                                                       interval, sensor_type=sensor_type)
+                        ha_data[key].fillna(0.0)
+                        self.add_col_df(ha_data, result, key)
+                        if len(ha_data) > 0:
+                            last_moment = max(last_moment, ha_data["tot"].iloc[-1] + datetime.timedelta(hours=1))
+                if last_moment < tot:
+                    df_column = self.get_da_data(key, last_moment, tot, get_interval=get_interval,
+                                                 rep_interval=rep_interval, table="prognoses")
+                    self.add_col_df(df_column, result, key)
+            elif calc_dict["series"][key]["source"] == "prices":
+                if not key in result.columns:
+                    df_prices = self.get_price_data(vanaf, tot)
+                    df_prices.reset_index(drop=True, inplace=True)
+                    result.reset_index(drop=True, inplace=True)
+                    # df_prices.rename(columns={'time': 'tijd'}, inplace=True)
+                    # df_prices["tijd"] = pd.to_datetime(df_prices["tijd"])
+                    # df_prices.index = df_prices["tijd"]
+                    result["da_cons"] = df_prices["da_cons"]
+                    result["da_prod"] = df_prices["da_prod"]
+                    result.index = result["tijd"]
+        return result
+
     def get_grid_data(
         self,
         periode: str,
@@ -1262,6 +1934,7 @@ class Report:
             result["tot"] = pd.to_datetime(result["tot"])
             last_moment = result["tot"].iloc[-1] + datetime.timedelta(hours=1)
         if last_moment < tot:
+            """
             # get the prices:
             query = (
                 select(
@@ -1288,6 +1961,10 @@ class Report:
                 logging.debug(query_str)
                 df_prices = pd.read_sql_query(query, connection)
             logging.debug(f"Prijzen \n{df_prices.to_string()}\n")
+            """
+            df_prices = self.get_price_data(
+                last_moment, tot
+            )  #  +datetime.timedelta(hours=1))
 
             df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
@@ -1374,9 +2051,10 @@ class Report:
                         else:
                             df_ha = pd.concat([df_ha, df_prog])
 
+            df_prices.rename(columns={"time": "tijd"}, inplace=True)
             df_prices.index = pd.to_datetime(df_prices["tijd"])
-            df_ha = self.copy_col_df(df_prices, df_ha, "price")
-            df_ha = self.copy_col_df(df_prices, df_ha, "tijd")
+            df_ha = self.copy_col_df(df_prices, df_ha, "da_cons")
+            df_ha = self.copy_col_df(df_prices, df_ha, "da_prod")
             df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
             df_ha = self.recalc_df_ha(df_ha, interval)
 
@@ -1391,182 +2069,201 @@ class Report:
 
         return result
 
-    '''
-    def get_co2_data(
+    def agg_interval(self, calc_dict: dict, input_df: pd.DataFrame, rep_interval: str):
+        if rep_interval != "uur":
+            agg_dict = { }
+            columns = input_df.columns
+            for key in list(calc_dict["series"].keys()):
+                if key in columns:
+                    agg_dict[key] = calc_dict["series"][key]["agg"]
+            result_df = input_df.groupby([rep_interval], as_index=False).agg(agg_dict)
+            return result_df
+        return input_df
+
+    def clean_df(self, calc_dict: dict, df_input: pd.DataFrame, rep_columns: list, active_view: str, rep_interval: str):
+        """
+
+        :param calc_dict:
+        :param df_input:
+        :param rep_columns: report columns
+        :param active_view: tabel of grafiek
+        :param rep_interval:
+        :return:
+        """
+        df_result =pd.DataFrame(columns = [rep_interval] + rep_columns)
+        df_result[rep_interval] = df_input[rep_interval]
+        for column in rep_columns:
+            df_result[column] = df_input[column]
+            # df_result[rep_columns] = df_input[rep_columns]
+        df_result = self.agg_interval(calc_dict, df_result, rep_interval)
+        if active_view == "tabel":
+            df_result.loc["Total"] = df_result.sum(axis=0, numeric_only=True)
+            df_result[rep_interval] = df_result[rep_interval].astype(object)
+            df_result.at[df_result.index[-1], rep_interval] = "Totaal"
+            if "with header" in calc_dict:
+                with_header = calc_dict['with header']
+            else:
+                with_header = True
+            if with_header:
+                header_col = [rep_interval.capitalize()]
+                name_col = [""]
+            else:
+                name_col = [rep_interval.capitalize()]
+            dim_col = [""]
+            for key in rep_columns:
+                if with_header:
+                    header_col += [calc_dict["series"][key]["header"]]
+                name_col += [calc_dict["series"][key]["name"]]
+                dim_col += [calc_dict["series"][key]["dim"]]
+            if with_header:
+                df_result.columns = [header_col, name_col, dim_col]
+            else:
+                df_result.columns = [name_col, dim_col]
+        return df_result
+
+    def calc_report(
+            self,
+            active_period: str,
+            active_interval: str | None = None,
+            active_view: str = "table",
+            _tot: datetime.datetime | None = None,
+    )-> pd.DataFrame:
+        return
+
+    def calc_saving_consumption(
         self,
-        periode: str,
-        _vanaf=None,
-        _tot=None,
-        _interval: str | None = None,
-        _source: str = "all",
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
-        Haalt de co2 data: consumptie, productie, co2-intensity
-        db_da: values tibber data
-        aangevuld met
-        db_ha: co2-inensity
-        geen prognoses
-        :param periode: dus een van alle gedefinieerde perioden: vandaag, gisteren enz.
-        :param _vanaf: als != None dan geldt dit als begintijdstip en overrullt
-            begintijdstip van periode
-        :param _tot: als  != None dan hier het eindtijdstip
-        :param _interval: als != None dan hier het gewenste interval
-        :param _source: als != None dan hier de source all, da of ha
-        :return: een dataframe met de gevraagde co2-data
+        Berekent besparing op verbruik
+        :param active_period: vandaag .... vorig jaar
+        :param active_interval:
+        :param active_view:
+        :param _tot:
+        :return: dataframe met
+        - kolom 1 netto consumption zonder batterij
+        - kolom 2 idem met batterij
+        - kolom 3 = kolom 2 - kolom 1
+        als active_view = table: met kolomtotalen
         """
+        calc_dict = self.saving_consumption_dict
+        df = self.get_columns(calc_dict, active_period, _tot)
+        df["bruto_cons_zonder"] = df["cons"] - df["prod"] - df["bat_in"] + df["bat_out"]
+        df = self.split_column(df, "bruto_cons_zonder", "cons_zonder", "prod_zonder")
+        df["netto_cons_zonder"] = df["cons_zonder"] - df["prod_zonder"]
+        df["netto_cons_met"] = df["cons"] - df["prod"]
+        df["saving"] = df["netto_cons_zonder"] - df["netto_cons_met"]
+        df_result = self.clean_df(calc_dict, df,
+                                  [ "cons_zonder", "prod_zonder", "netto_cons_zonder",
+                                    "cons", "prod", "netto_cons_met",
+                                   "saving"], active_view,
+                                  self.periodes[active_period]["interval"])
+        return df_result
 
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
-        # Aliases for the values table
-        t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
-        # Aliases for the variabel table
-        v1 = variabel_table.alias("v1")
-        v2 = variabel_table.alias("v2")
+    @staticmethod
+    def split_column(df:pd.DataFrame, col0: str, col1: str, col2: str) -> pd.DataFrame:
+        mask1 = df[col0] < 0
+        mask2 = df[col0] >= 0
+        df[col1] = df[col0].mask(mask1)
+        df[col2] = - df[col0].mask(mask2)
+        df.fillna(0.0, inplace=True)
+        return df
 
-        if periode == "":
-            vanaf = _vanaf
-            tot = _tot
-            interval = _interval if _interval else "uur"
-        else:
-            periode_d = self.periodes[periode]
-            vanaf = _vanaf if _vanaf else periode_d["vanaf"]
-            tot = _tot if _tot else periode_d["tot"]
-            interval = _interval if _interval else periode_d["interval"]
+    def calc_saving_cost(
+        self,
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None
+    ) -> pd.DataFrame:
+        """
+        Berekent besparing op kosten
+        :param active_period: vandaag .... vorig jaar
+        :param active_interval:
+        :param active_view:
+        :param _tot:
+        :return: dataframe met
+        - kolom 1 netto consumption zonder batterij
+        - kolom 2 idem met batterij
+        - kolom 3 = kolom 2 - kolom 1
+        als active_view = table: met kolomtotalen
+        """
+        calc_dict = self.saving_cost_dict
+        df = self.get_columns(calc_dict, active_period, _tot)
+        df["cost"] = df["cons"] * df["da_cons"]
+        df["profit"] = df["prod"] * df["da_prod"]
+        df["netto_cost"] = df["cost"] - df["profit"]
+        df["bruto_cons_zonder"] = df["cons"] - df["prod"] - df["bat_in"] + df["bat_out"]
+        df = self.split_column(df, "bruto_cons_zonder", "cons_zonder", "prod_zonder")
+        df["cost_zonder"] = df["cons_zonder"] * df["da_cons"]
+        df["profit_zonder"] = df["prod_zonder"] * df["da_prod"]
+        df["netto_cost_zonder"] = df["cost_zonder"] - df["profit_zonder"]
+        df["saving"] = df["netto_cost_zonder"] - df["netto_cost"]
+        df_result = self.clean_df(calc_dict, df,
+                                  ["cost_zonder", "profit_zonder", "netto_cost_zonder",
+                                   "cost", "profit", "netto_cost", "saving"],
+                                  active_view, self.periodes[active_period]["interval"])
+        return df_result
 
-        source = _source
-        if interval == "maand":
-            column = self.db_da.month(t1.c.time).label("maand")
-        elif interval == "dag":
-            column = self.db_da.day(t1.c.time).label("dag")
-        else:  # interval == "uur"
-            column = self.db_da.hour(t1.c.time).label("uur")
-        result = None
-        if source == "all" or source == "da":
-            for cat, label in [
-                ("cons", "consumption"),
-                ("prod", "production"),
-            ]:
-                query = (
-                    select(
-                        column,
-                        func.min(self.db_da.from_unixtime(t1.c.time)).label("vanaf"),
-                        func.max(self.db_da.from_unixtime(t1.c.time)).label("tot"),
-                        func.sum(t1.c.value).label(label),
-                    )
-                    .where(
-                        and_(
-                            t1.c.variabel == v1.c.id,
-                            v1.c.code == cat,
-                            t1.c.time
-                            >= self.db_da.unix_timestamp(
-                                vanaf.strftime("%Y-%m-%d %H:%M:%S")
-                            ),
-                            t1.c.time
-                            < self.db_da.unix_timestamp(
-                                tot.strftime("%Y-%m-%d %H:%M:%S")
-                            ),
-                        )
-                    )
-                    .group_by("uur")
-                )
+    def calc_saving_co2(
+        self,
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None
+    ) -> pd.DataFrame:
+        """
+        Berekent besparing op kosten
+        :param active_period: vandaag .... vorig jaar
+        :param active_interval:
+        :param active_view:
+        :param _tot:
+        :return: dataframe met
+        - kolom 1 netto consumption zonder batterij
+        - kolom 2 idem met batterij
+        - kolom 3 = kolom 2 - kolom 1
+        als active_view = table: met kolomtotalen
+        """
+        calc_dict = self.saving_co2_dict
+        df = self.get_columns(calc_dict, active_period, _tot)
+        df["netto_cons_zonder"] = df["cons"] - df["prod"] - df["bat_in"] + df["bat_out"]
+        df["emissie_zonder"] = df["netto_cons_zonder"] * df["co2_intensity"] / 1000
+        df["netto_cons"] = df["cons"] - df["prod"]
+        df["emissie_met"] = df["netto_cons"] * df["co2_intensity"] / 1000
+        df["saving"] = df["emissie_zonder"] - df["emissie_met"]
+        df_result = self.clean_df(calc_dict, df,
+                                  ["netto_cons_zonder", "emissie_zonder",
+                                   "netto_cons", "emissie_met", "saving"],
+                                  active_view, self.periodes[active_period]["interval"])
+        return df_result
 
-                with self.db_da.engine.connect() as connection:
-                    query_str = str(query.compile(connection))
-                    logging.debug(f"Query: \n {query_str}")
-                    result_cat = pd.read_sql_query(query, connection)
-                result_cat.index = result_cat[
-                    interval
-                ]  # pd.to_datetime(result_cat["vanaf"])
-                if result is None:
-                    result = result_cat
-                else:
-                    result[label] = result_cat[label]
-        else:
-            result = pd.DataFrame(
-                columns=[
-                    "uur",
-                    "vanaf",
-                    "tot",
-                    "consumption",
-                    "production",
-                    "cost",
-                    "profit",
-                ]
-            )
-            result.index = result["uur"]  # vanaf
+    def calc_co2_emission(
+            self,
+            active_period: str,
+            active_interval: str | None = None,
+            active_view: str = "table",
+            _tot: datetime.datetime | None = None
+    ) -> pd.DataFrame:
+        """
+        Berekent besparing op kosten
+        :param active_period: vandaag .... vorig jaar
+        :param active_interval:
+        :param active_view:
+        :param _tot:
+        :return: dataframe met
+        """
+        calc_dict = self.calc_co2_emission_dict
+        df = self.get_columns(calc_dict, active_period, _tot)
+        df["netto_cons"] = df["cons"] - df["prod"]
+        df["emissie"] = df["netto_cons"] * df["co2_intensity"] / 1000
+        df_result = self.clean_df(calc_dict, df,
+                                  ["cons", "prod", "netto_cons", "co2_intensity", "emissie"],
+                                  active_view, self.periodes[active_period]["interval"])
+        return df_result
 
-        # get the co2-intensity:
-        sensor = self.config.get(["entity co2-intensity"], self.report_options, None)
-        df_co2 = self.get_sensor_data(
-            sensor, vanaf, tot, "CO2 int.", "uur"
-        )
-        df_co2.index = pd.to_datetime(df_co2["tijd"])
-        df_co2["tijd"] = pd.to_datetime(df_co2["tijd"])
-
-        result["datasoort"] = "recorded"
-        if result.shape[0] == 0:
-            # datetime.datetime.combine(vanaf, datetime.time(0,0)) - datetime.timedelta(hours=1)
-            last_moment = vanaf
-        else:
-            result["vanaf"] = pd.to_datetime(result["vanaf"])
-            result["tot"] = pd.to_datetime(result["tot"])
-            last_moment = result["tot"].iloc[-1] + datetime.timedelta(hours=1)
-        if last_moment < tot:
-            df_ha = pd.DataFrame()
-            if source == "all" or source == "ha":
-                # data uit ha ophalen
-                count = 0
-                for sensor in self.report_options["entities grid consumption"]:
-                    if count == 0:
-                        df_ha = self.get_sensor_data(
-                            sensor, last_moment, tot, "consumption", "uur"
-                        )
-                        df_ha.index = pd.to_datetime(df_ha["tijd"])
-                        df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
-                    else:
-                        df_2 = self.get_sensor_data(
-                            sensor, last_moment, tot, "consumption", "uur"
-                        )
-                        df_2.index = pd.to_datetime(df_2["tijd"])
-                        df_ha = self.add_col_df(df_2, df_ha, "consumption")
-                        # df_cons = df_cons.merge(df_2, on=['tijd']).set_index(['tijd']).sum(axis=1)
-                    if len(df_ha) > 0:
-                        df_ha["datasoort"] = "recorded"
-                    count = +1
-                count = 0
-                for sensor in self.report_options["entities grid production"]:
-                    df_p = self.get_sensor_data(
-                        sensor, last_moment, tot, "production", "uur"
-                    )
-                    df_p.index = pd.to_datetime(df_p["tijd"])
-                    if count == 0:
-                        df_ha = self.copy_col_df(df_p, df_ha, "production")
-                    else:
-                        df_ha = self.add_col_df(df_p, df_ha, "production")
-                    count = +1
-                if len(df_ha) > 0:
-                    last_moment = df_ha["tijd"].iloc[-1] + datetime.timedelta(hours=1)
-                    df_ha["datasoort"] = "recorded"
-                else:
-                    last_moment = vanaf
-
-            df_ha = self.copy_col_df(df_co2, df_ha, "CO2 int.")
-            df_ha = self.copy_col_df(df_co2, df_ha, "tijd")
-            df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
-            df_ha = self.recalc_df_co2(df_ha, interval)
-
-            if len(result) == 0:
-                result = df_ha
-            else:
-                if len(df_ha) > 0:
-                    result = pd.concat([result, df_ha])
-
-        return result
-    '''
 
     @staticmethod
     def get_last_day_month(input_dt: datetime):
@@ -1575,7 +2272,6 @@ class Report:
         return res[1]
 
     def calc_grid_columns(self, report_df, active_interval, active_view):
-        from dao.prog.utils import get_value_from_dict
 
         first_col = active_interval.capitalize()
         # if active_subject == "verbruik":
@@ -1734,6 +2430,7 @@ class Report:
             columns_2 = columns_2 + [self.energy_balance_dict[key]["dim"]]
         if active_view == "tabel":
             report_df.loc["Total"] = report_df.sum(axis=0, numeric_only=True)
+            report_df[active_interval] = report_df[active_interval].astype(object)
             report_df.at["Total", active_interval] = "Totaal"
             columns = [columns_1, columns_2]
             report_df.columns = columns
@@ -1742,6 +2439,7 @@ class Report:
 
         return report_df
 
+    '''
     def calc_co2_columns(self, report_df, active_interval, active_view):
         first_col = active_interval.capitalize()
         # report_df = report_df.drop('vanaf', axis=1)
@@ -1757,7 +2455,10 @@ class Report:
         if active_interval != "uur":
             report_df["uur"] = pd.to_datetime(report_df["uur"])
             report_df["uur"] = report_df.apply(
-                lambda x: self.tijd_at_interval(active_interval, x["uur"], as_index=True), axis=1
+                lambda x: self.tijd_at_interval(
+                    active_interval, x["uur"], as_index=True
+                ),
+                axis=1,
             )
             report_df = report_df.groupby(["uur"], as_index=False).agg(
                 {
@@ -1785,6 +2486,7 @@ class Report:
             report_df.columns = columns_1
 
         return report_df
+    '''
 
     #  ------------------------------------------------
     def get_sensor_week_data(
@@ -1872,6 +2574,8 @@ class Report:
         else:
             df_raw = pd.DataFrame(columns=["weekdag", "tijd", "tot", col_name])
         df_raw.index = pd.to_datetime(df_raw["tijd"])
+        # when NaN in result replace with zero (0)
+        df_raw[col_name] = df_raw[col_name].fillna(0)
         df_wd = df_raw.loc[df_raw["weekdag"] == weekday]
         return df_wd
 
@@ -2062,8 +2766,6 @@ class Report:
         return df
 
     def get_price_data(self, start, end):
-        from dao.prog.utils import get_value_from_dict
-
         df_da = self.db_da.get_column_data("values", "da", start=start, end=end)
         old_dagstr = ""
         taxes_l = 0
@@ -2168,43 +2870,49 @@ class Report:
             options = _options
         else:
             options = {
-                "title": "Grafiek verbruik",
+                "title": "Verbruik en kosten",
                 "style": self.config.get(["graphics", "style"]),
-                "vaxis": [{"title": "kWh"}, {"title": "euro"}],
-                "series": [
+                "graphs": [
                     {
-                        "column": "Verbruik",
-                        "title": "Verbruik",
-                        "type": "stacked",
-                        "color": "#00bfff",
-                    },
-                    {
-                        "column": "Productie",
-                        "title": "Productie",
-                        "negativ": "true",
-                        "type": "stacked",
-                        "color": "green",
-                    },
-                    {
-                        "column": "Kosten",
-                        "label": "Kosten",
-                        "type": "stacked",
-                        "color": "red",
-                        "vaxis": "right",
-                    },
-                    {
-                        "column": "Opbrengst",
-                        "label": "Opbrengst",
-                        "negativ": "true",
-                        "type": "stacked",
-                        "color": "#ff8000",
-                        "vaxis": "right",
-                    },
+                        "vaxis": [{"title": "kWh"}, {"title": "euro"}],
+                        "align_zeros": "True",
+                        "series": [
+                            {
+                                "column": "Verbruik",
+                                "title": "Verbruik",
+                                "type": "stacked",
+                                "color": "#00bfff",
+                            },
+                            {
+                                "column": "Productie",
+                                "title": "Productie",
+                                "negativ": "true",
+                                "type": "stacked",
+                                "color": "green",
+                            },
+                            {
+                                "column": "Kosten",
+                                "title": "Kosten",
+                                "type": "stacked",
+                                "color": "red",
+                                "vaxis": "right",
+                            },
+                            {
+                                "column": "Opbrengst",
+                                "title": "Opbrengst",
+                                "negativ": "true",
+                                "type": "stacked",
+                                "color": "#ff8000",
+                                "vaxis": "right",
+                            },
+                        ],
+                    }
                 ],
             }
+        options["title"] = options["title"] + " " + period
         options["haxis"] = {
-            "values": self.periodes[period]["interval"].capitalize(),
-            "title": self.periodes[period]["interval"] + " van " + period,
+            "values": self.periodes[period]["interval"] if self.periodes[period]["interval"] in df else self.periodes[period]["interval"].capitalize(),
+            "title": self.periodes[period]["interval"],
         }
 
         gb = GraphBuilder()
@@ -2215,3 +2923,5 @@ class Report:
         report_data = base64.b64encode(buf.getbuffer()).decode("ascii")
         plt.close(fig)
         return report_data
+
+

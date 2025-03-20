@@ -17,8 +17,6 @@ import sqlalchemy_utils
 import os
 import logging
 
-from sqlalchemy.dialects.mssql.information_schema import columns
-
 from dao.prog.utils import interpolate
 
 
@@ -167,7 +165,7 @@ class DBmanagerObj(object):
                 "epoch",
                 func.to_timestamp(date_str, 'YYYY-MM-DD hh24:mi:ss')
                 # func.timezone(self.TARGET_TIMEZONE, func.cast(date_str, TIMESTAMP)),
-                #EXTRACT(epoch FROM to_timestamp('2025-01-07 00:07:00', 'YYYY-MM-DD hh24:mi:ss'))
+                # EXTRACT(epoch FROM to_timestamp('2025-01-07 00:07:00', 'YYYY-MM-DD hh24:mi:ss'))
             )
         else:  # mysql/mariadb
             return func.unix_timestamp(date_str)
@@ -186,7 +184,32 @@ class DBmanagerObj(object):
                 func.lpad(func.month(func.from_unixtime(column)), 2, "0"),
             )
 
+    def month_start(self, column):
+        if self.db_dialect == "sqlite":
+            return func.strftime(
+                "%Y-%m-01", func.datetime(column, "unixepoch", "localtime")
+            )
+        elif self.db_dialect == "postgresql":
+            return func.to_char(func.to_timestamp(column), "YYYY-MM-01")
+        else:  # mysql/mariadb
+            return func.concat(
+                func.year(func.from_unixtime(column)),
+                "-",
+                func.lpad(func.month(func.from_unixtime(column)), 2, "0"),
+                "-01"
+            )
+
     def day(self, column) -> func:
+        if self.db_dialect == "sqlite":
+            return func.strftime(
+                "%Y-%m-%d", func.datetime(column, "unixepoch", "localtime")
+            )
+        elif self.db_dialect == "postgresql":
+            return func.to_char(func.to_timestamp(column), "YYYY-MM-DD")
+        else:  # mysql/mariadb
+            return func.date(func.from_unixtime(column))
+
+    def day_start(self, column) -> func:
         if self.db_dialect == "sqlite":
             return func.strftime(
                 "%Y-%m-%d", func.datetime(column, "unixepoch", "localtime")
@@ -205,6 +228,16 @@ class DBmanagerObj(object):
             return func.to_char(func.to_timestamp(column), "HH24:MI")
         else:  # mysql/mariadb
             return func.time_format(func.time(func.from_unixtime(column)), "%H:%i")
+
+    def hour_start(self, column) -> func:
+        if self.db_dialect == "sqlite":
+            return func.strftime(
+                "%Y-%m-%d %H:%M", func.datetime(column, "unixepoch", "localtime")
+            )
+        elif self.db_dialect == "postgresql":
+            return func.to_char(func.to_timestamp(column), "YYYY-MM-DD HH24:MI")
+        else:  # mysql/mariadb
+            return func.date_format(func.from_unixtime(column), "%Y-%m-%d %H:%i")
 
     def savedata(self, df: pd.DataFrame, tablename: str = "values"):
         """
@@ -373,8 +406,7 @@ class DBmanagerObj(object):
             )
             if end is not None:
                 query = query.where(
-                    t1.c.time
-                    < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                    t1.c.time < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
                 )
             else:
                 start_dt = datetime.datetime.fromtimestamp(start)
@@ -386,8 +418,7 @@ class DBmanagerObj(object):
                 end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
                 end_ts = end_dt.timestamp()
                 query = query.where(
-                    t1.c.time
-                    < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
+                    t1.c.time < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
                 )
 
             query = query.order_by(t1.c.time)
