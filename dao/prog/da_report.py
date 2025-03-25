@@ -988,6 +988,7 @@ class Report:
             df_raw = pd.DataFrame(columns=[agg, "tijd", "tot", col_name])
         df_raw["tijd"] = pd.to_datetime(df_raw["tijd"])
         df_raw.index = df_raw["tijd"]
+        df_raw["tot"] = pd.to_datetime(df_raw["tot"])
 
         # when NaN in result replace with zero (0)
         df_raw[col_name] = df_raw[col_name].fillna(0)
@@ -1404,8 +1405,10 @@ class Report:
         get_interval: str | None = None,
         column: str | None = None,
     ) -> pd.DataFrame:
-        result = pd.DataFrame(columns=[rep_interval, "tijd"])
+        result = pd.DataFrame(columns=[rep_interval, "tijd", "tot", "datasoort"])
         moment = vanaf
+        now = datetime.datetime.now()
+        now = datetime.datetime(now.year,now.month, now.day,now.hour)
         if get_interval is None:
             step_interval = rep_interval
         else:
@@ -1428,7 +1431,8 @@ class Report:
                 moment = moment + datetime.timedelta(days=1)
             else:  # "maand":
                 moment = old_moment + relativedelta(months=1)
-            result.loc[result.shape[0]] = [tijd_str, old_moment]
+            datasoort = "recorded" if moment <= now else "expected"
+            result.loc[result.shape[0]] = [tijd_str, old_moment, moment, datasoort]
         result.index = pd.to_datetime(result["tijd"])
         if column is not None:
             result[column] = 0.0
@@ -1438,6 +1442,7 @@ class Report:
         self,
         periode: str,
         col_dict: dict = None,
+        field: str = None,
         _vanaf: datetime.datetime = None,
         _tot: datetime.datetime = None,
         _interval: str = None,
@@ -1446,6 +1451,7 @@ class Report:
         berekent een report conform de col_dict configuratie
         :param periode: key van een van de self.periodes
         :param col_dict: of self.energy_balance_dict of self.co2_dict
+        :param field: one particular field
         :param _vanaf: als afwijkt van periode.vanaf
         :param _tot: als afwijkt van periode.tot
         :param _interval: als afwijkt van periode.interval
@@ -1485,6 +1491,8 @@ class Report:
                 column = self.db_da.from_unixtime(t1.c.time).label("tijd")
                 groupby_str = "tijd"
         for key, categorie in col_dict.items():
+            if not field is None and key != field:
+                continue
             result[key] = 0.0
             """
             if interval == "maand":
@@ -2421,7 +2429,10 @@ class Report:
         # report_df = report_df.drop('vanaf', axis=1)
         report_df.style.format("{:.3f}")
         report_df = report_df.drop("tijd", axis=1)
-        # report_df =  report_df.drop('datasoort', axis=1)
+        report_df = report_df.drop("tot", axis=1)
+        report_df = report_df.drop("datasoort", axis=1)
+        if "datasoort" in report_df.columns:
+            report_df =  report_df.drop("datasoort", axis=1)
         key_columns = report_df.columns.values.tolist()[1:]
         columns_1 = [first_col]
         columns_2 = [""]
@@ -2818,7 +2829,7 @@ class Report:
         tot = None
         if not expected:
             now = datetime.datetime.now()
-            tot = datetime.datetime(now.year, now.month, now.day, now.hour)
+            tot = min(self.periodes[periode]["tot"], datetime.datetime(now.year, now.month, now.day, now.hour))
         else:
             tot = self.periodes[periode]["tot"]
         df = pd.DataFrame()
@@ -2848,7 +2859,16 @@ class Report:
             if not (field in self.energy_balance_dict):
                 result = '{"message":"Failed"}'
                 return result
+            '''
             df = self.get_field_data(field, periode)
+            '''
+            df_balance = self.get_energy_balance_data(periode, field=field, _tot=tot)
+            df_balance["time"] = df_balance["tijd"]
+            df = df_balance[["time", field, "datasoort"]].copy()
+            if cumulate:
+                df[field] = df_balance[field].cumsum()
+            df.rename({field: "value"}, axis=1, inplace=True)
+
 
         history_df = df[df["datasoort"] == "recorded"]
         history_df = history_df.drop("datasoort", axis=1)

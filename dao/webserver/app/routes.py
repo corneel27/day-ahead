@@ -15,7 +15,7 @@ from dao.prog.version import __version__
 
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
-images_folder = os.path.join(web_datapath, "images")
+images_folder = os.path.join(web_datapath, 'images')
 try:
     config = Config(app_datapath + "options.json")
 except ValueError as ex:
@@ -747,6 +747,9 @@ def run_api(bewerking: str):
         )
         with open(filename, "w") as f:
             f.write(log_content)
-        return render_template("api_run.html", log_content=log_content)
+        return render_template("api_run.html",
+                               log_content=log_content,
+                               version=__version__
+                               )
     else:
         return "Onbekende bewerking: " + bewerking
