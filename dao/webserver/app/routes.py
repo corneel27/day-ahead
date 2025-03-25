@@ -747,6 +747,9 @@ def run_api(bewerking: str):
         )
         with open(filename, "w") as f:
             f.write(log_content)
-        return render_template("api_run.html", log_content=log_content)
+        return render_template("api_run.html",
+                               log_content=log_content,
+                               version=__version__
+                               )
     else:
         return "Onbekende bewerking: " + bewerking

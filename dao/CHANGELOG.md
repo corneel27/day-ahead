@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.3.1] 
+- Fixed error: no version-info when rendering api_run.html
+- Fixed error when using sqlite for Home Assistant database during generating reports
+- Fixed time error, when calling api-report over long periodes
 
 # [V2025.3.0] 
 - Fixed error when one use postgresql and get prices from Nordpool
