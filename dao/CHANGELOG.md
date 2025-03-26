@@ -1,5 +1,27 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.3.1] 
+- Fixed error: no version-info when rendering api_run.html
+- Fixed error when using sqlite for Home Assistant database during generating reports
+- Fixed time error, when calling api-report over long periodes
+
+# [V2025.3.0] 
+- Fixed error when one use postgresql and get prices from Nordpool
+- Fixed error when no co2-sensor is configured in the settings
+- Introduction of new reports of **Savings** when you use one or more home baterries:
+  - consumption (most of the time this saving wil be negative, because the use of the battery cost energy)
+  - cost
+  - CO2-emission; only available when you have activated the integration **Electricity Maps** 
+  and when you have configured the sensor CO2-intensity in your settings
+- All reports of CO2-emissions are restricted till the current hour, because the sensor CO2-intensity
+only have values till the current hour. You cannot use the checbox "met prognose" and also the periods "morgen"
+and "vandaag_en_morgen" are deleted.
+- Introduction of generic calculating routines. With these routines new reports can easily be programmed.
+In the near future the calculation of all reports will based on these routines.
+- Introduction of a new type of graph (Waterfall-type) to present calculated savings.
+For instance:
+ ![saving_cost_graph.png](images/saving_cost_graph.png) <br />
+
 
 # [V2025.2.0] 
 - Fixed error calculating historic consumption and production since last invoice day

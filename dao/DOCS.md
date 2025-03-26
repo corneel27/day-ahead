@@ -424,6 +424,7 @@ Het hoofdmenu van het dashboard bestaat uit 4 opties: <br />
 - Home
 - Run
 - Reports
+- Savings
 - Config
 
 **Home**<br/>
@@ -495,9 +496,26 @@ Je hebt de keuze uit de volgende perioden:
 * dit contractjaar _*_ <br/>
 * 365 dagen
 
-Bij de perioden met een _*_ hebben je optie "met prognose".
+Bij de perioden met een _*_ hebben je de optie "met prognose".
 Als je die aanvinkt wordt een rapportage berekend inclusief de resultaten van de laatst uitgevoerde optimaliseringsberekening.
 Dit geldt zowel voor de tabel als de grafiek. In de toekomst zullen in de grafiek de "prognose waarden" iets afwijkend worden getoond.
+
+**Savings**<br/>
+Hiermee bereken en rapporteer je je besparingen die je realiseert door de inzet van je thuisbatterij(en) op de volgende onderdelen:
+* **verbruik**<br/>
+Je verbruik zal altijd groter worden door de inzet van je batterij, omdat deze altijd een rendement onder de 100% zal hebben. Dus je realiseert op je verbruik meestal een negatieve besparing (dus een toename).
+* **kosten**<br/>
+Als je je baterij goed inzet met de strategie "minimaliseer kosten" zul je dus financiele besparingen
+realiseren. Diekun je dusmet deze rapportage zichtbaar maken.
+In tabelvorm:
+ ![saving_cost_table.png](images/saving_cost_table.png) <br />
+In grafiekvorm:
+ ![saving_cost_graph.png](images/saving_cost_graph.png) <br />
+
+* **CO2**<br>
+Het inzetten van je batterij met beide strategieen zal meestal ook betekenen dat teruglevert bij een groot aandeel fossiel in de opwekking van elektriciteit
+en gebruik van elektriciteit uit het net bij een laag aandeel fossiel in de elektriciteitsmix.
+Met deze rapportage maak je deze besparing zichtbaar.
 
 **Settings**<br/>
 -    ***Options***<br/>
@@ -1201,14 +1219,14 @@ aan het einde van het lopende uur
        * orientation: orientatie in graden, 0 = zuid, -90 is oost, 90 west  
        * capacity: capaciteit in kWp  
        * yield: opbrengstfactor van je panelen als er 1 J/cm² straling op je panelen valt in kWh/J/cm²  
-        Deze bereken je als volgt:  <a name="pv_yield"></a> `yield = kWh/400000` waarbij `kWh` de werkelijke opbrengst is in een jaar.  
+       Deze bereken je als volgt:  <a name="pv_yield"></a> `yield = kWh/400000` waarbij `kWh` de werkelijke opbrengst is in een jaar.  
          * Een eerste schatting van de jaarlijkse opbrengst van je panelen is: Wp x 0,85.
-Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. De `yield` wordt dan 0,01275 kWh/J/cm² <br>
+           Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. De `yield` wordt dan 0,01275 kWh/J/cm² <br>
          * De gemiddelde direct opvallende straling gesommeerd over een jaar is "ongeveer" 400.000 J/cm².<br>
          * Als jouw "geschatte" jaaropbrengst van je panelen stelt op 5100 kWh dan wordt de yield:
 5100 / 400.000 = 0,01275 kWh/J/cm². Let op, de yield is afhankelijk van de capaciteit van jouw installatie<br>
          * Zo kun je voor iedere pv installatie een eerste schatting maken.<br>
-         * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
+          * Na een week kun je de berekende geprognotiseerde productie vergelijken met de werkelijke productie en dienovereenkomstig de yield aanpassen:
 stel geprognoticeerd/berekend = 50 kWh gemeten is: 40 kWh dan wordt de nieuwe yield = oude_yield * 40 / 50. <br>
      * entity pv switch: 
        * een entity (meestal een helper in de vorm van een input_boolean), waarmee je

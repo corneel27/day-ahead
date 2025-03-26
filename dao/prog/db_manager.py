@@ -181,7 +181,32 @@ class DBmanagerObj(object):
                 func.lpad(func.month(func.from_unixtime(column)), 2, "0"),
             )
 
+    def month_start(self, column):
+        if self.db_dialect == "sqlite":
+            return func.strftime(
+                "%Y-%m-01", func.datetime(column, "unixepoch", "localtime")
+            )
+        elif self.db_dialect == "postgresql":
+            return func.to_char(func.to_timestamp(column), "YYYY-MM-01")
+        else:  # mysql/mariadb
+            return func.concat(
+                func.year(func.from_unixtime(column)),
+                "-",
+                func.lpad(func.month(func.from_unixtime(column)), 2, "0"),
+                "-01"
+            )
+
     def day(self, column) -> func:
+        if self.db_dialect == "sqlite":
+            return func.strftime(
+                "%Y-%m-%d", func.datetime(column, "unixepoch", "localtime")
+            )
+        elif self.db_dialect == "postgresql":
+            return func.to_char(func.to_timestamp(column), "YYYY-MM-DD")
+        else:  # mysql/mariadb
+            return func.date(func.from_unixtime(column))
+
+    def day_start(self, column) -> func:
         if self.db_dialect == "sqlite":
             return func.strftime(
                 "%Y-%m-%d", func.datetime(column, "unixepoch", "localtime")
@@ -200,6 +225,16 @@ class DBmanagerObj(object):
             return func.to_char(func.to_timestamp(column), "HH24:MI")
         else:  # mysql/mariadb
             return func.time_format(func.time(func.from_unixtime(column)), "%H:%i")
+
+    def hour_start(self, column) -> func:
+        if self.db_dialect == "sqlite":
+            return func.strftime(
+                "%Y-%m-%d %H:%M", func.datetime(column, "unixepoch", "localtime")
+            )
+        elif self.db_dialect == "postgresql":
+            return func.to_char(func.to_timestamp(column), "YYYY-MM-DD HH24:MI")
+        else:  # mysql/mariadb
+            return func.date_format(func.from_unixtime(column), "%Y-%m-%d %H:%i")
 
     def savedata(self, df: pd.DataFrame, tablename: str = "values"):
         """

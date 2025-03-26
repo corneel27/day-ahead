@@ -156,7 +156,7 @@ class DaPrices:
             df_db = pd.DataFrame(columns=["time", "code", "value"])
             for hourly_value in hourly_values:
                 time_dt = hourly_value["start"]
-                time_ts = time_dt.timestamp()
+                time_ts = int(time_dt.timestamp())
                 value = hourly_value["value"]
                 if value == float("inf"):
                     continue
@@ -269,7 +269,7 @@ class DaPrices:
                     dt = datetime.datetime.strptime(
                         node["startsAt"], "%Y-%m-%dT%H:%M:%S.%f%z"
                     )
-                    time_stamp = dt.timestamp()
+                    time_stamp = int(dt.timestamp())
                     value = float(node["energy"])
                     logging.info(f"{node} {dt} {time_stamp} {value}")
                     df_db.loc[df_db.shape[0]] = [time_stamp, "da", value]
