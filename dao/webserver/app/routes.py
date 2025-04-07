@@ -706,7 +706,6 @@ def api_report(fld: str, periode: str):
     :return: de gevraagde data in json formaat
     """
     cumulate = request.args.get('cumulate')
-    expected = request.args.get('expected')
     report = Report(app_datapath+"/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
@@ -718,16 +717,7 @@ def api_report(fld: str, periode: str):
             cumulate = cumulate == 1
         except ValueError:
             cumulate = False
-
-    if expected is None:
-        expected = False
-    else:
-        try:
-            expected = int(expected)
-            expected = expected == 1
-        except ValueError:
-            expected = False
-    result = report.get_api_data(fld, periode, cumulate=cumulate, expected=expected)
+    result = report.get_api_data(fld, periode, cumulate=cumulate)
     return result
 
 

@@ -276,6 +276,8 @@ class DaCalc(DaBase):
                 p_grl.append((gc_p_high + taxes_l) * (1 + btw / 100))
                 p_grt.append((gc_p_high + taxes_t) * (1 + btw / 100))
             first_hour = False
+        while len(b_l) > len(uur):
+            b_l = b_l[:-1]
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
         try:
