@@ -688,7 +688,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 | **solar**                |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                           | 
 |                          | name                         | string           |                                    |                                                    |
 |                          | tilt                         | getal            |                                    | helling 0 ..90                                     |
-|                          | orientation                  | getal            |                                    | -180(N) ..-90(W)..0(Z) ..90(W)..180(N)             |
+|                          | orientation                  | getal            |                                    | -180(N) ..-90(O)..0(Z) ..90(W)..180(N)             |
 |                          | capacity                     | getal            |                                    | kWp                                                |
 |                          | yield                        | getal            |                                    | Wh/J/cm2                                           |
 |                          | entity pv switch             | string           | ""                                 | input_boolean                                      |
@@ -1484,7 +1484,24 @@ gebruiken om grafieken te maken met bijv. apex-charts (zie hieronder).<br/>
 Voor **\<variabele>** kun je (voorlopig) een van de volgende mogelijkheden invullen (wordt uitgebreid):
 - **da**<br/>
     Hiermee vraag je de day ahead prijzen op. Het programma retourneert de volgende gegevens (json):
-```{ "message":"Success", "recorded": [{"time":"2023-10-13 00:00","da_ex":0.12399,"da_cons":0.3242558,"da_prod":0.3242558},{"time":"2023-10-13 01:00","da_ex":0.115,"da_cons":0.3133779,"da_prod":0.3133779},{"time":"2023-10-13 02:00","da_ex":0.10714,"da_cons":0.3038673,"da_prod":0.3038673},{"time":"2023-10-13 03:00","da_ex":0.1014,"da_cons":0.2969219,"da_prod":0.2969219}, .....```
+```
+  {"message": "Success",
+  "data": [
+    {
+      "time_ts": 1743890400000,
+      "time": "2025-04-06 00:00",
+      "value": 0.653,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1743894000000,
+      "time": "2025-04-06 01:00",
+      "value": 0,
+      "datatype": "recorded"
+    },
+    ...
+
+```
 per uur worden de drie prijzen geretourneerd:
   - ```da_ex```: kale day ahead prijs, excl. belasting, excl. btw en excl opslag leverancier
   - ```da_cons```: de day ahead prijs waarvoor jij elektriciteit koopt, dus inclusief energiebelasting, btw en opslag leverancier
@@ -1492,11 +1509,33 @@ per uur worden de drie prijzen geretourneerd:
   (voorlopig is dit bij de meeste gelijk aan da_cons) 
 - **consumption** <br/>
   Hiermee vraag je je verbruiksgegevens op. Bijvoorbeeld:<br/>
-```{ "message":"Success", "recorded": [{"time":"2023-10-13 00:00","value":0.177},{"time":"2023-10-13 01:00","value":0.458},{"time":"2023-10-13 02:00","value":0.158},{"time":"2023-10-13 03:00","value":0.648},{"time":"2023-10-13 04:00","value":0.134},{"time":"2023-10-13 05:00","value":0.129},{"time":"2023-10-13 06:00","value":0.128},{"time":"2023-10-13 07:00","value":0.1},{"time":"2023-10-13 08:00","value":0.02}, ...  ,{"time":"2023-10-13 15:00","value":5.343}], "expected" : [{"time":"2023-10-13 16:00","value":2.20486},{"time":"2023-10-13 17:00","value":0.501},{"time":"2023-10-13 18:00","value":0.0},{"time":"2023-10-13 19:00","value":0.0},{"time":"2023-10-13 20:00","value":0.0},{"time":"2023-10-13 21:00","value":0.19},{"time":"2023-10-13 22:00","value":1.605},{"time":"2023-10-13 23:00","value":1.585}] }```<br/>
-Deze reeks data bestaat uit twee onderdelen:
-  - ```recorded```: het geregistreerde verbruik (hier vanaf 0:00 uur tot en met 15:00 uur)
-  - ```expected```: het geprognotiseerde verbruik (hier vanaf 16:00 uur). 
-  Dit is het verwachte verbruik zoals het programma dit de laatste keer dat het heeft gedraaid heeft berekend. 
+
+  ````
+  {"message": "Success",
+  "data": [
+    {
+      "time_ts": 1743890400000,
+      "time": "2025-04-06 00:00",
+      "value": 0.653,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1743894000000,
+      "time": "2025-04-06 01:00",
+      "value": 0,
+      "datatype": "recorded"
+    },
+    ...
+    ````
+
+    De records van deze data bestaan uit de volgende attributen:
+
+    - time_ts: datum tijd van het begintijdstip van het record als timestamp in milli seconden
+    - time: datum tijd van het begintijdstip in leesbare vorm
+    - value: de gevraagde waarde
+    - datatype: kan zijn 
+      - "recorded": daadwerkelijk gerealiseerd
+      - "expected": de prognose dat het zo gerealiseerd gaat worden
 - **production**<br/>
     Hiermee vraag je je teruglevering gegevens op. De indeling is hetzelfde als bij consumption.
 - **cost**<br/>
@@ -1526,41 +1565,60 @@ Je kunt kiezen uit:
 - **dit_contractjaar**  met interval maand
 
 Het laatste stuk **?\<param>=\<param_value>** is facultatief.
-Er zijn twee parameters die je kunt invullen, De eerste opgegeven parameter begint altijd met een 
-vraagteken. Een tweede parameter volgt dan met een "&". 
+Er zijn een parameter die je kunt invullen, De opgegeven parameter begint altijd met een 
+vraagteken. 
 - **cumulate=1**<br/>
     Als je cumulate opgeeft en je zet deze op "1" dan worden alle resultaten cumulatief berekend.
 Bijvoorbeeld: ```<url>/api/report/profit/vorige_week?cumulate=1``` geeft als resultaat: <br/>
 ````
-{"message":"Success", "recorded": [{"time":"2023-10-02 00:00","value":10.9429554939},
-{"time":"2023-10-03 00:00","value":19.7526173011},{"time":"2023-10-04 00:00","value":24.1756554841},
-{"time":"2023-10-05 00:00","value":31.4851145427},{"time":"2023-10-06 00:00","value":37.0579458385},
-{"time":"2023-10-07 00:00","value":38.6841635039},{"time":"2023-10-08 00:00","value":40.9582582529}], 
-"expected" : [] }
+{
+  "message": "Success",
+  "data": [
+    {
+      "time_ts": 1742770800000,
+      "time": "2025-03-24 00:00",
+      "value": 11.6872498372,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1742857200000,
+      "time": "2025-03-25 00:00",
+      "value": 14.9270051299,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1742943600000,
+      "time": "2025-03-26 00:00",
+      "value": 17.7700805077,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1743030000000,
+      "time": "2025-03-27 00:00",
+      "value": 24.2873032184,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1743116400000,
+      "time": "2025-03-28 00:00",
+      "value": 31.4215470394,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1743202800000,
+      "time": "2025-03-29 00:00",
+      "value": 37.6845920782,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1743289200000,
+      "time": "2025-03-30 00:00",
+      "value": 37.8160016386,
+      "datatype": "recorded"
+    }
+  ]
+}
 ````
-- **expected=1**<br/>
-Als je deze parameter opgeeft en je zet de waarde op "1", dan worden ook de door DAO berekende 
-prognoses mee teruggegeven in het resultaat.
-Bijvoorbeeld: ```<url>/api/report/profit/vandaag?expected=1``` geeft als resultaat: <br/>
-````
-{ "message":"Success", "recorded": [{"time":"2024-12-08 00:00","value":0.0},
-{"time":"2024-12-08 01:00","value":0.0},{"time":"2024-12-08 02:00","value":0.0},
-{"time":"2024-12-08 03:00","value":0.0},{"time":"2024-12-08 04:00","value":0.0},
-{"time":"2024-12-08 05:00","value":0.0},{"time":"2024-12-08 06:00","value":0.0},
-{"time":"2024-12-08 07:00","value":0.0},{"time":"2024-12-08 08:00","value":0.0},
-{"time":"2024-12-08 09:00","value":0.0},{"time":"2024-12-08 10:00","value":0.0},
-{"time":"2024-12-08 11:00","value":0.201345665},{"time":"2024-12-08 12:00","value":0.64805301},
-{"time":"2024-12-08 13:00","value":0.0076923475},{"time":"2024-12-08 14:00","value":0.1709918615},
-{"time":"2024-12-08 15:00","value":0.427633268},{"time":"2024-12-08 16:00","value":0.0019065631},
-{"time":"2024-12-08 17:00","value":0.0},{"time":"2024-12-08 18:00","value":0.0},
-{"time":"2024-12-08 19:00","value":0.0},{"time":"2024-12-08 20:00","value":0.0},{
-"time":"2024-12-08 21:00","value":0.0},{"time":"2024-12-08 22:00","value":0.0}], 
-"expected" : [{"time":"2024-12-08 23:00","value":0.0}] }
-````
-**Let op**
-Het gebruik van deze parameter leidt soms tot onverwachte resultaten als de api bij perioden wordt gebruikt
-met een interval van een dag (deze week, deze maand) of een maand (dit jaar). Wanneer op een dag of een maand
-een deel van de variabele zowel "recorded" als "expected" is wordt de hele waarde weergegeven onder "expected".
 
 ## Gebruik van deze api voor presentatie in Home Assistant
 
