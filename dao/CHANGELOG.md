@@ -1,5 +1,64 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# [V2025.4.0] 
+
+### BREAKING CHANGE
+- Fixed the error (two hours too late) in the timestamp in the result-records from api/report-calls<br>
+- The optional parameter "expected" isn't used anymore
+The records now have a different structure:
+  - the attributes "realised" and "expected" are now in the record as **datatype**
+  - the attribute "time" now has a string presenting the date and time of the startmoment of the record
+  - the new atribute "time_ts" present the date and time as a timestamp in milliseconds.
+  - for instance a record of the price-info:
+  ```
+  {
+  "message": "Success",
+  "data": [
+    {
+      "time_ts": 1743890400000,
+      "time": "2025-04-06 00:00",
+      "da_ex": 0.07045,
+      "da_cons": 0.23290806,
+      "da_prod": 0.23290806,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1743894000000,
+      "time": "2025-04-06 01:00",
+      "da_ex": 0.061,
+      "da_cons": 0.22147356,
+      "da_prod": 0.22147356,
+      "datatype": "recorded"
+    },
+    .....
+  ```
+  - for instance the data-structure for a consumption request:
+  ``` 
+  {"message": "Success",
+  "data": [
+    {
+      "time_ts": 1743890400000,
+      "time": "2025-04-06 00:00",
+      "value": 0.653,
+      "datatype": "recorded"
+    },
+    {
+      "time_ts": 1743894000000,
+      "time": "2025-04-06 01:00",
+      "value": 0,
+      "datatype": "recorded"
+    },
+    ...
+    ```
+
+<br>
+<br>
+
+**Other fixes:** <br>
+- Fixed warning when getting prices from Nordpool for a day with changing to/from daylight saving <br>
+- Fixed warning when calculating optimization for a day with changing to/from daylight saving
+
 # [V2025.3.1] 
 - Fixed error: no version-info when rendering api_run.html
 - Fixed error when using sqlite for Home Assistant database during generating reports
