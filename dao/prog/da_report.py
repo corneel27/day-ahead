@@ -4,6 +4,8 @@ import pandas as pd
 import base64
 from io import BytesIO
 from dateutil.relativedelta import relativedelta
+from pandas.core.dtypes.inference import is_number
+
 from dao.prog.da_config import Config
 from dao.prog.da_graph import GraphBuilder
 from dao.prog.utils import get_value_from_dict
@@ -18,7 +20,7 @@ import matplotlib.pyplot as plt
 class Report:
     periodes = {}
 
-    def __init__(self, file_name: str = "../data/options.json"):
+    def __init__(self, file_name: str = "../data/options.json", _now: datetime.datetime = None):
         self.config = Config(file_name)
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
@@ -33,7 +35,7 @@ class Report:
         self.btw_def = self.prices_options["vat"]
 
         self.report_options = self.config.get(["report"])
-        self.make_periodes()
+        self.make_periodes(_now=_now)
 
         self.saving_consumption_dict = {
             "calc_interval": "uur",
@@ -743,12 +745,15 @@ class Report:
         '''
         return
 
-    def make_periodes(self):
+    def make_periodes(self, _now: datetime.datetime = None):
         def create_dict(name, _vanaf, _tot, interval):
             return {name: {"vanaf": _vanaf, "tot": _tot, "interval": interval}}
 
         # vandaag
-        now = datetime.datetime.now()
+        if _now is None:
+            now = datetime.datetime.now()
+        else:
+            now = _now
         vanaf = datetime.datetime(now.year, now.month, now.day)
         tot = vanaf + datetime.timedelta(days=1)
         if now.hour < 13:
@@ -1283,8 +1288,14 @@ class Report:
                 tijd_str = str(row.tijd)[0:7]  # jaar maand
             col_1 = row.consumption
             col_2 = row.production
-            col_3 = row.consumption * row.da_cons
-            col_4 = row.production * row.da_prod
+            if is_number(row.consumption) and is_number(row.da_cons):
+                col_3 = row.consumption * row.da_cons
+            else:
+                col_3 = 0
+            if is_number(row.production) and is_number(row.da_prod):
+                col_4 = row.production * row.da_prod
+            else:
+                col_4 = 0
             col_5 = row.datasoort
             fi_df.loc[fi_df.shape[0]] = [
                 tijd_str,
@@ -2815,9 +2826,13 @@ class Report:
         return df
 
     def get_api_data(
-        self, field: str, periode: str, cumulate: bool = False, expected: bool = False
+        self, field: str, _periode: str, cumulate: bool = False
     ):
-        periode = periode.replace("_", " ")
+        periode = _periode.replace("_", " ")
+        if not periode in self.periodes.keys():
+            result = f'{{"message": "Failed", "raison": "Periode: \'{_periode}\' is not allowed"}}'
+            return result
+
         grid_fields = [
             "consumption",
             "production",
@@ -2826,12 +2841,7 @@ class Report:
             "profit",
             "netto_cost",
         ]
-        tot = None
-        if not expected:
-            now = datetime.datetime.now()
-            tot = min(self.periodes[periode]["tot"], datetime.datetime(now.year, now.month, now.day, now.hour))
-        else:
-            tot = self.periodes[periode]["tot"]
+        tot = self.periodes[periode]["tot"]
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode, _tot=tot)
@@ -2855,9 +2865,10 @@ class Report:
             )
         elif field[0:3] == "soc":
             df = self.get_soc_data(field, self.periodes[periode]["vanaf"], tot)
+            df["time"] = pd.to_datetime(df["time"])
         else:
             if not (field in self.energy_balance_dict):
-                result = '{"message":"Failed"}'
+                result = f'{{"message":"Failed", "raison": "field: \'{field}\' is not allowed"}}'
                 return result
             '''
             df = self.get_field_data(field, periode)
@@ -2869,18 +2880,18 @@ class Report:
                 df[field] = df_balance[field].cumsum()
             df.rename({field: "value"}, axis=1, inplace=True)
 
-
-        history_df = df[df["datasoort"] == "recorded"]
-        history_df = history_df.drop("datasoort", axis=1)
-        history_json = history_df.to_json(orient="records")
-        expected_df = df[df["datasoort"] == "expected"]
-        expected_df = expected_df.drop("datasoort", axis=1)
-        expected_json = expected_df.to_json(orient="records")
+        df["time"] = pd.to_datetime(df["time"])
+        time_zone = self.config.get(["time_zone"], None, 'Europe/Amsterdam')
+        df["time_ts"] = df["time"].dt.tz_localize(time_zone)
+        df["time"] = df["time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+        df.rename(columns={"datasoort": "datatype"}, inplace=True)
+        cols = df.columns.tolist()
+        cols = cols[-1:] + cols[:-1]
+        df = df[cols]
+        data_json = df.to_json(orient="records")
         result = (
-            '{ "message":"Success", "recorded": '
-            + history_json
-            + ', "expected" : '
-            + expected_json
+            '{ "message":"Success", "data": '
+            + data_json
             + " }"
         )
         return result

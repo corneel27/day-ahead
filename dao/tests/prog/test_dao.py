@@ -55,6 +55,7 @@ def test_da_calc():
     # da_calc.calc_optimum(_start_soc=67.2)
     '''
 
+
 def get_grid_data(
     engine: str,
     source: str,
@@ -94,6 +95,12 @@ def test_grid_reporting():
     print(f"Result from DA:\n{result[0].to_string(index=False)}")
     print(f"Result from HA:\n{result[1].to_string(index=False)}")
 
+def test_report_start_periode():
+    file_name = "../data/options_mysql.json"
+    report = dao.prog.da_report.Report(file_name, _now = datetime.datetime(year=2022, month=7, day=1))
+    df = report.get_grid_data(periode = "vorige maand")
+    df = report.calc_grid_columns(df, "dag", "tabel")
+    print(f"Result test start periode:\n{df.to_string(index=False)}")
 
 def test_main():
     test_get_grid_data_sqlite()
