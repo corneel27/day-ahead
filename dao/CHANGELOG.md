@@ -1,6 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# [V2025.4.1]
+- Fixed error with postgresql during reporting of savings (reported by @balk77)
+- Fixed planning error when calculating the planning of a machine during the planning window (reported by @bvw)
+
+
 # [V2025.4.0] 
 
 ### BREAKING CHANGE

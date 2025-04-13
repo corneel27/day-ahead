@@ -1204,7 +1204,7 @@ Hiermee zorg je ervoor dat er geen levering c.q. teruglevering aan het net plaat
 Deze optie wordt met name interessant en bruikbaar als er een verschil is in tarief tussen 
 leveren en terugleveren. Bijvoorbeeld als je niet meer kunt salderen. Maar ook bij de 
 strategie "nul op de meter", zal het programma vaker van deze mogelijkheid gebruik willen maken. 
-* entity from battery (input_number, optioneel): het programma berkent voor het eerstkomende uur het dc-vermogen waarmee de batterij wordt 
+* entity from battery (input_number, optioneel): het programma berekent voor het eerstkomende uur het dc-vermogen waarmee de batterij wordt 
 ontladen (+) of geladen (-). Deze waarde (in W) wordt na de berekening opgeslagen in deze entiteit
 * entity from pv (input_number, optioneel): idem het dc-vermogen dat via mppt of anderszins door 
 pv wordt geleverd (alleen +)
