@@ -1731,13 +1731,13 @@ class Report:
         column2 = func.min(self.db_da.from_unixtime(t1.c.time)).label("tijd")
         if rep_interval == "maand":
             column = self.db_da.month(t1.c.time).label("maand")
-            column2 = self.db_da.month_start(t1.c.time).label("tijd")
+            column2 = func.min(self.db_da.month_start(t1.c.time).label("tijd"))
         elif rep_interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
-            column2 = self.db_da.day_start(t1.c.time).label("tijd")
+            column2 = func.min(self.db_da.day_start(t1.c.time).label("tijd"))
         else:  # rep_interval == "uur"
             column = self.db_da.hour(t1.c.time).label("uur")
-            column2 = self.db_da.hour_start(t1.c.time).label("tijd")
+            column2 = func.min(self.db_da.hour_start(t1.c.time).label("tijd"))
 
         if get_interval == "uur" and rep_interval != "uur":
             column = self.db_da.hour_start(t1.c.time).label("uur")

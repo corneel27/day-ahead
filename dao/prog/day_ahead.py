@@ -1761,6 +1761,8 @@ class DaCalc(DaBase):
             ):
                 start_ma_dt += dt.timedelta(days=1)
                 ready_ma_dt += dt.timedelta(days=1)
+            if start_ma_dt < start_dt:
+                start_ma_dt = start_dt
             """    
             if not error and start_ma_dt > ready_ma_dt:
                 if ready_ma_dt > start_ma_dt:
