@@ -20,7 +20,7 @@ een intel 64 bit processor (amd64), of intel 32 bit (i386).
 ---
 ## Installatie
 Deze is uitgebreid beschreven in DOCS.md:
-https://github.com/cornee...n/dao/DOCS.md#installatie
+https://github.com/corneel27/day-ahead/blob/main/dao/DOCS.md
 
 ---
 ## Optimization
