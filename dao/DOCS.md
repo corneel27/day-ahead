@@ -1737,8 +1737,8 @@ series:
       align: start
     data_generator: |
       let td = entity.attributes.data;
-      const trecorded = td.filter(td => td.datatype === 'recorded');
-      return tdexpected.map(row => {
+      const tdrecorded = td.filter(td => td.datatype === 'recorded');
+      return tdrecorded.map(row => {
               return [row.time_ts, row.da_ex];
             });
   - entity: sensor.da_price
@@ -1754,7 +1754,7 @@ series:
     float_precision: 5
     data_generator: |
       let td = entity.attributes.data;
-      const trecorded = td.filter(td => td.datatype === 'expected');
+      const tdexpected = td.filter(td => td.datatype === 'expected');
       return tdexpected.map(row => {
               return [row.time_ts, row.da_ex];
             });
@@ -1773,8 +1773,8 @@ series:
       align: start
     data_generator: |
       let td = entity.attributes.data;
-      const trecorded = td.filter(td => td.datatype === 'recorded');
-      return tdexpected.map(row => {
+      const tdrecorded = td.filter(td => td.datatype === 'recorded');
+      return tdrecorded.map(row => {
               return [row.time_ts, row.da_cons];
             });
   - entity: sensor.da_price
@@ -1790,7 +1790,7 @@ series:
     float_precision: 5
     data_generator: |
       let td = entity.attributes.data;
-      const trecorded = td.filter(td => td.datatype === 'expected');
+      const tdexpected = td.filter(td => td.datatype === 'expected');
       return tdexpected.map(row => {
               return [row.time_ts, row.da_cons];
             });
@@ -1806,7 +1806,7 @@ Voor de uitleg van deze instellingen verwijs ik je (voorlopig)naar de documentat
 Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc. <br>
 **Opmerking** Dit is echt voor gebruikers die weten waar ze mee bezig zijn.
 Je krijgt hiermee toegang tot de krochten van Home Assistant en je kunt je installatie hiermee 
-naar de x@#x@#$x#$%x helpen.
+naar de x@x@$x$%x helpen.
 Daartoe moet je je eerst toegang verschaffen tot het binnenste van de add-on.
 Dat gaat als volgt:
  * eerst zet je in je profiel op Home Assistant de geavanceerde modus 
