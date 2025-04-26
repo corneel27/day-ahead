@@ -187,7 +187,7 @@ class Meteo:
         """
         :param utc_time: utc tijd in sec
         :param radiation: globale straling in J/cm²
-        :param h_col: hoogte/helling van de collector in radialen
+        :param h_col: hoogte van de collector in radialen
         :param a_col: azimuth van de collector in radialen
         :return: de straling (direct en diffuus) in J/cm² op het vlak van de collector
         """
@@ -302,17 +302,17 @@ class Meteo:
             df1 = df1.reset_index()  # make sure indexes pair with number of rows
             for row in df1.itertuples():
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "gr",
                     float(row.gr),
                 ]
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "temp",
                     float(row.temp),
                 ]
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "solar_rad",
                     float(row.solar_rad),
                 ]
@@ -321,17 +321,17 @@ class Meteo:
             df1 = self.get_from_meteoserver("gfs")
             for row in df1[count:].itertuples():
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "gr",
                     float(row.gr),
                 ]
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "temp",
                     float(row.temp),
                 ]
                 df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd) - 3600),
+                    str(int(row.tijd)),
                     "solar_rad",
                     float(row.solar_rad),
                 ]
@@ -528,8 +528,8 @@ class Meteo:
             tilt: helling t.o.v. plat vlak in graden, 0 = vlak (horizontaal), 90 = verticaal
             orienation: orientatie oost = -90, zuid = 0, west = 90 in graden
         :param utc_time: utc tijd in seconden
-        :param global_rad: globale straling in J/cm².h
-        :return: alle straling op paneel J/cm².h
+        :param global_rad: globale straling in J/cm²
+        :return: alle straling op paneel J/cm²
         """
         # tilt:
         # orientation: orientatie oost = -90, zuid = 0, west = 90 in graden

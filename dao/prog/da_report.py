@@ -1,5 +1,7 @@
 import calendar
 import datetime
+# from unittest.mock import inplace
+
 import pandas as pd
 import base64
 from io import BytesIO
@@ -1501,6 +1503,8 @@ class Report:
             else:
                 column = self.db_da.from_unixtime(t1.c.time).label("tijd")
                 groupby_str = "tijd"
+        if col_dict[field]["sensors"] == "calc":
+            field = None
         for key, categorie in col_dict.items():
             if not field is None and key != field:
                 continue
@@ -1731,13 +1735,13 @@ class Report:
         column2 = func.min(self.db_da.from_unixtime(t1.c.time)).label("tijd")
         if rep_interval == "maand":
             column = self.db_da.month(t1.c.time).label("maand")
-            column2 = self.db_da.month_start(t1.c.time).label("tijd")
+            column2 = func.min(self.db_da.month_start(t1.c.time).label("tijd"))
         elif rep_interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
-            column2 = self.db_da.day_start(t1.c.time).label("tijd")
+            column2 = func.min(self.db_da.day_start(t1.c.time).label("tijd"))
         else:  # rep_interval == "uur"
             column = self.db_da.hour(t1.c.time).label("uur")
-            column2 = self.db_da.hour_start(t1.c.time).label("tijd")
+            column2 = func.min(self.db_da.hour_start(t1.c.time).label("tijd"))
 
         if get_interval == "uur" and rep_interval != "uur":
             column = self.db_da.hour_start(t1.c.time).label("uur")
@@ -2188,7 +2192,9 @@ class Report:
         mask2 = df[col0] >= 0
         df[col1] = df[col0].mask(mask1)
         df[col2] = - df[col0].mask(mask2)
-        df.fillna(0.0, inplace=True)
+        df[col1] = df[col1].fillna(0.0)
+        df[col2] = df[col2].fillna(0.0)
+        # df.fillna(0.0, inplace=True)
         return df
 
     def calc_saving_cost(

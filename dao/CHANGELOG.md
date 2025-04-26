@@ -1,5 +1,16 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.4.2]
+
+- Fixed futurewarning dataframe (reported by @Torch1969)
+- Fixed error when deleting an image/log and deny or cancel confirmation (the item was deleted) (reported by @Bravo)
+- Fixed error when calling api with data for **base** (=baseload) (reported by @Torch1969)
+- Adjusted documentation of the api-call 
+
+
+# [V2025.4.1]
+- Fixed error with postgresql during reporting of savings (reported by @balk77)
+- Fixed planning error when calculating the planning of a machine during the planning window (reported by @bvw)
 
 # [V2025.4.0] 
 
