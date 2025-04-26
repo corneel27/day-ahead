@@ -292,6 +292,10 @@ def home():
             active_time = float(lst["active_time"][0])
         if "action" in lst:
             action = lst["action"][0]
+        if "file_delete" in lst:
+            confirm_delete = (lst["file_delete"][0] == "delete")
+        else:
+            confirm_delete = False
 
     if active_view == "grafiek":
         active_map = "/images/"
@@ -314,7 +318,7 @@ def home():
         index = min(len(flist) - 1, index + 1)
     if action == "last":
         index = len(flist) - 1
-    if action == "delete":
+    if action == "delete" and confirm_delete:
         os.remove(app_datapath + active_map + flist[index]["name"])
         flist = get_file_list(app_datapath + active_map, active_filter)
         index = min(len(flist) - 1, index)
