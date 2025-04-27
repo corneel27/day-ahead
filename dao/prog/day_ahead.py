@@ -1752,10 +1752,11 @@ class DaCalc(DaBase):
                     logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
                     error = True
             else:
-                ready = self.get_state(end_window_entity).state
-                ready_ma_dt = convert_timestr(ready, start_dt)
-            if ready_ma_dt <= start_ma_dt:
-                ready_ma_dt += dt.timedelta(days=1)
+                ready_hm = self.get_state(end_window_entity).state
+                ready_ma_dt = convert_timestr(ready_hm, start_dt)
+            if (ready_ma_dt <= start_ma_dt) :
+                start_ma_dt -= dt.timedelta(days=1)
+            # ready_ma_dt += dt.timedelta(days=1)
             if (start_dt > ready_ma_dt) or (
                 start_dt + dt.timedelta(minutes=RL[m] * 15) > ready_ma_dt
             ):

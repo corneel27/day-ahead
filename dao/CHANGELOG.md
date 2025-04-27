@@ -6,7 +6,7 @@
 - Fixed error when deleting an image/log and deny or cancel confirmation (the item was deleted) (reported by @Bravo)
 - Fixed error when calling api with data for **base** (=baseload) (reported by @Torch1969)
 - Adjusted documentation of the api-call 
-
+- Fixed error planning machine when planning exceeds 24:00/0:00 barrier (reported by @sjampeter)
 
 # [V2025.4.1]
 - Fixed error with postgresql during reporting of savings (reported by @balk77)
