@@ -1913,15 +1913,18 @@ class DaCalc(DaBase):
                     logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
                     error = True
             else:
-                ready = self.get_state(end_window_entity).state
-                ready_ma_dt = convert_timestr(ready, start_dt)
-            if ready_ma_dt <= start_ma_dt:
-                ready_ma_dt += dt.timedelta(days=1)
+                ready_hm = self.get_state(end_window_entity).state
+                ready_ma_dt = convert_timestr(ready_hm, start_dt)
+            if (ready_ma_dt <= start_ma_dt) :
+                start_ma_dt -= dt.timedelta(days=1)
+            # ready_ma_dt += dt.timedelta(days=1)
             if (start_dt > ready_ma_dt) or (
                 start_dt + dt.timedelta(minutes=RL[m] * 15) > ready_ma_dt
             ):
                 start_ma_dt += dt.timedelta(days=1)
                 ready_ma_dt += dt.timedelta(days=1)
+            if start_ma_dt < start_dt:
+                start_ma_dt = start_dt
             """    
             if not error and start_ma_dt > ready_ma_dt:
                 if ready_ma_dt > start_ma_dt:
@@ -2645,12 +2648,12 @@ class DaCalc(DaBase):
                             f"Inzet-factor laden {self.ev_options[e]['name']} per stap"
                         )
                         print("uur", end=" ")
-                        for cs in range(ECS[0]):
+                        for cs in range(ECS[e]):
                             print(f" {charge_stages[e][cs]['ampere']:4.1f}A", end=" ")
                         print()
                         for u in range(ready_u[e] + 1):
-                            print(f"{uur[u]}", end="    ")
-                            for cs in range(ECS[0]):
+                            print(f"{uur[u]:2d}", end="    ")
+                            for cs in range(ECS[e]):
                                 print(
                                     f"{abs(charger_factor[0][cs][u].x):.2f}", end="   "
                                 )

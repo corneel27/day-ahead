@@ -1503,7 +1503,7 @@ class Report:
             else:
                 column = self.db_da.from_unixtime(t1.c.time).label("tijd")
                 groupby_str = "tijd"
-        if col_dict[field]["sensors"] == "calc":
+        if field is not None and col_dict[field]["sensors"] == "calc":
             field = None
         for key, categorie in col_dict.items():
             if not field is None and key != field:
