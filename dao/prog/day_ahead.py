@@ -2438,12 +2438,12 @@ class DaCalc(DaBase):
                             f"Inzet-factor laden {self.ev_options[e]['name']} per stap"
                         )
                         print("uur", end=" ")
-                        for cs in range(ECS[0]):
+                        for cs in range(ECS[e]):
                             print(f" {charge_stages[e][cs]['ampere']:4.1f}A", end=" ")
                         print()
                         for u in range(ready_u[e] + 1):
                             print(f"{uur[u]:2d}", end="    ")
-                            for cs in range(ECS[0]):
+                            for cs in range(ECS[e]):
                                 print(
                                     f"{abs(charger_factor[0][cs][u].x):.2f}", end="   "
                                 )
