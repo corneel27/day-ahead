@@ -1409,16 +1409,16 @@ class DaCalc(DaBase):
             self.hp_enabled = (entity_hp_enabled is None) or (
                 self.get_state(entity_hp_enabled).state == "on"
             )
-            if not self.hp_enabled:
-                logging.info(
-                    "Warmtepomp niet enabled - warmtepomp wordt niet ingepland"
-                )
         else:
             self.hp_enabled = False
+        if not self.hp_enabled:
+            logging.info(
+                "Warmtepomp niet aanwezig of enabled - warmtepomp wordt niet ingepland"
+            )
             for u in range(U):
                 model += c_hp[u] == 0
                 model += hp_on[u] == 0
-        if self.hp_enabled:
+        else: #  self.hp_enabled == True
             # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
             self.hp_adjustment = self.config.get(
                 ["adjustment"], self.heating_options, "power"
