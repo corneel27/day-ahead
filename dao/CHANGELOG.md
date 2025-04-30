@@ -6,12 +6,7 @@
 - Fixed error when deleting an image/log and deny or cancel confirmation (the item was deleted) (reported by @Bravo)
 - Fixed error when calling api with data for **base** (=baseload) (reported by @Torch1969)
 - Adjusted documentation of the api-call
-
-RC3:
 - Fixed error planning machine when planning exceeds 24:00/0:00 barrier (reported by @sjampeter)
-<br>
-
-RC4: 
 - Fixed error when more than one EV is configured (reported by @DaBit)
 - Fixed error when generating \Reports\Balans (reported by @Torch1969)
 
