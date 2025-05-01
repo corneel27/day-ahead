@@ -1,5 +1,14 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.4.2]
+
+- Fixed futurewarning dataframe (reported by @Torch1969)
+- Fixed error when deleting an image/log and deny or cancel confirmation (the item was deleted) (reported by @Bravo)
+- Fixed error when calling api with data for **base** (=baseload) (reported by @Torch1969)
+- Adjusted documentation of the api-call
+- Fixed error planning machine when planning exceeds 24:00/0:00 barrier (reported by @sjampeter)
+- Fixed error when more than one EV is configured (reported by @DaBit)
+- Fixed error when generating \Reports\Balans (reported by @Torch1969)
 
 # [V2025.4.1]
 - Fixed error with postgresql during reporting of savings (reported by @balk77)
