@@ -1549,7 +1549,18 @@ per uur worden de drie prijzen geretourneerd:
    - **soc** is de capaciteits-gewogen gemiddelde van de SoC's van alle batterijen
    - **soc_0** is de SoC van de eerste batterij
    - **soc_1** is de SoC van de tweede batterij
-   - enz
+   - enz<br>
+  
+Verder kun je nog de volgende variabelen opvragen:
+- **cons**, een korte alias voor consumption
+- **prod**, een korte alias voorproduction
+- **bat_in**, de energie die de batterij ingaat
+- **bat_out**, de energie die uit de batterij komt
+- **base**, de basislast
+- **boil**, het energieverbruik van de boiler 
+- **wp**, het energieverbruik van de warmtepomp
+- **ev**, het energieverbruik van je ev's
+- **pv_ac**, de energieproductie van je ac-gekoppelde zonnepanelen
 
 Bij **\<period>** kun je de periode opgeven waarover je de gevraagde gegevens wilt ontvangen. 
 Je kunt kiezen uit:
@@ -1636,10 +1647,9 @@ rest:
       - name: DA Price
         unique_id: da_price
         unit_of_measurement: 'euro/kWh'
-        value_template: "{{ (value_json.recorded[now().hour].da_ex) | round(5) }}"
+        value_template: "{{ (value_json.data[now().hour].da_ex) | round(5) }}"
         json_attributes:
-          - recorded
-          - expected
+          - data
   - resource: http://192.168.178.64:5000/api/report/consumption/vandaag_en_morgen
     verify_ssl: false
     scan_interval: 600
@@ -1647,10 +1657,9 @@ rest:
       - name: DAO Grid consumption
         unique_id: dao_grid_consumption
         unit_of_measurement: 'kWh'
-        value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
+        value_template: "{{ (value_json.data[now().hour].value) | round(3) }}"
         json_attributes:
-          - recorded
-          - expected
+          - data
   - resource: http://192.168.178.64:5000/api/report/consumption/vandaag?cumulate=1
     verify_ssl: false
     scan_interval: 600
@@ -1658,10 +1667,9 @@ rest:
       - name: DAO Grid consumption cumulatief
         unique_id: dao_grid_consumption_cumulatief
         unit_of_measurement: 'kWh'
-        value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
+        value_template: "{{ (value_json.data[now().hour].value) | round(3) }}"
         json_attributes:
-          - recorded
-          - expected
+          - data
   - resource: http://192.168.178.64:5000/api/report/production/vandaag_en_morgen
     verify_ssl: false
     scan_interval: 600
@@ -1669,10 +1677,9 @@ rest:
       - name: DAO Grid production
         unique_id: dao_grid_production
         unit_of_measurement: 'kWh'
-        value_template: "{{ (value_json.recorded[now().hour-1].value) | round(3) }}"
+        value_template: "{{ (value_json.data[now().hour].value) | round(3) }}"
         json_attributes:
-          - recorded
-          - expected
+          - data
 ````
 Korte toelichting:
 - **resource: http://192.168.178.64:5000/api/report/da/vandaag_en_morgen** verwijst naar de url-api waarmee je de data ophaalt van de gewenste sensor
@@ -1681,11 +1688,10 @@ Korte toelichting:
 - **sensor:**
     - **name: da_price** naam van de sensor in Home Assistant
     - **unit_of_measurement: 'euro/kWh'** de dimensie
-    - **value_template: "{{ (value_json.recorded[now().hour].value) | round(5) }}"**<br/>
+    - **value_template: "{{ (value_json.data[now().hour].value) | round(5) }}"**<br/>
     de template waarmee de actuele waarde van de sensor uit de attributen wordt gehaald
     - **json_attributes:<br/>
-          - recorded** de daadwerkelijk geregistreerde waarden (in de values tabel)
-          - **expected** de geprognotiseerde waarden (in de prognoses tabel)<br />
+          - **data** de lijst met waarden<br />
 
 Kijk je in Home Assistant via Ontwikkelhulpmiddelen/Statussen en filter je bijvoorbeeld 
 je sensoren op "da_", dan moet je zoiets te zien krijgen:<br/>
@@ -1717,7 +1723,7 @@ yaxis:
     decimals: 2
 series:
   - entity: sensor.da_price
-    attribute: recorded
+    attribute: data
     name: Exclusief historie
     type: line
     curve: stepline
@@ -1730,11 +1736,13 @@ series:
     statistics:
       align: start
     data_generator: |
-      return entity.attributes.recorded.map(row => {
-              return [row.time, row.da_ex];
+      let td = entity.attributes.data;
+      const tdrecorded = td.filter(td => td.datatype === 'recorded');
+      return tdrecorded.map(row => {
+              return [row.time_ts, row.da_ex];
             });
   - entity: sensor.da_price
-    attribute: expected
+    attribute: data
     name: Exclusief prognose
     type: line
     curve: stepline
@@ -1745,11 +1753,13 @@ series:
     opacity: 0.5
     float_precision: 5
     data_generator: |
-      return entity.attributes.expected.map(row => {
-              return [row.time, row.da_ex];
+      let td = entity.attributes.data;
+      const tdexpected = td.filter(td => td.datatype === 'expected');
+      return tdexpected.map(row => {
+              return [row.time_ts, row.da_ex];
             });
   - entity: sensor.da_price
-    attribute: recorded
+    attribute: data
     name: Consumptie historie
     type: line
     curve: stepline
@@ -1762,11 +1772,13 @@ series:
     statistics:
       align: start
     data_generator: |
-      return entity.attributes.recorded.map(row => {
-              return [row.time, row.da_cons];
+      let td = entity.attributes.data;
+      const tdrecorded = td.filter(td => td.datatype === 'recorded');
+      return tdrecorded.map(row => {
+              return [row.time_ts, row.da_cons];
             });
   - entity: sensor.da_price
-    attribute: expected
+    attribute: data
     name: Consumptie prognose
     type: line
     curve: stepline
@@ -1777,8 +1789,10 @@ series:
     opacity: 0.5
     float_precision: 5
     data_generator: |
-      return entity.attributes.expected.map(row => {
-              return [row.time, row.da_cons];
+      let td = entity.attributes.data;
+      const tdexpected = td.filter(td => td.datatype === 'expected');
+      return tdexpected.map(row => {
+              return [row.time_ts, row.da_cons];
             });
 ````
 Voor de uitleg van deze instellingen verwijs ik je (voorlopig)naar de documentatie van de apexcharts:<br/>
@@ -1792,7 +1806,7 @@ Voor de uitleg van deze instellingen verwijs ik je (voorlopig)naar de documentat
 Je kunt het programma draaien en testen via een terminalvenster op je laptop/pc. <br>
 **Opmerking** Dit is echt voor gebruikers die weten waar ze mee bezig zijn.
 Je krijgt hiermee toegang tot de krochten van Home Assistant en je kunt je installatie hiermee 
-naar de x@#x@#$x#$%x helpen.
+naar de x@x@$x$%x helpen.
 Daartoe moet je je eerst toegang verschaffen tot het binnenste van de add-on.
 Dat gaat als volgt:
  * eerst zet je in je profiel op Home Assistant de geavanceerde modus 

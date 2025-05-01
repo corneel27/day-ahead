@@ -1409,16 +1409,16 @@ class DaCalc(DaBase):
             self.hp_enabled = (entity_hp_enabled is None) or (
                 self.get_state(entity_hp_enabled).state == "on"
             )
-            if not self.hp_enabled:
-                logging.info(
-                    "Warmtepomp niet enabled - warmtepomp wordt niet ingepland"
-                )
         else:
             self.hp_enabled = False
+        if not self.hp_enabled:
+            logging.info(
+                "Warmtepomp niet aanwezig of enabled - warmtepomp wordt niet ingepland"
+            )
             for u in range(U):
                 model += c_hp[u] == 0
                 model += hp_on[u] == 0
-        if self.hp_enabled:
+        else: #  self.hp_enabled == True
             # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
             self.hp_adjustment = self.config.get(
                 ["adjustment"], self.heating_options, "power"
@@ -1752,10 +1752,11 @@ class DaCalc(DaBase):
                     logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
                     error = True
             else:
-                ready = self.get_state(end_window_entity).state
-                ready_ma_dt = convert_timestr(ready, start_dt)
-            if ready_ma_dt <= start_ma_dt:
-                ready_ma_dt += dt.timedelta(days=1)
+                ready_hm = self.get_state(end_window_entity).state
+                ready_ma_dt = convert_timestr(ready_hm, start_dt)
+            if (ready_ma_dt <= start_ma_dt) :
+                start_ma_dt -= dt.timedelta(days=1)
+            # ready_ma_dt += dt.timedelta(days=1)
             if (start_dt > ready_ma_dt) or (
                 start_dt + dt.timedelta(minutes=RL[m] * 15) > ready_ma_dt
             ):
@@ -2437,12 +2438,12 @@ class DaCalc(DaBase):
                             f"Inzet-factor laden {self.ev_options[e]['name']} per stap"
                         )
                         print("uur", end=" ")
-                        for cs in range(ECS[0]):
+                        for cs in range(ECS[e]):
                             print(f" {charge_stages[e][cs]['ampere']:4.1f}A", end=" ")
                         print()
                         for u in range(ready_u[e] + 1):
                             print(f"{uur[u]:2d}", end="    ")
-                            for cs in range(ECS[0]):
+                            for cs in range(ECS[e]):
                                 print(
                                     f"{abs(charger_factor[0][cs][u].x):.2f}", end="   "
                                 )
