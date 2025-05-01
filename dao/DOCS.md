@@ -1647,7 +1647,7 @@ rest:
       - name: DA Price
         unique_id: da_price
         unit_of_measurement: 'euro/kWh'
-        value_template: "{{ (value_json.data[now().hour-1].da_ex) | round(5) }}"
+        value_template: "{{ (value_json.data[now().hour].da_ex) | round(5) }}"
         json_attributes:
           - data
   - resource: http://192.168.178.64:5000/api/report/consumption/vandaag_en_morgen
@@ -1657,7 +1657,7 @@ rest:
       - name: DAO Grid consumption
         unique_id: dao_grid_consumption
         unit_of_measurement: 'kWh'
-        value_template: "{{ (value_json.data[now().hour-1].value) | round(3) }}"
+        value_template: "{{ (value_json.data[now().hour].value) | round(3) }}"
         json_attributes:
           - data
   - resource: http://192.168.178.64:5000/api/report/consumption/vandaag?cumulate=1
@@ -1667,7 +1667,7 @@ rest:
       - name: DAO Grid consumption cumulatief
         unique_id: dao_grid_consumption_cumulatief
         unit_of_measurement: 'kWh'
-        value_template: "{{ (value_json.data[now().hour-1].value) | round(3) }}"
+        value_template: "{{ (value_json.data[now().hour].value) | round(3) }}"
         json_attributes:
           - data
   - resource: http://192.168.178.64:5000/api/report/production/vandaag_en_morgen
@@ -1677,7 +1677,7 @@ rest:
       - name: DAO Grid production
         unique_id: dao_grid_production
         unit_of_measurement: 'kWh'
-        value_template: "{{ (value_json.data[now().hour-1].value) | round(3) }}"
+        value_template: "{{ (value_json.data[now().hour].value) | round(3) }}"
         json_attributes:
           - data
 ````
@@ -1688,7 +1688,7 @@ Korte toelichting:
 - **sensor:**
     - **name: da_price** naam van de sensor in Home Assistant
     - **unit_of_measurement: 'euro/kWh'** de dimensie
-    - **value_template: "{{ (value_json.data[now().hour-1].value) | round(5) }}"**<br/>
+    - **value_template: "{{ (value_json.data[now().hour].value) | round(5) }}"**<br/>
     de template waarmee de actuele waarde van de sensor uit de attributen wordt gehaald
     - **json_attributes:<br/>
           - **data** de lijst met waarden<br />
