@@ -73,19 +73,22 @@ class DaBase(hass.Hass):
         self.protocol_api = self.config.get(
             ["homeassistant", "protocol api"], default="http"
         )
-        self.ip_address = self.config.get(
-            ["homeassistant", "ip adress"], default="supervisor"
+        self.host = self.config.get(
+            ["homeassistant", "host"],
+            default = self.config.get(["homeassistant", "ip adress"], default="supervisor") #ip adress is obsolete
         )
-        self.ip_port = self.config.get(["homeassistant", "ip port"], default=None)
-        if self.ip_port is None:
-            self.hassurl = self.protocol_api + "://" + self.ip_address + "/core/"
+        self.port = self.config.get(
+            ["homeassistant", "port"], 
+            default = self.config.get(["homeassistant", "ip port"], default=None)) #ip port is obsolete
+        if self.port is None:
+            self.hassurl = self.protocol_api + "://" + self.host + "/core/"
         else:
             self.hassurl = (
                 self.protocol_api
                 + "://"
-                + self.ip_address
+                + self.host
                 + ":"
-                + str(self.ip_port)
+                + str(self.port)
                 + "/"
             )
         self.hasstoken = self.config.get(

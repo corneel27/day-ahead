@@ -584,8 +584,8 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 | Key                      | Subkey                       | Type             | Default                            | Opmerkingen                                        |
 |--------------------------|------------------------------|------------------|------------------------------------|----------------------------------------------------|
 | **homeassistant**        | protocol api                 | string           | http                               | Alleen invullen                                    |
-|                          | ip adress                    | string           | supervisor                         | als addon op                                       |  
-|                          | ip port                      | integer          | blanco                             | andere machine                                     | 
+|                          | host                         | string           | supervisor                         | als addon op                                       |  
+|                          | port                         | integer          | blanco                             | andere machine                                     | 
 |                          | token                        | string           | blanco                             | draait                                             | 
 | **database ha**          | engine                       | string           | mysql                              | keuze uit: mysql / sqlite / postgresql             |
 |                          | server                       | string           | core-mariadb                       | default als addo met mysql als engine              |
