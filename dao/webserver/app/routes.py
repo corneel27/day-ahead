@@ -273,6 +273,8 @@ def home():
     active_view = "grafiek"
     active_time = None
     action = None
+    confirm_delete = False
+    
     if config is not None:
         battery_options = config.get(["battery"])
         for b in range(len(battery_options)):
@@ -294,8 +296,6 @@ def home():
             action = lst["action"][0]
         if "file_delete" in lst:
             confirm_delete = (lst["file_delete"][0] == "delete")
-        else:
-            confirm_delete = False
 
     if active_view == "grafiek":
         active_map = "/images/"
