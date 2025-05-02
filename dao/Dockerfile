@@ -11,7 +11,7 @@ RUN apt-get update -y
 RUN apt-get upgrade -y
 
 #handige tools
-RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev
+RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev libjpeg-dev
 RUN apt-get install -y postgresql-client sqlite3 gcc
 
 # Copy software for add-on
