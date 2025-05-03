@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.5.0]
+- Introduction of a check on "last invoice", warning when more than one year ago.
+- Fix Dockerfile for build error Pillow library
+
 # [V2025.4.2]
 
 - Fixed futurewarning dataframe (reported by @Torch1969)
