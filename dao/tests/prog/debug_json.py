@@ -7,6 +7,7 @@ sys.path.append("../../../dao/prog")
 import dao.prog.da_report
 import dao.prog.day_ahead
 
+
 def start_logging():
     logging.basicConfig(
         level=logging.INFO,
@@ -28,6 +29,7 @@ def debug_da_calc():
         _start_dt=datetime.datetime(year=2025, month=2, day=11, hour=9, minute=0),
         _start_soc=0.0,
     )
+
 
 if __name__ == "__main__":
     debug_da_calc()

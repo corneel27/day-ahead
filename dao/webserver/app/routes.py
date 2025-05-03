@@ -15,7 +15,7 @@ from dao.prog.version import __version__
 
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
-images_folder = os.path.join(web_datapath, 'images')
+images_folder = os.path.join(web_datapath, "images")
 try:
     config = Config(app_datapath + "options.json")
 except ValueError as ex:
@@ -24,49 +24,48 @@ except ValueError as ex:
     config = None
 
 logname = "dashboard.log"
-handler = TimedRotatingFileHandler("../data/log/" + logname, when="midnight",
-                                   backupCount=1 if config is None else
-                                   config.get(["history", "save days"]))
+handler = TimedRotatingFileHandler(
+    "../data/log/" + logname,
+    when="midnight",
+    backupCount=1 if config is None else config.get(["history", "save days"]),
+)
 handler.suffix = "%Y%m%d"
 handler.setLevel(logging.INFO)
-logging.basicConfig(level=logging.DEBUG, handlers=[handler],
-                    format=f'%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
-browse = {
-
-}
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[handler],
+    format=f"%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s",
+)
+browse = {}
 
 views = {
-    "tabel": {
-        "name": "Tabel",
-        "icon": "tabel.png"
-    },
-    "grafiek": {
-        "name": "Grafiek",
-        "icon": "grafiek.png"
-    }
+    "tabel": {"name": "Tabel", "icon": "tabel.png"},
+    "grafiek": {"name": "Grafiek", "icon": "grafiek.png"},
 }
 
 actions = {
-    "first": {
-        "icon": "first.png"
-    },
-    "prev": {
-        "icon": "prev.png"
-    },
-    "next": {
-        "icon": "next.png"
-    },
-    "last": {
-        "ison": "last.png"
-    }
+    "first": {"icon": "first.png"},
+    "prev": {"icon": "prev.png"},
+    "next": {"icon": "next.png"},
+    "last": {"ison": "last.png"},
 }
 
 periods = {
     "list": [
-        "vandaag", "morgen", "vandaag en morgen", "gisteren", "deze week", "vorige week",
-        "deze maand", "vorige maand", "dit jaar", "vorig jaar", "dit contractjaar", "365 dagen"
+        "vandaag",
+        "morgen",
+        "vandaag en morgen",
+        "gisteren",
+        "deze week",
+        "vorige week",
+        "deze maand",
+        "vorige maand",
+        "dit jaar",
+        "vorig jaar",
+        "dit contractjaar",
+        "365 dagen",
     ],
-    "prognose": ["vandaag", "deze week", "deze maand", "dit jaar", "dit contractjaar"]
+    "prognose": ["vandaag", "deze week", "deze maand", "dit jaar", "dit contractjaar"],
 }
 
 web_menu = {
@@ -75,7 +74,7 @@ web_menu = {
         "submenu": {},
         "views": views,
         "actions": actions,
-        "function": "home"
+        "function": "home",
     },
     "run": {
         "name": "Run",
@@ -87,19 +86,11 @@ web_menu = {
                 "name": "Grid",
                 "views": views,
                 "periods": periods,
-                "calculate": "calc_grid"
+                "calculate": "calc_grid",
             },
-            "balans": {
-                "name": "Balans",
-                "views": views,
-                "periods": periods
-            },
-            "co2": {
-                "name": "CO2",
-                "views": views,
-                "periods": periods.copy()
-            }
-        }
+            "balans": {"name": "Balans", "views": views, "periods": periods},
+            "co2": {"name": "CO2", "views": views, "periods": periods.copy()},
+        },
     },
     "savings": {
         "name": "Savings",
@@ -109,40 +100,31 @@ web_menu = {
                 "views": views,
                 "periods": periods,
                 "calculate": "calc_saving_consumption",
-                "graph_options": "saving_cons_graph_options"
+                "graph_options": "saving_cons_graph_options",
             },
             "cost": {
                 "name": "Kosten",
                 "views": views,
                 "periods": periods,
                 "calculate": "calc_saving_cost",
-                "graph_options": "saving_cost_graph_options"
-},
+                "graph_options": "saving_cost_graph_options",
+            },
             "co2": {
                 "name": "CO2-emissie",
                 "views": views,
                 "periods": periods.copy(),
                 "calculate": "calc_saving_co2",
-                "graph_options": "saving_co2_graph_options"
+                "graph_options": "saving_co2_graph_options",
             },
-
-        }
+        },
     },
     "settings": {
         "name": "Config",
         "submenu": {
-            "options": {
-                "name": "Options",
-                "views": "json-editor"
-            },
-            "secrets": {
-                "name": "Secrets",
-                "views": "json-editor"
-            }
-
-        }
-    }
-
+            "options": {"name": "Options", "views": "json-editor"},
+            "secrets": {"name": "Secrets", "views": "json-editor"},
+        },
+    },
 }
 
 if config is not None:
@@ -166,56 +148,41 @@ else:
 bewerkingen = {
     "calc_met_debug": {
         "name": "Optimaliseringsberekening met debug",
-        "cmd": [
-            "python3",
-            "../prog/day_ahead.py",
-            "debug",
-            "calc"],
+        "cmd": ["python3", "../prog/day_ahead.py", "debug", "calc"],
         "task": "calc_optimum",
-        "file_name": "calc_debug"},
+        "file_name": "calc_debug",
+    },
     "calc_zonder_debug": {
         "name": "Optimaliseringsberekening zonder debug",
-        "cmd": [
-            "python3",
-            "../prog/day_ahead.py",
-            "calc"],
+        "cmd": ["python3", "../prog/day_ahead.py", "calc"],
         "task": "calc_optimum",
-        "file_name": "calc"},
+        "file_name": "calc",
+    },
     "get_tibber": {
         "name": "Verbruiksgegevens bij Tibber ophalen",
-        "cmd": [
-            "python3",
-            "../prog/day_ahead.py",
-            "tibber"],
+        "cmd": ["python3", "../prog/day_ahead.py", "tibber"],
         "task": "get_tibber_data",
-        "file_name": "tibber"},
+        "file_name": "tibber",
+    },
     "get_meteo": {
         "name": "Meteoprognoses ophalen",
-        "cmd": [
-            "python3",
-            "../prog/day_ahead.py",
-            "meteo"],
+        "cmd": ["python3", "../prog/day_ahead.py", "meteo"],
         "task": "get_meteo_data",
-        "file_name": "meteo"},
+        "file_name": "meteo",
+    },
     "get_prices": {
         "name": "Day ahead prijzen ophalen",
-        "cmd": [
-            "python3",
-            "../prog/day_ahead.py",
-            "prices"],
+        "cmd": ["python3", "../prog/day_ahead.py", "prices"],
         "task": "get_day_ahead_prices",
-        "parameters":
-            ["prijzen_start", "prijzen_tot"],
+        "parameters": ["prijzen_start", "prijzen_tot"],
         "file_name": "prices",
     },
     "calc_baseloads": {
         "name": "Bereken de baseloads",
-        "cmd": [
-            "python3",
-            "../prog/day_ahead.py",
-            "calc_baseloads"],
+        "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],
         "task": "calc_baseloads",
-        "file_name": "baseloads"},
+        "file_name": "baseloads",
+    },
 }
 
 
@@ -295,7 +262,7 @@ def home():
         if "action" in lst:
             action = lst["action"][0]
         if "file_delete" in lst:
-            confirm_delete = (lst["file_delete"][0] == "delete")
+            confirm_delete = lst["file_delete"][0] == "delete"
 
     if active_view == "grafiek":
         active_map = "/images/"
@@ -412,6 +379,7 @@ def run_process():
         version=__version__,
     )
 
+
 '''
 @app.route("/reports", methods=["POST", "GET"])
 def reports():
@@ -518,8 +486,9 @@ def reports():
     )
 '''
 
+
 @app.route("/reports", methods=["POST", "GET"])
-def reports(active_menu:str):
+def reports(active_menu: str):
     report = Report(app_datapath + "/options.json")
     menu_dict = web_menu[active_menu]
     title = menu_dict["name"]
@@ -562,8 +531,10 @@ def reports(active_menu:str):
     if not met_prognose:
         now = datetime.datetime.now()
         tot = report.periodes[active_period]["tot"]
-        if (active_period in menu_dict["submenu"][active_subject]["periods"]["prognose"] or
-                menu_dict["submenu"][active_subject]["periods"]["prognose"] == []):
+        if (
+            active_period in menu_dict["submenu"][active_subject]["periods"]["prognose"]
+            or menu_dict["submenu"][active_subject]["periods"]["prognose"] == []
+        ):
             tot = min(tot, datetime.datetime(now.year, now.month, now.day, now.hour))
     views_lst = list(menu_dict["submenu"][active_subject]["views"].keys())
     period_lst = menu_dict["submenu"][active_subject]["periods"]["list"]
@@ -571,20 +542,32 @@ def reports(active_menu:str):
     if active_menu == "reports":
         if active_subject == "grid":
             report_df = report.get_grid_data(active_period, _tot=tot)
-            report_df = report.calc_grid_columns(report_df, active_interval, active_view)
+            report_df = report.calc_grid_columns(
+                report_df, active_interval, active_view
+            )
         elif active_subject == "balans":
             report_df = report.get_energy_balance_data(active_period, _tot=tot)
             report_df = report.calc_balance_columns(
                 report_df, active_interval, active_view
             )
         else:  # co2
-            report_df = report.calc_co2_emission(active_period, _tot=tot,
-                                      active_interval=active_interval, active_view=active_view)
+            report_df = report.calc_co2_emission(
+                active_period,
+                _tot=tot,
+                active_interval=active_interval,
+                active_view=active_view,
+            )
         report_df.round(3)
     else:  #  savings
-        calc_function = getattr(report, menu_dict["submenu"][active_subject]["calculate"])
-        report_df = calc_function(active_period, _tot=tot,
-                                  active_interval=active_interval, active_view=active_view)
+        calc_function = getattr(
+            report, menu_dict["submenu"][active_subject]["calculate"]
+        )
+        report_df = calc_function(
+            active_period,
+            _tot=tot,
+            active_interval=active_interval,
+            active_view=active_view,
+        )
     if active_view == "tabel":
         report_data = [
             report_df.to_html(
@@ -609,10 +592,10 @@ def reports(active_menu:str):
                     report_df, active_period, report.co2_graph_options
                 )
         else:  #  "savings"
-            graph_options = getattr(report, menu_dict["submenu"][active_subject]["graph_options"])
-            report_data = report.make_graph(
-                report_df, active_period, graph_options
+            graph_options = getattr(
+                report, menu_dict["submenu"][active_subject]["graph_options"]
             )
+            report_data = report.make_graph(report_df, active_period, graph_options)
     return render_template(
         "report.html",
         title=title,
@@ -709,8 +692,8 @@ def api_report(fld: str, periode: str):
     :param periode: de periode van de gevraagde data
     :return: de gevraagde data in json formaat
     """
-    cumulate = request.args.get('cumulate')
-    report = Report(app_datapath+"/options.json")
+    cumulate = request.args.get("cumulate")
+    report = Report(app_datapath + "/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
     if cumulate is None:
@@ -741,9 +724,8 @@ def run_api(bewerking: str):
         )
         with open(filename, "w") as f:
             f.write(log_content)
-        return render_template("api_run.html",
-                               log_content=log_content,
-                               version=__version__
-                               )
+        return render_template(
+            "api_run.html", log_content=log_content, version=__version__
+        )
     else:
         return "Onbekende bewerking: " + bewerking

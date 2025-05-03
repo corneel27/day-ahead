@@ -296,11 +296,13 @@ def log_exc_plus():
             f"in {frame.f_code.co_name}"
         )
 
+
 def error_handling(ex):
     if logging.root.level == logging.DEBUG:
         logging.exception(ex)
     else:
         log_exc_plus()
+
 
 def prnt_xy(x: list, y: list):
     for i in range(len(x)):
@@ -357,6 +359,7 @@ def tst_interpolate():
 def interpolate_prognose_data():
     from da_config import Config
     from db_manager import DBmanagerObj
+
     config = Config("../data/options.json")
     db_da = config.get_db_da()
     start_ts = datetime.datetime(year=2024, month=11, day=12).timestamp()

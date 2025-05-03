@@ -18,12 +18,17 @@ def test_get_grid_data_sqlite():
             periode="", _vanaf=vanaf, _tot=tot, _interval="uur", _source="ha"
         )
         df_ha = report.calc_grid_columns(df_ha, "uur", "tabel")
-        print(f"Eigen meterstanden op {day.strftime('%Y-%m-%d')}:\n{df_ha.to_string(index=False)}")
-        df_da = report.get_grid_data(periode='', _vanaf=vanaf, _tot=tot, _interval="uur",
-                                     _source="da")
+        print(
+            f"Eigen meterstanden op {day.strftime('%Y-%m-%d')}:\n{df_ha.to_string(index=False)}"
+        )
+        df_da = report.get_grid_data(
+            periode="", _vanaf=vanaf, _tot=tot, _interval="uur", _source="da"
+        )
         df_da = report.calc_grid_columns(df_da, "uur", "tabel")
-        print(f"Verbruiken gecorrigeerd door Tibber op {day.strftime('%Y-%m-%d')}:\n"
-              f"{df_da.to_string(index=False)}")
+        print(
+            f"Verbruiken gecorrigeerd door Tibber op {day.strftime('%Y-%m-%d')}:\n"
+            f"{df_da.to_string(index=False)}"
+        )
         # print(df_ha.equals(df_da))
 
 
@@ -47,13 +52,13 @@ def test_da_calc():
         _start_dt=datetime.datetime(year=2025, month=1, day=26, hour=19, minute=0),
         _start_soc=30.0,
     )
-    '''
+    """
     da_calc.calc_optimum(
         _start_dt=datetime.datetime(year=2024, month=9, day=21, hour=14, minute=0),
         _start_soc=35.0,
     )
     # da_calc.calc_optimum(_start_soc=67.2)
-    '''
+    """
 
 
 def get_grid_data(
@@ -95,12 +100,16 @@ def test_grid_reporting():
     print(f"Result from DA:\n{result[0].to_string(index=False)}")
     print(f"Result from HA:\n{result[1].to_string(index=False)}")
 
+
 def test_report_start_periode():
     file_name = "../data/options_mysql.json"
-    report = dao.prog.da_report.Report(file_name, _now = datetime.datetime(year=2022, month=7, day=1))
-    df = report.get_grid_data(periode = "vorige maand")
+    report = dao.prog.da_report.Report(
+        file_name, _now=datetime.datetime(year=2022, month=7, day=1)
+    )
+    df = report.get_grid_data(periode="vorige maand")
     df = report.calc_grid_columns(df, "dag", "tabel")
     print(f"Result test start periode:\n{df.to_string(index=False)}")
+
 
 def test_main():
     test_get_grid_data_sqlite()

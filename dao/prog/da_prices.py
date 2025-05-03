@@ -168,8 +168,11 @@ class DaPrices:
                 f"{end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'}"
                 f" (source: nordpool, db-records): \n {df_db.to_string(index=False)}"
             )
-            if (len(df_db) < 24 and
-                    datetime.datetime.fromtimestamp(time_ts) < datetime.datetime(end_date.year, end_date.month, end_date.day, end_date.hour)):
+            if len(df_db) < 24 and datetime.datetime.fromtimestamp(
+                time_ts
+            ) < datetime.datetime(
+                end_date.year, end_date.month, end_date.day, end_date.hour
+            ):
                 logging.warning(
                     f"Retrieve of day ahead prices for "
                     f"{end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'} "

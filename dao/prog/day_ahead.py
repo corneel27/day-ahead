@@ -25,7 +25,6 @@ from da_base import DaBase
 
 
 class DaCalc(DaBase):
-
     def __init__(self, file_name=None):
         super().__init__(file_name=file_name)
         if self.config is None:
@@ -200,6 +199,7 @@ class DaCalc(DaBase):
         pv_yield = []
         solar_prod = []
         entity_pv_ac_switch = []
+        max_solar_power = []
         solar_num = len(self.solar)
         for s in range(solar_num):
             pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
@@ -208,6 +208,7 @@ class DaCalc(DaBase):
             if entity == "":
                 entity = None
             entity_pv_ac_switch.append(entity)
+            max_solar_power.append(self.config.get(["max_power"], self.solar[s], None))
 
         time_first_hour = dt.datetime.fromtimestamp(prog_data["time"].iloc[0])
         first_hour = int(time_first_hour.hour)
@@ -328,7 +329,7 @@ class DaCalc(DaBase):
             consumption_his = cons_df["consumption"].sum()
             production_his = cons_df["production"].sum()
         except Exception as ex:
-            logging.error('Failed.', exc_info=ex)
+            logging.error("Failed.", exc_info=ex)
             logging.warning(f"Verbruik laatste contractjaar kon niet wordt vastgesteld")
             consumption_his = 0
             production_his = 0
@@ -345,14 +346,14 @@ class DaCalc(DaBase):
             if report is not None:
                 try:
                     cons_today_df = report.get_grid_data(periode="vandaag")
-                    consumption_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
-                        "consumption"
-                    ].sum()
-                    production_today = cons_today_df[cons_today_df["datasoort"] == "recorded"][
-                        "production"
-                    ].sum()
+                    consumption_today = cons_today_df[
+                        cons_today_df["datasoort"] == "recorded"
+                    ]["consumption"].sum()
+                    production_today = cons_today_df[
+                        cons_today_df["datasoort"] == "recorded"
+                    ]["production"].sum()
                 except Exception as ex:
-                    logging.error('Failed.', exc_info=ex)
+                    logging.error("Failed.", exc_info=ex)
                     logging.warning(f"Verbruik vandaag kon niet wordt vastgesteld")
             logging.info(f"consumption today: {consumption_today} kWh")
             logging.info(f"production today: {production_today} kWh")
@@ -367,9 +368,16 @@ class DaCalc(DaBase):
         ##############################################################
         #                          pv ac
         ##############################################################
+        # introduce maximum power for inverter
         pv_ac = [
             [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=solar_prod[s][u] * 1.1)
+                model.add_var(
+                    var_type=CONTINUOUS,
+                    lb=0,
+                    ub=solar_prod[s][u]
+                    if max_solar_power[s] is None
+                    else min(solar_prod[s][u], max_solar_power[s]),
+                )
                 for u in range(U)
             ]
             for s in range(solar_num)
@@ -379,10 +387,9 @@ class DaCalc(DaBase):
         ]
 
         # constraints
-
         for s in range(solar_num):
             for u in range(U):
-                model += pv_ac[s][u] == solar_prod[s][u] * pv_ac_on_off[s][u]
+                model += pv_ac[s][u] <= solar_prod[s][u] * pv_ac_on_off[s][u]
         for s in range(solar_num):
             if entity_pv_ac_switch[s] is None:
                 for u in range(U):
@@ -432,14 +439,10 @@ class DaCalc(DaBase):
                 discharge_stages = [{"power": 0.0, "efficiency": 1}] + discharge_stages
 
             # noinspection PyTypeChecker
-            max_charge_power.append(
-                int(charge_stages[-1]["power"]) / 1000
-            )
+            max_charge_power.append(int(charge_stages[-1]["power"]) / 1000)
             # CS is aantal charge stages
             CS.append(len(charge_stages))
-            max_discharge_power.append(
-                discharge_stages[-1]["power"] / 1000
-            )
+            max_discharge_power.append(discharge_stages[-1]["power"] / 1000)
 
             # reduced power
             red_hours = self.config.get(["reduced hours"], self.battery_options[b], {})
@@ -551,14 +554,8 @@ class DaCalc(DaBase):
                     )
                     eff = 1
                     for ds in range(DS[b]):
-                        if (
-                            discharge_stages[ds]["power"]
-                            / 1000
-                            > prod_dc
-                        ):
-                            eff = discharge_stages[ds][
-                                "efficiency"
-                            ]
+                        if discharge_stages[ds]["power"] / 1000 > prod_dc:
+                            eff = discharge_stages[ds]["efficiency"]
                             break
                     prod_ac = prod_dc * eff
                     pv_prod_dc[b][s].append(prod_dc)
@@ -604,19 +601,11 @@ class DaCalc(DaBase):
         """
         # met sos ###################################################################
         ac_to_dc_samples = [
-            [
-                charge_stages[cs]["power"] / 1000
-                for cs in range(CS[b])
-            ]
-            for b in range(B)
+            [charge_stages[cs]["power"] / 1000 for cs in range(CS[b])] for b in range(B)
         ]
         dc_from_ac_samples = [
             [
-                (
-                    charge_stages[cs]["efficiency"]
-                    * charge_stages[cs]["power"]
-                    / 1000
-                )
+                (charge_stages[cs]["efficiency"] * charge_stages[cs]["power"] / 1000)
                 for cs in range(CS[b])
             ]
             for b in range(B)
@@ -666,8 +655,7 @@ class DaCalc(DaBase):
                     model.add_var(
                         var_type=CONTINUOUS,
                         lb=0,
-                        ub=discharge_stages[ds]["power"]
-                        / 1000,
+                        ub=discharge_stages[ds]["power"] / 1000,
                     )
                     for _ in range(U)
                 ]
@@ -813,8 +801,7 @@ class DaCalc(DaBase):
                 )
                 model += (xsum(ac_from_dc_st_on[b][ds][u] for ds in range(DS[b]))) <= 1
                 model += dc_to_ac[b][u] == xsum(
-                    ac_from_dc_st[b][ds][u]
-                    / discharge_stages[ds]["efficiency"]
+                    ac_from_dc_st[b][ds][u] / discharge_stages[ds]["efficiency"]
                     for ds in range(DS[b])
                 )
 
@@ -1418,7 +1405,7 @@ class DaCalc(DaBase):
             for u in range(U):
                 model += c_hp[u] == 0
                 model += hp_on[u] == 0
-        else: #  self.hp_enabled == True
+        else:  #  self.hp_enabled == True
             # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
             self.hp_adjustment = self.config.get(
                 ["adjustment"], self.heating_options, "power"
@@ -1637,9 +1624,13 @@ class DaCalc(DaBase):
                 max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
                 # max_heat_prod = sum(max_heat_power
                 # een uur minder vanwege de boiler
-                max_heat_prod = sum(max_heat_power * hour_fraction[u] for u in range(U-1))
+                max_heat_prod = sum(
+                    max_heat_power * hour_fraction[u] for u in range(U - 1)
+                )
                 # som van alle geproduceerde warmte == benodigde warmte
-                model += xsum(h_hp[u] for u in range(U)) == min(heat_needed, max_heat_prod)
+                model += xsum(h_hp[u] for u in range(U)) == min(
+                    heat_needed, max_heat_prod
+                )
 
         ########################################################################
         # apparaten /machines
@@ -1651,9 +1642,7 @@ class DaCalc(DaBase):
         KW = []  # aantal kwartieren in een planningswindow
         ma_uur_kw = []  # per machine een list met beschikbare kwartieren
         ma_kw_dt = []  # per machine een list op welk tijdstip een kwartier begint
-        program_index = (
-            []
-        )  # nummer in de lijst welk programma van een machine gaat draaien
+        program_index = []  # nummer in de lijst welk programma van een machine gaat draaien
         ma_name = []  # naam van de machine
         # entity voor opvragen vorig en teruggeven berekend nieuw start-tijdstip
         ma_entity_plan_start = []
@@ -1754,7 +1743,7 @@ class DaCalc(DaBase):
             else:
                 ready_hm = self.get_state(end_window_entity).state
                 ready_ma_dt = convert_timestr(ready_hm, start_dt)
-            if (ready_ma_dt <= start_ma_dt) :
+            if ready_ma_dt <= start_ma_dt:
                 start_ma_dt -= dt.timedelta(days=1)
             # ready_ma_dt += dt.timedelta(days=1)
             if (start_dt > ready_ma_dt) or (
@@ -1919,13 +1908,16 @@ class DaCalc(DaBase):
                     print()
 
             for kw in range(KW[m]):
-                model += c_ma_kw[m][kw] == xsum(
-                    self.machines[m]["programs"][program_index[m]]["power"][kw - r]
-                    * ma_start[m][r]
-                    # 4000 = omrekenen van kwartier vermogen in W naar verbruik in kWh
-                    / 4000
-                    # van alle mogelijke runs de kwartieren
-                    for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]
+                model += (
+                    c_ma_kw[m][kw]
+                    == xsum(
+                        self.machines[m]["programs"][program_index[m]]["power"][kw - r]
+                        * ma_start[m][r]
+                        # 4000 = omrekenen van kwartier vermogen in W naar verbruik in kWh
+                        / 4000
+                        # van alle mogelijke runs de kwartieren
+                        for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]
+                    )
                 )
             for u in range(U):
                 if len(ma_uur_kw[m][u]) == 0:
@@ -2064,7 +2056,9 @@ class DaCalc(DaBase):
                 model.objective = minimize(delivery)
                 model.optimize()
                 if model.num_solutions == 0:
-                    logging.warning(f"Geen oplossing in na herberekening voor: {self.strategy}")
+                    logging.warning(
+                        f"Geen oplossing in na herberekening voor: {self.strategy}"
+                    )
                     return
             logging.info("Herberekening")
             logging.info(f"Kosten (euro): {cost.x:<6.2f}")
@@ -2077,6 +2071,7 @@ class DaCalc(DaBase):
 
         # Suppress FutureWarning messages
         import warnings
+
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
         if model.num_solutions == 0:
@@ -2949,7 +2944,8 @@ class DaCalc(DaBase):
             "title": "Prognose berekend op: " + start_dt.strftime("%Y-%m-%d %H:%M"),
             "style": style,
             "haxis": {"values": "uur", "title": "uren van de dag"},
-            "graphs": [{
+            "graphs": [
+                {
                     "vaxis": [{"title": "kWh"}],
                     "series": [
                         {"column": "verbruik", "type": "stacked", "color": "#00bfff"},
@@ -2978,7 +2974,12 @@ class DaCalc(DaBase):
                             "type": "stacked",
                             "color": "#a32cc4",
                         },
-                        {"column": "ev", "title": "EV", "type": "stacked", "color": "yellow"},
+                        {
+                            "column": "ev",
+                            "title": "EV",
+                            "type": "stacked",
+                            "color": "yellow",
+                        },
                         {
                             "column": "mach",
                             "title": "App.",
@@ -2998,8 +2999,8 @@ class DaCalc(DaBase):
                             "color": "#ff8000",
                         },
                     ],
-            }
-            ]
+                }
+            ],
         }
 
         backend = self.config.get(["graphical backend"], None, "")
