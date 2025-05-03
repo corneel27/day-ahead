@@ -1,9 +1,7 @@
-name: "Publish"
+name: "Build Dockerfiles Test Run"
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
 
 jobs:
   publish:
@@ -21,8 +19,11 @@ jobs:
         uses: home-assistant/builder@master
         with:
           args: |
+            --test \
             --all \
             --target dao \
             --docker-hub corneel27 \
             --generic $GITHUB_REF_NAME
             
+
+
