@@ -17,12 +17,26 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Publish
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+      - name: Publish to Dockerhub
         uses: home-assistant/builder@master
         with:
           args: |
             --all \
             --target dao \
-            --docker-hub corneel27 \
+            --docker-hub ${{ secrets.DOCKERHUB_USERNAME }} \
+            --generic $GITHUB_REF_NAME
+      - name: Publish to GHCR
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --all \
+            --target dao \
+            --docker-hub ghcr.io/${{ secrets.DOCKERHUB_USERNAME }} \
             --generic $GITHUB_REF_NAME
             
