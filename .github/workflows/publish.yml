@@ -1,13 +1,13 @@
-name: "Publish"
+name: "Publish to GHCR and Dockerhub"
 
 on:
-  workflow_dispatch:
   release:
     types: [published]
 
 jobs:
-  publish:
-    name: Publish
+  publish_release:
+    name: Publish latest and release version
+    if: "!github.event.release.prerelease"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository
@@ -37,6 +37,41 @@ jobs:
           args: |
             --all \
             --target dao \
-            --docker-hub ghcr.io/${{ github.actor }} \
+            --docker-hub ghcr.io/${{ secrets.DOCKERHUB_USERNAME }} \
             --generic $GITHUB_REF_NAME
-            
+  publish_prerelease:
+    name: Publish pre-release version
+    if: "github.event.release.prerelease"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+      - name: Publish to Dockerhub
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --all \
+            --target dao \
+            --no-latest \
+            --docker-hub ${{ secrets.DOCKERHUB_USERNAME }} \
+            --generic $GITHUB_REF_NAME
+      - name: Publish to GHCR
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --all \
+            --target dao \
+            --no-latest \
+            --docker-hub ghcr.io/${{ github.actor }} \
+            --generic $GITHUB_REF_NAME            
