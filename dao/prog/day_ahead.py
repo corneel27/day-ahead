@@ -1566,6 +1566,9 @@ class DaCalc(DaBase):
                                 model += hp_on[u + 3] == hp_on[u + 4]
                 else:
                     logging.info(f"Geen warmtevraag - warmtepomp wordt niet ingepland")
+                    for u in range(U):
+                        model += c_hp[u] == 0
+                        model += hp_on[u] == 0                    
             else:
                 # hp_adjustment == "power" or "heating curve"
                 logging.info(f"Warmtepomp met power-regeling wordt ingepland")
