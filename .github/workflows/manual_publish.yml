@@ -32,7 +32,7 @@ jobs:
             --all \
             --target dao \
             --no-latest \
-            --release-tag ${{ github.event.inputs.name }} \
+            --release-tag ${{ github.event.inputs.release_tag }} \
             --additional-tag manual-release \
             --docker-hub ${{ secrets.DOCKERHUB_USERNAME }} \
             --generic $GITHUB_REF_NAME
@@ -43,7 +43,7 @@ jobs:
             --all \
             --target dao \
             --no-latest \
-            --release-tag ${{ github.event.inputs.name }} \
+            --release-tag ${{ github.event.inputs.release_tag }} \
             --additional-tag manual-release \
             --docker-hub ghcr.io/${{ github.actor }} \
             --generic $GITHUB_REF_NAME            
