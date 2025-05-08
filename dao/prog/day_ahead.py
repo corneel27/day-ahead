@@ -1553,6 +1553,8 @@ class DaCalc(DaBase):
                                 model += hp_on[u + 3] == hp_on[u + 4]
                 else:
                     logging.info(f"Geen warmtevraag - warmtepomp wordt niet ingepland")
+                    model += c_hp[0] == 0
+                    model += hp_on[0] == 0
             else:
                 # hp_adjustment == "power" or "heating curve"
                 logging.info(f"Warmtepomp met power-regeling wordt ingepland")
@@ -1599,6 +1601,7 @@ class DaCalc(DaBase):
                 #  als er geen warmtevraag is eerste uur geen verbruik
                 if not self.hp_heat_demand:
                     model += c_hp[0] == 0
+                    model += hp_on[0] == 0
 
                 # beschikbaar vermogen x aan/uit, want p_hpx[u] X hpx_on[u] kan niet
                 for u in range(U):
@@ -1692,7 +1695,7 @@ class DaCalc(DaBase):
             ) - dt.timedelta(days=1)
             planned_end_dt = planned_start_dt
             if ma_entity_plan_start[m] is None:
-                if ma_entity_plan_end is None:
+                if ma_entity_plan_end[m] is None:
                     error = True
                     logging.error(
                         f"Er zijn geen entities voor doorgeven van de planning gedefinieerd "
@@ -1774,28 +1777,27 @@ class DaCalc(DaBase):
                     f"ligt voorbij de einde planningswindow {ready_ma_dt}"
                 )
                 error = True
-            elif start_ma_dt < planned_start_dt <= start_dt:
-                if start_dt <= planned_end_dt:
-                    logging.info(
-                        f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                        f"ligt voor het einde van de vorige planning(1): {planned_start_dt}"
-                    )
-                    error = True
-                elif start_dt <= ready_ma_dt:
-                    logging.info(
-                        f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                        f"ligt voor einde huidige planning-window: {ready_ma_dt}"
-                    )
-                    error = True
-                elif ready_ma_dt + dt.timedelta(days=1) <= tijd[U - 1]:
-                    start_ma_dt += dt.timedelta(days=1)
-                    ready_ma_dt += dt.timedelta(days=1)
-                else:
-                    logging.info(
-                        f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                        f"ligt voorbij begin vorige planning(2): {planned_start_dt}"
-                    )
-                    error = True
+            elif start_ma_dt >= planned_start_dt and start_ma_dt <=planned_end_dt:
+                logging.info(
+                    f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                    f"ligt voor het einde van de vorige planning(1): {planned_start_dt}"
+                )
+                error = True
+            elif start_dt <= ready_ma_dt:
+                logging.info(
+                    f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                    f"ligt voor einde huidige planning-window: {ready_ma_dt}"
+                )
+                error = True
+            elif ready_ma_dt + dt.timedelta(days=1) <= tijd[U - 1]:
+                start_ma_dt += dt.timedelta(days=1)
+                ready_ma_dt += dt.timedelta(days=1)
+            else:
+                logging.info(
+                    f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                    f"ligt voorbij begin vorige planning(2): {planned_start_dt}"
+                )
+                error = True
             if error:
                 kw_num = 0
             else:
@@ -2148,7 +2150,7 @@ class DaCalc(DaBase):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             btw = get_value_from_dict(dag_str, btw_def)
             saldeer_corr_gc = -sum_old_cons * (sum(p_grt) / len(p_grt) - 0.11)
-            saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw)
+            saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw/100)
             old_cost_gc += saldeer_corr_gc
             old_cost_da += saldeer_corr_da
             logging.info(f"Saldeercorrectie: {sum_old_cons:<6.2f} kWh")
