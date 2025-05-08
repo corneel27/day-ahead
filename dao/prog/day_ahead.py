@@ -2150,7 +2150,7 @@ class DaCalc(DaBase):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             btw = get_value_from_dict(dag_str, btw_def)
             saldeer_corr_gc = -sum_old_cons * (sum(p_grt) / len(p_grt) - 0.11)
-            saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw/100)
+            saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw / 100)
             old_cost_gc += saldeer_corr_gc
             old_cost_da += saldeer_corr_da
             logging.info(f"Saldeercorrectie: {sum_old_cons:<6.2f} kWh")
