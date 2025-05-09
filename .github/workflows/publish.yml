@@ -31,7 +31,7 @@ jobs:
         with:
           args: |
             --all \
-            --target dao-{$GITHUB_REF_NAME} \
+            --target dao-$GITHUB_REF_NAME \
             --docker-hub ghcr.io/${{ github.actor }} \
             --generic $GITHUB_REF_NAME \
             --additional-tag $GITHUB_REF_NAME
