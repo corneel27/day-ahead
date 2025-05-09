@@ -1,8 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 # [V2025.5.0]
+
+- Start with a pre-builded repository on Github (mostly done by bvw)
 - Introduction of a check on "last invoice", warning when more than one year ago.
 - Fix Dockerfile for build error Pillow library
+- Corrected VAT-calculation when calculating the profit during the DAO optimal-calculation (reported bij bvw)
+- Fix heatpump planning: when heat_demand-entity is false there will be no heat-pump power calculated in the first hour (reported by bvw)
+- Fixed error planning machine when planning calculation is in the previous planned period (reported by @sjampeter)
+- Fixed error and show error-message when no entities are configured for setting the calculated planning of a machine in HA (reported by llevering)
+
 
 # [V2025.4.2]
 
