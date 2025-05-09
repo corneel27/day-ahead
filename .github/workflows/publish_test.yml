@@ -31,7 +31,7 @@ jobs:
         with:
           args: |
             --all \
-            --image "dao-{arch}-{$GITHUB_REF_NAME}"
+            --image "dao-{arch}"
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
             --generic $GITHUB_REF_NAME \
