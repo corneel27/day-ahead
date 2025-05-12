@@ -9,7 +9,8 @@
 - Fix heatpump planning: when heat_demand-entity is false there will be no heat-pump power calculated in the first hour (reported by bvw)
 - Fixed error planning machine when planning calculation is in the previous planned period (reported by @sjampeter)
 - Fixed error and show error-message when no entities are configured for setting the calculated planning of a machine in HA (reported by llevering)
-
+- Fixed error with postgresql during reporting of balance and calculation of baseloads (reported by @balk77)
+- Fixed error not switching off pv-switch with negative prices with more than one pv-string
 
 # [V2025.4.2]
 

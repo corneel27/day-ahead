@@ -903,11 +903,11 @@ class Report:
             t2 = statistics.alias("t2")
             if agg == "maand":
                 column = self.db_ha.month(t2.c.start_ts).label("maand")
-                column2 = self.db_da.month_start(t2.c.start_ts).label("tijd")
+                column2 = func.min(self.db_ha.month_start(t2.c.start_ts)).label("tijd")
             elif agg == "dag":
                 column = self.db_ha.day(t2.c.start_ts).label("dag")
-                column2 = self.db_da.day_start(t2.c.start_ts).label("tijd")
-            else:  # interval == "uur"
+                column2 = func.min(self.db_ha.day_start(t2.c.start_ts)).label("tijd")
+            else:  # interval == "uur
                 column = self.db_ha.hour(t2.c.start_ts).label("uur")
                 column2 = self.db_ha.from_unixtime(t2.c.start_ts).label("tijd")
 

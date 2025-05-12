@@ -408,7 +408,7 @@ class DaBase(hass.Hass):
         # dacalc = DaCalc("../data/options_fac.json")
         dacalc.debug = True
         dacalc.calc_optimum()
-        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 5, 7, 16))
+        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 5, 12, 21))
 
     def calc_optimum(self):
         from day_ahead import DaCalc

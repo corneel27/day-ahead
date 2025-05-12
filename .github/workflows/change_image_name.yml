@@ -1,4 +1,4 @@
-name: "Set image_tag"
+name: "Set image tag"
 
 on:
   workflow_dispatch:
@@ -10,22 +10,25 @@ on:
       - main
 
 jobs:
-  change_tag:
+  if_merged:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: check out the repository to the runner
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: run sed vervang :addon door :latest
+      - name: run sed delete addon
         shell: bash
-        run: sed -i 's/:addon/:latest/g'/dao/config.yaml
+        run: |
+          sed -i 's/addon//g'/dao/config.yaml
+          sed -i 's/addon//g'/dao/build.yaml
       - name: Configure Git
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
       - name: Commit and push changes
         run: |
-          git add /dao/config.yaml
-          git commit -m ":addon vervangen door :latest"
+          git add /dao/config.yaml /dao/build.yaml
+          git commit -m "addon verwijderd"
           git push

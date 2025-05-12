@@ -389,7 +389,7 @@ class DaCalc(DaBase):
         # constraints
         for s in range(solar_num):
             for u in range(U):
-                model += pv_ac[s][u] <= solar_prod[s][u] * pv_ac_on_off[s][u]
+                model += pv_ac[s][u] == solar_prod[s][u] * pv_ac_on_off[s][u]
         for s in range(solar_num):
             if entity_pv_ac_switch[s] is None:
                 for u in range(U):
@@ -846,7 +846,7 @@ class DaCalc(DaBase):
                     pv_prod_dc[b][s][u] * pv_dc_on_off[b][s][u]
                     for s in range(pv_dc_num[b])
                 )
-                # nakijken!!!
+
                 model += (
                     dc_from_ac[b][u] + dc_from_bat[b][u] + pv_prod_dc_sum[b][u]
                     == dc_to_ac[b][u] + dc_to_bat[b][u]
@@ -1405,7 +1405,8 @@ class DaCalc(DaBase):
             for u in range(U):
                 model += c_hp[u] == 0
                 model += hp_on[u] == 0
-        else:  #  self.hp_enabled == True
+        else:
+            # self.hp_enabled == True
             # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
             self.hp_adjustment = self.config.get(
                 ["adjustment"], self.heating_options, "power"
@@ -1723,8 +1724,8 @@ class DaCalc(DaBase):
                 planned_start_dt
             )  # de planning van de vorige geslaagde run
             ma_planned_end_dt.append(planned_end_dt)
-            start_ma_dt = start_dt  # now
-            ready_ma_dt = uur[U - 1]  # het laatste moment van planningshorizon
+            start_opt = start_dt  # now
+            # ready_ma_dt = uur[U - 1]  # het laatste moment van planningshorizon
             if start_window_entity is None:
                 logging.error(
                     f"De 'entity start window' is niet gedefinieerd bij de instellingen "
@@ -1733,8 +1734,8 @@ class DaCalc(DaBase):
                 logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
                 error = True
             else:
-                start_hm = self.get_state(start_window_entity).state
-                start_ma_dt = convert_timestr(start_hm, start_dt)
+                start_window_hm = self.get_state(start_window_entity).state
+                start_window_dt = convert_timestr(start_window_hm, start_dt)
             if end_window_entity is None:
                 logging.error(
                     f"De 'entity end window' is niet gedefinieerd bij de instellingen "
@@ -1744,64 +1745,117 @@ class DaCalc(DaBase):
                     logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
                     error = True
             else:
-                ready_hm = self.get_state(end_window_entity).state
-                ready_ma_dt = convert_timestr(ready_hm, start_dt)
-            if ready_ma_dt <= start_ma_dt:
-                start_ma_dt -= dt.timedelta(days=1)
+                end_window_hm = self.get_state(end_window_entity).state
+                end_window_dt = convert_timestr(end_window_hm, start_dt)
+            if end_window_dt < start_window_dt:
+                start_window_dt -= dt.timedelta(days=1)
             # ready_ma_dt += dt.timedelta(days=1)
-            if (start_dt > ready_ma_dt) or (
-                start_dt + dt.timedelta(minutes=RL[m] * 15) > ready_ma_dt
-            ):
-                start_ma_dt += dt.timedelta(days=1)
-                ready_ma_dt += dt.timedelta(days=1)
-            if start_ma_dt < start_dt:
-                start_ma_dt = start_dt
-            """    
-            if not error and start_ma_dt > ready_ma_dt:
-                if ready_ma_dt > start_ma_dt:
-                    logging.info(f"Apparaat {ma_name[m]} wordt nog niet ingepland: de "
-                                 f"planningsperiode is begonnen")
+            '''
+            vandaag			
+            if end_gepland_dt.day != start_opt and end_pland_dt < start_opt: gisteren
+               inplannen
+            start_opt < start_gepland		opnieuw inplannen	
+            start_opt > start_gepland			
+                start_opt < end_gepland		niet inplannen
+                start_opt >= end_gepland		morgen inplannen
+                
+                        
+            morgen inplannen			
+            start_window + 1dag			
+            end_window + 1 dag			
+            inplannen	
+            '''
+            if not error:
+                inplannen = False
+                # planning is voor vandaag
+                if ((planned_end_dt.day != start_opt.day and planned_end_dt < start_opt) or
+                        # begin planning is na start_opt
+                        (start_opt < planned_start_dt)):
+                    inplannen = True
+                else: # start_opt >= planned_start_dt:
+                    if start_opt <= planned_end_dt:
+                        error = True
+                        logging.info(
+                            f"Machine {ma_name[m]} wordt niet ingepland, want "
+                            f"de berekende planning wordt nu uitgevoerd"
+                        )
+                    elif start_opt <= end_window_dt:
+                        error = True
+                        logging.info(
+                            f"Machine {ma_name[m]} wordt niet ingepland, want "
+                            f"in deze planning-window heeft de machine al gedraaid"
+                        )
+                    elif ((max(start_opt, start_window_dt) < end_window_dt) and
+                         ((max(start_opt, start_window_dt) - end_window_dt) < dt.timedelta(minutes = (RL[m] * 15)))):
+                        error = True
+                        logging.info(
+                            f"Machine {ma_name[m]} wordt niet ingepland, want "
+                            f"er is te weinig tijd tussen nu en einde planning-window "
+                            f"({end_window_dt}) "
+                        )
+                    else:
+                        if end_window_dt + dt.timedelta(days=1) > tijd[U-1]:
+                            error = True
+                            logging.info(
+                                f"Machine {ma_name[m]} wordt niet ingepland, want "
+                                f"einde planning-window ({end_window_dt + dt.timedelta(days=1)})"
+                                f"ligt voorbij de planningshorizon ({tijd[U-1]})"
+                            )
+                        elif not inplannen:
+                            start_window_dt += dt.timedelta(days=1)
+                            end_window_dt += dt.timedelta(days=1)
+
+
+                """    
+                if inplannen:
+                if (start_opt > planned_end_dt) or (
+                    start_dt + dt.timedelta(minutes=RL[m] * 15) > planned_end_dt
+                ):
+                    start_ma_dt += dt.timedelta(days=1)
+                    planned_end_dt += dt.timedelta(days=1)
+                if start_ma_dt < start_dt:
+                    start_ma_dt = start_dt
+                if not error and start_ma_dt > ready_ma_dt:
+                    if ready_ma_dt > start_ma_dt:
+                        logging.info(f"Apparaat {ma_name[m]} wordt nog niet ingepland: de "
+                                     f"planningsperiode is begonnen")
+                        error = True
+                    else:
+                        ready_ma_dt = ready_ma_dt + dt.timedelta(days=1)
+                if end > tijd[U - 1]:
+                    logging.info(
+                        f"Machine {ma_name[m]} wordt niet ingepland, want {ready_ma_dt} "
+                        f"ligt voorbij de planningshorizon {uur[U-1]}"
+                    )
                     error = True
+                elif start_dt >= ready_ma_dt:
+                    logging.info(
+                        f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                        f"ligt voorbij de einde planningswindow {ready_ma_dt}"
+                    )
+                    error = True
+                elif planned_start_dt <= start_ma_dt <= planned_end_dt:
+                    logging.info(
+                        f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                        f"ligt binnen de vorige planning(1): {planned_start_dt}"
+                    )
+                    error = True
+                elif ready_ma_dt + dt.timedelta(days=1) <= tijd[U - 1]:
+                    start_ma_dt += dt.timedelta(days=1)
+                    ready_ma_dt += dt.timedelta(days=1)
                 else:
-                    ready_ma_dt = ready_ma_dt + dt.timedelta(days=1)
-            """
-            if ready_ma_dt > tijd[U - 1]:
-                logging.info(
-                    f"Machine {ma_name[m]} wordt niet ingepland, want {ready_ma_dt} "
-                    f"ligt voorbij de planningshorizon {uur[U-1]}"
-                )
-                error = True
-            elif start_dt >= ready_ma_dt:
-                logging.info(
-                    f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                    f"ligt voorbij de einde planningswindow {ready_ma_dt}"
-                )
-                error = True
-            elif start_ma_dt >= planned_start_dt and start_ma_dt <=planned_end_dt:
-                logging.info(
-                    f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                    f"ligt voor het einde van de vorige planning(1): {planned_start_dt}"
-                )
-                error = True
-            elif start_dt <= ready_ma_dt:
-                logging.info(
-                    f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                    f"ligt voor einde huidige planning-window: {ready_ma_dt}"
-                )
-                error = True
-            elif ready_ma_dt + dt.timedelta(days=1) <= tijd[U - 1]:
-                start_ma_dt += dt.timedelta(days=1)
-                ready_ma_dt += dt.timedelta(days=1)
-            else:
-                logging.info(
-                    f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                    f"ligt voorbij begin vorige planning(2): {planned_start_dt}"
-                )
-                error = True
+                    logging.info(
+                        f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                        f"ligt voorbij begin vorige planning(2): {planned_start_dt}"
+                    )
+                    error = True
+                """
+
+
             if error:
                 kw_num = 0
             else:
-                delta = ready_ma_dt - start_ma_dt
+                delta = end_window_dt - max(start_opt, start_window_dt)
                 # aantal kwartieren in planningsperiode
                 kw_num = math.ceil(delta.seconds / 900)
             KW.append(kw_num)
@@ -1814,12 +1868,13 @@ class DaCalc(DaBase):
                 if kw_num > 0:
                     logging.info(
                         f"Apparaat {ma_name[m]} met programma '{program_selected[m]}' "
-                        f"wordt ingepland tussen {start_ma_dt.strftime('%Y-%m-%d %H:%M')} "
-                        f"en {ready_ma_dt.strftime('%Y-%m-%d %H:%M')}."
+                        f"wordt ingepland tussen "
+                        f"{max(start_opt, start_window_dt).strftime('%Y-%m-%d %H:%M')} "
+                        f"en {end_window_dt.strftime('%Y-%m-%d %H:%M')}."
                     )
             # het eerste tijdstip waarop de run kan beginnen
             start_ma_dt = dt.datetime.fromtimestamp(
-                900 * math.ceil(max(start_ma_dt, start_dt).timestamp() / 900)
+                900 * math.ceil(max(start_window_dt, start_opt).timestamp() / 900)
             )
 
             # ma_uur_kw: per machine per uur een lijst van kwartiernummers in het betreffende uur
@@ -2808,6 +2863,7 @@ class DaCalc(DaBase):
                 logging.info(f"Apparaat: {ma_name[m]}")
                 logging.info(f"Programma: {program_selected[m]}")
                 if RL[m] > 0:
+                    start_machine_str = ""
                     for r in range(R[m]):
                         if ma_start[m][r].x == 1:
                             # print(f"ma_start: run {r} start {ma_start[m][r].x}")
@@ -2839,6 +2895,8 @@ class DaCalc(DaBase):
                                         datetime=end_machine_str,
                                     )
                                     logging.info(f"Is klaar op {end_machine_str}")
+                    if start_machine_str == "":
+                        logging.info(f"Niet ingepland")
 
                 if self.log_level == logging.DEBUG:
                     logging.debug(
@@ -3028,7 +3086,6 @@ class DaCalc(DaBase):
         style = self.config.get(["graphics", "style"], None, "default")
         import matplotlib.pyplot as plt
         import matplotlib.ticker as ticker
-        import matplotlib.lines as mlines
 
         plt.set_loglevel(level="warning")
         pil_logger = logging.getLogger("PIL")
