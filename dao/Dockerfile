@@ -4,14 +4,6 @@ FROM ${BUILD_FROM}
 ARG BUILD_ARCH
 ENV ENV_BUILD_ARCH=$BUILD_ARCH
 
-ARG BUILD_VERSION
-
-# Labels
-LABEL \
-    io.hass.arch="aarch64|i386|amd64"
-    io.hass.type="addon" \
-    io.hass.version=${BUILD_VERSION} \
-
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -31,6 +23,7 @@ COPY webserver /root/dao/webserver/
 COPY data /tmp/daodata/
 
 #version
+ARG BUILD_VERSION
 ENV DAO_VERSION=$BUILD_VERSION
 RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/version.py
 
@@ -71,4 +64,10 @@ EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
 ENTRYPOINT  ["/bin/bash", "./run.sh"]
+
+# Labels
+LABEL \
+    io.hass.arch="aarch64|i386|amd64"
+    io.hass.type="addon" \
+    io.hass.version=${BUILD_VERSION} \
 
