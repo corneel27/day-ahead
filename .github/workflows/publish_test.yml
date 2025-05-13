@@ -30,7 +30,9 @@ jobs:
         uses: home-assistant/builder@master
         with:
           args: |
-            --all \
+            --amd64 \
+            --aarch64 \
+            --i386 \
             --image "dao-{arch}-addon" \
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
