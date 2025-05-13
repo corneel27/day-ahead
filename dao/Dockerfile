@@ -67,7 +67,7 @@ ENTRYPOINT  ["/bin/bash", "./run.sh"]
 
 # Labels
 LABEL \
-    io.hass.arch="aarch64|i386|amd64"
+    io.hass.arch="aarch64|i386|amd64" \
     io.hass.type="addon" \
     io.hass.version=${BUILD_VERSION} \
 
