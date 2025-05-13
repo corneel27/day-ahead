@@ -3225,7 +3225,7 @@ class DaCalc(DaBase):
             axis[1].bar(
                 ind,
                 np.array(heatpump_n),
-                bottom=np.array(base_n),
+                bottom=np.array(base_n + np.array(boiler_n) ),
                 label="WP",
                 color="#a32cc4",
                 align="edge",
