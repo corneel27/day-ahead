@@ -6,10 +6,9 @@ ENV ENV_BUILD_ARCH=$BUILD_ARCH
 
 ARG BUILD_VERSION
 
-
 # Labels
 LABEL \
-    io.hass.arch="${BUILD_ARCH}" \
+    io.hass.arch="aarch64|i386|amd64"
     io.hass.type="addon" \
     io.hass.version=${BUILD_VERSION} \
 
