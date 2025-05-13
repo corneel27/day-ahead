@@ -36,5 +36,4 @@ jobs:
             --image "dao-{arch}-addon" \
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
-            --generic $GITHUB_REF_NAME \
-            --additional-tag $GITHUB_REF_NAME
+            --generic $GITHUB_REF_NAME 
