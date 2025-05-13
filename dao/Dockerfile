@@ -5,11 +5,10 @@ ARG BUILD_ARCH
 ENV ENV_BUILD_ARCH=$BUILD_ARCH
 
 ARG BUILD_VERSION
-ARG BUILD_NAME
+
 
 # Labels
 LABEL \
-    io.hass.name="${BUILD_NAME}" \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
     io.hass.version=${BUILD_VERSION} \
