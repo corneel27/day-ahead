@@ -1,11 +1,11 @@
-name: "Publish test"
+name: "Test version"
 
 on:
   workflow_dispatch:
 
 jobs:
-  publish:
-    name: Publish
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
