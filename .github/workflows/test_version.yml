@@ -14,7 +14,8 @@ jobs:
       - name: Read version from file
         id: get_version
         run: |
-          VERSION=grep 'version: ' /dao/config.yaml | sed 's/version: //'
+          echo grep 'version: ' /dao/config.yaml | sed 's/version: //'
+          VERSION = $(grep 'version: ' /dao/config.yaml | sed 's/version: //')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Show version
