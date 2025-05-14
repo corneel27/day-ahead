@@ -11,6 +11,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: show github_ref
+        run: echo "${GITHUB_REF}"
+
       - name: Get version from Git tag
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
         if: startsWith(github.ref, 'refs/tags/')
