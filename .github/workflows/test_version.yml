@@ -11,12 +11,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: show github_ref
-        run: echo "${GITHUB_REF}"
-
-      - name: Get version from Git tag
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Read version from file
+        id: get_version
+        run: |
+          VERSION=grep 'version: ' dao/config.yaml | sed 's/version: //'
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Show version
         run: echo "Version is $VERSION"
