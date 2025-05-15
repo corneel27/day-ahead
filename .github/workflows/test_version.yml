@@ -16,7 +16,7 @@ jobs:
         run: |
           echo ${{ github.workspace }}
           grep 'version: ' ${{ github.workspace }}/dao/config.yaml | sed 's/version: //'
-          versie_nr=$('version: ' ${{ github.workspace }}/dao/config.yaml | sed 's/version: //')
+          versie_nr=$(grep 'version: ' ${{ github.workspace }}/dao/config.yaml | sed 's/version: //')
           echo "VERSIENR=$versie_nr" >> $GITHUB_ENV
 
       - name: Show version
