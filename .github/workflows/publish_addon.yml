@@ -1,9 +1,8 @@
-name: "Publish test"
+name: "Publish addon"
 
 on:
   workflow_dispatch:
     branches:
-      - main
       - addon
   release:
     types: [published]

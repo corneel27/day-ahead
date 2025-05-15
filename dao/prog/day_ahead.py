@@ -1749,6 +1749,9 @@ class DaCalc(DaBase):
                 end_window_dt = convert_timestr(end_window_hm, start_dt)
             if end_window_dt < start_window_dt:
                 start_window_dt -= dt.timedelta(days=1)
+            if end_window_dt < start_opt:
+                start_window_dt += dt.timedelta(days=1)
+                end_window_dt += dt.timedelta(days=1)
             # ready_ma_dt += dt.timedelta(days=1)
             '''
             vandaag			

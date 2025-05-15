@@ -2,7 +2,7 @@
 # Day Ahead Optimizer
 # [V2025.5.0]
 
-- Start with a pre-builded repository on Github (mostly done by bvw)
+- Start with a pre-builded repository on Github (thanks to bvw)
 - Introduction of a check on "last invoice", warning when more than one year ago.
 - Fix Dockerfile for build error Pillow library
 - Corrected VAT-calculation when calculating the profit during the DAO optimal-calculation (reported bij bvw)
