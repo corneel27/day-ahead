@@ -11,11 +11,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Read version from file
+      - name: Get version from config.yaml
         id: get_version
         run: |
-          echo ${{ github.workspace }}
-          grep 'version: ' ${{ github.workspace }}/dao/config.yaml | sed 's/version: //'
           versie_nr=$(grep 'version: ' ${{ github.workspace }}/dao/config.yaml | sed 's/version: //')
           echo "VERSION=$versie_nr" >> $GITHUB_ENV
 
