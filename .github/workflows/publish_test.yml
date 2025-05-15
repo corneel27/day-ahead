@@ -26,6 +26,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
+      - name: Get version from config.yaml
+        run: |
+          versie_nr=$(grep 'version: ' ${{ github.workspace }}/dao/config.yaml | sed 's/version: //')
+          echo "VERSION=$versie_nr" >> $GITHUB_ENV
       - name: Publish to GHCR
         uses: home-assistant/builder@master
         with:
@@ -37,3 +41,5 @@ jobs:
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
             --generic $GITHUB_REF_NAME 
+            --version $VERSION
+            --additional-tag $VERSION
