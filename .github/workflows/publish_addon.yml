@@ -1,0 +1,44 @@
+name: "Publish addon"
+
+on:
+  workflow_dispatch:
+    branches:
+      - addon
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+      - name: Get version from config.yaml
+        run: |
+          versie_nr=$(grep 'version: ' ${{ github.workspace }}/dao/config.yaml | sed 's/version: //')
+          echo "VERSION=$versie_nr" >> $GITHUB_ENV
+      - name: Publish to GHCR
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --amd64 \
+            --aarch64 \
+            --i386 \
+            --image "dao-{arch}-addon" \
+            --target dao \
+            --docker-hub ghcr.io/${{ github.actor }} \
+            --generic $GITHUB_REF_NAME \
+            --version $VERSION \
+            --additional-tag $VERSION
