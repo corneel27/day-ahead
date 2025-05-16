@@ -9,7 +9,6 @@ import logging
 
 
 class GraphBuilder:
-
     def __init__(self, backend=None):
         plt.set_loglevel(level="warning")
         pil_logger = logging.getLogger("PIL")
@@ -36,13 +35,12 @@ class GraphBuilder:
         total = df[y].sum()
         df.loc[df.shape[0]] = [total]
 
-
         # Calculating the running totals
         # print(df)
-        df['Running_Total'] = df[y].cumsum()
+        df["Running_Total"] = df[y].cumsum()
         # print(df)
-        df['Shifted_Total'] = df['Running_Total'].shift(1).fillna(0)
-        df.loc[df.index[-1], 'Shifted_Total'] = 0.0
+        df["Shifted_Total"] = df["Running_Total"].shift(1).fillna(0)
+        df.loc[df.index[-1], "Shifted_Total"] = 0.0
         # print(df)
 
         # plotting the waterfall chart
@@ -50,19 +48,26 @@ class GraphBuilder:
         # code for Bars
         bw = 0.6
         ind = np.arange(len(df.index))
-        plot = axis.bar(ind, df[y], bottom=df["Shifted_Total"], width=bw,
-                        edgecolor=["green" if x >= 0 else "red" for x in df[y]],
-                        color=["green" if x >= 0 else "red" for x in df[y]])
+        plot = axis.bar(
+            ind,
+            df[y],
+            bottom=df["Shifted_Total"],
+            width=bw,
+            edgecolor=["green" if x >= 0 else "red" for x in df[y]],
+            color=["green" if x >= 0 else "red" for x in df[y]],
+        )
 
         for i in range(1, len(df)):
-            axis.plot([(i - 1) + bw / 2, i - bw / 2],
-                      [df["Running_Total"].iloc[i - 1], df["Running_Total"].iloc[i - 1]],
-                      color="green" if df[y].iloc[i] >= 0 else "red")
+            axis.plot(
+                [(i - 1) + bw / 2, i - bw / 2],
+                [df["Running_Total"].iloc[i - 1], df["Running_Total"].iloc[i - 1]],
+                color="green" if df[y].iloc[i] >= 0 else "red",
+            )
 
         max_y = math.ceil(max(max(df["Running_Total"][:-1]), 0))
-        min_y = math.floor(min(min(df["Running_Total"][:-1])-1, 0))
-        delta = math.floor((max_y - min_y)/10)
-        axis.set_ylim([min_y, max_y+delta])
+        min_y = math.floor(min(min(df["Running_Total"][:-1]) - 1, 0))
+        delta = math.floor((max_y - min_y) / 10)
+        axis.set_ylim([min_y, max_y + delta])
         rel_y_pos_text = (max_y - min_y) / 100
         # Adding the total labels
         abs_max_y = max(max_y, -min_y, abs(df["Running_Total"].iloc[-1]))
@@ -70,12 +75,17 @@ class GraphBuilder:
         old_total = 0
         old_amount = None
         for i, (total, bottom, amount) in enumerate(
-                zip(df['Running_Total'], df["Shifted_Total"], df[y])):
+            zip(df["Running_Total"], df["Shifted_Total"], df[y])
+        ):
             total = old_total if i == (len(df["Running_Total"]) - 1) else total
             old_total = total
             if amount != old_amount:
-                axis.text(i, max(total, bottom) + rel_y_pos_text,
-                          f'{amount:.{dec_num}f}', ha='center')
+                axis.text(
+                    i,
+                    max(total, bottom) + rel_y_pos_text,
+                    f"{amount:.{dec_num}f}",
+                    ha="center",
+                )
             old_amount = amount
 
         axis.set_title(options["series"][0]["title"])
@@ -86,7 +96,9 @@ class GraphBuilder:
         plt.style.use(options["style"])
         graphs = options["graphs"]
         num_graphs = len(graphs)
-        fig, axis = plt.subplots(figsize=(8, 5*num_graphs), nrows=num_graphs, sharex='all')
+        fig, axis = plt.subplots(
+            figsize=(8, 5 * num_graphs), nrows=num_graphs, sharex="all"
+        )
         fig.subplots_adjust(bottom=0.2)
         g_nr = -1
         haxis = options["haxis"]
@@ -113,8 +125,8 @@ class GraphBuilder:
                 else:
                     label = serie["column"].capitalize()
                 handles, labels = ax.get_legend_handles_labels()
-                handles.append(Patch(facecolor='green'))
-                handles.append(Patch(facecolor='red'))
+                handles.append(Patch(facecolor="green"))
+                handles.append(Patch(facecolor="red"))
                 labels.append(label + " (+)")
                 labels.append(label + " (-)")
             else:
@@ -143,7 +155,9 @@ class GraphBuilder:
                     if "width" in serie:
                         width = serie["width"]
                     data_array = data_array.to_list()
-                    if ("negativ" in serie) or (("sign" in serie) and (serie["sign"] == "neg")):
+                    if ("negativ" in serie) or (
+                        ("sign" in serie) and (serie["sign"] == "neg")
+                    ):
                         data_array = np.negative(data_array)
                     s_type = serie["type"]
                     color = serie["color"]
@@ -162,7 +176,12 @@ class GraphBuilder:
 
                     if s_type == "bar":
                         plot = ax_serie.bar(
-                            ind, data_array, label=label, width=width, color=color, align="edge"
+                            ind,
+                            data_array,
+                            label=label,
+                            width=width,
+                            color=color,
+                            align="edge",
                         )
                     elif s_type == "line":
                         if "linestyle" in serie:
@@ -183,7 +202,7 @@ class GraphBuilder:
                         else:
                             linestyle = "solid"
                         data_array.append(data_array[-1])
-                        ind_serie = np.arange(len(ind)+1)
+                        ind_serie = np.arange(len(ind) + 1)
                         plot = ax_serie.step(
                             ind_serie,
                             data_array,
@@ -246,13 +265,13 @@ class GraphBuilder:
 
             xlabels = df[haxis["values"]].values.tolist()
             if graph_type == "waterfall":
-                ind = np.arange(len(df.index)+1)
+                ind = np.arange(len(df.index) + 1)
                 xlabels += ["Totaal"]
             ax.set_xticks(
                 ind,
                 labels=xlabels,
             )
-            if "title" in haxis and g_nr == (num_graphs-1):
+            if "title" in haxis and g_nr == (num_graphs - 1):
                 ax.set_xlabel(haxis["title"])
             if len(df.index) > 8:
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(2))

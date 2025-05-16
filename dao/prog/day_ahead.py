@@ -12,7 +12,6 @@ import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS
 from pandas.core.dtypes.inference import is_number
 from dao.prog.da_report import Report
-from dao.prog.da_config import Config
 from utils import (
     interpolate,
     get_value_from_dict,
@@ -27,7 +26,6 @@ from da_base import DaBase
 
 
 class DaCalc(DaBase):
-
     def __init__(self, file_name=None):
         super().__init__(file_name=file_name)
         if self.config is None:
@@ -217,6 +215,7 @@ class DaCalc(DaBase):
         pv_yield = []
         solar_prod = []
         entity_pv_ac_switch = []
+        max_solar_power = []
         solar_num = len(self.solar)
         for s in range(solar_num):
             pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
@@ -225,6 +224,7 @@ class DaCalc(DaBase):
             if entity == "":
                 entity = None
             entity_pv_ac_switch.append(entity)
+            max_solar_power.append(self.config.get(["max_power"], self.solar[s], None))
 
         b_l = base_cons[-U:]
         tijd = []
@@ -294,6 +294,8 @@ class DaCalc(DaBase):
                 p_grl.append((gc_p_high + taxes_l) * (1 + btw / 100))
                 p_grt.append((gc_p_high + taxes_t) * (1 + btw / 100))
             first_hour = False
+        while len(b_l) > len(uur):
+            b_l = b_l[:-1]
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
         try:
@@ -341,12 +343,10 @@ class DaCalc(DaBase):
             # df.query("a == 1")['b'].sum()
             # df[df['a']==1]['b'].sum()
             cons_df = report.get_grid_data(periode="dit contractjaar", _tot=start_dt)
-            consumption_his = cons_df[cons_df["datasoort"] == "recorded"][
-                "consumption"
-            ].sum()
-            production_his = cons_df[cons_df["datasoort"] == "recorded"]["production"].sum()
+            consumption_his = cons_df["consumption"].sum()
+            production_his = cons_df["production"].sum()
         except Exception as ex:
-            logging.error('Failed.', exc_info=ex)
+            logging.error("Failed.", exc_info=ex)
             logging.warning(f"Verbruik laatste contractjaar kon niet wordt vastgesteld")
             consumption_his = 0
             production_his = 0
@@ -387,7 +387,13 @@ class DaCalc(DaBase):
         ##############################################################
         pv_ac = [
             [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=solar_prod[s][u] * 1.1)
+                model.add_var(
+                    var_type=CONTINUOUS,
+                    lb=0,
+                    ub=solar_prod[s][u]
+                    if max_solar_power[s] is None
+                    else min(solar_prod[s][u], max_solar_power[s]),
+                )
                 for u in range(U)
             ]
             for s in range(solar_num)
@@ -397,7 +403,6 @@ class DaCalc(DaBase):
         ]
 
         # constraints
-
         for s in range(solar_num):
             for u in range(U):
                 model += pv_ac[s][u] == solar_prod[s][u] * pv_ac_on_off[s][u]
@@ -450,14 +455,10 @@ class DaCalc(DaBase):
                 discharge_stages = [{"power": 0.0, "efficiency": 1}] + discharge_stages
 
             # noinspection PyTypeChecker
-            max_charge_power.append(
-                int(charge_stages[-1]["power"]) / 1000
-            )
+            max_charge_power.append(int(charge_stages[-1]["power"]) / 1000)
             # CS is aantal charge stages
             CS.append(len(charge_stages))
-            max_discharge_power.append(
-                discharge_stages[-1]["power"] / 1000
-            )
+            max_discharge_power.append(discharge_stages[-1]["power"] / 1000)
 
             # reduced power
             red_hours = self.config.get(["reduced hours"], self.battery_options[b], {})
@@ -536,7 +537,7 @@ class DaCalc(DaBase):
             )
             opt_low_level.append(opt_low_lvl)
 
-            if _start_soc is None or b > 0:
+            if _start_soc is None:
                 start_soc_str = self.get_state(
                     self.battery_options[b]["entity actual level"]
                 ).state
@@ -569,14 +570,8 @@ class DaCalc(DaBase):
                     )
                     eff = 1
                     for ds in range(DS[b]):
-                        if (
-                            discharge_stages[ds]["power"]
-                            / 1000
-                            > prod_dc
-                        ):
-                            eff = discharge_stages[ds][
-                                "efficiency"
-                            ]
+                        if discharge_stages[ds]["power"] / 1000 > prod_dc:
+                            eff = discharge_stages[ds]["efficiency"]
                             break
                     prod_ac = prod_dc * eff
                     pv_prod_dc[b][s].append(prod_dc)
@@ -622,19 +617,11 @@ class DaCalc(DaBase):
         """
         # met sos ###################################################################
         ac_to_dc_samples = [
-            [
-                charge_stages[cs]["power"] / 1000
-                for cs in range(CS[b])
-            ]
-            for b in range(B)
+            [charge_stages[cs]["power"] / 1000 for cs in range(CS[b])] for b in range(B)
         ]
         dc_from_ac_samples = [
             [
-                (
-                    charge_stages[cs]["efficiency"]
-                    * charge_stages[cs]["power"]
-                    / 1000
-                )
+                (charge_stages[cs]["efficiency"] * charge_stages[cs]["power"] / 1000)
                 for cs in range(CS[b])
             ]
             for b in range(B)
@@ -684,8 +671,7 @@ class DaCalc(DaBase):
                     model.add_var(
                         var_type=CONTINUOUS,
                         lb=0,
-                        ub=discharge_stages[ds]["power"]
-                        / 1000,
+                        ub=discharge_stages[ds]["power"] / 1000,
                     )
                     for _ in range(U)
                 ]
@@ -831,8 +817,7 @@ class DaCalc(DaBase):
                 )
                 model += (xsum(ac_from_dc_st_on[b][ds][u] for ds in range(DS[b]))) <= 1
                 model += dc_to_ac[b][u] == xsum(
-                    ac_from_dc_st[b][ds][u]
-                    / discharge_stages[ds]["efficiency"]
+                    ac_from_dc_st[b][ds][u] / discharge_stages[ds]["efficiency"]
                     for ds in range(DS[b])
                 )
 
@@ -877,7 +862,7 @@ class DaCalc(DaBase):
                     pv_prod_dc[b][s][u] * pv_dc_on_off[b][s][u]
                     for s in range(pv_dc_num[b])
                 )
-                # nakijken!!!
+
                 model += (
                     dc_from_ac[b][u] + dc_from_bat[b][u] + pv_prod_dc_sum[b][u]
                     == dc_to_ac[b][u] + dc_to_bat[b][u]
@@ -1571,7 +1556,8 @@ class DaCalc(DaBase):
             for u in range(U):
                 model += c_hp[u] == 0
                 model += hp_on[u] == 0
-        else: #  self.hp_enabled == True
+        else:
+            # self.hp_enabled == True
             # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
             self.hp_adjustment = self.config.get(
                 ["adjustment"], self.heating_options, "power"
@@ -1719,6 +1705,8 @@ class DaCalc(DaBase):
                                 model += hp_on[u + 3] == hp_on[u + 4]
                 else:
                     logging.info(f"Geen warmtevraag - warmtepomp wordt niet ingepland")
+                    model += c_hp[0] == 0
+                    model += hp_on[0] == 0
             else:
                 # hp_adjustment == "power" or "heating curve"
                 logging.info(f"Warmtepomp met power-regeling wordt ingepland")
@@ -1765,6 +1753,7 @@ class DaCalc(DaBase):
                 #  als er geen warmtevraag is eerste uur geen verbruik
                 if not self.hp_heat_demand:
                     model += c_hp[0] == 0
+                    model += hp_on[0] == 0
 
                 # beschikbaar vermogen x aan/uit, want p_hpx[u] X hpx_on[u] kan niet
                 for u in range(U):
@@ -1812,9 +1801,7 @@ class DaCalc(DaBase):
         KW = []  # aantal kwartieren in een planningswindow
         ma_uur_kw = []  # per machine een list met beschikbare kwartieren
         ma_kw_dt = []  # per machine een list op welk tijdstip een kwartier begint
-        program_index = (
-            []
-        )  # nummer in de lijst welk programma van een machine gaat draaien
+        program_index = []  # nummer in de lijst welk programma van een machine gaat draaien
         ma_name = []  # naam van de machine
         # entity voor opvragen vorig en teruggeven berekend nieuw start-tijdstip
         ma_entity_plan_start = []
@@ -1864,7 +1851,7 @@ class DaCalc(DaBase):
             ) - dt.timedelta(days=1)
             planned_end_dt = planned_start_dt
             if ma_entity_plan_start[m] is None:
-                if ma_entity_plan_end is None:
+                if ma_entity_plan_end[m] is None:
                     error = True
                     logging.error(
                         f"Er zijn geen entities voor doorgeven van de planning gedefinieerd "
@@ -1892,8 +1879,8 @@ class DaCalc(DaBase):
                 planned_start_dt
             )  # de planning van de vorige geslaagde run
             ma_planned_end_dt.append(planned_end_dt)
-            start_ma_dt = start_dt  # now
-            ready_ma_dt = uur[U - 1]  # het laatste moment van planningshorizon
+            start_opt = start_dt  # now
+            # ready_ma_dt = uur[U - 1]  # het laatste moment van planningshorizon
             if start_window_entity is None:
                 logging.error(
                     f"De 'entity start window' is niet gedefinieerd bij de instellingen "
@@ -1902,8 +1889,8 @@ class DaCalc(DaBase):
                 logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
                 error = True
             else:
-                start_hm = self.get_state(start_window_entity).state
-                start_ma_dt = convert_timestr(start_hm, start_dt)
+                start_window_hm = self.get_state(start_window_entity).state
+                start_window_dt = convert_timestr(start_window_hm, start_dt)
             if end_window_entity is None:
                 logging.error(
                     f"De 'entity end window' is niet gedefinieerd bij de instellingen "
@@ -1913,50 +1900,102 @@ class DaCalc(DaBase):
                     logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
                     error = True
             else:
-                ready_hm = self.get_state(end_window_entity).state
-                ready_ma_dt = convert_timestr(ready_hm, start_dt)
-            if (ready_ma_dt <= start_ma_dt) :
-                start_ma_dt -= dt.timedelta(days=1)
+                end_window_hm = self.get_state(end_window_entity).state
+                end_window_dt = convert_timestr(end_window_hm, start_dt)
+            if end_window_dt < start_window_dt:
+                start_window_dt -= dt.timedelta(days=1)
+            if end_window_dt < start_opt:
+                start_window_dt += dt.timedelta(days=1)
+                end_window_dt += dt.timedelta(days=1)
             # ready_ma_dt += dt.timedelta(days=1)
-            if (start_dt > ready_ma_dt) or (
-                start_dt + dt.timedelta(minutes=RL[m] * 15) > ready_ma_dt
-            ):
-                start_ma_dt += dt.timedelta(days=1)
-                ready_ma_dt += dt.timedelta(days=1)
-            if start_ma_dt < start_dt:
-                start_ma_dt = start_dt
-            """    
-            if not error and start_ma_dt > ready_ma_dt:
-                if ready_ma_dt > start_ma_dt:
-                    logging.info(f"Apparaat {ma_name[m]} wordt nog niet ingepland: de "
-                                 f"planningsperiode is begonnen")
-                    error = True
-                else:
-                    ready_ma_dt = ready_ma_dt + dt.timedelta(days=1)
-            """
-            if ready_ma_dt > tijd[U - 1]:
-                logging.info(
-                    f"Machine {ma_name[m]} wordt niet ingepland, want {ready_ma_dt} "
-                    f"ligt voorbij de planningshorizon {uur[U-1]}"
-                )
-                error = True
-            elif start_dt >= ready_ma_dt:
-                logging.info(
-                    f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                    f"ligt voorbij de einde planningswindow {ready_ma_dt}"
-                )
-                error = True
-            elif start_ma_dt < planned_start_dt <= start_dt:
-                if start_dt <= planned_end_dt:
+            '''
+            vandaag			
+            if end_gepland_dt.day != start_opt and end_pland_dt < start_opt: gisteren
+               inplannen
+            start_opt < start_gepland		opnieuw inplannen	
+            start_opt > start_gepland			
+                start_opt < end_gepland		niet inplannen
+                start_opt >= end_gepland		morgen inplannen
+                
+                        
+            morgen inplannen			
+            start_window + 1dag			
+            end_window + 1 dag			
+            inplannen	
+            '''
+            if not error:
+                inplannen = False
+                # planning is voor vandaag
+                if ((planned_end_dt.day != start_opt.day and planned_end_dt < start_opt) or
+                        # begin planning is na start_opt
+                        (start_opt < planned_start_dt)):
+                    inplannen = True
+                else: # start_opt >= planned_start_dt:
+                    if start_opt <= planned_end_dt:
+                        error = True
+                        logging.info(
+                            f"Machine {ma_name[m]} wordt niet ingepland, want "
+                            f"de berekende planning wordt nu uitgevoerd"
+                        )
+                    elif start_opt <= end_window_dt:
+                        error = True
+                        logging.info(
+                            f"Machine {ma_name[m]} wordt niet ingepland, want "
+                            f"in deze planning-window heeft de machine al gedraaid"
+                        )
+                    elif ((max(start_opt, start_window_dt) < end_window_dt) and
+                         ((max(start_opt, start_window_dt) - end_window_dt) < dt.timedelta(minutes = (RL[m] * 15)))):
+                        error = True
+                        logging.info(
+                            f"Machine {ma_name[m]} wordt niet ingepland, want "
+                            f"er is te weinig tijd tussen nu en einde planning-window "
+                            f"({end_window_dt}) "
+                        )
+                    else:
+                        if end_window_dt + dt.timedelta(days=1) > tijd[U-1]:
+                            error = True
+                            logging.info(
+                                f"Machine {ma_name[m]} wordt niet ingepland, want "
+                                f"einde planning-window ({end_window_dt + dt.timedelta(days=1)})"
+                                f"ligt voorbij de planningshorizon ({tijd[U-1]})"
+                            )
+                        elif not inplannen:
+                            start_window_dt += dt.timedelta(days=1)
+                            end_window_dt += dt.timedelta(days=1)
+
+
+                """    
+                if inplannen:
+                if (start_opt > planned_end_dt) or (
+                    start_dt + dt.timedelta(minutes=RL[m] * 15) > planned_end_dt
+                ):
+                    start_ma_dt += dt.timedelta(days=1)
+                    planned_end_dt += dt.timedelta(days=1)
+                if start_ma_dt < start_dt:
+                    start_ma_dt = start_dt
+                if not error and start_ma_dt > ready_ma_dt:
+                    if ready_ma_dt > start_ma_dt:
+                        logging.info(f"Apparaat {ma_name[m]} wordt nog niet ingepland: de "
+                                     f"planningsperiode is begonnen")
+                        error = True
+                    else:
+                        ready_ma_dt = ready_ma_dt + dt.timedelta(days=1)
+                if end > tijd[U - 1]:
                     logging.info(
-                        f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                        f"ligt voor het einde van de vorige planning(1): {planned_start_dt}"
+                        f"Machine {ma_name[m]} wordt niet ingepland, want {ready_ma_dt} "
+                        f"ligt voorbij de planningshorizon {uur[U-1]}"
                     )
                     error = True
-                elif start_dt <= ready_ma_dt:
+                elif start_dt >= ready_ma_dt:
                     logging.info(
                         f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
-                        f"ligt voor einde huidige planning-window: {ready_ma_dt}"
+                        f"ligt voorbij de einde planningswindow {ready_ma_dt}"
+                    )
+                    error = True
+                elif planned_start_dt <= start_ma_dt <= planned_end_dt:
+                    logging.info(
+                        f"Machine {ma_name[m]} wordt niet ingepland, want {start_dt} "
+                        f"ligt binnen de vorige planning(1): {planned_start_dt}"
                     )
                     error = True
                 elif ready_ma_dt + dt.timedelta(days=1) <= tijd[U - 1]:
@@ -1968,10 +2007,13 @@ class DaCalc(DaBase):
                         f"ligt voorbij begin vorige planning(2): {planned_start_dt}"
                     )
                     error = True
+                """
+
+
             if error:
                 kw_num = 0
             else:
-                delta = ready_ma_dt - start_ma_dt
+                delta = end_window_dt - max(start_opt, start_window_dt)
                 # aantal kwartieren in planningsperiode
                 kw_num = math.ceil(delta.seconds / 900)
             KW.append(kw_num)
@@ -1984,12 +2026,13 @@ class DaCalc(DaBase):
                 if kw_num > 0:
                     logging.info(
                         f"Apparaat {ma_name[m]} met programma '{program_selected[m]}' "
-                        f"wordt ingepland tussen {start_ma_dt.strftime('%Y-%m-%d %H:%M')} "
-                        f"en {ready_ma_dt.strftime('%Y-%m-%d %H:%M')}."
+                        f"wordt ingepland tussen "
+                        f"{max(start_opt, start_window_dt).strftime('%Y-%m-%d %H:%M')} "
+                        f"en {end_window_dt.strftime('%Y-%m-%d %H:%M')}."
                     )
             # het eerste tijdstip waarop de run kan beginnen
             start_ma_dt = dt.datetime.fromtimestamp(
-                900 * math.ceil(max(start_ma_dt, start_dt).timestamp() / 900)
+                900 * math.ceil(max(start_window_dt, start_opt).timestamp() / 900)
             )
 
             # ma_uur_kw: per machine per uur een lijst van kwartiernummers in het betreffende uur
@@ -2080,13 +2123,16 @@ class DaCalc(DaBase):
                     print()
 
             for kw in range(KW[m]):
-                model += c_ma_kw[m][kw] == xsum(
-                    self.machines[m]["programs"][program_index[m]]["power"][kw - r]
-                    * ma_start[m][r]
-                    # 4000 = omrekenen van kwartier vermogen in W naar verbruik in kWh
-                    / 4000
-                    # van alle mogelijke runs de kwartieren
-                    for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]
+                model += (
+                    c_ma_kw[m][kw]
+                    == xsum(
+                        self.machines[m]["programs"][program_index[m]]["power"][kw - r]
+                        * ma_start[m][r]
+                        # 4000 = omrekenen van kwartier vermogen in W naar verbruik in kWh
+                        / 4000
+                        # van alle mogelijke runs de kwartieren
+                        for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]
+                    )
                 )
             for u in range(U):
                 if len(ma_uur_kw[m][u]) == 0:
@@ -2207,20 +2253,19 @@ class DaCalc(DaBase):
         model.check_optimization_results()
 
         # kosten optimalisering
-        strategy = self.strategy.lower()
-        if strategy == "minimize cost":
+        if self.strategy == "minimize cost":
             strategie = "minimale kosten"
             model.objective = minimize(cost)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing  voor: {strategy}")
+                logging.warning(f"Geen oplossing  voor: {self.strategy}")
                 return
-        elif strategy == "minimize consumption":
+        elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
             model.objective = minimize(delivery)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing  voor: {strategy}")
+                logging.warning(f"Geen oplossing  voor: {self.strategy}")
                 return
             min_delivery = max(0.0, delivery.x)
             logging.info("Eerste berekening")
@@ -2233,7 +2278,9 @@ class DaCalc(DaBase):
                 model.objective = minimize(delivery)
                 model.optimize()
                 if model.num_solutions == 0:
-                    logging.warning(f"Geen oplossing in na herberekening voor: {self.strategy}")
+                    logging.warning(
+                        f"Geen oplossing in na herberekening voor: {self.strategy}"
+                    )
                     return
             logging.info("Herberekening")
             logging.info(f"Kosten (euro): {cost.x:<6.2f}")
@@ -2329,7 +2376,7 @@ class DaCalc(DaBase):
             taxes_l = get_value_from_dict(dag_str, taxes_l_def)
             btw = get_value_from_dict(dag_str, btw_def)
             saldeer_corr_gc = -sum_old_cons * (sum(p_grt) / len(p_grt) - 0.11)
-            saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw)
+            saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw / 100)
             old_cost_gc += saldeer_corr_gc
             old_cost_da += saldeer_corr_da
             logging.info(f"Saldeercorrectie: {sum_old_cons:<6.2f} kWh")
@@ -2349,9 +2396,7 @@ class DaCalc(DaBase):
         logging.info(
             f"Niet geoptimaliseerd, kosten met day ahead tarieven: {old_cost_da:<6.2f}"
         )
-        logging.info(
-            f"Geoptimaliseerd, kosten met day ahead tarieven: {sum_opt_cost:<6.2f}, {cost.x:<6.2f}"
-        )
+        logging.info(f"Geoptimaliseerd, kosten met day ahead tarieven: {cost.x:<6.2f}")
         logging.info(f"Levering: {delivery.x:<6.2f} (kWh)")
         if self.boiler_present:
             boiler_at_23 = (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (
