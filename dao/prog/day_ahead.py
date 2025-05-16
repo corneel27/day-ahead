@@ -1772,8 +1772,10 @@ class DaCalc(DaBase):
                 inplannen = False
                 # planning is voor vandaag
                 if ((planned_end_dt.day != start_opt.day and planned_end_dt < start_opt) or
-                        # begin planning is na start_opt
-                        (start_opt < planned_start_dt)):
+                    # begin planning is na start_opt
+                    ((planned_end_dt < start_opt) and (start_window_dt >=planned_end_dt)) or
+                    (start_opt < planned_start_dt)
+                ):
                     inplannen = True
                 else: # start_opt >= planned_start_dt:
                     if start_opt <= planned_end_dt:
@@ -1782,7 +1784,7 @@ class DaCalc(DaBase):
                             f"Machine {ma_name[m]} wordt niet ingepland, want "
                             f"de berekende planning wordt nu uitgevoerd"
                         )
-                    elif start_opt <= end_window_dt:
+                    elif start_opt <= end_window_dt: # dus start_opt > plannend_end
                         error = True
                         logging.info(
                             f"Machine {ma_name[m]} wordt niet ingepland, want "

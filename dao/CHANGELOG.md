@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# [V2025.5.0 rc5a]
+There were still issues with machine planning. These are fixed.
+
 # [V2025.5.0]
 
 - Start with a pre-builded repository on Github (thanks to bvw)
