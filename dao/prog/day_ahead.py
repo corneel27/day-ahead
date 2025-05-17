@@ -30,10 +30,10 @@ class DaCalc(DaBase):
         super().__init__(file_name=file_name)
         if self.config is None:
             return
-        self.interval = self.config.get(["interval"], None, "hour").lower()
-        self.interval_s = 3600 if self.interval == "hour" else 900
-        self.interval_name = "uur" if self.interval == "hour" else "15min"
-        self.steps_day = 24 if self.interval == "hour" else 96
+        self.interval = self.config.get(["interval"], None, "1hour").lower()
+        self.interval_s = 3600 if self.interval == "1hour" else 900
+        self.interval_name = "uur" if self.interval == "1hour" else "15min"
+        self.steps_day = 24 if self.interval == "1hour" else 96
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
         self.battery_options = self.config.get(["battery"])
@@ -1927,8 +1927,10 @@ class DaCalc(DaBase):
                 inplannen = False
                 # planning is voor vandaag
                 if ((planned_end_dt.day != start_opt.day and planned_end_dt < start_opt) or
-                        # begin planning is na start_opt
-                        (start_opt < planned_start_dt)):
+                    # begin planning is na start_opt
+                    ((planned_end_dt < start_opt) and (start_window_dt >=planned_end_dt)) or
+                    (start_opt < planned_start_dt)
+                ):
                     inplannen = True
                 else: # start_opt >= planned_start_dt:
                     if start_opt <= planned_end_dt:
@@ -1937,7 +1939,7 @@ class DaCalc(DaBase):
                             f"Machine {ma_name[m]} wordt niet ingepland, want "
                             f"de berekende planning wordt nu uitgevoerd"
                         )
-                    elif start_opt <= end_window_dt:
+                    elif start_opt <= end_window_dt: # dus start_opt > plannend_end
                         error = True
                         logging.info(
                             f"Machine {ma_name[m]} wordt niet ingepland, want "
@@ -3066,6 +3068,7 @@ class DaCalc(DaBase):
                 logging.info(f"Apparaat: {ma_name[m]}")
                 logging.info(f"Programma: {program_selected[m]}")
                 if RL[m] > 0:
+                    start_machine_str = ""
                     for r in range(R[m]):
                         if ma_start[m][r].x == 1:
                             # print(f"ma_start: run {r} start {ma_start[m][r].x}")
@@ -3097,6 +3100,8 @@ class DaCalc(DaBase):
                                         datetime=end_machine_str,
                                     )
                                     logging.info(f"Is klaar op {end_machine_str}")
+                    if start_machine_str == "":
+                        logging.info(f"Niet ingepland")
 
                 if self.log_level == logging.DEBUG:
                     logging.debug(
@@ -3166,7 +3171,7 @@ class DaCalc(DaBase):
                 + c_hp[u].x
                 + c_ev_sum[u]
                 + c_ma_sum[u]
-                + accu_in_sum,
+                + accu_in_sum * hour_fraction[u],
             )
         soc_t = []
         if B > 0:
@@ -3204,7 +3209,8 @@ class DaCalc(DaBase):
             "title": "Prognose berekend op: " + start_dt.strftime("%Y-%m-%d %H:%M"),
             "style": style,
             "haxis": {"values": "uur", "title": "uren van de dag"},
-            "graphs": [{
+            "graphs": [
+                {
                     "vaxis": [{"title": "kWh"}],
                     "series": [
                         {"column": "verbruik", "type": "stacked", "color": "#00bfff"},
@@ -3233,7 +3239,12 @@ class DaCalc(DaBase):
                             "type": "stacked",
                             "color": "#a32cc4",
                         },
-                        {"column": "ev", "title": "EV", "type": "stacked", "color": "yellow"},
+                        {
+                            "column": "ev",
+                            "title": "EV",
+                            "type": "stacked",
+                            "color": "yellow",
+                        },
                         {
                             "column": "mach",
                             "title": "App.",
@@ -3253,8 +3264,8 @@ class DaCalc(DaBase):
                             "color": "#ff8000",
                         },
                     ],
-            }
-            ]
+                }
+            ],
         }
 
         backend = self.config.get(["graphical backend"], None, "")
@@ -3335,7 +3346,7 @@ class DaCalc(DaBase):
             axis[0].bar(
                 ind,
                 np.array(heatpump_n),
-                bottom=np.array(base_n),
+                bottom=np.array(base_n) + np.array(boiler_n),
                 label="WP",
                 color="#a32cc4",
                 align="edge",
@@ -3377,7 +3388,7 @@ class DaCalc(DaBase):
         ylim = math.ceil(max_y)
         axis[0].set_ylim([-ylim, ylim])
         axis[0].set_xticks(ind, labels=uur_labels)
-        if self.interval == "hour":
+        if self.interval == "1hour":
             ticker_multi = 2
             ticker_offset = 0
         else:
@@ -3429,7 +3440,7 @@ class DaCalc(DaBase):
             axis[1].bar(
                 ind,
                 np.array(heatpump_n),
-                bottom=np.array(base_n),
+                bottom=np.array(base_n) + np.array(boiler_n),
                 label="WP",
                 color="#a32cc4",
                 align="edge",
@@ -3568,7 +3579,7 @@ class DaCalc(DaBase):
                 axis_20 = axis[gr_no].twinx()
                 leg4 = axis_20.plot(
                     ind, soc_b[b], label="% SoC", linestyle="solid", color="olive"
-                )
+                )[0]
                 axis_20.set_ylabel("% SoC")
                 axis_20.set_ylim([0, 100])
                 soc_line = mlines.Line2D([], [], color="olive", label="SoC %")

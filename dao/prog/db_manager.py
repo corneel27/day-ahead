@@ -319,7 +319,7 @@ class DBmanagerObj(object):
             connection.close()
         self.log_pool_status()
 
-    def get_prognose_field(self, field: str, start, end=None, interval="hour"):
+    def get_prognose_field(self, field: str, start, end=None, interval="1hour"):
         values_table = Table("values", self.metadata, autoload_with=self.engine)
         t1 = values_table.alias("t1")
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
@@ -363,10 +363,10 @@ class DBmanagerObj(object):
         df["tijd"] = pd.to_datetime(df["tijd"])
         return df
 
-    def get_prognose_data(self, start, end=None, interval="hour"):
+    def get_prognose_data(self, start, end=None, interval="1hour"):
         values_table = Table("values", self.metadata, autoload_with=self.engine)
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
-        if interval == "hour":
+        if interval == "1hour":
             # Aliases for the values table
             t1 = values_table.alias("t1")
             t2 = values_table.alias("t2")
