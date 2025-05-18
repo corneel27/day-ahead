@@ -208,7 +208,7 @@ class DaCalc(DaBase):
             if entity == "":
                 entity = None
             entity_pv_ac_switch.append(entity)
-            max_solar_power.append(self.config.get(["max_power"], self.solar[s], None))
+            max_solar_power.append(self.config.get(["max power"], self.solar[s], None))
 
         time_first_hour = dt.datetime.fromtimestamp(prog_data["time"].iloc[0])
         first_hour = int(time_first_hour.hour)
@@ -247,6 +247,8 @@ class DaCalc(DaBase):
                     * pv_yield[s]
                     * hour_fraction[-1]
                 )
+                if not max_solar_power[s] is None:
+                    prod = min(prod, max_solar_power[s])
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org_ac.append(pv_total)
@@ -260,6 +262,9 @@ class DaCalc(DaBase):
                         * self.battery_options[b]["solar"][s]["yield"]
                         * hour_fraction[-1]
                     )
+                    dc_max_power = self.config.get(["max power"], self.battery_options[b]["solar"][s], None)
+                    if not dc_max_power is None:
+                        prod = min (prod, dc_max_power)
                     pv_total += prod
             pv_org_dc.append(pv_total)
 
@@ -374,9 +379,7 @@ class DaCalc(DaBase):
                 model.add_var(
                     var_type=CONTINUOUS,
                     lb=0,
-                    ub=solar_prod[s][u]
-                    if max_solar_power[s] is None
-                    else min(solar_prod[s][u], max_solar_power[s]),
+                    ub=solar_prod[s][u],
                 )
                 for u in range(U)
             ]
@@ -1752,6 +1755,13 @@ class DaCalc(DaBase):
             if end_window_dt < start_opt:
                 start_window_dt += dt.timedelta(days=1)
                 end_window_dt += dt.timedelta(days=1)
+            if end_window_dt > tijd[U-1]:
+                error = True
+                logging.info(
+                    f"Machine {ma_name[m]} wordt niet ingepland, want "
+                    f"het planning-window ligt voorbij einde optimalisering"
+                )
+
             # ready_ma_dt += dt.timedelta(days=1)
             '''
             vandaag			
