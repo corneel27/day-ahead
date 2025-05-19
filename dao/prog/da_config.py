@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+
 # from logging import raiseExceptions
 from dao.prog.db_manager import DBmanagerObj
 import sqlalchemy_utils
@@ -95,9 +96,13 @@ class Config:
             db_ha_server = self.get(["database ha", "server"], None, "core-mariadb")
             db_ha_port = int(self.get(["database ha", "port"], None, 0))
             if db_ha_engine == "sqlite":
-                db_ha_name = self.get(["database ha", "database"], None, "home-assistant_v2.db")
+                db_ha_name = self.get(
+                    ["database ha", "database"], None, "home-assistant_v2.db"
+                )
             else:
-                db_ha_name = self.get(["database ha", "database"], None, "homeassistant")
+                db_ha_name = self.get(
+                    ["database ha", "database"], None, "homeassistant"
+                )
             db_ha_user = self.get(["database ha", "username"], None, "homeassistant")
             db_ha_password = self.get(["database ha", "password"])
             db_ha_path = self.get(["database ha", "db_path"], None, "/homeassistant")

@@ -1,6 +1,6 @@
 import calendar
 import datetime
-from unittest.mock import inplace
+# from unittest.mock import inplace
 
 import pandas as pd
 import base64
@@ -22,7 +22,9 @@ import matplotlib.pyplot as plt
 class Report:
     periodes = {}
 
-    def __init__(self, file_name: str = "../data/options.json", _now: datetime.datetime = None):
+    def __init__(
+        self, file_name: str = "../data/options.json", _now: datetime.datetime = None
+    ):
         self.config = Config(file_name)
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
@@ -52,7 +54,7 @@ class Report:
                         ["entities grid consumption"], self.report_options, []
                     ),
                     "tabel": True,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#00bfff",
                 },
                 "prod_zonder": {
@@ -65,7 +67,7 @@ class Report:
                         ["entities grid production"], self.report_options, []
                     ),
                     "tabel": True,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#0080ff",
                 },
                 "netto_cons_zonder": {
@@ -87,7 +89,7 @@ class Report:
                         ["entities grid consumption"], self.report_options, []
                     ),
                     "tabel": True,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#00bfff",
                 },
                 "prod": {
@@ -100,7 +102,7 @@ class Report:
                         ["entities grid production"], self.report_options, []
                     ),
                     "tabel": True,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#0080ff",
                 },
                 "netto_cons_met": {
@@ -130,7 +132,7 @@ class Report:
                         ["entities battery production"], self.report_options, []
                     ),
                     "tabel": False,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "red",
                 },
                 "bat_in": {
@@ -144,11 +146,11 @@ class Report:
                     "tabel": False,
                     "agg": "sum",
                 },
-            }
+            },
         }
 
         self.saving_cost_dict = {
-            "calc_interval" : "uur",
+            "calc_interval": "uur",
             "series": {
                 "cons": {
                     "dim": "kWh",
@@ -159,7 +161,7 @@ class Report:
                         ["entities grid consumption"], self.report_options, []
                     ),
                     "tabel": False,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#00bfff",
                 },
                 "prod": {
@@ -171,7 +173,7 @@ class Report:
                         ["entities grid production"], self.report_options, []
                     ),
                     "tabel": False,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#0080ff",
                 },
                 "bat_out": {
@@ -183,7 +185,7 @@ class Report:
                         ["entities battery production"], self.report_options, []
                     ),
                     "tabel": False,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "red",
                 },
                 "bat_in": {
@@ -277,12 +279,12 @@ class Report:
                     "color": "#ff8000",
                     "tabel": True,
                     "agg": "sum",
-                }
-            }
+                },
+            },
         }
 
         self.saving_co2_dict = {
-            "calc_interval" : "uur",
+            "calc_interval": "uur",
             "series": {
                 "netto_cons_zonder": {
                     "dim": "kWh",
@@ -312,7 +314,7 @@ class Report:
                         ["entities grid consumption"], self.report_options, []
                     ),
                     "tabel": False,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#00bfff",
                 },
                 "prod": {
@@ -324,7 +326,7 @@ class Report:
                         ["entities grid production"], self.report_options, []
                     ),
                     "tabel": False,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#0080ff",
                 },
                 "netto_cons": {
@@ -379,7 +381,7 @@ class Report:
                     "width": 0.7,
                     "name": "CO2 emissie",
                     "source": "calc",
-                    "agg" : "sum"
+                    "agg": "sum",
                 },
                 "saving": {
                     "dim": "kg CO2",
@@ -389,12 +391,12 @@ class Report:
                     "color": "#ff8000",
                     "tabel": True,
                     "agg": "sum",
-                }
-            }
+                },
+            },
         }
 
         self.calc_co2_emission_dict = {
-            "calc_interval" : "uur",
+            "calc_interval": "uur",
             "with header": False,
             "series": {
                 "cons": {
@@ -406,7 +408,7 @@ class Report:
                         ["entities grid consumption"], self.report_options, []
                     ),
                     "tabel": False,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#00bfff",
                 },
                 "prod": {
@@ -418,7 +420,7 @@ class Report:
                         ["entities grid production"], self.report_options, []
                     ),
                     "tabel": False,
-                    "agg" : "sum",
+                    "agg": "sum",
                     "color": "#0080ff",
                 },
                 "netto_cons": {
@@ -448,9 +450,9 @@ class Report:
                     "type": "bar",
                     "name": "CO2 emissie",
                     "source": "calc",
-                    "agg" : "sum"
+                    "agg": "sum",
                 },
-            }
+            },
         }
 
         self.energy_balance_dict = {
@@ -690,14 +692,10 @@ class Report:
                     "vaxis": [{"title": "kWh"}],
                     "align_zeros": "True",
                     "series": [
-                        {
-                            "column": "saving",
-                            "title": "Besparing",
-                            "name": "Besparing"
-                        }
-                    ]
+                        {"column": "saving", "title": "Besparing", "name": "Besparing"}
+                    ],
                 }
-            ]
+            ],
         }
 
         self.saving_cost_graph_options = {
@@ -709,14 +707,10 @@ class Report:
                     "vaxis": [{"title": "eur"}],
                     "align_zeros": "True",
                     "series": [
-                        {
-                            "column": "saving",
-                            "title": "Besparing",
-                            "name": "Besparing"
-                        }
-                    ]
+                        {"column": "saving", "title": "Besparing", "name": "Besparing"}
+                    ],
                 }
-            ]
+            ],
         }
 
         self.saving_co2_graph_options = {
@@ -728,23 +722,19 @@ class Report:
                     "vaxis": [{"title": "kg CO2"}],
                     "align_zeros": "True",
                     "series": [
-                        {
-                            "column": "saving",
-                            "title": "Besparing",
-                            "name": "Besparing"
-                        }
-                    ]
+                        {"column": "saving", "title": "Besparing", "name": "Besparing"}
+                    ],
                 }
-            ]
+            ],
         }
-        '''
+        """
         self.saving_cost_graph_options = self.saving_cons_graph_options.copy()
         self.saving_cost_graph_options['title'] = "Besparing kosten door batterij"
         self.saving_cost_graph_options["graphs"][0]["vaxis"] = [{"title": "eur"}]
         self.saving_co2_graph_options = self.saving_cons_graph_options.copy()
         self.saving_co2_graph_options['title'] = "Besparing CO2-emissie door batterij"
         self.saving_co2_graph_options["graphs"][0]["vaxis"] = [{"title": "kg CO2"}]
-        '''
+        """
         return
 
     def make_periodes(self, _now: datetime.datetime = None):
@@ -814,6 +804,11 @@ class Report:
         vanaf = datetime.datetime.strptime(
             self.prices_options["last invoice"], "%Y-%m-%d"
         )
+        if vanaf + datetime.timedelta(days=366) < vanaf_m:
+            logging.warning(
+                f'"last invoice" ({self.prices_options["last invoice"]}) is verouderd en moet worden bijgewerkt'
+            )
+            vanaf = vanaf_m - datetime.timedelta(days=366)
         tot = max_tot
         self.periodes.update(create_dict("dit contractjaar", vanaf, tot, "maand"))
 
@@ -908,11 +903,11 @@ class Report:
             t2 = statistics.alias("t2")
             if agg == "maand":
                 column = self.db_ha.month(t2.c.start_ts).label("maand")
-                column2 = self.db_da.month_start(t2.c.start_ts).label("tijd")
+                column2 = func.min(self.db_ha.month_start(t2.c.start_ts)).label("tijd")
             elif agg == "dag":
                 column = self.db_ha.day(t2.c.start_ts).label("dag")
-                column2 = self.db_da.day_start(t2.c.start_ts).label("tijd")
-            else:  # interval == "uur"
+                column2 = func.min(self.db_ha.day_start(t2.c.start_ts)).label("tijd")
+            else:  # interval == "uur
                 column = self.db_ha.hour(t2.c.start_ts).label("uur")
                 column2 = self.db_ha.from_unixtime(t2.c.start_ts).label("tijd")
 
@@ -1238,7 +1233,6 @@ class Report:
         return
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
-
         def get_datasoort(ds):
             for s in ds:
                 if s == "expected":
@@ -1421,7 +1415,7 @@ class Report:
         result = pd.DataFrame(columns=[rep_interval, "tijd", "tot", "datasoort"])
         moment = vanaf
         now = datetime.datetime.now()
-        now = datetime.datetime(now.year,now.month, now.day,now.hour)
+        now = datetime.datetime(now.year, now.month, now.day, now.hour)
         if get_interval is None:
             step_interval = rep_interval
         else:
@@ -1709,7 +1703,7 @@ class Report:
         tot: datetime.datetime,
         get_interval: str,
         rep_interval: str,
-        table: str = "values"
+        table: str = "values",
     ) -> pd.DataFrame:
         """
         genereert een dataframe van de data in de da-database
@@ -1767,7 +1761,7 @@ class Report:
                     < self.db_da.unix_timestamp(tot.strftime("%Y-%m-%d %H:%M:%S")),
                 )
             )
-           .group_by(groupby_str)
+            .group_by(groupby_str)
         )
 
         with self.db_da.engine.connect() as connection:
@@ -1800,12 +1794,19 @@ class Report:
         for key in columns:
             if calc_dict["series"][key]["source"] == "db":
                 result[key] = 0.0
-                df_column = self.get_da_data(key, vanaf, tot, get_interval=get_interval,
-                                             rep_interval=rep_interval)
+                df_column = self.get_da_data(
+                    key,
+                    vanaf,
+                    tot,
+                    get_interval=get_interval,
+                    rep_interval=rep_interval,
+                )
                 if len(df_column) == 0:
                     last_moment = vanaf
                 else:
-                    last_moment = df_column["tot"].iloc[-1] + datetime.timedelta(hours=1)
+                    last_moment = df_column["tot"].iloc[-1] + datetime.timedelta(
+                        hours=1
+                    )
                 self.add_col_df(df_column, result, key)
                 if last_moment < tot:
                     if "sensor_type" in calc_dict["series"][key]:
@@ -1814,15 +1815,30 @@ class Report:
                         sensor_type = "quantity"
                     vanaf_ha = last_moment
                     for sensor in calc_dict["series"][key]["sensors"]:
-                        ha_data = self.get_sensor_data(sensor, vanaf_ha, tot, key,
-                                                       interval, sensor_type=sensor_type)
+                        ha_data = self.get_sensor_data(
+                            sensor,
+                            vanaf_ha,
+                            tot,
+                            key,
+                            interval,
+                            sensor_type=sensor_type,
+                        )
                         ha_data[key].fillna(0.0)
                         self.add_col_df(ha_data, result, key)
                         if len(ha_data) > 0:
-                            last_moment = max(last_moment, ha_data["tot"].iloc[-1] + datetime.timedelta(hours=1))
+                            last_moment = max(
+                                last_moment,
+                                ha_data["tot"].iloc[-1] + datetime.timedelta(hours=1),
+                            )
                 if last_moment < tot:
-                    df_column = self.get_da_data(key, last_moment, tot, get_interval=get_interval,
-                                                 rep_interval=rep_interval, table="prognoses")
+                    df_column = self.get_da_data(
+                        key,
+                        last_moment,
+                        tot,
+                        get_interval=get_interval,
+                        rep_interval=rep_interval,
+                        table="prognoses",
+                    )
                     self.add_col_df(df_column, result, key)
             elif calc_dict["series"][key]["source"] == "prices":
                 if not key in result.columns:
@@ -2094,7 +2110,7 @@ class Report:
 
     def agg_interval(self, calc_dict: dict, input_df: pd.DataFrame, rep_interval: str):
         if rep_interval != "uur":
-            agg_dict = { }
+            agg_dict = {}
             columns = input_df.columns
             for key in list(calc_dict["series"].keys()):
                 if key in columns:
@@ -2102,8 +2118,15 @@ class Report:
             result_df = input_df.groupby([rep_interval], as_index=False).agg(agg_dict)
             return result_df
         return input_df
-        
-    def clean_df(self, calc_dict: dict, df_input: pd.DataFrame, rep_columns: list, active_view: str, rep_interval: str):
+
+    def clean_df(
+        self,
+        calc_dict: dict,
+        df_input: pd.DataFrame,
+        rep_columns: list,
+        active_view: str,
+        rep_interval: str,
+    ):
         """
 
         :param calc_dict:
@@ -2113,7 +2136,7 @@ class Report:
         :param rep_interval:
         :return:
         """
-        df_result =pd.DataFrame(columns = [rep_interval] + rep_columns)
+        df_result = pd.DataFrame(columns=[rep_interval] + rep_columns)
         df_result[rep_interval] = df_input[rep_interval]
         for column in rep_columns:
             df_result[column] = df_input[column]
@@ -2124,7 +2147,7 @@ class Report:
             df_result[rep_interval] = df_result[rep_interval].astype(object)
             df_result.at[df_result.index[-1], rep_interval] = "Totaal"
             if "with header" in calc_dict:
-                with_header = calc_dict['with header']
+                with_header = calc_dict["with header"]
             else:
                 with_header = True
             if with_header:
@@ -2145,12 +2168,12 @@ class Report:
         return df_result
 
     def calc_report(
-            self,
-            active_period: str,
-            active_interval: str | None = None,
-            active_view: str = "table",
-            _tot: datetime.datetime | None = None,
-    )-> pd.DataFrame:
+        self,
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None,
+    ) -> pd.DataFrame:
         return
 
     def calc_saving_consumption(
@@ -2179,19 +2202,29 @@ class Report:
         df["netto_cons_zonder"] = df["cons_zonder"] - df["prod_zonder"]
         df["netto_cons_met"] = df["cons"] - df["prod"]
         df["saving"] = df["netto_cons_zonder"] - df["netto_cons_met"]
-        df_result = self.clean_df(calc_dict, df,
-                                  [ "cons_zonder", "prod_zonder", "netto_cons_zonder",
-                                    "cons", "prod", "netto_cons_met",
-                                   "saving"], active_view,
-                                  self.periodes[active_period]["interval"])
+        df_result = self.clean_df(
+            calc_dict,
+            df,
+            [
+                "cons_zonder",
+                "prod_zonder",
+                "netto_cons_zonder",
+                "cons",
+                "prod",
+                "netto_cons_met",
+                "saving",
+            ],
+            active_view,
+            self.periodes[active_period]["interval"],
+        )
         return df_result
 
     @staticmethod
-    def split_column(df:pd.DataFrame, col0: str, col1: str, col2: str) -> pd.DataFrame:
+    def split_column(df: pd.DataFrame, col0: str, col1: str, col2: str) -> pd.DataFrame:
         mask1 = df[col0] < 0
         mask2 = df[col0] >= 0
         df[col1] = df[col0].mask(mask1)
-        df[col2] = - df[col0].mask(mask2)
+        df[col2] = -df[col0].mask(mask2)
         df[col1] = df[col1].fillna(0.0)
         df[col2] = df[col2].fillna(0.0)
         # df.fillna(0.0, inplace=True)
@@ -2202,7 +2235,7 @@ class Report:
         active_period: str,
         active_interval: str | None = None,
         active_view: str = "table",
-        _tot: datetime.datetime | None = None
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2227,10 +2260,21 @@ class Report:
         df["profit_zonder"] = df["prod_zonder"] * df["da_prod"]
         df["netto_cost_zonder"] = df["cost_zonder"] - df["profit_zonder"]
         df["saving"] = df["netto_cost_zonder"] - df["netto_cost"]
-        df_result = self.clean_df(calc_dict, df,
-                                  ["cost_zonder", "profit_zonder", "netto_cost_zonder",
-                                   "cost", "profit", "netto_cost", "saving"],
-                                  active_view, self.periodes[active_period]["interval"])
+        df_result = self.clean_df(
+            calc_dict,
+            df,
+            [
+                "cost_zonder",
+                "profit_zonder",
+                "netto_cost_zonder",
+                "cost",
+                "profit",
+                "netto_cost",
+                "saving",
+            ],
+            active_view,
+            self.periodes[active_period]["interval"],
+        )
         return df_result
 
     def calc_saving_co2(
@@ -2238,7 +2282,7 @@ class Report:
         active_period: str,
         active_interval: str | None = None,
         active_view: str = "table",
-        _tot: datetime.datetime | None = None
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2259,18 +2303,27 @@ class Report:
         df["netto_cons"] = df["cons"] - df["prod"]
         df["emissie_met"] = df["netto_cons"] * df["co2_intensity"] / 1000
         df["saving"] = df["emissie_zonder"] - df["emissie_met"]
-        df_result = self.clean_df(calc_dict, df,
-                                  ["netto_cons_zonder", "emissie_zonder",
-                                   "netto_cons", "emissie_met", "saving"],
-                                  active_view, self.periodes[active_period]["interval"])
+        df_result = self.clean_df(
+            calc_dict,
+            df,
+            [
+                "netto_cons_zonder",
+                "emissie_zonder",
+                "netto_cons",
+                "emissie_met",
+                "saving",
+            ],
+            active_view,
+            self.periodes[active_period]["interval"],
+        )
         return df_result
 
     def calc_co2_emission(
-            self,
-            active_period: str,
-            active_interval: str | None = None,
-            active_view: str = "table",
-            _tot: datetime.datetime | None = None
+        self,
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2284,11 +2337,14 @@ class Report:
         df = self.get_columns(calc_dict, active_period, _tot)
         df["netto_cons"] = df["cons"] - df["prod"]
         df["emissie"] = df["netto_cons"] * df["co2_intensity"] / 1000
-        df_result = self.clean_df(calc_dict, df,
-                                  ["cons", "prod", "netto_cons", "co2_intensity", "emissie"],
-                                  active_view, self.periodes[active_period]["interval"])
+        df_result = self.clean_df(
+            calc_dict,
+            df,
+            ["cons", "prod", "netto_cons", "co2_intensity", "emissie"],
+            active_view,
+            self.periodes[active_period]["interval"],
+        )
         return df_result
-
 
     @staticmethod
     def get_last_day_month(input_dt: datetime):
@@ -2297,7 +2353,6 @@ class Report:
         return res[1]
 
     def calc_grid_columns(self, report_df, active_interval, active_view):
-
         first_col = active_interval.capitalize()
         # if active_subject == "verbruik":
         #    columns.extend(["Verbruik", "Productie", "Netto"])
@@ -2449,7 +2504,7 @@ class Report:
         report_df = report_df.drop("tot", axis=1)
         report_df = report_df.drop("datasoort", axis=1)
         if "datasoort" in report_df.columns:
-            report_df =  report_df.drop("datasoort", axis=1)
+            report_df = report_df.drop("datasoort", axis=1)
         key_columns = report_df.columns.values.tolist()[1:]
         columns_1 = [first_col]
         columns_2 = [""]
@@ -2467,7 +2522,7 @@ class Report:
 
         return report_df
 
-    '''
+    """
     def calc_co2_columns(self, report_df, active_interval, active_view):
         first_col = active_interval.capitalize()
         # report_df = report_df.drop('vanaf', axis=1)
@@ -2514,7 +2569,7 @@ class Report:
             report_df.columns = columns_1
 
         return report_df
-    '''
+    """
 
     #  ------------------------------------------------
     def get_sensor_week_data(
@@ -2831,9 +2886,7 @@ class Report:
         df = self.db_da.get_column_data("prognoses", field, start=start, end=end)
         return df
 
-    def get_api_data(
-        self, field: str, _periode: str, cumulate: bool = False
-    ):
+    def get_api_data(self, field: str, _periode: str, cumulate: bool = False):
         periode = _periode.replace("_", " ")
         if not periode in self.periodes.keys():
             result = f'{{"message": "Failed", "raison": "Periode: \'{_periode}\' is not allowed"}}'
@@ -2876,9 +2929,9 @@ class Report:
             if not (field in self.energy_balance_dict):
                 result = f'{{"message":"Failed", "raison": "field: \'{field}\' is not allowed"}}'
                 return result
-            '''
+            """
             df = self.get_field_data(field, periode)
-            '''
+            """
             df_balance = self.get_energy_balance_data(periode, field=field, _tot=tot)
             df_balance["time"] = df_balance["tijd"]
             df = df_balance[["time", field, "datasoort"]].copy()
@@ -2887,7 +2940,7 @@ class Report:
             df.rename({field: "value"}, axis=1, inplace=True)
 
         df["time"] = pd.to_datetime(df["time"])
-        time_zone = self.config.get(["time_zone"], None, 'Europe/Amsterdam')
+        time_zone = self.config.get(["time_zone"], None, "Europe/Amsterdam")
         df["time_ts"] = df["time"].dt.tz_localize(time_zone)
         df["time"] = df["time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
         df.rename(columns={"datasoort": "datatype"}, inplace=True)
@@ -2895,11 +2948,7 @@ class Report:
         cols = cols[-1:] + cols[:-1]
         df = df[cols]
         data_json = df.to_json(orient="records")
-        result = (
-            '{ "message":"Success", "data": '
-            + data_json
-            + " }"
-        )
+        result = '{ "message":"Success", "data": ' + data_json + " }"
         return result
 
     def make_graph(self, df, period, _options=None):
@@ -2948,7 +2997,9 @@ class Report:
             }
         options["title"] = options["title"] + " " + period
         options["haxis"] = {
-            "values": self.periodes[period]["interval"] if self.periodes[period]["interval"] in df else self.periodes[period]["interval"].capitalize(),
+            "values": self.periodes[period]["interval"]
+            if self.periodes[period]["interval"] in df
+            else self.periodes[period]["interval"].capitalize(),
             "title": self.periodes[period]["interval"],
         }
 
@@ -2960,5 +3011,3 @@ class Report:
         report_data = base64.b64encode(buf.getbuffer()).decode("ascii")
         plt.close(fig)
         return report_data
-
-

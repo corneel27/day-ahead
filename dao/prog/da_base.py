@@ -16,13 +16,13 @@ from version import __version__
 from dao.prog.da_config import Config
 from da_meteo import Meteo
 from da_prices import DaPrices
+
 # from db_manager import DBmanagerObj
 from typing import Union
 from hassapi.models import StateList
 
 
 class NotificationHandler(Handler):
-
     def __init__(self, _hass: hass.Hass, _entity=None):
         """
         Initialize the handler.
@@ -37,12 +37,11 @@ class NotificationHandler(Handler):
             if record.levelno >= logging.ERROR:
                 self.count += 1
             msg = self.format(record)
-            msg = msg.partition('\n')[0]
+            msg = msg.partition("\n")[0]
             self.hass.set_value(self.entity, msg)
 
 
 class DaBase(hass.Hass):
-
     def __init__(self, file_name: str = None):
         self.file_name = file_name
         path = os.getcwd()
@@ -409,7 +408,7 @@ class DaBase(hass.Hass):
         # dacalc = DaCalc("../data/options_fac.json")
         dacalc.debug = True
         dacalc.calc_optimum()
-        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 4, 17, 13))
+        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 5, 17, 7))
 
     def calc_optimum(self):
         from day_ahead import DaCalc
@@ -465,8 +464,9 @@ class DaBase(hass.Hass):
             stream_handler.setLevel(self.log_level)
             logger.addHandler(stream_handler)
         if self.notification_entity is not None:
-            notification_handler = NotificationHandler(_hass=super(),
-                                                       _entity=self.notification_entity)
+            notification_handler = NotificationHandler(
+                _hass=super(), _entity=self.notification_entity
+            )
             notification_handler.setFormatter(formatter)
             logger.addHandler(notification_handler)
         self.start_logging()
@@ -481,7 +481,7 @@ class DaBase(hass.Hass):
             self.set_last_activity()
             self.db_da.log_pool_status()
         except Exception:
-            logging.exception('Er is een fout opgetreden, zie de fout-tracering')
+            logging.exception("Er is een fout opgetreden, zie de fout-tracering")
             raise
 
         if logfile:

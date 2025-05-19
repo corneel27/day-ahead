@@ -12,7 +12,7 @@ RUN apt-get upgrade -y
 
 #handige tools
 RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev
-RUN apt-get install -y postgresql-client sqlite3 gcc
+RUN apt-get install -y postgresql-client sqlite3 gcc libjpeg-dev
 
 # Copy software for add-on
 RUN mkdir /root/dao
@@ -64,4 +64,10 @@ EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
 ENTRYPOINT  ["/bin/bash", "./run.sh"]
+
+# Labels
+LABEL \
+    io.hass.arch="${BUILD_ARCH}" \
+    io.hass.type="addon" \
+    io.hass.version=${BUILD_VERSION}
 

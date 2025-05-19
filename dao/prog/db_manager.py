@@ -69,8 +69,8 @@ class DBmanagerObj(object):
                 f"postgresql+psycopg2://{self.user}:{self.password}@"
                 f"{self.server}/{self.db_name}"
             )
-#             with self.engine.connect() as connection:
-#                connection.execute(text(f"SET timezone = '{self.TARGET_TIMEZONE}';"))
+        #             with self.engine.connect() as connection:
+        #                connection.execute(text(f"SET timezone = '{self.TARGET_TIMEZONE}';"))
         else:  # sqlite3
             if self.db_path is None:
                 self.db_path = "../data"
@@ -160,9 +160,9 @@ class DBmanagerObj(object):
         elif self.db_dialect == "postgresql":
             return func.extract(
                 "epoch",
-                func.to_timestamp(date_str, 'YYYY-MM-DD hh24:mi:ss')
+                func.to_timestamp(date_str, "YYYY-MM-DD hh24:mi:ss"),
                 # func.timezone(self.TARGET_TIMEZONE, func.cast(date_str, TIMESTAMP)),
-                #EXTRACT(epoch FROM to_timestamp('2025-01-07 00:07:00', 'YYYY-MM-DD hh24:mi:ss'))
+                # EXTRACT(epoch FROM to_timestamp('2025-01-07 00:07:00', 'YYYY-MM-DD hh24:mi:ss'))
             )
         else:  # mysql/mariadb
             return func.unix_timestamp(date_str)
@@ -193,7 +193,7 @@ class DBmanagerObj(object):
                 func.year(func.from_unixtime(column)),
                 "-",
                 func.lpad(func.month(func.from_unixtime(column)), 2, "0"),
-                "-01"
+                "-01",
             )
 
     def day(self, column) -> func:
@@ -403,7 +403,8 @@ class DBmanagerObj(object):
             )
             if end is not None:
                 query = query.where(
-                    t1.c.time < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                    t1.c.time
+                    < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
                 )
             else:
                 start_dt = datetime.datetime.fromtimestamp(start)
@@ -415,7 +416,8 @@ class DBmanagerObj(object):
                 end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
                 end_ts = end_dt.timestamp()
                 query = query.where(
-                    t1.c.time < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
+                    t1.c.time
+                    < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
                 )
 
             query = query.order_by(t1.c.time)
