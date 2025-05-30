@@ -144,7 +144,7 @@ class DaBase(hass.Hass):
         )
         if self.taxes_t_def is None:
             logging.warning(f"Vervang 'redelivery' in je settings door 'production'")
-            taxes_t_def = self.config.get(
+            self.taxes_t_def = self.config.get(
                 ["energy taxes redelivery"], self.prices_options, None
             )
         self.ol_t_def = self.config.get(
