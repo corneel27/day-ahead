@@ -7,12 +7,12 @@ import pytz
 import ephem
 from requests import get
 import matplotlib.pyplot as plt
-import graphs
+import dao.prog.graphs as graphs
 
 # import os, sys
 # sys.path.append(os.path.abspath("../dalib"))
-from da_config import Config
-from db_manager import DBmanagerObj
+from dao.prog.da_config import Config
+from dao.prog.db_manager import DBmanagerObj
 from sqlalchemy import Table, select, func, and_
 
 
@@ -317,7 +317,7 @@ class Meteo:
                     float(row.solar_rad),
                 ]
 
-        if count < 39:
+        if count < 96:
             df1 = self.get_from_meteoserver("gfs")
             for row in df1[count:].itertuples():
                 df_db.loc[df_db.shape[0]] = [
@@ -336,7 +336,7 @@ class Meteo:
                     float(row.solar_rad),
                 ]
                 count += 1
-                if count >= 48:
+                if count >= 96:
                     break
 
         df_tostring = df_db

@@ -15,36 +15,41 @@
     "regular high": 0.50,
     "regular low": 0.40,
     "switch to low": 23,
-    "energy taxes delivery": {
+    "energy taxes consumption": {
       "2022-01-01": 0.06729,
       "2023-01-01": 0.12599,
       "2024-01-01": 0.10880,
       "2025-01-01": 0.10154
     },
-    "energy taxes redelivery": {
+    "energy taxes production": {
       "2022-01-01": 0.06729,
       "2023-01-01": 0.12599,
       "2024-01-01": 0.10880,
       "2025-01-01": 0.10154
     },
-    "cost supplier delivery": {
+    "cost supplier consumption": {
       "2022-01-01": 0.002,
       "2023-03-01": 0.018,
       "2024-04-01": 0.0175,
       "2024-08-01": 0.020496
     },
-    "cost supplier redelivery": {
+    "cost supplier production": {
       "2022-01-01": 0.002,
       "2023-03-01": 0.018,
       "2024-04-01": 0.0175,
       "2024-08-01": 0.020496
     },
-    "vat": {
+    "vat delivery": {
       "2022-01-01": 21,
       "2022-07-01": 9,
       "2023-01-01": 21
     },
-    "last invoice": "2022-09-01",
+    "vat redelivery": {
+      "2022-01-01": 21,
+      "2022-07-01": 9,
+      "2023-01-01": 21
+    },
+   "last invoice": "2022-09-01",
     "tax refund": "True"
   },
   "logging level" : "info",
@@ -80,9 +85,11 @@
   "graphics": {
     "style": "Solarize_Light2",
     "show" : "true",
-    "prices delivery": "True",
-    "prices redelivery": "True",
-    "average delivery": "True"
+    "battery balance": "True",
+    "prices consumption": "True",
+    "prices production": "False",
+    "prices spot": "True",
+    "average consumption": "True"
   },
   "strategy": "minimize cost",
   "notifications": {

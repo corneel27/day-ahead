@@ -14,7 +14,6 @@ from pandas.core.dtypes.inference import is_number
 from dao.prog.da_report import Report
 from utils import (
     get_value_from_dict,
-    is_laagtarief,
     convert_timestr,
     calc_uur_index,
     error_handling,
@@ -68,17 +67,15 @@ class DaCalc(DaBase):
         start_dt = dt.datetime.fromtimestamp(start_ts)
         start_h = int(self.interval_s * math.floor(start_ts / self.interval_s))
         fraction_first_interval = 1 - (start_ts - start_h) / self.interval_s
-        if self.interval == "hour":
-            prog_data = self.db_da.get_prognose_data(
-                start=start_h, end=None, interval=self.interval
-            )
+        prog_data = self.db_da.get_prognose_data(
+            start=start_h, end=None, interval=self.interval
+        )
 
         u = len(prog_data)
         if u <= 2:
             logging.error(
                 f"Er ontbreken voor een aantal uur gegevens "
                 f"(meteo en/of dynamische prijzen) "
-                f"er kan niet worden gerekend"
             )
             if self.notification_entity is not None:
                 self.set_value(
@@ -104,78 +101,32 @@ class DaCalc(DaBase):
                 self.notification_entity,
                 "DAO calc gestart " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
             )
+
+        report = Report()
+        price_data = report.get_price_data(
+            start=dt.datetime.fromtimestamp(start_h), end=None
+        )
+        prog_data["da_cons"] = price_data["da_cons"]
+        prog_data["da_prod"] = price_data["da_prod"]
+
         logging.debug("Prognose data:\n{}".format(prog_data.to_string()))
 
-        """
-        day_ahead prijs omrekenen naar twee prijzen
-        1. pl: prijs voor verbruik (levering)
-            altijd met opslag voor 
-            eb_l 0,12599 (2023)
-            opslag leverancier, ol_l 0,001 (tibber)
-            btw over het geheel 21%
-        2. pt: prijs voor teruglevering
-            alleen opslag voor saldering, 
-            na 6 maanden saldo levering/teruglevering , als teruglevering > 
-            levering dan geen opslag eb en ode
-            eb_t 0,12955
-            opslag leverancier ol_t (aftrek!!) 0,0
-            en btw over het geheel 21%
-        """
-        taxes_l_def = self.prices_options["energy taxes delivery"]
-        # eb + ode levering
-        # eb_l = 0.12955
-        # opslag kosten leverancier
-        ol_l_def = self.prices_options["cost supplier delivery"]
-        # ol_l_def ["2022-01-01] = 0.002
-        # ol_l_def ["2023-03-01] = 0.018
-        # eb+ode teruglevering
-        taxes_t_def = self.prices_options["energy taxes redelivery"]
-        # eb_t = 0.12955
-        # eb_t = 0
-        # ode_t = 0
-        ol_t_def = self.prices_options["cost supplier redelivery"]
-        # ol_t = 0 #-0.011
-        btw_def = self.prices_options["vat"]
-        # btw = 0.09
-
-        # prijzen van een traditionele leverancier zijn alleen indicatief;
-        # er wordt niet mee gerekend
-        gc_p_low = self.prices_options["regular low"]
-        gc_p_high = self.prices_options["regular high"]
         pl = []  # prijs levering day_ahead
         pt = []  # prijs teruglevering day_ahead
+        p_spot = []  # prijs op de spot markt
         pl_avg = []  # prijs levering day_ahead gemiddeld
-        pt_notax = []  # prijs teruglevering day ahead zonder taxes
         uur = []  # datum_tijd van het betreffende uur
         prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
         for row in prog_data.itertuples():
             uur.append(row.tijd)
-            dag_str = row.tijd.strftime("%Y-%m-%d")
-            ol_l = get_value_from_dict(dag_str, ol_l_def)
-            ol_t = get_value_from_dict(dag_str, ol_t_def)
-            taxes_l = get_value_from_dict(dag_str, taxes_l_def)
-            taxes_t = get_value_from_dict(dag_str, taxes_t_def)
-            btw = get_value_from_dict(dag_str, btw_def)
-            price_l = round((row.da_price + taxes_l + ol_l) * (1 + btw / 100), 5)
-            price_t = round((row.da_price + taxes_t + ol_t) * (1 + btw / 100), 5)
-            pl.append(price_l)
-            pt.append(price_t)
-            # tarief teruglevering zonder eb en btw
-            price_t_notax = row.da_price
-            pt_notax.append(price_t_notax)
+            p_spot.append(row.da_price)
+            pl.append(row.da_cons)
+            pt.append(row.da_prod)
 
         B = len(self.battery_options)
         U = len(pl)
-        if U >= 24:
-            p_avg = sum(pl) / U  # max(pl) #
-        else:
-            dag_str = dt.datetime.now().strftime("%Y-%m-%d")
-            ol_l = get_value_from_dict(dag_str, ol_l_def)
-            taxes_l = get_value_from_dict(dag_str, taxes_l_def)
-            btw = get_value_from_dict(dag_str, btw_def)
-            p_avg = (self.calc_da_avg() + taxes_l + ol_l) * (1 + btw / 100)
-
+        p_avg = sum(pl) / U  # max(pl) #
         for u in range(U):
             pl_avg.append(p_avg)
 
@@ -219,8 +170,6 @@ class DaCalc(DaBase):
         global_rad = []  # globale straling per uur
         pv_org_ac = []  # opwekking zonnepanelen[]
         pv_org_dc = []
-        p_grl = []  # prijs levering
-        p_grt = []  # prijs teruglevering
         hour_fraction = []
         first_hour = True
 
@@ -262,26 +211,15 @@ class DaCalc(DaBase):
                         * self.battery_options[b]["solar"][s]["yield"]
                         * hour_fraction[-1]
                     )
-                    dc_max_power = self.config.get(["max power"], self.battery_options[b]["solar"][s], None)
-                    if not dc_max_power is None:
-                        prod = min (prod, dc_max_power)
+                    pv_dc_max_power = self.config.get(
+                        ["max power"], self.battery_options[b]["solar"][s], None
+                    )
+                    if pv_dc_max_power is not None:
+                        prod = min(prod, pv_dc_max_power)
                     pv_total += prod
             pv_org_dc.append(pv_total)
-
-            dag_str = dtime.strftime("%Y-%m-%d")
-            taxes_l = get_value_from_dict(dag_str, taxes_l_def)
-            taxes_t = get_value_from_dict(dag_str, taxes_t_def)
-            btw = get_value_from_dict(dag_str, btw_def)
-            if is_laagtarief(
-                dt.datetime(dtime.year, dtime.month, dtime.day, hour),
-                self.config.get(["switch to low"], self.prices_options, 23),
-            ):
-                p_grl.append((gc_p_low + taxes_l) * (1 + btw / 100))
-                p_grt.append((gc_p_low + taxes_t) * (1 + btw / 100))
-            else:
-                p_grl.append((gc_p_high + taxes_l) * (1 + btw / 100))
-                p_grt.append((gc_p_high + taxes_t) * (1 + btw / 100))
             first_hour = False
+
         while len(b_l) > len(uur):
             b_l = b_l[:-1]
         while len(b_l) < len(uur):
@@ -312,63 +250,7 @@ class DaCalc(DaBase):
             logging.info(f"pv_ac: {len(pv_org_ac)}")
             logging.info(f"pv_ac: {len(pv_org_dc)}")
 
-        # volledig salderen?
-        salderen = self.prices_options["tax refund"] == "True"
-
-        """
-        last_invoice = dt.datetime.strptime(
-            self.prices_options["last invoice"], "%Y-%m-%d"
-        )
-
-        cons_data_history = self.db_da.get_consumption(
-            last_invoice, dt.datetime.today()
-        )
-        """
-        report = None
-        try:
-            report = Report(file_name=self.file_name)
-            # df.loc[df['a'] == 1, 'b'].sum()
-            # df.query("a == 1")['b'].sum()
-            # df[df['a']==1]['b'].sum()
-            cons_df = report.get_grid_data(periode="dit contractjaar", _tot=start_dt)
-            consumption_his = cons_df["consumption"].sum()
-            production_his = cons_df["production"].sum()
-        except Exception as ex:
-            logging.error("Failed.", exc_info=ex)
-            logging.warning(f"Verbruik laatste contractjaar kon niet wordt vastgesteld")
-            consumption_his = 0
-            production_his = 0
-
-        logging.info(f"Verbruik dit contractjaar: " f"{consumption_his:.3f} kWh")
-        logging.info(f"Productie dit contractjaar: " f"{production_his:.3f} kWh")
-        if not salderen and is_number(consumption_his) and is_number(production_his):
-            salderen = production_his < consumption_his
-        consumption_today = 0
-        production_today = 0
-        if salderen:
-            logging.info(f"All taxes refund (alles wordt gesaldeerd)")
-        else:
-            if report is not None:
-                try:
-                    cons_today_df = report.get_grid_data(periode="vandaag")
-                    consumption_today = cons_today_df[
-                        cons_today_df["datasoort"] == "recorded"
-                    ]["consumption"].sum()
-                    production_today = cons_today_df[
-                        cons_today_df["datasoort"] == "recorded"
-                    ]["production"].sum()
-                except Exception as ex:
-                    logging.error("Failed.", exc_info=ex)
-                    logging.warning(f"Verbruik vandaag kon niet wordt vastgesteld")
-            logging.info(f"consumption today: {consumption_today} kWh")
-            logging.info(f"production today: {production_today} kWh")
-            logging.info(f"verschil: " f"{consumption_today - production_today} kWh")
-
         model = Model()
-
-        # reken met prijzen traditionele leverancier
-        # pl = p_grl
-        # pt = p_grt
 
         ##############################################################
         #                          pv ac
@@ -545,6 +427,9 @@ class DaCalc(DaBase):
                 pv_prod_dc[b].append([])
                 pv_prod_ac[b].append([])
                 pv_yield = self.battery_options[b]["solar"][s]["yield"]
+                pv_dc_max_power = self.config.get(
+                    ["max power"], self.battery_options[b]["solar"][s], None
+                )
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u
                     prod_dc = (
@@ -555,6 +440,8 @@ class DaCalc(DaBase):
                         )
                         * pv_yield
                     )
+                    if pv_dc_max_power is not None:
+                        prod_dc = min(prod_dc, pv_dc_max_power)
                     eff = 1
                     for ds in range(DS[b]):
                         if discharge_stages[ds]["power"] / 1000 > prod_dc:
@@ -914,6 +801,13 @@ class DaCalc(DaBase):
             boiler_setpoint = float(
                 self.get_state(self.boiler_options["entity setpoint"]).state
             )
+            if boiler_act_temp > boiler_setpoint + 1:
+                logging.warning(
+                    f"Je setpoint ({boiler_setpoint}) is lager de actuele "
+                    f"temperatuur ({boiler_act_temp}). Het verdient aanbeveling je "
+                    f"setpoint hoger in te stellen"
+                )
+            boiler_setpoint = max(boiler_setpoint, boiler_act_temp)
             boiler_hysterese = float(
                 self.get_state(self.boiler_options["entity hysterese"]).state
             )
@@ -1342,39 +1236,17 @@ class DaCalc(DaBase):
             for _ in range(U)
         ]
         # teruglevering
-        c_t_total = [
-            model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power)
-            for _ in range(U)
-        ]
-        c_t_w_tax = [
+        c_t = [
             model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power)
             for _ in range(U)
         ]
         c_l_on = [model.add_var(var_type=BINARY) for _ in range(U)]
         c_t_on = [model.add_var(var_type=BINARY) for _ in range(U)]
 
-        # salderen == True
-        # c_t_no_tax = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for u in range(U)]
-
-        if salderen:
-            c_t_no_tax = [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for _ in range(U)
-            ]
-        else:
-            # alles wat meer wordt teruggeleverd dan geleverd (c_t_no_tax) wordt niet gesaldeerd
-            # (geen belasting terug): tarief pt_notax
-            c_t_no_tax = [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power)
-                for _ in range(U)
-            ]
-            model += (xsum(c_t_w_tax[u] for u in range(U)) + production_today) <= (
-                xsum(c_l[u] for u in range(U)) + consumption_today
-            )
         # netto per uur alleen leveren of terugleveren niet tegelijk?
         for u in range(U):
-            model += c_t_total[u] == c_t_w_tax[u] + c_t_no_tax[u]
             model += c_l[u] <= c_l_on[u] * 20
-            model += c_t_total[u] <= c_t_on[u] * 20
+            model += c_t[u] <= c_t_on[u] * 20
             model += c_l_on[u] + c_t_on[u] <= 1
 
         #####################################
@@ -1755,7 +1627,7 @@ class DaCalc(DaBase):
             if end_window_dt < start_opt:
                 start_window_dt += dt.timedelta(days=1)
                 end_window_dt += dt.timedelta(days=1)
-            if end_window_dt > tijd[U-1]:
+            if end_window_dt > tijd[U - 1]:
                 error = True
                 logging.info(
                     f"Machine {ma_name[m]} wordt niet ingepland, want "
@@ -1763,7 +1635,7 @@ class DaCalc(DaBase):
                 )
 
             # ready_ma_dt += dt.timedelta(days=1)
-            '''
+            """
             vandaag			
             if end_gepland_dt.day != start_opt and end_pland_dt < start_opt: gisteren
                inplannen
@@ -1777,31 +1649,38 @@ class DaCalc(DaBase):
             start_window + 1dag			
             end_window + 1 dag			
             inplannen	
-            '''
+            """
             if not error:
                 inplannen = False
                 # planning is voor vandaag
-                if ((planned_end_dt.day != start_opt.day and planned_end_dt < start_opt) or
+                if (
+                    (planned_end_dt.day != start_opt.day and planned_end_dt < start_opt)
+                    or
                     # begin planning is na start_opt
-                    ((planned_end_dt < start_opt) and (start_window_dt >=planned_end_dt)) or
-                    (start_opt < planned_start_dt)
+                    (
+                        (planned_end_dt < start_opt)
+                        and (start_window_dt >= planned_end_dt)
+                    )
+                    or (start_opt < planned_start_dt)
                 ):
                     inplannen = True
-                else: # start_opt >= planned_start_dt:
+                else:  # start_opt >= planned_start_dt:
                     if start_opt <= planned_end_dt:
                         error = True
                         logging.info(
                             f"Machine {ma_name[m]} wordt niet ingepland, want "
                             f"de berekende planning wordt nu uitgevoerd"
                         )
-                    elif start_opt <= end_window_dt: # dus start_opt > plannend_end
+                    elif start_opt <= end_window_dt:  # dus start_opt > plannend_end
                         error = True
                         logging.info(
                             f"Machine {ma_name[m]} wordt niet ingepland, want "
                             f"in deze planning-window heeft de machine al gedraaid"
                         )
-                    elif ((max(start_opt, start_window_dt) < end_window_dt) and
-                         ((max(start_opt, start_window_dt) - end_window_dt) < dt.timedelta(minutes = (RL[m] * 15)))):
+                    elif (max(start_opt, start_window_dt) < end_window_dt) and (
+                        (max(start_opt, start_window_dt) - end_window_dt)
+                        < dt.timedelta(minutes=(RL[m] * 15))
+                    ):
                         error = True
                         logging.info(
                             f"Machine {ma_name[m]} wordt niet ingepland, want "
@@ -1809,7 +1688,7 @@ class DaCalc(DaBase):
                             f"({end_window_dt}) "
                         )
                     else:
-                        if end_window_dt + dt.timedelta(days=1) > tijd[U-1]:
+                        if end_window_dt + dt.timedelta(days=1) > tijd[U - 1]:
                             error = True
                             logging.info(
                                 f"Machine {ma_name[m]} wordt niet ingepland, want "
@@ -1819,7 +1698,6 @@ class DaCalc(DaBase):
                         elif not inplannen:
                             start_window_dt += dt.timedelta(days=1)
                             end_window_dt += dt.timedelta(days=1)
-
 
                 """    
                 if inplannen:
@@ -1865,7 +1743,6 @@ class DaCalc(DaBase):
                     )
                     error = True
                 """
-
 
             if error:
                 kw_num = 0
@@ -2035,7 +1912,7 @@ class DaCalc(DaBase):
         for u in range(U):
             model += (
                 c_l[u]
-                == c_t_total[u]
+                == c_t[u]
                 + b_l[u] * hour_fraction[u]
                 + xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B))
                 * hour_fraction[u]
@@ -2063,17 +1940,14 @@ class DaCalc(DaBase):
                 for u in range(U)
             )
 
-        if salderen:
+        if self.salderen:
             p_bat = p_avg
         else:
-            p_bat = sum(pt_notax) / U
+            p_bat = sum(pt) / U
 
         # alles in kWh * prijs = kosten in euro
         model += cost == (
-            xsum(
-                c_l[u] * pl[u] - c_t_w_tax[u] * pt[u] - c_t_no_tax[u] * pt_notax[u]
-                for u in range(U)
-            )
+            xsum(c_l[u] * pl[u] - c_t[u] * pt[u] for u in range(U))
             + xsum(
                 cycle_cost[b]
                 + xsum((opt_low_level[b] - soc_low[b][u]) * 0.0025 for u in range(U))
@@ -2155,7 +2029,6 @@ class DaCalc(DaBase):
         # er is een oplossing
         # afdrukken van de resultaten
         logging.info("Het programma heeft een optimale oplossing gevonden.")
-        old_cost_gc = 0
         old_cost_da = 0
         sum_old_cons = 0
         org_l = []
@@ -2205,38 +2078,13 @@ class DaCalc(DaBase):
             )
             sum_old_cons += netto
             if netto >= 0:
-                old_cost_gc += netto * p_grl[u]
                 old_cost_da += netto * pl[u]
                 org_l.append(netto)
                 org_t.append(0)
             else:
-                old_cost_gc += netto * p_grt[u]
                 old_cost_da += netto * pt[u]
                 org_l.append(0)
                 org_t.append(netto)
-        if (not salderen) and (sum_old_cons < 0):
-            # er wordt (een deel) niet gesaldeerd
-            dag_str = dt.datetime.now().strftime("%Y-%m-%d")
-            taxes_l = get_value_from_dict(dag_str, taxes_l_def)
-            btw = get_value_from_dict(dag_str, btw_def)
-            saldeer_corr_gc = -sum_old_cons * (sum(p_grt) / len(p_grt) - 0.11)
-            saldeer_corr_da = -sum_old_cons * taxes_l * (1 + btw / 100)
-            old_cost_gc += saldeer_corr_gc
-            old_cost_da += saldeer_corr_da
-            logging.info(f"Saldeercorrectie: {sum_old_cons:<6.2f} kWh")
-            logging.info(
-                f"Saldeercorrectie niet geoptimaliseerd reg. "
-                f"tarieven: {saldeer_corr_gc:<6.2f} euro"
-            )
-            logging.info(
-                f"Saldeercorrectie niet geoptimaliseerd day ahead "
-                f"tarieven: {saldeer_corr_da:<6.2f} euro"
-            )
-        else:
-            logging.info(f"Geen saldeer correctie")
-        logging.info(
-            f"Niet geoptimaliseerd, kosten met reguliere tarieven: {old_cost_gc:<6.2f}"
-        )
         logging.info(
             f"Niet geoptimaliseerd, kosten met day ahead tarieven: {old_cost_da:<6.2f}"
         )
@@ -2412,6 +2260,20 @@ class DaCalc(DaBase):
             if not self.debug:
                 self.save_df(tablename="prognoses", tijd=tijd_soc, df=df_soc)
 
+        # voorspelling pv_dc opslaan.
+        if B > 0:
+            df_pv_dc = pd.DataFrame(columns=["tijd", "pv_dc"])
+            df_pv_dc.index = pd.to_datetime(df_pv_dc["tijd"])
+            tijd_pv = tijd.copy()
+            prod_pc_sum = 0
+            for u in range(U):
+                for b in range(B):
+                    prod_pc_sum += pv_prod_dc_sum[b][u].x
+                row_pv_dc = [tijd_pv[u], prod_pc_sum]
+                df_pv_dc.loc[df_pv_dc.shape[0]] = row_pv_dc
+            if not self.debug:
+                self.save_df(tablename="prognoses", tijd=tijd_pv, df=df_pv_dc)
+
         # totaal overzicht
         # pd.options.display.float_format = '{:,.3f}'.format
         cols = ["uur", "bat_in", "bat_out"]
@@ -2434,14 +2296,14 @@ class DaCalc(DaBase):
             row = [uur[u], accu_in_sum[u], accu_out_sum[u]]
             row = row + [
                 c_l[u].x,
-                c_t_total[u].x,
+                c_t[u].x,
                 b_l[u],
                 c_b[u].x,
                 c_hp[u].x,
                 c_ev_sum[u],
                 solar_hour_sum_opt[u],
                 c_l[u].x * pl[u],
-                -c_t_w_tax[u].x * pt[u] - c_t_no_tax[u].x * pt_notax[u],
+                -c_t[u].x * pt[u],
                 boiler_temp[u + 1].x,
             ]
             if M > 0:
@@ -2671,7 +2533,7 @@ class DaCalc(DaBase):
                     new_state = "Uit"
                     stop_omvormer = None
                     balance = False
-                elif abs(c_l[0].x - c_t_w_tax[0].x - c_t_no_tax[0].x) <= 0.01:
+                elif abs(c_l[0].x - c_t[0].x) <= 0.01:
                     new_state = "Aan"
                     balance = True
                     stop_omvormer = None
@@ -2701,7 +2563,7 @@ class DaCalc(DaBase):
                 from_ac = int(first_row["->dc"] * 1000 / fraction_first_interval)
                 calculated_soc = round(soc[b][1].x, 1)
                 grid_set_point = round(
-                    1000 * (c_l[0].x - c_t_total[0].x) / hour_fraction[0], 0
+                    1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0
                 )
                 logging.info(f"Grid set point: {grid_set_point} W")
                 logging.info(f"Cycle cost {bat_name}: {cycle_cost[b].x:<0.2f} euro")
@@ -2955,7 +2817,7 @@ class DaCalc(DaBase):
         pv_ac_p = []
         max_y = 0
         for u in range(U):
-            c_t_n.append(-c_t_total[u].x)
+            c_t_n.append(-c_t[u].x)
             c_l_p.append(c_l[u].x)
             base_n.append(-b_l[u])
             boiler_n.append(-c_b[u].x)
@@ -2974,14 +2836,14 @@ class DaCalc(DaBase):
             accu_out_p.append(accu_out_sum * hour_fraction[u])
             max_y = max(
                 max_y,
-                (c_l_p[u] + pv_p_org[u] + pv_ac_p[u]),
-                abs(c_t_total[u].x)
+                (c_l_p[u] + pv_p_org[u] + accu_out_p[u]),
+                abs(c_t[u].x)
                 + b_l[u]
                 + c_b[u].x
                 + c_hp[u].x
                 + c_ev_sum[u]
                 + c_ma_sum[u]
-                + accu_in_sum,
+                + accu_in_sum * hour_fraction[u],
             )
         soc_t = []
         if B > 0:
@@ -3240,7 +3102,7 @@ class DaCalc(DaBase):
             axis[1].bar(
                 ind,
                 np.array(heatpump_n),
-                bottom=np.array(base_n + np.array(boiler_n) ),
+                bottom=np.array(base_n + np.array(boiler_n)),
                 label="WP",
                 color="#a32cc4",
                 align="edge",
@@ -3409,11 +3271,18 @@ class DaCalc(DaBase):
         axis[gr_no].set_title("Verloop SoC en tarieven")
         axis[gr_no].sharex(axis[0])
 
+        prices_consumption_str = self.config.get(
+            ["graphics", "prices consumption"], None, None
+        )
+        if prices_consumption_str is None:
+            prices_consumption_str = self.config.get(
+                ["graphics", "prices delivery"], None, "True"
+            )
+            logging.warning(f"Gebruik 'prices consumption' ipv `prices delivery'")
+        prices_consumption = prices_consumption_str.lower() == "true"
+
         axis22 = axis[gr_no].twinx()
-        if (
-            self.config.get(["graphics", "prices delivery"], None, "true").lower()
-            == "true"
-        ):
+        if prices_consumption:
             pl.append(pl[-1])
             ln2 = axis22.step(
                 ind,
@@ -3424,24 +3293,52 @@ class DaCalc(DaBase):
             )
         else:
             ln2 = None
-        if (
-            self.config.get(["graphics", "prices redelivery"], None, "true").lower()
-            == "true"
-        ):
-            pt_notax.append(pt_notax[-1])
+
+        prices_production_str = self.config.get(
+            ["graphics", "prices production"], None, None
+        )
+        if prices_production_str is None:
+            prices_production_str = self.config.get(
+                ["graphics", "prices redelivery"], None, "True"
+            )
+            logging.warning(f"Gebruik 'prices production' ipv `prices redelivery'")
+        prices_production = prices_production_str.lower() == "true"
+
+        if prices_production:
+            pt.append(pt[-1])
             ln3 = axis22.step(
                 ind,
-                np.array(pt_notax),
-                label="Tarief terug\nno tax",
-                color="#0080ff",
+                np.array(pt),
+                label="Tarief\nteruglev.",
+                color="green",  # "#0080ff",
                 where="post",
             )
         else:
             ln3 = None
-        if (
-            self.config.get(["graphics", "average delivery"], None, "true").lower()
-            == "true"
-        ):
+
+        if self.config.get(["graphics", "prices spot"], None, "true").lower() == "true":
+            p_spot.append(p_spot[-1])
+            ln5 = axis22.step(
+                ind,
+                np.array(p_spot),
+                label="Spot prijzen",
+                color="orange",
+                where="post",
+            )
+        else:
+            ln5 = None
+
+        average_consumption_str = self.config.get(
+            ["graphics", "average consumption"], None, None
+        )
+        if average_consumption_str is None:
+            average_consumption_str = self.config.get(
+                ["graphics", "average delivery"], None, "True"
+            )
+            logging.warning(f"Gebruik 'average consumption' ipv `average delivery'")
+        average_consumption = average_consumption_str.lower() == "true"
+
+        if average_consumption:
             pl_avg.append(pl_avg[-1])
             ln4 = axis22.plot(
                 ind,
@@ -3466,6 +3363,8 @@ class DaCalc(DaBase):
             lns += ln3
         if ln4:
             lns += ln4
+        if ln5:
+            lns += ln5
         labels = [line.get_label() for line in lns]
         axis22.legend(lns, labels, loc="best", bbox_to_anchor=(1.40, 1.00))
 
