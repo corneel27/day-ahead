@@ -1104,9 +1104,9 @@ Instellingen voor optimalisering van het elektraverbruik van je warmwater boiler
    * `boiler present`: True of False (default False). Als je False invult worden onderstaande boiler-instellingen genegeerd.
    * `entity boiler enabled`: entiteit in ha die aangeeft of je boiler is ingeschakeld. Tijdens vakantie kun je hiermee richting
 DAO aangeven dat de boiler niet hoeft te worden ingepland.
-   * `entity actual temp.` : entiteit in ha die de actuele boilertemp. presenteert  
-   * `entity setpoint`: entiteit die de ingestelde boilertemp. presenteert  
-   * `entity hysterese`: entiteit die de gehanteerde hysterese voor de boiler presenteert  
+   * `entity actual temp.` : entiteit in ha die de actuele boilertemp. presenteert (in °C) 
+   * `entity setpoint`: entiteit die de ingestelde boilertemp. presenteert (in °C)
+   * `entity hysterese`: entiteit die de gehanteerde hysterese voor de boiler presenteert (in K) 
    * `cop`: de cop van de boiler bijv. 3: met 1 kWh elektriciteit wordt 3 kWh warm water gemaakt (een elektrische boiler heeft een cop = 1)
    * `cooling rate`: gemiddelde afkoelsnelheid van de boiler in K/uur  
    * `volume`: inhoud van de boiler in liter  
@@ -1156,7 +1156,7 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
   De gegevens en de instellingen van geen, een of meer batterijen
   Je kunt de batterij instellingen herhalen als je meer dan een batterij hebt, of je laat de lijst leeg (geen batterij)
    * name: de naam van de batterij (komt terug in rapportages)
-   * entity actual level: entiteit die de actuele SoC van de batterij presenteert  
+   * entity actual level: entiteit die in procenten de actuele SoC van de batterij presenteert  
    * capacity: capaciteit van de batterij in kWh  
    * lower limit: onderste SoC limiet (tijdelijk)  
    * upper limit: bovenste SoC limiet  

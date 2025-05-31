@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     branches:
       - addon
-  release:
-    types: [published]
-
+  push:
+    branches:
+      - addon
 jobs:
   publish:
     name: Publish
