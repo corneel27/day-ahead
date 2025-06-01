@@ -49,7 +49,7 @@ op het informatiescherm van de add-on.
 Klik op **Starten** om de add-on te starten. Je moet nu het dashboard kunnen benaderen via de zijbalk 
 of via de knop **Open web-ui**. 
 De addon opent het dashboard/web-gui op poort 5000:<br>
- ![home_1.png](images/home_1.png) <br>
+ ![home_1.png](./images/home_1.png) <br>
 Het kan zijn dat die 
 poort op jouw machine in gebruik is door een ander proces. 
 Je kunt dan onder de menu-optie **Configuratie** een andere poort instellen 
