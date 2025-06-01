@@ -33,7 +33,7 @@ Klik op de nieuwe add-on en je krijgt het informatie-scherm te zien.
 
 Klik op "Installeer" en wacht enkele minuten (deze tijd is afhankelijk van de snelheid van je processor).
 Als de add-on met succes is geinstalleerd krijg je het volgende scherm:
- ![img_start.png](images/img_start.png) <br />
+ ![img_start.png](./images/img_start.png) <br />
 Dat is de informatie-pagina van de add-on.
 Je hebt bovenin 4 menu-opties:<br>
 **Informatie**: Hiermee ga je naar de informatiepagina <br>
