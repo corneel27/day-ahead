@@ -1,5 +1,4 @@
-name: "Set image tag"
-
+name: "Change image name"
 on:
   workflow_dispatch:
     branches:
@@ -10,7 +9,7 @@ on:
 
 jobs:
   change_image:
-    name: change inmage
+    name: change image
     runs-on: ubuntu-latest
     steps:
       - name: check out the repository to the runner
