@@ -33,7 +33,7 @@ Klik op de nieuwe add-on en je krijgt het informatie-scherm te zien.
 
 Klik op "Installeer" en wacht enkele minuten (deze tijd is afhankelijk van de snelheid van je processor).
 Als de add-on met succes is geinstalleerd krijg je het volgende scherm:
- ![img_start.png](images/img_start.png) <br />
+ ![img_start.png](./images/img_start.png) <br />
 Dat is de informatie-pagina van de add-on.
 Je hebt bovenin 4 menu-opties:<br>
 **Informatie**: Hiermee ga je naar de informatiepagina <br>
@@ -49,7 +49,7 @@ op het informatiescherm van de add-on.
 Klik op **Starten** om de add-on te starten. Je moet nu het dashboard kunnen benaderen via de zijbalk 
 of via de knop **Open web-ui**. 
 De addon opent het dashboard/web-gui op poort 5000:<br>
- ![home_1.png](images/home_1.png) <br>
+ ![home_1.png](./images/home_1.png) <br>
 Het kan zijn dat die 
 poort op jouw machine in gebruik is door een ander proces. 
 Je kunt dan onder de menu-optie **Configuratie** een andere poort instellen 
@@ -67,7 +67,7 @@ tekst-editor waarmee je de instellingen in json kunt aanpassen
 (zie onderstaande afbeelding). Als je 
 klaar bent met aanpassen klik je op het "vinkje" en als je "geldige json" 
 hebt ingetypt wordt het bestand opgeslagen.
- ![config.png](images/config.png) <br />
+ ![config.png](./images/config.png) <br />
 Daarvoor moeten de volgende zaken in het configuratiebestand goed ingesteld
 worden:
 ### **Toegang tot homeassistant**
@@ -204,15 +204,15 @@ In Nederland worden te gebruiken meteogegevens ter beschikking gesteld door
 * Klik op het vinkje om je aanpassing op te slaan.
 * Om te testen of het geheel werkt: selecteer in het dashboard het 
     Run-menu:<br>
-   ![meteo_1.png](images/meteo_1.png) <br />
+   ![meteo_1.png](./images/meteo_1.png) <br />
 * Na ca 30 seconden wordt - als het goed gaat - de logging van deze 
     operatie getoond: <br>
-   ![meteo_2.png](images/meteo_2.png) <br />
+   ![meteo_2.png](./images/meteo_2.png) <br />
 <br>
 ### **Dynamische uurprijzen**<br>
 Ook het ophalen van dynamische uurprijzen (day ahead prices) stel je in via 
   het Config-menu, submenu "options", onderdeel **prices** <br>
-![prices_1.png](images/prices_1.png) <br />
+![prices_1.png](./images/prices_1.png) <br />
     Daar is alles al ingevuld, maar je kunt het aanpassen aan jouw situatie: <br>
 De belangrijkste onderdelen zijn: <br>
     * source day ahead: waar haal je de data vandaan: nordpool is een goede 
@@ -227,13 +227,13 @@ De belangrijkste onderdelen zijn: <br>
     De meeste onderdelen zijn voorzien van meer regels met een datum. Deze 
       data zijn een begindatum van een nieuw tarief of een nieuwe waarde.<br>
   We kunnen dit onderdeel ook weer testen via het Run-menu van het dashboard:
-  ![prices_2.png](images/prices_2.png) <br>
+  ![prices_2.png](./images/prices_2.png) <br>
     Daar is nu eerst een vanaf datum ingevuld, maar deze kun je leeg laten. 
   In dat geval zal voor 12 uur de data van vandaag worden opgehaald en 
   vanaf uur zullen de data van morgen worden opgehaald (als ze beschikbaar 
   zijn).<br>
   Dit resulteert dan (als alles goed gaat) in de volgende logging:<br>
-  ![prices_3.png](images/prices_3.png) <br>
+  ![prices_3.png](./images/prices_3.png) <br>
 
 ### **Basisverbruik**<br>
 Tenslotte heeft het programma je basisverbruik (=baseload) nodig. Je basisverbruik is 
@@ -283,14 +283,14 @@ Als je de meteovoorspellingen met succes hebt opgehaald en ook de day-ahead
 prijzen van vandaag en vanaf 13:00 uur ook die van morgen dan kunnen we gaan 
 rekenen.<br>
 Ga naar het Run menu en klik op **Optimaliseringsberekening met debug**:<br>
- ![calc_1.png](images/calc_1.png) <br>
+ ![calc_1.png](./images/calc_1.png) <br>
 Na enkele seconden krijg je een logging van de berekening te zien:<br>
- ![calc_2.png](images/calc_2.png) <br>
+ ![calc_2.png](./images/calc_2.png) <br>
 Omdat we nog geen verplaatsbare verbruikers, een thuisaccu of elektrische auto's hebben 
 gedefinieerd zal het programma geen "winst" berekenen.
 Je kunt via het Home-menu de grafiek van de berekening oproepen en daar kun je ook de logging opnieuw 
 bekijken:
- ![calc_3.png](images/calc_3.png) <br>
+ ![calc_3.png](./images/calc_3.png) <br>
 Als dat allemaal goed is gegaan kun je ook de **Optimaliseringsberekening zonder debug** doen.
 Die zal - als het goed is - dezelfde resultaten laten zien. Toch verschilt deze berekening op twee 
 essentiele onderdelen van de berekening met debug:
@@ -420,7 +420,7 @@ Je kunt de volgende instellingen maken:
 
 ### Dashboard menu
 Het hoofdmenu van het dashboard bestaat uit 4 opties: <br />
-  ![img_5.png](images/img_5.png) <br />
+  ![img_5.png](./images/img_5.png) <br />
 
 - Home
 - Run
@@ -431,7 +431,7 @@ Het hoofdmenu van het dashboard bestaat uit 4 opties: <br />
 **Home**<br/>
 Deze webpagina komt ook naar voren als je de webserver via je browser 
 benadert: <br />
-  ![Img_6.png](images/Img_6.png) <br />
+  ![Img_6.png](./images/Img_6.png) <br />
 Daarin toont zich een submenu met daarin de informatie die je met submenu selecteert:
 Het submenu geeft links de keuze de keuze uit (voorlopig twee **onderwerpen**):
  - grid (deze is nu actief, dat wordt aangegeven met de kleur rood)
@@ -446,10 +446,10 @@ Rechts kun je bladeren door de aangeboden informatie:
 - **<** de vorige
 - **>** de volgende
 - **>|** de nieuwste, meest recente grafiek/tabel
-- ![delete.png](images/delete.png) met de afvalbak kun je de aangeboden informatie verwijderen
+- ![delete.png](./images/delete.png) met de afvalbak kun je de aangeboden informatie verwijderen
 
 **Run**<br/>
-![Img_8.png](images/Img_8.png) <br />
+![Img_8.png](./images/Img_8.png) <br />
 Via deze menu-optie kun je alle mogelijke berekeningen en bewerkingen van het programma activeren 
 (zie ook het begin van deze handleiding). <br/>
 Je activeert een bewerking door deze aan te klikken.<br/>
@@ -464,10 +464,10 @@ Vul je alleen "prijzen vanaf" in dan zal vanaf die dag tot vandaag de prijzen wo
 die kan maar gegevens van een etmaal tegelijk ophoesten en dus alleen van de dag die je invult bij "prijzen vanaf".  
 Controleer de getoonde logging of alles gaat zoals je het verwacht.
 Als je bijvoorbeeld van een periode terug de prijzen wilt ophalen, krijg je dit scherm: 
-![img_8a.png](images/img_8a.png)
+![img_8a.png](./images/img_8a.png)
 
 **Reports**<br/>
-![Img_7.png](images/Img_7.png) <br />
+![Img_7.png](./images/Img_7.png) <br />
 Dit onderdeel is nog in ontwikkeling, maar biedt nu al veel mogelijkheden.<br/>
 Er zijn twee rapportmogelijkheden:
 - **grid** Hiermee krijg je inzicht in je energieverbruik, maar ook je productie (teruglevering) aan je leverancier
@@ -509,9 +509,9 @@ Je verbruik zal altijd groter worden door de inzet van je batterij, omdat deze a
 Als je je baterij goed inzet met de strategie "minimaliseer kosten" zul je dus financiele besparingen
 realiseren. Diekun je dusmet deze rapportage zichtbaar maken.
 In tabelvorm:
- ![saving_cost_table.png](images/saving_cost_table.png) <br />
+ ![saving_cost_table.png](./images/saving_cost_table.png) <br />
 In grafiekvorm:
- ![saving_cost_graph.png](images/saving_cost_graph.png) <br />
+ ![saving_cost_graph.png](./images/saving_cost_graph.png) <br />
 
 * **CO2**<br>
 Het inzetten van je batterij met beide strategieen zal meestal ook betekenen dat teruglevert bij een groot aandeel fossiel in de opwekking van elektriciteit
@@ -986,11 +986,11 @@ Als in deze periode ook je batterij al gedraaid heeft:
 * basislast = inkoop - teruglevering - wp - boiler - ev + pv - accu_in + accu_uit
 * de resultaten zet je samen met het begintijdstip van ieder uur in een spreadsheet<br>
   dat ziet er dan als volgt uit: <br>
-  ![img_1.png](images/img_1.png)
+  ![img_1.png](./images/img_1.png)
 * daarnaast begin je een nieuwe tabel met in de eerste kolom de getallen 0, 1 tot en met 23
 * in de tweede kolom bereken je met "averageif" (of in libreoffice "gemiddelde.als") het gemiddelde van de baseloadkolom voor het uur 0, 1 enz. 
   Dat ziet er dan als volgt uit: <br>
-  ![img_2.png](images/img_2.png)
+  ![img_2.png](./images/img_2.png)
 * de 24 getallen uit de tweede kolom vul je in in de lijst.
 
 ### **graphical backend**<br/>
@@ -1036,11 +1036,11 @@ De twee strategieën zijn:
     Als je deze kiest worden je batterij en je verbruiken zo ingezet dat deze leiden tot de laagste 
     kosten (= hoogste opbrengst)
 Als voorbeeld levert deze het volgende resultaat:
-  ![img_3.png](images/img_3.png)
+  ![img_3.png](./images/img_3.png)
   * minimize consumption<br>
     Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter" bij zo laag mogelijke kosten.
 Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
-  ![img_4.png](images/img_4.png)
+  ![img_4.png](./images/img_4.png)
 
 ### **notifications**
 
@@ -1146,11 +1146,11 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
    * **min run length** : minimaal aantal uren [1-5] dat de warmtepomp achter elkaar moet draaien (alleen voor on/off warmtepomp en om te voorkomen dat de warmtepomp teveel schakelt).
    * **entity avg outside temp** : HA 'input_number' entiteit die de door DAO voorspelde buitentemperatuur in °C bevat (hiermee kun je mbv een automation in HA de COP en het vermogen van een on/off warmtepomp in berekenen).
    * **entity hp cop** : HA 'sensor' entiteit die aangeeft wat de COP van de warmtepomp is bij een gegeven buitentemperatuur (alleen voor on/off warmtepomp). Bijvoorbeeld voor een Daikin Altherma 8kW: <br>
-    ![cop.png](images/COP.png)
+    ![cop.png](./images/COP.png)
    * **entity hp switch** : HA 'input_boolean' entiteit die de warmtepomp middels een automation in HA in- of uitschakelt.
    * **entity hp power** : Bij "on/off" warmtepomp: HA 'sensor' entiteit die aangeeft op welk vermogen in kW de warmtepomp zal draaien bij een gegeven buitentemperatuur. Bij "power" warmtepomp: HA 'input_number' entiteit waarin DAO 
    het optimaal berekende vermogen in kW zet. Bijvoorbeeld voor een Daikin Altherma 8kW: <br>
-    ![power.png](images/power.png)
+    ![power.png](./images/power.png)
 
 ### **battery**<br> 
   De gegevens en de instellingen van geen, een of meer batterijen
@@ -1342,7 +1342,7 @@ Per apparaat geef je de volgende instellingen mee:
  * entity calculated end (optioneel): idem om het berekende eindstip van de run in HA weer te geven.
  
  Opmerkingen:
-1. Het geheel kan er dan (per apparaat/machine) in HA als volgt uitzien:![img_13.png](images/img_13.png)
+1. Het geheel kan er dan (per apparaat/machine) in HA als volgt uitzien:![img_13.png](./images/img_13.png)
 2. Als een optimaliseringsberekening in een gedefinieerd "tijdwindow" valt dan zal er geen (her)berekening van de inplanning plaatsvinden.
 3. Het is gewenst dat minimaal een van de twee "calculated" helpers wordt ingegeven, zodat het programma het resultaat
  kan communiceren naar HA
@@ -1407,7 +1407,7 @@ Vul de naam van die sensor in bij report:<br> `"entity co2-intensity": ["sensor.
 3. Herstart DAO via Instellingen/Add-ons/DAO
 4. Ga naar het dashboard van DAO en klik op Report.
 5. Je krijgt nu (naast grid en balans) een extra rapportage item: **CO2**
-![img_co2.png](images/img_co2.png) <br />
+![img_co2.png](./images/img_co2.png) <br />
 
 **Opmerkingen**<br>
 1. Helaas krijg je met een gratis account bij Electricity Maps geen historische data. HA slaat wel elk uur de gemiddelde waarde van de CO2intensiteit op in zijn database, dus je krijgt zo vanzelf historie in je HA-database.
@@ -1707,7 +1707,7 @@ Korte toelichting:
 
 Kijk je in Home Assistant via Ontwikkelhulpmiddelen/Statussen en filter je bijvoorbeeld 
 je sensoren op "da_", dan moet je zoiets te zien krijgen:<br/>
-![Img_9.png](images/Img_9.png) <br />
+![Img_9.png](./images/Img_9.png) <br />
 waarmee duidelijk is dat je de gegevens binnenkrijgt in Home Assistant en dat de aangemaakte sensor(en) werken.
 
 ### Presentatie van deze data in Home Assistant 
@@ -1717,7 +1717,7 @@ Zie voor alle informatie: https://github.com/RomRider/apexcharts-card
 Daar staat ook hoe je de software installeert en alleinfo over de configuratie-opties.
 Voorbeeld:
 <br/>
-![Img_10.png](images/Img_10.png) <br />
+![Img_10.png](./images/Img_10.png) <br />
 De configuratie van deze grafiek ziet er als volgt uit:<br/>
 ````
 type: custom:apexcharts-card

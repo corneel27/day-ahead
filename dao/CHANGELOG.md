@@ -1,7 +1,7 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
-# [V2025.5.1]
+# [V2025.6.0]
 
 ## Breaking changes
 1. The calculation of the cost and profit with a "regular" energy-supplier is removed.
