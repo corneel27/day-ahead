@@ -379,114 +379,6 @@ def run_process():
         version=__version__,
     )
 
-
-'''
-@app.route("/reports", methods=["POST", "GET"])
-def reports():
-    report = Report(app_datapath + "/options.json")
-    menu_dict = web_menu["report"]
-    title = menu_dict["name"]
-    subjects_lst = list(menu_dict["submenu"].keys())
-    active_subject = subjects_lst[0]
-    views_lst = list(menu_dict["submenu"][active_subject]["views"].keys())
-    active_view = views_lst[0]
-    period_lst = menu_dict["submenu"][active_subject]["periods"]["list"]
-    active_period = period_lst[0]
-    show_prognose = False
-    met_prognose = False
-
-    if request.method in ["POST", "GET"]:
-        # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
-        lst = request.form.to_dict(flat=False)
-        if "cur_subject" in lst:
-            active_subject = lst["cur_subject"][0]
-        if "cur_view" in lst:
-            active_view = lst["cur_view"][0]
-        if "cur_periode" in lst:
-            active_period = lst["cur_periode"]
-        if "subject" in lst:
-            active_subject = lst["subject"][0]
-        if "view" in lst:
-            active_view = lst["view"][0]
-        if "periode-select" in lst:
-            active_period = lst["periode-select"][0]
-        if "met_prognose" in lst:
-            met_prognose = lst["met_prognose"][0]
-    tot = None
-    if active_period in menu_dict["submenu"][active_subject]["periods"]["prognose"]:
-        show_prognose = True
-    else:
-        show_prognose = False
-        met_prognose = False
-    if not met_prognose:
-        now = datetime.datetime.now()
-        tot = report.periodes[active_period]["tot"]
-        if active_period in menu_dict["submenu"][active_subject]["periods"]["prognose"]:
-            tot = min(tot, datetime.datetime(now.year, now.month, now.day, now.hour))
-    views_lst = list(menu_dict["submenu"][active_subject]["views"].keys())
-    period_lst = menu_dict["submenu"][active_subject]["periods"]["list"]
-    active_interval = report.periodes[active_period]["interval"]
-    if active_subject == "grid":
-        report_df = report.get_grid_data(active_period, _tot=tot)
-        filtered_df = report.calc_grid_columns(report_df, active_interval, active_view)
-    elif active_subject == "balans":
-        report_df = report.get_energy_balance_data(active_period, _tot=tot)
-        filtered_df = report.calc_balance_columns(
-            report_df, active_interval, active_view
-        )
-    else:  # co2
-        filtered_df = report.calc_co2_emission(active_period, _tot=tot,
-                                  active_interval=active_interval, active_view=active_view)
-        """
-        report_df = report.get_energy_balance_data(active_period, _tot=tot,
-                                                   col_dict=report.co2_dict,
-                                                   _interval="uur")
-        filtered_df = report.calc_co2_columns(
-            report_df, active_interval, active_view
-        )
-        """
-    filtered_df.round(3)
-    if active_view == "tabel":
-        report_data = [
-            filtered_df.to_html(
-                index=False,
-                justify="right",
-                decimal=",",
-                classes="data",
-                border=0,
-                float_format="{:.3f}".format,
-            )
-        ]
-    else:
-        if active_subject == "grid":
-            report_data = report.make_graph(filtered_df, active_period)
-        elif active_subject == "balans":
-            report_data = report.make_graph(
-                filtered_df, active_period, report.balance_graph_options
-            )
-        else:  # co2
-            report_data = report.make_graph(
-                filtered_df, active_period, report.co2_graph_options
-            )
-
-    return render_template(
-        "report.html",
-        title="Rapportage",
-        active_menu="reports",
-        subjects=subjects_lst,
-        views=views_lst,
-        periode_options=period_lst,
-        active_period=active_period,
-        show_prognose=show_prognose,
-        met_prognose=met_prognose,
-        active_subject=active_subject,
-        active_view=active_view,
-        report_data=report_data,
-        version=__version__,
-    )
-'''
-
-
 @app.route("/reports", methods=["POST", "GET"])
 def reports(active_menu: str):
     report = Report(app_datapath + "/options.json")
@@ -546,7 +438,9 @@ def reports(active_menu: str):
                 report_df, active_interval, active_view
             )
         elif active_subject == "balans":
-            report_df = report.get_energy_balance_data(active_period, _tot=tot)
+            report_df, lastmoment = report.get_energy_balance_data(
+                active_period, _tot=tot
+            )
             report_df = report.calc_balance_columns(
                 report_df, active_interval, active_view
             )
@@ -666,22 +560,6 @@ def settings():
         message=message,
         version=__version__,
     )
-
-
-'''
-@app.route('/api/prognose/<string:fld>', methods=['GET'])
-def api_prognose(fld: str):
-    """
-    retourneert in json de data van
-    :param fld: de code van de gevraagde data
-    :return: de gevraagde data in json formaat
-    """
-    report = dao.prog.da_report.Report()
-    start = request.args.get('start')
-    end = request.args.get('end')
-    data = report.get_api_data(fld, prognose=True, start=start, end=end)
-    return jsonify({'data': data})
-'''
 
 
 @app.route("/api/report/<string:fld>/<string:periode>", methods=["GET"])

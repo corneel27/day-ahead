@@ -1,6 +1,96 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# [V2025.6.0]
+
+## Breaking changes
+1. The calculation of the cost and profit with a "regular" energy-supplier is removed.
+So you can remove the corresponding settings:
+````
+    "regular high" : 0.40,
+    "regular low" : 0.35,
+    "switch to low": 23,
+````
+
+2. The terms "delivery" and "redelivery" will be exchanged for the more commonly used terms **consumption** and **production**.
+This will be done with backwards compatibilty, so you can use the old names, but you het a warning in the logging.
+These are the new settings with the new names:
+````
+    "energy taxes consumption": {
+      "2022-01-01": 0.06729,
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.10880,
+      "2025-01-01": 0.10154
+    },
+    "energy taxes production": {
+      "2022-01-01": 0.06729,
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.10880,
+      "2025-01-01": 0.10154
+    },
+    "cost supplier consumption": {
+      "2022-01-01": 0.002,
+      "2023-03-01": 0.018,
+      "2024-04-01": 0.0175,
+      "2024-08-01": 0.020496
+    },
+    "cost supplier production": {
+      "2022-01-01": 0.002,
+      "2023-03-01": 0.018,
+      "2024-04-01": 0.0175,
+      "2024-08-01": 0.020496
+    },
+    
+````
+   The **cost supplier** above are for Tibber so please adjust if you have another supplier.
+
+3. The calculation of the consumption and the production (and the tax refund) in the current contractperiod with your provider is removed.
+You must set by yourself with the setting : **"tax refund" : "True"** whether the energy tax will be refund or not.
+
+4. The graphics of the prices are adjusted. You can now set the following graphs on or off:
+````
+    "prices consumption": "True",
+    "prices production": "True",
+    "prices spot": "True",
+    "average consumption": "True"
+````
+The "prices production" are only relevant if they differ from "prices consumption".
+When you set both "True" and the values are equal, they will be plotted over each other.
+
+5. The VAT (BTW) is now divided in two categories "vat consumption" and "vat production" and so are the settings:
+This is done for the Belgian users of DAO wich have a different vat for redelivery but also for the future when tax refund and possible also vat refund 
+will stop 
+To keep it backwards compatible the following logic is implemented:
+   - when "vat consumption" is not found: "vat" will be used
+   - when "vat production" is not found: "vat consumption" will be used and when that is not found "vat" will be used. <br>
+
+   It is recommended for the future to change your settings now.<br>
+  For instance:
+````
+    "vat consumption": {
+      "2022-01-01": 21,
+      "2022-07-01": 9,
+      "2023-01-01": 21
+    },
+    "vat production": {
+      "2022-01-01": 21,
+      "2022-07-01": 9,
+      "2023-01-01": 21
+    },
+
+````
+6. The term **ip adress** in the settings for connecting your Home Assistant machine is deprecated.
+Use the term generic term **host** for it in the future (feature request of ebbz)
+
+## New features 
+- Introduction of a new optional setting for your solar strings (ac and dc):
+  **max power**. With this setting (in kW) you can cap the power of your pv-string with the max power of your inverter(s) (feature request)
+- Extend the result of the api-call for pv_ac and pv_dc (this one is new) when invoked with the period "vandaag_en_morgen".
+Therefor the period of getting meteo-data is enlarged until 96 hour from "now" (feature request Torch1969 e.a)
+
+## Other changes
+- Fixed calculation error when boiler set temperature is lower then boiler actual temperature (reported by timenator)
+
 # [V2025.5.0]
 
 - Start with a pre-builded repository on Github (thanks to bvw)

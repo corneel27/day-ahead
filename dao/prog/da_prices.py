@@ -1,6 +1,6 @@
-from da_config import Config
+from dao.prog.da_config import Config
 import pandas as pd
-from db_manager import DBmanagerObj
+from dao.prog.db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
 import datetime
 import sys
