@@ -379,7 +379,6 @@ def run_process():
         version=__version__,
     )
 
-
 @app.route("/reports", methods=["POST", "GET"])
 def reports(active_menu: str):
     report = Report(app_datapath + "/options.json")
