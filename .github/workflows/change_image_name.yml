@@ -9,23 +9,25 @@ on:
       - step
 
 jobs:
-  runs-on: ubuntu-latest
-  steps:
-    - name: check out the repository to the runner
-      uses: actions/checkout@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-    - name: run sed delete -addon
-      shell: bash
-      run: |
-        sed -i -e 's/-addon"/"/g' ${{ github.workspace }}/dao/config.yaml
-        sed -i -e 's/-addon"/"/g' ${{ github.workspace }}/dao/build.yaml
-    - name: Configure Git
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-    - name: Commit and push changes
-      run: |
-        git add ${{ github.workspace }}/dao/config.yaml ${{ github.workspace }}/dao/build.yaml
-        git commit -m "-addon verwijderd"
-        git push
+  change_image:
+    name: change inmage
+    runs-on: ubuntu-latest
+    steps:
+      - name: check out the repository to the runner
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: run sed delete -addon
+        shell: bash
+        run: |
+          sed -i -e 's/-addon"/"/g' ${{ github.workspace }}/dao/config.yaml
+          sed -i -e 's/-addon"/"/g' ${{ github.workspace }}/dao/build.yaml
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+      - name: Commit and push changes
+        run: |
+          git add ${{ github.workspace }}/dao/config.yaml ${{ github.workspace }}/dao/build.yaml
+          git commit -m "-addon verwijderd"
+          git push
