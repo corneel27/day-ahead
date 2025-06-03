@@ -10,6 +10,7 @@ from pandas.core.dtypes.inference import is_number
 
 from dao.prog.da_config import Config
 from dao.prog.da_graph import GraphBuilder
+from dao.prog.da_base import DaBase
 from dao.prog.utils import get_value_from_dict
 import math
 import json
@@ -19,24 +20,15 @@ from sqlalchemy import Table, select, and_, literal, func, case
 import matplotlib.pyplot as plt
 
 
-class Report:
+class Report(DaBase):
     periodes = {}
 
     def __init__(
         self, file_name: str = "../data/options.json", _now: datetime.datetime = None
     ):
-        self.config = Config(file_name)
-        self.db_da = self.config.get_db_da()
-        self.db_ha = self.config.get_db_ha()
-        self.prices_options = self.config.get(["prices"])
-        # eb + ode levering
-        self.taxes_l_def = self.prices_options["energy taxes delivery"]
-        # opslag kosten leverancier
-        self.ol_l_def = self.prices_options["cost supplier delivery"]
-        # eb+ode teruglevering
-        self.taxes_t_def = self.prices_options["energy taxes redelivery"]
-        self.ol_t_def = self.prices_options["cost supplier redelivery"]
-        self.btw_def = self.prices_options["vat"]
+        super().__init__(file_name=file_name)
+        if self.config is None:
+            return
 
         self.report_options = self.config.get(["report"])
         self.make_periodes(_now=_now)
@@ -571,6 +563,17 @@ class Report:
             },
         }
 
+        self.several_dict = {
+            "pv_dc": {
+                "dim": "kWh",
+                "sign": "pos",
+                "name": "PV DC",
+                "sensors": self.config.get(
+                    ["entities solar production dc"], self.report_options, []
+                ),
+                "color": "#e39ff6",
+            },
+        }
         self.co2_dict = {
             "cons": {
                 "dim": "kWh",
@@ -1094,12 +1097,20 @@ class Report:
         if col_name_to is None:
             col_name_to = col_name_from
         col_index = add_from.columns.get_loc(col_name_from) + 1
-        for row in add_from.itertuples():
-            # add_from.at[row.tijd, col_name_from])
-            if row.tijd in add_to.index:
-                add_to.at[row.tijd, col_name_to] = (
-                    add_to.at[row.tijd, col_name_to] + factor * row[col_index]
-                )
+        if "tijd" in add_from.columns:
+            for row in add_from.itertuples():
+                # add_from.at[row.tijd, col_name_from])
+                if row.tijd in add_to.index:
+                    add_to.at[row.tijd, col_name_to] = (
+                        add_to.at[row.tijd, col_name_to] + factor * row[col_index]
+                    )
+        else:
+            for row in add_from.itertuples():
+                # add_from.at[row.tijd, col_name_from])
+                if row.time in add_to.index:
+                    add_to.at[row.time, col_name_to] = (
+                        add_to.at[row.time, col_name_to] + factor * row[col_index]
+                    )
         return add_to
 
     def get_latest_present(self, code: str) -> datetime.datetime:
@@ -1253,29 +1264,11 @@ class Report:
         )
         if len(org_data_df.index) == 0:
             return fi_df
-        """
-        old_dagstr = ""
-        taxes_l = 0
-        taxes_t = 0
-        ol_l = 0
-        ol_t = 0
-        btw = 0
-        """
         for row in org_data_df.itertuples():
             if pd.isnull(row.tijd):
                 continue
             if not isinstance(row.tijd, datetime.datetime):
                 print(row)
-            """
-            dag_str = row.tijd.strftime("%Y-%m-%d")
-            if dag_str != old_dagstr:
-                ol_l = get_value_from_dict(dag_str, self.ol_l_def)
-                ol_t = get_value_from_dict(dag_str, self.ol_t_def)
-                taxes_l = get_value_from_dict(dag_str, self.taxes_l_def)
-                taxes_t = get_value_from_dict(dag_str, self.taxes_t_def)
-                btw = get_value_from_dict(dag_str, self.btw_def)
-                old_dagstr = dag_str
-            """
             if interval == "uur":
                 tijd_str = str(row.tijd)[10:16]
             elif interval == "dag":
@@ -1462,7 +1455,7 @@ class Report:
         :param _vanaf: als afwijkt van periode.vanaf
         :param _tot: als afwijkt van periode.tot
         :param _interval: als afwijkt van periode.interval
-        :return:
+        :return: dataframe met data, last_moment van de data
         """
         periode_d = self.periodes[periode]
         vanaf = _vanaf if _vanaf else periode_d["vanaf"]
@@ -1499,6 +1492,7 @@ class Report:
                 groupby_str = "tijd"
         if field is not None and col_dict[field]["sensors"] == "calc":
             field = None
+        last_moment = vanaf
         for key, categorie in col_dict.items():
             if not field is None and key != field:
                 continue
@@ -1691,10 +1685,13 @@ class Report:
                 prog_result.index = pd.to_datetime(prog_result["tijd"])
                 if len(prog_result) > 0:
                     self.add_col_df(prog_result, result, key)
+                    last_moment = prog_result["tot"].iloc[-1] + datetime.timedelta(
+                        hours=1
+                    )
             if categorie["sensors"] == "calc":
                 function = categorie["function"]
                 result = getattr(self, function)(result)
-        return result
+        return result, last_moment
 
     def get_da_data(
         self,
@@ -2372,33 +2369,9 @@ class Report:
         fi_df = pd.DataFrame(columns=columns)
         if len(report_df.index) == 0:
             return fi_df
-        prices_options = self.config.get(["prices"])
-        # eb + ode levering
-        taxes_l_def = prices_options["energy taxes delivery"]
-        # opslag kosten leverancier
-        ol_l_def = prices_options["cost supplier delivery"]
-        # eb+ode teruglevering
-        taxes_t_def = self.prices_options["energy taxes redelivery"]
-        ol_t_def = self.prices_options["cost supplier redelivery"]
-        btw_def = self.prices_options["vat"]
-        #        report_df = report_df.reset_index()
-        old_dagstr = ""
-        taxes_l = 0
-        taxes_t = 0
-        ol_l = 0
-        ol_t = 0
-        btw = 0
         for row in report_df.itertuples():
             if pd.isnull(row.vanaf):
                 continue
-            dag_str = row.vanaf.strftime("%Y-%m-%d")
-            if dag_str != old_dagstr:
-                ol_l = get_value_from_dict(dag_str, ol_l_def)
-                ol_t = get_value_from_dict(dag_str, ol_t_def)
-                taxes_l = get_value_from_dict(dag_str, taxes_l_def)
-                taxes_t = get_value_from_dict(dag_str, taxes_t_def)
-                btw = get_value_from_dict(dag_str, btw_def)
-                old_dagstr = dag_str
             if active_interval == "uur":
                 tijd_str = str(row.vanaf)[10:16]
             elif active_interval == "dag":
@@ -2408,30 +2381,9 @@ class Report:
             col_1 = row.consumption
             col_2 = row.production
             col_3 = col_1 - col_2
-            if math.isnan(row.cost):
-                col_4 = (row.consumption * (row.price + taxes_l + ol_l)) * (
-                    1 + btw / 100
-                )
-            else:
-                col_4 = row.cost
-            if math.isnan(row.profit):
-                col_5 = (row.production * (row.price + taxes_t + ol_t)) * (
-                    1 + btw / 100
-                )
-            else:
-                col_5 = row.profit
+            col_4 = row.cost
+            col_5 = row.profit
             col_6 = col_4 - col_5
-            """
-            #col_7 = (row.price + taxes_l + ol_l) * (1 + btw / 100)
-            if col_1:
-                col_7 = col_4/col_1
-            else:
-                col_7 = numpy.nan
-            if col_2:
-                col_8 = col_5/col_2
-            else:
-                col_8 = numpy.nan
-            """
             fi_df.loc[fi_df.shape[0]] = [
                 tijd_str,
                 col_1,
@@ -2794,12 +2746,14 @@ class Report:
         return
 
     # ------------------------------------------------
-    def get_field_data(self, field: str, periode: str, tot=None):
+    def get_field_data(self, field: str, periode: str, tot=None, dict=None):
         period = self.periodes[periode]
-        if not (field in self.energy_balance_dict):
+        if dict is None:
+            dict = self.energy_balance_dict
+        if not (field in dict):
             result = None
             return result
-        categorie = self.energy_balance_dict[field]
+        categorie = dict[field]
         df = self.db_da.get_column_data(
             "values",
             field,
@@ -2831,22 +2785,33 @@ class Report:
                 last_moment = df_ha_result["time"].iloc[-1] + datetime.timedelta(
                     hours=1
                 )
-            df_ha_result["time"] = df_ha_result["time"].apply(
-                lambda x: x.strftime("%Y-%m-%d %H:%M")
-            )
+                df_ha_result["time"] = df_ha_result["time"].apply(
+                    lambda x: x.strftime("%Y-%m-%d %H:%M")
+                )
 
         if last_moment < self.periodes[periode]["tot"]:
             df_prog = self.db_da.get_column_data(
                 "prognoses", field, start=last_moment, end=period["tot"]
             )
+            if len(df_prog) > 0:
+                last_moment = df_prog["time"].iloc[-1]
             df_prog.index = pd.to_datetime(df_prog["time"])
             df_prog = df_prog.rename(columns={"value": field})
             df_prog["datasoort"] = "expected"
-            df_uur = pd.concat([df_ha_result, df_prog])
+            if len(df_ha_result) == 0:
+                df_uur = df_prog
+            elif len(df_prog) == 0:
+                df_uur = df_ha_result
+            else:
+                df_uur = pd.concat([df_ha_result, df_prog])
         else:
             df_uur = df_ha_result
-        df = pd.concat([df, df_uur])
-        return df
+        if len(df_uur) > 0:
+            if len(df) == 0:
+                df = df_uur
+            else:
+                df = pd.concat([df, df_uur])
+        return df, last_moment
 
     def get_price_data(self, start, end):
         df_da = self.db_da.get_column_data("values", "da", start=start, end=end)
@@ -2855,9 +2820,14 @@ class Report:
         taxes_t = 0
         ol_l = 0
         ol_t = 0
-        btw = 0
+        btw_l = 0
+        btw_t = 0
         columns = ["time", "da_ex", "da_cons", "da_prod", "datasoort"]
         df = pd.DataFrame(columns=columns)
+        salderen = (
+            self.config.get(["tax refund"], self.prices_options, "true").lower()
+            == "true"
+        )
         for row in df_da.itertuples():
             if pd.isnull(row.time):
                 continue
@@ -2867,10 +2837,14 @@ class Report:
                 ol_t = get_value_from_dict(dag_str, self.ol_t_def)
                 taxes_l = get_value_from_dict(dag_str, self.taxes_l_def)
                 taxes_t = get_value_from_dict(dag_str, self.taxes_t_def)
-                btw = get_value_from_dict(dag_str, self.btw_def)
+                btw_l = get_value_from_dict(dag_str, self.btw_l_def)
+                btw_t = get_value_from_dict(dag_str, self.btw_t_def)
                 old_dagstr = dag_str
-            da_cons = (row.value + taxes_l + ol_l) * (1 + btw / 100)
-            da_prod = (row.value + taxes_t + ol_t) * (1 + btw / 100)
+            da_cons = (row.value + taxes_l + ol_l) * (1 + btw_l / 100)
+            if salderen:
+                da_prod = (row.value + taxes_t + ol_t) * (1 + btw_t / 100)
+            else:
+                da_prod = (row.value + ol_t) * (1 + btw_t / 100)
             df.loc[df.shape[0]] = [
                 datetime.datetime.strptime(row.time, "%Y-%m-%d %H:%M"),
                 row.value,
@@ -2886,10 +2860,54 @@ class Report:
         df = self.db_da.get_column_data("prognoses", field, start=start, end=end)
         return df
 
+    def get_pv_prognose(self, field, vanaf, tot):
+        df_gr = self.db_da.get_column_data("values", "gr", vanaf, tot)
+        df_gr = df_gr.rename(columns={"value": "gr"})
+        df_gr["time"] = pd.to_datetime(df_gr["time"])
+        df_result = pd.DataFrame(columns=["time", field, "datasoort"])
+        if field == "pv_ac":
+            solar_num = len(self.solar)
+            for row in df_gr.itertuples():
+                prod = 0
+                for s in range(solar_num):
+                    bruto = (
+                        self.meteo.calc_solar_rad(
+                            self.solar[s], row.time.timestamp(), row.gr
+                        )
+                        * self.solar[s]["yield"]
+                    )
+                    max_power = self.config.get(["max power"], self.solar[s], None)
+                    netto = bruto if max_power is None else min(bruto, max_power)
+                    prod += netto
+                df_result.loc[df_result.shape[0]] = [row.time, prod, "expected"]
+        else:  # pv_dc
+            battery_options = self.config.get(["battery"])
+            B = len(battery_options)
+            for row in df_gr.itertuples():
+                prod = 0
+                for b in range(B):
+                    solar_options = battery_options[b]["solar"]
+                    solar_num = len(solar_options)
+                    for s in range(solar_num):
+                        bruto = (
+                            self.meteo.calc_solar_rad(
+                                solar_options[s], row.time.timestamp(), row.gr
+                            )
+                            * solar_options[s]["yield"]
+                        )
+                        max_power = self.config.get(
+                            ["max power"], solar_options[s], None
+                        )
+                        netto = bruto if max_power is None else min(bruto, max_power)
+                        prod += netto
+                df_result.loc[df_result.shape[0]] = [row.time, prod, "expected"]
+        df_result.index = pd.to_datetime(df_result["time"])
+        return df_result
+
     def get_api_data(self, field: str, _periode: str, cumulate: bool = False):
         periode = _periode.replace("_", " ")
         if not periode in self.periodes.keys():
-            result = f'{{"message": "Failed", "raison": "Periode: \'{_periode}\' is not allowed"}}'
+            result = f'{{"message": "Failed", "reason": "Periode: \'{_periode}\' is not allowed"}}'
             return result
 
         grid_fields = [
@@ -2925,19 +2943,34 @@ class Report:
         elif field[0:3] == "soc":
             df = self.get_soc_data(field, self.periodes[periode]["vanaf"], tot)
             df["time"] = pd.to_datetime(df["time"])
+        elif field in ["pv_ac", "pv_dc"]:
+            # df, last_moment = self.get_field_data(field, periode, dict=self.several_dict)
+            if field == "pv_ac":
+                dict = self.energy_balance_dict
+            else:
+                dict = self.several_dict
+            df_balance, last_moment = self.get_energy_balance_data(
+                periode, field=field, _tot=tot, col_dict=dict
+            )
+            df_balance["time"] = df_balance["tijd"]
+            df = df_balance[["time", field, "datasoort"]].copy()
+            if periode == "vandaag en morgen":
+                vanaf = last_moment
+                tot = last_moment + datetime.timedelta(days=2)
+                df_pv = self.get_pv_prognose(field, vanaf, tot)
+                df = pd.concat([df, df_pv])
+                #  self.add_col_df(df_pv, df, field)
         else:
             if not (field in self.energy_balance_dict):
-                result = f'{{"message":"Failed", "raison": "field: \'{field}\' is not allowed"}}'
+                result = f'{{"message":"Failed", "reason": "field: \'{field}\' is not allowed"}}'
                 return result
             """
             df = self.get_field_data(field, periode)
             """
-            df_balance = self.get_energy_balance_data(periode, field=field, _tot=tot)
-            df_balance["time"] = df_balance["tijd"]
-            df = df_balance[["time", field, "datasoort"]].copy()
-            if cumulate:
-                df[field] = df_balance[field].cumsum()
-            df.rename({field: "value"}, axis=1, inplace=True)
+
+        if cumulate:
+            df[field] = df_balance[field].cumsum()
+        df.rename({field: "value"}, axis=1, inplace=True)
 
         df["time"] = pd.to_datetime(df["time"])
         time_zone = self.config.get(["time_zone"], None, "Europe/Amsterdam")

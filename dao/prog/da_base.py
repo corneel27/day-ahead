@@ -11,11 +11,11 @@ from subprocess import PIPE, run
 import logging
 from logging import Handler
 from sqlalchemy import Table, select, func, and_
-from utils import get_tibber_data, error_handling
-from version import __version__
+from dao.prog.utils import get_tibber_data, error_handling
+from dao.prog.version import __version__
 from dao.prog.da_config import Config
-from da_meteo import Meteo
-from da_prices import DaPrices
+from dao.prog.da_meteo import Meteo
+from dao.prog.da_prices import DaPrices
 
 # from db_manager import DBmanagerObj
 from typing import Union
@@ -72,9 +72,21 @@ class DaBase(hass.Hass):
         self.protocol_api = self.config.get(
             ["homeassistant", "protocol api"], default="http"
         )
-        self.ip_address = self.config.get(
-            ["homeassistant", "ip adress"], default="supervisor"
-        )
+
+        ha_options = self.config.get(["homeassistant"])
+        if "ip adress" in ha_options:
+            self.ip_address = self.config.get(
+                ["homeassistant", "ip adress"], default="supervisor"
+            )
+            logging.warning(
+                f"the use of 'ip adress' is deprecated, change it to 'host' "
+                f"in the near future 'ip adress' cannot be used any more."
+            )
+        else:
+            self.ip_address = self.config.get(
+                ["homeassistant", "host"], default="supervisor"
+            )
+
         self.ip_port = self.config.get(["homeassistant", "ip port"], default=None)
         if self.ip_port is None:
             self.hassurl = self.protocol_api + "://" + self.ip_address + "/core/"
@@ -108,8 +120,55 @@ class DaBase(hass.Hass):
 
         self.prices = DaPrices(self.config, self.db_da)
         self.prices_options = self.config.get(["prices"])
-        self.history_options = self.config.get(["history"])
+        # eb + ode levering
+        self.taxes_l_def = self.config.get(
+            ["energy taxes consumption"], self.prices_options, None
+        )
+        if self.taxes_l_def is None:
+            logging.warning(f"Vervang 'delivery' in je settings door 'consumption'")
+            self.taxes_l_def = self.config.get(
+                ["energy taxes delivery"], self.prices_options, None
+            )
+        # opslag kosten leverancier
+        self.ol_l_def = self.config.get(
+            ["cost supplier consumption"], self.prices_options, None
+        )
+        if self.ol_l_def is None:
+            logging.warning(f"Vervang 'delivery' in je settings door 'consumption'")
+            self.ol_l_def = self.config.get(
+                ["cost supplier delivery"], self.prices_options, None
+            )
+        # eb+ode teruglevering
+        self.taxes_t_def = self.config.get(
+            ["energy taxes production"], self.prices_options, None
+        )
+        if self.taxes_t_def is None:
+            logging.warning(f"Vervang 'redelivery' in je settings door 'production'")
+            self.taxes_t_def = self.config.get(
+                ["energy taxes redelivery"], self.prices_options, None
+            )
+        self.ol_t_def = self.config.get(
+            ["cost supplier production"], self.prices_options, None
+        )
+        if self.ol_t_def is None:
+            logging.warning(f"Vervang 'redelivery' in je settings door 'production'")
+            self.ol_t_def = self.config.get(
+                ["cost supplier redelivery"], self.prices_options, None
+            )
+        if "vat consumption" in self.prices_options:
+            self.btw_l_def = self.prices_options["vat consumption"]
+        else:
+            self.btw_l_def = self.prices_options["vat"]
+        if "vat production" in self.prices_options:
+            self.btw_t_def = self.prices_options["vat production"]
+        else:
+            self.btw_t_def = self.btw_l_def.copy()
+        self.salderen = (
+            self.config.get(["tax refund"], self.prices_options, "true").lower()
+            == "true"
+        )
 
+        self.history_options = self.config.get(["history"])
         self.strategy = self.config.get(["strategy"], None, "minimize cost").lower()
         self.tibber_options = self.config.get(["tibber"], None, None)
         self.notification_entity = self.config.get(

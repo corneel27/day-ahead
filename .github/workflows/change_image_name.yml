@@ -1,17 +1,15 @@
-name: "Set image tag"
-
+name: "Change image name"
 on:
   workflow_dispatch:
     branches:
-      - main
-  pull_request:
-    types: [closed]
+      - step
+  push:
     branches:
-      - main
+      - step
 
 jobs:
-  if_merged:
-    if: github.event.pull_request.merged == true
+  change_image:
+    name: change image
     runs-on: ubuntu-latest
     steps:
       - name: check out the repository to the runner
@@ -32,3 +30,4 @@ jobs:
           git add ${{ github.workspace }}/dao/config.yaml ${{ github.workspace }}/dao/build.yaml
           git commit -m "-addon verwijderd"
           git push
+
