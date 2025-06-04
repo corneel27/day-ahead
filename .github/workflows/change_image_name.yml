@@ -30,3 +30,4 @@ jobs:
           git add ${{ github.workspace }}/dao/config.yaml ${{ github.workspace }}/dao/build.yaml
           git commit -m "-addon verwijderd"
           git push
+

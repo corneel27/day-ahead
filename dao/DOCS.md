@@ -734,6 +734,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | entities battery consumption | list of string   | []                                 |                                                   | 
 |                          | entities battery production  | list of string   | []                                 |                                                   | 
 |                          | entity co2-intensity         | list of string   | []                                 |                                                   | 
+
 | **scheduler**            | active                       | boolean          | True                               | 
 |                          |                              | list             | {time, task}                       |                                                   | 
 
@@ -1120,9 +1121,7 @@ rekening houden met het gebruik van de wp door de boiler en vive versa. De wp za
 ### **heating**<br>
 Dit onderdeel is nog in ontwikkeling. 
   * **heater present**  als **true** zal de warmtepomp worden ingepland als **false** wordt er geen warmtepomp ingepland.
-
   * **entity hp enabled**:  een 'binary_sensor' of input_boolean die aangeeft of de aanwezige warmtepomp in bedrijf is (waarde is **on** en moet worden ingepland of dat hij uit staat (waarde is **off**) door bijvoorbeeld de zomer of een vakantie en niet mag worden ingepland.
-
   * **entity hp heat demand** : een 'binary_sensor' of input_boolean die aangeeft of er directe warmtevraag is in de woning (bijvoorbeeld via een thermostaat). aan de warmtepomp. Als "on" zal de inzet van de warmtepomp vanaf het eerste uur worden geoptimliseerd. Als "off" zal het eerste uur de warmtepomp altijd uit zijn en de inplanning worden berekend vanaf het volgende uur.
   * **degree days factor**: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag (met 16°C als referentietemperatuur).<br>
      Zet deze op 0 als je geen warmtepomp hebt zodat er ook geen warmtevraag is. <br>

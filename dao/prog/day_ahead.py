@@ -1635,6 +1635,7 @@ class DaCalc(DaBase):
                 )
 
             # ready_ma_dt += dt.timedelta(days=1)
+
             """
             vandaag			
             if end_gepland_dt.day != start_opt and end_pland_dt < start_opt: gisteren
@@ -1649,6 +1650,7 @@ class DaCalc(DaBase):
             start_window + 1dag			
             end_window + 1 dag			
             inplannen	
+
             """
             if not error:
                 inplannen = False
