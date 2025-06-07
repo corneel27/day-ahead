@@ -4,6 +4,7 @@
 # 2025.6.1
 Fixed error with api-call for data with parameter "cumulate=1" (reported by @konehead and @simnet)
 
+
 # 2025.6.0
 
 ## Breaking changes
