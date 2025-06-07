@@ -2943,34 +2943,28 @@ class Report(DaBase):
         elif field[0:3] == "soc":
             df = self.get_soc_data(field, self.periodes[periode]["vanaf"], tot)
             df["time"] = pd.to_datetime(df["time"])
-        elif field in ["pv_ac", "pv_dc"]:
+        elif field in ["pv_ac", "pv_dc"] or field in self.energy_balance_dict:
             # df, last_moment = self.get_field_data(field, periode, dict=self.several_dict)
-            if field == "pv_ac":
-                dict = self.energy_balance_dict
-            else:
+            if field == "pv_dc":
                 dict = self.several_dict
+            else:
+                dict = self.energy_balance_dict
             df_balance, last_moment = self.get_energy_balance_data(
                 periode, field=field, _tot=tot, col_dict=dict
             )
             df_balance["time"] = df_balance["tijd"]
             df = df_balance[["time", field, "datasoort"]].copy()
-            if periode == "vandaag en morgen":
+            if periode == "vandaag en morgen" and field in ["pv_ac", "pv_dc"]:
                 vanaf = last_moment
                 tot = last_moment + datetime.timedelta(days=2)
                 df_pv = self.get_pv_prognose(field, vanaf, tot)
                 df = pd.concat([df, df_pv])
-                #  self.add_col_df(df_pv, df, field)
+            if cumulate:
+                df[field] = df[field].cumsum()
+            df.rename({field: "value"}, axis=1, inplace=True)
         else:
-            if not (field in self.energy_balance_dict):
-                result = f'{{"message":"Failed", "reason": "field: \'{field}\' is not allowed"}}'
-                return result
-            """
-            df = self.get_field_data(field, periode)
-            """
-
-        if cumulate:
-            df[field] = df_balance[field].cumsum()
-        df.rename({field: "value"}, axis=1, inplace=True)
+            result = f'{{"message":"Failed", "reason": "field: \'{field}\' is not allowed"}}'
+            return result
 
         df["time"] = pd.to_datetime(df["time"])
         time_zone = self.config.get(["time_zone"], None, "Europe/Amsterdam")
