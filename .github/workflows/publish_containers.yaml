@@ -28,7 +28,7 @@ jobs:
 
       # checkout the repo
       - name: Checkout the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       # Update config.yaml to reflect the correct version
       - name: Update version
@@ -53,7 +53,7 @@ jobs:
       # login to GHCR with the repository owner creds
       - name: Login to GHCR
         if: ${{ github.event_name == 'release' }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2
         with:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
@@ -61,7 +61,7 @@ jobs:
 
       # use hass builder to create generic images
       - name: Publish ${{ matrix.addon }}  image to GHCR
-        uses: home-assistant/builder@master
+        uses: home-assistant/builder@71885366c80f6ead6ae8c364b61d910e0dc5addc # 2025.03.0
         with:
           args: |
             ${{ env.BUILD_ARGS }} \
@@ -76,7 +76,7 @@ jobs:
 
       # use hass builder to create addon images
       - name: Publish ${{ matrix.addon }}  addon image to GHCR
-        uses: home-assistant/builder@master
+        uses: home-assistant/builder@71885366c80f6ead6ae8c364b61d910e0dc5addc # 2025.03.0
         with:
           args: |
             ${{ env.BUILD_ARGS }} \
