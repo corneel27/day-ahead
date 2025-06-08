@@ -65,7 +65,8 @@ jobs:
         uses: home-assistant/builder@master
         with:
           args: |
-            ${{ env.BUILD_ARGS }} \
+            ${{ env.LATEST }} \
+            ${{ env.EXTRA_TAG }} \
             --addon \
             --${{ matrix.arch }} \
             --image "dao-${{ matrix.arch }}-addon" \
