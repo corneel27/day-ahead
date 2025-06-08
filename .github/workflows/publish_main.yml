@@ -14,22 +14,47 @@ jobs:
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
         uses: docker/login-action@v2
         with:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
-      - name: Get version from config.yaml
+      - name: Get version from release tag
+      # ${{ github.ref_name }} contains the tag of the release
+      # Update config.yaml to reflect that version
         run: |
-          versie_nr=$(grep 'version: ' ${{ github.workspace }}/dao/config.yaml | sed 's/version: //')
-          echo "VERSION=$versie_nr" >> $GITHUB_ENV
-      - name: Publish to GHCR
+          sed -ie 's/version: develop/version: ${{ github.ref_name }}/g' dao/config.yaml
+          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+      - name: Set latest on a verions without .rc
+        shell: bash
+        run: |
+          if [[ ${{ github.ref_name }} == *".rc"* ]]; then
+            echo "this is a release candidate, not setting latest tag"
+            echo "ADDITIONAL_TAGS=" >> $GITHUB_ENV
+          else
+            echo "this is a final release, setting latest tag"
+            echo "ADDITIONAL_TAGS=latest" >> $GITHUB_ENV
+          fi  
+      - name: Publish addon-image to GHCR
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --amd64 \
+            --aarch64 \
+            --i386 \
+            --image "dao-{arch}-addon" \
+            --target dao \
+            --docker-hub ghcr.io/${{ github.actor }} \
+            --generic $GITHUB_REF_NAME \
+            --version $VERSION \
+            --additional-tag $ADDITIONAL_TAGS
+      - name: Remove addon tag to publish normal image
+        shell: bash
+        run: |
+          sed -i -e 's/-addon"/"/g' ${{ github.workspace }}/dao/config.yaml
+          sed -i -e 's/-addon"/"/g' ${{ github.workspace }}/dao/build.yaml
+      - name: Publish image to GHCR
         uses: home-assistant/builder@master
         with:
           args: |
@@ -41,4 +66,4 @@ jobs:
             --docker-hub ghcr.io/${{ github.actor }} \
             --generic $GITHUB_REF_NAME \
             --version $VERSION \
-            --additional-tag $VERSION
+            --additional-tag $ADDITIONAL_TAGS
