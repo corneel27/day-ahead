@@ -1,9 +1,15 @@
 name: "Publish containers to ghcr.io"
 
+env:
+  BUILD_ARGS: "--test"
+
 on:
   workflow_dispatch:
   release:
     types: [published]
+  pull_request:
+    branches:
+      - main
 
 jobs:
   publish:
@@ -14,6 +20,16 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
+      - name: Explain why this job ran
+        run: |
+          echo "The ${{ github.event_name }} event triggered this step."
+
+      # do a test build when it is a PR
+      - name: Set release event
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          echo "BUILD_ARGS=" >> $GITHUB_ENV
+
       # checkout the repo
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -51,6 +67,7 @@ jobs:
         uses: home-assistant/builder@master
         with:
           args: |
+            ${{ env.BUILD_ARGS }} \
             ${{ env.LATEST }} \
             ${{ env.EXTRA_TAG }} \
             --generic $VERSION \
