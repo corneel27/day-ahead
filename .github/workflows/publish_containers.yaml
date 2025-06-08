@@ -14,14 +14,6 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-
-      - name: Runs on Pre-Release
-        if: 'github.event.prerelease'
-        run: echo "This is a Pre-Release"
-      - name: Runs on Release
-        if: '!github.event.prerelease'
-        run: echo "This is a Release"
-
       # checkout the repo
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -38,10 +30,10 @@ jobs:
         run: |
           if [[ $VERSION == *".rc"* ]]; then
             echo "this is a release candidate, not setting stable tag"
-            echo "ADDITIONAL_TAG=rc" >> $GITHUB_ENV
+            echo "BUILD_ARGS=" >> $GITHUB_ENV;
           else
             echo "this is a final release, setting stable tag"
-            echo "ADDITIONAL_TAG=stable" >> $GITHUB_ENV
+            echo "BUILD_ARGS='--additional-tag=stable'" >> $GITHUB_ENV
           fi  
        
       # login to GHCR with the repository owner creds
@@ -57,25 +49,23 @@ jobs:
         uses: home-assistant/builder@master
         with:
           args: |
+            ${{ env.BUILD_ARGS }} \
             --generic $VERSION \
             --${{ matrix.arch }} \
             --image "dao-${{ matrix.arch }}" \
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
-            --version $VERSION \
-            --release-tag \
-            --additional-tag $ADDITIONAL_TAG
+            --version $VERSION 
 
       # use hass builder to create addon images
       - name: Publish ${{ matrix.addon }}  addon image to GHCR
         uses: home-assistant/builder@master
         with:
           args: |
+            ${{ env.BUILD_ARGS }} \
             --addon \
             --${{ matrix.arch }} \
             --image "dao-${{ matrix.arch }}" \
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
-            --version $VERSION \
-            --release-tag \
-            --additional-tag $ADDITIONAL_TAG
+            --version $VERSION 
