@@ -20,7 +20,7 @@ jobs:
       - name: find version to checkout
         run: |
           USER_INPUT=${{ github.event.inputs.release_tag }}
-          if [ "x${USER_INPUT} != "x" ]; then
+          if [ "x${USER_INPUT}" != "x" ]; then
             REF="ref/tags/${USER_INPUT}"
             VERSION="${USER_INPUT}"
           else
