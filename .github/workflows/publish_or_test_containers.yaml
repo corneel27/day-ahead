@@ -73,7 +73,8 @@ jobs:
           fi
 
       # use hass builder to create generic images
-      - name: Publish or test ${{ matrix.arch }} image
+      - name: Publish ${{ matrix.arch }} image
+        if: ${{ env.BUILD_ARGS != '--test' }}
         uses: home-assistant/builder@master
         with:
           args: |
@@ -88,7 +89,40 @@ jobs:
             --version $VERSION 
 
       # use hass builder to create addon images
-      - name: Publish or test ${{ matrix.arch }} addon image
+      - name: Publish ${{ matrix.arch }} addon image
+        if: ${{ env.BUILD_ARGS != '--test' }}
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            ${{ env.BUILD_ARGS }} \
+            ${{ env.LATEST }} \
+            ${{ env.EXTRA_TAG }} \
+            --addon \
+            --${{ matrix.arch }} \
+            --image "dao-${{ matrix.arch }}-addon" \
+            --target dao \
+            --docker-hub ghcr.io/${ACTOR} \
+            --version $VERSION 
+
+      # use hass builder to create generic images
+      - name: Test ${{ matrix.arch }} generic image
+        if: ${{ env.BUILD_ARGS == '--test' && matrix.arch == 'amd64' }}
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            ${{ env.BUILD_ARGS }} \
+            ${{ env.LATEST }} \
+            ${{ env.EXTRA_TAG }} \
+            --generic $VERSION \
+            --${{ matrix.arch }} \
+            --image "dao-${{ matrix.arch }}-addon" \
+            --target dao \
+            --docker-hub ghcr.io/${ACTOR} \
+            --version $VERSION 
+
+      # use hass builder to create addon images
+      - name: Test ${{ matrix.arch }} addon image
+        if: ${{ env.BUILD_ARGS == '--test' && matrix.arch == 'amd64' }}
         uses: home-assistant/builder@master
         with:
           args: |
