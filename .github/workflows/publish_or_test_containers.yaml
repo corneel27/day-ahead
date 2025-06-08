@@ -61,6 +61,17 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
 
+      # fix dependabot[bot] github actor
+      - name: Fix dependabot actor name
+        if: ${{ github.event_name != 'release' }}
+        shell: bash
+        run: |
+          if [[ "${{ github.actor }}" == "dependabot[bot]" ]]; then
+            echo "ACTOR=dependabot" >> $GITHUB_ENV;
+          else
+            echo "ACTOR=${{ github.actor }}" >> $GITHUB_ENV;
+          fi
+
       # use hass builder to create generic images
       - name: Publish or test ${{ matrix.arch }} image
         uses: home-assistant/builder@master
@@ -73,7 +84,7 @@ jobs:
             --${{ matrix.arch }} \
             --image "dao-${{ matrix.arch }}" \
             --target dao \
-            --docker-hub ghcr.io/${{ github.actor }} \
+            --docker-hub ghcr.io/${ACTOR} \
             --version $VERSION 
 
       # use hass builder to create addon images
@@ -88,5 +99,5 @@ jobs:
             --${{ matrix.arch }} \
             --image "dao-${{ matrix.arch }}-addon" \
             --target dao \
-            --docker-hub ghcr.io/${{ github.actor }} \
+            --docker-hub ghcr.io/${ACTOR} \
             --version $VERSION 
