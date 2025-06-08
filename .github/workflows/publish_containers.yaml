@@ -30,10 +30,10 @@ jobs:
         run: |
           if [[ $VERSION == *".rc"* ]]; then
             echo "this is a release candidate, not setting stable or latest tag"
-            echo "BUILD_ARGS='--no-latest'" >> $GITHUB_ENV;
+            echo "BUILD_ARGS=\"--no-latest --additional-tag latest-rc\"" >> $GITHUB_ENV;
           else
             echo "this is a final release, setting stable tag"
-            echo "BUILD_ARGS='--additional-tag=stable'" >> $GITHUB_ENV
+            echo "BUILD_ARGS=\"--additional-tag stable\"" >> $GITHUB_ENV
           fi  
        
       # login to GHCR with the repository owner creds
