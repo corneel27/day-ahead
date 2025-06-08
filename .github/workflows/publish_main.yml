@@ -1,4 +1,4 @@
-name: "Publish main"
+name: "Publish containers to ghcr.io"
 
 on:
   workflow_dispatch:
@@ -14,31 +14,44 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     steps:
+      - name: find version to checkout
+        run: |
+          USER_INPUT=${{ github.event.inputs.release_tag }}
+          REF=${USER_INPUT:-"${{ github.ref_name }}"}
+          echo "VERSION=$REF" >> $GITHUB_ENV
+
+      # checkout the specified release tag if run manually
+      # this defaults to the triggered github.ref_name
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.release_tag }}
+          ref: $VERSION
+
+      # Update config.yaml to reflect the correct version
+      - name: Update version
+        run: |
+          sed -ie 's/version: develop/version: $VERSION/g' dao/config.yaml
+
+      # Add additional 'stable' tag when this is a non-rc release
+      - name: Set stable on a verions without .rc
+        shell: bash
+        run: |
+          if [[ $VERSION == *".rc"* ]]; then
+            echo "this is a release candidate, not setting stable tag"
+          else
+            echo "this is a final release, setting stable tag"
+            echo "ADDITIONAL_TAG=stable" >> $GITHUB_ENV
+          fi  
+       
+      # login to GHCR with the repository owner creds
       - name: Login to GHCR
         uses: docker/login-action@v2
         with:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
-      - name: Get version from release tag
-      # ${{ github.ref_name }} contains the tag of the release
-      # Update config.yaml to reflect that version
-        run: |
-          sed -ie 's/version: develop/version: ${{ github.ref_name }}/g' dao/config.yaml
-          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
-      - name: Set stable on a verions without .rc
-        shell: bash
-        run: |
-          if [[ ${{ github.ref_name }} == *".rc"* ]]; then
-            echo "this is a release candidate, not setting stable tag"
-          else
-            echo "this is a final release, setting latest tag"
-            echo "ADDITIONAL_TAGS=stable" >> $GITHUB_ENV
-          fi  
+
+      # use hass builder to create images
       - name: Publish image to GHCR
         uses: home-assistant/builder@master
         with:
@@ -49,6 +62,6 @@ jobs:
             --image "dao-{arch}" \
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
-            --generic $GITHUB_REF_NAME \
             --version $VERSION \
-            --additional-tag $ADDITIONAL_TAGS
+            --release-tag
+            --additional-tag $ADDITIONAL_TAG
