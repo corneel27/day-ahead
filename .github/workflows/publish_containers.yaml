@@ -79,6 +79,7 @@ jobs:
         uses: home-assistant/builder@master
         with:
           args: |
+            ${{ env.BUILD_ARGS }} \
             ${{ env.LATEST }} \
             ${{ env.EXTRA_TAG }} \
             --addon \
