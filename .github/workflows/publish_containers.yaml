@@ -2,10 +2,6 @@ name: "Publish containers to ghcr.io"
 
 on:
   workflow_dispatch:
-    inputs:
-      release_tag:
-        type: text
-        description: provide the release tag
   release:
     types: [published]
 
@@ -14,33 +10,15 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     steps:
-      # we choose the version either from the user suplied input
-      # (when manually run)
-      # or from the github ref_name
-      - name: find version to checkout
-        run: |
-          USER_INPUT=${{ github.event.inputs.release_tag }}
-          if [ "x${USER_INPUT}" != "x" ]; then
-            REF="ref/tags/${USER_INPUT}"
-            VERSION="${USER_INPUT}"
-          else
-            REF="ref/tags/${{ github.ref_name }}"
-            VERSION="${{ github.ref_name }}"
-          fi
-          echo "REF=$REF" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      # checkout the specified release tag if run manually
-      # this defaults to the triggered github.ref_name
+      # checkout the repo
       - name: Checkout the repository
         uses: actions/checkout@v4
-        with:
-          ref: $REF
 
       # Update config.yaml to reflect the correct version
       - name: Update version
         run: |
-          sed -ie 's/version: develop/version: $VERSION/g' dao/config.yaml
+          sed -ie 's/version: develop/version: ${{ github.ref_name }}/g' dao/config.yaml
+          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
       # Add additional 'stable' tag when this is a non-rc release
       - name: Set stable on a verions without .rc
