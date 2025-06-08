@@ -1,0 +1,41 @@
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dao/config.yaml'
+
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create new release
+    runs-on: ubuntu-latest
+    steps:
+      # checkout the repo
+      - name: Checkout the repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      # extract version from dao/config.yaml
+      - name: Get version number
+        run: |
+          VERSION=$(grep version dao/config.yaml | sed -e 's/^version: //')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          if [[ $VERSION == *".rc"* ]]; then
+            echo "LATEST=false" >> $GITHUB_ENV;
+          else
+            echo "LATEST=true" >> $GITHUB_ENV;
+          fi
+
+      # create a new release for $VERSION
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${VERSION}" \
+              --repo="${GITHUB_REPOSITORY}" \
+              --title="${VERSION}" \
+              -d --generate-notes --latest=${LATEST}
+
