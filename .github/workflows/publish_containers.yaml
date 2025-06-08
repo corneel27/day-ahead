@@ -18,19 +18,20 @@ jobs:
         run: |
           USER_INPUT=${{ github.event.inputs.release_tag }}
           REF=${USER_INPUT:-"${{ github.ref_name }}"}
-          echo "VERSION=$REF" >> $GITHUB_ENV
+          echo "REF=$REF" >> $GITHUB_ENV
 
       # checkout the specified release tag if run manually
       # this defaults to the triggered github.ref_name
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          ref: $VERSION
+          ref: $REF
 
       # Update config.yaml to reflect the correct version
       - name: Update version
         run: |
-          sed -ie 's/version: develop/version: $VERSION/g' dao/config.yaml
+          sed -ie 's/version: develop/version: $REF/g' dao/config.yaml
+          echo "VERSION=$REF" >> $GITHUB_ENV
 
       # Add additional 'stable' tag when this is a non-rc release
       - name: Set stable on a verions without .rc
