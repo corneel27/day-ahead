@@ -14,7 +14,7 @@ on:
 
 jobs:
   publish:
-    name: Publish Images
+    name: Publish or test images
     strategy:
       matrix:
         arch: ["aarch64", "amd64", "i386"]
