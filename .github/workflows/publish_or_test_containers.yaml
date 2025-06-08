@@ -35,8 +35,8 @@ jobs:
       - name: Update version when release
         if: ${{ github.event_name == 'release' }}
         run: |
-          sed -ie 's/^version: .*/version: ${{ github.ref_name }}/g' dao/config.yaml
-          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          VERSION=$(grep version dao/config.yaml | sed -e 's/^version: //')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       # Add additional 'stable' tag when this is a non-rc release
       - name: Set stable on a verions without .rc
@@ -115,7 +115,7 @@ jobs:
             ${{ env.EXTRA_TAG }} \
             --generic $VERSION \
             --${{ matrix.arch }} \
-            --image "dao-${{ matrix.arch }}-addon" \
+            --image "dao-${{ matrix.arch }}" \
             --target dao \
             --docker-hub ghcr.io/${ACTOR} \
             --version $VERSION 
