@@ -55,7 +55,7 @@ jobs:
       # login to GHCR with the repository owner creds
       - name: Login to GHCR
         if: ${{ github.event_name == 'release' }}
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v2
         with:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
