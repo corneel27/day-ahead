@@ -21,7 +21,7 @@ jobs:
       # Update config.yaml to reflect the correct version
       - name: Update version
         run: |
-          sed -ie 's/version: develop/version: ${{ github.ref_name }}/g' dao/config.yaml
+          sed -ie 's/^version: .*/version: ${{ github.ref_name }}/g' dao/config.yaml
           echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
 
       # Add additional 'stable' tag when this is a non-rc release
@@ -29,8 +29,8 @@ jobs:
         shell: bash
         run: |
           if [[ $VERSION == *".rc"* ]]; then
-            echo "this is a release candidate, not setting stable tag"
-            echo "BUILD_ARGS=" >> $GITHUB_ENV;
+            echo "this is a release candidate, not setting stable or latest tag"
+            echo "BUILD_ARGS='--no-latest'" >> $GITHUB_ENV;
           else
             echo "this is a final release, setting stable tag"
             echo "BUILD_ARGS='--additional-tag=stable'" >> $GITHUB_ENV
