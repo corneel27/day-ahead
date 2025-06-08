@@ -61,7 +61,7 @@ jobs:
 
       # use hass builder to create generic images
       - name: Publish ${{ matrix.addon }}  image to GHCR
-        uses: home-assistant/builder@71885366c80f6ead6ae8c364b61d910e0dc5addc # 2025.03.0
+        uses: home-assistant/builder@master
         with:
           args: |
             ${{ env.BUILD_ARGS }} \
@@ -76,7 +76,7 @@ jobs:
 
       # use hass builder to create addon images
       - name: Publish ${{ matrix.addon }}  addon image to GHCR
-        uses: home-assistant/builder@71885366c80f6ead6ae8c364b61d910e0dc5addc # 2025.03.0
+        uses: home-assistant/builder@master
         with:
           args: |
             ${{ env.BUILD_ARGS }} \
