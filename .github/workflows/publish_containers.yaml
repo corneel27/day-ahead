@@ -7,7 +7,7 @@ on:
 
 jobs:
   publish:
-    name: Publish
+    name: Publish Images
     strategy:
       matrix:
         arch: ["aarch64", "amd64", "i386"]
@@ -65,7 +65,7 @@ jobs:
             ${{ env.BUILD_ARGS }} \
             --addon \
             --${{ matrix.arch }} \
-            --image "dao-${{ matrix.arch }}" \
+            --image "dao-${{ matrix.arch }}-addon" \
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
             --version $VERSION 
