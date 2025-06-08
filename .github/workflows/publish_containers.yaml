@@ -8,8 +8,20 @@ on:
 jobs:
   publish:
     name: Publish
+    strategy:
+      matrix:
+        arch: ["aarch64", "amd64", "i386"]
+
     runs-on: ubuntu-latest
     steps:
+
+      - name: Runs on Pre-Release
+        if: 'github.event.prerelease'
+        run: echo "This is a Pre-Release"
+      - name: Runs on Release
+        if: '!github.event.prerelease'
+        run: echo "This is a Release"
+
       # checkout the repo
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -26,6 +38,7 @@ jobs:
         run: |
           if [[ $VERSION == *".rc"* ]]; then
             echo "this is a release candidate, not setting stable tag"
+            echo "ADDITIONAL_TAG=rc" >> $GITHUB_ENV
           else
             echo "this is a final release, setting stable tag"
             echo "ADDITIONAL_TAG=stable" >> $GITHUB_ENV
@@ -39,17 +52,30 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: ghcr.io
 
-      # use hass builder to create images
-      - name: Publish image to GHCR
+      # use hass builder to create generic images
+      - name: Publish ${{ matrix.addon }}  image to GHCR
         uses: home-assistant/builder@master
         with:
           args: |
-            --amd64 \
-            --aarch64 \
-            --i386 \
-            --image "dao-{arch}" \
+            --generic $VERSION \
+            --${{ matrix.arch }} \
+            --image "dao-${{ matrix.arch }}" \
             --target dao \
             --docker-hub ghcr.io/${{ github.actor }} \
             --version $VERSION \
-            --release-tag
+            --release-tag \
+            --additional-tag $ADDITIONAL_TAG
+
+      # use hass builder to create addon images
+      - name: Publish ${{ matrix.addon }}  addon image to GHCR
+        uses: home-assistant/builder@master
+        with:
+          args: |
+            --addon \
+            --${{ matrix.arch }} \
+            --image "dao-${{ matrix.arch }}" \
+            --target dao \
+            --docker-hub ghcr.io/${{ github.actor }} \
+            --version $VERSION \
+            --release-tag \
             --additional-tag $ADDITIONAL_TAG
