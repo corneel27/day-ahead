@@ -20,11 +20,7 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - name: Explain why this job ran
-        run: |
-          echo "The ${{ github.event_name }} event triggered this step."
-
-      # do a test build when it is a PR
+      # do a test build when it is not a release (or pre-release)
       - name: Set release event
         if: ${{ github.event_name == 'release' }}
         run: |
