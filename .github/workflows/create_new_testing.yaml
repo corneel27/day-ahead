@@ -3,7 +3,7 @@ on:
     branches:
       - main
     paths:
-      - 'addon-release/config.yaml'
+      - 'addon-testing/config.yaml'
 
 
 permissions:
@@ -18,12 +18,12 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      # extract version from addon-release/config.yaml
+      # extract version from dao/config.yaml
       - name: Get version number
         run: |
-          VERSION=$(grep version addon-release/config.yaml | sed -e 's/^version: //')
+          VERSION=$(grep version addon-testing/config.yaml | sed -e 's/^version: //')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "LATEST=true" >> $GITHUB_ENV;
+          echo "LATEST=false" >> $GITHUB_ENV;
 
       # create a new release for $VERSION
       - name: Create release
@@ -33,5 +33,5 @@ jobs:
           gh release create "${VERSION}" \
               --repo="${GITHUB_REPOSITORY}" \
               --title="${VERSION}" \
-              -d --generate-notes --latest=${LATEST}
+              -d -p --generate-notes --latest=${LATEST}
 
