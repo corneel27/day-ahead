@@ -3,6 +3,9 @@ name: Build containers
 on:
   release:
     types: [published]
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
@@ -12,8 +15,8 @@ jobs:
       fail-fast: false
       matrix:
         addon: 
-          - addon-release
           - addon-testing
+          - addon-release
         arch:
           - aarch64
           - armv7
@@ -21,7 +24,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@v4
 
       - name: Get information
         id: info
@@ -56,6 +59,12 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Prepare ${{ matrix.addon }} build
+        if: steps.check.outputs.build_arch == 'true'
+        run: |
+          echo "Preparing build for ${{ matrix.addon }} on ${{ matrix.arch }}"
+          cp -r "./dao/.*" "./${{ matrix.addon }}"
+
       - name: Build ${{ matrix.addon }} add-on
         if: steps.check.outputs.build_arch == 'true'
         uses: home-assistant/builder@2025.03.0
@@ -63,7 +72,7 @@ jobs:
           args: |
             ${{ steps.check.outputs.build_args }} \
             --${{ matrix.arch }} \
-            --target ./${{ matrix.addon }} \
+            --target /data/${{ matrix.addon }} \
             --image "${{ steps.check.outputs.image }}" \
             --docker-hub "ghcr.io/${{ github.repository_owner }}" \
             --addon
