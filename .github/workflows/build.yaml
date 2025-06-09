@@ -19,12 +19,12 @@ jobs:
           - addon-release
         arch:
           - aarch64
-          - armv7
           - amd64
+          - i386
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Get information
         id: info
@@ -44,8 +44,8 @@ jobs:
           fi
           
           BUILD_ARGS=""
-          if ${{ !startsWith(github.ref, 'refs/tags/v') }}; then
-            BUILD_ARGS+=" --no-latest --version unstable-${GITHUB_REF_NAME//[\/]/-}"
+          if ${{ !startsWith(github.ref, 'refs/tags/') }}; then
+            BUILD_ARGS+=" --no-latest --additional-tag unstable --version ${GITHUB_REF_NAME//[\/]/-}"
             if ${{ github.ref != 'refs/heads/main' }}; then
               BUILD_ARGS+=" --test"
             fi
@@ -63,7 +63,8 @@ jobs:
         if: steps.check.outputs.build_arch == 'true'
         run: |
           echo "Preparing build for ${{ matrix.addon }} on ${{ matrix.arch }}"
-          cp -r "./dao/.*" "./${{ matrix.addon }}"
+          cp -r "${{ github.workspace }}/dao/.*" "./${{ matrix.addon }}"
+          cp -r "${{ github.workspace }}/dao/*" "./${{ matrix.addon }}"
 
       - name: Build ${{ matrix.addon }} add-on
         if: steps.check.outputs.build_arch == 'true'
@@ -72,7 +73,7 @@ jobs:
           args: |
             ${{ steps.check.outputs.build_args }} \
             --${{ matrix.arch }} \
-            --target /data/${{ matrix.addon }} \
+            --target ./${{ matrix.addon }} \
             --image "${{ steps.check.outputs.image }}" \
             --docker-hub "ghcr.io/${{ github.repository_owner }}" \
             --addon
