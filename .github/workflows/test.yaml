@@ -1,4 +1,4 @@
-name: Builder
+name: Test containers
 
 on:
   pull_request:
