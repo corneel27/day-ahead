@@ -24,7 +24,6 @@ jobs:
         run: |
           VERSION=$(grep version addon-testing/config.yaml | sed -e 's/^version: //')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "LATEST=false" >> $GITHUB_ENV;
 
       # create a new release for $VERSION
       - name: Create release
@@ -34,5 +33,5 @@ jobs:
           gh release create "${VERSION}" \
               --repo="${GITHUB_REPOSITORY}" \
               --title="${VERSION}" \
-              -d -p --generate-notes --latest=${LATEST}
+              -d -p --generate-notes --latest=false
 
