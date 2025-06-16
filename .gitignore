@@ -2,8 +2,12 @@ dao/data/images/.keep
 dao/data/log/*
 dao/data/secrets.json
 dao/data/options.json
+dao/data/images/*.png
+dao/data/baseload/*.json
+dao/tests
 .idea/
 __pycache__/
 ../CODEOWNERS
 dao/webserver/prog/*
+
 
