@@ -1,13 +1,18 @@
-dao/data/images/.keep
-dao/data/log/*
+dao/data/images
+dao/data/log
 dao/data/secrets.json
 dao/data/options.json
 dao/data/images/*.png
 dao/data/baseload/*.json
+dao/data/*.db
+dao/data/tst_options
+dao/prog/tst_py
 dao/tests
+to_do
+whl
 .idea/
 __pycache__/
 ../CODEOWNERS
-dao/webserver/prog/*
+
 
 
