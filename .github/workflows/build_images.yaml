@@ -1,0 +1,71 @@
+name: Build and publish
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build ${{ matrix.arch }} ${{ matrix.release }} release
+    strategy:
+      matrix:
+        release: [ "stable", "testing" ]
+        arch: [ "aarch64", "amd64", "i386" ]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # this will always checkout the triggered release tag
+      - name: Check out repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+      - name: Get version to build
+        run: |
+          VERSION=$(grep 'version: ' ./release-${{ matrix.release }}/config.yaml | sed -e 's/^version: //')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Set stable or testing on release
+        if: ${{ github.ref_name == env.VERSION }}
+        shell: bash
+        run: |
+          if [[ ${{ matrix.release }} == "stable" ]]; then
+            echo "this is a final release, setting stable tag"
+            echo "NO_LATEST=" >> $GITHUB_ENV;
+            echo "EXTRA_TAG=--additional-tag stable" >> $GITHUB_ENV
+          else
+            echo "this is a release candidate, not setting stable or latest tag"
+            echo "NO_LATEST=--no-latest" >> $GITHUB_ENV;
+            echo "EXTRA_TAG=--additional-tag testing" >> $GITHUB_ENV;
+          fi 
+
+      - name: Login to GHCR
+        if: ${{ github.ref_name == env.VERSION }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+
+
+      - name: Prepare ${{ matrix.release }} build
+        if: ${{ github.ref_name == env.VERSION }}
+        run: |
+          cp -a dao/* ./release-${{ matrix.release }}
+
+      - name: Build and publish ${{ matrix.release }} add-on
+        if: ${{ github.ref_name == env.VERSION }}
+        uses: home-assistant/builder@2025.03.0
+        with:
+          args: |
+            --generic $VERSION \
+            --${{ matrix.arch }} \
+            --image "dao-${{ matrix.arch }}" \
+            --target release-${{ matrix.release }} \
+            --version $VERSION \
+            --docker-hub ghcr.io/${{ github.actor }} \
+            ${{ env.NO_LATEST }} \
+            ${{ env.EXTRA_TAG }} \
+            --addon
