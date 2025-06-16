@@ -1,9 +1,10 @@
+name: Create new testing release
 on:
   push:
     branches:
       - main
     paths:
-      - 'dao/config.yaml'
+      - 'release-testing/config.yaml'
 
 
 permissions:
@@ -11,7 +12,7 @@ permissions:
 
 jobs:
   release:
-    name: Create new release
+    name: Create new testing release
     runs-on: ubuntu-latest
     steps:
       # checkout the repo
@@ -21,13 +22,8 @@ jobs:
       # extract version from dao/config.yaml
       - name: Get version number
         run: |
-          VERSION=$(grep version dao/config.yaml | sed -e 's/^version: //')
+          VERSION=$(grep 'version: ' release-testing/config.yaml | sed -e 's/^version: //')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          if [[ $VERSION == *".rc"* ]]; then
-            echo "LATEST=false" >> $GITHUB_ENV;
-          else
-            echo "LATEST=true" >> $GITHUB_ENV;
-          fi
 
       # create a new release for $VERSION
       - name: Create release
@@ -37,5 +33,5 @@ jobs:
           gh release create "${VERSION}" \
               --repo="${GITHUB_REPOSITORY}" \
               --title="${VERSION}" \
-              -d --generate-notes --latest=${LATEST}
+              -d -p --generate-notes --latest=false
 
