@@ -19,4 +19,4 @@ mariadb~=1.1.10
 flask~=3.0.3
 ephem~=4.1.6
 gunicorn~=23.0.0
-cryptography~=45.0.4
+
