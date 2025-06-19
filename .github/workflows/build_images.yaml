@@ -24,7 +24,11 @@ jobs:
 
       - name: Get version to build
         run: |
-          VERSION=$(grep 'version: ' ./release-${{ matrix.release }}/config.yaml | sed -e 's/^version: //')
+          if [[ ${{ matrix.release }} == "stable" ]]; then
+            VERSION=$(grep 'version: ' config.yaml | sed -e 's/^version: //')
+          else
+            VERSION=$(grep 'version: ' ./release-testing/config.yaml | sed -e 's/^version: //') 
+          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Set stable or testing on release
@@ -35,10 +39,12 @@ jobs:
             echo "this is a final release, setting stable tag"
             echo "NO_LATEST=" >> $GITHUB_ENV;
             echo "EXTRA_TAG=--additional-tag stable" >> $GITHUB_ENV
+            echo "TARGET=--target dao" >> $GITHUB_ENV
           else
             echo "this is a release candidate, not setting stable or latest tag"
             echo "NO_LATEST=--no-latest" >> $GITHUB_ENV;
             echo "EXTRA_TAG=--additional-tag testing" >> $GITHUB_ENV;
+            echo "TARGET=--target release-testing" >> $GITHUB_ENV
           fi 
 
       - name: Login to GHCR
@@ -55,7 +61,7 @@ jobs:
         run: |
           cp -a dao/* ./release-${{ matrix.release }}
 
-      - name: Build and publish ${{ matrix.release }} add-on
+      - name: Build and publish ${{ matrix.release }} dao-image
         if: ${{ github.ref_name == env.VERSION }}
         uses: home-assistant/builder@2025.03.0
         with:
@@ -63,7 +69,7 @@ jobs:
             --generic $VERSION \
             --${{ matrix.arch }} \
             --image "dao-${{ matrix.arch }}" \
-            --target release-${{ matrix.release }} \
+            ${{ env.TARGET }} \
             --version $VERSION \
             --docker-hub ghcr.io/${{ github.actor }} \
             ${{ env.NO_LATEST }} \
