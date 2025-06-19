@@ -1,5 +1,5 @@
 ---
-name: 刀 Day Ahead Optimizer (STABLE)
+name: 刀 Day Ahead Optimizer
 version: 2025.6.1
 slug: day_ahead_opt
 description: Home Assistant Community Add-ons for day ahead optimizations
