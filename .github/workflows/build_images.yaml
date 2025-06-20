@@ -25,7 +25,7 @@ jobs:
       - name: Get version to build
         run: |
           if [[ ${{ matrix.release }} == "stable" ]]; then
-            VERSION=$(grep 'version: ' config.yaml | sed -e 's/^version: //')
+            VERSION=$(grep 'version: ' dao/config.yaml | sed -e 's/^version: //')
           else
             VERSION=$(grep 'version: ' ./release-testing/config.yaml | sed -e 's/^version: //') 
           fi

@@ -22,7 +22,7 @@ jobs:
       # extract version from release-stable/config.yaml
       - name: Get version number
         run: |
-          VERSION=$(grep 'version: ' config.yaml | sed -e 's/^version: //')
+          VERSION=$(grep 'version: ' dao/config.yaml | sed -e 's/^version: //')
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       # create a new release for $VERSION
