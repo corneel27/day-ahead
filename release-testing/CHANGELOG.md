@@ -2,10 +2,10 @@
 # Day Ahead Optimizer
 
 # 2025.6.2
-introduction new buildsystem
-repair vat delivery -> vat consumption, vat redelivery -> vat production
-moved files from dao/release-stable to dao/
-
+- introduction new buildsystem
+- repair vat delivery -> vat consumption, vat redelivery -> vat production
+- moved files from dao/release-stable to dao/
+- fixed error reporting savings
 
 # 2025.6.1
 Fixed error with api-call for data with parameter "cumulate=1" (reported by @konehead and @simnet)

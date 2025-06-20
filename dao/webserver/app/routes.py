@@ -459,7 +459,7 @@ def reports(active_menu: str):
         report_df = calc_function(
             active_period,
             _tot=tot,
-            active_interval=active_interval,
+            # active_interval=active_interval,
             active_view=active_view,
         )
     if active_view == "tabel":
