@@ -1,6 +1,16 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# Deprecating i386, coming breaking change
+In the next coming version (2025.7.0) machines with i386-processor will not be supported anymore.<br>
+Some necessary modules (o.a. cryptography) are not available for the i386 architecture.<br>
+There are a few users with this processor (5 of ca 200).
+Please look out for another machine with an amd64 or aarch64 processor (perhaps a separate Docker-container on your NAS).
+
+# 2025.6.2
+- Introduction new buildsystem (thanks @simnet)
+- Repair vat delivery -> vat consumption, vat redelivery -> vat production
+
 # 2025.6.1
 Fixed error with api-call for data with parameter "cumulate=1" (reported by @konehead and @simnet)
 

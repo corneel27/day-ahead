@@ -2,7 +2,7 @@
 # Day Ahead Optimizer
 
 # 2025.6.2
-- introduction new buildsystem
+- introduction new buildsystem (thanks @simnet)
 - repair vat delivery -> vat consumption, vat redelivery -> vat production
 - moved files from dao/release-stable to dao/
 - fixed error reporting savings
