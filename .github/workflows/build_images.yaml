@@ -59,7 +59,9 @@ jobs:
       - name: Prepare ${{ matrix.release }} build
         if: ${{ github.ref_name == env.VERSION }}
         run: |
-          cp -a dao/* ./release-${{ matrix.release }}
+          if [[ ${{ matrix.release }} == "testing" ]]; then
+             cp -a dao/* ./release-${{ matrix.release }}
+          fi
 
       - name: Build and publish ${{ matrix.release }} dao-image
         if: ${{ github.ref_name == env.VERSION }}
