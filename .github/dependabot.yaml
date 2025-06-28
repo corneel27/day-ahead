@@ -5,4 +5,7 @@ updates:
     schedule:
       interval: weekly
       time: "06:00"
-
+  - package-ecosystem: pip
+    directory: "/dao"
+    schedule:
+      interval: daily
