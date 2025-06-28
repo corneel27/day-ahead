@@ -73,7 +73,7 @@ jobs:
             --image "dao-${{ matrix.arch }}" \
             ${{ env.TARGET }} \
             --version $VERSION \
-            --docker-hub ghcr.io/${{ github.actor }} \
+            --docker-hub ghcr.io/${{ github.repository_owner }} \
             ${{ env.NO_LATEST }} \
             ${{ env.EXTRA_TAG }} \
             --addon
