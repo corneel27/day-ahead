@@ -158,6 +158,8 @@ Voor de volledigheid geeft ik voor de drie mogelijke engines de "default"
      "password": "!secret db_da_password"
    },
   ```
+$\color{Red}{\textsf{Opgelet:}}$ Zorg dat de postgres database timezone gelijk is aan de timezone waarin je leeft. Dit moet handmatig aangepast worden door middel van `alter database <database naam, bijvoorbeeld day_ahead> set timezone to 'Europe/Amsterdam';` uit te voeren op je database.
+
 Meer uitleg over deze database instellingen vind je in [Database DA](#database-da)
 
 Als je alles goed hebt ingevuld gaat je weer terug naar het 
