@@ -1,6 +1,6 @@
 pandas~=2.3.0
 pytz~=2024.2
-requests~=2.32.3
+requests~=2.32.4
 matplotlib~=3.9.2
 numpy~=1.26.4
 mysql~=0.0.3
