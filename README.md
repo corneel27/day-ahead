@@ -1,10 +1,9 @@
 # DAY AHEAD OPTIMIZER
 
-![Supports aarch64 Architecture][aarch64-shield] ![Supports amd64 Architecture][amd64-shield] ![Supports i386 Architecture][i386-shield]
+![Supports aarch64 Architecture][aarch64-shield] ![Supports amd64 Architecture][amd64-shield]
 
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
-[i386-shield]: https://img.shields.io/badge/i386-yes-green.svg
 
 ## Inleiding
 Het programma Day Ahead Optimizer (DAO) voert de volgende acties, 
@@ -14,8 +13,8 @@ berekeningen en bewerkingen uit:
 * ophalen van meteogegevens bij Meteoserver
 * berekenen van de optimale inzet van een aanwezige batterij, wp-boiler en elektrische auto.<br>
 
-Het programma draait alleen als addon op HA installaties met een arm64 processor (bijv Raspberry Pi4),
-een intel 64 bit processor (amd64), of intel 32 bit (i386).
+Het programma draait alleen als addon op HA installaties met een arm64 processor (bijv Raspberry Pi4) of 
+een intel 64 bit processor (amd64)
 
 ---
 ## Installatie

@@ -1,6 +1,6 @@
 ---
 name: 刀 Day Ahead Optimizer (TESTING)
-version: 2025.6.2.rc5
+version: 2025.7.0.rc1
 stage: experimental
 slug: day_ahead_opt-testing
 description: Beta version of DAO. Use only for testing!
@@ -9,7 +9,6 @@ codenotary: cees.van.beek@xs4all.nl
 arch:
   - aarch64
   - amd64
-  - i386
 init: false
 ingress: true
 ingress_port: 5000

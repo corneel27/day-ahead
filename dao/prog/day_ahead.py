@@ -151,8 +151,11 @@ class DaCalc(DaBase):
         solar_prod = []
         entity_pv_ac_switch = []
         max_solar_power = []
+        pv_ac_varcode = []
         solar_num = len(self.solar)
         for s in range(solar_num):
+            if s <= 9:
+                pv_ac_varcode.append("pv_ac_"+str(s))
             pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
             solar_prod.append([])
             entity = self.config.get(["entity pv switch"], self.solar[s], None)
@@ -201,9 +204,15 @@ class DaCalc(DaBase):
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org_ac.append(pv_total)
+
             pv_total = 0
+            pv_dc_varcode = []
+            pv_dc_num = 0
             for b in range(B):
                 for s in range(len(self.battery_options[b]["solar"])):
+                    if pv_dc_num <= 9:
+                        pv_dc_varcode.append("pv_dc_"+str(pv_dc_num))
+                    pv_dc_num += 1
                     prod = (
                         self.meteo.calc_solar_rad(
                             self.battery_options[b]["solar"][s], row.time, row.glob_rad
@@ -2275,6 +2284,23 @@ class DaCalc(DaBase):
                 df_pv_dc.loc[df_pv_dc.shape[0]] = row_pv_dc
             if not self.debug:
                 self.save_df(tablename="prognoses", tijd=tijd_pv, df=df_pv_dc)
+
+        """
+        # voorspellingen van pv opslaan
+        df_pv_prog = pd.DataFrame(columns=["time"]+pv_ac_varcode+pv_dc_varcode)
+        for u in range(U):
+            if hour_fraction[u] >= 1:
+                row_pv = [tijd[u]]
+                for s in range(solar_num):
+                    row_pv.append(pv_ac[s][u].x)
+                for b in range(B):
+                    for s in range(pv_dc_num[b]):
+                        row_pv.append(pv_prod_dc[b][s][u].x * hour_fraction[u])
+                df_pv_prog.loc[df_pv_prog.shape[0]] = row_pv_dc
+        tijd_pv = tijd[:len(df_pv_prog)]
+        if not self.debug:
+            self.save_df(tablename="prognoses", tijd=tijd_pv, df=df_pv_prog)
+        """
 
         # totaal overzicht
         # pd.options.display.float_format = '{:,.3f}'.format
