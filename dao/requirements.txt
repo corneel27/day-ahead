@@ -1,7 +1,7 @@
 pandas~=2.3.0
 pytz~=2025.2
 requests~=2.32.4
-matplotlib~=3.9.2
+matplotlib~=3.9.4
 numpy~=2.0.2
 mysql~=0.0.3
 mysql-connector-python~=9.3.0
