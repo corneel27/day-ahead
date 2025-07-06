@@ -158,6 +158,15 @@ Voor de volledigheid geeft ik voor de drie mogelijke engines de "default"
      "password": "!secret db_da_password"
    },
   ```
+  
+    **Opgelet**: Zorg dat de postgres database timezone gelijk is aan de timezone waarin je leeft. 
+    Je kunt dit checken door in te loggen op je server en de day_ahead database en dan het volgende commando te geven<br>
+`SHOW TIMEZONE;`<br>
+Je kunt het eventueel aanpassen met het volgende commando:<br>
+`ALTER DATABASE <database naam> SET TIMEZONE TO <timezone>;` <br>
+Je vervangt `<database naam>` door de naam die je hebt ingevuld bij "database" en `<timezone>` door je eigen tijdzone bijvoorbeeld Europe/Amsterdam.
+
+
 Meer uitleg over deze database instellingen vind je in [Database DA](#database-da)
 
 Als je alles goed hebt ingevuld gaat je weer terug naar het 

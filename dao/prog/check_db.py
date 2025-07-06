@@ -1,6 +1,4 @@
-import sys
 import datetime
-import logging
 import tzlocal
 
 from sqlalchemy import (
@@ -25,8 +23,7 @@ import pandas as pd
 #  sys.path.append("../")
 from da_config import Config
 from version import __version__
-from utils import version_number, error_handling
-from db_manager import DBmanagerObj
+from utils import version_number
 
 
 class CheckDB:
@@ -77,7 +74,7 @@ class CheckDB:
             self.engine = self.db_da.engine
         except Exception as ex:
             error_handling(ex)
-            logging.error("Check your credentials")
+            print("Check your credentials")
         """
 
     def upsert_variabel(self, variabel_table, record):
@@ -165,7 +162,7 @@ class CheckDB:
                 record = records[i]
                 self.upsert_variabel(variabel_tabel, record)
 
-            logging.info('Table "variabel" met inhoud gecreeerd.')
+            print('Table "variabel" met inhoud gecreeerd.')
 
             # table "values" maken
             values_tabel = Table(
@@ -185,7 +182,7 @@ class CheckDB:
             )
             values_tabel.create(self.engine)
 
-            logging.info('Table "values" gecreeerd.')
+            print('Table "values" gecreeerd.')
             prognoses_tabel = Table(
                 "prognoses",
                 metadata,
@@ -202,12 +199,12 @@ class CheckDB:
                 sqlite_autoincrement=True,  # Ensure SQLite uses AUTOINCREMENT
             )
             prognoses_tabel.create(self.engine)
-            logging.info('Table "prognoses" gecreeerd.')
+            print('Table "prognoses" gecreeerd.')
 
         if l_version < 20240307:
             record = [18, "mach", "Apparatuur", "kWh"]
             self.upsert_variabel(variabel_tabel, record)
-            logging.info('Table "variabel" geupdated.')
+            print('Table "variabel" geupdated.')
 
         if l_version < 20240805:
             records_2024_8_5 = [
@@ -220,7 +217,7 @@ class CheckDB:
             for i in range(len(records_2024_8_5)):
                 record = records_2024_8_5[i]
                 self.upsert_variabel(variabel_tabel, record)
-            logging.info('Table "variabel" geupdated.')
+            print('Table "variabel" geupdated.')
 
         if l_version < 20250700:
             """
@@ -273,15 +270,18 @@ class CheckDB:
             for i in range(len(records_2025_7_0)):
                 record = records_2025_7_0[i]
                 self.upsert_variabel(variabel_tabel, record)
-            logging.info('Table "variabel" geupdated.')
+            print('Table "variabel" geupdated.')
             """
             # timezone in postgresql could be wrong, correct it once
-            if self.db_da.db_dialect == "postgresql":
-                with self.db_da.engine.connect() as con:
-                    timezone = tzlocal.get_localzone_name()
-                    statement = text(f'ALTER DATABASE day_ahead SET timezone TO "{timezone}";')
-                    result = con.execute(statement)
-                logging.info(f'Database "day_ahead" timezone gezet naar {timezone}')
+        if self.db_da.db_dialect == "postgresql":
+            with self.db_da.engine.connect() as con:
+                timezone = tzlocal.get_localzone_name()
+                statement = text("SHOW TIMEZONE;")
+                result = con.execute(statement)
+                tz_db = result.first()[0]
+                if tz_db != timezone:
+                    print(f'De timezone van de database "day_ahead" {result} wijkt af van local timezone: {timezone}')
+                    print("Update de timezone (zie DOCS.md")
 
         if l_version < n_version:
             # update version number database
