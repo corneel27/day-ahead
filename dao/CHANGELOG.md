@@ -1,11 +1,18 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
-# Deprecating i386, coming breaking change
-In the next coming version (2025.7.0) machines with i386-processor will not be supported anymore.<br>
+# 2025.7.0
+
+# BREAKING CHANGE<br>support stops for i386 
+Machines with i386-processor will not be supported anymore.<br>
 Some necessary modules (o.a. cryptography) are not available for the i386 architecture.<br>
 There are a few users with this processor (5 of ca 200).
 Please look out for another machine with an amd64 or aarch64 processor (perhaps a separate Docker-container on your NAS).
+
+Other changes:
+- Added cryptography to requirements.txt
+- Updated several python-modules (dependabot)
+- Users with postgresql-database timezone is set to local timezone.
 
 # 2025.6.2
 - Introduction new buildsystem (thanks @simnet)
