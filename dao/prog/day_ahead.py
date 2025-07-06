@@ -111,77 +111,32 @@ class DaCalc(DaBase):
                 self.notification_entity,
                 "DAO calc gestart " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
             )
+
+        report = Report()
+        price_data = report.get_price_data(
+            start=dt.datetime.fromtimestamp(start_h), end=None
+        )
+        prog_data["da_cons"] = price_data["da_cons"]
+        prog_data["da_prod"] = price_data["da_prod"]
+
         logging.debug("Prognose data:\n{}".format(prog_data.to_string()))
 
-        """
-        day_ahead prijs omrekenen naar twee prijzen
-        1. pl: prijs voor verbruik (levering)
-            altijd met opslag voor 
-            eb_l 0,12599 (2023)
-            opslag leverancier, ol_l 0,001 (tibber)
-            btw over het geheel 21%
-        2. pt: prijs voor teruglevering
-            alleen opslag voor saldering, 
-            na 6 maanden saldo levering/teruglevering , als teruglevering > 
-            levering dan geen opslag eb en ode
-            eb_t 0,12955
-            opslag leverancier ol_t (aftrek!!) 0,0
-            en btw over het geheel 21%
-        """
-        taxes_l_def = self.prices_options["energy taxes delivery"]
-        # eb + ode levering
-        # eb_l = 0.12955
-        # opslag kosten leverancier
-        ol_l_def = self.prices_options["cost supplier delivery"]
-        # ol_l_def ["2022-01-01] = 0.002
-        # ol_l_def ["2023-03-01] = 0.018
-        # eb+ode teruglevering
-        taxes_t_def = self.prices_options["energy taxes redelivery"]
-        # eb_t = 0.12955
-        # eb_t = 0
-        # ode_t = 0
-        ol_t_def = self.prices_options["cost supplier redelivery"]
-        # ol_t = 0 #-0.011
-        btw_def = self.prices_options["vat"]
-        # btw = 0.09
-
-        # prijzen van een traditionele leverancier zijn alleen indicatief;
-        # er wordt niet mee gerekend
-        gc_p_low = self.prices_options["regular low"]
-        gc_p_high = self.prices_options["regular high"]
         pl = []  # prijs levering day_ahead
         pt = []  # prijs teruglevering day_ahead
+        p_spot = []  # prijs op de spot markt
         pl_avg = []  # prijs levering day_ahead gemiddeld
-        pt_notax = []  # prijs teruglevering day ahead zonder taxes
         uur = []  # datum_tijd van het betreffende uur
-        prog_data = prog_data.reset_index(drop=True)
+        prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
         for row in prog_data.itertuples():
-            dag_str = row.tijd.strftime("%Y-%m-%d")
-            ol_l = get_value_from_dict(dag_str, ol_l_def)
-            ol_t = get_value_from_dict(dag_str, ol_t_def)
-            taxes_l = get_value_from_dict(dag_str, taxes_l_def)
-            taxes_t = get_value_from_dict(dag_str, taxes_t_def)
-            btw = get_value_from_dict(dag_str, btw_def)
-            price_l = round((row.da_price + taxes_l + ol_l) * (1 + btw / 100), 5)
-            price_t = round((row.da_price + taxes_t + ol_t) * (1 + btw / 100), 5)
-            pl.append(price_l)
-            pt.append(price_t)
-            # tarief teruglevering zonder eb en btw
-            price_t_notax = row.da_price
-            pt_notax.append(price_t_notax)
+            uur.append(row.tijd)
+            p_spot.append(row.da_price)
+            pl.append(row.da_cons)
+            pt.append(row.da_prod)
 
         B = len(self.battery_options)
         U = len(pl)
-        if U >= self.steps_day:
-            p_avg = sum(pl) / U  # max(pl) #
-        else:
-            dag_str = dt.datetime.now().strftime("%Y-%m-%d")
-            ol_l = get_value_from_dict(dag_str, ol_l_def)
-            taxes_l = get_value_from_dict(dag_str, taxes_l_def)
-            btw = get_value_from_dict(dag_str, btw_def)
-            p_avg = (self.calc_da_avg() + taxes_l + ol_l) * (1 + btw / 100)
-
+        p_avg = sum(pl) / U  # max(pl) #
         for u in range(U):
             pl_avg.append(p_avg)
 
@@ -216,24 +171,28 @@ class DaCalc(DaBase):
         solar_prod = []
         entity_pv_ac_switch = []
         max_solar_power = []
+        pv_ac_varcode = []
         solar_num = len(self.solar)
         for s in range(solar_num):
+            if s <= 9:
+                pv_ac_varcode.append("pv_ac_"+str(s))
             pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
             solar_prod.append([])
             entity = self.config.get(["entity pv switch"], self.solar[s], None)
             if entity == "":
                 entity = None
             entity_pv_ac_switch.append(entity)
-            max_solar_power.append(self.config.get(["max_power"], self.solar[s], None))
+            max_solar_power.append(self.config.get(["max power"], self.solar[s], None))
 
-        b_l = base_cons[-U:]
+        time_first_hour = dt.datetime.fromtimestamp(prog_data["time"].iloc[0])
+        first_hour = int(time_first_hour.hour)
+        b_l = base_cons[first_hour:]
+        uur = []  # hulparray met uren
         tijd = []
         ts = []
         global_rad = []  # globale straling per uur
         pv_org_ac = []  # opwekking zonnepanelen[]
         pv_org_dc = []
-        p_grl = []  # prijs levering
-        p_grt = []  # prijs teruglevering
         hour_fraction = []
         first_hour = True
 
