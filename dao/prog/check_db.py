@@ -219,8 +219,8 @@ class CheckDB:
                 self.upsert_variabel(variabel_tabel, record)
             print('Table "variabel" geupdated.')
 
+        """
         if l_version < 20250700:
-            """
             # update variabel with records voor calculated pv_ac, pv_dc and corr. factors
             records_2025_7_0 = [
                 [23, "pv_ac_0", "Zonne energie AC 1", "kWh"],
@@ -271,8 +271,9 @@ class CheckDB:
                 record = records_2025_7_0[i]
                 self.upsert_variabel(variabel_tabel, record)
             print('Table "variabel" geupdated.')
-            """
-            # timezone in postgresql could be wrong, correct it once
+        """
+
+        # timezone in postgresql could be wrong, correct it once
         if self.db_da.db_dialect == "postgresql":
             with self.db_da.engine.connect() as con:
                 timezone = tzlocal.get_localzone_name()
