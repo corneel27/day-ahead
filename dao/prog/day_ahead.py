@@ -147,7 +147,7 @@ class DaCalc(DaBase):
                 base_cons = base_cons + base_cons
 
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
-        pv_yield = []
+        # pv_yield = []
         solar_prod = []
         entity_pv_ac_switch = []
         max_solar_power = []
@@ -156,7 +156,7 @@ class DaCalc(DaBase):
         for s in range(solar_num):
             if s <= 9:
                 pv_ac_varcode.append("pv_ac_"+str(s))
-            pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
+            # pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
             solar_prod.append([])
             entity = self.config.get(["entity pv switch"], self.solar[s], None)
             if entity == "":
@@ -194,11 +194,24 @@ class DaCalc(DaBase):
                 hour_fraction.append(1)
                 # pv.append(pv_total)
             for s in range(solar_num):
-                prod = (
-                    self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad)
-                    * pv_yield[s]
-                    * hour_fraction[-1]
-                )
+                if "strings" in self.solar[s]:
+                    prod = 0
+                    str_num = len(self.solar[s]["strings"])
+                    for str_s in range(str_num):
+                        prod_str = (
+                            self.meteo.calc_solar_rad(
+                                self.solar[s]["strings"][str_s], row.time, row.glob_rad
+                            )
+                            * self.solar[s]["strings"][str_s]["yield"]
+                            * hour_fraction[-1]
+                        )
+                        prod += prod_str
+                else:
+                    prod = (
+                        self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad)
+                        * self.solar[s]["yield"]
+                        * hour_fraction[-1]
+                    )
                 if not max_solar_power[s] is None:
                     prod = min(prod, max_solar_power[s])
                 solar_prod[s].append(prod)
