@@ -147,7 +147,6 @@ class DaCalc(DaBase):
                 base_cons = base_cons + base_cons
 
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
-        # pv_yield = []
         solar_prod = []
         entity_pv_ac_switch = []
         max_solar_power = []
@@ -156,7 +155,6 @@ class DaCalc(DaBase):
         for s in range(solar_num):
             if s <= 9:
                 pv_ac_varcode.append("pv_ac_"+str(s))
-            # pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
             solar_prod.append([])
             entity = self.config.get(["entity pv switch"], self.solar[s], None)
             if entity == "":
@@ -226,13 +224,28 @@ class DaCalc(DaBase):
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_"+str(pv_dc_num))
                     pv_dc_num += 1
-                    prod = (
-                        self.meteo.calc_solar_rad(
-                            self.battery_options[b]["solar"][s], row.time, row.glob_rad
+                    if "strings" in self.battery_options[b]["solar"][s]:
+                        prod = 0
+                        str_num = len(self.battery_options[b]["solar"][s]["strings"])
+                        for str_s in range(str_num):
+                            prod_str = (
+                                self.meteo.calc_solar_rad(
+                                    self.battery_options[b]["solar"][s]["strings"][str_s],
+                                    row.time,
+                                    row.glob_rad,
+                                )
+                                * self.battery_options[b]["solar"][s]["strings"][str_s]["yield"]
+                                * hour_fraction[-1]
+                            )
+                            prod += prod_str
+                    else:
+                        prod = (
+                            self.meteo.calc_solar_rad(
+                                self.battery_options[b]["solar"][s], row.time, row.glob_rad
+                            )
+                            * self.battery_options[b]["solar"][s]["yield"]
+                            * hour_fraction[-1]
                         )
-                        * self.battery_options[b]["solar"][s]["yield"]
-                        * hour_fraction[-1]
-                    )
                     pv_dc_max_power = self.config.get(
                         ["max power"], self.battery_options[b]["solar"][s], None
                     )
@@ -448,20 +461,34 @@ class DaCalc(DaBase):
             for s in range(pv_dc_num[b]):
                 pv_prod_dc[b].append([])
                 pv_prod_ac[b].append([])
-                pv_yield = self.battery_options[b]["solar"][s]["yield"]
                 pv_dc_max_power = self.config.get(
                     ["max power"], self.battery_options[b]["solar"][s], None
                 )
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u
-                    prod_dc = (
-                        self.meteo.calc_solar_rad(
-                            self.battery_options[b]["solar"][s],
-                            int(tijd[u].timestamp()),
-                            global_rad[u],
+                    if "strings" in self.battery_options[b]["solar"][s]:
+                        prod_dc = 0
+                        str_num = len(self.battery_options[b]["solar"][s]["strings"])
+                        for str_s in range(str_num):
+                            prod_str = (
+                                self.meteo.calc_solar_rad(
+                                    self.battery_options[b]["solar"][s]["strings"][str_s],
+                                    row.time,
+                                    row.glob_rad,
+                                )
+                                * self.battery_options[b]["solar"][s]["strings"][str_s]["yield"]
+                                * hour_fraction[-1]
+                            )
+                            prod_dc += prod_str
+                    else:
+                        prod_dc = (
+                            self.meteo.calc_solar_rad(
+                                self.battery_options[b]["solar"][s],
+                                int(tijd[u].timestamp()),
+                                global_rad[u],
+                            )
+                            * self.battery_options[b]["solar"][s]["yield"]
                         )
-                        * pv_yield
-                    )
                     if pv_dc_max_power is not None:
                         prod_dc = min(prod_dc, pv_dc_max_power)
                     eff = 1
