@@ -302,26 +302,39 @@
       "entity from pv": "input_number.growatt_from_pv",
       "entity from ac": "input_number.growatt_from_ac",
       "entity calculated soc": "input_number.growatt_calculated_soc",
-      "solar": [
-        {
+      "solar": [ {
           "name": "tuinkamer",
-          "tilt": 45,
-          "orientation": 5,
-          "capacity": 1.8,
-          "yield": 0.000,
-          "entity pv switch": "input_boolean.pv_tuinkamer_aan_uit"
+          "entity pv switch": "input_boolean.pv_tuinkamer_aan_uit",
+          "strings": [{
+            "tilt": 45,
+            "orientation": 5,
+            "capacity": 1.8,
+            "yield": 0.010
+            }
+          ]
         }
       ]
     }
   ],
+
   "solar": [
-    {
-      "name": "woning",
-      "tilt": 35,
-      "orientation": 5,
-      "capacity": 4.2,
-      "yield": 0.010,
-      "entity pv switch": "input_boolean.pv_woning_aan_uit"
+    { "name" : "woning",
+      "entity pv switch": "input_boolean.pv_woning_aan_uit",
+      "entities sensor": ["sensor.solaredge_woning_ac_energy_kwh"],
+      "strings": [
+        {
+        "tilt": 40,
+        "orientation": 5,
+        "capacity": 3.3,
+        "yield": 0.0065
+        },
+        {
+        "tilt": 15,
+        "orientation": 5,
+        "capacity": 0.9,
+        "yield": 0.0025
+        }
+      ]
     },
     {
       "name": "garage",

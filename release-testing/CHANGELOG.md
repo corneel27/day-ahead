@@ -1,6 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2025.7.1.rc1
+
+Introduction for support of more strings in pv-inverters.<br>
+See DOCS.md
+
 # 2025.7.0
 
 # BREAKING CHANGE<br>support stops for i386 
