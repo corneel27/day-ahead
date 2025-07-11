@@ -192,26 +192,7 @@ class DaCalc(DaBase):
                 hour_fraction.append(1)
                 # pv.append(pv_total)
             for s in range(solar_num):
-                if "strings" in self.solar[s]:
-                    prod = 0
-                    str_num = len(self.solar[s]["strings"])
-                    for str_s in range(str_num):
-                        prod_str = (
-                            self.meteo.calc_solar_rad(
-                                self.solar[s]["strings"][str_s], row.time, row.glob_rad
-                            )
-                            * self.solar[s]["strings"][str_s]["yield"]
-                            * hour_fraction[-1]
-                        )
-                        prod += prod_str
-                else:
-                    prod = (
-                        self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad)
-                        * self.solar[s]["yield"]
-                        * hour_fraction[-1]
-                    )
-                if not max_solar_power[s] is None:
-                    prod = min(prod, max_solar_power[s])
+                prod = self.calc_prod_solar(self.solar[s], row.time, row.glob_rad, hour_fraction[-1])
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org_ac.append(pv_total)
@@ -224,33 +205,9 @@ class DaCalc(DaBase):
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_"+str(pv_dc_num))
                     pv_dc_num += 1
-                    if "strings" in self.battery_options[b]["solar"][s]:
-                        prod = 0
-                        str_num = len(self.battery_options[b]["solar"][s]["strings"])
-                        for str_s in range(str_num):
-                            prod_str = (
-                                self.meteo.calc_solar_rad(
-                                    self.battery_options[b]["solar"][s]["strings"][str_s],
-                                    row.time,
-                                    row.glob_rad,
-                                )
-                                * self.battery_options[b]["solar"][s]["strings"][str_s]["yield"]
-                                * hour_fraction[-1]
-                            )
-                            prod += prod_str
-                    else:
-                        prod = (
-                            self.meteo.calc_solar_rad(
-                                self.battery_options[b]["solar"][s], row.time, row.glob_rad
-                            )
-                            * self.battery_options[b]["solar"][s]["yield"]
-                            * hour_fraction[-1]
-                        )
-                    pv_dc_max_power = self.config.get(
-                        ["max power"], self.battery_options[b]["solar"][s], None
+                    prod = self.calc_prod_solar(
+                        self.battery_options[b]["solar"][s], row.time, row.glob_rad, hour_fraction[-1]
                     )
-                    if pv_dc_max_power is not None:
-                        prod = min(prod, pv_dc_max_power)
                     pv_total += prod
             pv_org_dc.append(pv_total)
             first_hour = False
@@ -461,36 +418,9 @@ class DaCalc(DaBase):
             for s in range(pv_dc_num[b]):
                 pv_prod_dc[b].append([])
                 pv_prod_ac[b].append([])
-                pv_dc_max_power = self.config.get(
-                    ["max power"], self.battery_options[b]["solar"][s], None
-                )
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u
-                    if "strings" in self.battery_options[b]["solar"][s]:
-                        prod_dc = 0
-                        str_num = len(self.battery_options[b]["solar"][s]["strings"])
-                        for str_s in range(str_num):
-                            prod_str = (
-                                self.meteo.calc_solar_rad(
-                                    self.battery_options[b]["solar"][s]["strings"][str_s],
-                                    row.time,
-                                    row.glob_rad,
-                                )
-                                * self.battery_options[b]["solar"][s]["strings"][str_s]["yield"]
-                                * hour_fraction[-1]
-                            )
-                            prod_dc += prod_str
-                    else:
-                        prod_dc = (
-                            self.meteo.calc_solar_rad(
-                                self.battery_options[b]["solar"][s],
-                                int(tijd[u].timestamp()),
-                                global_rad[u],
-                            )
-                            * self.battery_options[b]["solar"][s]["yield"]
-                        )
-                    if pv_dc_max_power is not None:
-                        prod_dc = min(prod_dc, pv_dc_max_power)
+                    prod_dc = self.calc_prod_solar(self.battery_options[b]["solar"][s], int(tijd[u].timestamp()), global_rad[u], hour_fraction[u])
                     eff = 1
                     for ds in range(DS[b]):
                         if discharge_stages[ds]["power"] / 1000 > prod_dc:
@@ -1649,7 +1579,7 @@ class DaCalc(DaBase):
             )  # de planning van de vorige geslaagde run
             ma_planned_end_dt.append(planned_end_dt)
             start_opt = start_dt  # now
-            # ready_ma_dt = uur[U - 1]  # het laatste moment van planningshorizon
+            # ready_ma_dt = uur[U - 1] # het laatste moment van planningshorizon
             if start_window_entity is None:
                 logging.error(
                     f"De 'entity start window' is niet gedefinieerd bij de instellingen "

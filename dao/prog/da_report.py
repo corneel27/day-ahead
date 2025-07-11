@@ -2837,14 +2837,7 @@ class Report(DaBase):
             for row in df_gr.itertuples():
                 prod = 0
                 for s in range(solar_num):
-                    bruto = (
-                            self.meteo.calc_solar_rad(
-                                self.solar[s], row.time.timestamp(), row.gr
-                            )
-                            * self.solar[s]["yield"]
-                    )
-                    max_power = self.config.get(["max power"], self.solar[s], None)
-                    netto = bruto if max_power is None else min(bruto, max_power)
+                    netto = self.calc_prod_solar(self.solar[s], row.time.timestamp(), row.gr, 1)
                     prod += netto
                 df_result.loc[df_result.shape[0]] = [row.time, prod, "expected"]
         else:  # pv_dc
@@ -2856,16 +2849,9 @@ class Report(DaBase):
                     solar_options = battery_options[b]["solar"]
                     solar_num = len(solar_options)
                     for s in range(solar_num):
-                        bruto = (
-                                self.meteo.calc_solar_rad(
-                                    solar_options[s], row.time.timestamp(), row.gr
-                                )
-                                * solar_options[s]["yield"]
+                        netto = self.calc_prod_solar(
+                            self.solar[s], row.time.timestamp(), row.gr, 1
                         )
-                        max_power = self.config.get(
-                            ["max power"], solar_options[s], None
-                        )
-                        netto = bruto if max_power is None else min(bruto, max_power)
                         prod += netto
                 df_result.loc[df_result.shape[0]] = [row.time, prod, "expected"]
         df_result.index = pd.to_datetime(df_result["time"])

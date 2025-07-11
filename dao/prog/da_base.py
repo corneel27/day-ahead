@@ -360,6 +360,40 @@ class DaBase(hass.Hass):
             result = json.load(f)
         return result
 
+    def calc_prod_solar(self, solar_opt: dict, act_time: int, act_gr: float, hour_fraction: float):
+        """
+        berekent de productie van een string
+        :param solar_opt: dict met alle instellingen van de string
+        :param act_time: timestamp in utc seconden van het moment
+        :param act_gr: de globale straling
+        :param hour_fraction: de uurfractie
+        :return: de productie in kWh
+        """
+        if "strings" in solar_opt:
+            prod = 0
+            str_num = len(solar_opt["strings"])
+            for str_s in range(str_num):
+                prod_str = (
+                    self.meteo.calc_solar_rad(
+                        solar_opt["strings"][str_s],
+                        act_time,
+                        act_gr,
+                    )
+                    * solar_opt["strings"][str_s]["yield"]
+                    * hour_fraction
+                )
+                prod += prod_str
+        else:
+            prod = (
+                self.meteo.calc_solar_rad(solar_opt, act_time, act_gr)
+                * solar_opt["yield"]
+                * hour_fraction
+            )
+        max_power = self.config.get(["max power"], solar_opt, None)
+        if not max_power is None:
+            prod = min(prod, max_power)
+        return prod
+
     def calc_da_avg(self) -> float:
         """
         calculates the average of the last '24' hour values of the day ahead prices
