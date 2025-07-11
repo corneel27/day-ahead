@@ -279,10 +279,11 @@ class CheckDB:
                 timezone = tzlocal.get_localzone_name()
                 statement = text("SHOW TIMEZONE;")
                 result = con.execute(statement)
-                tz_db = result.first()[0]
+                row = result.first()
+                tz_db = row[0]
                 if tz_db != timezone:
-                    print(f'De timezone van de database "day_ahead" {result} wijkt af van local timezone: {timezone}')
-                    print("Update de timezone (zie DOCS.md")
+                    print(f'De timezone van de database "day_ahead" is "{tz_db}" en wijkt af van local timezone: {timezone}')
+                    print("Update de timezone (zie DOCS.md)")
 
         if l_version < n_version:
             # update version number database
