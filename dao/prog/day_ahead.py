@@ -147,7 +147,6 @@ class DaCalc(DaBase):
                 base_cons = base_cons + base_cons
 
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
-        pv_yield = []
         solar_prod = []
         entity_pv_ac_switch = []
         max_solar_power = []
@@ -156,7 +155,6 @@ class DaCalc(DaBase):
         for s in range(solar_num):
             if s <= 9:
                 pv_ac_varcode.append("pv_ac_"+str(s))
-            pv_yield.append(float(self.config.get(["yield"], self.solar[s])))
             solar_prod.append([])
             entity = self.config.get(["entity pv switch"], self.solar[s], None)
             if entity == "":
@@ -194,13 +192,7 @@ class DaCalc(DaBase):
                 hour_fraction.append(1)
                 # pv.append(pv_total)
             for s in range(solar_num):
-                prod = (
-                    self.meteo.calc_solar_rad(self.solar[s], row.time, row.glob_rad)
-                    * pv_yield[s]
-                    * hour_fraction[-1]
-                )
-                if not max_solar_power[s] is None:
-                    prod = min(prod, max_solar_power[s])
+                prod = self.calc_prod_solar(self.solar[s], row.time, row.glob_rad, hour_fraction[-1])
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org_ac.append(pv_total)
@@ -213,18 +205,9 @@ class DaCalc(DaBase):
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_"+str(pv_dc_num))
                     pv_dc_num += 1
-                    prod = (
-                        self.meteo.calc_solar_rad(
-                            self.battery_options[b]["solar"][s], row.time, row.glob_rad
-                        )
-                        * self.battery_options[b]["solar"][s]["yield"]
-                        * hour_fraction[-1]
+                    prod = self.calc_prod_solar(
+                        self.battery_options[b]["solar"][s], row.time, row.glob_rad, hour_fraction[-1]
                     )
-                    pv_dc_max_power = self.config.get(
-                        ["max power"], self.battery_options[b]["solar"][s], None
-                    )
-                    if pv_dc_max_power is not None:
-                        prod = min(prod, pv_dc_max_power)
                     pv_total += prod
             pv_org_dc.append(pv_total)
             first_hour = False
@@ -435,22 +418,9 @@ class DaCalc(DaBase):
             for s in range(pv_dc_num[b]):
                 pv_prod_dc[b].append([])
                 pv_prod_ac[b].append([])
-                pv_yield = self.battery_options[b]["solar"][s]["yield"]
-                pv_dc_max_power = self.config.get(
-                    ["max power"], self.battery_options[b]["solar"][s], None
-                )
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u
-                    prod_dc = (
-                        self.meteo.calc_solar_rad(
-                            self.battery_options[b]["solar"][s],
-                            int(tijd[u].timestamp()),
-                            global_rad[u],
-                        )
-                        * pv_yield
-                    )
-                    if pv_dc_max_power is not None:
-                        prod_dc = min(prod_dc, pv_dc_max_power)
+                    prod_dc = self.calc_prod_solar(self.battery_options[b]["solar"][s], int(tijd[u].timestamp()), global_rad[u], hour_fraction[u])
                     eff = 1
                     for ds in range(DS[b]):
                         if discharge_stages[ds]["power"] / 1000 > prod_dc:
@@ -1609,7 +1579,7 @@ class DaCalc(DaBase):
             )  # de planning van de vorige geslaagde run
             ma_planned_end_dt.append(planned_end_dt)
             start_opt = start_dt  # now
-            # ready_ma_dt = uur[U - 1]  # het laatste moment van planningshorizon
+            # ready_ma_dt = uur[U - 1] # het laatste moment van planningshorizon
             if start_window_entity is None:
                 logging.error(
                     f"De 'entity start window' is niet gedefinieerd bij de instellingen "
