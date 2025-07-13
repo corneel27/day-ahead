@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2025.7.1.rc2
+Fixed error get_meteo when solar is configured with strings (reported by @Mirabis)
+
 # 2025.7.1.rc1
 
 Introduction for support of more strings in pv-inverters.<br>

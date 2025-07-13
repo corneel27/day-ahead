@@ -232,16 +232,20 @@ class Meteo:
         solar = None
         if len(self.solar) > 0:
             solar = self.solar[0]
+            if "strings" in solar:
+                solar = solar["strings"][0]
         else:
             for b in range(len(self.bat)):
                 if len(self.bat[b]["solar"]) > 0:
                     solar = self.bat[b]["solar"][0]
-        if not (solar is None):
-            tilt = solar["tilt"]
-            orientation = solar["orientation"]
-        else:
+                    if "strings" in solar:
+                        solar = solar["strings"][0]
+        if solar is None:
             tilt = 45
             orientation = 0
+        else:
+            tilt = solar["tilt"]
+            orientation = solar["orientation"]
         tilt = min(90, max(0, tilt))
         hcol = math.radians(tilt)
         acol = math.radians(orientation)
