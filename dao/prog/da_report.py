@@ -52,7 +52,7 @@ class Report(DaBase):
         self.co2_intensity_sensor = self.config.get(
             ["entity co2-intensity"], self.report_options, []
         )
-        self.ev_consumption_sensors =  self.config.get(
+        self.ev_consumption_sensors = self.config.get(
             ["entities ev consumption"], self.report_options, []
         )
         self.wp_consumption_sensors = self.config.get(
@@ -1968,7 +1968,7 @@ class Report(DaBase):
             """
             df_prices = self.get_price_data(
                 last_moment, tot
-            )  #   +datetime.timedelta(hours=1))
+            )  # +datetime.timedelta(hours=1))
 
             df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
@@ -2594,6 +2594,10 @@ class Report(DaBase):
                 result[col_name] = result[col_name] + df[col_name]
                 # result = Report.add_col_df(df, result, col_name)
             counter = +1
+        if result is None:
+            logging.debug(f"Geen data voor baseload van {col_name}")
+        else:
+            logging.debug(f"Baseload berekening {col_name}:\n {result.to_string()}\n")
         return result
 
     def calc_weekday_baseload(self, wd: int) -> list:
@@ -2663,6 +2667,7 @@ class Report(DaBase):
         grid_consumption = grid_consumption.rename(
             columns={"grid_consumption": "baseload"}
         )
+        grid_consumption.drop(columns=["state_t1", "state_t2"])
         # baseload - grid_production
         result = Report.add_col_df(
             grid_production, grid_consumption, "grid_production", "baseload", True
@@ -2692,9 +2697,11 @@ class Report(DaBase):
             battery_production, result, "battery_production", "baseload"
         )
 
+        logging.debug(f"Baseload berekening per uur:\n {result.to_string()}\n")
         result = result.groupby("uur", as_index=False).agg(
             {"tijd": "min", "weekdag": "mean", "baseload": "mean"}
         )
+        logging.debug(f"Geagregeerde baseload uur:\n {result.to_string()}\n")
         result.baseload = result.baseload.round(3)
         result = result["baseload"].values.tolist()
         return result

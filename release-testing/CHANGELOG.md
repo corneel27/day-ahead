@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2025.7.1.rc3
+Extra logging op debug-level tijdens berekening baseloads.
+
 # 2025.7.1.rc2
 Fixed error get_meteo when solar is configured with strings (reported by @Mirabis)
 
