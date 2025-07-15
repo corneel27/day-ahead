@@ -240,6 +240,7 @@ class Meteo:
                     solar = self.bat[b]["solar"][0]
                     if "strings" in solar:
                         solar = solar["strings"][0]
+                    break
         if solar is None:
             tilt = 45
             orientation = 0
