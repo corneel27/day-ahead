@@ -1,6 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2025.7.1
+Introduction for support of more strings in pv-inverters.<br>
+See DOCS.md<br>
+Extra logging op debug-level tijdens berekening baseloads.<br>
+Changed call of "fillna" in calculation of baseloads
+
 # 2025.7.0
 
 # BREAKING CHANGE<br>support stops for i386 
