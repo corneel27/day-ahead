@@ -2576,8 +2576,8 @@ class Report(DaBase):
         else:
             df_raw = pd.DataFrame(columns=["weekdag", "tijd", "tot", col_name])
         df_raw.index = pd.to_datetime(df_raw["tijd"])
-        # when NaN in result replace with zero (0)
-        df_raw[col_name] = df_raw[col_name].fillna(0)
+        # when NaN in result replace with zero (0.0)
+        df_raw.fillna(0.0, inplace=True)
         df_wd = df_raw.loc[df_raw["weekdag"] == weekday]
         return df_wd
 
