@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2025.7.2
+Fix error in api-calculation prognose pv_dc
+
 # 2025.7.1.rc3
 Extra logging op debug-level tijdens berekening baseloads.
 

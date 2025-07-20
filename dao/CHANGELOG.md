@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2025.7.2
+Fix error in api-calculation prognose pv_dc
+
 # 2025.7.1
 Introduction for support of more strings in pv-inverters.<br>
 See DOCS.md<br>
