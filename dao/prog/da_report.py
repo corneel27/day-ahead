@@ -2857,7 +2857,7 @@ class Report(DaBase):
                     solar_num = len(solar_options)
                     for s in range(solar_num):
                         netto = self.calc_prod_solar(
-                            self.solar[s], row.time.timestamp(), row.gr, 1
+                            solar_options[s], row.time.timestamp(), row.gr, 1
                         )
                         prod += netto
                 df_result.loc[df_result.shape[0]] = [row.time, prod, "expected"]
