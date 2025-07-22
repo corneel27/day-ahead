@@ -1,5 +1,7 @@
 import calendar
 import datetime
+from unittest.mock import inplace
+
 # from unittest.mock import inplace
 
 import pandas as pd
@@ -2492,13 +2494,14 @@ class Report(DaBase):
 
     #  ------------------------------------------------
     def get_sensor_week_data(
-            self, sensor: str, weekday: int, vanaf: datetime.datetime, col_name: str
+            self, sensor: str, weekday: int, vanaf: datetime.datetime, tot: datetime.datetime, col_name: str
     ) -> pd.DataFrame:
         """
         Berekent de waarde van een HA-sensor over 24 uur voor een bepaalde weekdag
         :param sensor:
         :param weekday:
         :param vanaf:
+        :param tot:
         :param col_name:
         :return:
         """
@@ -2531,6 +2534,7 @@ class Report(DaBase):
 
         # Define parameters
         start_ts_param1 = vanaf.strftime("%Y-%m-%d %H:%M:%S")  # '2024-01-01 00:00:00'
+        tot_ts_param1 = tot.strftime("%Y-%m-%d %H:%M:%S")
 
         # Build the query to retrieve raw data
         query = (
@@ -2551,6 +2555,7 @@ class Report(DaBase):
                 & (t1.c.state.isnot(None))
                 & (t2.c.state.isnot(None))
                 & (t1.c.start_ts >= self.db_ha.unix_timestamp(start_ts_param1) - 3600)
+                & (t1.c.start_ts < self.db_ha.unix_timestamp(tot_ts_param1) - 3600)
             )
         )
 
@@ -2584,16 +2589,26 @@ class Report(DaBase):
     def get_sensor_week_sum(
             self, sensor_list: list, weekday: int, vanaf: datetime.datetime, col_name: str
     ) -> pd.DataFrame:
-        counter = 0
+        # counter = 0
         result = None
+        now = datetime.datetime.now()
+        tot = datetime.datetime(now.year, now.month, now.day)
+        result = self.generate_df(vanaf, tot, "uur", None, col_name)
+        result["weekdag"] = result.apply(
+            lambda x: self.tijd_at_interval("weekdag", x["tijd"]), axis=1
+        )
+        result["uur"] = result.apply(
+            lambda x: self.tijd_at_interval("heel_uur", x["tijd"]), axis=1
+        )
+        result = result.loc[result["weekdag"] == weekday]
         for sensor in sensor_list:
-            df = self.get_sensor_week_data(sensor, weekday, vanaf, col_name)
-            if counter == 0:
-                result = df
-            else:
+            df = self.get_sensor_week_data(sensor, weekday, vanaf, tot, col_name)
+            df.dropna(subset=[col_name], inplace=True)
+            if len(df) == len(result):
                 result[col_name] = result[col_name] + df[col_name]
-                # result = Report.add_col_df(df, result, col_name)
-            counter = +1
+            else:
+                result = Report.add_col_df(df, result, col_name)
+
         if result is None:
             logging.debug(f"Geen data voor baseload van {col_name}")
         else:
@@ -2667,7 +2682,7 @@ class Report(DaBase):
         grid_consumption = grid_consumption.rename(
             columns={"grid_consumption": "baseload"}
         )
-        grid_consumption.drop(columns=["state_t1", "state_t2"])
+        # grid_consumption.drop(columns=["state_t1", "state_t2"])
         # baseload - grid_production
         result = Report.add_col_df(
             grid_production, grid_consumption, "grid_production", "baseload", True
