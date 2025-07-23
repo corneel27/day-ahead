@@ -2980,7 +2980,7 @@ class DaCalc(DaBase):
         axis[0].bar(
             ind, np.array(org_l), label="Levering", color="#00bfff", align="edge"
         )
-        if sum(pv_p_org) > 0:
+        if solar_num > 0:
             axis[0].bar(
                 ind,
                 np.array(pv_p_org),
@@ -3019,14 +3019,15 @@ class DaCalc(DaBase):
                 color="#a32cc4",
                 align="edge",
             )
-        axis[0].bar(
-            ind,
-            np.array(ev_n),
-            bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
-            label="EV laden",
-            color="yellow",
-            align="edge",
-        )
+        if EV > 0:
+            axis[0].bar(
+                ind,
+                np.array(ev_n),
+                bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
+                label="EV laden",
+                color="yellow",
+                align="edge",
+            )
         if M > 0:
             axis[0].bar(
                 ind,
@@ -3066,22 +3067,24 @@ class DaCalc(DaBase):
         axis[1].bar(
             ind, np.array(c_l_p), label="Levering", color="#00bfff", align="edge"
         )
-        axis[1].bar(
-            ind,
-            np.array(pv_p_opt),
-            bottom=np.array(c_l_p),
-            label="PV AC",
-            color="green",
-            align="edge",
-        )
-        axis[1].bar(
-            ind,
-            np.array(accu_out_p),
-            bottom=np.array(c_l_p) + np.array(pv_p_opt),
-            label="Accu uit",
-            color="red",
-            align="edge",
-        )
+        if solar_num > 0:
+            axis[1].bar(
+                ind,
+                np.array(pv_p_opt),
+                bottom=np.array(c_l_p),
+                label="PV AC",
+                color="green",
+                align="edge",
+            )
+        if B > 0:
+            axis[1].bar(
+                ind,
+                np.array(accu_out_p),
+                bottom=np.array(c_l_p) + np.array(pv_p_opt),
+                label="Accu uit",
+                color="red",
+                align="edge",
+            )
 
         # axis[1].bar(ind, np.array(cons_n), label="Verbruik", color='yellow')
         axis[1].bar(
@@ -3105,14 +3108,15 @@ class DaCalc(DaBase):
                 color="#a32cc4",
                 align="edge",
             )
-        axis[1].bar(
-            ind,
-            np.array(ev_n),
-            bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
-            label="EV laden",
-            color="yellow",
-            align="edge",
-        )
+        if EV > 0:
+            axis[1].bar(
+                ind,
+                np.array(ev_n),
+                bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
+                label="EV laden",
+                color="yellow",
+                align="edge",
+            )
         if M > 0:
             axis[1].bar(
                 ind,
@@ -3137,19 +3141,20 @@ class DaCalc(DaBase):
             color="#0080ff",
             align="edge",
         )
-        axis[1].bar(
-            ind,
-            np.array(accu_in_n),
-            bottom=np.array(base_n)
-            + np.array(boiler_n)
-            + np.array(heatpump_n)
-            + np.array(ev_n)
-            + np.array(mach_n)
-            + np.array(c_t_n),
-            label="Accu in",
-            color="#ff8000",
-            align="edge",
-        )
+        if B > 0:
+            axis[1].bar(
+                ind,
+                np.array(accu_in_n),
+                bottom=np.array(base_n)
+                + np.array(boiler_n)
+                + np.array(heatpump_n)
+                + np.array(ev_n)
+                + np.array(mach_n)
+                + np.array(c_t_n),
+                label="Accu in",
+                color="#ff8000",
+                align="edge",
+            )
         axis[1].legend(loc="best", bbox_to_anchor=(1.05, 1.00))
         axis[1].set_ylabel("kWh")
         axis[1].set_ylim([-ylim, ylim])
