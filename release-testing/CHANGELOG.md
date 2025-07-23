@@ -1,8 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
-# 2025.7.3.rc1
-Changed calculation of baseloads to omit NaN
+# 2025.7.3.rc2
+- Changed calculation of baseloads to omit NaN
+- Timeout webpage set to 120 seconds
 
 # 2025.7.2
 Fix error in api-calculation prognose pv_dc
