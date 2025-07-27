@@ -852,7 +852,7 @@ class DaCalc(DaBase):
             else:
                 logging.info(
                     f"Boiler opwarmen wordt ingepland tussen: "
-                    f"{uur[boiler_start]} en {uur[boiler_end]} uur"
+                    f"{uur[boiler_start]} en {uur[boiler_end]} uur\n"
                 )
                 needed_elec = [0.0 for _ in range(U)]
                 needed_time = [0 for _ in range(U)]
@@ -946,13 +946,24 @@ class DaCalc(DaBase):
             # soc_state = min(soc_state, 90.0)
 
             actual_soc.append(soc_state)
-            wished_level.append(
-                float(
-                    self.get_state(
-                        self.ev_options[e]["charge scheduler"]["entity set level"]
-                    ).state
-                )
-            )
+            entity_ev_instant_start = self.config.get(["entity instant start"], self.ev_options[e], None)
+            if entity_ev_instant_start is None:
+                ev_instant_charge = False
+            else:
+                ev_instant_charge = self.get_state(entity_ev_instant_start).state == "on"
+            if ev_instant_charge:
+                entity_ev_instant_level = self.config.get(["entity instant level"], self.ev_options[e], None)
+                if entity_ev_instant_level is None:
+                    wished_lvl = 100.0
+                else:
+                    wished_lvl = float(self.get_state(entity_ev_instant_level).state)
+            else:
+                wished_lvl = float(
+                        self.get_state(
+                            self.ev_options[e]["charge scheduler"]["entity set level"]
+                        ).state
+                    )
+            wished_level.append(wished_lvl)
             level_margin.append(
                 self.config.get(
                     ["level margin"], self.ev_options[e]["charge scheduler"], 0
@@ -981,6 +992,8 @@ class DaCalc(DaBase):
             ev_stages = self.ev_options[e]["charge stages"]
             if ev_stages[0]["ampere"] != 0.0:
                 ev_stages = [{"ampere": 0.0, "efficiency": 1}] + ev_stages
+            if ev_instant_charge:
+                ev_stages = [ev_stages[0], ev_stages[-1]]
             charge_stages.append(ev_stages)
             ECS.append(len(charge_stages[e]))
             max_ampere = charge_stages[e][-1]["ampere"]
@@ -1051,6 +1064,10 @@ class DaCalc(DaBase):
                 max_power[e] * charge_stages[e][-1]["efficiency"]
             )
             logging.info(f"Tijd nodig om te laden: {time_needed:.2f} uur")
+            if ev_instant_charge:
+                hrs_needed = math.floor(time_needed)
+                min_needed = math.ceil((time_needed-hrs_needed)*60)
+                ready = start_dt + datetime.timedelta(hours=hrs_needed, minutes=min_needed)
             old_switch_state = self.get_state(self.ev_options[e]["charge switch"]).state
             old_ampere_state = self.get_state(
                 self.ev_options[e]["entity set charging ampere"]
@@ -1085,16 +1102,19 @@ class DaCalc(DaBase):
                 and (wished_level[e] - level_margin[e] > actual_soc[e])
                 and (tijd[0] < ready)
             ):
-                for u in range(U):
-                    if (tijd[u] + dt.timedelta(hours=1)) >= ready:
-                        ready_index = u
-                        break
+                if ev_instant_charge:
+                    ready_index = hours_needed[e]
+                else:
+                    for u in range(U):
+                        if (tijd[u] + dt.timedelta(hours=1)) >= ready:
+                            ready_index = u
+                            break
             if ready_index == U:
                 if len(reden) > 0:
                     reden = reden[:-1] + "."
-                logging.info(f"Opladen wordt niet ingepland, omdat{reden}")
+                logging.info(f"Opladen wordt niet ingepland, omdat{reden}\n")
             else:
-                logging.info(f"Opladen wordt ingepland.")
+                logging.info(f"Opladen wordt ingepland tussen {start_dt} en {ready}\n")
             ready_u.append(ready_index)
 
         # charger_on = [[model.add_var(var_type=BINARY) for u in range(U)] for e in range(EV)]
@@ -1161,13 +1181,17 @@ class DaCalc(DaBase):
                     model += (
                         xsum(charger_on[e][cs][u] for cs in range(ECS[e])[1:])
                     ) <= 1
+                    if u == ready_u[e]:
+                        hr_fraction = (ready - tijd[u]).total_seconds()/3600
+                    else:
+                        hr_fraction = hour_fraction[u]
                     model += c_ev[e][u] == xsum(
-                        charger_power[e][cs][u] * hour_fraction[u]
+                        charger_power[e][cs][u] * hr_fraction
                         for cs in range(ECS[e])
                     )
                     model += ev_accu_in[e][u] == xsum(
                         charge_stages[e][cs]["accu_power"]
-                        * hour_fraction[u]
+                        * hr_fraction
                         * charger_factor[e][cs][u]
                         for cs in range(ECS[e])
                     )

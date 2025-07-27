@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.7.4.rc1
+- Only draw consumption/production of configured devices.
+- Implemented instant charging electric vehicle(s) (see DOCS.md) 
 
 # 2025.7.3.rc2
 - Changed calculation of baseloads to omit NaN
