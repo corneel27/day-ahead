@@ -719,6 +719,8 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | entity set charging ampere   | string           |                                    | input_number                                       |
 |                          | charge switch                | string           |                                    | input_boolean                                      |
 |                          | entity stop laden            | string           | ""                                 | input_datetime                                     |
+|                          | entity instant charge        | string           |                                    | input_boolean                                      |
+|                          | entity instant level         | string           |                                    | input_number                                       |
 | **machines**             |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                           | 
 |                          | name                         | string           |                                    |                                                    |
 |                          | programs                     | list             |                                    | 1 of meer {..} progrma                             |
@@ -1328,6 +1330,39 @@ action:
 mode: single
 
 ```
+#### Direct laden
+Je kunt met DAO "direct laden" configureren. <br>
+Daarvoor zijn twee extra **optionele** entities beschikbaar:
+* entity instant start: een input_boolean, door deze op "on" te zetten vertel je DAO dat je direct wilt gaan laden.
+* entity instant level: een input_number, waarmee je het uiteidelijke soc-level van direct laden kunt instellen (in %)). 
+Laat je deze weg dan laadt DAO door tot 100% SoC is bereikt.<br>
+
+Je zult zelf in HA nog de volgende zaken moeten configureren:
+* een rest-commando (in configuration.yaml) om DAO direct te laten rekenen:<br>
+```
+  rest_command:
+    start_dao_calc:
+      url: http://<ip-address>:<port>/api/run/calc_zonder_debug
+      verify_ssl: false
+```
+* Hierbij zijn ip-address het ip-adres van de machine waarop DAO draait
+Het poortnummer waarop DAO luistert naar web- en api-verzoeken (meestal 5000)
+* een automation die getriggerd wordt door de state-wijziging van de entity die je hebt ingevuld bij **entity instant start**.<br>
+Bijvoorbeeld:
+````
+alias: Start berekening DAO via rest
+description: Start berekening DAO
+mode: single
+triggers:
+  - entity_id:
+      - input_button.start_day_ahead_berekening
+      - input_boolean.instant_start_ev_charging
+    trigger: state
+conditions: []
+actions:
+  - data: {}
+    action: rest_command.start_dao_calc
+````
 
 ### **machines**
 
