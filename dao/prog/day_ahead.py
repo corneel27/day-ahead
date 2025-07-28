@@ -915,6 +915,7 @@ class DaCalc(DaBase):
         #  now_dt = dt.datetime.now()
         charge_stages = []
         ampere_factor = []
+        ev_instant_charge = []
         ECS = []
         for e in range(EV):
             ev_capacity = self.ev_options[e]["capacity"]
@@ -948,10 +949,11 @@ class DaCalc(DaBase):
             actual_soc.append(soc_state)
             entity_ev_instant_start = self.config.get(["entity instant start"], self.ev_options[e], None)
             if entity_ev_instant_start is None:
-                ev_instant_charge = False
+                instant_charge = False
             else:
-                ev_instant_charge = self.get_state(entity_ev_instant_start).state == "on"
-            if ev_instant_charge:
+                instant_charge = self.get_state(entity_ev_instant_start).state == "on"
+            ev_instant_charge.append(instant_charge)
+            if instant_charge:
                 entity_ev_instant_level = self.config.get(["entity instant level"], self.ev_options[e], None)
                 if entity_ev_instant_level is None:
                     wished_lvl = 100.0
@@ -992,7 +994,7 @@ class DaCalc(DaBase):
             ev_stages = self.ev_options[e]["charge stages"]
             if ev_stages[0]["ampere"] != 0.0:
                 ev_stages = [{"ampere": 0.0, "efficiency": 1}] + ev_stages
-            if ev_instant_charge:
+            if instant_charge:
                 ev_stages = [ev_stages[0], ev_stages[-1]]
             charge_stages.append(ev_stages)
             ECS.append(len(charge_stages[e]))
@@ -1016,7 +1018,7 @@ class DaCalc(DaBase):
             logging.info(
                 f"Instellingen voor laden van EV: {self.ev_options[e]['name']}"
             )
-
+            logging.info(f"Direct laden is {'aan' if instant_charge else 'uit'}")
             logging.info(f" Ampere  Effic. Grid kW Accu kW")
             for cs in range(ECS[e]):
                 if not ("efficiency" in charge_stages[e][cs]):
@@ -1064,7 +1066,7 @@ class DaCalc(DaBase):
                 max_power[e] * charge_stages[e][-1]["efficiency"]
             )
             logging.info(f"Tijd nodig om te laden: {time_needed:.2f} uur")
-            if ev_instant_charge:
+            if instant_charge:
                 hrs_needed = math.floor(time_needed)
                 min_needed = math.ceil((time_needed-hrs_needed)*60)
                 ready = start_dt + datetime.timedelta(hours=hrs_needed, minutes=min_needed)
@@ -1102,7 +1104,7 @@ class DaCalc(DaBase):
                 and (wished_level[e] - level_margin[e] > actual_soc[e])
                 and (tijd[0] < ready)
             ):
-                if ev_instant_charge:
+                if instant_charge:
                     ready_index = hours_needed[e]
                 else:
                     for u in range(U):
@@ -2403,9 +2405,12 @@ class DaCalc(DaBase):
                 entity_charging_ampere = self.ev_options[e][
                     "entity set charging ampere"
                 ]
-                entity_stop_laden = self.config.get(
-                    ["entity stop charging"], self.ev_options[e], None
-                )
+                if ev_instant_charge[e]:
+                    entity_stop_laden = None
+                else:
+                    entity_stop_laden = self.config.get(
+                        ["entity stop charging"], self.ev_options[e], None
+                    )
                 old_switch_state = self.get_state(entity_charge_switch).state
                 old_ampere_state = self.get_state(entity_charging_ampere).state
                 new_ampere_state = 0
