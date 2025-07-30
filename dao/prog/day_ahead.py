@@ -756,8 +756,10 @@ class DaCalc(DaBase):
                 )
         else:
             self.boiler_enabled = False
+        logging.info("\n")
         if not self.boiler_present or not self.boiler_enabled:
             # default values
+            boiler_instant_start = False
             boiler_setpoint = 50
             boiler_hysterese = 10
             spec_heat_boiler = 200 * 4.2 + 100 * 0.5  # kJ/K
@@ -773,6 +775,12 @@ class DaCalc(DaBase):
                 f"Boiler niet aanwezig of staat uit, boiler wordt niet ingepland"
             )
         else:
+            entity_boiler_instant_start = self.config.get(["entity instant start"], self.boiler_options, None)
+            if entity_boiler_instant_start is None:
+                boiler_instant_start = False
+            else:
+                boiler_instant_start = self.get_state(entity_boiler_instant_start).state == "on"
+            logging.info(f"Boiler direct opwarmen staat {'aan' if boiler_instant_start else 'uit'}")
             # 50 huidige boilertemperatuur ophalen uit ha
             boiler_act_temp = float(
                 self.get_state(self.boiler_options["entity actual temp."]).state
@@ -809,23 +817,27 @@ class DaCalc(DaBase):
                 == "true"
             )
             # tijdstip index waarop boiler kan worden verwarmd
-            boiler_start = int(
-                max(
-                    0,
-                    min(
-                        23, int((boiler_act_temp - boiler_bovengrens) / boiler_cooling)
-                    ),
+            if boiler_instant_start:
+                boiler_start = 0
+                boiler_end = 0
+            else:
+                boiler_start = int(
+                    max(
+                        0,
+                        min(
+                            23, int((boiler_act_temp - boiler_bovengrens) / boiler_cooling)
+                        ),
+                    )
                 )
-            )
 
-            # tijdstip index waarop boiler nog aan kan
-            # (41-40)/0.4=2.5
-            boiler_end = int(
-                min(
-                    U - 1,
-                    max(0, int((boiler_act_temp - boiler_ondergrens) / boiler_cooling)),
+                # tijdstip index waarop boiler nog aan kan
+                # (41-40)/0.4=2.5
+                boiler_end = int(
+                    min(
+                        U - 1,
+                        max(0, int((boiler_act_temp - boiler_ondergrens) / boiler_cooling)),
+                    )
                 )
-            )
             boiler_temp = [
                 model.add_var(
                     var_type=CONTINUOUS,
@@ -990,7 +1002,7 @@ class DaCalc(DaBase):
                     ready.hour < start_dt.hour
                 ):
                     ready = ready + dt.timedelta(days=1)
-            hours_available = (ready - start_dt).total_seconds() / 3600
+            hours_available = max(0, (ready - start_dt).total_seconds() / 3600)
             ev_stages = self.ev_options[e]["charge stages"]
             if ev_stages[0]["ampere"] != 0.0:
                 ev_stages = [{"ampere": 0.0, "efficiency": 1}] + ev_stages
@@ -1059,6 +1071,7 @@ class DaCalc(DaBase):
                 e_needed,
                 max_power[e] * hours_available * charge_stages[e][-1]["efficiency"],
             )
+            e_needed = max(0, e_needed) #  nooit minder dan 0
             energy_needed.append(e_needed)  # in kWh
             logging.info(f"Benodigde energie: {energy_needed[e]} kWh")
             # uitgedrukt in aantal uren; bijvoorbeeld 1,5
@@ -1237,13 +1250,13 @@ class DaCalc(DaBase):
         # instelbaar maken?
         # levering
         c_l = [
-            model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power)
-            for _ in range(U)
+            model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power * hour_fraction[u])
+            for u in range(U)
         ]
         # teruglevering
         c_t = [
-            model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power)
-            for _ in range(U)
+            model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power * hour_fraction[u])
+            for u in range(U)
         ]
         c_l_on = [model.add_var(var_type=BINARY) for _ in range(U)]
         c_t_on = [model.add_var(var_type=BINARY) for _ in range(U)]
@@ -1534,6 +1547,7 @@ class DaCalc(DaBase):
         ma_entity_plan_end = []
         ma_planned_start_dt = []  # start tijdstip planning window
         ma_planned_end_dt = []  # eind tijdstip planning window
+        ma_instant_start = []  # direct starten
         for m in range(M):
             error = False
             ma_name.append(self.machines[m]["name"])
@@ -1570,6 +1584,14 @@ class DaCalc(DaBase):
             )
             program_index.append(p)
             RL.append(len(self.machines[m]["programs"][p]["power"]))  # aantal stappen
+            entity_machine_instant_start = self.config.get(["entity instant start"], self.machines[m], None)
+            if entity_machine_instant_start is None:
+                machine_instant_start = False
+            else:
+                machine_instant_start = self.get_state(entity_machine_instant_start).state == "on"
+            ma_instant_start.append(machine_instant_start)
+            logging.info(f"{self.machines[m]["name"]} direct starten staat {'aan' if machine_instant_start else 'uit'}")
+
             # initialize yesterday
             planned_start_dt = dt.datetime(
                 start_dt.year, start_dt.month, start_dt.day
@@ -1606,27 +1628,31 @@ class DaCalc(DaBase):
             ma_planned_end_dt.append(planned_end_dt)
             start_opt = start_dt  # now
             # ready_ma_dt = uur[U - 1] # het laatste moment van planningshorizon
-            if start_window_entity is None:
-                logging.error(
-                    f"De 'entity start window' is niet gedefinieerd bij de instellingen "
-                    f"van {ma_name[m]}."
-                )
-                logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
-                error = True
+            if machine_instant_start:
+                start_window_dt = start_dt
+                end_window_dt = start_dt + dt.timedelta(minutes=RL[m] * 15)
             else:
-                start_window_hm = self.get_state(start_window_entity).state
-                start_window_dt = convert_timestr(start_window_hm, start_dt)
-            if end_window_entity is None:
-                logging.error(
-                    f"De 'entity end window' is niet gedefinieerd bij de instellingen "
-                    f"van {ma_name[m]}."
-                )
-                if not error:
+                if start_window_entity is None:
+                    logging.error(
+                        f"De 'entity start window' is niet gedefinieerd bij de instellingen "
+                        f"van {ma_name[m]}."
+                    )
                     logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
                     error = True
-            else:
-                end_window_hm = self.get_state(end_window_entity).state
-                end_window_dt = convert_timestr(end_window_hm, start_dt)
+                else:
+                    start_window_hm = self.get_state(start_window_entity).state
+                    start_window_dt = convert_timestr(start_window_hm, start_dt)
+                if end_window_entity is None:
+                    logging.error(
+                        f"De 'entity end window' is niet gedefinieerd bij de instellingen "
+                        f"van {ma_name[m]}."
+                    )
+                    if not error:
+                        logging.error(f"Apparaat {ma_name[m]} wordt niet ingepland.")
+                        error = True
+                else:
+                    end_window_hm = self.get_state(end_window_entity).state
+                    end_window_dt = convert_timestr(end_window_hm, start_dt)
             if end_window_dt < start_window_dt:
                 start_window_dt -= dt.timedelta(days=1)
             if end_window_dt < start_opt:
