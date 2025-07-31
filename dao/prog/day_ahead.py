@@ -1590,7 +1590,7 @@ class DaCalc(DaBase):
             else:
                 machine_instant_start = self.get_state(entity_machine_instant_start).state == "on"
             ma_instant_start.append(machine_instant_start)
-            logging.info(f"Apparaat {self.machines[m]["name"]} direct starten staat {'aan' if machine_instant_start else 'uit'}")
+            logging.info(f"Apparaat {self.machines[m]['name']} direct starten staat {'aan' if machine_instant_start else 'uit'}")
 
             # initialize yesterday
             planned_start_dt = dt.datetime(
