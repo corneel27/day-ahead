@@ -925,7 +925,7 @@ class DaCalc(DaBase):
         ev_plugged_in = []
         ev_position = []
         #  now_dt = dt.datetime.now()
-        charge_stages = []
+        ev_charge_stages = []
         ampere_factor = []
         ev_instant_charge = []
         ECS = []
@@ -1008,9 +1008,9 @@ class DaCalc(DaBase):
                 ev_stages = [{"ampere": 0.0, "efficiency": 1}] + ev_stages
             if instant_charge:
                 ev_stages = [ev_stages[0], ev_stages[-1]]
-            charge_stages.append(ev_stages)
-            ECS.append(len(charge_stages[e]))
-            max_ampere = charge_stages[e][-1]["ampere"]
+            ev_charge_stages.append(ev_stages)
+            ECS.append(len(ev_charge_stages[e]))
+            max_ampere = ev_charge_stages[e][-1]["ampere"]
             try:
                 max_ampere = float(max_ampere)
             except ValueError:
@@ -1033,19 +1033,19 @@ class DaCalc(DaBase):
             logging.info(f"Direct laden is {'aan' if instant_charge else 'uit'}")
             logging.info(f" Ampere  Effic. Grid kW Accu kW")
             for cs in range(ECS[e]):
-                if not ("efficiency" in charge_stages[e][cs]):
-                    charge_stages[e][cs]["efficiency"] = 1
-                charge_stages[e][cs]["power"] = (
-                    charge_stages[e][cs]["ampere"] * 230 * ampere_factor[e] / 1000
+                if not ("efficiency" in ev_charge_stages[e][cs]):
+                    ev_charge_stages[e][cs]["efficiency"] = 1
+                ev_charge_stages[e][cs]["power"] = (
+                    ev_charge_stages[e][cs]["ampere"] * 230 * ampere_factor[e] / 1000
                 )
-                charge_stages[e][cs]["accu_power"] = (
-                    charge_stages[e][cs]["power"] * charge_stages[e][cs]["efficiency"]
+                ev_charge_stages[e][cs]["accu_power"] = (
+                    ev_charge_stages[e][cs]["power"] * ev_charge_stages[e][cs]["efficiency"]
                 )
                 logging.info(
-                    f"{charge_stages[e][cs]['ampere']:>7.2f} "
-                    f"{charge_stages[e][cs]['efficiency']:>7.2f} "
-                    f"{charge_stages[e][cs]['power']:>7.2f} "
-                    f"{charge_stages[e][cs]['accu_power']:>7.2f}"
+                    f"{ev_charge_stages[e][cs]['ampere']:>7.2f} "
+                    f"{ev_charge_stages[e][cs]['efficiency']:>7.2f} "
+                    f"{ev_charge_stages[e][cs]['power']:>7.2f} "
+                    f"{ev_charge_stages[e][cs]['accu_power']:>7.2f}"
                 )
 
             """
@@ -1069,14 +1069,14 @@ class DaCalc(DaBase):
             e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
             e_needed = min(
                 e_needed,
-                max_power[e] * hours_available * charge_stages[e][-1]["efficiency"],
+                max_power[e] * hours_available * ev_charge_stages[e][-1]["efficiency"],
             )
             e_needed = max(0, e_needed) #  nooit minder dan 0
             energy_needed.append(e_needed)  # in kWh
             logging.info(f"Benodigde energie: {energy_needed[e]} kWh")
             # uitgedrukt in aantal uren; bijvoorbeeld 1,5
             time_needed = energy_needed[e] / (
-                max_power[e] * charge_stages[e][-1]["efficiency"]
+                max_power[e] * ev_charge_stages[e][-1]["efficiency"]
             )
             logging.info(f"Tijd nodig om te laden: {time_needed:.2f} uur")
             if instant_charge:
@@ -1181,7 +1181,7 @@ class DaCalc(DaBase):
                         # daadwerkelijk ac vermogen = vermogen van de stap x oplaadfactor (0..1)
                         model += (
                             charger_power[e][cs][u]
-                            == charge_stages[e][cs]["power"] * charger_factor[e][cs][u]
+                            == ev_charge_stages[e][cs]["power"] * charger_factor[e][cs][u]
                         )
                         # idem met schakelaar
                         model += (
@@ -1205,7 +1205,7 @@ class DaCalc(DaBase):
                         for cs in range(ECS[e])
                     )
                     model += ev_accu_in[e][u] == xsum(
-                        charge_stages[e][cs]["accu_power"]
+                        ev_charge_stages[e][cs]["accu_power"]
                         * hr_fraction
                         * charger_factor[e][cs][u]
                         for cs in range(ECS[e])
@@ -1293,7 +1293,7 @@ class DaCalc(DaBase):
             self.hp_enabled = False
         if not self.hp_enabled:
             logging.info(
-                "Warmtepomp niet aanwezig of enabled - warmtepomp wordt niet ingepland"
+                "Warmtepomp niet aanwezig of enabled - warmtepomp wordt niet ingepland\n"
             )
             for u in range(U):
                 model += c_hp[u] == 0
@@ -1446,12 +1446,12 @@ class DaCalc(DaBase):
                             if min_run_length > 4:
                                 model += hp_on[u + 3] == hp_on[u + 4]
                 else:
-                    logging.info(f"Geen warmtevraag - warmtepomp wordt niet ingepland")
+                    logging.info(f"Geen warmtevraag - warmtepomp wordt niet ingepland\n")
                     model += c_hp[0] == 0
                     model += hp_on[0] == 0
             else:
                 # hp_adjustment == "power" or "heating curve"
-                logging.info(f"Warmtepomp met power-regeling wordt ingepland")
+                logging.info(f"Warmtepomp met power-regeling wordt ingepland\n")
                 stages = self.heating_options["stages"]
                 S = len(stages)
                 c_hp = [
@@ -1590,7 +1590,7 @@ class DaCalc(DaBase):
             else:
                 machine_instant_start = self.get_state(entity_machine_instant_start).state == "on"
             ma_instant_start.append(machine_instant_start)
-            logging.info(f"{self.machines[m]["name"]} direct starten staat {'aan' if machine_instant_start else 'uit'}")
+            logging.info(f"Apparaat {self.machines[m]["name"]} direct starten staat {'aan' if machine_instant_start else 'uit'}")
 
             # initialize yesterday
             planned_start_dt = dt.datetime(
@@ -1799,7 +1799,7 @@ class DaCalc(DaBase):
                     )
             # het eerste tijdstip waarop de run kan beginnen
             start_ma_dt = dt.datetime.fromtimestamp(
-                900 * math.ceil(max(start_window_dt, start_opt).timestamp() / 900)
+                900 * math.floor(max(start_window_dt, start_opt).timestamp() / 900)
             )
 
             # ma_uur_kw: per machine per uur een lijst van kwartiernummers in het betreffende uur
@@ -1870,7 +1870,7 @@ class DaCalc(DaBase):
                 model += xsum(ma_start[m][kw] for kw in range(KW[m])) == 1
 
             # kan niet starten als je de run niet kan afmaken
-            for kw in range(KW[m])[KW[m] - RL[m] :]:
+            for kw in range(KW[m])[KW[m] - (RL[m]-1) :]:
                 model += ma_start[m][kw] == 0
 
             if self.log_level == logging.DEBUG:
@@ -2173,7 +2173,7 @@ class DaCalc(DaBase):
                     if ac_to_dc_st_on[b][cs][u].x == 1:
                         c_stage = cs
                         ac_to_dc_eff =
-                            charge_stages[cs]["efficiency"] * 100.0
+                            ev_charge_stages[cs]["efficiency"] * 100.0
                 """
                 ac_to_dc_netto = (
                     ac_to_dc[b][u].x - ac_from_dc[b][u].x
@@ -2418,7 +2418,7 @@ class DaCalc(DaBase):
                         )
                         print("uur", end=" ")
                         for cs in range(ECS[e]):
-                            print(f" {charge_stages[e][cs]['ampere']:4.1f}A", end=" ")
+                            print(f" {ev_charge_stages[e][cs]['ampere']:4.1f}A", end=" ")
                         print()
                         for u in range(ready_u[e] + 1):
                             print(f"{uur[u]:2d}", end="    ")
@@ -2449,7 +2449,7 @@ class DaCalc(DaBase):
                 for cs in range(ECS[e])[1:]:
                     # print(f"{charger_factor[e][cs][0].x:.2f}", end="  ")
                     if charger_factor[e][cs][0].x > 0:
-                        new_ampere_state = charge_stages[e][cs]["ampere"]
+                        new_ampere_state = ev_charge_stages[e][cs]["ampere"]
                         if new_ampere_state > 0:
                             new_switch_state = "on"
                         if (charger_factor[e][cs][0].x < 1) and (
@@ -2812,7 +2812,7 @@ class DaCalc(DaBase):
                                         datetime=start_machine_str,
                                     )
                                     logging.info(f"Start op {start_machine_str}")
-                            end_machine_str = ma_kw_dt[m][r + RL[m]].strftime(
+                            end_machine_str = (ma_kw_dt[m][r + RL[m]-1]+dt.timedelta(seconds=900)).strftime(
                                 "%Y-%m-%d %H:%M"
                             )
                             if not (ma_entity_plan_end[m] is None):

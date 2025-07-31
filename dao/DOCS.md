@@ -650,6 +650,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | boiler heated by heatpump    | boolean          | "True"                             | W                                                  |
 |                          | activate service             | string           |                                    |                                                    |
 |                          | activate entity              | string           |                                    |                                                    |
+|                          | entity instant start         | string           |                                    | input_boolean                                      |
 | **heating**              | heater present               | boolean          | "False"                            |                                                    | 
 |                          | entity hp enabled            | string           |                                    | bij afwezigheid wordt heatpump ingepland           |
 |                          | entity hp heat demand        | string           |                                    |                                                    |
@@ -719,7 +720,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | entity set charging ampere   | string           |                                    | input_number                                       |
 |                          | charge switch                | string           |                                    | input_boolean                                      |
 |                          | entity stop laden            | string           | ""                                 | input_datetime                                     |
-|                          | entity instant charge        | string           |                                    | input_boolean                                      |
+|                          | entity instant start         | string           |                                    | input_boolean                                      |
 |                          | entity instant level         | string           |                                    | input_number                                       |
 | **machines**             |                              | list             |                                    | 0, 1 of meer {..}  pv_ac                           | 
 |                          | name                         | string           |                                    |                                                    |
@@ -731,6 +732,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                          | entity selected program      | string           |                                    | input_select                                       |
 |                          | entity calculated start      | string           | ""                                 | input_datetime, datum en tijd                      |
 |                          | entity calculated end        | string           | ""                                 | input_datetime, datum en tijd                      |
+|                          | entity instant start         | string           |                                    | input_boolean                                      |
 | **tibber**               | api url                      | string, url      | https://api.tibber.com/v1-beta/gql | desgewenst                                         | 
 |                          | api_token                    | string           |                                    |                                                    |
 | **report**               | entities grid consumption    | list of string   | []                                 |                                                    | 
@@ -1127,6 +1129,14 @@ DAO aangeven dat de boiler niet hoeft te worden ingepland.
    * `boiler heated by heatpump`: True of False (default True). Als de boiler wordt opgeward door de warmtepomp zal het gebruik van de warmtepomp voor verwarming
 rekening houden met het gebruik van de wp door de boiler en vive versa. De wp zal dan nooit tegelijk in bedrijf zijn voor de boiler en voor de verwarming. 
 
+#### Direct starten
+Je kunt met DAO "direct starten" van de boiler configureren. <br>
+Daarvoor is een extra **optionele** entity beschikbaar **entity instant start**, een input_boolean. <br>
+Door deze op "on" te zetten vertel je DAO dat je de boiler direct wil gaan verwarmen.
+Je zult zelf in HA nog de volgende zaken moeten configureren (zie voor meer uitleg **direct laden** bij electric vehicle):
+* een rest-commando (in configuration.yaml) om DAO direct te laten rekenen
+* een automation die getriggerd wordt door de state-wijziging van de entity die je hebt ingevuld bij **entity instant start**.
+
 ### **heating**<br>
 Dit onderdeel is nog in ontwikkeling. 
   * **heater present**  als **true** zal de warmtepomp worden ingepland als **false** wordt er geen warmtepomp ingepland.
@@ -1333,8 +1343,8 @@ mode: single
 #### Direct laden
 Je kunt met DAO "direct laden" configureren. <br>
 Daarvoor zijn twee extra **optionele** entities beschikbaar:
-* entity instant start: een input_boolean, door deze op "on" te zetten vertel je DAO dat je direct wilt gaan laden.
-* entity instant level: een input_number, waarmee je het uiteidelijke soc-level van direct laden kunt instellen (in %)). 
+* **entity instant start**: een input_boolean, door deze op "on" te zetten vertel je DAO dat je direct wilt gaan laden.
+* **entity instant level**: een input_number, waarmee je het uiteidelijke soc-level van direct laden kunt instellen (in %)). 
 Laat je deze weg dan laadt DAO door tot 100% SoC is bereikt.<br>
 
 Je zult zelf in HA nog de volgende zaken moeten configureren:
@@ -1357,6 +1367,8 @@ triggers:
   - entity_id:
       - input_button.start_day_ahead_berekening
       - input_boolean.instant_start_ev_charging
+      - input_boolean.instant_start_boiler
+      - input_boolean.instant_start_wasmachine
     trigger: state
 conditions: []
 actions:
@@ -1395,6 +1407,20 @@ Per apparaat geef je de volgende instellingen mee:
 3. Het is gewenst dat minimaal een van de twee "calculated" helpers wordt ingegeven, zodat het programma het resultaat
  kan communiceren naar HA
  
+#### Direct starten
+Je kunt met DAO "direct starten" configureren. <br>
+Daarvoor is een extra **optionele** entity beschikbaar: **entity instant start**, 
+een input_boolean. <br>
+Door deze op "on" te zetten vertel je DAO dat je direct de machine wilt starten met het ingestelde programma.
+Je zult zelf in HA nog de volgende zaken moeten configureren (zie voor meer uitleg **direct laden** bij electric vehicle):
+* een rest-commando (in configuration.yaml) om DAO direct te laten rekenen
+* een automation die getriggerd wordt door de state-wijziging van de entity die je hebt ingevuld bij **entity instant start**.
+
+**Opmerking**:
+Je zult nooit precies aan het begin van een klok-kwartier een apparaat starten.
+Echter zal DAO het in de berekening van de prognose van het verbruik en het toerekenen van de kwartiervermogen 
+doen voorkomen alsof de start-actie aan het begin van het lopende kwartier is gestart.  
+
 
  ### **tibber**<br>
  * api url: url van de api van tibber, default "https://api.tibber.com/v1-beta/gql" 
