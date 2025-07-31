@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.7.4.rc2
+- Implemented instant start for boiler and machines
+- Energy needed to charge ev limited op 0 kWh as minimum
+- Correct error exceeding max grid power in partial first hour (reported by @sMoKeFiSh)
+- Fixed error logging planning second ev (reported by @DaBit)
+
 # 2025.7.4.rc1
 - Only draw consumption/production of configured devices.
 - Implemented instant charging electric vehicle(s) (see DOCS.md) 
