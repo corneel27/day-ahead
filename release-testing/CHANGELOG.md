@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.7.4.rc3
+Fixed name-error
+
 # 2025.7.4.rc2
 - Implemented instant start for boiler and machines
 - Energy needed to charge ev limited op 0 kWh as minimum
