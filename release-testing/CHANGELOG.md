@@ -1,5 +1,6 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
 # 2025.8.0.rc2
 - Clear error message when no data present from Nordpool 
 - Supplement documentation instant start
