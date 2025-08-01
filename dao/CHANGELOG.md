@@ -1,5 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.8.0
+- Clear error message when no data present from Nordpool 
+- Supplement documentation instant start
+- Fixed report error second ev (reported by @DaBit)
+- Implemented instant start for boiler and machines
+- Energy needed to charge ev limited op 0 kWh as minimum
+- Correct error exceeding max grid power in partial first hour (reported by @sMoKeFiSh)
+- Only draw consumption/production of configured devices.
+- Implemented instant charging electric vehicle(s) (see DOCS.md) 
+
 # 2025.7.3
 - Changed calculation of baseloads to omit NaN
 - Timeout webpage set to 120 seconds
