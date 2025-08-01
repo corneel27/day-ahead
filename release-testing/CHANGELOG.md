@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.8.0.rc1
+Fixed report error second ev (reported by @DaBit)
+
 # 2025.7.4.rc3
 Fixed name-error
 
