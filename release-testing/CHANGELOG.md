@@ -1,8 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 # 2025.8.0.rc2
-Clear error message when no data present from Nordpool 
-
+- Clear error message when no data present from Nordpool 
+- Supplement documentation instant start
 
 # 2025.8.0.rc1
 Fixed report error second ev (reported by @DaBit)
