@@ -1358,7 +1358,7 @@ Je zult zelf in HA nog de volgende zaken moeten configureren:
 * Hierbij zijn ip-address het ip-adres van de machine waarop DAO draait
 Het poortnummer waarop DAO luistert naar web- en api-verzoeken (meestal 5000)
 * een automation die getriggerd wordt door de state-wijziging van de entity die je hebt ingevuld bij **entity instant start**.<br>
-Bijvoorbeeld:
+Bijvoorbeeld (in dit voorbeeld zijn ook de entities voor direct starten van een boiler en een wasmachine opgenomen):
 ````
 alias: Start berekening DAO via rest
 description: Start berekening DAO
@@ -1374,6 +1374,24 @@ conditions: []
 actions:
   - data: {}
     action: rest_command.start_dao_calc
+````
+Als het einddoel (de waarde van de entity die je hebt ingevuld bij "entity instant level", of 100%) 
+is bereikt zul je de input-boolean die de start-actie heeft getriggerd ook uit moeten zetten dat kan met een 
+automation die getriggerd wordt door het actuele soc-level van de accu van je auto:
+Voorbeeeld:
+````commandline
+alias: Stop direct laden auto
+description: ""
+triggers:
+  - entity_id:
+      - sensor.auto_actual_soc
+    above: input_number.direct_laden_gewenst_niveau
+    trigger: numeric_state
+actions:
+  - data: {}
+    entity_id: input_boolean.instant_start_ev_charging
+    action: switch.turn_off
+mode: single
 ````
 
 ### **machines**
