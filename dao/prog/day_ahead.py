@@ -2424,7 +2424,7 @@ class DaCalc(DaBase):
                             print(f"{uur[u]:2d}", end="    ")
                             for cs in range(ECS[e]):
                                 print(
-                                    f"{abs(charger_factor[0][cs][u].x):.2f}", end="   "
+                                    f"{abs(charger_factor[e][cs][u].x):.2f}", end="   "
                                 )
                             print()
                 entity_charge_switch = self.ev_options[e]["charge switch"]
