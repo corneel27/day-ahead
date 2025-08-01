@@ -149,6 +149,9 @@ class DaPrices:
                 logging.exception(ex)
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
                 return
+            if hourly_prices_spot is None:
+                logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
+                return
 
             hourly_values = hourly_prices_spot["areas"]["NL"]["values"]
             s = pp.pformat(hourly_values, indent=2)
