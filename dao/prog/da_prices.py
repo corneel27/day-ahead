@@ -1,6 +1,6 @@
-from da_config import Config
+from dao.prog.da_config import Config
 import pandas as pd
-from db_manager import DBmanagerObj
+from dao.prog.db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
 import datetime
 import sys
@@ -65,7 +65,11 @@ class DaPrices:
                 result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
         return result
 
-    def get_prices(self, source):
+    def get_prices(self, source, interval:str="1hour"):
+        if interval=="1hour":
+            resolution = 60
+        else:
+            resolution = 15
         now = datetime.datetime.now()
         # start
         if len(sys.argv) > 2:
@@ -141,7 +145,7 @@ class DaPrices:
             else:
                 end_date = start
             try:
-                hourly_prices_spot = prices_spot.hourly(areas=["NL"], end_date=end_date)
+                act_spot_prices = prices_spot.fetch(areas=["NL"], end_date=end_date, resolution=resolution)
             except ConnectionError:
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
                 return
@@ -149,15 +153,18 @@ class DaPrices:
                 logging.exception(ex)
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
                 return
+            if act_spot_prices is None:
+                logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
+                return
 
-            hourly_values = hourly_prices_spot["areas"]["NL"]["values"]
-            s = pp.pformat(hourly_values, indent=2)
+            act_values = act_spot_prices["areas"]["NL"]["values"]
+            s = pp.pformat(act_values, indent=2)
             logging.info(f"Day ahead prijzen van Nordpool:\n {s}")
             df_db = pd.DataFrame(columns=["time", "code", "value"])
-            for hourly_value in hourly_values:
-                time_dt = hourly_value["start"]
+            for act_value in act_values:
+                time_dt = act_value["start"]
                 time_ts = int(time_dt.timestamp())
-                value = hourly_value["value"]
+                value = act_value["value"]
                 if value == float("inf"):
                     continue
                 else:
