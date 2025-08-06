@@ -26,7 +26,7 @@ class Report(DaBase):
     periodes = {}
 
     def __init__(
-            self, file_name: str = "../data/options.json", _now: datetime.datetime = None
+        self, file_name: str = "../data/options.json", _now: datetime.datetime = None
     ):
         super().__init__(file_name=file_name)
         if self.config is None:
@@ -792,13 +792,13 @@ class Report(DaBase):
         return
 
     def get_sensor_data(
-            self,
-            sensor: str,
-            vanaf: datetime.datetime,
-            tot: datetime.datetime,
-            col_name: str,
-            agg: str = "uur",
-            sensor_type: str = "quantity",
+        self,
+        sensor: str,
+        vanaf: datetime.datetime,
+        tot: datetime.datetime,
+        col_name: str,
+        agg: str = "uur",
+        sensor_type: str = "quantity",
     ) -> pd.DataFrame:
         """
         Retrieves and aggregates sensordata from ha database
@@ -919,12 +919,12 @@ class Report(DaBase):
                     & (t1.c.state.isnot(None))
                     & (t2.c.state.isnot(None))
                     & (
-                            t1.c.start_ts
-                            >= self.db_ha.unix_timestamp(start_ts_param1) - 3600
+                        t1.c.start_ts
+                        >= self.db_ha.unix_timestamp(start_ts_param1) - 3600
                     )
                     & (
-                            t1.c.start_ts
-                            < self.db_ha.unix_timestamp(start_ts_param2) - 3600
+                        t1.c.start_ts
+                        < self.db_ha.unix_timestamp(start_ts_param2) - 3600
                     )
                 )
             )
@@ -974,7 +974,7 @@ class Report(DaBase):
 
     @staticmethod
     def aggregate_data(
-            df_raw: pd.DataFrame, col_name: str, agg: str = "uur"
+        df_raw: pd.DataFrame, col_name: str, agg: str = "uur"
     ) -> pd.DataFrame:
         df_raw["tot"] = df_raw.apply(
             lambda x: datetime.datetime.fromtimestamp(x["tijd"]), axis=1
@@ -1008,7 +1008,7 @@ class Report(DaBase):
                         dag=(
                             "start_ts_t2",
                             lambda x: f"{x.dt.year.iloc[0]}-{x.dt.month.iloc[0]:2}-"
-                                      f"{x.dt.day.iloc[0]:2}",
+                            f"{x.dt.day.iloc[0]:2}",
                         ),
                         tijd=(
                             "start_ts_t2",
@@ -1033,7 +1033,7 @@ class Report(DaBase):
 
     @staticmethod
     def copy_col_df(
-            copy_from: pd.DataFrame, copy_to: pd.DataFrame, col_name: str
+        copy_from: pd.DataFrame, copy_to: pd.DataFrame, col_name: str
     ) -> pd.DataFrame:
         """
         kopieert kolom "col_name" van copy_from naar copy_to,
@@ -1054,11 +1054,11 @@ class Report(DaBase):
 
     @staticmethod
     def add_col_df(
-            add_from: pd.DataFrame,
-            add_to: pd.DataFrame,
-            col_name_from: str,
-            col_name_to: str = None,
-            negation: bool = False,
+        add_from: pd.DataFrame,
+        add_to: pd.DataFrame,
+        col_name_from: str,
+        col_name_to: str = None,
+        negation: bool = False,
     ) -> pd.DataFrame:
         # add_from = add_from.reset_index()
         if add_from is None:
@@ -1072,14 +1072,14 @@ class Report(DaBase):
                 # add_from.at[row.tijd, col_name_from])
                 if row.tijd in add_to.index:
                     add_to.at[row.tijd, col_name_to] = (
-                            add_to.at[row.tijd, col_name_to] + factor * row[col_index]
+                        add_to.at[row.tijd, col_name_to] + factor * row[col_index]
                     )
         else:
             for row in add_from.itertuples():
                 # add_from.at[row.tijd, col_name_from])
                 if row.time in add_to.index:
                     add_to.at[row.time, col_name_to] = (
-                            add_to.at[row.time, col_name_to] + factor * row[col_index]
+                        add_to.at[row.time, col_name_to] + factor * row[col_index]
                     )
         return add_to
 
@@ -1127,11 +1127,11 @@ class Report(DaBase):
         return result
 
     def get_sensor_sum(
-            self,
-            sensor_list: list,
-            vanaf: datetime.datetime,
-            tot: datetime.datetime,
-            col_name: str,
+        self,
+        sensor_list: list,
+        vanaf: datetime.datetime,
+        tot: datetime.datetime,
+        col_name: str,
     ) -> pd.DataFrame:
         """
         Berekent een dataframe met sum van de waarden van de sensoren in de list
@@ -1154,7 +1154,7 @@ class Report(DaBase):
         return result
 
     def calc_cost(
-            self, vanaf: datetime.datetime, tot: datetime.datetime
+        self, vanaf: datetime.datetime, tot: datetime.datetime
     ) -> pd.DataFrame:
         cons_df = self.get_sensor_sum(
             self.grid_dict["cons"]["sensors"], vanaf, tot, "cons"
@@ -1349,7 +1349,7 @@ class Report(DaBase):
 
     @staticmethod
     def tijd_at_interval(
-            interval: str, moment: datetime.datetime, as_index: bool = False
+        interval: str, moment: datetime.datetime, as_index: bool = False
     ) -> str | int:
         if interval == "maand":
             result = datetime.datetime(moment.year, moment.month, day=1)
@@ -1369,11 +1369,11 @@ class Report(DaBase):
 
     @staticmethod
     def generate_df(
-            vanaf: datetime.datetime,
-            tot: datetime.datetime,
-            rep_interval: str,
-            get_interval: str | None = None,
-            column: str | None = None,
+        vanaf: datetime.datetime,
+        tot: datetime.datetime,
+        rep_interval: str,
+        get_interval: str | None = None,
+        column: str | None = None,
     ) -> pd.DataFrame:
         result = pd.DataFrame(columns=[rep_interval, "tijd", "tot", "datasoort"])
         moment = vanaf
@@ -1409,13 +1409,13 @@ class Report(DaBase):
         return result
 
     def get_energy_balance_data(
-            self,
-            periode: str,
-            col_dict: dict = None,
-            field: str = None,
-            _vanaf: datetime.datetime = None,
-            _tot: datetime.datetime = None,
-            _interval: str = None,
+        self,
+        periode: str,
+        col_dict: dict = None,
+        field: str = None,
+        _vanaf: datetime.datetime = None,
+        _tot: datetime.datetime = None,
+        _interval: str = None,
     ):
         """
         berekent een report conform de col_dict configuratie
@@ -1664,13 +1664,13 @@ class Report(DaBase):
         return result, last_moment
 
     def get_da_data(
-            self,
-            key: str,
-            vanaf: datetime.datetime,
-            tot: datetime.datetime,
-            get_interval: str,
-            rep_interval: str,
-            table: str = "values",
+        self,
+        key: str,
+        vanaf: datetime.datetime,
+        tot: datetime.datetime,
+        get_interval: str,
+        rep_interval: str,
+        table: str = "values",
     ) -> pd.DataFrame:
         """
         genereert een dataframe van de data in de da-database
@@ -1739,7 +1739,7 @@ class Report(DaBase):
         return code_result
 
     def get_columns(
-            self, calc_dict, active_period: str, _tot: datetime.datetime | None = None
+        self, calc_dict, active_period: str, _tot: datetime.datetime | None = None
     ) -> pd.DataFrame:
         if "calc_interval" in calc_dict:
             get_interval = calc_dict["calc_interval"]
@@ -1821,12 +1821,12 @@ class Report(DaBase):
         return result
 
     def get_grid_data(
-            self,
-            periode: str,
-            _vanaf=None,
-            _tot=None,
-            _interval: str | None = None,
-            _source: str = "all",
+        self,
+        periode: str,
+        _vanaf=None,
+        _tot=None,
+        _interval: str | None = None,
+        _source: str = "all",
     ) -> pd.DataFrame:
         """
         Haalt de grid data: consumptie, productie, cost, profit op de drie tabellen:
@@ -2087,12 +2087,12 @@ class Report(DaBase):
         return input_df
 
     def clean_df(
-            self,
-            calc_dict: dict,
-            df_input: pd.DataFrame,
-            rep_columns: list,
-            active_view: str,
-            rep_interval: str,
+        self,
+        calc_dict: dict,
+        df_input: pd.DataFrame,
+        rep_columns: list,
+        active_view: str,
+        rep_interval: str,
     ):
         """
 
@@ -2136,19 +2136,19 @@ class Report(DaBase):
         return df_result
 
     def calc_report(
-            self,
-            active_period: str,
-            active_interval: str | None = None,
-            active_view: str = "table",
-            _tot: datetime.datetime | None = None,
+        self,
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         return
 
     def calc_saving_consumption(
-            self,
-            active_period: str,
-            active_view: str = "table",
-            _tot: datetime.datetime | None = None,
+        self,
+        active_period: str,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op verbruik
@@ -2197,11 +2197,11 @@ class Report(DaBase):
         return df
 
     def calc_saving_cost(
-            self,
-            active_period: str,
-            active_interval: str | None = None,
-            active_view: str = "table",
-            _tot: datetime.datetime | None = None,
+        self,
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2244,11 +2244,11 @@ class Report(DaBase):
         return df_result
 
     def calc_saving_co2(
-            self,
-            active_period: str,
-            active_interval: str | None = None,
-            active_view: str = "table",
-            _tot: datetime.datetime | None = None,
+        self,
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2285,11 +2285,11 @@ class Report(DaBase):
         return df_result
 
     def calc_co2_emission(
-            self,
-            active_period: str,
-            active_interval: str | None = None,
-            active_view: str = "table",
-            _tot: datetime.datetime | None = None,
+        self,
+        active_period: str,
+        active_interval: str | None = None,
+        active_view: str = "table",
+        _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2494,7 +2494,12 @@ class Report(DaBase):
 
     #  ------------------------------------------------
     def get_sensor_week_data(
-            self, sensor: str, weekday: int, vanaf: datetime.datetime, tot: datetime.datetime, col_name: str
+        self,
+        sensor: str,
+        weekday: int,
+        vanaf: datetime.datetime,
+        tot: datetime.datetime,
+        col_name: str,
     ) -> pd.DataFrame:
         """
         Berekent de waarde van een HA-sensor over 24 uur voor een bepaalde weekdag
@@ -2587,7 +2592,7 @@ class Report(DaBase):
         return df_wd
 
     def get_sensor_week_sum(
-            self, sensor_list: list, weekday: int, vanaf: datetime.datetime, col_name: str
+        self, sensor_list: list, weekday: int, vanaf: datetime.datetime, col_name: str
     ) -> pd.DataFrame:
         # counter = 0
         result = None
@@ -2802,12 +2807,14 @@ class Report(DaBase):
                 df = pd.concat([df, df_uur])
         return df, last_moment
 
-    def get_price_data(self, start, end, interval:str="1hour"):
+    def get_price_data(self, start, end, interval: str = "1hour"):
         if interval == "1hour":
             agg_func = "avg"
         else:
             agg_func = None
-        df_da = self.db_da.get_column_data("values", "da", start=start, end=end, agg_func=agg_func)
+        df_da = self.db_da.get_column_data(
+            "values", "da", start=start, end=end, agg_func=agg_func
+        )
         if interval == "15min":
             df_da["tijd"] = pd.to_datetime(df_da["time"])
             df_da = interpolate(df_da, "value", 15, False)
@@ -2822,8 +2829,8 @@ class Report(DaBase):
         columns = ["time", "da_ex", "da_cons", "da_prod", "datasoort"]
         df = pd.DataFrame(columns=columns)
         salderen = (
-                self.config.get(["tax refund"], self.prices_options, "true").lower()
-                == "true"
+            self.config.get(["tax refund"], self.prices_options, "true").lower()
+            == "true"
         )
         for row in df_da.itertuples():
             if pd.isnull(row.time):
@@ -2852,7 +2859,7 @@ class Report(DaBase):
         return df
 
     def get_soc_data(
-            self, field: str, start: datetime.datetime, end: datetime.datetime
+        self, field: str, start: datetime.datetime, end: datetime.datetime
     ) -> pd.DataFrame:
         df = self.db_da.get_column_data("prognoses", field, start=start, end=end)
         return df
@@ -2867,7 +2874,9 @@ class Report(DaBase):
             for row in df_gr.itertuples():
                 prod = 0
                 for s in range(solar_num):
-                    netto = self.calc_prod_solar(self.solar[s], row.time.timestamp(), row.gr, 1)
+                    netto = self.calc_prod_solar(
+                        self.solar[s], row.time.timestamp(), row.gr, 1
+                    )
                     prod += netto
                 df_result.loc[df_result.shape[0]] = [row.time, prod, "expected"]
         else:  # pv_dc
@@ -2946,7 +2955,9 @@ class Report(DaBase):
                 df[field] = df[field].cumsum()
             df.rename({field: "value"}, axis=1, inplace=True)
         else:
-            result = f'{{"message":"Failed", "reason": "field: \'{field}\' is not allowed"}}'
+            result = (
+                f'{{"message":"Failed", "reason": "field: \'{field}\' is not allowed"}}'
+            )
             return result
 
         df["time"] = pd.to_datetime(df["time"])

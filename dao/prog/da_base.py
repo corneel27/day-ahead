@@ -360,7 +360,9 @@ class DaBase(hass.Hass):
             result = json.load(f)
         return result
 
-    def calc_prod_solar(self, solar_opt: dict, act_time: int, act_gr: float, hour_fraction: float):
+    def calc_prod_solar(
+        self, solar_opt: dict, act_time: int, act_gr: float, hour_fraction: float
+    ):
         """
         berekent de productie van een string
         :param solar_opt: dict met alle instellingen van de string

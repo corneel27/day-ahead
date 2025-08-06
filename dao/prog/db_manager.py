@@ -439,7 +439,7 @@ class DBmanagerObj(object):
         column_name: str,
         start: datetime.datetime = None,
         end: datetime.datetime = None,
-        agg_func: str|None = None
+        agg_func: str | None = None,
     ):
         """
         Retourneert een dataframe
@@ -473,7 +473,7 @@ class DBmanagerObj(object):
         if agg_func is None:
             time_column = values_table.c.time.label("time")
             agg_column = values_table.c.value.label("value")
-        elif agg_func== "avg":
+        elif agg_func == "avg":
             time_column = func.min(values_table.c.time).label("time")
             agg_column = func.avg(values_table.c.value).label("value")
         else:
