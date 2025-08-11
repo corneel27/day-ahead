@@ -2,13 +2,15 @@ import datetime
 import json
 import math
 import logging
+# import time
+# import random
 import pandas as pd
 import pytz
 import ephem
 from requests import get
 import matplotlib.pyplot as plt
-import dao.prog.graphs as graphs
-
+import numpy as np
+from dao.prog.da_graph import GraphBuilder
 # import os, sys
 # sys.path.append(os.path.abspath("../dalib"))
 from dao.prog.da_config import Config
@@ -260,6 +262,54 @@ class Meteo:
             global_rad.loc[(global_rad.tijd == utc_time), "solar_rad"] = q_tot
         return global_rad
 
+    def make_graph_meteo(self, df, file=None, show=False):
+        df["uur"] = df["tijd_nl"].apply(lambda x: x[11:13])
+        meteo_options = {
+            "title": f"Opgehaalde meteodata vanaf {df.iloc[0, 2]}",
+            "style": self.config.get(["graphics", "style"]),
+            "graphs": [
+                {
+                    "vaxis": [{"title": "J/cm2"}, {"title": "°C"}],
+                    "align_zeros": "True",
+                    "series": [
+                        {
+                            "column": "gr",
+                            "title": "Globale straling",
+                            "type": "stacked",
+                            "color": "blue",
+                        },
+                        {
+                            "column": "temp",
+                            "title": "Temperatuur",
+                            "type": "line",
+                            "color": "green",
+                            "vaxis": "right",
+                        },
+                    ],
+                }
+            ],
+            "haxis": {"values": "uur", "title": "uur"},
+        }
+
+        gb = GraphBuilder()
+        plt = gb.build(df, meteo_options, False)
+        if file is not None:
+            plt.savefig(file)
+        """
+        plt.figure(figsize=(15, 10))
+        df["gr"] = pd.to_numeric(df["gr"])
+        x_axis = np.arange(len(df["tijd_nl"].values))
+        plt.bar(x_axis - 0.1, df["gr"].values, width=0.7, label="global rad")
+        # plt.bar(x_axis + 0.1, df["solar_rad"].values, width=0.2, label="netto rad")
+        plt.xticks(x_axis + 0.1, df["tijd_nl"].values, rotation=45)
+        if file is not None:
+            plt.savefig(file)
+        if show:
+            plt.show()
+        plt.close("all")
+        return
+        """
+
     def get_from_meteoserver(self, model: str) -> pd.DataFrame:
         parameters = (
             "?lat="
@@ -302,7 +352,7 @@ class Meteo:
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         count = len(df1)
         if count == 0:
-            logging.error("No data recieved from meteoserver")
+            logging.error("No harmonie-data recieved from meteoserver")
         else:
             df1 = df1.reset_index()  # make sure indexes pair with number of rows
             for row in df1.itertuples():
@@ -323,44 +373,56 @@ class Meteo:
                 ]
 
         if count < 96:
-            df1 = self.get_from_meteoserver("gfs")
-            for row in df1[count:].itertuples():
-                df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd)),
-                    "gr",
-                    float(row.gr),
-                ]
-                df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd)),
-                    "temp",
-                    float(row.temp),
-                ]
-                df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd)),
-                    "solar_rad",
-                    float(row.solar_rad),
-                ]
-                count += 1
-                if count >= 96:
-                    break
+            df2 = self.get_from_meteoserver("gfs")
+            len_df2 = len(df2)
+            if len_df2 == 0:
+                logging.error("No gfs-data recieved from meteoserver")
+            else:
+                for row in df2[count:].itertuples():
+                    df_db.loc[df_db.shape[0]] = [
+                        str(int(row.tijd)),
+                        "gr",
+                        float(row.gr),
+                    ]
+                    df_db.loc[df_db.shape[0]] = [
+                        str(int(row.tijd)),
+                        "temp",
+                        float(row.temp),
+                    ]
+                    df_db.loc[df_db.shape[0]] = [
+                        str(int(row.tijd)),
+                        "solar_rad",
+                        float(row.solar_rad),
+                    ]
+                    count += 1
+                    if count >= 96:
+                        break
 
         df_tostring = df_db
-        # df_tostring["tijd"] = pd.to_datetime(df_tostring["time"])
         df_tostring["tijd"] = df_tostring["time"].apply(
             lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")
         )
         logging.debug(f"Meteo data records \n{df_tostring.to_string(index=False)}")
 
         self.db_da.savedata(df_db)
-        style = self.config.get(["graphics", "style"], None, "default")
-        plt.style.use(style)
-        graphs.make_graph_meteo(
-            df1,
-            file="../data/images/meteo_"
-            + datetime.datetime.now().strftime("%Y-%m-%d__%H-%M")
-            + ".png",
-            show=show_graph,
-        )
+        if len(df1) > 0:
+            if len(df2) > len(df1):
+                df_gr = pd.concat([df1, df2[len(df1):96]])
+            else:
+                df_gr = df1
+        else:
+            df_gr = df2[:96]
+
+        if len(df_gr) > 0:
+            style = self.config.get(["graphics", "style"], None, "default")
+            plt.style.use(style)
+            self.make_graph_meteo(
+                df_gr,
+                file="../data/images/meteo_"
+                + datetime.datetime.now().strftime("%Y-%m-%d__%H-%M")
+                + ".png",
+                show=show_graph,
+            )
 
         """
         url = "https://api.forecast.solar/estimate/watthours/"+str(self.latitude)+"/"
