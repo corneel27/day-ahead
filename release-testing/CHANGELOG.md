@@ -1,6 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2025.8.1.rc1
+
+- Fixed error handling getting meteo-data
+- Clear graph with the new meteodata
+- Retry once if no meteodata recieved
+
 # 2025.8.0.rc2
 - Clear error message when no data present from Nordpool 
 - Supplement documentation instant start
