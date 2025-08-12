@@ -11,7 +11,7 @@ python-dateutil~=2.9.0.post0
 nordpool~=0.5.0
 entsoe-py~=0.7.1
 beautifulsoup4
-sqlalchemy~=2.0.42
+sqlalchemy~=2.0.43
 SQLAlchemy-Utils~=0.41.2
 psycopg2-binary
 pymysql~=1.1.1
