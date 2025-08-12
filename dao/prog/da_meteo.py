@@ -2,17 +2,12 @@ import datetime
 import json
 import math
 import logging
-# import time
-# import random
 import pandas as pd
 import pytz
 import ephem
 from requests import get
 import matplotlib.pyplot as plt
-import numpy as np
 from dao.prog.da_graph import GraphBuilder
-# import os, sys
-# sys.path.append(os.path.abspath("../dalib"))
 from dao.prog.da_config import Config
 from dao.prog.db_manager import DBmanagerObj
 from sqlalchemy import Table, select, func, and_
@@ -47,9 +42,9 @@ class Meteo:
         berekent de omrekenfacor van directe zon straling op het collectorvlak
         alle parameters in radialen
         :param hcol: helling van de collector: 0 = horizontaal, 0.5 pi verticaal
-        :param acol: azimuth van de collector: 0 = zuid , -0,5 pi = oost, +0,5 pi = west
+        :param acol: azimuth van de collector: 0 = zuid, -0,5 pi = oost, +0,5 pi = west
         :param hzon: hoogte van de zon, 0 = horizontaal, 0.5 pi verticaal
-        :param azon: azimuth van de zon 0 = zuid , -0,5 pi = oost, +0,5 pi = west
+        :param azon: azimuth van de zon 0 = zuid, -0,5 pi = oost, +0,5 pi = west
         :return: de omrekenfactor
         """
         if hzon <= 0:
@@ -292,9 +287,9 @@ class Meteo:
         }
 
         gb = GraphBuilder()
-        plt = gb.build(df, meteo_options, False)
+        plot = gb.build(df, meteo_options, show=show)
         if file is not None:
-            plt.savefig(file)
+            plot.savefig(file)
         """
         plt.figure(figsize=(15, 10))
         df["gr"] = pd.to_numeric(df["gr"])
@@ -319,27 +314,29 @@ class Meteo:
             + "&key="
             + self.meteoserver_key
         )
+        count = 0
+        max_count = 1
+        data = {}
         if model == "harmonie":
             url = "https://data.meteoserver.nl/api/uurverwachting.php"
         else:
             url = "https://data.meteoserver.nl/api/uurverwachting_gfs.php"
-        resp = get(url + parameters)
-        logging.debug(resp.text)
-        try:
-            json_object = json.loads(resp.text)
-        except Exception as ex:
-            logging.info(ex)
-            logging.error(f"Geen meteodata via model: {model}")
-            return pd.DataFrame()
-        if "data" not in json_object:
-            return pd.DataFrame()
-        data = json_object["data"]
+        while count <= max_count:
+            resp = get(url + parameters)
+            logging.debug(resp.text)
+            json_object = {}
+            try:
+                json_object = json.loads(resp.text)
+            except Exception as ex:
+                logging.info(ex)
+            if "data" in json_object:
+                data = json_object["data"]
+                break
+            count += 1
 
-        # for t in data:
-        #  print(t["tijd"], t["tijd_nl"], t["gr"], t["temp"])
-        # Use pandas.DataFrame.from_dict() to Convert JSON to DataFrame
+        if count > max_count :
+            return pd.DataFrame()
 
-        # Convert a List of dictionaries using from_records() method.
         df = pd.DataFrame.from_records(data)
         df = self.solar_rad_df(df)
         df1 = df[["tijd", "tijd_nl", "gr", "temp", "solar_rad"]]
@@ -371,7 +368,7 @@ class Meteo:
                     "solar_rad",
                     float(row.solar_rad),
                 ]
-
+        df2 = pd.DataFrame()
         if count < 96:
             df2 = self.get_from_meteoserver("gfs")
             len_df2 = len(df2)
