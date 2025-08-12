@@ -5,6 +5,7 @@
 
 - Fixed error handling getting meteo-data
 - Clear graph with the new meteodata
+- Retry once if no meteodata recieved
 
 # 2025.8.0.rc2
 - Clear error message when no data present from Nordpool 
