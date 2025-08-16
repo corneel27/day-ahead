@@ -258,7 +258,7 @@ class Meteo:
         return global_rad
 
     def make_graph_meteo(self, df, file=None, show=False):
-        df["uur"] = df["tijd_nl"].apply(lambda x: x[11:13])
+        df["uur"] = df.tijd_nl.apply(lambda x: x[11:13])
         meteo_options = {
             "title": f"Opgehaalde meteodata vanaf {df.iloc[0, 2]}",
             "style": self.config.get(["graphics", "style"]),
@@ -269,13 +269,14 @@ class Meteo:
                     "series": [
                         {
                             "column": "gr",
-                            "title": "Globale straling",
+                            "name": "Globale straling",
                             "type": "stacked",
                             "color": "blue",
+                            "width": 0.8
                         },
                         {
                             "column": "temp",
-                            "title": "Temperatuur",
+                            "name": "Temperatuur",
                             "type": "line",
                             "color": "green",
                             "vaxis": "right",
@@ -340,8 +341,10 @@ class Meteo:
         df = pd.DataFrame.from_records(data)
         df = self.solar_rad_df(df)
         df1 = df[["tijd", "tijd_nl", "gr", "temp", "solar_rad"]]
-        logging.info(f"Meteo data {model}: \n{df1.to_string(index=True)}")
-        logging.info(f"Aantal meteorecords {model}: {len(df1)}")
+        logging.info(f"Meteodata model {model}")
+        logging.info(f"Aantal ophaalpogingen: {count+1}")
+        logging.info(f"Aantal records: {len(df1)}")
+        logging.info(f"Data {model}: \n{df1.to_string(index=True)}")
         return df1
 
     def get_meteo_data(self, show_graph=False):
