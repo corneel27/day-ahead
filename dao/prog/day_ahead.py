@@ -28,7 +28,7 @@ class DaCalc(DaBase):
         super().__init__(file_name=file_name)
         if self.config is None:
             return
-        self.interval = self.config.get(["interval"], None, "hour").lower()
+        self.interval = self.config.get(["interval"], None, "1hour").lower()
         self.interval_s = 3600 if self.interval == "hour" else 900
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])

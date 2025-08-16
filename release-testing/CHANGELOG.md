@@ -1,7 +1,7 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 # 2025.8.1.rc2
-- Improved graphical presentation recieved meteodata
+- Improved graphical presentation received meteodata
 - Improved logging getting meteodata
 
 # 2025.8.1.rc1
