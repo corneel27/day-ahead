@@ -360,10 +360,10 @@ class DBmanagerObj(object):
         df["tijd"] = pd.to_datetime(df["tijd"])
         return df
 
-    def get_prognose_data(self, start, end=None, interval="hour"):
+    def get_prognose_data(self, start, end=None, interval="1hour"):
         values_table = Table("values", self.metadata, autoload_with=self.engine)
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
-        if interval == "hour":
+        if interval == "1hour":
             # Aliases for the values table
             t1 = values_table.alias("t1")
             t2 = values_table.alias("t2")
@@ -428,6 +428,7 @@ class DBmanagerObj(object):
             df = pd.DataFrame(result.fetchall(), columns=result.keys())
             df["tijd"] = pd.to_datetime(df["tijd"])
             return df
+        return None
         # else: #  interval == "kwartier"
 
     def get_column_data(
