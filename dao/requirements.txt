@@ -9,7 +9,7 @@ hassapi~=0.2.1
 mip~=1.16rc0
 python-dateutil~=2.9.0.post0
 nordpool~=0.5.0
-entsoe-py~=0.7.1
+entsoe-py~=0.7.3
 beautifulsoup4
 sqlalchemy~=2.0.43
 SQLAlchemy-Utils~=0.41.2
