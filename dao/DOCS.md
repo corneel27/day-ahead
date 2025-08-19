@@ -218,6 +218,19 @@ In Nederland worden te gebruiken meteogegevens ter beschikking gesteld door
     operatie getoond: <br>
    ![meteo_2.png](./images/meteo_2.png) <br />
 <br>
+
+Je kunt desgewenst nog een twee zaken aanpassen:
+* **meteo-model** <br>
+Met de instelling "meteoserver-model" kun je het meteodata-model kiezen waarmee de op te halen data worden gegenereerd.
+Er zijn twee modellen:<br>
+  * **harmonie**: voorspelt maximaal 40 uur vooruit en berekent data voor ieder grid van 1 x 1 km (fijnmazig)
+  * **gfs**: voorspelt tot minimaal 96 uur vooruit en berekent data voor een grid van 10 x 10 km (grofmazig)<br>
+  
+  Deze instelling is optioneel. Als je niets instelt wordt "harmonie" als model gekozen.<br>
+  De laatste is het best bruikbaar voor gebruikers die via een api een langere termijn voorspelling willen van hun pv-productie.
+* **ophaalpogingen**<br>
+    Met de instelling "meteoserver-attemps" kun je het aantal maximaal aantal pogingen instellingen die DAO doet om meteodata binnen te krijgen.<br>
+    Ook deze instelling is optioneel. Als je niets instelt worden er maximaal 2 ophaalpogingen per keer gedaan.
 ### **Dynamische uurprijzen**<br>
 Ook het ophalen van dynamische uurprijzen (day ahead prices) stel je in via 
   het Config-menu, submenu "options", onderdeel **prices** <br>

@@ -1,5 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2025.8.1.rc4
+- You can configure the meteo-model for your data (option, default **harmonie**) 
+- You can configure the max number of attempts (option, default 2)<br>
+
+More info in DOCS.md
+
 # 2025.8.1.rc3
 Fixed index-error when more than one batteries are used (reported by @PSMGoossens)
 
