@@ -16,7 +16,7 @@ SQLAlchemy-Utils~=0.41.2
 psycopg2-binary
 pymysql~=1.1.1
 mariadb~=1.1.13
-flask~=3.1.1
+flask~=3.1.2
 ephem~=4.2
 gunicorn~=23.0.0
 cryptography~=45.0.6
