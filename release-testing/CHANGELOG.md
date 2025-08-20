@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.8.1.rc5
+Zelfde als productie versie 20258.8.1
+- small corrections in DOCS.md
 
 # 2025.8.1.rc4
 - You can configure the meteo-model for your data (option, default **harmonie**) 

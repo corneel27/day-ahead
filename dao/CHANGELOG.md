@@ -1,5 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.8.1
+
+- You can configure the meteo-model for your data (option, default **harmonie**) 
+- You can configure the max number of attempts (option, default 2)<br>
+More info in DOCS.md
+- Fixed index-error when more than one batteries are used (reported by @PSMGoossens)
+- Improved graphical presentation received meteodata
+- Improved logging getting meteodata
+- Fixed error handling getting meteo-data
+
 # 2025.8.0
 - Clear error message when no data present from Nordpool 
 - Supplement documentation instant start
