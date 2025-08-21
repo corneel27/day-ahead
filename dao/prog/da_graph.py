@@ -152,6 +152,7 @@ class GraphBuilder:
                         data_array = df[serie["column"]]
                     else:
                         data_array = df[serie["name"]]
+                    data_array = pd.to_numeric(data_array)
                     if "width" in serie:
                         width = serie["width"]
                     data_array = data_array.to_list()
@@ -193,8 +194,7 @@ class GraphBuilder:
                             data_array,
                             label=label,
                             linestyle=linestyle,
-                            color=color,
-                            where="post",
+                            color=color
                         )[0]
                     elif s_type == "step":
                         if "linestyle" in serie:
@@ -267,14 +267,16 @@ class GraphBuilder:
             if graph_type == "waterfall":
                 ind = np.arange(len(df.index) + 1)
                 xlabels += ["Totaal"]
+
             ax.set_xticks(
                 ind,
                 labels=xlabels,
             )
             if "title" in haxis and g_nr == (num_graphs - 1):
                 ax.set_xlabel(haxis["title"])
-            if len(df.index) > 8:
-                ax.xaxis.set_major_locator(ticker.MultipleLocator(2))
+            num_xas = len(df.index)
+            if num_xas > 12:
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(round(num_xas/12)))
                 ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
             if len(str(xlabels[0])) > 2:
                 ax.set_xticks(

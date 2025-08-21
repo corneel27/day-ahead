@@ -19,6 +19,8 @@ class Meteo:
         self.config = config
         self.db_da = db_da
         self.meteoserver_key = config.get(["meteoserver-key"])
+        self.meteoserver_model = config.get(["meteoserver-model"], None, "harmonie")
+        self.meteoserver_attemps = config.get(["meteoserver-attemps"], None, 2)
         self.latitude = config.get(["latitude"])
         self.longitude = config.get(["longitude"])
         self.solar = config.get(["solar"])
@@ -272,7 +274,7 @@ class Meteo:
                             "name": "Globale straling",
                             "type": "stacked",
                             "color": "blue",
-                            "width": 0.8
+                            "width": 0.8,
                         },
                         {
                             "column": "temp",
@@ -316,13 +318,12 @@ class Meteo:
             + self.meteoserver_key
         )
         count = 0
-        max_count = 1
         data = {}
         if model == "harmonie":
             url = "https://data.meteoserver.nl/api/uurverwachting.php"
         else:
             url = "https://data.meteoserver.nl/api/uurverwachting_gfs.php"
-        while count <= max_count:
+        while count <= self.meteoserver_attemps:
             resp = get(url + parameters)
             logging.debug(resp.text)
             json_object = {}
@@ -335,24 +336,27 @@ class Meteo:
                 break
             count += 1
 
-        if count > max_count :
+        if count > self.meteoserver_attemps:
             return pd.DataFrame()
 
         df = pd.DataFrame.from_records(data)
         df = self.solar_rad_df(df)
         df1 = df[["tijd", "tijd_nl", "gr", "temp", "solar_rad"]]
+        df1 = df1[:96]
         logging.info(f"Meteodata model {model}")
-        logging.info(f"Aantal ophaalpogingen: {count+1}")
+        logging.info(
+            f"Aantal uitgevoerde ophaalpogingen: {count+1} van maximaal: {self.meteoserver_attemps}"
+        )
         logging.info(f"Aantal records: {len(df1)}")
         logging.info(f"Data {model}: \n{df1.to_string(index=True)}")
         return df1
 
     def get_meteo_data(self, show_graph=False):
-        df1 = self.get_from_meteoserver("harmonie")
+        df1 = self.get_from_meteoserver(self.meteoserver_model)
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         count = len(df1)
         if count == 0:
-            logging.error("No harmonie-data recieved from meteoserver")
+            logging.error(f"No {self.meteoserver_model}-data recieved from meteoserver")
         else:
             df1 = df1.reset_index()  # make sure indexes pair with number of rows
             for row in df1.itertuples():
@@ -371,6 +375,8 @@ class Meteo:
                     "solar_rad",
                     float(row.solar_rad),
                 ]
+
+        """
         df2 = pd.DataFrame()
         if count < 96:
             df2 = self.get_from_meteoserver("gfs")
@@ -397,14 +403,14 @@ class Meteo:
                     count += 1
                     if count >= 96:
                         break
-
+        """
         df_tostring = df_db
         df_tostring["tijd"] = df_tostring["time"].apply(
             lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")
         )
         logging.debug(f"Meteo data records \n{df_tostring.to_string(index=False)}")
-
         self.db_da.savedata(df_db)
+        """
         if len(df1) > 0:
             if len(df2) > len(df1):
                 df_gr = pd.concat([df1, df2[len(df1):96]])
@@ -412,7 +418,8 @@ class Meteo:
                 df_gr = df1
         else:
             df_gr = df2[:96]
-
+        """
+        df_gr = df1
         if len(df_gr) > 0:
             style = self.config.get(["graphics", "style"], None, "default")
             plt.style.use(style)

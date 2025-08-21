@@ -113,6 +113,7 @@ class DaBase(hass.Hass):
         self.config.set("latitude", resp_dict["latitude"])
         self.config.set("longitude", resp_dict["longitude"])
         self.config.set("time_zone", resp_dict["time_zone"])
+        self.config.set("country", resp_dict["country"])
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
         self.meteo = Meteo(self.config, self.db_da)
@@ -325,7 +326,7 @@ class DaBase(hass.Hass):
 
     def get_day_ahead_prices(self):
         self.prices.get_prices(
-            self.config.get(["source day ahead"], self.prices_options, "nordpool")
+            self.config.get(["source day ahead"], self.prices_options)
         )
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):

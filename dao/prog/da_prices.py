@@ -18,6 +18,8 @@ class DaPrices:
     def __init__(self, config: Config, db_da: DBmanagerObj):
         self.config = config
         self.db_da = db_da
+        self.interval = self.config.get(["interval"], None, "1hour")
+        self.country = self.config.get(["country"], None, "NL")
 
     def get_time_latest_record(self, code: str) -> datetime.datetime:
         """
@@ -65,8 +67,8 @@ class DaPrices:
                 result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
         return result
 
-    def get_prices(self, source, interval: str = "1hour"):
-        if interval == "1hour":
+    def get_prices(self, source):
+        if self.interval == "1hour":
             resolution = 60
         else:
             resolution = 15
@@ -146,7 +148,7 @@ class DaPrices:
                 end_date = start
             try:
                 act_spot_prices = prices_spot.fetch(
-                    areas=["NL"], end_date=end_date, resolution=resolution
+                    areas=[self.country], end_date=end_date, resolution=resolution
                 )
             except ConnectionError:
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
