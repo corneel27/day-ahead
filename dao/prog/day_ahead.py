@@ -68,12 +68,17 @@ class DaCalc(DaBase):
             start_ts = start_ts + self.interval_s - modulo
         start_dt = dt.datetime.fromtimestamp(start_ts)
         start_hour = int(3600 * math.floor(start_ts / 3600))
-        start_interval = int(self.interval_s * math.floor(start_ts / self.interval_s))
-        start_interval_dt = datetime.datetime.fromtimestamp(start_interval)
+        start_interval_ts = int(
+            self.interval_s * math.floor(start_ts / self.interval_s)
+        )
+        start_interval_dt = datetime.datetime.fromtimestamp(start_interval_ts)
         # loopt af van 1 (starts_ds == start_interval) naar
         # 0 (start_interval is bijna bij begin volgend interval)
-        fraction_first_interval = (
-            self.interval_s / 3600 - (start_ts - start_interval) / 3600
+        interval_fraction_first_interval = (
+            1 - (start_ts - start_interval_ts) / self.interval_s
+        )
+        hour_fraction_first_interval = (
+            self.interval_s / 3600 - (start_ts - start_interval_ts) / 3600
         )
 
         report = Report()
@@ -168,7 +173,7 @@ class DaCalc(DaBase):
                 start + datetime.timedelta(hours=i) for i in range(len(base_cons))
             ]
             base_cons_df = pd.DataFrame({"tijd": base_tijd, "base_cons": base_cons})
-            base_cons_df = interpolate(base_cons_df, "base_cons", 15, quantity=True)
+            base_cons_df = interpolate(base_cons_df, "base_cons", quantity=True)
             base_cons = base_cons_df["base_cons"].tolist()
 
         # 0.015 kWh/J/cm² productie van mijn panelen per J/cm²
@@ -187,9 +192,12 @@ class DaCalc(DaBase):
             entity_pv_ac_switch.append(entity)
             max_solar_power.append(self.config.get(["max power"], self.solar[s], None))
 
-        time_first_hour = dt.datetime.fromtimestamp(prog_data["time"].iloc[0])
-        first_hour = int(time_first_hour.hour)
-        b_l = base_cons[first_hour:]
+        time_first_interval = prog_data["tijd"].iloc[0]
+        if self.interval == "1hour":
+            first_interval_nr = int(time_first_interval.hour)
+        else:
+            first_interval_nr = time_first_interval.hour*4 + round(time_first_interval.minute/15)
+        b_l = base_cons[first_interval_nr:]
         uur = []  # hulparray met uren
         tijd = []
         ts = []
@@ -197,7 +205,8 @@ class DaCalc(DaBase):
         pv_org_ac = []  # opwekking zonnepanelen[]
         pv_org_dc = []
         hour_fraction = []
-        first_hour = True
+        interval_fraction = []
+        first_interval = True
 
         # prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
@@ -208,17 +217,17 @@ class DaCalc(DaBase):
             tijd.append(dtime)
             global_rad.append(row.glob_rad)
             pv_total = 0
-            if first_hour:
+            if first_interval:
                 ts.append(start_ts)
-                hour_fraction.append(fraction_first_interval)
-                # pv.append(pv_total * fraction_first_interval)
+                hour_fraction.append(hour_fraction_first_interval)
+                interval_fraction.append(interval_fraction_first_interval)
             else:
                 ts.append(row.time)
                 hour_fraction.append(self.interval_s / 3600)
-                # pv.append(pv_total)
+                interval_fraction.append(1)
             for s in range(solar_num):
                 prod = self.calc_prod_solar(
-                    self.solar[s], row.time, row.glob_rad, hour_fraction[-1]
+                    self.solar[s], row.time, row.glob_rad, interval_fraction[-1]
                 )
                 solar_prod[s].append(prod)
                 pv_total += prod
@@ -236,11 +245,11 @@ class DaCalc(DaBase):
                         self.battery_options[b]["solar"][s],
                         row.time,
                         row.glob_rad,
-                        hour_fraction[-1],
+                        interval_fraction[-1],
                     )
                     pv_total += prod
             pv_org_dc.append(pv_total)
-            first_hour = False
+            first_interval = False
 
         while len(b_l) > len(uur):
             b_l = b_l[:-1]
@@ -345,7 +354,9 @@ class DaCalc(DaBase):
                 charge_stages[b] = [{"power": 0.0, "efficiency": 1}] + charge_stages[b]
             discharge_stages.append(self.battery_options[b]["discharge stages"])
             if float(discharge_stages[b][0]["power"]) != 0.0:
-                discharge_stages[b] = [{"power": 0.0, "efficiency": 1}] + discharge_stages[b]
+                discharge_stages[b] = [
+                    {"power": 0.0, "efficiency": 1}
+                ] + discharge_stages[b]
 
             # noinspection PyTypeChecker
             max_charge_power.append(int(charge_stages[b][-1]["power"]) / 1000)
@@ -507,11 +518,16 @@ class DaCalc(DaBase):
         """
         # met sos ###################################################################
         ac_to_dc_samples = [
-            [charge_stages[b][cs]["power"] / 1000 for cs in range(CS[b])] for b in range(B)
+            [charge_stages[b][cs]["power"] / 1000 for cs in range(CS[b])]
+            for b in range(B)
         ]
         dc_from_ac_samples = [
             [
-                (charge_stages[b][cs]["efficiency"] * charge_stages[b][cs]["power"] / 1000)
+                (
+                    charge_stages[b][cs]["efficiency"]
+                    * charge_stages[b][cs]["power"]
+                    / 1000
+                )
                 for cs in range(CS[b])
             ]
             for b in range(B)
@@ -2569,6 +2585,8 @@ class DaCalc(DaBase):
             d_f.loc[d_f.shape[0]] = row
         if not self.debug:
             d_f_save = d_f.drop(["b_tem"], axis=1)
+            if interval_fraction_first_interval < 0.99:  # drop first row
+                d_f_save = d_f_save.iloc[1:]
             self.save_df(tablename="prognoses", tijd=tijd, df=d_f_save)
         else:
             logging.info("Berekende prognoses zijn niet opgeslagen.")
@@ -2851,9 +2869,11 @@ class DaCalc(DaBase):
                 else:
                     stop_str = stop_omvormer.strftime("%Y-%m-%d %H:%M")
                 first_row = df_accu[b].iloc[0]
-                from_battery = int(-first_row["dc->"] * 1000 / fraction_first_interval)
-                from_pv = int(first_row["pv->dc"] * 1000 / fraction_first_interval)
-                from_ac = int(first_row["->dc"] * 1000 / fraction_first_interval)
+                from_battery = int(
+                    -first_row["dc->"] * 1000 / hour_fraction_first_interval
+                )
+                from_pv = int(first_row["pv->dc"] * 1000 / hour_fraction_first_interval)
+                from_ac = int(first_row["->dc"] * 1000 / hour_fraction_first_interval)
                 calculated_soc = round(soc[b][1].x, 1)
                 grid_set_point = round(
                     1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0

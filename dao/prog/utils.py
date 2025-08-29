@@ -7,6 +7,7 @@ import math
 import json
 import os
 import sys
+import numpy as np
 import pandas as pd
 from requests import post
 import logging
@@ -342,7 +343,7 @@ def interpol_rows(
     return result_df
 
 
-def interpolate(
+def interpolate_old(
     # org_x: list[datetime.datetime],
     # org_y: list[float],
     # start_x: datetime.datetime,
@@ -388,6 +389,20 @@ def tst_interpolate():
     # prnt_xy(result["tijd"], result["value"])
 
 
+"""
+# Voorbeeld: 1D interpolatie
+points = [0, 1, 2, 3, 4]
+all_interp = []
+for i in range(1, len(points) - 2):
+    segment = catmull_rom_spline(
+        points[i - 1], points[i], points[i + 1], points[i + 2], n_points=5
+    )
+    all_interp.extend(segment.tolist())
+
+print(all_interp)
+"""
+
+
 def interpolate_prognose_data():
     from da_config import Config
     from db_manager import DBmanagerObj
@@ -400,5 +415,117 @@ def interpolate_prognose_data():
     print(prognose_data.to_string())
 
 
+def interpolate(df: pd.DataFrame, field: str, quantity: bool = False) -> pd.DataFrame:
+    """
+    Interpoleert uurwaarden (gegeven op hele uren, feitelijk H:30) naar kwartierwaarden.
+    Voor elk uurblok worden 4 kwartierwaarden berekend, zodanig dat het gemiddelde
+    exact overeenkomt met de uurwaarde.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame met kolommen:
+        - "tijd": datetime (op hele uren, bv. 09:00 betekent waarde voor 09:30)
+        - field: float/int, uurwaarden
+    field: str, name of the column
+    quantity: bool, is it a quantity
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame met kwartierwaarden in kolommen ["tijd", field]
+    """
+
+    result = []
+
+    for i in range(len(df)):
+        t_curr = df.loc[i, "tijd"]
+        v_curr = df.loc[i, field]
+
+        if i == 0:
+            # eerste uurblok (lineair richting volgende)
+            v_next = df.loc[i + 1, field]
+            """
+            q0 = v_curr
+            q1 = (2 * v_curr + v_next) / 3
+            q2 = (v_curr + 2 * v_next) / 3
+            q3 = v_next
+            """
+            q0 = v_curr + (v_curr - v_next) * 0.50  # 09:00 dicht bij 09:30
+            q1 = v_curr + (v_curr - v_next) * 0.25  # 9:15
+            q2 = v_curr  # 09:30 → ongeveer uurwaarde
+            q3 = v_curr + (v_next - v_curr) * 0.25  # 09:45 dicht bij 09:30
+
+        elif i == len(df) - 1:
+            # laatste uurblok (lineair vanaf vorige)
+            v_prev = df.loc[i - 1, field]
+            """
+            q0 = v_prev
+            q1 = (2 * v_prev + v_curr) / 3
+            q2 = (v_prev + 2 * v_curr) / 3
+            q3 = v_curr
+            """
+            q0 = v_curr + (v_prev - v_curr) * 0.50  # 09:00 dicht bij 09:30
+            q1 = v_curr + (v_prev - v_curr) * 0.25  # 9:15
+            q2 = v_curr  # 09:30 → ongeveer uurwaarde
+            q3 = v_curr + (v_curr - v_prev) * 0.25  # 09:45 dicht bij 09:30
+        else:
+            # tussenliggende blokken met jouw formule
+            v_prev = df.loc[i - 1, field]
+            v_next = df.loc[i + 1, field]
+
+            """
+            q0 = v_prev + (v_curr - v_prev) * 0.75
+            q1 = v_curr
+            q2 = v_next + (v_curr - v_next) * 0.75
+            q3 = (q0 + q1 + q2) / 3  # voorlopig
+            """
+            q0 = v_prev + (v_curr - v_prev) * 0.50  # 09:00 dicht bij 09:30
+            q1 = v_prev + (v_curr - v_prev) * 0.75  # 9:15
+            q2 = v_curr  # 09:30 → ongeveer uurwaarde
+            q3 = v_next + (v_curr - v_next) * 0.75  # 09:45 dicht bij 09:30
+
+        quarters = np.array([q0, q1, q2, q3], dtype=float)
+
+        # correctie zodat gemiddelde exact gelijk is aan uurwaarde
+        correction = v_curr - quarters.mean()
+        quarters += correction
+        if quantity:
+            quarters = quarters / 4
+
+        for k in range(4):
+            result.append(
+                {
+                    "tijd": t_curr + datetime.timedelta(minutes=15 * k),
+                    field: float(quarters[k]),
+                }
+            )
+    result_df = pd.DataFrame(result)
+    result_df.index = pd.to_datetime(result_df["tijd"])
+    return result_df
+
+
+def tst_interpolate_df():
+    import pandas as pd
+    import datetime
+
+    data = pd.DataFrame(
+        {
+            "tijd": [
+                datetime.datetime(2023, 1, 1, 9, 0),
+                datetime.datetime(2023, 1, 1, 10, 0),
+                datetime.datetime(2023, 1, 1, 11, 0),
+                datetime.datetime(2023, 1, 1, 12, 0),
+                datetime.datetime(2023, 1, 1, 13, 0),
+            ],
+            "value": [15, 17, 14, 18, 20],
+        }
+    )
+
+    quarters = interpolate(data, "value", False)
+    print(quarters)
+
+
+# tst_interpolate_df()
 # tst_interpolate()
-#  interpolate_prognose_data()
+# interpolate_prognose_data()

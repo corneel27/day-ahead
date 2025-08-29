@@ -424,8 +424,9 @@ class DBmanagerObj(object):
             result_df = None
             for field, new_field in fields:
                 fld_df = self.get_prognose_field(field, start, end, interval)
-                fld_df.index = pd.to_datetime(fld_df["tijd"])
-                fld_df = interpolate(fld_df, field, 15, (field == "gr"))
+                # fld_df.index = pd.to_datetime(fld_df["tijd"])
+                # fld_df = interpolate(fld_df, field, 15, (field == "gr"))
+                fld_df = interpolate(fld_df, field, (field == "gr"))
                 if result_df is None:
                     result_df = fld_df
                 else:
