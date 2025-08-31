@@ -2031,7 +2031,7 @@ class DaCalc(DaBase):
                 uur_kw.append([])
             for kw in range(kw_num):
                 # index in uur-lijst
-                uur_index = calc_uur_index(kwartier_dt, tijd)
+                uur_index = calc_uur_index(kwartier_dt, tijd, self.interval)
                 if uur_index < U:
                     uur_kw[uur_index].append(kw)
                 kw_dt.append(kwartier_dt)
@@ -2522,8 +2522,8 @@ class DaCalc(DaBase):
             df_pv_dc = pd.DataFrame(columns=["tijd", "pv_dc"])
             df_pv_dc.index = pd.to_datetime(df_pv_dc["tijd"])
             tijd_pv = tijd.copy()
-            prod_pc_sum = 0
             for u in range(U):
+                prod_pc_sum = 0
                 for b in range(B):
                     prod_pc_sum += pv_prod_dc_sum[b][u].x
                 row_pv_dc = [tijd_pv[u], prod_pc_sum]
@@ -2587,7 +2587,9 @@ class DaCalc(DaBase):
             d_f_save = d_f.drop(["b_tem"], axis=1)
             if interval_fraction_first_interval < 0.99:  # drop first row
                 d_f_save = d_f_save.iloc[1:]
-            self.save_df(tablename="prognoses", tijd=tijd, df=d_f_save)
+                save_tijd = tijd.copy()
+                save_tijd = save_tijd[1:]
+            self.save_df(tablename="prognoses", tijd=save_tijd, df=d_f_save)
         else:
             logging.info("Berekende prognoses zijn niet opgeslagen.")
 

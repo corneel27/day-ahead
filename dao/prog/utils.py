@@ -246,18 +246,23 @@ def get_tibber_data():
     db_da.savedata(tibber_df)
 
 
-def calc_uur_index(dt: datetime, tijd: list) -> int:
+def calc_uur_index(dt: datetime, tijd: list, interval: str) -> int:
     """
     Berekent van parameter dt de index in lijst uur
     :param dt: de datetime waarvan de index wordt gezocht
-    :param tijd: lijst met datetime van begin van het betreffende uur
+    :param tijd: lijst met datetime van begin van het betreffende interval
+    :param interval: str "1hour" of "15min"
     :return: het indexnummer in de lijst
     """
     result_index = len(tijd)
     if (result_index == 0) or (dt < tijd[0]):
         return result_index
+    if interval == "1hour":
+        delta = 60
+    else:
+        delta = 15
     for u in range(len(tijd)):
-        if dt < (tijd[u] + datetime.timedelta(hours=1)):
+        if dt < (tijd[u] + datetime.timedelta(minutes=delta)):
             result_index = u
             break
     return result_index
