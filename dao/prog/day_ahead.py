@@ -2300,8 +2300,8 @@ class DaCalc(DaBase):
             df_pv_dc = pd.DataFrame(columns=["tijd", "pv_dc"])
             df_pv_dc.index = pd.to_datetime(df_pv_dc["tijd"])
             tijd_pv = tijd.copy()
-            prod_pc_sum = 0
             for u in range(U):
+                prod_pc_sum = 0
                 for b in range(B):
                     prod_pc_sum += pv_prod_dc_sum[b][u].x
                 row_pv_dc = [tijd_pv[u], prod_pc_sum]

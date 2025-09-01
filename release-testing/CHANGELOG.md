@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2025.9.0.rc1
+Fix error api prognose pv_dc
+
 # 2025.8.1.rc5
 Zelfde als productie versie 20258.8.1
 - small corrections in DOCS.md
