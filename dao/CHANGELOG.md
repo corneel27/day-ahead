@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2025.9.0
+Fix error api prognose pv_dc
+
 # 2025.8.1
 
 - You can configure the meteo-model for your data (option, default **harmonie**) 
