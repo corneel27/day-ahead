@@ -1,4 +1,3 @@
-
 from calendar import month
 
 from dateutil import easter
