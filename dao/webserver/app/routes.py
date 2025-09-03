@@ -459,7 +459,7 @@ def reports(active_menu: str):
         report_df = calc_function(
             active_period,
             _tot=tot,
-            # active_interval=active_interval,
+            active_interval=active_interval,
             active_view=active_view,
         )
     if active_view == "tabel":
@@ -560,6 +560,22 @@ def settings():
         message=message,
         version=__version__,
     )
+
+
+'''
+@app.route('/api/prognose/<string:fld>', methods=['GET'])
+def api_prognose(fld: str):
+    """
+    retourneert in json de data van
+    :param fld: de code van de gevraagde data
+    :return: de gevraagde data in json formaat
+    """
+    report = dao.prog.da_report.Report()
+    start = request.args.get('start')
+    end = request.args.get('end')
+    data = report.get_api_data(fld, prognose=True, start=start, end=end)
+    return jsonify({'data': data})
+'''
 
 
 @app.route("/api/report/<string:fld>/<string:periode>", methods=["GET"])
