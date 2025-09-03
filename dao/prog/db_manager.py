@@ -17,6 +17,9 @@ import sqlalchemy_utils
 import os
 import logging
 
+from dao.prog.utils import interpolate
+
+
 # import utils as utils
 
 
@@ -316,7 +319,7 @@ class DBmanagerObj(object):
             connection.close()
         self.log_pool_status()
 
-    def get_prognose_field(self, field: str, start, end=None, interval="hour"):
+    def get_prognose_field(self, field: str, start, end=None, interval="1hour"):
         values_table = Table("values", self.metadata, autoload_with=self.engine)
         t1 = values_table.alias("t1")
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
@@ -366,14 +369,10 @@ class DBmanagerObj(object):
         if interval == "1hour":
             # Aliases for the values table
             t1 = values_table.alias("t1")
-            t2 = values_table.alias("t2")
-            t3 = values_table.alias("t3")
             t0 = values_table.alias("t0")
 
             # Aliases for the variabel table
             v1 = variabel_table.alias("v1")
-            v2 = variabel_table.alias("v2")
-            v3 = variabel_table.alias("v3")
             v0 = variabel_table.alias("v0")
 
             # Build the SQLAlchemy query
@@ -382,19 +381,11 @@ class DBmanagerObj(object):
                 self.from_unixtime(t1.c.time).label("tijd"),
                 t0.c.value.label("temp"),
                 t1.c.value.label("glob_rad"),
-                t2.c.value.label("pv_rad"),
-                t3.c.value.label("da_price"),
             ).where(
                 and_(
-                    t1.c.time == t2.c.time,
-                    t1.c.time == t3.c.time,
                     t1.c.time == t0.c.time,
                     t1.c.variabel == v1.c.id,
                     v1.c.code == "gr",
-                    t2.c.variabel == v2.c.id,
-                    v2.c.code == "solar_rad",
-                    t3.c.variabel == v3.c.id,
-                    v3.c.code == "da",
                     t0.c.variabel == v0.c.id,
                     v0.c.code == "temp",
                     t1.c.time
@@ -428,8 +419,20 @@ class DBmanagerObj(object):
             df = pd.DataFrame(result.fetchall(), columns=result.keys())
             df["tijd"] = pd.to_datetime(df["tijd"])
             return df
-        return None
-        # else: #  interval == "kwartier"
+        else:  # interval == "15min"
+            fields = [("temp", "temp"), ("gr", "glob_rad")]
+            result_df = None
+            for field, new_field in fields:
+                fld_df = self.get_prognose_field(field, start, end, interval)
+                # fld_df.index = pd.to_datetime(fld_df["tijd"])
+                # fld_df = interpolate(fld_df, field, 15, (field == "gr"))
+                fld_df = interpolate(fld_df, field, (field == "gr"))
+                if result_df is None:
+                    result_df = fld_df
+                else:
+                    result_df[new_field] = fld_df[field]
+            result_df["time"] = result_df["tijd"].astype(int) // 1e9
+            return result_df
 
     def get_column_data(
         self,
@@ -437,6 +440,7 @@ class DBmanagerObj(object):
         column_name: str,
         start: datetime.datetime = None,
         end: datetime.datetime = None,
+        agg_func: str | None = None,
     ):
         """
         Retourneert een dataframe
@@ -467,13 +471,28 @@ class DBmanagerObj(object):
         """
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
         values_table = Table(tablename, self.metadata, autoload_with=self.engine)
-        query = select(values_table.c.time, values_table.c.value).where(
+        if agg_func is None:
+            time_column = values_table.c.time.label("time")
+            agg_column = values_table.c.value.label("value")
+        elif agg_func == "avg":
+            time_column = func.min(values_table.c.time).label("time")
+            agg_column = func.avg(values_table.c.value).label("value")
+        else:
+            time_column = func.min(values_table.c.time).label("time")
+            agg_column = func.sum(values_table.c.value).label("value")
+        query = select(
+            self.hour_start(values_table.c.time).label("uur"),
+            time_column,
+            agg_column,
+        ).where(
             and_(
                 variabel_table.c.code == column_name,
                 values_table.c.variabel == variabel_table.c.id,
                 values_table.c.time >= self.unix_timestamp(start),
             )
         )
+        if agg_func is not None:
+            query = query.group_by("uur")
         if end is not None:
             query = query.where(values_table.c.time < self.unix_timestamp(end))
         query = query.order_by(values_table.c.time)
