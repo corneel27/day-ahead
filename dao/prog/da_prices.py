@@ -18,6 +18,8 @@ class DaPrices:
     def __init__(self, config: Config, db_da: DBmanagerObj):
         self.config = config
         self.db_da = db_da
+        self.interval = self.config.get(["interval"], None, "1hour")
+        self.country = self.config.get(["country"], None, "NL")
 
     def get_time_latest_record(self, code: str) -> datetime.datetime:
         """
@@ -66,6 +68,10 @@ class DaPrices:
         return result
 
     def get_prices(self, source):
+        if self.interval == "1hour":
+            resolution = 60
+        else:
+            resolution = 15
         now = datetime.datetime.now()
         # start
         if len(sys.argv) > 2:
@@ -141,7 +147,9 @@ class DaPrices:
             else:
                 end_date = start
             try:
-                hourly_prices_spot = prices_spot.hourly(areas=["NL"], end_date=end_date)
+                act_spot_prices = prices_spot.fetch(
+                    areas=[self.country], end_date=end_date, resolution=resolution
+                )
             except ConnectionError:
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
                 return
@@ -149,18 +157,18 @@ class DaPrices:
                 logging.exception(ex)
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
                 return
-            if hourly_prices_spot is None:
+            if act_spot_prices is None:
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
                 return
 
-            hourly_values = hourly_prices_spot["areas"]["NL"]["values"]
-            s = pp.pformat(hourly_values, indent=2)
+            act_values = act_spot_prices["areas"]["NL"]["values"]
+            s = pp.pformat(act_values, indent=2)
             logging.info(f"Day ahead prijzen van Nordpool:\n {s}")
             df_db = pd.DataFrame(columns=["time", "code", "value"])
-            for hourly_value in hourly_values:
-                time_dt = hourly_value["start"]
+            for act_value in act_values:
+                time_dt = act_value["start"]
                 time_ts = int(time_dt.timestamp())
-                value = hourly_value["value"]
+                value = act_value["value"]
                 if value == float("inf"):
                     continue
                 else:
@@ -277,77 +285,6 @@ class DaPrices:
                         node["startsAt"], "%Y-%m-%dT%H:%M:%S.%f%z"
                     )
                     time_stamp = int(dt.timestamp())
-                    value = float(node["energy"])
-                    logging.info(f"{node} {dt} {time_stamp} {value}")
-                    df_db.loc[df_db.shape[0]] = [time_stamp, "da", value]
-            logging.debug(
-                f"Day ahead prijzen (source: tibber, db-records): \n "
-                f"{df_db.to_string(index=False)}"
-            )
-            self.db_da.savedata(df_db)
-
-        if source.lower() == "tibber":
-            now_ts = datetime.datetime.now().timestamp()
-            get_ts = start.timestamp()
-            count = 1 + math.ceil((now_ts - get_ts) / 3600)
-            count_str = str(count)
-            query = (
-                "{ "
-                '"query": '
-                ' "{ '
-                "  viewer { "
-                "    homes { "
-                "      currentSubscription { "
-                "        priceInfo { "
-                "          today { "
-                "            energy "
-                "            startsAt "
-                "          } "
-                "          tomorrow { "
-                "            energy "
-                "            startsAt "
-                "          } "
-                "          range(resolution: HOURLY, last: " + count_str + ") { "
-                "            nodes { "
-                "              energy "
-                "              startsAt "
-                "            } "
-                "          } "
-                "        } "
-                "      } "
-                "    } "
-                "  } "
-                '}" '
-                "}"
-            )
-
-            logging.debug(query)
-            tibber_options = self.config.get(["tibber"])
-            url = self.config.get(
-                ["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql"
-            )
-            headers = {
-                "Authorization": "Bearer " + tibber_options["api_token"],
-                "content-type": "application/json",
-            }
-            resp = post(url, headers=headers, data=query)
-            tibber_dict = json.loads(resp.text)
-            today_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-                "currentSubscription"
-            ]["priceInfo"]["today"]
-            tomorrow_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-                "currentSubscription"
-            ]["priceInfo"]["tomorrow"]
-            range_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-                "currentSubscription"
-            ]["priceInfo"]["range"]["nodes"]
-            df_db = pd.DataFrame(columns=["time", "code", "value"])
-            for lst in [today_nodes, tomorrow_nodes, range_nodes]:
-                for node in lst:
-                    dt = datetime.datetime.strptime(
-                        node["startsAt"], "%Y-%m-%dT%H:%M:%S.%f%z"
-                    )
-                    time_stamp = str(int(dt.timestamp()))
                     value = float(node["energy"])
                     logging.info(f"{node} {dt} {time_stamp} {value}")
                     df_db.loc[df_db.shape[0]] = [time_stamp, "da", value]
