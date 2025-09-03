@@ -113,6 +113,7 @@ class DaBase(hass.Hass):
         self.config.set("latitude", resp_dict["latitude"])
         self.config.set("longitude", resp_dict["longitude"])
         self.config.set("time_zone", resp_dict["time_zone"])
+        self.config.set("country", resp_dict["country"])
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
         self.meteo = Meteo(self.config, self.db_da)
@@ -360,7 +361,9 @@ class DaBase(hass.Hass):
             result = json.load(f)
         return result
 
-    def calc_prod_solar(self, solar_opt: dict, act_time: int, act_gr: float, hour_fraction: float):
+    def calc_prod_solar(
+        self, solar_opt: dict, act_time: int, act_gr: float, hour_fraction: float
+    ):
         """
         berekent de productie van een string
         :param solar_opt: dict met alle instellingen van de string
@@ -468,6 +471,14 @@ class DaBase(hass.Hass):
         if entity_id is not None:
             self.set_state(entity_id, value)
 
+    def get_entity_state(self, entity_key: str, options: dict) -> int | float | str:
+        entity_id = self.config.get([entity_key], options, None)
+        if entity_id is not None:
+            result = self.get_state(entity_id).state
+        else:
+            result = None
+        return result
+
     def clean_data(self):
         """
         takes care for cleaning folders data/log and data/images
@@ -501,7 +512,7 @@ class DaBase(hass.Hass):
         # dacalc = DaCalc("../data/test.json")
         dacalc.debug = True
         dacalc.calc_optimum()
-        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 5, 17, 7))
+        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 8, 21, 19, minute=30))
 
     def calc_optimum(self):
         from day_ahead import DaCalc
