@@ -2602,6 +2602,9 @@ class DaCalc(DaBase):
 
         logging.info(f"Berekende prognoses: \n{d_f.to_string(index=False)}")
         # , formatters={'uur':'{:03d}'.format}))
+        logging.info(f"Kosten:           € {cost.x:<0.2f}")
+        # logging.info(f"Opgebouwd uit:")
+        # logging.info(f"Inkoop energie:   € {} ")
         logging.info(f"Winst: € {old_cost_da - cost.x:<0.2f}")
 
         # doorzetten van alle settings naar HA
