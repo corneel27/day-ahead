@@ -194,7 +194,7 @@ class GraphBuilder:
                             data_array,
                             label=label,
                             linestyle=linestyle,
-                            color=color
+                            color=color,
                         )[0]
                     elif s_type == "step":
                         if "linestyle" in serie:
@@ -276,7 +276,7 @@ class GraphBuilder:
                 ax.set_xlabel(haxis["title"])
             num_xas = len(df.index)
             if num_xas > 12:
-                ax.xaxis.set_major_locator(ticker.MultipleLocator(round(num_xas/12)))
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(round(num_xas / 12)))
                 ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
             if len(str(xlabels[0])) > 2:
                 ax.set_xticks(

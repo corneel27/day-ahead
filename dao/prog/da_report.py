@@ -2818,6 +2818,11 @@ class Report(DaBase):
             end = datetime.datetime.strptime(df_da["time"].iloc[-1], "%Y-%m-%d %H:%M")
             num_quaters = round((end - start).total_seconds() / 900)
             if len(df_da) < num_quaters - 1:
+                logging.error(
+                    f"Er ontbreken kwartierwaarden van de day-ahead tarieven, "
+                    f"de berekening wordt afgebroken"
+                )
+                return None
                 # time0= df_da.loc[]
                 df_da["tijd"] = pd.to_datetime(df_da["time"])
                 df_da = interpolate(df_da, "value", False)

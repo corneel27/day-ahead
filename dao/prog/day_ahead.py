@@ -85,6 +85,8 @@ class DaCalc(DaBase):
         price_data = report.get_price_data(
             dt.datetime.fromtimestamp(start_hour), end=None, interval=self.interval
         )
+        if price_data is None:
+            return
         while price_data.iloc[0]["time"] < start_interval_dt:
             price_data = price_data.iloc[1:]
         price_data.index = pd.to_datetime(price_data["time"])
@@ -1104,7 +1106,8 @@ class DaCalc(DaBase):
                         boiler_temp[u + 1]
                         == boiler_temp[u]
                         # - mix_los * boiler_st[u]
-                        - boiler_cooling + c_b[u] * cop_boiler * 3600 / spec_heat_boiler
+                        - boiler_cooling
+                        + c_b[u] * cop_boiler * 3600 / spec_heat_boiler
                     )
 
         ################################################
@@ -1756,9 +1759,7 @@ class DaCalc(DaBase):
         KW = []  # aantal kwartieren in een planningswindow
         ma_uur_kw = []  # per machine een list met beschikbare kwartieren
         ma_kw_dt = []  # per machine een list op welk tijdstip een kwartier begint
-        program_index = (
-            []
-        )  # nummer in de lijst welk programma van een machine gaat draaien
+        program_index = []  # nummer in de lijst welk programma van een machine gaat draaien
         ma_name = []  # naam van de machine
         # entity voor opvragen vorig en teruggeven berekend nieuw start-tijdstip
         ma_entity_plan_start = []
@@ -2113,37 +2114,39 @@ class DaCalc(DaBase):
                     print()
 
             for kw in range(KW[m]):
-                model += c_ma_kw[m][kw] == xsum(
-                    self.machines[m]["programs"][program_index[m]]["power"][kw - r]
-                    * ma_start[m][r]
-                    # 4000 = omrekenen van kwartier vermogen in W naar verbruik in kWh
-                    / 4000
-                    # van alle mogelijke runs de kwartieren
-                    for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]
+                model += (
+                    c_ma_kw[m][kw]
+                    == xsum(
+                        self.machines[m]["programs"][program_index[m]]["power"][kw - r]
+                        * ma_start[m][r]
+                        # 4000 = omrekenen van kwartier vermogen in W naar verbruik in kWh
+                        / 4000
+                        # van alle mogelijke runs de kwartieren
+                        for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]
+                    )
                 )
             for u in range(U):
                 if len(ma_uur_kw[m][u]) == 0:
                     # er zijn geen "window" kwartieren in dit uur
                     if (
                         # het verbruik uit een eerdere planning berekenen en meenemen
-                        ma_planned_start_dt[m] < (tijd[u] + dt.timedelta(hours=1))
+                        ma_planned_start_dt[m]
+                        < (tijd[u] + dt.timedelta(minutes=int(self.interval_s / 60)))
                         and ma_planned_end_dt[m] > tijd[u]
                     ):
                         c_ma_sum = 0
+                        start_interval_dt = max(tijd[u], start_dt)
+                        end_interval_dt = tijd[u] + dt.timedelta(minutes=int(self.interval_s/60))
                         for kw in range(RL[m]):
-                            gepland_moment = ma_planned_start_dt[m] + dt.timedelta(
+                            start_kw_dt = ma_planned_start_dt[m] + dt.timedelta(
                                 minutes=kw * 15
                             )
-                            if (
-                                max(start_dt, tijd[u])
-                                <= gepland_moment
-                                <= (tijd[u] + dt.timedelta(hours=1))
-                            ):
-                                verschil = gepland_moment - start_dt
-                                if start_dt > tijd[u] and verschil.seconds < 900:
-                                    fraction = verschil.seconds / 900
-                                else:
-                                    fraction = 1
+                            end_kw_dt = start_kw_dt + dt.timedelta(minutes=15)
+                            start_overlap_dt = max(start_interval_dt,start_kw_dt)
+                            end_overlap_dt = min(end_interval_dt, end_kw_dt)
+                            if start_overlap_dt < end_overlap_dt:
+                                verschil = end_overlap_dt- start_overlap_dt
+                                fraction = verschil.seconds / 900
                                 c_ma_sum += (
                                     self.machines[m]["programs"][program_index[m]][
                                         "power"
