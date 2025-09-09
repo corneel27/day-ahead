@@ -15,7 +15,7 @@ from sqlalchemy import (
     desc,
     insert,
     update,
-    text
+    text,
 )
 import pandas as pd
 
@@ -282,7 +282,9 @@ class CheckDB:
                 row = result.first()
                 tz_db = row[0]
                 if tz_db != timezone:
-                    print(f'De timezone van de database "day_ahead" is "{tz_db}" en wijkt af van local timezone: {timezone}')
+                    print(
+                        f'De timezone van de database "day_ahead" is "{tz_db}" en wijkt af van local timezone: {timezone}'
+                    )
                     print("Update de timezone (zie DOCS.md)")
 
         if l_version < n_version:
@@ -296,6 +298,7 @@ class CheckDB:
             with self.engine.connect() as connection:
                 connection.execute(insert_query)
                 connection.commit()
+
 
 def main():
     checkdb = CheckDB("../data/options.json")
