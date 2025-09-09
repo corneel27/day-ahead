@@ -1,5 +1,45 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.9.1.rc1
+
+### **The release candidate with support of 15min-interval of prices**
+**Important**: read this first!<br>
+
+**Interval**<br>
+This realease supports two intervals: 1hour and 15min
+You make your choice in the settings, put in your settings somewhere in the root the setting:<br>
+"interval": "1hour" or "interval": "15min", 1hour will be default when you make no intervalsetting
+
+**source**<br>
+At the moment only Nordpool supports 15min prices.<br>
+If you don't want trouble: make nordpool your price-source.
+
+**boiler**<br>
+The boiler part is completely redesigned and (in my opinion) become better.
+The (thermal and financial) value of the boiler at the beginning and the end of the calculationperiod si taken into account. 
+For every interval the electricity consumption for reheating is calculated and thee best fitting will be choosen in the algortime.
+
+**test**<br>
+If you want to test with 15min-interval, these are the steps to take:
+- don't use your test-addon as production-addon, there can be errors: I hope you find and report them
+- choose a seperate da-database for the test-addon (sqlite will do perfect) 
+- deactivate (=delete) the row(s) in your scheduler-settings that calculate every hour
+- set your interval to "15min"
+- get the meteo
+- set nordpool as your prices-source
+- get day-ahead prices for today and tomorrow
+- make your calculation with debug: check the graphs and the log
+- you can change the interval between 1hour and 15min and compare
+- when you get the prices: take care that interval=15min
+- when you are confident with the results: make a calculation without debug
+- last but nog least: report your experiences on tweakers (preferred) or on github.
+
+**Know issues**
+- the consumption with 15min interval is higher than with 1hour interval
+- also other results are different for interval=1hour and interval=15min. Who can help me to figure this out?
+- the prognoses-parts of the reports are wrong 
+
+It is my objective to bring a production release before September 20th (I will be absent for about a week).  
 
 # 2025.9.0.rc1
 Fix error api prognose pv_dc

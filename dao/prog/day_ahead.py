@@ -260,7 +260,7 @@ class DaCalc(DaBase):
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
         try:
-            if self.log_level == logging.INFO:
+            if self.log_level <= logging.INFO:
                 start_df = pd.DataFrame(
                     {
                         "uur": uur,
@@ -2218,7 +2218,7 @@ class DaCalc(DaBase):
                 for b in range(B)
             )
             # waarde energie boiler
-            - (boiler_temp[U] - boiler_ondergrens)
+            - (boiler_temp[U] - boiler_temp[0])
             * (spec_heat_boiler / (3600 * cop_boiler))
             * p_avg
         )
