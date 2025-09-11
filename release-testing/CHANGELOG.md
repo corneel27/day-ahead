@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.9.1.rc2
+
+- Fixed error when saving prognoses in the exact 15min time
+- Added logging of free/used memory in logging on level "debug"
+- Added support of getting 15min-prices from Tibber
+
 # 2025.9.1.rc1
 
 ### **The release candidate with support of 15min-interval of prices**
@@ -10,7 +16,7 @@ This realease supports two intervals: 1hour and 15min
 You make your choice in the settings, put in your settings somewhere in the root the setting:<br>
 "interval": "1hour" or "interval": "15min", 1hour will be default when you make no intervalsetting
 
-**source**<br>
+**source prices**<br>
 At the moment only Nordpool supports 15min prices.<br>
 If you don't want trouble: make nordpool your price-source.
 

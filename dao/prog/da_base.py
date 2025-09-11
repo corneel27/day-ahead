@@ -231,6 +231,7 @@ class DaBase(hass.Hass):
             "calc_optimum": {
                 "name": "Optimaliseringsberekening zonder debug",
                 "cmd": ["python3", "../prog/day_ahead.py", "calc"],
+                "object": "DaCalc",
                 "function": "calc_optimum",
                 "file_name": "calc",
             },
