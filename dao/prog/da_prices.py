@@ -228,6 +228,15 @@ class DaPrices:
             now_ts = datetime.datetime.now().timestamp()
             get_ts = start.timestamp()
             count = 1 + math.ceil((now_ts - get_ts) / 3600)
+            if self.interval == "1hour":
+                resolution = "HOURLY"
+            else:
+                resolution = "QUARTER_HOURLY"
+                count = count * 4
+                if count > 674:
+                    count = 674
+                    logging.warning("Je kunt met Tibber maximaal 7 dagen terug opvragen")
+            count = min(674, count)
             query = (
                 "{ "
                 '"query": '
@@ -235,7 +244,7 @@ class DaPrices:
                 "  viewer { "
                 "    homes { "
                 "      currentSubscription { "
-                "        priceInfo { "
+                "        priceInfo(resolution: "+ resolution +"){ "
                 "          today { "
                 "            energy "
                 "            startsAt "
@@ -244,11 +253,11 @@ class DaPrices:
                 "            energy "
                 "            startsAt "
                 "          } "
-                "          range(resolution: HOURLY, last: " + str(count) + ") { "
-                "            nodes { "
-                "              energy "
-                "              startsAt "
-                "            } "
+                "        } "
+                "        priceInfoRange(resolution: "+ resolution +", last: " + str(count) + ") { "
+                "          nodes { "
+                "            energy "
+                "            startsAt "
                 "          } "
                 "        } "
                 "      } "
@@ -277,7 +286,7 @@ class DaPrices:
             ]["priceInfo"]["tomorrow"]
             range_nodes = tibber_dict["data"]["viewer"]["homes"][0][
                 "currentSubscription"
-            ]["priceInfo"]["range"]["nodes"]
+            ]["priceInfoRange"]["nodes"]
             df_db = pd.DataFrame(columns=["time", "code", "value"])
             for lst in [today_nodes, tomorrow_nodes, range_nodes]:
                 for node in lst:

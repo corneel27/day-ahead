@@ -61,7 +61,8 @@ class DaCalc(DaBase):
             start_dt = dt.datetime.now()
         else:
             start_dt = _start_dt
-        # start_dt = dt.datetime(year=2024, month=9, day=26, hour=14, minute=0)
+        # om te testen met afwijkende startdatum/tijd
+        # start_dt = datetime.datetime(2025, 9, 10, 0, minute=0)
         start_ts = int(start_dt.timestamp())
         modulo = start_ts % self.interval_s
         if modulo > (self.interval_s - 10):
@@ -80,8 +81,14 @@ class DaCalc(DaBase):
         hour_fraction_first_interval = (
             self.interval_s / 3600 - (start_ts - start_interval_ts) / 3600
         )
+        if self.log_level == logging.DEBUG:
+            logging.debug("Memory used/free:")
+            with open("/proc/meminfo") as file:
+                for line in file:
+                    if "Mem" in line:
+                        print(line, end="")
 
-        report = Report()
+        report = Report(self.file_name)
         price_data = report.get_price_data(
             dt.datetime.fromtimestamp(start_hour), end=None, interval=self.interval
         )
@@ -2588,9 +2595,9 @@ class DaCalc(DaBase):
             d_f.loc[d_f.shape[0]] = row
         if not self.debug:
             d_f_save = d_f.drop(["b_tem"], axis=1)
+            save_tijd = tijd.copy()
             if interval_fraction_first_interval < 0.99:  # drop first row
                 d_f_save = d_f_save.iloc[1:]
-                save_tijd = tijd.copy()
                 save_tijd = save_tijd[1:]
             self.save_df(tablename="prognoses", tijd=save_tijd, df=d_f_save)
         else:
