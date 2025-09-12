@@ -28,23 +28,23 @@ ENV DAO_VERSION=$BUILD_VERSION
 RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/version.py
 
 #benodigde libraries voor mip
-RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
+#RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
 
-COPY miplib.tar.gz /tmp/
+#COPY miplib.tar.gz /tmp/
 WORKDIR /root/dao/prog
-RUN echo 'platform: "$ENV_BUILD_ARCH"' \
-  && export BUILD_ARCH="$ENV_BUILD_ARCH" \
-  && echo 'export BUILD_ARCH="$ENV_BUILD_ARCH"' >> ~/.bashrc \
-  && export PYTHONPATH="/root:/root/dao:/root/dao/prog" \
-  && echo 'export PYTHONPATH="/root:/root/dao:/root/dao/prog"' >> ~/.bashrc
+# RUN echo 'platform: "$ENV_BUILD_ARCH"' \
+#  && export BUILD_ARCH="$ENV_BUILD_ARCH" \
+#  && echo 'export BUILD_ARCH="$ENV_BUILD_ARCH"' >> ~/.bashrc \
+#  && export PYTHONPATH="/root:/root/dao:/root/dao/prog" \
+#  && echo 'export PYTHONPATH="/root:/root/dao:/root/dao/prog"' >> ~/.bashrc
 
-RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
-      tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
-      export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" && \
-      export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"  && \
-      echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  && \
-      echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc \
-   ; fi
+#RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
+#      tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
+#      export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" && \
+#      export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"  && \
+#      echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  && \
+#      echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc \
+#   ; fi
 
 #installeer python en pip
 RUN apt-get install python3 -y\
@@ -58,6 +58,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY requirements.txt /tmp/
 RUN pip3 install uv
 RUN uv pip install -r /tmp/requirements.txt
+RUN pip install cffi==2.0.0.b1
+RUN pip install --ignore-requires-python mip
 COPY run /root/dao/prog/
 
 EXPOSE 5000
