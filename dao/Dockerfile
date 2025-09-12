@@ -8,7 +8,7 @@ ENV ENV_BUILD_ARCH=$BUILD_ARCH
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update -y
-RUN apt-get upgrade -y
+RUN apt-get full-upgrade -y
 
 #handige tools
 RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev
