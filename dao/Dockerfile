@@ -59,8 +59,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY requirements.txt /tmp/
 RUN pip3 install uv
 RUN uv pip install -r /tmp/requirements.txt
-RUN pip install cffi==2.0.0.b1
-RUN pip install mip==1.16rc0
+# RUN pip install cffi==2.0.0.b1
+RUN pip install mip
 COPY run /root/dao/prog/
 
 EXPOSE 5000
