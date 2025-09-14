@@ -38,13 +38,13 @@ RUN echo 'platform: "$ENV_BUILD_ARCH"' \
   && export PYTHONPATH="/root:/root/dao:/root/dao/prog" \
   && echo 'export PYTHONPATH="/root:/root/dao:/root/dao/prog"' >> ~/.bashrc
 
-#RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
-#      tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
-#      export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" && \
-#      export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"  && \
-#      echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  && \
-#      echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc \
-#   ; fi
+RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
+      tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
+      export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" && \
+      export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"  && \
+      echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  && \
+      echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc \
+   ; fi
 
 #installeer python en pip
 RUN apt-get install python3 -y\
