@@ -30,7 +30,7 @@ RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/version.py
 #benodigde libraries voor mip
 # RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
 
-# COPY miplib.tar.gz /tmp/
+COPY miplib.tar.gz /tmp/
 WORKDIR /root/dao/prog
 RUN echo 'platform: "$ENV_BUILD_ARCH"' \
   && export BUILD_ARCH="$ENV_BUILD_ARCH" \
