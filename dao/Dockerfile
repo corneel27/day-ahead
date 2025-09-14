@@ -29,7 +29,10 @@ RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/version.py
 
 #benodigde libraries voor mip
 RUN apt-get install -y wget libnauty-dev coinor-libcgl-dev
-# libcholmod3
+
+RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
+      apt-get install -y libcholmod3 \
+    ; fi
 
 COPY miplib.tar.gz /tmp/
 WORKDIR /root/dao/prog
