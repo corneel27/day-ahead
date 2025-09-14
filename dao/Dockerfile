@@ -31,7 +31,7 @@ RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/version.py
 RUN apt-get install -y wget coinor-libcgl-dev
 
 RUN apt-get install -y wget coinor-cbc coinor-libcgl-dev
-#COPY miplib.tar.gz /tmp/
+# COPY miplib.tar.gz /tmp/
 WORKDIR /root/dao/prog
 # RUN echo 'platform: "$ENV_BUILD_ARCH"' \
 #  && export BUILD_ARCH="$ENV_BUILD_ARCH" \
@@ -60,7 +60,7 @@ COPY requirements.txt /tmp/
 RUN pip3 install uv
 RUN uv pip install -r /tmp/requirements.txt
 # RUN pip install cffi==2.0.0.b1
-RUN pip install mip
+# RUN pip install mip
 COPY run /root/dao/prog/
 
 EXPOSE 5000
