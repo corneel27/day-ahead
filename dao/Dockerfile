@@ -12,7 +12,7 @@ RUN apt-get upgrade -y
 
 #handige tools
 RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev
-RUN apt-get install -y postgresql-client sqlite3 gcc libjpeg-dev
+RUN apt-get install -y postgresql-client sqlite3 gcc libjpeg-dev libffi-dev
 
 # Copy software for add-on
 RUN mkdir /root/dao
@@ -28,7 +28,11 @@ ENV DAO_VERSION=$BUILD_VERSION
 RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/version.py
 
 #benodigde libraries voor mip
-RUN apt-get install -y wget libnauty2-dev coinor-libcgl-dev libcholmod3
+RUN apt-get install -y wget libnauty-dev coinor-libcgl-dev
+
+RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
+      apt-get install -y libcholmod3 \
+    ; fi
 
 COPY miplib.tar.gz /tmp/
 WORKDIR /root/dao/prog

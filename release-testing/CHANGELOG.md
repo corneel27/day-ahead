@@ -1,5 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.9.1.rc3
+- Fixed error with postgresql da-database
+- Fixed optimalisation-error on amd64 machines
+
+Known issues:
+- boiler module does not calculate well
+- saving-reports generates "internal server error"
+
 # 2025.9.1.rc2
 
 - Fixed error when saving prognoses in the exact 15min time
