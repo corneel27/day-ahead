@@ -2146,6 +2146,7 @@ class Report(DaBase):
     def calc_saving_consumption(
         self,
         active_period: str,
+        active_interval: str | None = None,
         active_view: str = "table",
         _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
