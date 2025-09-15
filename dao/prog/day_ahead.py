@@ -30,7 +30,7 @@ class DaCalc(DaBase):
             return
         self.interval = self.config.get(["interval"], None, "1hour").lower()
         self.interval_s = 3600 if self.interval == "1hour" else 900
-        self.interval_name = "uur" if self.interval == "1hour" else "15min"
+        self.interval_name = "uur" if self.interval == "1hour" else "kwartier"
         self.steps_day = 24 if self.interval == "1hour" else 96
         self.history_options = self.config.get(["history"])
         self.boiler_options = self.config.get(["boiler"])
@@ -139,6 +139,7 @@ class DaCalc(DaBase):
         prog_data["da_prod"] = price_data["da_prod"]
 
         logging.debug("Prognose data:\n{}".format(prog_data.to_string()))
+        pd.options.display.float_format = "{:.3f}".format
 
         pl = []  # prijs levering day_ahead
         pt = []  # prijs teruglevering day_ahead
@@ -1284,19 +1285,13 @@ class DaCalc(DaBase):
             )
             e_needed = max(0, e_needed)  #  nooit minder dan 0
             energy_needed.append(e_needed)  # in kWh
-            logging.info(f"Benodigde energie: {energy_needed[e]} kWh")
+            logging.info(f"Benodigde energie: {energy_needed[e]:.3f} kWh")
             # uitgedrukt in aantal uren; bijvoorbeeld 1,5
-            time_needed = (
-                energy_needed[e]
-                / (max_power[e] * ev_charge_stages[e][-1]["efficiency"])
-                * 3600
-                / self.interval_s
-            )
-
-            logging.info(f"Tijd nodig om te laden: {time_needed:.2f} uur")
+            time_needed = energy_needed[e] / (max_power[e] * ev_charge_stages[e][-1]["efficiency"])
+            hrs_needed = math.floor(time_needed)
+            min_needed = math.ceil((time_needed - hrs_needed) * 60)
+            logging.info(f"Tijd nodig om te laden: {hrs_needed}:{min_needed} uur")
             if instant_charge:
-                hrs_needed = math.floor(time_needed)
-                min_needed = math.ceil((time_needed - hrs_needed) * 60)
                 ready = start_dt + datetime.timedelta(
                     hours=hrs_needed, minutes=min_needed
                 )
@@ -1305,8 +1300,10 @@ class DaCalc(DaBase):
                 self.ev_options[e]["entity set charging ampere"]
             ).state
             # afgerond naar boven in hele uren
-            intervals_needed.append(math.ceil(time_needed))
-            logging.info(f"Afgerond naar hele uren: {intervals_needed[e]}")
+            int_needed = math.ceil(time_needed if self.interval=="1hour" else time_needed * 4)
+            intervals_needed.append(int_needed)
+            logging.info(f"Afgerond naar hele intervallen: {intervals_needed[e]} "
+                         f"{self.interval_name}")
             logging.info(f"Stand laden schakelaar: {old_switch_state}")
             logging.info(f"Stand aantal ampere laden: {old_ampere_state} A")
             ready_index = U

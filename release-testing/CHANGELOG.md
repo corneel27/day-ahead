@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.9.1.rc4
+- Fixed error calculation/presentation "time needed" charging an ev
+- Fixed error calculating "savings"-reports
+
 # 2025.9.1.rc3
 - Fixed error with postgresql da-database
 - Fixed optimalisation-error on amd64 machines
