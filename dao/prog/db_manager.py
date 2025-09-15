@@ -471,6 +471,7 @@ class DBmanagerObj(object):
         """
         variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
         values_table = Table(tablename, self.metadata, autoload_with=self.engine)
+        hour_column = self.hour_start(values_table.c.time).label("uur")
         if agg_func is None:
             time_column = values_table.c.time.label("time")
             agg_column = values_table.c.value.label("value")
@@ -481,7 +482,7 @@ class DBmanagerObj(object):
             time_column = func.min(values_table.c.time).label("time")
             agg_column = func.sum(values_table.c.value).label("value")
         query = select(
-            self.hour_start(values_table.c.time).label("uur"),
+            hour_column,
             time_column,
             agg_column,
         ).where(
@@ -495,7 +496,7 @@ class DBmanagerObj(object):
             query = query.group_by("uur")
         if end is not None:
             query = query.where(values_table.c.time < self.unix_timestamp(end))
-        query = query.order_by(values_table.c.time)
+        query = query.order_by("uur")
 
         with self.engine.connect() as connection:
             result = connection.execute(query)
