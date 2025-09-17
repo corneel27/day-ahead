@@ -1,5 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.9.1.rc5
+- Fixed format-error when loglevel=debug
+- Set max of y-as for soc to 102%: when soc=100% the line is visible
+- Maximised the calculationtime to 20 sec, the accuracy to 0.005 euro (whichever comes first)
+- Extra information in the logging (level info) for control of the calculation of the profit
+- Fixed error with wrong calculation of the consumption after optimization (reported bij @Mirabis)
+
+Known issue:
+- boiler module does not calculate well
+
 # 2025.9.1.rc4
 - Fixed error calculation/presentation "time needed" charging an ev
 - Fixed error calculating "savings"-reports

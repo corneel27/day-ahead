@@ -510,10 +510,10 @@ class DaBase(hass.Hass):
         from day_ahead import DaCalc
 
         dacalc = DaCalc(self.file_name)
-        # dacalc = DaCalc("../data/test.json")
+        # dacalc = DaCalc("../data/tst_options/options_mirabis.json")
         dacalc.debug = True
         dacalc.calc_optimum()
-        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 8, 21, 19, minute=30))
+        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 9, 16, 10, minute=45), _start_soc=98)
 
     def calc_optimum(self):
         from day_ahead import DaCalc
