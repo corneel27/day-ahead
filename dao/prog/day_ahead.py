@@ -2236,9 +2236,9 @@ class DaCalc(DaBase):
         #        strategy optimization
         #####################################################
         # settings
-        #model.max_mip_gap_abs = 0.001
+        model.max_mip_gap_abs = 0.001
         model.max_nodes = 1500
-        #model.max_seconds = 20
+        model.max_seconds = 20
         if self.log_level > logging.DEBUG:
             model.verbose = 0
         model.check_optimization_results()
