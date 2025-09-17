@@ -62,7 +62,7 @@ class DaCalc(DaBase):
         else:
             start_dt = _start_dt
         # om te testen met afwijkende startdatum/tijd
-        # start_dt = datetime.datetime(2025, 9, 10, 0, minute=0)
+        # start_dt = datetime.datetime(2025, 9, 16, 13, minute=30)
         start_ts = int(start_dt.timestamp())
         modulo = start_ts % self.interval_s
         if modulo > (self.interval_s - 10):
@@ -397,7 +397,7 @@ class DaCalc(DaBase):
                     )
                     print(f"hour max-power(kW)")
                     for u in range(U):
-                        print(f"{uur[u]:2.0f} {red_power[u]:6.3f}")
+                        print(f"{uur[u]} {red_power[u]:6.3f}")
                 else:
                     logging.info(
                         f"Reduced hours applied for {self.battery_options[b]['name']}"
@@ -886,7 +886,7 @@ class DaCalc(DaBase):
             boiler_ondergrens = boiler_setpoint - boiler_hysterese
             # volume in  liter
             vol = self.config.get(["volume"], self.boiler_options, 200)
-            # spec heat in kJ/K = vol in liter * 4,2 kJ/k.liter + 200 kg boiler * 0,5 kJ/k.kg
+            # spec heat in kJ/K = vol in liter * 4,2 kJ/k.liter + 100 kg boiler * 0,5 kJ/k.kg
             spec_heat_boiler = 1.1 * (vol * 4.2 + 100 * 0.5)  # kJ/K
             # cop
             cop_boiler = float(self.config.get(["cop"], self.boiler_options, 3))
@@ -923,7 +923,7 @@ class DaCalc(DaBase):
             boiler_end_temp = boiler_act_temp - U * boiler_cooling
             boiler_end_index = int(
                 min(
-                    U,
+                    U-1,
                     max(
                         0,
                         math.floor(
@@ -935,7 +935,7 @@ class DaCalc(DaBase):
             boiler_temp = [
                 model.add_var(
                     var_type=CONTINUOUS,
-                    lb=min(boiler_act_temp, boiler_setpoint - boiler_hysterese - 10),
+                    lb=min(boiler_act_temp, boiler_setpoint - boiler_hysterese),
                     ub=boiler_setpoint + 10,
                 )
                 for _ in range(U + 1)
@@ -991,7 +991,7 @@ class DaCalc(DaBase):
                     f"Boiler verbruik in 1 {self.interval_name}: {cons_interval} kWh"
                 )
                 for u in range(U):
-                    # benodigde warmte vooropwarmen vanaf interval u in kWh
+                    # benodigde warmte voor opwarmen vanaf interval u in kWh
                     est_needed_heat[u] = max(
                         0.0,
                         float(
@@ -2173,7 +2173,7 @@ class DaCalc(DaBase):
             model += (
                 c_l[u]
                 == c_t[u]
-                + b_l[u] * hour_fraction[u]
+                + b_l[u] * interval_fraction[u]
                 + xsum(ac_to_dc[b][u] - ac_from_dc[b][u] for b in range(B))
                 * hour_fraction[u]
                 +
@@ -2188,7 +2188,9 @@ class DaCalc(DaBase):
         # cost variabele
         cost = model.add_var(var_type=CONTINUOUS, lb=-1000, ub=1000)
         delivery = model.add_var(var_type=CONTINUOUS, lb=0, ub=1000)
+        production = model.add_var(var_type=CONTINUOUS, lb=0, ub=1000)
         model += delivery == xsum(c_l[u] for u in range(U))
+        model += production == xsum(c_t[u] for u in range(U))
 
         #  cycle cost per batterij
         cycle_cost = [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(B)]
@@ -2234,8 +2236,9 @@ class DaCalc(DaBase):
         #        strategy optimization
         #####################################################
         # settings
-        model.max_gap = 0.1
+        #model.max_mip_gap_abs = 0.001
         model.max_nodes = 1500
+        #model.max_seconds = 20
         if self.log_level > logging.DEBUG:
             model.verbose = 0
         model.check_optimization_results()
@@ -2349,11 +2352,6 @@ class DaCalc(DaBase):
                 old_cost_da += netto * pt[u]
                 org_l.append(0)
                 org_t.append(netto)
-        logging.info(
-            f"Niet geoptimaliseerd, kosten met day ahead tarieven: {old_cost_da:<6.2f}"
-        )
-        logging.info(f"Geoptimaliseerd, kosten met day ahead tarieven: {cost.x:<6.2f}")
-        logging.info(f"Levering: {delivery.x:<6.2f} (kWh)")
         if self.boiler_present:
             boiler_at_23 = (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (
                 spec_heat_boiler / (3600 * cop_boiler)
@@ -2602,6 +2600,10 @@ class DaCalc(DaBase):
 
         d_f = d_f.astype({"uur": str})
         d_f.loc["total"] = d_f.iloc[:, 1:].sum()
+        cost_consumption = d_f.loc["total"]["cost"]
+        tarive_consumption = cost_consumption / delivery.x
+        profit_production = d_f.loc["total"]["profit"]
+        tarive_production = profit_production / production.x
         # d_f.loc['total'] = d_f.loc['total'].astype(object)
 
         d_f.at[d_f.index[-1], "uur"] = "Totaal"
@@ -2609,10 +2611,45 @@ class DaCalc(DaBase):
 
         logging.info(f"Berekende prognoses: \n{d_f.to_string(index=False)}")
         # , formatters={'uur':'{:03d}'.format}))
-        logging.info(f"Kosten:           € {cost.x:<0.2f}")
+
+        logging.info(f"Consumption:        {delivery.x:<6.2f} (kWh)")
+        logging.info(f"Cost consumption:   {cost_consumption:<6.2f} (€)")
+        logging.info(f"Tariff consumption: {tarive_consumption:<6.3f} (€/kWh)")
+        logging.info(f"Production:         {production.x:<6.2f} (kWh)")
+        logging.info(f"Profit production:  {profit_production:<6.2f} (€)")
+        logging.info(f"Tariff production:  {tarive_production:<6.3f} (€/kWh)")
+
+        battery_storage = 0
+        total_cycle_cost = 0
+        for b in range(B):
+            battery_storage += (
+                (soc_mid[b][0].x - soc_mid[b][U].x)
+                * one_soc[b]
+                * eff_bat_to_dc[b]
+                * avg_eff_dc_to_ac[b]
+                * p_bat
+            )
+            total_cycle_cost += cycle_cost[b].x
+        boiler_storage = (
+            (boiler_temp[0].x - boiler_temp[U].x)
+            *(spec_heat_boiler / (3600 * cop_boiler))
+            *p_avg
+        )
+        total_cost = cost_consumption + profit_production+ total_cycle_cost+ battery_storage+boiler_storage
+        logging.info("\n")
+        logging.info("Calculation profit optimize")
+        logging.info(f"Cost before optimize:               {old_cost_da: 7.2f} (€)")
+        logging.info(f"Cost consumption:   {cost_consumption: 7.2f} (€)")
+        logging.info(f"Profit production:  {profit_production: 7.2f} (€)")
+        logging.info(f"Cycle cost:         {total_cycle_cost: 7.2f} (€)")
+        logging.info(f"Battery storage:    {battery_storage: 7.2f} (€)")
+        logging.info(f"Boiler storage:     {boiler_storage: 7.2f} (€)")
+        logging.info(f"Total:              {total_cost: 7.2f} (€)")
+        logging.info(f"Cost after optimize:                {cost.x: 7.2f} (€)")
+        logging.info(f"Profit:                             {old_cost_da - cost.x: 7.2f} (€)")
         # logging.info(f"Opgebouwd uit:")
         # logging.info(f"Inkoop energie:   € {} ")
-        logging.info(f"Winst: € {old_cost_da - cost.x:<0.2f}")
+
 
         # doorzetten van alle settings naar HA
         if not self.debug:
@@ -3582,7 +3619,7 @@ class DaCalc(DaBase):
                     ind, soc_b[b], label="% SoC", linestyle="solid", color="olive"
                 )[0]
                 axis_20.set_ylabel("% SoC")
-                axis_20.set_ylim([0, 100])
+                axis_20.set_ylim([0, 102])
                 soc_line = mlines.Line2D([], [], color="olive", label="SoC %")
                 if pv_dc_num[b] > 0:
                     labels = ["AC<->", "BAT<->", "PV->", "% SoC"]
@@ -3615,7 +3652,7 @@ class DaCalc(DaBase):
             ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
         )
         axis[gr_no].xaxis.set_minor_locator(ticker.MultipleLocator(1))
-        axis[gr_no].set_ylim([0, 100])
+        axis[gr_no].set_ylim([0, 102])
         axis[gr_no].set_title("Verloop SoC en tarieven")
         axis[gr_no].sharex(axis[0])
 
