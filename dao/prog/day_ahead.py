@@ -464,7 +464,7 @@ class DaCalc(DaBase):
             else:
                 start_soc.append(_start_soc)
             logging.info(
-                f"Startwaarde SoC {self.battery_options[b]['name']}: {start_soc[b]}%"
+                f"Startwaarde SoC {self.battery_options[b]['name']}: {start_soc[b]}%\n"
             )
 
             # pv dc mppt
@@ -824,7 +824,7 @@ class DaCalc(DaBase):
                 )
         else:
             self.boiler_enabled = False
-        logging.info("\n")
+
         if not self.boiler_present or not self.boiler_enabled:
             # default values
             boiler_instant_start = False
@@ -1029,7 +1029,7 @@ class DaCalc(DaBase):
                         * (spec_heat_boiler / (3600 * cop_boiler))
                         * p_avg
                     )
-                    est_netto_cost[u] = est_elec_cost[u] - est_boiler_endvalue[u]
+                    est_netto_cost[u] = est_elec_cost[u] # - est_boiler_endvalue[u]
                 df_boiler = pd.DataFrame(
                     {
                         "tijd": tijd,
@@ -1043,14 +1043,18 @@ class DaCalc(DaBase):
                         "netto_cost": est_netto_cost,
                     }
                 )
-                logging.debug(f"Prognose boiler:\n{df_boiler.to_string()}\n")
+                logging.info(f"Prognose boiler:\n{df_boiler.to_string()}\n")
 
                 # c_b = consumption boiler in kWh per interval
                 c_b = [
                     model.add_var(var_type=CONTINUOUS, lb=0, ub=cons_interval)
                     for _ in range(U)
                 ]
-                model += xsum(boiler_st[u] for u in range(U)) == 1
+                model += xsum(boiler_st[u] for u in range(U)[boiler_start_index:boiler_end_index]) == 1
+                for u in range(boiler_start_index):
+                    model+= boiler_st[u]==0
+                for u in range(U)[boiler_end_index+1:]:
+                    model += boiler_st[u] == 0
                 for u in range(U):
                     if u < boiler_start_index:
                         model += c_b[u] == 0
@@ -2223,11 +2227,14 @@ class DaCalc(DaBase):
                 * p_bat
                 for b in range(B)
             )
+        )
+        """
             # waarde energie boiler
             - (boiler_temp[U] - boiler_temp[0])
             * (spec_heat_boiler / (3600 * cop_boiler))
             * p_avg
         )
+        """
         # waarde opslag accu
         # +(boiler_temp[U] - boiler_ondergrens) * (spec_heat_boiler/(3600 * cop_boiler)) *
         # p_avg # waarde energie boiler

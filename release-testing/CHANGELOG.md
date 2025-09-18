@@ -36,7 +36,7 @@ Known issues:
 **Important**: read this first!<br>
 
 **Interval**<br>
-This realease supports two intervals: 1hour and 15min
+This release supports two intervals: 1hour and 15min
 You make your choice in the settings, put in your settings somewhere in the root the setting:<br>
 "interval": "1hour" or "interval": "15min", 1hour will be default when you make no intervalsetting
 
