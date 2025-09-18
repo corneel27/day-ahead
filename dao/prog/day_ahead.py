@@ -2612,12 +2612,12 @@ class DaCalc(DaBase):
         logging.info(f"Berekende prognoses: \n{d_f.to_string(index=False)}")
         # , formatters={'uur':'{:03d}'.format}))
 
-        logging.info(f"Consumption:        {delivery.x:<6.2f} (kWh)")
-        logging.info(f"Cost consumption:   {cost_consumption:<6.2f} (€)")
-        logging.info(f"Tariff consumption: {tarive_consumption:<6.3f} (€/kWh)")
-        logging.info(f"Production:         {production.x:<6.2f} (kWh)")
-        logging.info(f"Profit production:  {profit_production:<6.2f} (€)")
-        logging.info(f"Tariff production:  {tarive_production:<6.3f} (€/kWh)")
+        logging.info(f"Consumption:          {delivery.x:<6.2f} (kWh)")
+        logging.info(f"Cost consumption:     {cost_consumption:<6.2f} (€)")
+        logging.info(f"Tariff consumption:   {tarive_consumption:<6.3f} (€/kWh)")
+        logging.info(f"Production:           {production.x:<6.2f} (kWh)")
+        logging.info(f"Profit production:    {profit_production:<6.2f} (€)")
+        logging.info(f"Tariff production:    {tarive_production:<6.3f} (€/kWh)")
 
         battery_storage = 0
         total_cycle_cost = 0
@@ -2638,15 +2638,15 @@ class DaCalc(DaBase):
         total_cost = cost_consumption + profit_production+ total_cycle_cost+ battery_storage+boiler_storage
         logging.info("\n")
         logging.info("Calculation profit optimize")
-        logging.info(f"Cost before optimize:               {old_cost_da: 7.2f} (€)")
-        logging.info(f"Cost consumption:   {cost_consumption: 7.2f} (€)")
-        logging.info(f"Profit production:  {profit_production: 7.2f} (€)")
-        logging.info(f"Cycle cost:         {total_cycle_cost: 7.2f} (€)")
-        logging.info(f"Battery storage:    {battery_storage: 7.2f} (€)")
-        logging.info(f"Boiler storage:     {boiler_storage: 7.2f} (€)")
-        logging.info(f"Total:              {total_cost: 7.2f} (€)")
-        logging.info(f"Cost after optimize:                {cost.x: 7.2f} (€)")
-        logging.info(f"Profit:                             {old_cost_da - cost.x: 7.2f} (€)")
+        logging.info(f"Cost before optimize: {old_cost_da: 7.2f} (€)")
+        logging.info(f"Cost consumption:     {cost_consumption: 7.2f} (€)")
+        logging.info(f"Profit production:    {profit_production: 7.2f} (€)")
+        logging.info(f"Cycle cost:           {total_cycle_cost: 7.2f} (€)")
+        logging.info(f"Battery storage:      {battery_storage: 7.2f} (€)")
+        logging.info(f"Boiler storage:       {boiler_storage: 7.2f} (€)")
+        logging.info(f"Total:                {total_cost: 7.2f} (€)")
+        logging.info(f"Cost after optimize:  {cost.x: 7.2f} (€)")
+        logging.info(f"Profit:               {old_cost_da - cost.x: 7.2f} (€)")
         # logging.info(f"Opgebouwd uit:")
         # logging.info(f"Inkoop energie:   € {} ")
 
