@@ -816,6 +816,8 @@ class DaCalc(DaBase):
         #####################################
         #             boiler                #
         #####################################
+        # aantal opwarm-intervallen
+        est_needed_intv = [0 for _ in range(U)]
         # boiler is aan het verwarmen
         boiler_on = [model.add_var(var_type=BINARY) for _ in range(U)]
         # boiler begint met verwarmen
@@ -988,8 +990,7 @@ class DaCalc(DaBase):
                 est_needed_heat = [0.0 for _ in range(U)]
                 est_needed_elec = [0.0 for _ in range(U)]
                 est_needed_elec_st = []
-                cb_hr_run = []
-                est_needed_intv = [0 for _ in range(U)]
+                # cb_hr_run = []
                 est_elec_cost = [0.0 for _ in range(U)]
                 est_boiler_endtemp = [0.0 for _ in range(U)]
                 est_boiler_endvalue = [0.0 for _ in range(U)]
@@ -1034,20 +1035,22 @@ class DaCalc(DaBase):
                         break
                     est_needed_intv[u] = num_intervals
                     est_needed_elec_st.append([])
-                    cb_hr_run.append([])
-                    for _ in range(U):
-                        cb_hr_run[u].append(0.0)
+                    # cb_hr_run.append([])
+                    # for _ in range(U):
+                    #     cb_hr_run[u].append(0.0)
                     used = 0.0
-                    for j in range(num_intervals):
+                    for j in range(num_intervals+1):
                         use = min(
-                            est_needed_elec[u] - used,
-                            cons_interval,
+                            max(0, est_needed_elec[u] - used),
+                            cons_interval * interval_fraction[u+j],
                         )
                         est_elec_cost[u] += use * pl[min(u + j, U - 1)]
                         est_needed_elec_st[u].append(use)
-                        if u + j < U:
-                            cb_hr_run[u][u + j] = use
+                        # if u + j < U:
+                        #    cb_hr_run[u][u + j] = use
                         used += use
+                        if used >= est_needed_elec[u]:
+                            break
                     est_boiler_endtemp[u] = boiler_setpoint - boiler_cooling * (
                         U - u - est_needed_intv[u]
                     )
@@ -1057,18 +1060,18 @@ class DaCalc(DaBase):
                         * p_avg
                     )
                     est_netto_cost[u] = est_elec_cost[u] - est_boiler_endvalue[u]
-                    if (u >= boiler_start_index) and (
+                    if (u >= boiler_start_index) and (u<=boiler_end_index) and (
                         (boiler_netto_cost is None)
                         or (est_netto_cost[u] < boiler_netto_cost)
                     ):
                         boiler_netto_cost = est_netto_cost[u]
                         boiler_start = u
 
-                if self.debug:
-                    df_interval = pd.DataFrame(cb_hr_run)
-                    logging.debug(f"Interval boiler:\n{df_interval.to_string()}\n")
+                # if self.debug:
+                #     df_interval = pd.DataFrame(cb_hr_run)
+                #     logging.debug(f"Interval boiler:\n{df_interval.to_string()}\n")
 
-                if self.log_level == logging.DEBUG:
+                if self.log_level == logging.INFO:
                     df_boiler = pd.DataFrame(
                         {
                             "tijd": tijd,
@@ -1082,7 +1085,7 @@ class DaCalc(DaBase):
                             "netto_cost": est_netto_cost,
                         }
                     )
-                    logging.debug(f"Prognose boiler:\n{df_boiler.to_string()}\n")
+                    logging.info(f"Prognose boiler:\n{df_boiler.to_string()}\n")
 
                 # c_b = consumption boiler in kWh per interval
                 c_b = [
@@ -1092,6 +1095,8 @@ class DaCalc(DaBase):
                 model += xsum(boiler_st[u] for u in range(U)) == 1
 
                 # korte bocht oplossing
+                logging.info(f"Boiler start wordt ingezet op {tijd[boiler_start]} met "
+                             f"{est_needed_intv[boiler_start]} intervallen")
                 for u in range(U):
                     if u == boiler_start:
                         model += boiler_st[u] == 1

@@ -3,7 +3,10 @@
 # 2025.9.1.rc6
 - Maximised the calculationtime to 20 sec, the accuracy to 0.005 euro (whichever comes first)
 - Fixed issues with boiler with 15min-interval
-- 
+
+Known issue:
+- the prognoses in the reports and the savings are incorrect
+
 # 2025.9.1.rc5
 - Fixed format-error when loglevel=debug
 - Set max of y-as for soc to 102%: when soc=100% the line is visible
