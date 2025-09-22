@@ -235,7 +235,9 @@ class DaPrices:
                 count = count * 4
                 if count > 674:
                     count = 674
-                    logging.warning("Je kunt met Tibber maximaal 7 dagen terug opvragen")
+                    logging.warning(
+                        "Je kunt met Tibber maximaal 7 dagen terug opvragen"
+                    )
             count = min(674, count)
             query = (
                 "{ "
@@ -244,7 +246,7 @@ class DaPrices:
                 "  viewer { "
                 "    homes { "
                 "      currentSubscription { "
-                "        priceInfo(resolution: "+ resolution +"){ "
+                "        priceInfo(resolution: " + resolution + "){ "
                 "          today { "
                 "            energy "
                 "            startsAt "
@@ -254,7 +256,11 @@ class DaPrices:
                 "            startsAt "
                 "          } "
                 "        } "
-                "        priceInfoRange(resolution: "+ resolution +", last: " + str(count) + ") { "
+                "        priceInfoRange(resolution: "
+                + resolution
+                + ", last: "
+                + str(count)
+                + ") { "
                 "          nodes { "
                 "            energy "
                 "            startsAt "

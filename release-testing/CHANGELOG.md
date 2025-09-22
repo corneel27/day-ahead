@@ -1,9 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.9.1.rc6
+- Maximised the calculationtime to 20 sec, the accuracy to 0.005 euro (whichever comes first)
+- Fixed issues with boiler with 15min-interval
+
+Known issue:
+- the prognoses in the reports and the savings are incorrect
+
 # 2025.9.1.rc5
 - Fixed format-error when loglevel=debug
 - Set max of y-as for soc to 102%: when soc=100% the line is visible
-- Maximised the calculationtime to 20 sec, the accuracy to 0.005 euro (whichever comes first)
 - Extra information in the logging (level info) for control of the calculation of the profit
 - Fixed error with wrong calculation of the consumption after optimization (reported by @Mirabis)
 
@@ -34,7 +40,7 @@ Known issues:
 **Important**: read this first!<br>
 
 **Interval**<br>
-This realease supports two intervals: 1hour and 15min
+This release supports two intervals: 1hour and 15min
 You make your choice in the settings, put in your settings somewhere in the root the setting:<br>
 "interval": "1hour" or "interval": "15min", 1hour will be default when you make no intervalsetting
 
