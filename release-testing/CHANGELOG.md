@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.9.1.rc7
+- Fix error (Signal SIGSEGV caught) in rc6 on x86 (arch=amd64) machines
+
 # 2025.9.1.rc6
 - Maximised the calculationtime to 20 sec, the accuracy to 0.005 euro (whichever comes first)
 - Fixed issues with boiler with 15min-interval
