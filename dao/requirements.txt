@@ -19,5 +19,5 @@ mariadb~=1.1.13
 flask~=3.1.2
 ephem~=4.2
 gunicorn~=23.0.0
-cryptography~=45.0.7
+cryptography~=46.0.1
 tzlocal~=5.3.1
