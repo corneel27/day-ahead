@@ -44,10 +44,6 @@ RUN echo 'platform: "$ENV_BUILD_ARCH"' \
 
 RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
       tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
-      export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" && \
-      export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"  && \
-      echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  && \
-      echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc \
    ; fi
 
 #installeer python en pip
