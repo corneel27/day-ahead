@@ -43,7 +43,7 @@ RUN echo 'platform: "$ENV_BUILD_ARCH"' \
   && echo 'export PYTHONPATH="/root:/root/dao:/root/dao/prog"' >> ~/.bashrc
 
 RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
-      tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
+      tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog \
    ; fi
 
 #installeer python en pip
