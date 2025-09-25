@@ -38,6 +38,7 @@ fi
 dir="/root/dao/prog/miplib/"
 if [ -d "$dir" ]; then
   export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
+  export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"
 fi
 
 export PYTHONPATH="/root:/root/dao:/root/dao/prog"
