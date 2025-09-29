@@ -1967,9 +1967,6 @@ class Report(DaBase):
                 df_prices = pd.read_sql_query(query, connection)
             logging.debug(f"Prijzen \n{df_prices.to_string()}\n")
             """
-            df_prices = self.get_price_data(
-                last_moment, tot
-            )  # +datetime.timedelta(hours=1))
 
             df_ha = pd.DataFrame()
             if source == "all" or source == "ha":
@@ -2008,6 +2005,7 @@ class Report(DaBase):
                     df_ha["datasoort"] = "recorded"
                 else:
                     last_moment = vanaf
+                df_prices = self.get_price_data(vanaf, last_moment, interval="1hour")
 
             if source == "all" or source == "da":
                 if last_moment < tot:
@@ -2051,10 +2049,15 @@ class Report(DaBase):
                     df_prog.index = pd.to_datetime(df_prog["tijd"])
                     df_prog["datasoort"] = "expected"
                     if len(df_prog) > 0:
+                        df_prog_prices = self.get_price_data(last_moment, tot, interval=self.interval)
                         if len(df_ha) == 0:
                             df_ha = df_prog
+                            df_prices = df_prog_prices
                         else:
                             df_ha = pd.concat([df_ha, df_prog])
+                            df_prices.index = pd.to_datetime(df_prices["time"])
+                            df_prog_prices.index = pd.to_datetime(df_prog_prices["time"])
+                            df_prices = pd.concat([df_prices, df_prog_prices])
 
             df_prices.rename(columns={"time": "tijd"}, inplace=True)
             df_prices.index = pd.to_datetime(df_prices["tijd"])

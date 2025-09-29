@@ -1,6 +1,35 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2025.10.0
+This version is similar with 2025.10.0.rc1 in the testing-channel
+- Fix error with storing forecast (there was no timezone-correction)
+- Maximised the calculationtime to 20 sec, the accuracy to 0.005 euro (whichever comes first)
+- Fixed format-error when loglevel=debug
+- Set max of y-as for soc to 102%: when soc=100% the line is visible
+- Extra information in the logging (level info) for control of the calculation of the profit
+- Fixed error calculation/presentation "time needed" charging an ev
+- Fixed error with postgresql da-database
+- Added logging of free/used memory in logging on level "debug"
+
+Know issue:
+- The forecast-calculation in the reports is nog good working
+
+
+**Interval**<br>
+This release supports two intervals: **1hour** and **15min**
+You make your choice in the settings, put in your settings somewhere in the root the setting:<br>
+"interval": "1hour" or "interval": "15min", 1hour will be default when you make no intervalsetting
+
+**source prices**<br>
+At the moment only Nordpool, Tibber and Entsoe (the last one could not be tested) supports 15min prices.<br>
+If you don't want trouble: make nordpool your price-source.
+
+**boiler**<br>
+The boiler part is completely redesigned and (in my opinion) become better.
+The (thermal and financial) value of the boiler at the beginning and the end of the calculationperiod si taken into account. 
+For every interval the electricity consumption for reheating is calculated and thee best fitting will be choosen in the algortime.
+
 # 2025.9.0
 Fix error api prognose pv_dc
 

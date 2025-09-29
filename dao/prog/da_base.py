@@ -3,6 +3,7 @@ import sys
 import os
 import fnmatch
 import time
+import pytz
 from requests import get
 import json
 import hassapi as hass
@@ -113,11 +114,13 @@ class DaBase(hass.Hass):
         self.config.set("latitude", resp_dict["latitude"])
         self.config.set("longitude", resp_dict["longitude"])
         self.config.set("time_zone", resp_dict["time_zone"])
+        self.time_zone = resp_dict["time_zone"]
         self.config.set("country", resp_dict["country"])
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
         self.meteo = Meteo(self.config, self.db_da)
         self.solar = self.config.get(["solar"])
+        self.interval = self.config.get(["interval"], None, "1hour").lower()
 
         self.prices = DaPrices(self.config, self.db_da)
         self.prices_options = self.config.get(["prices"])
@@ -231,7 +234,7 @@ class DaBase(hass.Hass):
             "calc_optimum": {
                 "name": "Optimaliseringsberekening zonder debug",
                 "cmd": ["python3", "../prog/day_ahead.py", "calc"],
-                "object": "DaCalc",
+                "object": "DaBase",
                 "function": "calc_optimum",
                 "file_name": "calc",
             },
@@ -341,8 +344,11 @@ class DaBase(hass.Hass):
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         df = df.reset_index(drop=True)
         columns = df.columns.values.tolist()[1:]
+        tz = pytz.timezone(self.time_zone)
         for index in range(len(tijd)):
-            utc = int(tijd[index].timestamp())
+            dt = pd.to_datetime(tijd[index])
+            dt = tz.localize(dt)
+            utc = int(dt.timestamp())
             for c in columns:
                 db_row = [str(utc), c, float(df.loc[index, c])]
                 df_db.loc[df_db.shape[0]] = db_row
@@ -513,7 +519,7 @@ class DaBase(hass.Hass):
         # dacalc = DaCalc("../data/tst_options/options_mirabis.json")
         dacalc.debug = True
         dacalc.calc_optimum()
-        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 9, 16, 10, minute=45), _start_soc=98)
+        # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 9, 28, 21, minute=0), _start_soc=50)
 
     def calc_optimum(self):
         from day_ahead import DaCalc
