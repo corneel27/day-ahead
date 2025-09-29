@@ -2316,7 +2316,7 @@ class DaCalc(DaBase):
         # settings
         model.max_mip_gap_abs = 0.001
         model.max_nodes = 1500
-        model.max_seconds = 20
+        # model.max_seconds = 20
         if self.log_level > logging.DEBUG:
             model.verbose = 0
         model.check_optimization_results()
@@ -2720,7 +2720,7 @@ class DaCalc(DaBase):
             + boiler_storage
         )
 
-        logging.info("/nCalculation profit after optimize in €\n"
+        logging.info("\nCalculation profit after optimize in €\n"
             f"Cost before optimize            {old_cost_da: 7.2f}\n"
             f"Cost consumption   {cost_consumption: 7.2f}\n"
             f"Profit production  {profit_production: 7.2f}\n"
