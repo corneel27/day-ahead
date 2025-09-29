@@ -28,7 +28,6 @@ class DaCalc(DaBase):
         super().__init__(file_name=file_name)
         if self.config is None:
             return
-        self.interval = self.config.get(["interval"], None, "1hour").lower()
         self.interval_s = 3600 if self.interval == "1hour" else 900
         self.interval_name = "uur" if self.interval == "1hour" else "kwartier"
         self.steps_day = 24 if self.interval == "1hour" else 96
@@ -122,8 +121,8 @@ class DaCalc(DaBase):
             return
         if u_data <= 8 or u_prices <= 8:
             logging.warning(
-                f"Er ontbreken voor een aantal uur gegevens "
-                f"(meteo en/of dynamische prijzen)\n"
+                f"Er ontbreken voor een aantal uur meteogegevens "
+                f"(en/of dynamische prijzen)\n"
                 f"controleer of alle gegevens zijn opgehaald"
             )
             if self.notification_entity is not None:
@@ -234,8 +233,6 @@ class DaCalc(DaBase):
             uur.append(hour)
             tijd.append(dtime)
             gr = row.glob_rad
-            if self.interval == "15min":
-                gr *= 4
             global_rad.append(gr)
             pv_total = 0
             if first_interval:
@@ -248,10 +245,8 @@ class DaCalc(DaBase):
                 interval_fraction.append(1)
             for s in range(solar_num):
                 prod = self.calc_prod_solar(
-                    self.solar[s], row.time, gr, interval_fraction[-1]
+                    self.solar[s], row.time, gr, hour_fraction[-1]
                 )
-                if self.interval == "15min":
-                    prod /= 4
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org_ac.append(pv_total)
@@ -268,7 +263,7 @@ class DaCalc(DaBase):
                         self.battery_options[b]["solar"][s],
                         row.time,
                         gr,
-                        interval_fraction[-1],
+                        hour_fraction[-1],
                     )
                     pv_total += prod
             pv_org_dc.append(pv_total)
@@ -492,8 +487,6 @@ class DaCalc(DaBase):
                         global_rad[u],
                         hour_fraction[u],
                     )
-                    if self.interval =="15min":
-                        prod_dc /= 4
                     eff = 1
                     for ds in range(DS[b]):
                         if discharge_stages[b][ds]["power"] / 1000 > prod_dc:
@@ -1820,8 +1813,8 @@ class DaCalc(DaBase):
                 max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
 
                 # een of meer intervallen minder als boiler via wp gaat
-                if boiler_heated_by_heatpump and boiler_start_index < U:
-                    boiler_int = est_needed_intv[U - 1]
+                if boiler_heated_by_heatpump and boiler_start < U:
+                    boiler_int = est_needed_intv[boiler_start] + 1
                 else:
                     boiler_int = 0
                 max_heat_prod = sum(
@@ -2727,17 +2720,16 @@ class DaCalc(DaBase):
             + boiler_storage
         )
 
-        logging.info("Calculation profit after optimize in €")
-        logging.info(f"Cost before optimize               {old_cost_da: 7.2f}")
-        logging.info(f"Cost consumption   {cost_consumption: 7.2f}")
-        logging.info(f"Profit production  {profit_production: 7.2f}")
-        logging.info(f"Cycle cost         {total_cycle_cost: 7.2f}")
-        logging.info(f"Battery storage    {battery_storage: 7.2f}")
-        logging.info(f"Boiler storage     {boiler_storage: 7.2f}")
-        logging.info(f"Total              {total_cost: 7.2f}")
-        logging.info(f"Cost after optimize               {cost.x: 7.2f}")
-        logging.info(
-            f"Profit:                             {old_cost_da - cost.x: 7.2f}"
+        logging.info("/nCalculation profit after optimize in €\n"
+            f"Cost before optimize            {old_cost_da: 7.2f}\n"
+            f"Cost consumption   {cost_consumption: 7.2f}\n"
+            f"Profit production  {profit_production: 7.2f}\n"
+            f"Cycle cost         {total_cycle_cost: 7.2f}\n"
+            f"Battery storage    {battery_storage: 7.2f}\n"
+            f"Boiler storage     {boiler_storage: 7.2f}\n"
+            f"Total              {total_cost: 7.2f}\n"
+            f"Cost after optimize            {cost.x: 7.2f}\n"
+            f"Profit:                        {old_cost_da - cost.x: 7.2f}"
         )
 
         # doorzetten van alle settings naar HA

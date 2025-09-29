@@ -1,5 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.0.rc1
+This version is similar with 2025.10.0 in the stable-channel
+- Fix error with storing forecast (there was no timezone-correction)
+
+Know issue:
+- The forecast in the reports still nog good working
+
 # 2025.9.1.rc7
 - Fix error (Signal SIGSEGV caught) in rc6 on x86 (arch=amd64) machines
 
