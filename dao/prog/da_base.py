@@ -110,7 +110,7 @@ class DaBase(hass.Hass):
         }
         resp = get(self.hassurl + "api/config", headers=headers)
         resp_dict = json.loads(resp.text)
-        # logging.debug(f"hass/api/config: {resp.text}")
+        logging.debug(f"hass/api/config: {resp.text}")
         self.config.set("latitude", resp_dict["latitude"])
         self.config.set("longitude", resp_dict["longitude"])
         self.config.set("time_zone", resp_dict["time_zone"])
