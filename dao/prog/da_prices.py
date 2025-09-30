@@ -238,7 +238,7 @@ class DaPrices:
                     logging.warning(
                         "Je kunt met Tibber maximaal 7 dagen terug opvragen"
                     )
-            count = min(674, count)
+            count = max(1, min(674, count))
             query = (
                 "{ "
                 '"query": '
