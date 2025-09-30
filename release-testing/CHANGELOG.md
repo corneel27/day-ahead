@@ -1,5 +1,19 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.1.rc1
+This version is similar with 2025.10.1 in the stable-channel.<br>
+Fixes:
+- deleted max_seconds limit
+- max_mip_gap set to 0.005 (was 0.001)
+- added logging.debug of hass/api/config
+- fixed divide-zero error when production or consumption are 0.0
+- when no country is configured in HA, "NL" is assumed
+- "api/report/da/vandaag" and "api/report/da/vandaag en morgen" present data with the configured interval
+- added documentation about the interval-setting to DOCS.md
+
+Know issue:
+- The forecast in the reports still nog good working
+
 # 2025.10.0.rc1
 This version is similar with 2025.10.0 in the stable-channel
 - Fix error with storing forecast (there was no timezone-correction)

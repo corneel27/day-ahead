@@ -92,6 +92,7 @@
     "prices spot": "True",
     "average consumption": "True"
   },
+  "interval": "15min",
   "strategy": "minimize cost",
   "notifications": {
     "notification entity": "input_text.dao_notificatie",
@@ -428,10 +429,10 @@
     "entities battery production": ["sensor.ess_grid_production"]
   },
   "scheduler": {
-    "0430": "get_meteo_data",
-    "1030": "get_meteo_data",
-    "1630": "get_meteo_data",
-    "2230": "get_meteo_data",
+    "0435": "get_meteo_data",
+    "1035": "get_meteo_data",
+    "1635": "get_meteo_data",
+    "2235": "get_meteo_data",
     "0950": "get_tibber_data",
     "1050": "get_tibber_data",
     "1150": "get_tibber_data",
@@ -444,7 +445,10 @@
     "1554": "get_day_ahead_prices",
     "1655": "get_day_ahead_prices",
     "xx00": "calc_optimum",
+    "xx15": "calc_optimum",
+    "xx30": "calc_optimum",
+    "xx45": "calc_optimum",
     "2359": "clean_data",
-    "0930": "calc_baseloads"
+    "0935": "calc_baseloads"
   }
 }

@@ -2944,7 +2944,7 @@ class Report(DaBase):
                         df[field] = df[field].cumsum()
         elif field == "da":
             df = self.get_price_data(
-                self.periodes[periode]["vanaf"], self.periodes[periode]["tot"]
+                self.periodes[periode]["vanaf"], self.periodes[periode]["tot"], self.interval
             )
         elif field[0:3] == "soc":
             df = self.get_soc_data(field, self.periodes[periode]["vanaf"], tot)
