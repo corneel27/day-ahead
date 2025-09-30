@@ -108,7 +108,7 @@ class DaPrices:
             client = EntsoePandasClient(api_key=api_key)
             da_prices = pd.DataFrame()
             try:
-                da_prices = client.query_day_ahead_prices("NL", start=start, end=end)
+                da_prices = client.query_day_ahead_prices(self.country, start=start, end=end)
             except Exception as ex:
                 logging.error(ex)
                 logging.error(f"Geen data van Entsoe: tussen {start} en {end}")
@@ -161,7 +161,7 @@ class DaPrices:
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
                 return
 
-            act_values = act_spot_prices["areas"]["NL"]["values"]
+            act_values = act_spot_prices["areas"][self.country]["values"]
             s = pp.pformat(act_values, indent=2)
             logging.info(f"Day ahead prijzen van Nordpool:\n {s}")
             df_db = pd.DataFrame(columns=["time", "code", "value"])
