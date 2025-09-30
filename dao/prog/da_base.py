@@ -115,7 +115,10 @@ class DaBase(hass.Hass):
         self.config.set("longitude", resp_dict["longitude"])
         self.config.set("time_zone", resp_dict["time_zone"])
         self.time_zone = resp_dict["time_zone"]
-        self.config.set("country", resp_dict["country"])
+        country = resp_dict["country"]
+        if country is None or country == "":
+            country = "NL"
+        self.config.set("country", country)
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
         self.meteo = Meteo(self.config, self.db_da)
