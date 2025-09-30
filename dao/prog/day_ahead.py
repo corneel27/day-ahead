@@ -943,7 +943,7 @@ class DaCalc(DaBase):
             boiler_temp = [
                 model.add_var(
                     var_type=CONTINUOUS,
-                    lb=min(boiler_act_temp, boiler_setpoint - boiler_hysterese),
+                    lb=min(boiler_act_temp, boiler_setpoint - boiler_hysterese - 10),
                     ub=boiler_setpoint + 10,
                 )
                 for _ in range(U + 1)
@@ -2679,9 +2679,9 @@ class DaCalc(DaBase):
         d_f = d_f.astype({"uur": str})
         d_f.loc["total"] = d_f.iloc[:, 1:].sum()
         cost_consumption = d_f.loc["total"]["cost"]
-        tariff_consumption = cost_consumption / delivery.x
+        tariff_consumption = cost_consumption / delivery.x if delivery.x != 0 else 0.0
         profit_production = d_f.loc["total"]["profit"]
-        tariff_production = profit_production / production.x
+        tariff_production = abs(profit_production) / production.x if production.x != 0 else 0.0
         # d_f.loc['total'] = d_f.loc['total'].astype(object)
 
         d_f.at[d_f.index[-1], "uur"] = "Totaal"
@@ -2736,7 +2736,7 @@ class DaCalc(DaBase):
         if not self.debug:
             logging.info("Doorzetten van alle settings naar HA")
         else:
-            logging.info("Onderstaande settings worden NIET doorgezet naar HA")
+            logging.info("Onderstaande settings worden NIET doorgezet naar HA (debug-run)")
 
         """
         set helpers output home assistant
