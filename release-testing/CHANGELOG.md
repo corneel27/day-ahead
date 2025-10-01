@@ -1,5 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.2.rc1
+This version is similar with 2025.10.2 in the stable-channel.<br>
+Fixes:
+- Fixed index-error when saving soc-forcast
+- Fixed error using other landcode
+- Fix error getting 15-min prices from Tibber
+
+Know issue:
+- The forecast in the reports still nog good working
+
 # 2025.10.1.rc1
 This version is similar with 2025.10.1 in the stable-channel.<br>
 Fixes:
