@@ -12,7 +12,7 @@ RUN apt-get upgrade -y
 
 #handige tools
 RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev
-RUN apt-get install -y postgresql-client sqlite3 gcc libjpeg-dev libffi-dev
+RUN apt-get install -y postgresql-client sqlite3 gcc libjpeg-dev libffi-dev gcc g++ git
 
 # Copy software for add-on
 RUN mkdir /root/dao
@@ -63,7 +63,7 @@ COPY requirements.txt /tmp/
 RUN pip3 install uv
 RUN uv pip install -r /tmp/requirements.txt
 # RUN
-RUN uv pip install mip
+RUN uv pip install mip==1.16rc0 --ignore-requires-python
 
 COPY run /root/dao/prog/
 
