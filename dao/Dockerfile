@@ -63,7 +63,7 @@ COPY requirements.txt /tmp/
 RUN pip3 install uv
 RUN uv pip install -r /tmp/requirements.txt
 # RUN
-RUN uv pip install mip==1.16rc0 --ignore-requires-python
+#RUN uv pip install mip==1.16rc0 --ignore-requires-python
 
 COPY run /root/dao/prog/
 
