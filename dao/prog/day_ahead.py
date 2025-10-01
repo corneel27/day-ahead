@@ -2490,7 +2490,7 @@ class DaCalc(DaBase):
                 ) * hour_fraction[u]
                 if ac_to_dc_netto > 0:
                     ac_to_dc_eff = dc_from_ac_netto * 100.0 / ac_to_dc_netto
-                elif ac_to_dc_netto < 0:
+                elif dc_from_ac_netto < 0:
                     ac_to_dc_eff = ac_to_dc_netto * 100.0 / dc_from_ac_netto
                 else:
                     ac_to_dc_eff = "--"
@@ -2504,7 +2504,7 @@ class DaCalc(DaBase):
                 ) * hour_fraction[u]
                 if dc_to_bat_netto > 0:
                     dc_to_bat_eff = bat_from_dc_netto * 100.0 / dc_to_bat_netto
-                elif dc_to_bat_netto < 0:
+                elif bat_from_dc_netto < 0:
                     dc_to_bat_eff = dc_to_bat_netto * 100.0 / bat_from_dc_netto
                 else:
                     dc_to_bat_eff = "--"
