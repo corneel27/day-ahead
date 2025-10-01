@@ -348,7 +348,7 @@ class DaBase(hass.Hass):
         df = df.reset_index(drop=True)
         columns = df.columns.values.tolist()[1:]
         tz = pytz.timezone(self.time_zone)
-        for index in range(len(tijd)):
+        for index in range(min(len(tijd), len(df))):
             dt = pd.to_datetime(tijd[index])
             dt = tz.localize(dt)
             utc = int(dt.timestamp())

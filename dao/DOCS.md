@@ -953,18 +953,18 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
 
 ### **interval**
 Standaard rekent het programma met een 1 uur interval (default settings = "**1hour**")
-Als jouw energieleverancier rekent met kwartieprijzen dan kun je het interval op "**15min**" zetten.
-Let daarbij op de volgende aandachtspunten: 
+Als jouw energieleverancier rekent met kwartierprijzen dan kun je het interval op "**15min**" zetten.
+Let op de volgende aandachtspunten: 
 1. Pas de scheduler aan zodat het programma ook ieder kwartier rekent. Zet de volgende extra regels in de scheduler:<br>
 ````
     "xx15": "calc_optimum",
     "xx30": "calc_optimum",
     "xx45": "calc_optimum",
 ````
-Let daarbij op dat deze "kwartieren" niet overeenkomen met een andere actie (meteo ophalen of.)
+Let daarbij op dat deze "kwartieren" niet overeenkomen met een andere actie (meteo ophalen).
 Het programma kan vooralsnog per minuut maar 1 taak uitvoeren. Pas in dat geval de planning van deze taak aan.
 
-2. Vul bij price-source een providor in die het leveren van kwartierprijzen ondersteund.
+2. Vul bij price-source een providor in die het leveren van kwartierprijzen ondersteunt.
 Vooralsnog zijn dat nordpool, tibber (beide getest) en entsoe (niet getest)
 3. Haal ("met de hand" via het run menu) de prijzen voor vandaag en na 13:00 voor morgen opnieuw op. Vul de datum van vandaag (en morgen) in bij het "vanaf"-veld.
 
