@@ -1,5 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.3
+This version is similar with 2025.10.3.rc1 in the testing-channel.<br>
+Fixes:
+- Fixed errors when there are no pricedata at 13:00
+- Fixed ZeroDivisionErrors
+
+Know issue:
+- The forecast in the reports still nog good working
 # 2025.10.2
 This version is similar with 2025.10.2.rc1 in the testing-channel.<br>
 Fixes:
