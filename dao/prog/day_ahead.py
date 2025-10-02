@@ -228,6 +228,8 @@ class DaCalc(DaBase):
         # prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
         for row in prog_data.itertuples():
+            if math.isnan(row.da_ex):
+                break
             dtime = row.tijd
             hour = dtime.strftime("%H:%M")
             uur.append(hour)
@@ -2490,7 +2492,7 @@ class DaCalc(DaBase):
                 ) * hour_fraction[u]
                 if ac_to_dc_netto > 0:
                     ac_to_dc_eff = dc_from_ac_netto * 100.0 / ac_to_dc_netto
-                elif ac_to_dc_netto < 0:
+                elif dc_from_ac_netto < 0:
                     ac_to_dc_eff = ac_to_dc_netto * 100.0 / dc_from_ac_netto
                 else:
                     ac_to_dc_eff = "--"
@@ -2504,7 +2506,7 @@ class DaCalc(DaBase):
                 ) * hour_fraction[u]
                 if dc_to_bat_netto > 0:
                     dc_to_bat_eff = bat_from_dc_netto * 100.0 / dc_to_bat_netto
-                elif dc_to_bat_netto < 0:
+                elif bat_from_dc_netto < 0:
                     dc_to_bat_eff = dc_to_bat_netto * 100.0 / bat_from_dc_netto
                 else:
                     dc_to_bat_eff = "--"
@@ -3504,7 +3506,7 @@ class DaCalc(DaBase):
         axis[0].set_ylabel("kWh")
         ylim = math.ceil(max_y)
         axis[0].set_ylim([-ylim, ylim])
-        axis[0].set_xticks(ind, labels=uur_labels)
+        axis[0].set_xticks(ind, labels=uur_labels[:len(ind)])
         if self.interval == "1hour":
             ticker_multi = 2
             ticker_offset = 0
@@ -3612,7 +3614,7 @@ class DaCalc(DaBase):
         axis[1].legend(loc="best", bbox_to_anchor=(1.05, 1.00))
         axis[1].set_ylabel("kWh")
         axis[1].set_ylim([-ylim, ylim])
-        axis[1].set_xticks(ind, labels=uur_labels)
+        axis[1].set_xticks(ind, labels=uur_labels[:len(ind)])
         axis[1].xaxis.set_major_locator(
             ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
         )
@@ -3686,7 +3688,7 @@ class DaCalc(DaBase):
                 # axis[gr_no].legend(loc='best', bbox_to_anchor=(1.30, 1.00))
                 axis[gr_no].set_ylabel("kWh")
                 axis[gr_no].set_ylim([-ylim, ylim])
-                axis[gr_no].set_xticks(ind, labels=uur_labels)
+                axis[gr_no].set_xticks(ind, labels=uur_labels[:len(ind)])
                 axis[gr_no].xaxis.set_major_locator(
                     ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
                 )
@@ -3726,7 +3728,7 @@ class DaCalc(DaBase):
             ln1 = axis[gr_no].plot(
                 ind, soc_t, label="SoC", linestyle=line_styles[0], color="olive"
             )
-        axis[gr_no].set_xticks(ind, labels=uur_labels)
+        axis[gr_no].set_xticks(ind, labels=uur_labels[:len(ind)])
         axis[gr_no].set_ylabel("% SoC")
         axis[gr_no].set_xlabel("uren van de dag")
         axis[gr_no].xaxis.set_major_locator(
