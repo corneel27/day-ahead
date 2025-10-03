@@ -15,7 +15,7 @@ jobs:
         # we only test build release-testing for amd64
         # this can be changed if desired
         release: [ "testing" ]
-        arch: [ "amd64" ]
+        arch: [ "amd64", "aarch64" ]
     permissions:
       contents: read
       packages: write

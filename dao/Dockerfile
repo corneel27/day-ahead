@@ -54,6 +54,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 COPY requirements.txt /tmp/
 RUN pip3 install uv
+RUN if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -s `which mariadb_config` /usr/local/bin/mariadb_config; fi
 RUN uv pip install -r /tmp/requirements.txt
 
 COPY run /root/dao/prog/
