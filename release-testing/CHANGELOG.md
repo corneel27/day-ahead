@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.4.rc3
+Debian base image to version 8.0.0 for arm64
+
 # 2025.10.4.rc2
 Debian base image to version 8.1.3
 Added environment - variabels to .bashrc
