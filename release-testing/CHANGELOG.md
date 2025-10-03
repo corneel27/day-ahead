@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.4.rc2
+Debian base image to version 8.1.3
+Added environment - variabels to .bashrc
+
 # 2025.10.4.rc1
 - Fix format error
 - transition to debian 13 (trixie) base-mages
