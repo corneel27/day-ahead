@@ -61,15 +61,15 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 COPY requirements.txt /tmp/
 RUN pip3 install uv
-RUN uv pip install -r /tmp/requirements.txt
-# RUN
+#RUN uv pip install -r /tmp/requirements.txt
+
 #RUN uv pip install mip==1.16rc0 --ignore-requires-python
 
 COPY run /root/dao/prog/
 
 EXPOSE 5000
 WORKDIR /root/dao/prog
-RUN chmod a+x run.sh
+RUN chmod a+x run_test.sh
 ENTRYPOINT  ["/bin/bash", "./run.sh"]
 
 # Labels
