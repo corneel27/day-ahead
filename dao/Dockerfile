@@ -12,14 +12,13 @@ RUN apt-get upgrade -y
 
 #handige tools
 RUN apt-get install -y pkgconf nano file mariadb-client inotify-tools procps gunicorn libmariadb3 libmariadb-dev
-RUN apt-get install -y postgresql-client sqlite3 gcc libjpeg-dev libffi-dev
+RUN apt-get install -y postgresql-client sqlite3 libjpeg-dev libffi-dev
 
 # Copy software for add-on
 RUN mkdir /root/dao
 COPY __init__.py /root/dao
 COPY prog /root/dao/prog/
 COPY webserver /root/dao/webserver/
-# COPY dao/__init__.py /root/dao
 COPY data /tmp/daodata/
 
 #version
@@ -30,11 +29,7 @@ RUN printf  '__version__ ="%s"\n' "$DAO_VERSION" > /root/dao/prog/version.py
 #benodigde libraries voor mip en voor compileren van eigen cbc
 RUN apt-get install -y wget libnauty-dev coinor-libcgl-dev gcc g++ git
 
-RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
-      apt-get install -y libcholmod3 \
-    ; fi
-
-COPY miplib.tar.gz /tmp/
+COPY miplib_${BUILD_ARCH}.tar.gz /tmp/
 WORKDIR /root/dao/prog
 RUN echo 'platform: "$ENV_BUILD_ARCH"' \
   && export BUILD_ARCH="$ENV_BUILD_ARCH" \
@@ -42,13 +37,11 @@ RUN echo 'platform: "$ENV_BUILD_ARCH"' \
   && export PYTHONPATH="/root:/root/dao:/root/dao/prog" \
   && echo 'export PYTHONPATH="/root:/root/dao:/root/dao/prog"' >> ~/.bashrc
 
-RUN if [ "${BUILD_ARCH}" = "aarch64" ]; then \
-      tar -xvf /tmp/miplib.tar.gz -C /root/dao/prog && \
-      export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" && \
-      export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"  && \
-      echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  && \
-      echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc \
-   ; fi
+RUN tar -xzf /tmp/miplib_${BUILD_ARCH}.tar.gz -C /root/dao/prog  \
+  && export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" \
+  && export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/" \
+  && echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  \
+  && echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc
 
 #installeer python en pip
 RUN apt-get install python3 -y\
@@ -62,6 +55,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY requirements.txt /tmp/
 RUN pip3 install uv
 RUN uv pip install -r /tmp/requirements.txt
+RUN pip install mip==1.16rc0 --ignore-requires-python
+
 COPY run /root/dao/prog/
 
 EXPOSE 5000
@@ -74,4 +69,3 @@ LABEL \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
     io.hass.version=${BUILD_VERSION}
-
