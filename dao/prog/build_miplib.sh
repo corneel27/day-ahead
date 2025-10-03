@@ -10,5 +10,7 @@ chmod +x coinbrew
 if [ -d "/root/dao/prog/miplib/lib" ]; then rm -rf /root/dao/prog/miplib/lib; fi
 mkdir -p /root/dao/prog/miplib/lib
 cp -a ~/build/prog/lib/*.so* /root/dao/prog/miplib/lib
+
+if [ -d "/config/miplib/lib" ]; then rm -rf /config/miplib/lib; fi
 mkdir -p /config/miplib/lib
 cp -a ~/build/prog/lib/*.so* /config/miplib/lib
