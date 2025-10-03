@@ -39,7 +39,9 @@ RUN echo 'platform: "$ENV_BUILD_ARCH"' \
 
 RUN tar -xzf /tmp/miplib_${BUILD_ARCH}.tar.gz -C /root/dao/prog  \
   && export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so" \
-  && export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"
+  && export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/" \
+  && echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc  \
+  && echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc
 
 #installeer python en pip
 RUN apt-get install python3 -y\
