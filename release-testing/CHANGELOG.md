@@ -1,5 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.4.rc1
+- Fix format error
+- overgang naar een debian 13 (trixie) base-mages
+- python versie 3.13 (was 3.11)
+- nieuwe generieke binaries voor amd64 en aarch64
+- mogelijkheid tot compileren en activeren van binaries voor eigen hardware
+
 # 2025.10.3.rc1
 This version is similar with 2025.10.3 in the stable-channel.<br>
 Fixes:
