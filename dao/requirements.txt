@@ -21,3 +21,4 @@ ephem~=4.2
 gunicorn~=23.0.0
 cryptography~=46.0.2
 tzlocal~=5.3.1
+mip==1.16rc0
