@@ -4,9 +4,9 @@ requests~=2.32.5
 matplotlib~=3.10.3
 numpy~=2.0.2
 mysql~=0.0.3
+cffi~=2.0.0
 mysql-connector-python~=9.4.0
 hassapi~=0.2.1
-mip
 python-dateutil~=2.9.0.post0
 nordpool~=0.5.0
 entsoe-py~=0.7.4
@@ -19,5 +19,5 @@ mariadb~=1.1.13
 flask~=3.1.2
 ephem~=4.2
 gunicorn~=23.0.0
-cryptography~=45.0.7
+cryptography~=46.0.2
 tzlocal~=5.3.1

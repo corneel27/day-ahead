@@ -2443,7 +2443,7 @@ class DaCalc(DaBase):
                 if self.hp_heat_demand:
                     logging.info(f"u     tar    cons")
                     for u in range(U):
-                        logging.info(f"{uur[u]:2.0f} {pl[u]:6.4f} {c_hp[u].x:6.2f}")
+                        logging.info(f"{uur[u]} {pl[u]:6.4f} {c_hp[u].x:6.2f}")
             else:
                 logging.info(
                     f"u     tar     p0     p1     p2     p3     p4     p5     p6     p7   "

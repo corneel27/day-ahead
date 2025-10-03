@@ -35,10 +35,13 @@ else
   ln -s /config/dao_data $file
 fi
 
-dir="/root/dao/prog/miplib/"
-if [ -d "$dir" ]; then
-  export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
+if [ -f "/config/miplib/lib/libCbc.so" ]
+then
+  rm -fr /root/dao/prog/miplib
+  cp -a /config/miplib /root/dao/prog/miplib
 fi
+export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
+export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib"
 
 export PYTHONPATH="/root:/root/dao:/root/dao/prog"
 cd /root/dao/prog
