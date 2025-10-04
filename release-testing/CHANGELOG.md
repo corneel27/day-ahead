@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.4.rc5
+added environment variabels to .bashrc 
+update releasetesting build.yaml to 8.1.3
+
 # 2025.10.4.rc4
 Debian base image to version 8.1.3 for arm64
 
