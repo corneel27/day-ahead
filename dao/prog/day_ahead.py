@@ -1090,21 +1090,26 @@ class DaCalc(DaBase):
                 model += xsum(boiler_st[u] for u in range(U)) == 1
 
                 # korte bocht oplossing
-                logging.info(f"Boiler start wordt ingezet op {tijd[boiler_start]} met "
-                             f"{est_needed_intv[boiler_start]} intervallen")
-                for u in range(U):
-                    if u == boiler_start:
-                        model += boiler_st[u] == 1
-                    else:
-                        model += boiler_st[u] == 0
-                    if boiler_start <= u < boiler_start + est_needed_intv[boiler_start]:
-                        model += (
-                            c_b[u] == est_needed_elec_st[boiler_start][u - boiler_start]
-                        )
-                        model += boiler_on[u] == 1
-                    else:
+                if boiler_start is None:
+                    for u in range(U):
                         model += c_b[u] == 0.0
                         model += boiler_on[u] == 1
+                else:
+                    logging.info(f"Boiler start wordt ingezet op {tijd[boiler_start]} met "
+                                 f"{est_needed_intv[boiler_start]} intervallen")
+                    for u in range(U):
+                        if u == boiler_start:
+                            model += boiler_st[u] == 1
+                        else:
+                            model += boiler_st[u] == 0
+                        if boiler_start <= u < boiler_start + est_needed_intv[boiler_start]:
+                            model += (
+                                c_b[u] == est_needed_elec_st[boiler_start][u - boiler_start]
+                            )
+                            model += boiler_on[u] == 1
+                        else:
+                            model += c_b[u] == 0.0
+                            model += boiler_on[u] == 0
 
                 # beste oplossing die nog niet werkt
                 """
