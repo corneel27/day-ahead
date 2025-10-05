@@ -28,23 +28,23 @@ class DaScheduler(DaBase):
                 continue
             hour = next_min.hour
             minute = next_min.minute
-            key1 = str(hour).zfill(2) + str(minute).zfill(2)
+            key0 = str(hour).zfill(2) + str(minute).zfill(2)
             # ieder uur in dezelfde minuut voorbeeld xx15
-            key2 = "xx" + str(minute).zfill(2)
+            key1 = "xx" + str(minute).zfill(2)
             # iedere minuut in een uur voorbeeld 02xx
-            key3 = str(hour).zfill(2) + "xx"
-            task = None
-            if key1 in self.scheduler_tasks:
-                task = self.scheduler_tasks[key1]
-            elif key2 in self.scheduler_tasks:
-                task = self.scheduler_tasks[key2]
-            elif key3 in self.scheduler_tasks:
-                task = self.scheduler_tasks[key3]
-            if task is not None:
+            key2 = str(hour).zfill(2) + "xx"
+            tasks = []
+            for key in self.scheduler_tasks:
+                if key == key0:
+                    tasks.append(self.scheduler_tasks[key])
+                elif key == key1:
+                    tasks.append(self.scheduler_tasks[key])
+                elif key == key2:
+                    tasks.append(self.scheduler_tasks[key])
+            for task in tasks:
                 for key_task in self.tasks:
                     if self.tasks[key_task]["function"] == task:
                         try:
-                            # self.run_task_cmd(key_task)
                             self.run_task_function(key_task, True)
                         except KeyboardInterrupt:
                             sys.exit()
