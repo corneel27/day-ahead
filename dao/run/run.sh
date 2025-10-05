@@ -43,7 +43,7 @@ fi
 export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
 export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib"
 echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc
-echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc 
+echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc
 
 export PYTHONPATH="/root:/root/dao:/root/dao/prog"
 cd /root/dao/prog
