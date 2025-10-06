@@ -1,8 +1,14 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.4.rc6
+- Changed scheduler: there can be more one task planned at a minute (but with different keys!)
+- Changed order of graphics: consumption and production are set on top of other categories
+- Added `switch entity` to boiler (alternative for activate entity)
+- Several python-modules are updated
+
 # 2025.10.4.rc5
-added environment variabels to .bashrc 
-update releasetesting build.yaml to 8.1.3
+- Added environment variabels to .bashrc 
+- Update releasetesting build.yaml to 8.1.3
 
 # 2025.10.4.rc4
 Debian base image to version 8.1.3 for arm64
