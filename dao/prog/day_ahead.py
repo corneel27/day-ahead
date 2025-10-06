@@ -2770,10 +2770,14 @@ class DaCalc(DaBase):
                     if self.debug:
                         logging.info("Boiler opwarmen zou zijn geactiveerd")
                     else:
-                        self.call_service(
-                            self.boiler_options["activate service"],
-                            entity_id=self.boiler_options["activate entity"],
-                        )
+                        boiler_activate_entity = self.config.get(["activate entity"], self.boiler_options, None)
+                        boiler_switch_entity = self.config.get(["switch entity"], self.boiler_options, None)
+                        if boiler_activate_entity is None and boiler_switch_entity is None:
+                            logging.warning("Er zijn geen entities gedefinieerd voor het opwarmen van de boiler")
+                        if boiler_activate_entity:
+                            self.call_service(self.boiler_options["activate service"], boiler_activate_entity)
+                        if boiler_switch_entity:
+                            self.turn_on(boiler_switch_entity)
                         # "input_button.hw_trigger")
                         logging.info("Boiler opwarmen geactiveerd")
                 else:

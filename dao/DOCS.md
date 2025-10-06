@@ -633,7 +633,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                           | vat production               | list             |                                    | {datum : getal}                                    |
 |                           | last invoice                 | datum            |                                    | begindatum contract                                |
 |                           | tax refund                   | boolean          |                                    |                                                    |
-| **interval**              |                              | string           | "1hour"                            | keuze uit "1hour" of "15min"
+| **interval**              |                              | string           | "1hour"                            | keuze uit "1hour" of "15min"                       
 | **log level**             |                              | string           | "info"                             | keuze uit "debug", "info", "warning" of "error"    |
 | **use_calc_baseload**     |                              | boolean          | "False"                            |                                                    |
 | **baseload calc periode** |                              | getal            | 56                                 | alleen als "use_calc_baseload" = True              | 
@@ -666,6 +666,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                           | boiler heated by heatpump    | boolean          | "True"                             | W                                                  |
 |                           | activate service             | string           |                                    |                                                    |
 |                           | activate entity              | string           |                                    |                                                    |
+|                           | switch entity                | string           |                                    | input_boolean                                      |
 |                           | entity instant start         | string           |                                    | input_boolean                                      |
 | **heating**               | heater present               | boolean          | "False"                            |                                                    | 
 |                           | entity hp enabled            | string           |                                    | bij afwezigheid wordt heatpump ingepland           |
@@ -1160,6 +1161,8 @@ DAO aangeven dat de boiler niet hoeft te worden ingepland.
    * `elec. power`: elektrisch vermogen van de boiler in W  
    * `activate entity`: entiteit (meestal van een inputhelper) waarmee de boiler opwarmen wordt gestart  
    * `activate service`: naam van de service van deze entiteit. Voor een input_button is dat "press", voor een input_boolean is "turn_on".
+   * `switch entity`: entiteit van een input_boolean, waarmee je het opwarmen van de boiler kunt starten.<br>
+Let op: DAO zet alleen de input-Booelan naar "on". Je moet met een automationgetriggerd door deze boolean alsnog zelf de boiler-schakelaar omzetten en met diezelfde automation de input_boolean weer op "off" zetten.
    * `boiler heated by heatpump`: True of False (default True). Als de boiler wordt opgeward door de warmtepomp zal het gebruik van de warmtepomp voor verwarming
 rekening houden met het gebruik van de wp door de boiler en vive versa. De wp zal dan nooit tegelijk in bedrijf zijn voor de boiler en voor de verwarming. 
 
