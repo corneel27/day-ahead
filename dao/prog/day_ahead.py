@@ -3432,27 +3432,35 @@ class DaCalc(DaBase):
             nrows += B
         fig, axis = plt.subplots(figsize=(8, 3 * nrows), nrows=nrows)
         ind = np.arange(U)
-        axis[0].bar(
-            ind, np.array(org_l), label="Levering", color="#00bfff", align="edge"
-        )
+        #volgorde 1 pv_org 2 pv_ac 3 levering
         if solar_num > 0:
             axis[0].bar(
                 ind,
                 np.array(pv_p_org),
-                bottom=np.array(org_l),
                 label="PV AC",
                 color="green",
                 align="edge",
             )
+        # 2
         if sum(pv_ac_p) > 0:
             axis[0].bar(
                 ind,
                 np.array(pv_ac_p),
-                bottom=np.array(org_l) + np.array(pv_p_org),
+                bottom=np.array(pv_p_org),
                 label="PV DC",
                 color="lime",
                 align="edge",
             )
+        # 3
+        axis[0].bar(
+            ind,
+            np.array(org_l),
+            bottom=np.array(pv_p_org) + np.array(pv_ac_p),
+            label="Levering",
+            color="#00bfff",
+            align="edge"
+        )
+
         axis[0].bar(
             ind, np.array(base_n), label="Overig verbr.", color="#f1a603", align="edge"
         )
@@ -3528,12 +3536,8 @@ class DaCalc(DaBase):
         )
 
         axis[1].bar(
-            ind, np.array(c_l_p), label="Levering", color="#00bfff", align="edge"
-        )
-        axis[1].bar(
             ind,
             np.array(pv_p_opt),
-            bottom=np.array(c_l_p),
             label="PV AC",
             color="green",
             align="edge",
@@ -3541,10 +3545,18 @@ class DaCalc(DaBase):
         axis[1].bar(
             ind,
             np.array(accu_out_p),
-            bottom=np.array(c_l_p) + np.array(pv_p_opt),
+            bottom=np.array(pv_p_opt),
             label="Accu uit",
             color="red",
             align="edge",
+        )
+        axis[1].bar(
+            ind,
+            np.array(c_l_p),
+            bottom= np.array(pv_p_opt) + np.array(accu_out_p),
+            label="Levering",
+            color="#00bfff",
+            align="edge"
         )
 
         # axis[1].bar(ind, np.array(cons_n), label="Verbruik", color='yellow')
@@ -3590,18 +3602,6 @@ class DaCalc(DaBase):
                 color="brown",
                 align="edge",
             )
-        axis[1].bar(
-            ind,
-            np.array(c_t_n),
-            bottom=np.array(base_n)
-            + np.array(boiler_n)
-            + np.array(heatpump_n)
-            + np.array(ev_n)
-            + np.array(mach_n),
-            label="Teruglev.",
-            color="#0080ff",
-            align="edge",
-        )
         if B > 0:
             axis[1].bar(
                 ind,
@@ -3616,6 +3616,19 @@ class DaCalc(DaBase):
                 color="#ff8000",
                 align="edge",
             )
+        axis[1].bar(
+            ind,
+            np.array(c_t_n),
+            bottom=np.array(base_n)
+            + np.array(boiler_n)
+            + np.array(heatpump_n)
+            + np.array(ev_n)
+            + np.array(mach_n)
+            + np.array(accu_in_n),
+            label="Teruglev.",
+            color="#0080ff",
+            align="edge",
+        )
         axis[1].legend(loc="best", bbox_to_anchor=(1.05, 1.00))
         axis[1].set_ylabel("kWh")
         axis[1].set_ylim([-ylim, ylim])
