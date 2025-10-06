@@ -321,7 +321,6 @@
   "solar": [
     { "name" : "woning",
       "entity pv switch": "input_boolean.pv_woning_aan_uit",
-      "entities sensor": ["sensor.solaredge_woning_ac_energy_kwh"],
       "strings": [
         {
         "tilt": 40,
