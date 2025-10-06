@@ -1034,10 +1034,10 @@ class DaCalc(DaBase):
                     # for _ in range(U):
                     #     cb_hr_run[u].append(0.0)
                     used = 0.0
-                    for j in range(num_intervals+1):
+                    for j in range(num_intervals + 1):
                         use = min(
                             max(0, est_needed_elec[u] - used),
-                            cons_interval * interval_fraction[u+j],
+                            cons_interval * interval_fraction[u + j],
                         )
                         est_elec_cost[u] += use * pl[min(u + j, U - 1)]
                         est_needed_elec_st[u].append(use)
@@ -1055,9 +1055,13 @@ class DaCalc(DaBase):
                         * p_avg
                     )
                     est_netto_cost[u] = est_elec_cost[u] - est_boiler_endvalue[u]
-                    if (u >= boiler_start_index) and (u<=boiler_end_index) and (
-                        (boiler_netto_cost is None)
-                        or (est_netto_cost[u] < boiler_netto_cost)
+                    if (
+                        (u >= boiler_start_index)
+                        and (u <= boiler_end_index)
+                        and (
+                            (boiler_netto_cost is None)
+                            or (est_netto_cost[u] < boiler_netto_cost)
+                        )
                     ):
                         boiler_netto_cost = est_netto_cost[u]
                         boiler_start = u
@@ -1095,16 +1099,23 @@ class DaCalc(DaBase):
                         model += c_b[u] == 0.0
                         model += boiler_on[u] == 1
                 else:
-                    logging.info(f"Boiler start wordt ingezet op {tijd[boiler_start]} met "
-                                 f"{est_needed_intv[boiler_start]} intervallen")
+                    logging.info(
+                        f"Boiler start wordt ingezet op {tijd[boiler_start]} met "
+                        f"{est_needed_intv[boiler_start]} intervallen"
+                    )
                     for u in range(U):
                         if u == boiler_start:
                             model += boiler_st[u] == 1
                         else:
                             model += boiler_st[u] == 0
-                        if boiler_start <= u < boiler_start + est_needed_intv[boiler_start]:
+                        if (
+                            boiler_start
+                            <= u
+                            < boiler_start + est_needed_intv[boiler_start]
+                        ):
                             model += (
-                                c_b[u] == est_needed_elec_st[boiler_start][u - boiler_start]
+                                c_b[u]
+                                == est_needed_elec_st[boiler_start][u - boiler_start]
                             )
                             model += boiler_on[u] == 1
                         else:
@@ -2688,7 +2699,9 @@ class DaCalc(DaBase):
         cost_consumption = d_f.loc["total"]["cost"]
         tariff_consumption = cost_consumption / delivery.x if delivery.x != 0 else 0.0
         profit_production = d_f.loc["total"]["profit"]
-        tariff_production = abs(profit_production) / production.x if production.x != 0 else 0.0
+        tariff_production = (
+            abs(profit_production) / production.x if production.x != 0 else 0.0
+        )
         # d_f.loc['total'] = d_f.loc['total'].astype(object)
 
         d_f.at[d_f.index[-1], "uur"] = "Totaal"
@@ -2727,7 +2740,8 @@ class DaCalc(DaBase):
             + boiler_storage
         )
 
-        logging.info("\nCalculation profit after optimize in €\n"
+        logging.info(
+            "\nCalculation profit after optimize in €\n"
             f"Cost before optimize            {old_cost_da: 7.2f}\n"
             f"Cost consumption   {cost_consumption: 7.2f}\n"
             f"Profit production  {profit_production: 7.2f}\n"
@@ -2743,7 +2757,9 @@ class DaCalc(DaBase):
         if not self.debug:
             logging.info("Doorzetten van alle settings naar HA")
         else:
-            logging.info("Onderstaande settings worden NIET doorgezet naar HA (debug-run)")
+            logging.info(
+                "Onderstaande settings worden NIET doorgezet naar HA (debug-run)"
+            )
 
         """
         set helpers output home assistant
@@ -2770,12 +2786,24 @@ class DaCalc(DaBase):
                     if self.debug:
                         logging.info("Boiler opwarmen zou zijn geactiveerd")
                     else:
-                        boiler_activate_entity = self.config.get(["activate entity"], self.boiler_options, None)
-                        boiler_switch_entity = self.config.get(["switch entity"], self.boiler_options, None)
-                        if boiler_activate_entity is None and boiler_switch_entity is None:
-                            logging.warning("Er zijn geen entities gedefinieerd voor het opwarmen van de boiler")
+                        boiler_activate_entity = self.config.get(
+                            ["activate entity"], self.boiler_options, None
+                        )
+                        boiler_switch_entity = self.config.get(
+                            ["switch entity"], self.boiler_options, None
+                        )
+                        if (
+                            boiler_activate_entity is None
+                            and boiler_switch_entity is None
+                        ):
+                            logging.warning(
+                                "Er zijn geen entities gedefinieerd voor het opwarmen van de boiler"
+                            )
                         if boiler_activate_entity:
-                            self.call_service(self.boiler_options["activate service"], boiler_activate_entity)
+                            self.call_service(
+                                self.boiler_options["activate service"],
+                                boiler_activate_entity,
+                            )
                         if boiler_switch_entity:
                             self.turn_on(boiler_switch_entity)
                         # "input_button.hw_trigger")
@@ -3436,7 +3464,7 @@ class DaCalc(DaBase):
             nrows += B
         fig, axis = plt.subplots(figsize=(8, 3 * nrows), nrows=nrows)
         ind = np.arange(U)
-        #volgorde 1 pv_org 2 pv_ac 3 levering
+        # volgorde 1 pv_org 2 pv_ac 3 levering
         if solar_num > 0:
             axis[0].bar(
                 ind,
@@ -3462,7 +3490,7 @@ class DaCalc(DaBase):
             bottom=np.array(pv_p_org) + np.array(pv_ac_p),
             label="Levering",
             color="#00bfff",
-            align="edge"
+            align="edge",
         )
 
         axis[0].bar(
@@ -3523,7 +3551,7 @@ class DaCalc(DaBase):
         axis[0].set_ylabel("kWh")
         ylim = math.ceil(max_y)
         axis[0].set_ylim([-ylim, ylim])
-        axis[0].set_xticks(ind, labels=uur_labels[:len(ind)])
+        axis[0].set_xticks(ind, labels=uur_labels[: len(ind)])
         if self.interval == "1hour":
             ticker_multi = 2
             ticker_offset = 0
@@ -3557,10 +3585,10 @@ class DaCalc(DaBase):
         axis[1].bar(
             ind,
             np.array(c_l_p),
-            bottom= np.array(pv_p_opt) + np.array(accu_out_p),
+            bottom=np.array(pv_p_opt) + np.array(accu_out_p),
             label="Levering",
             color="#00bfff",
-            align="edge"
+            align="edge",
         )
 
         # axis[1].bar(ind, np.array(cons_n), label="Verbruik", color='yellow')
@@ -3636,7 +3664,7 @@ class DaCalc(DaBase):
         axis[1].legend(loc="best", bbox_to_anchor=(1.05, 1.00))
         axis[1].set_ylabel("kWh")
         axis[1].set_ylim([-ylim, ylim])
-        axis[1].set_xticks(ind, labels=uur_labels[:len(ind)])
+        axis[1].set_xticks(ind, labels=uur_labels[: len(ind)])
         axis[1].xaxis.set_major_locator(
             ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
         )
@@ -3710,7 +3738,7 @@ class DaCalc(DaBase):
                 # axis[gr_no].legend(loc='best', bbox_to_anchor=(1.30, 1.00))
                 axis[gr_no].set_ylabel("kWh")
                 axis[gr_no].set_ylim([-ylim, ylim])
-                axis[gr_no].set_xticks(ind, labels=uur_labels[:len(ind)])
+                axis[gr_no].set_xticks(ind, labels=uur_labels[: len(ind)])
                 axis[gr_no].xaxis.set_major_locator(
                     ticker.MultipleLocator(ticker_multi, offset=ticker_offset)
                 )
@@ -3750,7 +3778,7 @@ class DaCalc(DaBase):
             ln1 = axis[gr_no].plot(
                 ind, soc_t, label="SoC", linestyle=line_styles[0], color="olive"
             )
-        axis[gr_no].set_xticks(ind, labels=uur_labels[:len(ind)])
+        axis[gr_no].set_xticks(ind, labels=uur_labels[: len(ind)])
         axis[gr_no].set_ylabel("% SoC")
         axis[gr_no].set_xlabel("uren van de dag")
         axis[gr_no].xaxis.set_major_locator(

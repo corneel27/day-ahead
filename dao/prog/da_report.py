@@ -2049,14 +2049,18 @@ class Report(DaBase):
                     df_prog.index = pd.to_datetime(df_prog["tijd"])
                     df_prog["datasoort"] = "expected"
                     if len(df_prog) > 0:
-                        df_prog_prices = self.get_price_data(last_moment, tot, interval=self.interval)
+                        df_prog_prices = self.get_price_data(
+                            last_moment, tot, interval=self.interval
+                        )
                         if len(df_ha) == 0:
                             df_ha = df_prog
                             df_prices = df_prog_prices
                         else:
                             df_ha = pd.concat([df_ha, df_prog])
                             df_prices.index = pd.to_datetime(df_prices["time"])
-                            df_prog_prices.index = pd.to_datetime(df_prog_prices["time"])
+                            df_prog_prices.index = pd.to_datetime(
+                                df_prog_prices["time"]
+                            )
                             df_prices = pd.concat([df_prices, df_prog_prices])
 
             df_prices.rename(columns={"time": "tijd"}, inplace=True)
@@ -2944,7 +2948,9 @@ class Report(DaBase):
                         df[field] = df[field].cumsum()
         elif field == "da":
             df = self.get_price_data(
-                self.periodes[periode]["vanaf"], self.periodes[periode]["tot"], self.interval
+                self.periodes[periode]["vanaf"],
+                self.periodes[periode]["tot"],
+                self.interval,
             )
         elif field[0:3] == "soc":
             df = self.get_soc_data(field, self.periodes[periode]["vanaf"], tot)
