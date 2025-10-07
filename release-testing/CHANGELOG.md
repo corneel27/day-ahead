@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.4.rc7
+Deze versie is identiek aan de productieversie 2025.10.4 en bevat
+geen wijzigingen t.o.v. versie 2025.10.4.rc6
+
 # 2025.10.4.rc6
 - Changed scheduler: there can be more one task planned at a minute (but with different keys!)
 - Changed order of graphics: consumption and production are set on top of other categories
