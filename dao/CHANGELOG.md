@@ -1,5 +1,21 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.4
+- Changed scheduler: there can be more one task planned at a minute (but with different keys!)
+- Changed order of graphics: consumption and production are set on top of other categories
+- Added `switch entity` to boiler (alternative for activate entity)
+- Several python-modules are updated
+- Added environment variabels to .bashrc 
+- Update build.yaml to Debian 13 (Trixie) version :8.1.3
+- Fix format error
+- transition to debian 13 (trixie) base-mages
+- python version 3.13 (was 3.11)
+- new generic binaries for amd64 and aarch64
+- possibility to compile and activate binaries for own processor
+
+Know issue:
+- The forecast in the reports still nog good working
+
 # 2025.10.3
 This version is similar with 2025.10.3.rc1 in the testing-channel.<br>
 Fixes:

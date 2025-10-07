@@ -299,7 +299,7 @@ class DaCalc(DaBase):
             logging.info(f"p_t: {len(pt)}")
             logging.info(f"base: {len(b_l)}")
             logging.info(f"pv_ac: {len(pv_org_ac)}")
-            logging.info(f"pv_ac: {len(pv_org_dc)}")
+            logging.info(f"pv_dc: {len(pv_org_dc)}")
 
         model = Model()
 
