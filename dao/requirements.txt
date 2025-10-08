@@ -15,7 +15,7 @@ sqlalchemy~=2.0.43
 SQLAlchemy-Utils~=0.42.0
 psycopg2-binary
 pymysql~=1.1.2
-mariadb~=1.1.13
+mariadb~=1.1.14
 flask~=3.1.2
 ephem~=4.2
 gunicorn~=23.0.0
