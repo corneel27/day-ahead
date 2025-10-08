@@ -871,9 +871,12 @@ class DaCalc(DaBase):
             boiler_act_temp = float(
                 self.get_state(self.boiler_options["entity actual temp."]).state
             )
+            """
             boiler_setpoint = float(
                 self.get_state(self.boiler_options["entity setpoint"]).state
             )
+            """
+            boiler_setpoint = float(self.get_setting_state("entity setpoint", self.boiler_options))
             if boiler_act_temp > boiler_setpoint + 1:
                 logging.warning(
                     f"Je setpoint ({boiler_setpoint}) is lager de actuele "
@@ -2453,6 +2456,7 @@ class DaCalc(DaBase):
                 spec_heat_boiler / (3600 * cop_boiler)
             )
             logging.info(f"Waarde boiler om 23 uur: {boiler_at_23:<0.2f} kWh")
+        import numpy as np
         if self.hp_present and self.hp_enabled:
             logging.info("\nInzet warmtepomp")
             if self.hp_adjustment == "on/off":
@@ -2461,6 +2465,25 @@ class DaCalc(DaBase):
                     for u in range(U):
                         logging.info(f"{uur[u]} {pl[u]:6.4f} {c_hp[u].x:6.2f}")
             else:
+                df_hp = pd.DataFrame(columns = ["uur", "tar"])
+                df_hp["uur"] = uur
+                df_hp["tar"] = pl
+                for s in range(len(self.heating_options["stages"])):
+                    values = []
+                    for u in range(U):
+                        values.append(p_hp[s][u].x)
+                    df_hp["p"+str(s)] = np.array(values, dtype=np.int32)
+                heat = []
+                cons = []
+                for u in range(U):
+                    heat.append(h_hp[u].x)
+                    cons.append(c_hp[u].x)
+                df_hp["heat"] = heat
+                df_hp["cons"] = cons
+                pd.options.display.float_format = "{:7.3f}".format
+                logging.info(f"\n{df_hp.to_string(index=False)}\n")
+
+                """
                 logging.info(
                     f"u     tar     p0     p1     p2     p3     p4     p5     p6     p7   "
                     f"heat   cons"
@@ -2471,7 +2494,9 @@ class DaCalc(DaBase):
                         f"{p_hp[2][u].x:6.0f} {p_hp[3][u].x:6.0f} {p_hp[4][u].x:6.0f} "
                         f"{p_hp[5][u].x:6.0f} {p_hp[6][u].x:6.0f} {p_hp[7][u].x:6.0f} "
                         f"{h_hp[u].x:6.2f} {c_hp[u].x:6.2f}"
-                    )
+                     )
+                """
+
         # overzicht per ac-accu:
         pd.options.display.float_format = "{:6.2f}".format
         df_accu = []
