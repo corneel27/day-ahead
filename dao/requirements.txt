@@ -1,7 +1,7 @@
 pandas~=2.3.3
 pytz~=2025.2
 requests~=2.32.5
-matplotlib~=3.10.6
+matplotlib~=3.10.7
 numpy~=2.3.3
 mysql~=0.0.3
 cffi~=2.0.0
