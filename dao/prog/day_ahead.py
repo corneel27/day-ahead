@@ -3667,8 +3667,7 @@ class DaCalc(DaBase):
                 + np.array(boiler_n)
                 + np.array(heatpump_n)
                 + np.array(ev_n)
-                + np.array(mach_n)
-                + np.array(c_t_n),
+                + np.array(mach_n),
                 label="Accu in",
                 color="#ff8000",
                 align="edge",
