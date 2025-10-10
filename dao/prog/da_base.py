@@ -489,7 +489,7 @@ class DaBase(hass.Hass):
             result = None
         return result
 
-    def get_setting_state(self, key: str, options: dict, exp_type: str="number") -> int | float | str | None:
+    def get_setting_state(self, key: str, options: dict, exp_type: str="number", default=1) -> int | float | str | None:
         """
         retourneert de waarde van een settings
         :param key: een string in de settings die ook een entity kan zijn
@@ -506,8 +506,8 @@ class DaBase(hass.Hass):
                     state = self.get_state(setting_value).state
                     return state
                 except Exception as ex:
-                    logging.error(f"No value found for {key}, {setting_value}")
-                    return None
+                    logging.warning(f"No value found for {key}, {setting_value}")
+                    return default
         else: # expected:string
             if type(setting_value) is str:
                 try:

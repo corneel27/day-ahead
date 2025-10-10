@@ -884,10 +884,10 @@ class DaCalc(DaBase):
                     f"setpoint hoger in te stellen"
                 )
             boiler_setpoint = max(boiler_setpoint, boiler_act_temp)
-            boiler_hysterese = float(
-                self.get_state(self.boiler_options["entity hysterese"]).state
-            )
+            logging.info(f"Boiler setpoint {boiler_setpoint} °C")
+            boiler_hysterese = float(self.get_setting_state("entity hysterese", self.boiler_options))
             # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
+            logging.info(f"Boiler hysterese {boiler_hysterese} K")
             boiler_cooling = (
                 self.boiler_options["cooling rate"] * self.interval_s / 3600
             )
@@ -1628,20 +1628,7 @@ class DaCalc(DaBase):
             logging.info(f"Gewogen graaddagen: {degree_days:.1f} K.day")
 
             # degree days factor kWh th / K.day
-            entity_degree_days_factor = self.config.get(
-                ["degree days factor"], self.heating_options, None
-            )
-            if entity_degree_days_factor is None:
-                degree_days_factor = 1
-            else:
-                try:
-                    # if just a number is speficied use this number
-                    degree_days_factor = float(entity_degree_days_factor)
-                except ValueError:
-                    # if en entity is specified get it from HA
-                    degree_days_factor = float(
-                        self.get_state(entity_degree_days_factor).state
-                    )
+            degree_days_factor = float(self.get_setting_state("degree days factor", self.heating_options, default=1))
             logging.info(f"Degree days factor: {degree_days_factor:.1f} kWh/K.day")
 
             # heat produced
