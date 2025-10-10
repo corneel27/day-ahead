@@ -176,7 +176,8 @@ class DaBase(hass.Hass):
         )
 
         self.history_options = self.config.get(["history"])
-        self.strategy = self.config.get(["strategy"], None, "minimize cost").lower()
+        # self.strategy = self.config.get(["strategy"], None, "minimize cost").lower()
+        self.strategy = self.get_setting_state("strategy", None, exp_type="string", default="minimize cost")
         self.tibber_options = self.config.get(["tibber"], None, None)
         self.notification_entity = self.config.get(
             ["notifications", "notification entity"], None, None

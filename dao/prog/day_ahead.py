@@ -2332,6 +2332,7 @@ class DaCalc(DaBase):
         # kosten optimalisering
         if self.strategy == "minimize cost":
             strategie = "minimale kosten"
+            logging.info(f"Strategie: {strategie}")
             model.objective = minimize(cost)
             model.optimize()
             if model.num_solutions == 0:
@@ -2339,6 +2340,7 @@ class DaCalc(DaBase):
                 return
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
+            logging.info(f"Strategie: {strategie}")
             model.objective = minimize(delivery)
             model.optimize()
             if model.num_solutions == 0:
@@ -2366,7 +2368,6 @@ class DaCalc(DaBase):
             logging.error("Kies een strategie in options")
             # strategie = 'niet gekozen'
             return
-        logging.info(f"Strategie: {strategie}")
 
         # Suppress FutureWarning messages
         import warnings
