@@ -599,6 +599,29 @@ dan kun je die (sub)instelling achterwege laten en zorgt het programma voor de d
 Als je de software installeert als addon op je Home Assistant machine kan de hele instelling **homeassistant** weggelaten worden. 
 Dit regelt de supervisor van Home Assistant dan voor je.
 
+#### Dual input
+Vanaf versie 2025.10.5 worden een aantal instellingen "dual input".
+D.w.z. dat je ze direct kunt ingeven in je instellingen, maar je kunt bij settings met "dual input" in plaats van een getal 
+of string ook een HA-entiteit opgeven bij die instelling. In dat geval zal DAO de instelling ophalen uit HA.
+Dit heeft voor een aantal instellingen voordelen.<br>
+De volgende settings zijn vanaf 2025.10.4 "dual input" en in volgende versies volgen er meer:
+- degree_days_factor
+- boiler_setpoint
+- boiler_hysterese
+- strategy<br>
+
+Enkele voorbeelden (van het gebruik van dual input): 
+1. tot nu toe was het boiler-setpoint en boiler hysterese een vast getal, als je daar een entiteit in HA van maakt dan kun je eens in de week of twee weken
+met een automation dit setpoint en de hysterese tijdelijk ophogen zodat een legionella door DAO wordt ingepland.
+2. Als je als strategy primair kiest voor "minimize consumption" komt het soms voor dat DAO geen oplossing vindt.
+Je krijgt dan een waarschuwing. Via je notification-instelling (zie daar) kun je die waarschuwing naar een HA input_text laten sturen. 
+Als je daar een automation aanhangt kun je je strategy omzetten naar "minimize cost" en via een rest-commando (zie daar)
+de berekening opnieuw uit laten voeren.<br>
+
+**Kortom**: als je het via HA wilt laten lopen heb je wat meer in te stellen en kun je er veel mee, maar het hoeft niet. 
+Het is allemaal optioneel.
+
+
 ----------------------------
 
 | Key                       | Subkey                       | Type             | Default                            | Opmerkingen                                        |
@@ -759,6 +782,7 @@ Dit regelt de supervisor van Home Assistant dan voor je.
 |                           | entities ev consumption      | list of string   | []                                 |                                                    | 
 |                           | entities wp consumption      | list of string   | []                                 |                                                    | 
 |                           | entities boiler consumption  | list of string   | []                                 |                                                    | 
+|                           | entities machine consumption | list of string   | []                                 |                                                    | 
 |                           | entities battery consumption | list of string   | []                                 |                                                    | 
 |                           | entities battery production  | list of string   | []                                 |                                                    | 
 |                           | entity co2-intensity         | list of string   | []                                 |                                                    | 
@@ -1006,7 +1030,8 @@ het verbruik of de productie van alle relevante beinvloedbare gebruikers registe
   * solar production ac
   * ev consumption
   * wp consumption
-  * boiler consumption<br>
+  * boiler consumption
+  * machine consumption<br>
 * In de scheduler (zie hierna) zet je een regel met een commando dat de baseloads iedere dag 
 een keer worden geactualiseerd: <br> bijvoorbeeld ` "2230": "calc_baseloads"`
   
@@ -1499,6 +1524,7 @@ Je kunt de volgende onderdelen invullen
 * entities ev consumption
 * entities wp consumption
 * entities boiler consumption
+* entities machine consumption
 * entities battery consumption
 * entities battery production
 * entity co2-intensity<br>
@@ -1521,6 +1547,7 @@ Als voorbeeld: zo heb ik deze lijst ingevuld:
     "entities ev consumption" : ["sensor.fritz_dect_200_laadpunt_total_energy"],
     "entities wp consumption" : ["sensor.youless_meterstand"],
     "entities boiler consumption": [],
+    "entities machine consumption": [],
     "entities battery consumption": ["sensor.ess_grid_consumption"],
     "entities battery production": ["sensor.ess_grid_production"],
     "entity co2-intensity": ["sensor.co2_intensity"]
