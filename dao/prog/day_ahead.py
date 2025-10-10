@@ -871,9 +871,12 @@ class DaCalc(DaBase):
             boiler_act_temp = float(
                 self.get_state(self.boiler_options["entity actual temp."]).state
             )
+            """
             boiler_setpoint = float(
                 self.get_state(self.boiler_options["entity setpoint"]).state
             )
+            """
+            boiler_setpoint = float(self.get_setting_state("entity setpoint", self.boiler_options))
             if boiler_act_temp > boiler_setpoint + 1:
                 logging.warning(
                     f"Je setpoint ({boiler_setpoint}) is lager de actuele "
@@ -881,10 +884,10 @@ class DaCalc(DaBase):
                     f"setpoint hoger in te stellen"
                 )
             boiler_setpoint = max(boiler_setpoint, boiler_act_temp)
-            boiler_hysterese = float(
-                self.get_state(self.boiler_options["entity hysterese"]).state
-            )
+            logging.info(f"Boiler setpoint {boiler_setpoint} °C")
+            boiler_hysterese = float(self.get_setting_state("entity hysterese", self.boiler_options))
             # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
+            logging.info(f"Boiler hysterese {boiler_hysterese} K")
             boiler_cooling = (
                 self.boiler_options["cooling rate"] * self.interval_s / 3600
             )
@@ -1625,20 +1628,7 @@ class DaCalc(DaBase):
             logging.info(f"Gewogen graaddagen: {degree_days:.1f} K.day")
 
             # degree days factor kWh th / K.day
-            entity_degree_days_factor = self.config.get(
-                ["degree days factor"], self.heating_options, None
-            )
-            if entity_degree_days_factor is None:
-                degree_days_factor = 1
-            else:
-                try:
-                    # if just a number is speficied use this number
-                    degree_days_factor = float(entity_degree_days_factor)
-                except ValueError:
-                    # if en entity is specified get it from HA
-                    degree_days_factor = float(
-                        self.get_state(entity_degree_days_factor).state
-                    )
+            degree_days_factor = float(self.get_setting_state("degree days factor", self.heating_options, default=1))
             logging.info(f"Degree days factor: {degree_days_factor:.1f} kWh/K.day")
 
             # heat produced
@@ -2342,6 +2332,7 @@ class DaCalc(DaBase):
         # kosten optimalisering
         if self.strategy == "minimize cost":
             strategie = "minimale kosten"
+            logging.info(f"Strategie: {strategie}")
             model.objective = minimize(cost)
             model.optimize()
             if model.num_solutions == 0:
@@ -2349,6 +2340,7 @@ class DaCalc(DaBase):
                 return
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
+            logging.info(f"Strategie: {strategie}")
             model.objective = minimize(delivery)
             model.optimize()
             if model.num_solutions == 0:
@@ -2376,7 +2368,6 @@ class DaCalc(DaBase):
             logging.error("Kies een strategie in options")
             # strategie = 'niet gekozen'
             return
-        logging.info(f"Strategie: {strategie}")
 
         # Suppress FutureWarning messages
         import warnings
@@ -2453,6 +2444,7 @@ class DaCalc(DaBase):
                 spec_heat_boiler / (3600 * cop_boiler)
             )
             logging.info(f"Waarde boiler om 23 uur: {boiler_at_23:<0.2f} kWh")
+        import numpy as np
         if self.hp_present and self.hp_enabled:
             logging.info("\nInzet warmtepomp")
             if self.hp_adjustment == "on/off":
@@ -2461,6 +2453,25 @@ class DaCalc(DaBase):
                     for u in range(U):
                         logging.info(f"{uur[u]} {pl[u]:6.4f} {c_hp[u].x:6.2f}")
             else:
+                df_hp = pd.DataFrame(columns = ["uur", "tar"])
+                df_hp["uur"] = uur
+                df_hp["tar"] = pl
+                for s in range(len(self.heating_options["stages"])):
+                    values = []
+                    for u in range(U):
+                        values.append(p_hp[s][u].x)
+                    df_hp["p"+str(s)] = np.array(values, dtype=np.int32)
+                heat = []
+                cons = []
+                for u in range(U):
+                    heat.append(h_hp[u].x)
+                    cons.append(c_hp[u].x)
+                df_hp["heat"] = heat
+                df_hp["cons"] = cons
+                pd.options.display.float_format = "{:7.3f}".format
+                logging.info(f"\n{df_hp.to_string(index=False)}\n")
+
+                """
                 logging.info(
                     f"u     tar     p0     p1     p2     p3     p4     p5     p6     p7   "
                     f"heat   cons"
@@ -2471,7 +2482,9 @@ class DaCalc(DaBase):
                         f"{p_hp[2][u].x:6.0f} {p_hp[3][u].x:6.0f} {p_hp[4][u].x:6.0f} "
                         f"{p_hp[5][u].x:6.0f} {p_hp[6][u].x:6.0f} {p_hp[7][u].x:6.0f} "
                         f"{h_hp[u].x:6.2f} {c_hp[u].x:6.2f}"
-                    )
+                     )
+                """
+
         # overzicht per ac-accu:
         pd.options.display.float_format = "{:6.2f}".format
         df_accu = []
@@ -3642,8 +3655,7 @@ class DaCalc(DaBase):
                 + np.array(boiler_n)
                 + np.array(heatpump_n)
                 + np.array(ev_n)
-                + np.array(mach_n)
-                + np.array(c_t_n),
+                + np.array(mach_n),
                 label="Accu in",
                 color="#ff8000",
                 align="edge",

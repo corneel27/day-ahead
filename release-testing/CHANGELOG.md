@@ -1,5 +1,17 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.5.rc1
+Changed:
+-   implemented **dual input** of settings:<br>
+    - direct via your settings
+    - indirect from HA via an entity in your settings<br>
+More info in DOCS.md
+- made degree_days_factor, boiler_setpoint, boiler_hysterese and strategy dual input
+- corrected output of hp with less than 8 stages
+- added meteo parameter: wind-snelheid
+- fixed error second graph
+- support voor machine consumptions sensors
+
 # 2025.10.4.rc7
 Deze versie is identiek aan de productieversie 2025.10.4 en bevat
 geen wijzigingen t.o.v. versie 2025.10.4.rc6

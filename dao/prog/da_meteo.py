@@ -341,7 +341,7 @@ class Meteo:
 
         df = pd.DataFrame.from_records(data)
         df = self.solar_rad_df(df)
-        df1 = df[["tijd", "tijd_nl", "gr", "temp", "solar_rad"]]
+        df1 = df[["tijd", "tijd_nl", "gr", "temp", "solar_rad", "winds"]]
         df1 = df1[:96]
         logging.info(f"Meteodata model {model}")
         logging.info(
@@ -374,6 +374,12 @@ class Meteo:
                     str(int(row.tijd)),
                     "solar_rad",
                     float(row.solar_rad),
+                ]
+                # winds
+                df_db.loc[df_db.shape[0]] = [
+                    str(int(row.tijd)),
+                    "winds",
+                    float(row.winds),
                 ]
 
         """

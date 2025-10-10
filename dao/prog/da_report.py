@@ -62,6 +62,9 @@ class Report(DaBase):
         self.boiler_consumption_sensors = self.config.get(
             ["entities boiler consumption"], self.report_options, []
         )
+        self.machine_consumption_sensors = self.config.get(
+            ["entities machine consumption"], self.report_options, []
+        )
 
         self.saving_consumption_dict = {
             "calc_interval": "uur",
@@ -497,6 +500,13 @@ class Report(DaBase):
                 "name": "Boiler",
                 "sensors": self.boiler_consumption_sensors,
                 "color": "#e39ff6",
+            },
+            "mach": {
+                "dim": "kWh",
+                "sign": "neg",
+                "name": "Machines",
+                "sensors": self.machine_consumption_sensors,
+                "color": "brown",
             },
             "base": {
                 "dim": "kWh",
@@ -2676,6 +2686,12 @@ class Report(DaBase):
             calc_start,
             "boiler_consumption",
         )
+        machine_consumption = self.get_sensor_week_sum(
+            self.machine_consumption_sensors,
+            wd,
+            calc_start,
+            "machine_consumption",
+        )
         battery_consumption = self.get_sensor_week_sum(
             self.battery_consumption_sensors,
             wd,
@@ -2715,6 +2731,11 @@ class Report(DaBase):
         result = Report.add_col_df(
             boiler_consumption, result, "boiler_consumption", "baseload", True
         )
+        # baseload - machine_consumption
+        result = Report.add_col_df(
+            machine_consumption, result, "machine_consumption", "baseload", True
+        )
+
         # baseload - battery_consumption
         result = Report.add_col_df(
             battery_consumption, result, "battery_consumption", "baseload", True
