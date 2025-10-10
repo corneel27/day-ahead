@@ -179,6 +179,7 @@
     "entities ev consumption" : ["sensor.laadpunt_total_energy"],
     "entities wp consumption" : [],
     "entities boiler consumption": [],
+    "entities machine consumption": [],
     "entities battery consumption": ["sensor.ess_grid_consumption"],
     "entities battery production": ["sensor.ess_grid_production"]
   },
