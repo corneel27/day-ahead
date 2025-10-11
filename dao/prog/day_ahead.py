@@ -1428,7 +1428,7 @@ class DaCalc(DaBase):
                     ready_index = intervals_needed[e]
                 else:
                     for u in range(U):
-                        if (tijd[u] + dt.timedelta(hours=1)) >= ready:
+                        if (tijd[u] + dt.timedelta(seconds=self.interval_s)) >= ready:
                             ready_index = u
                             break
             if ready_index == U:

@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2025.10.5.rc2
+Fixed error planning ev last hour with 15min prices (reported by @dabit)
+
 # 2025.10.5.rc1
 Changed:
 -   implemented **dual input** of settings:<br>
