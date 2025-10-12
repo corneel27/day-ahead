@@ -1821,7 +1821,7 @@ class DaCalc(DaBase):
                 max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
 
                 # een of meer intervallen minder als boiler via wp gaat
-                if boiler_heated_by_heatpump and boiler_start < U:
+                if boiler_heated_by_heatpump and not (boiler_start is None) and boiler_start < U:
                     boiler_int = est_needed_intv[boiler_start] + 1
                 else:
                     boiler_int = 0
