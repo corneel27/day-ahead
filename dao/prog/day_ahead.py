@@ -821,6 +821,7 @@ class DaCalc(DaBase):
             self.config.get(["boiler present"], self.boiler_options, "true").lower()
             == "true"
         )
+        boiler_start = None
         boiler_heated_by_heatpump = False
         if self.boiler_present:
             entity_boiler_enabled = self.config.get(
@@ -1004,7 +1005,6 @@ class DaCalc(DaBase):
                     f"Boiler verbruik in 1 {self.interval_name}: {cons_interval} kWh"
                 )
                 boiler_netto_cost = None
-                boiler_start = None
                 for u in range(U):
                     # benodigde warmte voor opwarmen vanaf interval u in kWh
                     est_needed_heat[u] = max(
@@ -1366,13 +1366,15 @@ class DaCalc(DaBase):
             logging.info(f"Locatie: {ev_position[e]}")
             logging.info(f"Ingeplugged:{ev_plugged_in[e]}")
             e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
-            e_needed = min(
-                e_needed,
-                max_power[e] * hours_available * ev_charge_stages[e][-1]["efficiency"],
-            )
+            max_possible = max_power[e] * hours_available * ev_charge_stages[e][-1]["efficiency"]
+            if e_needed > max_possible:
+                logging.warning(f"Er is te weinig tijd om tot {wished_level[e]}% te laden")
+                wished_level[e] = actual_soc[e] - 1 + max_possible * 100 / ev_capacity
+                logging.info(f"Bijgesteld gewenst laadniveau:{wished_level[e]:.1f} %")
+                e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
             e_needed = max(0, e_needed)  #  nooit minder dan 0
             energy_needed.append(e_needed)  # in kWh
-            logging.info(f"Benodigde energie: {energy_needed[e]:.3f} kWh")
+            logging.info(f"Benodigde netto energie: {energy_needed[e]:.3f} kWh")
             # uitgedrukt in aantal uren; bijvoorbeeld 1,5
             time_needed = energy_needed[e] / (
                 max_power[e] * ev_charge_stages[e][-1]["efficiency"]
