@@ -2338,7 +2338,7 @@ class DaCalc(DaBase):
             model.objective = minimize(cost)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing  voor: {self.strategy}")
+                logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
@@ -2346,7 +2346,7 @@ class DaCalc(DaBase):
             model.objective = minimize(delivery)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing  voor: {self.strategy}")
+                logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return
             min_delivery = max(0.0, delivery.x)
             logging.info("Eerste berekening")
