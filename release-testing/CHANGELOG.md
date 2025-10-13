@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.5.rc3
+- Fixed error when boiler is heated by heatpump
+- Fixed typo (extra space) in warning "Geen oplossing"
+- Fix error planning ev when planning window is too small
 
 # 2025.10.5.rc2
 Fixed error planning ev last hour with 15min prices (reported by @dabit)

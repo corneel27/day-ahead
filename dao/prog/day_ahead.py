@@ -821,6 +821,7 @@ class DaCalc(DaBase):
             self.config.get(["boiler present"], self.boiler_options, "true").lower()
             == "true"
         )
+        boiler_start = None
         boiler_heated_by_heatpump = False
         if self.boiler_present:
             entity_boiler_enabled = self.config.get(
@@ -1004,7 +1005,6 @@ class DaCalc(DaBase):
                     f"Boiler verbruik in 1 {self.interval_name}: {cons_interval} kWh"
                 )
                 boiler_netto_cost = None
-                boiler_start = None
                 for u in range(U):
                     # benodigde warmte voor opwarmen vanaf interval u in kWh
                     est_needed_heat[u] = max(
@@ -1366,13 +1366,15 @@ class DaCalc(DaBase):
             logging.info(f"Locatie: {ev_position[e]}")
             logging.info(f"Ingeplugged:{ev_plugged_in[e]}")
             e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
-            e_needed = min(
-                e_needed,
-                max_power[e] * hours_available * ev_charge_stages[e][-1]["efficiency"],
-            )
+            max_possible = max_power[e] * hours_available * ev_charge_stages[e][-1]["efficiency"]
+            if e_needed > max_possible:
+                logging.warning(f"Er is te weinig tijd om tot {wished_level[e]}% te laden")
+                wished_level[e] = actual_soc[e] - 1 + max_possible * 100 / ev_capacity
+                logging.info(f"Bijgesteld gewenst laadniveau:{wished_level[e]:.1f} %")
+                e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
             e_needed = max(0, e_needed)  #  nooit minder dan 0
             energy_needed.append(e_needed)  # in kWh
-            logging.info(f"Benodigde energie: {energy_needed[e]:.3f} kWh")
+            logging.info(f"Benodigde netto energie: {energy_needed[e]:.3f} kWh")
             # uitgedrukt in aantal uren; bijvoorbeeld 1,5
             time_needed = energy_needed[e] / (
                 max_power[e] * ev_charge_stages[e][-1]["efficiency"]
@@ -1821,7 +1823,7 @@ class DaCalc(DaBase):
                 max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
 
                 # een of meer intervallen minder als boiler via wp gaat
-                if boiler_heated_by_heatpump and boiler_start < U:
+                if boiler_heated_by_heatpump and not (boiler_start is None) and boiler_start < U:
                     boiler_int = est_needed_intv[boiler_start] + 1
                 else:
                     boiler_int = 0
@@ -2336,7 +2338,7 @@ class DaCalc(DaBase):
             model.objective = minimize(cost)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing  voor: {self.strategy}")
+                logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
@@ -2344,7 +2346,7 @@ class DaCalc(DaBase):
             model.objective = minimize(delivery)
             model.optimize()
             if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing  voor: {self.strategy}")
+                logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return
             min_delivery = max(0.0, delivery.x)
             logging.info("Eerste berekening")

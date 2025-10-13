@@ -599,18 +599,18 @@ dan kun je die (sub)instelling achterwege laten en zorgt het programma voor de d
 Als je de software installeert als addon op je Home Assistant machine kan de hele instelling **homeassistant** weggelaten worden. 
 Dit regelt de supervisor van Home Assistant dan voor je.
 
-#### Dual input
-Vanaf versie 2025.10.5 worden een aantal instellingen "dual input".
-D.w.z. dat je ze direct kunt ingeven in je instellingen, maar je kunt bij settings met "dual input" in plaats van een getal 
+#### Dynamic setting
+Vanaf versie 2025.10.5 maken een aantal instellingen gebruik van "dynamic setting".
+D.w.z. dat je ze direct kunt ingeven in je instellingen, maar je kunt bij settings met "dynamic setting" in plaats van een getal 
 of string ook een HA-entiteit opgeven bij die instelling. In dat geval zal DAO de instelling ophalen uit HA.
 Dit heeft voor een aantal instellingen voordelen.<br>
-De volgende settings zijn vanaf 2025.10.4 "dual input" en in volgende versies volgen er meer:
+De volgende settings kunnen vanaf 2025.10.5 met "dynamic setting" ingesteld worden en in volgende versies volgen er meer:
 - degree_days_factor
 - boiler_setpoint
 - boiler_hysterese
 - strategy<br>
 
-Enkele voorbeelden (van het gebruik van dual input): 
+Enkele voorbeelden (van het gebruik van dynamic setting): 
 1. tot nu toe was het boiler-setpoint en boiler hysterese een vast getal, als je daar een entiteit in HA van maakt dan kun je eens in de week of twee weken
 met een automation dit setpoint en de hysterese tijdelijk ophogen zodat een legionella door DAO wordt ingepland.
 2. Als je als strategy primair kiest voor "minimize consumption" komt het soms voor dat DAO geen oplossing vindt.
