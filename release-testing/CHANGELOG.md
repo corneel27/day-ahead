@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.5.rc5
+Fixed error allowed max gap
+
 # 2025.10.5.rc4
 
 - Added "max gap" (flex setting),see  DOCS.md
