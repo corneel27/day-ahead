@@ -2328,7 +2328,7 @@ class DaCalc(DaBase):
         # settings
         max_gap = abs(float(self.get_setting_state("max gap", None, exp_type="number", default=0.005)))
         max_gap = max(min(max_gap, 1.0), 0.00001)
-        model.max_mip_gap_abs = allowed_max_gap
+        model.max_mip_gap_abs = max_gap
         model.max_nodes = 1500
         # model.max_seconds = 20
         if self.log_level > logging.DEBUG:
@@ -2339,7 +2339,7 @@ class DaCalc(DaBase):
         if self.strategy == "minimize cost":
             strategie = "minimale kosten"
             logging.info(f"Strategie: {strategie}")
-            logging.info(f"Maximale fout (maximal gap): {allowed_max_gap:<8.6f} euro")
+            logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
             model.objective = minimize(cost)
             start_calc = time.perf_counter()
             model.optimize()
