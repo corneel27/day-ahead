@@ -3045,7 +3045,7 @@ class DaCalc(DaBase):
                     balance = False
                     new_ts = (
                         start_dt.timestamp()
-                        + (abs(netto_vermogen) / minimum_power) * 3600
+                        + (abs(netto_vermogen) / minimum_power) * self.interval_s
                     )
                     stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
                     if netto_vermogen > 0:
