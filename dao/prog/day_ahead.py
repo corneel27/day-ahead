@@ -1733,7 +1733,7 @@ class DaCalc(DaBase):
                     for u in range(U):
                         model += c_hp[u] == hp_power * hp_on[u]
                         # Energy consumption per hour is equal to power if it runs in that hour
-                    model += xsum(hp_on[u] for u in range(U)) == hp_hours
+                    model += xsum(hp_on[u] for u in range(U)) == int(hp_hours * 3600/self.interval_s)
                     # Ensure pump is running for designated number of hours
 
                     # Additional constraints to ensure the minimum run length (range 1-5 hours)
