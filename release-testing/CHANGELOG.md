@@ -1,5 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.5.rc4
+
+- Added "max gap" (flex setting),see  DOCS.md
+- Added logging "Rekentijd" in sec
+- Fixed error when planning wp-hours with 15min interval (reported by TomKuipers1983)
+- Fixed error when calculating "stop invertor" with 15min-interval
+
 # 2025.10.5.rc3
 - Fixed error when boiler is heated by heatpump
 - Fixed typo (extra space) in warning "Geen oplossing"
@@ -10,11 +17,11 @@ Fixed error planning ev last hour with 15min prices (reported by @dabit)
 
 # 2025.10.5.rc1
 Changed:
--   implemented **dual input** of settings:<br>
+-   implemented **flex setting** of settings:<br>
     - direct via your settings
     - indirect from HA via an entity in your settings<br>
 More info in DOCS.md
-- made degree_days_factor, boiler_setpoint, boiler_hysterese and strategy dual input
+- made degree_days_factor, boiler_setpoint, boiler_hysterese and strategy flex setting
 - corrected output of hp with less than 8 stages
 - added meteo parameter: wind-snelheid
 - fixed error second graph

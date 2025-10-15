@@ -6,6 +6,7 @@ Zie verder: DOCS.md
 
 import datetime
 import datetime as dt
+import time
 import sys
 import math
 import pandas as pd
@@ -53,6 +54,7 @@ class DaCalc(DaBase):
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
+        # _start_dt = datetime.datetime(year=2025, month=10, day=14, hour=13, minute=20)
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
@@ -1731,7 +1733,7 @@ class DaCalc(DaBase):
                     for u in range(U):
                         model += c_hp[u] == hp_power * hp_on[u]
                         # Energy consumption per hour is equal to power if it runs in that hour
-                    model += xsum(hp_on[u] for u in range(U)) == hp_hours
+                    model += xsum(hp_on[u] for u in range(U)) == int(hp_hours * 3600/self.interval_s)
                     # Ensure pump is running for designated number of hours
 
                     # Additional constraints to ensure the minimum run length (range 1-5 hours)
@@ -2324,7 +2326,9 @@ class DaCalc(DaBase):
         #        strategy optimization
         #####################################################
         # settings
-        model.max_mip_gap_abs = 0.005
+        max_gap = abs(float(self.get_setting_state("max gap", None, exp_type="number", default=0.005)))
+        max_gap = max(min(max_gap, 1.0), 0.00001)
+        model.max_mip_gap_abs = allowed_max_gap
         model.max_nodes = 1500
         # model.max_seconds = 20
         if self.log_level > logging.DEBUG:
@@ -2335,8 +2339,12 @@ class DaCalc(DaBase):
         if self.strategy == "minimize cost":
             strategie = "minimale kosten"
             logging.info(f"Strategie: {strategie}")
+            logging.info(f"Maximale fout (maximal gap): {allowed_max_gap:<8.6f} euro")
             model.objective = minimize(cost)
+            start_calc = time.perf_counter()
             model.optimize()
+            end_calc = time.perf_counter()
+            logging.info(f"Rekentijd: {end_calc-start_calc:<5.2f} sec")
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return
@@ -3037,7 +3045,7 @@ class DaCalc(DaBase):
                     balance = False
                     new_ts = (
                         start_dt.timestamp()
-                        + (abs(netto_vermogen) / minimum_power) * 3600
+                        + (abs(netto_vermogen) / minimum_power) * self.interval_s
                     )
                     stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
                     if netto_vermogen > 0:

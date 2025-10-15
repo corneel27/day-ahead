@@ -599,18 +599,19 @@ dan kun je die (sub)instelling achterwege laten en zorgt het programma voor de d
 Als je de software installeert als addon op je Home Assistant machine kan de hele instelling **homeassistant** weggelaten worden. 
 Dit regelt de supervisor van Home Assistant dan voor je.
 
-#### Dynamic setting
-Vanaf versie 2025.10.5 maken een aantal instellingen gebruik van "dynamic setting".
+#### Flex setting
+Vanaf versie 2025.10.5 maken een aantal instellingen gebruik van "flex setting".
 D.w.z. dat je ze direct kunt ingeven in je instellingen, maar je kunt bij settings met "dynamic setting" in plaats van een getal 
 of string ook een HA-entiteit opgeven bij die instelling. In dat geval zal DAO de instelling ophalen uit HA.
 Dit heeft voor een aantal instellingen voordelen.<br>
-De volgende settings kunnen vanaf 2025.10.5 met "dynamic setting" ingesteld worden en in volgende versies volgen er meer:
+De volgende settings kunnen vanaf 2025.10.5 met "flex setting" ingesteld worden en in volgende versies volgen er meer:
 - degree_days_factor
 - boiler_setpoint
 - boiler_hysterese
-- strategy<br>
+- strategy
+- max gap<br>
 
-Enkele voorbeelden (van het gebruik van dynamic setting): 
+Enkele voorbeelden (van het gebruik van flex setting): 
 1. tot nu toe was het boiler-setpoint en boiler hysterese een vast getal, als je daar een entiteit in HA van maakt dan kun je eens in de week of twee weken
 met een automation dit setpoint en de hysterese tijdelijk ophogen zodat een legionella door DAO wordt ingepland.
 2. Als je als strategy primair kiest voor "minimize consumption" komt het soms voor dat DAO geen oplossing vindt.
@@ -669,6 +670,7 @@ Het is allemaal optioneel.
 |                           | average consumption          | boolean          | "True"                             |                                                    |
 |                           | show                         | boolean          | "False"                            |                                                    |
 | **strategy**              |                              | string           | "minimize cost"                    | "minimize cost" of "minimize consumption"          |
+| **max gap**               |                              | getal            | 0.005                              | tussen 0.00001 en 1.00000                          |
 | **notifications**         | notification entity          | string           | ""                                 |                                                    | 
 |                           | opstarten                    | boolean          | "False"                            | 
 |                           | berekening                   | boolean          | "False"                            |                                                    | 
@@ -1113,6 +1115,14 @@ Als voorbeeld levert deze het volgende resultaat:
     Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter" bij zo laag mogelijke kosten.
 Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
   ![img_4.png](./images/img_4.png)
+
+### **max gap**
+De optimaliseringsberekening stopt als het verschil tussen twee interaties kleiner is dan de ingestelde "max gap".
+Standaard (default) staat max_gap op 0.005 (een halve euro cent).
+Als een berekening te lang duurt kun je deze waarde ophogen tot maximaal 1.0.
+**max gap** is een **flex setting** die je zowel direct in je instellingen kunt instellen, maar hij kan ook ingesteld worden met een entity in HA.  
+In dat geval geef je bij je setting geen getal op maar de naam van entity in HA.
+Bijvoorbeeld: ``"max gap" : "input_number.dao_max_gap",``
 
 ### **notifications**
 
