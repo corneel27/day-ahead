@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.5.rc6
+- This version is identical with production version 2025.10.5
+- Updated several used pyhton-modules (cryptography, numpy)
+
 # 2025.10.5.rc5
 Fixed error allowed max gap
 

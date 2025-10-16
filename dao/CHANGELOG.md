@@ -1,5 +1,27 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.5
+This version is identical with testversion 2025.10.5.rc6<br>
+Changed:
+-   implemented **flex setting** of settings:<br>
+    - direct via your settings
+    - indirect from HA via an entity in your settings<br>
+More info in DOCS.md
+- Updated several used pyhton-modules (cryptography, numpy)
+- Added "max gap" (flex setting), see DOCS.md
+- Added logging "Rekentijd" in sec
+- made degree_days_factor, boiler_setpoint, boiler_hysterese and strategy flex setting
+- support voor machine consumptions sensors
+- added meteo parameter: wind-snelheid<br>
+
+Fixed:
+- Fixed error when planning wp-hours with 15min interval (reported by TomKuipers1983)
+- Fixed error when calculating "stop invertor" with 15min-interval
+- corrected output of hp with less than 8 stages
+- fixed error second graph
+- fixed error planning ev last hour with 15min prices (reported by @dabit)
+- fixed error when boiler is heated by heatpump
+
 # 2025.10.4
 - Changed scheduler: there can be more one task planned at a minute (but with different keys!)
 - Changed order of graphics: consumption and production are set on top of other categories
