@@ -490,15 +490,16 @@ class DaBase(hass.Hass):
             result = None
         return result
 
-    def get_setting_state(self, key: str, options: dict, exp_type: str="number", default=1) -> int | float | str | None:
+    def get_setting_state(self, key: str, options: dict, exp_type: str = "number", default: any = 1) -> int | float | str | None:
         """
         retourneert de waarde van een settings
         :param key: een string in de settings die ook een entity kan zijn
         :param options:
         :param exp_type: "string" or "number", default number
+        :param default:
         :return: the waarde van de setting
         """
-        setting_value = self.config.get([key], options, None)
+        setting_value = self.config.get([key], options, default)
         if exp_type == "number":
             if (type(setting_value) is int or type(setting_value) is float):
                 return setting_value
