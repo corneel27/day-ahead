@@ -1369,7 +1369,7 @@ class DaCalc(DaBase):
             logging.info(f"Ingeplugged:{ev_plugged_in[e]}")
             e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
             max_possible = max_power[e] * hours_available * ev_charge_stages[e][-1]["efficiency"]
-            if e_needed > max_possible:
+            if (e_needed > max_possible) and ev_plugged_in[e] and (ev_position[e] == "home"):
                 logging.warning(f"Er is te weinig tijd om tot {wished_level[e]}% te laden")
                 wished_level[e] = actual_soc[e] - 1 + max_possible * 100 / ev_capacity
                 logging.info(f"Bijgesteld gewenst laadniveau:{wished_level[e]:.1f} %")

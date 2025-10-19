@@ -2843,7 +2843,7 @@ class Report(DaBase):
         df_da = self.db_da.get_column_data(
             "values", "da", start=start, end=end, agg_func=agg_func
         )
-        if len(df_da <= 5):
+        if len(df_da) <= 5:
             logging.error(
                 f"Er ontbreken kwartier- of uurwaarden van de day-ahead tarieven, "
                 f"de berekening wordt afgebroken"
