@@ -297,6 +297,8 @@
       "cycle cost": 0.01,
       "entity set power feedin": "input_number.feedin_grid",
       "entity set operating mode": "input_select.ess_operating_mode",
+      "entity set operating mode on": "Aan",
+      "entity set operating mode off": "Uit", 
       "entity stop inverter": "input_datetime.stop_victron",
       "entity balance switch": "input_boolean.balanceer_grid",
       "entity from battery": "input_number.growatt_from_battery",
