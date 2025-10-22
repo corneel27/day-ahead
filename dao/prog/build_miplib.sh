@@ -36,5 +36,6 @@ mkdir -p /config/miplib/lib
 cp -a ~/build/prog/lib/*.so* /config/miplib/lib
 
 echo
-echo "All done!"
+echo "All done. Hit any key to exit... (15 minutes timeout)"
+read -s -n 1 -t 900 || true && echo All done, exiting
 
