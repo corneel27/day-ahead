@@ -9,7 +9,7 @@ mysql-connector-python~=9.5.0
 hassapi~=0.2.1
 python-dateutil~=2.9.0.post0
 nordpool~=0.5.0
-entsoe-py~=0.7.7
+entsoe-py~=0.7.8
 beautifulsoup4
 sqlalchemy~=2.0.44
 SQLAlchemy-Utils~=0.42.0
