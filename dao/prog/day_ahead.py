@@ -357,6 +357,7 @@ class DaCalc(DaBase):
 
         CS = []
         DS = []
+        # in kW
         max_charge_power = []
         max_discharge_power = []
         reduced_power = []
@@ -484,7 +485,7 @@ class DaCalc(DaBase):
                 pv_prod_dc[b].append([])
                 pv_prod_ac[b].append([])
                 for u in range(U):
-                    # pv_prod productie van batterij b van solar s in uur u
+                    # pv_prod productie van batterij b van solar s in uur u, in kWh
                     prod_dc = self.calc_prod_solar(
                         self.battery_options[b]["solar"][s],
                         int(tijd[u].timestamp()),
@@ -786,8 +787,9 @@ class DaCalc(DaBase):
                     (dc_from_bat[b][u] * hour_fraction[u] / eff_bat_to_dc[b])
                     / one_soc[b]
                 )
+                # pv_prod_dc is in kWh, pv_prod_dc_sum in kW
                 model += pv_prod_dc_sum[b][u] == xsum(
-                    pv_prod_dc[b][s][u] * pv_dc_on_off[b][s][u]
+                    pv_prod_dc[b][s][u] * pv_dc_on_off[b][s][u] / hour_fraction[u]
                     for s in range(pv_dc_num[b])
                 )
 
@@ -2550,10 +2552,17 @@ class DaCalc(DaBase):
                 else:
                     dc_to_bat_eff = "--"
 
-                if ac_to_dc_netto > 0:
-                    overall_eff = bat_from_dc_netto * 100.0 / ac_to_dc_netto
-                elif bat_from_dc_netto < 0:
-                    overall_eff = ac_to_dc_netto * 100.0 / bat_from_dc_netto
+                pv_prod = 0
+                for s in range(pv_dc_num[b]):
+                    pv_prod += (
+                        pv_dc_on_off[b][s][u].x * pv_prod_dc[b][s][u]
+                    )
+
+
+                if pv_prod > 0:
+                    overall_eff = "--"
+                elif ac_to_dc_netto != 0 and is_number(ac_to_dc_eff) and is_number(dc_to_bat_eff):
+                    overall_eff = ac_to_dc_eff * dc_to_bat_eff / 100
                 else:
                     overall_eff = "--"
 
@@ -2565,11 +2574,6 @@ class DaCalc(DaBase):
                             discharge_stages[ds]["efficiency"] * 100.0
                 """
 
-                pv_prod = 0
-                for s in range(pv_dc_num[b]):
-                    pv_prod += (
-                        pv_dc_on_off[b][s][u].x * pv_prod_dc[b][s][u] * hour_fraction[u]
-                    )
                 row = [
                     str(uur[u]),
                     ac_to_dc_netto,
@@ -2649,7 +2653,7 @@ class DaCalc(DaBase):
             for u in range(U):
                 prod_pc_sum = 0
                 for b in range(B):
-                    prod_pc_sum += pv_prod_dc_sum[b][u].x
+                    prod_pc_sum += pv_prod_dc_sum[b][u].x * hour_fraction[u]
                 row_pv_dc = [tijd_pv[u], prod_pc_sum]
                 df_pv_dc.loc[df_pv_dc.shape[0]] = row_pv_dc
             if not self.debug:

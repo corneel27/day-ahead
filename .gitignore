@@ -8,6 +8,7 @@ dao/data/baseload/*.json
 dao/data/*.db
 dao/data/tst_options
 dao/prog/tst_py
+dao/prog/miplib
 dao/tests
 to_do
 whl
