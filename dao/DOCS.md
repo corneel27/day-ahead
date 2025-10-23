@@ -1290,7 +1290,10 @@ Dit is met name van belang bij hybride omvormers waar naast de invoeding vanuit 
 Wanneer deze instelling wordt weggelaten zal deze instelling 2 x het ontlaadvermogen aan ac-zijde bedragen.
    * cycle cost: afschrijfkosten (in euro) van het laden of ontladen van 1 kWh. Let op, dit wordt meegerekend zowel bij laden als ontladen, halve cycles dus. Als je bijvoorbeeld 12 cent per kWh per hele cycle hanteert vul je hier 0.06 EUR/kWh in.
    * entity set power feedin: entiteit waar je het te laden / ontladen vermogen inzet  
-   * entity set operating mode: entiteit waarmee je het ess aan/uit zet, maak hiervoor een input_select aan met minimaal de opties "Aan" en "Uit"  
+   * entity set operating mode: entiteit waarmee je het ess aan/uit zet, maak hiervoor een input_select aan met minimaal de opties "Aan" en "Uit". Met de opties hieronder kunnen alternatieve waardes worden gezet mocht je entity iets anders dan "Aan" en "Uit" gebruiken
+   * entity set operating mode on: de waarde die wordt verstuurd om de batterij aan te zetten. Standaard "Aan"
+   * entity set operating mode off: de waarde die wordt verstuurd om de batterij uit te zetten. Standaard "Uit"
+     
  Het is aan jou of jij hiermee een automatisering wilt triggeren die de omvormer aan / uit zet.
    * entity stop inverter (was entity stop victron): entiteit waarmee je datum/tijd opgeeft wanneer het ess moet stoppen  
    * entity balance switch: entiteit waarmee je Home Assistant in samenwerking met de omvormer op "balanceren" zet (overrult set power feedin)<br>

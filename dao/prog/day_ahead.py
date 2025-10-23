@@ -3030,18 +3030,24 @@ class DaCalc(DaBase):
                 # vermogen aan ac kant
                 netto_vermogen = int(1000 * (ac_to_dc[b][0].x - ac_from_dc[b][0].x))
                 minimum_power = int(self.battery_options[b]["minimum power"])
+                battery_state_on_value = self.config.get(
+                    ["entity set operating mode on"], self.battery_options[b], "Aan"
+                )
+                battery_state_off_value = entity_pv_switch = self.config.get(
+                    ["entity set operating mode off"], self.battery_options[b], "Uit"
+                )
                 bat_name = self.battery_options[b]["name"]
                 if abs(netto_vermogen) <= 20:
                     netto_vermogen = 0
-                    new_state = "Uit"
+                    new_state = battery_state_off_value
                     stop_omvormer = None
                     balance = False
                 elif abs(c_l[0].x - c_t[0].x) <= 0.01:
-                    new_state = "Aan"
+                    new_state = battery_state_on_value
                     balance = True
                     stop_omvormer = None
                 elif abs(netto_vermogen) < minimum_power:
-                    new_state = "Aan"
+                    new_state = battery_state_on_value
                     balance = False
                     new_ts = (
                         start_dt.timestamp()
@@ -3053,7 +3059,7 @@ class DaCalc(DaBase):
                     else:
                         netto_vermogen = -minimum_power
                 else:
-                    new_state = "Aan"
+                    new_state = battery_state_on_value
                     balance = False
                     stop_omvormer = None
                 if stop_omvormer is None:
