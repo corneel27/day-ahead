@@ -1,0 +1,80 @@
+/* Help Icon Styles */
+.help-icon {
+  font-size: 18px;
+  color: #6c757d;
+  cursor: help;
+  margin-left: 5px;
+  vertical-align: middle;
+  transition: color 0.2s;
+}
+
+.help-icon:hover {
+  color: #007bff;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Help Tooltip */
+.help-tooltip {
+  position: absolute;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
+  z-index: 10000;
+  animation: fadeIn 0.2s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.help-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px 8px 0 0;
+  font-weight: 600;
+}
+
+.help-tooltip-header .material-icons:first-child {
+  font-size: 20px;
+}
+
+.help-tooltip-header span:nth-child(2) {
+  flex: 1;
+  text-transform: capitalize;
+}
+
+.help-tooltip-close {
+  cursor: pointer;
+  font-size: 20px;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.help-tooltip-close:hover {
+  opacity: 1;
+}
+
+.help-tooltip-content {
+  padding: 15px;
+  line-height: 1.6;
+  color: #495057;
+  font-size: 14px;
+}
