@@ -35,6 +35,7 @@ First, clone the repository and navigate to the project directory:
 git clone https://github.com/corneel27/day-ahead.git
 cd day-ahead
 ```
+Alternatively you can use a fork to your own account.
 
 ### 2. Create a Python Virtual Environment
 
@@ -71,7 +72,7 @@ pip install -e .
 
 ### 4. Set Up Configuration Files
 
-The application requires configuration files in the `dao/data/` directory:
+The application requires configuration files in the `dao/data/` directory. Once these files are setup you can modify them through the web interface.
 
 1. Copy the example configuration files:
    ```bash
