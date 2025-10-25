@@ -92,7 +92,7 @@
     "co2_intensity": "Home Assistant sensors for CO2 intensity data (gCO2/kWh)"
   },
   "general": {
-    "strategy": "Optimization strategy to minimize costs or minimize production from grid",
+    "strategy": "The **strategy** setting in the Day Ahead Optimizer determines what the optimizer tries to achieve when calculating how to use your home energy resources (like batteries, solar, or flexible loads).\n\nYou can choose between two modes:\n\n**1. \"minimize cost\" (default)**\n→ The optimizer schedules charging, discharging, and energy use so that your total electricity cost is as low as possible. It buys power when prices are low and sells or avoids buying when prices are high.\n_Goal: save the most money._\n\n**2. \"minimize consumption\"**\n→ The optimizer tries to minimize the amount of energy drawn from the grid, even if that doesn't always yield the lowest cost. It aims for near \"zero on the meter\" by maximizing self-consumption of solar energy and using stored energy efficiently.\n_Goal: reduce dependency on the grid and external energy use._\n\n**In short:**\n• **\"Minimize cost\"** = focuses on financial optimization.\n• **\"Minimize consumption\"** = focuses on energy self-sufficiency.\n\nYou can switch between them dynamically, even via a Home Assistant entity, to adapt automatically to conditions (for example, switch to cost-minimizing mode when energy prices spike).",
     "grid_max_power": "Maximum available grid power connection in kW",
     "interval": "Calculation interval for optimization (15 minutes or hourly)",
     "source_day_ahead": "Source for fetching day-ahead electricity prices (nordpool, entsoe, easyenergy, tibber)",

@@ -19,6 +19,28 @@ function getHelpText(category, field) {
   return 'No help available for this field yet. Please check the documentation.';
 }
 
+// Format help text with support for line breaks, lists, bold, and italic
+function formatHelpText(text) {
+  // Convert newlines to <br>
+  let formatted = text.replace(/\n/g, '<br>');
+  
+  // Convert bullet points (lines starting with • or -) to list items
+  formatted = formatted.replace(/^[•\-]\s+(.+?)(<br>|$)/gm, '<li>$1</li>');
+  
+  // Wrap consecutive <li> items in <ul>
+  formatted = formatted.replace(/(<li>.*?<\/li>)+/g, match => {
+    return '<ul>' + match + '</ul>';
+  });
+  
+  // Convert **text** to bold
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  
+  // Convert *text* or _text_ to italic
+  formatted = formatted.replace(/\*(.+?)\*|_(.+?)_/g, '<em>$1$2</em>');
+  
+  return formatted;
+}
+
 // Create help icon
 function createHelpIcon(category, field) {
   const icon = document.createElement('span');
@@ -47,7 +69,7 @@ function showHelpTooltip(element, category, field) {
       <span class="help-tooltip-close material-icons">close</span>
     </div>
     <div class="help-tooltip-content">
-      ${getHelpText(category, field)}
+      ${formatHelpText(getHelpText(category, field))}
     </div>
   `;
   
