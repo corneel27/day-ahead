@@ -8,6 +8,9 @@
 <!-- Home Assistant Entity Search CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='config_ha_entities.css') }}">
 
+<!-- Upload Modal CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='config_upload.css') }}">
+
 <div class="config-container">
   <input type="hidden" id="current_menu" name="current_menu" value="settings">
   
@@ -23,13 +26,23 @@
     <!-- Action Buttons -->
     <div class="spacer">
       <div class="select action">
-        <span style="display:block; float:left; padding:10px"><b>JSON Editor</b></span>
         <button id="btn-save" class="btn btn_mid" title="Save changes">
-          <img src="static/update.png" alt="save" border="0" style="display:inline-block; height:1em; width:auto;" />
+          <img src="static/update.png" alt="save" border="0" style="display:inline-block; height:1em; width:auto; margin-right: 5px;" />
+          Save
         </button>
         <button id="btn-cancel" class="btn btn_mid" title="Cancel changes">
-          <img src="static/cancel.png" alt="cancel" border="0" style="display:inline-block; height:1em; width:auto;" />
+          <img src="static/cancel.png" alt="cancel" border="0" style="display:inline-block; height:1em; width:auto; margin-right: 5px;" />
+          Cancel
         </button>
+        <button id="btn-download" class="btn btn_mid" title="Download JSON file">
+          <span class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 3px;">download</span>
+          Download
+        </button>
+        <button id="btn-upload" class="btn btn_mid" title="Upload JSON file">
+          <span class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 3px;">upload</span>
+          Upload
+        </button>
+        <input type="file" id="file-upload-input" accept=".json" style="display:none;" />
       </div>
     </div>
   </div>
@@ -40,6 +53,43 @@
   <!-- Unsaved Changes Warning -->
   <div id="unsaved-warning" class="warning-banner" style="display:none;">
     ⚠️ You have unsaved changes. Click Save to persist your changes.
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="upload-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Upload JSON Configuration</h3>
+        <span class="modal-close material-icons">close</span>
+      </div>
+      <div class="modal-body">
+        <div class="upload-tabs">
+          <button class="upload-tab-btn active" data-upload-tab="file">Upload File</button>
+          <button class="upload-tab-btn" data-upload-tab="paste">Paste JSON</button>
+        </div>
+        
+        <div id="upload-tab-file" class="upload-tab-content active">
+          <div class="upload-area" id="drop-zone">
+            <span class="material-icons" style="font-size: 48px; color: #667eea;">cloud_upload</span>
+            <p>Drag and drop a JSON file here</p>
+            <p>or</p>
+            <button class="btn btn-primary" id="btn-browse-file">Browse Files</button>
+            <input type="file" id="modal-file-input" accept=".json" style="display:none;" />
+          </div>
+          <div id="file-preview" style="display:none; margin-top: 15px;">
+            <strong>Selected file:</strong> <span id="file-name"></span>
+          </div>
+        </div>
+        
+        <div id="upload-tab-paste" class="upload-tab-content">
+          <textarea id="json-paste-area" placeholder="Paste your JSON configuration here..." rows="15"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-upload-cancel">Cancel</button>
+        <button class="btn btn-primary" id="btn-upload-confirm">Upload & Apply</button>
+      </div>
+    </div>
   </div>
 
   <div class="clear"></div>
@@ -4244,6 +4294,9 @@
 
 <!-- Home Assistant Entity Search JavaScript -->
 <script src="{{ url_for('static', filename='config_ha_entities.js') }}"></script>
+
+<!-- Upload/Download JavaScript -->
+<script src="{{ url_for('static', filename='config_upload.js') }}"></script>
 
 <script>
   // Initialize Home Assistant entity autocomplete
