@@ -3390,10 +3390,10 @@
       }
     } else if (engine === 'mysql' || engine === 'postgresql') {
       // MySQL/PostgreSQL: need host, port, database, user, password
-      container.appendChild(createTextOption('Host', [pathPrefix, 'host'], 'Database host address'));
+      container.appendChild(createTextOption('Host', [pathPrefix, 'server'], 'Database host address'));
       container.appendChild(createNumberOption('Port', [pathPrefix, 'port'], 'Database port number'));
       container.appendChild(createTextOption('Database', [pathPrefix, 'database'], 'Database name'));
-      container.appendChild(createTextOption('User', [pathPrefix, 'user'], 'Database username'));
+      container.appendChild(createTextOption('User', [pathPrefix, 'username'], 'Database username'));
       container.appendChild(createSecretReferenceOption('Password', [pathPrefix, 'password'], 'Reference to database password secret'));
     }
   }
