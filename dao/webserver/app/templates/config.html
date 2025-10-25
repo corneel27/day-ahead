@@ -305,13 +305,13 @@
           <div class="report-section">
             <h5>Grid Entities</h5>
             <div class="report-entity-group">
-              <label>Grid Consumption Entities:</label>
+              <label data-help-category="reports" data-help-field="grid_consumption">Grid Consumption Entities:</label>
               <div id="report-grid-consumption-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('grid-consumption', 'sensor')">+ Add Entity</button>
             </div>
             
             <div class="report-entity-group">
-              <label>Grid Production Entities:</label>
+              <label data-help-category="reports" data-help-field="grid_production">Grid Production Entities:</label>
               <div id="report-grid-production-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('grid-production', 'sensor')">+ Add Entity</button>
             </div>
@@ -320,13 +320,13 @@
           <div class="report-section">
             <h5>Solar Production Entities</h5>
             <div class="report-entity-group">
-              <label>Solar Production AC Entities:</label>
+              <label data-help-category="reports" data-help-field="solar_ac">Solar Production AC Entities:</label>
               <div id="report-solar-ac-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('solar-ac', 'sensor')">+ Add Entity</button>
             </div>
             
             <div class="report-entity-group">
-              <label>Solar Production DC Entities:</label>
+              <label data-help-category="reports" data-help-field="solar_dc">Solar Production DC Entities:</label>
               <div id="report-solar-dc-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('solar-dc', 'sensor')">+ Add Entity</button>
             </div>
@@ -335,25 +335,25 @@
           <div class="report-section">
             <h5>Device Consumption Entities</h5>
             <div class="report-entity-group">
-              <label>Electric Vehicle Consumption Entities:</label>
+              <label data-help-category="reports" data-help-field="ev_consumption">Electric Vehicle Consumption Entities:</label>
               <div id="report-ev-consumption-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('ev-consumption', 'sensor')">+ Add Entity</button>
             </div>
             
             <div class="report-entity-group">
-              <label>Heat Pump (WP) Consumption Entities:</label>
+              <label data-help-category="reports" data-help-field="wp_consumption">Heat Pump (WP) Consumption Entities:</label>
               <div id="report-wp-consumption-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('wp-consumption', 'sensor')">+ Add Entity</button>
             </div>
             
             <div class="report-entity-group">
-              <label>Boiler Consumption Entities:</label>
+              <label data-help-category="reports" data-help-field="boiler_consumption">Boiler Consumption Entities:</label>
               <div id="report-boiler-consumption-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('boiler-consumption', 'sensor')">+ Add Entity</button>
             </div>
 
             <div class="report-entity-group">
-              <label>Machine Consumption Entities:</label>
+              <label data-help-category="reports" data-help-field="machine_consumption">Machine Consumption Entities:</label>
               <div id="report-machine-consumption-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('machine-consumption', 'sensor')">+ Add Entity</button>
             </div>
@@ -362,13 +362,13 @@
           <div class="report-section">
             <h5>Battery Entities</h5>
             <div class="report-entity-group">
-              <label>Battery Consumption Entities:</label>
+              <label data-help-category="reports" data-help-field="battery_consumption">Battery Consumption Entities:</label>
               <div id="report-battery-consumption-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('battery-consumption', 'sensor')">+ Add Entity</button>
             </div>
             
             <div class="report-entity-group">
-              <label>Battery Production Entities:</label>
+              <label data-help-category="reports" data-help-field="battery_production">Battery Production Entities:</label>
               <div id="report-battery-production-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('battery-production', 'sensor')">+ Add Entity</button>
             </div>
@@ -377,7 +377,7 @@
           <div class="report-section">
             <h5>CO2 Intensity</h5>
             <div class="report-entity-group">
-              <label>CO2 Intensity Entities:</label>
+              <label data-help-category="reports" data-help-field="co2_intensity">CO2 Intensity Entities:</label>
               <div id="report-co2-intensity-list" class="report-entity-list"></div>
               <button type="button" class="btn btn-add-small" onclick="addReportEntity('co2-intensity', 'sensor')">+ Add Entity</button>
             </div>
@@ -3135,9 +3135,9 @@
     
     // Day Ahead Group
     const dayAheadGroup = createOptionGroup('Day Ahead', [
-      createSelectOption('Strategy', ['strategy'], ['minimize cost', 'minimize production'], 'Optimization strategy'),
-      createNumberOption('Grid Max Power (kW)', ['grid', 'max_power'], 'Maximum grid power in kW'),
-      createSelectOption('Interval', ['interval'], ['15min', 'hourly'], 'Calculation interval')
+      createSelectOption('Strategy', ['strategy'], ['minimize cost', 'minimize production'], 'Optimization strategy', 'general', 'strategy'),
+      createNumberOption('Grid Max Power (kW)', ['grid', 'max_power'], 'Maximum grid power in kW', 'general', 'grid_max_power'),
+      createSelectOption('Interval', ['interval'], ['15min', 'hourly'], 'Calculation interval', 'general', 'interval')
     ]);
     
     container.appendChild(dayAheadGroup);
@@ -3148,10 +3148,10 @@
     
     // External Data Group
     const externalDataGroup = createOptionGroup('External Data', [
-      createSelectOption('Source Day Ahead', ['prices', 'source day ahead'], ['nordpool', 'entsoe', 'easyenergy', 'tibber'], 'Day ahead price source'),
-      createSecretReferenceOption('ENTSO-E API Key', ['prices', 'entsoe-api-key'], 'Reference to ENTSO-E API key secret'),
-      createSecretReferenceOption('Meteoserver Key', ['meteoserver-key'], 'Reference to meteoserver API key secret'),
-      createSecretReferenceOption('Tibber API Token', ['tibber', 'api_token'], 'Reference to Tibber API token secret')
+      createSelectOption('Source Day Ahead', ['prices', 'source day ahead'], ['nordpool', 'entsoe', 'easyenergy', 'tibber'], 'Day ahead price source', 'general', 'source_day_ahead'),
+      createSecretReferenceOption('ENTSO-E API Key', ['prices', 'entsoe-api-key'], 'Reference to ENTSO-E API key secret', 'general', 'entsoe_api_key'),
+      createSecretReferenceOption('Meteoserver Key', ['meteoserver-key'], 'Reference to meteoserver API key secret', 'general', 'meteoserver_key'),
+      createSecretReferenceOption('Tibber API Token', ['tibber', 'api_token'], 'Reference to Tibber API token secret', 'general', 'tibber_api_token')
     ]);
     
     container.appendChild(externalDataGroup);
@@ -3164,10 +3164,10 @@
     
     // Home Assistant Group
     const homeassistantGroup = createOptionGroup('Home Assistant', [
-      createTextOption('Host', ['homeassistant', 'host'], 'Home Assistant host address'),
-      createNumberOption('IP Port', ['homeassistant', 'ip port'], 'Home Assistant port number'),
-      createSelectOption('Protocol API', ['homeassistant', 'protocol api'], ['http', 'https'], 'API protocol'),
-      createSecretReferenceOption('Token', ['homeassistant', 'token'], 'Reference to Home Assistant API token secret')
+      createTextOption('Host', ['homeassistant', 'host'], 'Home Assistant host address', 'database', 'ha_host'),
+      createNumberOption('IP Port', ['homeassistant', 'ip port'], 'Home Assistant port number', 'database', 'ha_port'),
+      createSelectOption('Protocol API', ['homeassistant', 'protocol api'], ['http', 'https'], 'API protocol', 'database', 'ha_protocol'),
+      createSecretReferenceOption('Token', ['homeassistant', 'token'], 'Reference to Home Assistant API token secret', 'database', 'ha_token')
     ]);
     
     container.appendChild(homeassistantGroup);
@@ -3197,7 +3197,7 @@
     const currentEngine = getOptionValue([pathPrefix, 'engine']) || 'sqlite';
     
     // Engine selector
-    const engineOption = createSelectOption('Engine', [pathPrefix, 'engine'], ['sqlite', 'mysql', 'postgresql'], 'Database engine type');
+    const engineOption = createSelectOption('Engine', [pathPrefix, 'engine'], ['sqlite', 'mysql', 'postgresql'], 'Database engine type', 'database', 'engine');
     content.appendChild(engineOption);
     
     // Container for dynamic fields
@@ -3236,7 +3236,7 @@
     const isUsingCalc = useCalcBaseload === 'True' || useCalcBaseload === true;
     
     // Toggle for use_calc_baseload
-    const toggleOption = createCheckboxOption('Use Calculated Baseload', ['use_calc_baseload'], 'Calculate baseload from historical data');
+    const toggleOption = createCheckboxOption('Use Calculated Baseload', ['use_calc_baseload'], 'Calculate baseload from historical data', 'general', 'use_calc_baseload');
     content.appendChild(toggleOption);
     
     // Container for dynamic fields
@@ -3262,7 +3262,7 @@
     
     if (useCalc) {
       // Show calculation period
-      container.appendChild(createNumberOption('Baseload Calculation Period (days)', ['baseload calc periode'], 'Number of days to use for calculating baseload'));
+      container.appendChild(createNumberOption('Baseload Calculation Period (days)', ['baseload calc periode'], 'Number of days to use for calculating baseload', 'general', 'baseload_calc_periode'));
     } else {
       // Show 24 hour baseload inputs
       const baseloadArray = getOptionValue(['baseload']) || Array(24).fill(0);
@@ -3321,20 +3321,20 @@
     
     if (engine === 'sqlite') {
       // SQLite: only needs db_path and optionally database name
-      container.appendChild(createTextOption('Database Path', [pathPrefix, 'db_path'], 'Path to database directory'));
+      container.appendChild(createTextOption('Database Path', [pathPrefix, 'db_path'], 'Path to database directory', 'database', 'db_path'));
       
       // Only show database name if it exists in the config (for HA database)
       const dbName = getOptionValue([pathPrefix, 'database']);
       if (dbName !== undefined) {
-        container.appendChild(createTextOption('Database Name', [pathPrefix, 'database'], 'Database filename'));
+        container.appendChild(createTextOption('Database Name', [pathPrefix, 'database'], 'Database filename', 'database', 'database_name'));
       }
     } else if (engine === 'mysql' || engine === 'postgresql') {
       // MySQL/PostgreSQL: need host, port, database, user, password
-      container.appendChild(createTextOption('Host', [pathPrefix, 'server'], 'Database host address'));
-      container.appendChild(createNumberOption('Port', [pathPrefix, 'port'], 'Database port number'));
-      container.appendChild(createTextOption('Database', [pathPrefix, 'database'], 'Database name'));
-      container.appendChild(createTextOption('User', [pathPrefix, 'username'], 'Database username'));
-      container.appendChild(createSecretReferenceOption('Password', [pathPrefix, 'password'], 'Reference to database password secret'));
+      container.appendChild(createTextOption('Host', [pathPrefix, 'server'], 'Database host address', 'database', 'db_host'));
+      container.appendChild(createNumberOption('Port', [pathPrefix, 'port'], 'Database port number', 'database', 'db_port'));
+      container.appendChild(createTextOption('Database', [pathPrefix, 'database'], 'Database name', 'database', 'db_database'));
+      container.appendChild(createTextOption('User', [pathPrefix, 'username'], 'Database username', 'database', 'db_username'));
+      container.appendChild(createSecretReferenceOption('Password', [pathPrefix, 'password'], 'Reference to database password secret', 'database', 'db_password'));
     }
   }
 
@@ -3345,33 +3345,33 @@
     
     // Dashboard Group
     const dashboardGroup = createOptionGroup('Dashboard', [
-      createNumberOption('Port', ['dashboard', 'port'], 'Dashboard web server port'),
-      createSelectOption('Logging Level', ['logging level'], ['debug', 'info', 'warning', 'error'], 'Application logging level'),
-      createNumberOption('History Save Days', ['history', 'save days'], 'Number of days to keep history')
+      createNumberOption('Port', ['dashboard', 'port'], 'Dashboard web server port', 'dashboard', 'port'),
+      createSelectOption('Logging Level', ['logging level'], ['debug', 'info', 'warning', 'error'], 'Application logging level', 'dashboard', 'logging_level'),
+      createNumberOption('History Save Days', ['history', 'save days'], 'Number of days to keep history', 'dashboard', 'history_save_days')
     ]);
     
     container.appendChild(dashboardGroup);
     
     // Graphics Group
     const graphicsGroup = createOptionGroup('Graphics', [
-      createTextOption('Graphical Backend', ['graphical backend'], 'Matplotlib backend (leave empty for default)'),
-      createCheckboxOption('Show Graphics', ['graphics', 'show'], 'Enable or disable graphics generation'),
-      createSelectOption('Style', ['graphics', 'style'], ['Solarize_Light2', 'default', 'seaborn', 'ggplot', 'bmh', 'grayscale', 'dark_background'], 'Matplotlib style'),
-      createCheckboxOption('Average Consumption', ['graphics', 'average consumption'], 'Show average consumption line'),
-      createCheckboxOption('Battery Balance', ['graphics', 'battery balance'], 'Show battery balance graph'),
-      createCheckboxOption('Prices Consumption', ['graphics', 'prices consumption'], 'Show consumption prices'),
-      createCheckboxOption('Prices Production', ['graphics', 'prices production'], 'Show production prices'),
-      createCheckboxOption('Prices Spot', ['graphics', 'prices spot'], 'Show spot prices')
+      createTextOption('Graphical Backend', ['graphical backend'], 'Matplotlib backend (leave empty for default)', 'dashboard', 'graphical_backend'),
+      createCheckboxOption('Show Graphics', ['graphics', 'show'], 'Enable or disable graphics generation', 'dashboard', 'graphics_show'),
+      createSelectOption('Style', ['graphics', 'style'], ['Solarize_Light2', 'default', 'seaborn', 'ggplot', 'bmh', 'grayscale', 'dark_background'], 'Matplotlib style', 'dashboard', 'graphics_style'),
+      createCheckboxOption('Average Consumption', ['graphics', 'average consumption'], 'Show average consumption line', 'dashboard', 'graphics_average_consumption'),
+      createCheckboxOption('Battery Balance', ['graphics', 'battery balance'], 'Show battery balance graph', 'dashboard', 'graphics_battery_balance'),
+      createCheckboxOption('Prices Consumption', ['graphics', 'prices consumption'], 'Show consumption prices', 'dashboard', 'graphics_prices_consumption'),
+      createCheckboxOption('Prices Production', ['graphics', 'prices production'], 'Show production prices', 'dashboard', 'graphics_prices_production'),
+      createCheckboxOption('Prices Spot', ['graphics', 'prices spot'], 'Show spot prices', 'dashboard', 'graphics_prices_spot')
     ]);
     
     container.appendChild(graphicsGroup);
     
     // Notifications Group
     const notificationsGroup = createOptionGroup('Notifications', [
-      createCheckboxOption('Opstarten', ['notifications', 'opstarten'], 'Send notification on startup'),
-      createCheckboxOption('Berekening', ['notifications', 'berekening'], 'Send notification after calculation'),
-      createTextOption('Notification Entity', ['notifications', 'notification entity'], 'Home Assistant notification entity'),
-      createTextOption('Last Activity Entity', ['notifications', 'last activity entity'], 'Home Assistant last activity entity')
+      createCheckboxOption('Opstarten', ['notifications', 'opstarten'], 'Send notification on startup', 'dashboard', 'notifications_opstarten'),
+      createCheckboxOption('Berekening', ['notifications', 'berekening'], 'Send notification after calculation', 'dashboard', 'notifications_berekening'),
+      createTextOption('Notification Entity', ['notifications', 'notification entity'], 'Home Assistant notification entity', 'dashboard', 'notification_entity'),
+      createTextOption('Last Activity Entity', ['notifications', 'last activity entity'], 'Home Assistant last activity entity', 'dashboard', 'last_activity_entity')
     ]);
     
     container.appendChild(notificationsGroup);
@@ -3418,15 +3418,20 @@
   }
 
   // Create a number input option
-  function createNumberOption(label, path, description = '') {
+  function createNumberOption(label, path, description = '', helpCategory = '', helpField = '') {
     const item = document.createElement('div');
     item.className = 'option-item';
     
     const value = getOptionValue(path);
     
+    // Build help attributes
+    const helpAttrs = (helpCategory && helpField) 
+      ? `data-help-category="${escapeHtml(helpCategory)}" data-help-field="${escapeHtml(helpField)}"` 
+      : '';
+    
     item.innerHTML = `
       <div class="option-info">
-        <div class="option-label">${escapeHtml(label)}</div>
+        <div class="option-label" ${helpAttrs}>${escapeHtml(label)}</div>
         ${description ? `<div class="option-description">${escapeHtml(description)}</div>` : ''}
       </div>
       <div class="option-control">
@@ -3444,15 +3449,20 @@
   }
 
   // Create a text input option
-  function createTextOption(label, path, description = '') {
+  function createTextOption(label, path, description = '', helpCategory = '', helpField = '') {
     const item = document.createElement('div');
     item.className = 'option-item';
     
     const value = getOptionValue(path) || '';
     
+    // Build help attributes
+    const helpAttrs = (helpCategory && helpField) 
+      ? `data-help-category="${escapeHtml(helpCategory)}" data-help-field="${escapeHtml(helpField)}"` 
+      : '';
+    
     item.innerHTML = `
       <div class="option-info">
-        <div class="option-label">${escapeHtml(label)}</div>
+        <div class="option-label" ${helpAttrs}>${escapeHtml(label)}</div>
         ${description ? `<div class="option-description">${escapeHtml(description)}</div>` : ''}
       </div>
       <div class="option-control">
@@ -3469,7 +3479,7 @@
   }
 
   // Create a checkbox option
-  function createCheckboxOption(label, path, description = '') {
+  function createCheckboxOption(label, path, description = '', helpCategory = '', helpField = '') {
     const item = document.createElement('div');
     item.className = 'option-item';
     
@@ -3477,9 +3487,14 @@
     // Handle string "True"/"False" or boolean values
     const isChecked = value === 'True' || value === true;
     
+    // Build help attributes
+    const helpAttrs = (helpCategory && helpField) 
+      ? `data-help-category="${escapeHtml(helpCategory)}" data-help-field="${escapeHtml(helpField)}"` 
+      : '';
+    
     item.innerHTML = `
       <div class="option-info">
-        <div class="option-label">${escapeHtml(label)}</div>
+        <div class="option-label" ${helpAttrs}>${escapeHtml(label)}</div>
         ${description ? `<div class="option-description">${escapeHtml(description)}</div>` : ''}
       </div>
       <div class="option-control">
@@ -3503,7 +3518,7 @@
   }
 
   // Create a select dropdown option
-  function createSelectOption(label, path, choices, description = '') {
+  function createSelectOption(label, path, choices, description = '', helpCategory = '', helpField = '') {
     const item = document.createElement('div');
     item.className = 'option-item';
     
@@ -3513,9 +3528,14 @@
       `<option value="${escapeHtml(choice)}" ${choice === value ? 'selected' : ''}>${escapeHtml(choice)}</option>`
     ).join('');
     
+    // Build help attributes
+    const helpAttrs = (helpCategory && helpField) 
+      ? `data-help-category="${escapeHtml(helpCategory)}" data-help-field="${escapeHtml(helpField)}"` 
+      : '';
+    
     item.innerHTML = `
       <div class="option-info">
-        <div class="option-label">${escapeHtml(label)}</div>
+        <div class="option-label" ${helpAttrs}>${escapeHtml(label)}</div>
         ${description ? `<div class="option-description">${escapeHtml(description)}</div>` : ''}
       </div>
       <div class="option-control">
@@ -3534,7 +3554,7 @@
   }
 
   // Create a secret reference option (dropdown with available secrets)
-  function createSecretReferenceOption(label, path, description = '') {
+  function createSecretReferenceOption(label, path, description = '', helpCategory = '', helpField = '') {
     const item = document.createElement('div');
     item.className = 'option-item';
     
@@ -3560,9 +3580,14 @@
       )
     ].join('');
     
+    // Build help attributes
+    const helpAttrs = (helpCategory && helpField) 
+      ? `data-help-category="${escapeHtml(helpCategory)}" data-help-field="${escapeHtml(helpField)}"` 
+      : '';
+    
     item.innerHTML = `
       <div class="option-info">
-        <div class="option-label">${escapeHtml(label)}</div>
+        <div class="option-label" ${helpAttrs}>${escapeHtml(label)}</div>
         ${description ? `<div class="option-description">${escapeHtml(description)}</div>` : ''}
       </div>
       <div class="option-control">
