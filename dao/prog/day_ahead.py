@@ -139,6 +139,8 @@ class DaCalc(DaBase):
                 "DAO calc gestart " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
             )
 
+        prog_data = prog_data.reset_index(drop=True)
+        price_data = price_data.reset_index(drop=True)
         prog_data["da_ex"] = price_data["da_ex"]
         prog_data["da_cons"] = price_data["da_cons"]
         prog_data["da_prod"] = price_data["da_prod"]
@@ -3258,10 +3260,11 @@ class DaCalc(DaBase):
                     start_machine_str = ""
                     for r in range(R[m]):
                         if ma_start[m][r].x == 1:
-                            # print(f"ma_start: run {r} start {ma_start[m][r].x}")
-                            start_machine_str = ma_kw_dt[m][r].strftime(
-                                "%Y-%m-%d %H:%M"
-                            )
+                            if ma_kw_dt[m][r] == start_dt:
+                                ma_start_time = datetime.datetime.now() + datetime.timedelta(seconds=5)
+                            else:
+                                ma_start_time = ma_kw_dt[m][r]
+                            start_machine_str = ma_start_time.strftime("%Y-%m-%d %H:%M")
                             if not (ma_entity_plan_start[m] is None):
                                 if self.debug:
                                     logging.info(
