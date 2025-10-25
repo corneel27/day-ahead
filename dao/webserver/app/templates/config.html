@@ -640,7 +640,7 @@
             <h4>Charge Stages</h4>
             <p class="form-help">Power (W) and efficiency pairs for charging</p>
           </div>
-          <div id="battery-charge-stages-container" class="stages-container">
+          <div id="battery-charge-stages-container" class="stages-container-scrollable">
             <!-- Charge stages will be added here -->
           </div>
           <button id="btn-add-charge-stage" class="btn btn-add">+ Add Charge Stage</button>
@@ -649,7 +649,7 @@
             <h4>Discharge Stages</h4>
             <p class="form-help">Power (W) and efficiency pairs for discharging</p>
           </div>
-          <div id="battery-discharge-stages-container" class="stages-container">
+          <div id="battery-discharge-stages-container" class="stages-container-scrollable">
             <!-- Discharge stages will be added here -->
           </div>
           <button id="btn-add-discharge-stage" class="btn btn-add">+ Add Discharge Stage</button>
@@ -829,7 +829,7 @@
             <h4>Charge Stages</h4>
             <p class="form-help">Ampere and efficiency pairs for charging</p>
           </div>
-          <div id="ev-charge-stages-container" class="stages-container">
+          <div id="ev-charge-stages-container" class="stages-container-scrollable">
             <!-- Charge stages will be added here -->
           </div>
           <button id="btn-add-ev-charge-stage" class="btn btn-add">+ Add Charge Stage</button>
@@ -1903,30 +1903,18 @@
     
     batteryChargeStages.forEach((stage, index) => {
       const stageItem = document.createElement('div');
-      stageItem.className = 'stage-item';
+      stageItem.className = 'stage-item-compact';
       
       stageItem.innerHTML = `
-        <div class="stage-row">
-          <div class="stage-header">
-            <span class="stage-number">Stage ${index + 1}</span>
-            <button class="btn-icon btn-delete-stage" title="Delete stage">
-              <span class="material-icons">delete</span>
-            </button>
-          </div>
-          <div class="stage-fields">
-            <div class="stage-field">
-              <label>Power (W)</label>
-              <input type="number" class="stage-input" value="${stage.power || 0}" data-index="${index}" data-field="power" step="1">
-            </div>
-            <div class="stage-field">
-              <label>Efficiency</label>
-              <input type="number" class="stage-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.001" min="0" max="1">
-            </div>
-          </div>
-        </div>
+        <span class="stage-label">Stage ${index + 1}</span>
+        <label class="stage-inline-label">Power (W):</label>
+        <input type="number" class="stage-inline-input" value="${stage.power || 0}" data-index="${index}" data-field="power" step="1">
+        <label class="stage-inline-label">Efficiency:</label>
+        <input type="number" class="stage-inline-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.001" min="0" max="1">
+        <button class="btn-icon-small btn-delete-stage" title="Delete stage">×</button>
       `;
       
-      const inputs = stageItem.querySelectorAll('.stage-input');
+      const inputs = stageItem.querySelectorAll('.stage-inline-input');
       inputs.forEach(input => {
         input.addEventListener('change', (e) => {
           const idx = parseInt(e.target.dataset.index);
@@ -1951,30 +1939,18 @@
     
     batteryDischargeStages.forEach((stage, index) => {
       const stageItem = document.createElement('div');
-      stageItem.className = 'stage-item';
+      stageItem.className = 'stage-item-compact';
       
       stageItem.innerHTML = `
-        <div class="stage-row">
-          <div class="stage-header">
-            <span class="stage-number">Stage ${index + 1}</span>
-            <button class="btn-icon btn-delete-stage" title="Delete stage">
-              <span class="material-icons">delete</span>
-            </button>
-          </div>
-          <div class="stage-fields">
-            <div class="stage-field">
-              <label>Power (W)</label>
-            <input type="number" class="stage-input" value="${stage.power || 0}" data-index="${index}" data-field="power" step="1">
-          </div>
-            <div class="stage-field">
-              <label>Efficiency</label>
-            <input type="number" class="stage-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.001" min="0" max="1">
-          </div>
-        </div>
-        </div>
+        <span class="stage-label">Stage ${index + 1}</span>
+        <label class="stage-inline-label">Power (W):</label>
+        <input type="number" class="stage-inline-input" value="${stage.power || 0}" data-index="${index}" data-field="power" step="1">
+        <label class="stage-inline-label">Efficiency:</label>
+        <input type="number" class="stage-inline-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.001" min="0" max="1">
+        <button class="btn-icon-small btn-delete-stage" title="Delete stage">×</button>
       `;
       
-      const inputs = stageItem.querySelectorAll('.stage-input');
+      const inputs = stageItem.querySelectorAll('.stage-inline-input');
       inputs.forEach(input => {
         input.addEventListener('change', (e) => {
           const idx = parseInt(e.target.dataset.index);
@@ -1988,12 +1964,10 @@
         batteryDischargeStages.splice(index, 1);
         renderBatteryDischargeStages();
       });
-      
+
       container.appendChild(stageItem);
     });
-  }
-
-  function renderBatteryReducedHours() {
+  }  function renderBatteryReducedHours() {
     const container = document.getElementById('battery-reduced-hours-container');
     container.innerHTML = '';
     
@@ -2409,28 +2383,18 @@
     
     evChargeStages.forEach((stage, index) => {
       const stageItem = document.createElement('div');
-      stageItem.className = 'stage-item';
+      stageItem.className = 'stage-item-compact';
       
       stageItem.innerHTML = `
-        <div class="stage-header">
-          <span class="stage-number">Stage ${index + 1}</span>
-          <button class="btn-icon btn-delete-stage" title="Delete stage">
-            <span class="material-icons">delete</span>
-          </button>
-        </div>
-        <div class="stage-fields">
-          <div class="stage-field">
-            <label>Ampere (A)</label>
-            <input type="number" class="stage-input" value="${stage.ampere || 0}" data-index="${index}" data-field="ampere" step="1">
-          </div>
-          <div class="stage-field">
-            <label>Efficiency</label>
-            <input type="number" class="stage-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.01" min="0" max="1">
-          </div>
-        </div>
+        <span class="stage-label">Stage ${index + 1}</span>
+        <label class="stage-inline-label">Ampere (A):</label>
+        <input type="number" class="stage-inline-input" value="${stage.ampere || 0}" data-index="${index}" data-field="ampere" step="1">
+        <label class="stage-inline-label">Efficiency:</label>
+        <input type="number" class="stage-inline-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.01" min="0" max="1">
+        <button class="btn-icon-small btn-delete-stage" title="Delete stage">×</button>
       `;
       
-      const inputs = stageItem.querySelectorAll('.stage-input');
+      const inputs = stageItem.querySelectorAll('.stage-inline-input');
       inputs.forEach(input => {
         input.addEventListener('change', (e) => {
           const idx = parseInt(e.target.dataset.index);
@@ -5917,6 +5881,78 @@
   }
 
   .btn-delete-hour:hover {
+    color: #c82333;
+  }
+
+  /* Compact stage item styles */
+  .stages-container-scrollable {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #f8f9fa;
+  }
+
+  .stage-item-compact {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+
+  .stage-item-compact:last-child {
+    margin-bottom: 0;
+  }
+
+  .stage-label {
+    font-weight: 600;
+    min-width: 60px;
+    color: #495057;
+  }
+
+  .stage-inline-label {
+    font-weight: 500;
+    color: #6c757d;
+    white-space: nowrap;
+    margin: 0;
+  }
+
+  .stage-inline-input {
+    width: 100px;
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+    font-size: 13px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  }
+
+  .stage-inline-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+  }
+
+  .btn-icon-small {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 8px;
+    color: #dc3545;
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 1;
+    margin-left: auto;
+    transition: color 0.2s;
+  }
+
+  .btn-icon-small:hover {
     color: #c82333;
   }
 </style>
