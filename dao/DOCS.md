@@ -733,6 +733,9 @@ Het is allemaal optioneel.
 |                           | bat_to_dc max power          | getal            | 2 x max power discharge            | W                                                  |
 |                           | cycle cost                   | getal            |                                    | euro                                               |
 |                           | entity set power feedin      | string           |                                    | input_number                                       |
+|                           | entity set operating mode    | string           |                                    | input_select                                       |
+|                           | entity set operating mode on | string           |                                    | default = "Aan" indien niet gedefineerd            |
+|                           | entity set operating mode off| string           |                                    | default = "Uit" indien niet gedefinieerd           |
 |                           | entity stop inverter         | string           |                                    | input_datetime                                     |
 |                           | entity balance switch        | string           |                                    | input_boolean                                      |
 |                           | solar                        | list             |                                    | 0, 1 of meer {..} pv_dc, zie solar (pv_ac)         | 
