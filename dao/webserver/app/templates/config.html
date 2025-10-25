@@ -1235,8 +1235,8 @@
     const boilerGroup = createOptionGroup('Boiler Configuration', [
       createCheckboxOption('Boiler Present', ['boiler', 'boiler present'], 'Enable boiler optimisation'),
       createTextOption('Entity Actual Temperature', ['boiler', 'entity actual temp.'], 'Home Assistant sensor for actual temperature'),
-      createTextOption('Entity Setpoint', ['boiler', 'entity setpoint'], 'Home Assistant sensor for setpoint temperature'),
-      createTextOption('Entity Hysterese', ['boiler', 'entity hysterese'], 'Home Assistant sensor for hysteresis'),
+      createFlexNumberOption('Setpoint (°C)', ['boiler', 'setpoint'], 'Target temperature for water heater (flex setting: can be direct value or HA entity)', 0, 100, 0.1, 'boiler', 'boiler_setpoint'),
+      createFlexNumberOption('Hysterese (°C)', ['boiler', 'hysterese'], 'Temperature hysteresis for heating control (flex setting: can be direct value or HA entity)', 0, 20, 0.1, 'boiler', 'boiler_hysterese'),
       createNumberOption('COP (Coefficient of Performance)', ['boiler', 'cop'], 'Heat pump efficiency coefficient'),
       createNumberOption('Cooling Rate (°C/hour)', ['boiler', 'cooling rate'], 'Temperature drop per hour when not heating'),
       createNumberOption('Volume (liters)', ['boiler', 'volume'], 'Water tank volume in liters'),
@@ -1261,7 +1261,7 @@
     const basicGroup = createOptionGroup('Heating Configuration', [
       createCheckboxOption('Heater Present', ['heating', 'heater present'], 'Enable heating optimisation'),
       createTextOption('Entity HP Enabled', ['heating', 'entity hp enabled'], 'Home Assistant binary sensor for heat pump status'),
-      createNumberOption('Degree Days Factor', ['heating', 'degree days factor'], 'Factor for degree days calculation'),
+      createFlexNumberOption('Degree Days Factor (kWh/K.day)', ['heating', 'degree days factor'], 'Thermal kWh needed per degree-day with 16°C reference (flex setting: can be direct value or HA entity)', 0, null, 0.01, 'heating', 'degree_days_factor'),
       createSelectOption('Adjustment Method', ['heating', 'adjustment'], ['on/off', 'power', 'heating curve'], 'Heating adjustment method'),
       createTextOption('Entity Adjust Heating Curve', ['heating', 'entity adjust heating curve'], 'Home Assistant entity for heating curve adjustment'),
       createNumberOption('Adjustment Factor', ['heating', 'adjustment factor'], 'Factor for heating curve adjustment')
@@ -3185,9 +3185,10 @@
     
     // Day Ahead Group
     const dayAheadGroup = createOptionGroup('Day Ahead', [
-      createSelectOption('Strategy', ['strategy'], ['minimize cost', 'minimize production'], 'Optimization strategy', 'general', 'strategy'),
+      createFlexSelectOption('Strategy', ['strategy'], ['minimize cost', 'minimize consumption'], 'Optimization strategy (can be set directly or retrieved from Home Assistant entity)', 'general', 'strategy'),
       createNumberOption('Grid Max Power (kW)', ['grid', 'max_power'], 'Maximum grid power in kW', 'general', 'grid_max_power'),
-      createSelectOption('Interval', ['interval'], ['15min', 'hourly'], 'Calculation interval', 'general', 'interval')
+      createSelectOption('Interval', ['interval'], ['15min', 'hourly'], 'Calculation interval', 'general', 'interval'),
+      createFlexNumberOption('Max Gap', ['max gap'], 'Maximum optimization gap - calculation stops when difference between iterations is smaller than this value (default: 0.005)', 0.00001, 1.0, 0.00001, 'general', 'max_gap')
     ]);
     
     container.appendChild(dayAheadGroup);
@@ -3597,6 +3598,241 @@
     
     const select = item.querySelector('select');
     select.addEventListener('change', (e) => {
+      setOptionValue(path, e.target.value);
+    });
+    
+    return item;
+  }
+
+  // Create a flex setting option (can be either a dropdown selection or a Home Assistant entity)
+  function createFlexSelectOption(label, path, choices, description = '', helpCategory = '', helpField = '') {
+    const item = document.createElement('div');
+    item.className = 'option-item flex-option-item';
+    
+    const value = getOptionValue(path);
+    
+    // Determine if current value is an entity (not in choices list) or a direct value
+    const isEntity = value && typeof value === 'string' && !choices.includes(value);
+    const inputMode = isEntity ? 'entity' : 'select';
+    
+    const optionsHtml = choices.map(choice => 
+      `<option value="${escapeHtml(choice)}" ${choice === value && !isEntity ? 'selected' : ''}>${escapeHtml(choice)}</option>`
+    ).join('');
+    
+    // Build help attributes
+    const helpAttrs = (helpCategory && helpField) 
+      ? `data-help-category="${escapeHtml(helpCategory)}" data-help-field="${escapeHtml(helpField)}"` 
+      : '';
+    
+    // Generate unique ID for entity input
+    const uniqueId = `flex-entity-${path.join('-')}-${Date.now()}`;
+    
+    item.innerHTML = `
+      <div class="option-info">
+        <div class="option-label" ${helpAttrs}>${escapeHtml(label)}</div>
+        ${description ? `<div class="option-description">${escapeHtml(description)}</div>` : ''}
+        <div class="flex-mode-switch" style="margin-top: 5px; font-size: 0.85em;">
+          <label style="cursor: pointer; margin-right: 10px;">
+            <input type="radio" name="flex-mode-${path.join('-')}" value="select" ${!isEntity ? 'checked' : ''} style="margin-right: 3px;">
+            Direct value
+          </label>
+          <label style="cursor: pointer;">
+            <input type="radio" name="flex-mode-${path.join('-')}" value="entity" ${isEntity ? 'checked' : ''} style="margin-right: 3px;">
+            Home Assistant entity
+          </label>
+        </div>
+      </div>
+      <div class="option-control">
+        <select class="option-select flex-select" data-path="${path.join('.')}" style="${isEntity ? 'display: none;' : ''}">
+          ${optionsHtml}
+        </select>
+        <input type="text" id="${uniqueId}" class="option-input flex-entity" data-path="${path.join('.')}" 
+               value="${isEntity ? escapeHtml(value) : ''}" 
+               placeholder="e.g., input_select.strategy or sensor.strategy"
+               style="${!isEntity ? 'display: none;' : ''}">
+      </div>
+    `;
+    
+    const select = item.querySelector('.flex-select');
+    const input = item.querySelector('.flex-entity');
+    const radioButtons = item.querySelectorAll('input[type="radio"]');
+    
+    // Attach entity search autocomplete to the entity input
+    if (window.haEntitySearch && input) {
+      // Attach after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        window.haEntitySearch.attachAutocomplete(input, '', {
+          minChars: 2,
+          placeholder: 'Type to search entities...'
+        });
+        
+        // Hide the wrapper initially if we're in direct value mode
+        if (!isEntity) {
+          const wrapper = input.parentElement;
+          if (wrapper && wrapper.classList.contains('entity-autocomplete-wrapper')) {
+            wrapper.style.display = 'none';
+          }
+        }
+      }, 100);
+    }
+    
+    // Handle mode switching
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.value === 'select') {
+          select.style.display = '';
+          input.style.display = 'none';
+          // Hide the wrapper (with search icon) by hiding the parent if it's a wrapper
+          const wrapper = input.parentElement;
+          if (wrapper && wrapper.classList.contains('entity-autocomplete-wrapper')) {
+            wrapper.style.display = 'none';
+            select.style.display = '';
+          }
+          setOptionValue(path, select.value);
+        } else {
+          select.style.display = 'none';
+          // Show the wrapper (with search icon)
+          const wrapper = input.parentElement;
+          if (wrapper && wrapper.classList.contains('entity-autocomplete-wrapper')) {
+            wrapper.style.display = '';
+            input.style.display = '';
+          } else {
+            input.style.display = '';
+          }
+          if (input.value) {
+            setOptionValue(path, input.value);
+          }
+        }
+      });
+    });
+    
+    // Handle select change
+    select.addEventListener('change', (e) => {
+      setOptionValue(path, e.target.value);
+    });
+    
+    // Handle entity input change
+    input.addEventListener('change', (e) => {
+      setOptionValue(path, e.target.value);
+    });
+    
+    return item;
+  }
+
+  // Create a flex number option (can be either a direct number or a Home Assistant entity)
+  function createFlexNumberOption(label, path, description = '', min = null, max = null, step = 'any', helpCategory = '', helpField = '') {
+    const item = document.createElement('div');
+    item.className = 'option-item flex-option-item';
+    
+    const value = getOptionValue(path);
+    
+    // Determine if current value is an entity or a direct number
+    const isEntity = value && typeof value === 'string' && isNaN(parseFloat(value));
+    const numericValue = !isEntity && value !== null && value !== undefined ? value : '';
+    const entityValue = isEntity ? value : '';
+    
+    // Build help attributes
+    const helpAttrs = (helpCategory && helpField) 
+      ? `data-help-category="${escapeHtml(helpCategory)}" data-help-field="${escapeHtml(helpField)}"` 
+      : '';
+    
+    // Generate unique ID for entity input
+    const uniqueId = `flex-entity-${path.join('-')}-${Date.now()}`;
+    
+    // Build number input attributes
+    let numberAttrs = `type="number" step="${step}"`;
+    if (min !== null) numberAttrs += ` min="${min}"`;
+    if (max !== null) numberAttrs += ` max="${max}"`;
+    
+    item.innerHTML = `
+      <div class="option-info">
+        <div class="option-label" ${helpAttrs}>${escapeHtml(label)}</div>
+        ${description ? `<div class="option-description">${escapeHtml(description)}</div>` : ''}
+        <div class="flex-mode-switch" style="margin-top: 5px; font-size: 0.85em;">
+          <label style="cursor: pointer; margin-right: 10px;">
+            <input type="radio" name="flex-mode-${path.join('-')}" value="number" ${!isEntity ? 'checked' : ''} style="margin-right: 3px;">
+            Direct value
+          </label>
+          <label style="cursor: pointer;">
+            <input type="radio" name="flex-mode-${path.join('-')}" value="entity" ${isEntity ? 'checked' : ''} style="margin-right: 3px;">
+            Home Assistant entity
+          </label>
+        </div>
+      </div>
+      <div class="option-control">
+        <input ${numberAttrs} class="option-input flex-number" data-path="${path.join('.')}" 
+               value="${escapeHtml(numericValue)}" 
+               style="${isEntity ? 'display: none;' : ''}">
+        <input type="text" id="${uniqueId}" class="option-input flex-entity" data-path="${path.join('.')}" 
+               value="${escapeHtml(entityValue)}" 
+               placeholder="e.g., input_number.setting or sensor.value"
+               style="${!isEntity ? 'display: none;' : ''}">
+      </div>
+    `;
+    
+    const numberInput = item.querySelector('.flex-number');
+    const entityInput = item.querySelector('.flex-entity');
+    const radioButtons = item.querySelectorAll('input[type="radio"]');
+    
+    // Attach entity search autocomplete to the entity input
+    if (window.haEntitySearch && entityInput) {
+      // Attach after a short delay to ensure DOM is ready
+      setTimeout(() => {
+        window.haEntitySearch.attachAutocomplete(entityInput, '', {
+          minChars: 2,
+          placeholder: 'Type to search entities...'
+        });
+        
+        // Hide the wrapper initially if we're in direct value mode
+        if (!isEntity) {
+          const wrapper = entityInput.parentElement;
+          if (wrapper && wrapper.classList.contains('entity-autocomplete-wrapper')) {
+            wrapper.style.display = 'none';
+          }
+        }
+      }, 100);
+    }
+    
+    // Handle mode switching
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.value === 'number') {
+          numberInput.style.display = '';
+          // Hide the wrapper (with search icon)
+          const wrapper = entityInput.parentElement;
+          if (wrapper && wrapper.classList.contains('entity-autocomplete-wrapper')) {
+            wrapper.style.display = 'none';
+            numberInput.style.display = '';
+          } else {
+            entityInput.style.display = 'none';
+          }
+          const val = parseFloat(numberInput.value);
+          setOptionValue(path, isNaN(val) ? 0 : val);
+        } else {
+          numberInput.style.display = 'none';
+          // Show the wrapper (with search icon)
+          const wrapper = entityInput.parentElement;
+          if (wrapper && wrapper.classList.contains('entity-autocomplete-wrapper')) {
+            wrapper.style.display = '';
+            entityInput.style.display = '';
+          } else {
+            entityInput.style.display = '';
+          }
+          if (entityInput.value) {
+            setOptionValue(path, entityInput.value);
+          }
+        }
+      });
+    });
+    
+    // Handle number input change
+    numberInput.addEventListener('change', (e) => {
+      const val = parseFloat(e.target.value);
+      setOptionValue(path, isNaN(val) ? 0 : val);
+    });
+    
+    // Handle entity input change
+    entityInput.addEventListener('change', (e) => {
       setOptionValue(path, e.target.value);
     });
     
@@ -5157,7 +5393,7 @@
     margin-bottom: 20px;
     border: 1px solid #dee2e6;
     border-radius: 4px;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .option-group-header {
@@ -5167,10 +5403,12 @@
     font-size: 14px;
     color: #333;
     border-bottom: 1px solid #dee2e6;
+    border-radius: 4px 4px 0 0;
   }
 
   .option-group-content {
     background-color: white;
+    border-radius: 0 0 4px 4px;
   }
 
   .option-item {
@@ -5214,6 +5452,7 @@
     align-items: center;
     min-width: 200px;
     justify-content: flex-end;
+    position: relative;
   }
 
   .option-input,
@@ -5256,6 +5495,63 @@
     font-size: 14px;
     color: #495057;
     user-select: none;
+  }
+
+  /* Flex Setting Styles */
+  .flex-option-item .option-info {
+    flex: 1.5;
+  }
+
+  .flex-mode-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+  }
+
+  .flex-mode-switch label {
+    display: flex;
+    align-items: center;
+    font-size: 0.85em;
+    color: #6c757d;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+  }
+
+  .flex-mode-switch label:hover {
+    color: #495057;
+  }
+
+  .flex-mode-switch input[type="radio"] {
+    margin-right: 3px;
+    cursor: pointer;
+  }
+
+  .flex-mode-switch input[type="radio"]:checked + span {
+    color: #007bff;
+    font-weight: 500;
+  }
+
+  .flex-option-item .option-control {
+    min-width: 250px;
+  }
+
+  /* Entity autocomplete wrapper in flex controls */
+  .flex-option-item .entity-autocomplete-wrapper {
+    display: inline-block;
+    width: 100%;
+  }
+
+  .flex-entity {
+    font-family: 'Courier New', monospace;
+    color: #0066cc;
+  }
+
+  .flex-entity::placeholder {
+    font-family: 'Courier New', monospace;
+    color: #999;
+    font-style: italic;
   }
 
   /* Secrets UI Styles */
