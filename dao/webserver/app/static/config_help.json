@@ -10,13 +10,13 @@
   },
   "battery": {
     "name": "Battery name for identification",
-    "entity_level": "Entity showing current battery state of charge (%)",
+    "entity_level": "Home Assistant entity showing current battery state of charge (%)",
     "capacity": "Total battery capacity in kWh",
     "upper_limit": "Maximum allowed charge level (%)",
     "lower_limit": "Minimum allowed discharge level (%)",
     "optimal_lower": "Optimal minimum level for battery health (%)",
-    "entity_min_soc": "Entity for minimum SOC at optimization end",
-    "entity_max_soc": "Entity for maximum SOC at optimization end",
+    "entity_min_soc": "Home Assistant entity for minimum SOC at optimization end",
+    "entity_max_soc": "Home Assistant entity for maximum SOC at optimization end",
     "charge_stages": "Power and efficiency pairs for different charging rates",
     "discharge_stages": "Power and efficiency pairs for different discharging rates",
     "reduced_hours": "Power limitations for specific hours (hour: max_power)",
@@ -26,42 +26,42 @@
     "bat_to_dc_efficiency": "Efficiency converting battery to DC (%)",
     "bat_to_dc_power": "Maximum battery to DC power (W)",
     "cycle_cost": "Cost per battery cycle for degradation calculation (€)",
-    "entity_power_feedin": "Entity to control grid feed-in power",
-    "entity_operating_mode": "Entity to set battery operating mode",
-    "entity_stop_inverter": "Entity to stop inverter at specific time",
-    "entity_balance_switch": "Entity to enable/disable grid balancing",
-    "entity_from_battery": "Entity tracking power from battery",
-    "entity_from_pv": "Entity tracking power from PV",
-    "entity_from_ac": "Entity tracking power from AC",
-    "entity_calculated_soc": "Entity for calculated state of charge",
+    "entity_power_feedin": "Home Assistant entity to control grid feed-in power",
+    "entity_operating_mode": "Home Assistant entity to set battery operating mode",
+    "entity_stop_inverter": "Home Assistant entity to stop inverter at specific time",
+    "entity_balance_switch": "Home Assistant entity to enable/disable grid balancing",
+    "entity_from_battery": "Home Assistant entity tracking power from battery",
+    "entity_from_pv": "Home Assistant entity tracking power from PV",
+    "entity_from_ac": "Home Assistant entity tracking power from AC",
+    "entity_calculated_soc": "Home Assistant entity for calculated state of charge",
     "solar": "DC-connected solar panels directly to battery"
   },
   "ev": {
     "name": "Electric vehicle name/model",
     "capacity": "Battery capacity in kWh",
     "entity_position": "Device tracker entity for vehicle location",
-    "entity_max_amperage": "Entity showing maximum charging amperage",
+    "entity_max_amperage": "Home Assistant entity showing maximum charging amperage",
     "charge_three_phase": "Three-phase charging capability (True/False)",
     "charge_stages": "Amperage and efficiency pairs for charging levels",
-    "entity_actual_level": "Entity showing current battery level (%)",
+    "entity_actual_level": "Home Assistant entity showing current battery level (%)",
     "entity_plugged_in": "Binary sensor indicating if vehicle is plugged in",
     "charge_switch": "Switch to enable/disable charging",
-    "entity_set_charging_ampere": "Entity to set charging current",
-    "entity_stop_charging": "Entity to stop charging at specific time",
-    "scheduler_entity_set_level": "Entity to set desired charge level for scheduler",
+    "entity_set_charging_ampere": "Home Assistant entity to set charging current",
+    "entity_stop_charging": "Home Assistant entity to stop charging at specific time",
+    "scheduler_entity_set_level": "Home Assistant entity to set desired charge level for scheduler",
     "scheduler_level_margin": "Margin around target level for scheduler (%)",
-    "scheduler_entity_ready_datetime": "Entity for when vehicle should be ready"
+    "scheduler_entity_ready_datetime": "Home Assistant entity for when vehicle should be ready"
   },
   "machine": {
     "name": "Machine name (washing machine, dishwasher, etc.)",
     "programs": "Different programs with power consumption patterns",
     "program_name": "Program name (e.g., eco, normal, intensive)",
     "program_power": "Power consumption pattern in Watts per interval",
-    "entity_start_window": "Entity for earliest start time",
-    "entity_end_window": "Entity for latest end time",
+    "entity_start_window": "Home Assistant entity for earliest start time",
+    "entity_end_window": "Home Assistant entity for latest end time",
     "entity_selected_program": "Input select entity for program selection",
-    "entity_calculated_start": "Entity showing calculated optimal start time",
-    "entity_calculated_end": "Entity showing calculated end time"
+    "entity_calculated_start": "Home Assistant entity showing calculated optimal start time",
+    "entity_calculated_end": "Home Assistant entity showing calculated end time"
   },
   "prices": {
     "source": "Source for day-ahead prices (nordpool, entsoe, epex)",
@@ -121,7 +121,7 @@
     "heating_allowed_below": "Temperature below which heating is allowed",
     "elec_power": "Electrical power consumption in Watts",
     "activate_service": "Service call method (press, call, etc.)",
-    "activate_entity": "Entity to activate heating"
+    "activate_entity": "Home Assistant entity to activate heating"
   },
   "heating": {
     "heater_present": "Heat pump present (True/False)",
@@ -131,7 +131,7 @@
     "stages": "Power and COP pairs for different heating stages",
     "max_power": "Maximum power for this stage (W)",
     "cop": "Coefficient of Performance at this stage",
-    "entity_adjust_heating_curve": "Entity to adjust heating curve",
+    "entity_adjust_heating_curve": "Home Assistant entity to adjust heating curve",
     "adjustment_factor": "Factor for heating curve adjustment"
   }
 }
