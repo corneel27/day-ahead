@@ -1925,20 +1925,22 @@
       stageItem.className = 'stage-item';
       
       stageItem.innerHTML = `
-        <div class="stage-header">
-          <span class="stage-number">Stage ${index + 1}</span>
-          <button class="btn-icon btn-delete-stage" title="Delete stage">
-            <span class="material-icons">delete</span>
-          </button>
-        </div>
-        <div class="stage-fields">
-          <div class="stage-field">
-            <label>Power (W)</label>
-            <input type="number" class="stage-input" value="${stage.power || 0}" data-index="${index}" data-field="power" step="1">
+        <div class="stage-row">
+          <div class="stage-header">
+            <span class="stage-number">Stage ${index + 1}</span>
+            <button class="btn-icon btn-delete-stage" title="Delete stage">
+              <span class="material-icons">delete</span>
+            </button>
           </div>
-          <div class="stage-field">
-            <label>Efficiency</label>
-            <input type="number" class="stage-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.001" min="0" max="1">
+          <div class="stage-fields">
+            <div class="stage-field">
+              <label>Power (W)</label>
+              <input type="number" class="stage-input" value="${stage.power || 0}" data-index="${index}" data-field="power" step="1">
+            </div>
+            <div class="stage-field">
+              <label>Efficiency</label>
+              <input type="number" class="stage-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.001" min="0" max="1">
+            </div>
           </div>
         </div>
       `;
@@ -1971,21 +1973,23 @@
       stageItem.className = 'stage-item';
       
       stageItem.innerHTML = `
-        <div class="stage-header">
-          <span class="stage-number">Stage ${index + 1}</span>
-          <button class="btn-icon btn-delete-stage" title="Delete stage">
-            <span class="material-icons">delete</span>
-          </button>
-        </div>
-        <div class="stage-fields">
-          <div class="stage-field">
-            <label>Power (W)</label>
+        <div class="stage-row">
+          <div class="stage-header">
+            <span class="stage-number">Stage ${index + 1}</span>
+            <button class="btn-icon btn-delete-stage" title="Delete stage">
+              <span class="material-icons">delete</span>
+            </button>
+          </div>
+          <div class="stage-fields">
+            <div class="stage-field">
+              <label>Power (W)</label>
             <input type="number" class="stage-input" value="${stage.power || 0}" data-index="${index}" data-field="power" step="1">
           </div>
-          <div class="stage-field">
-            <label>Efficiency</label>
+            <div class="stage-field">
+              <label>Efficiency</label>
             <input type="number" class="stage-input" value="${stage.efficiency || 1}" data-index="${index}" data-field="efficiency" step="0.001" min="0" max="1">
           </div>
+        </div>
         </div>
       `;
       
@@ -5602,42 +5606,65 @@
     color: #c82333;
   }
 
-  .stage-fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-  }
+  /* Put header and fields on one row */
+.stage-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: nowrap;
+  margin-bottom: 10px;
+}
 
-  .stage-field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
+/* Stage number + delete button */
+.stage-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 20px; /* optional — ensures consistent spacing */
+}
 
-  .stage-field label {
-    font-size: 13px;
-    font-weight: 500;
-    color: #495057;
-  }
+/* Fields container — now inline instead of grid */
+.stage-fields {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1; /* take remaining space */
+}
 
-  .stage-input {
-    padding: 8px 10px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 14px;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  }
+/* Each field remains vertical (label + input) */
+.stage-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
 
-  .stage-input:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-  }
+/* Label styling */
+.stage-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #495057;
+}
 
-  .stage-input:hover {
-    border-color: #adb5bd;
-  }
+/* Input styling */
+.stage-input {
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.stage-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.stage-input:hover {
+  border-color: #adb5bd;
+}
+
 
   /* Solar Modal Styles */
   .modal-large {
