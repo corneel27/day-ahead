@@ -75,10 +75,39 @@ function showHelpTooltip(element, category, field) {
   
   document.body.appendChild(tooltip);
   
-  // Position tooltip
+  // Position tooltip with viewport boundary checking
   const rect = element.getBoundingClientRect();
-  tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
-  tooltip.style.left = `${rect.left + window.scrollX}px`;
+  const tooltipRect = tooltip.getBoundingClientRect();
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
+  
+  // Calculate initial position (below the element)
+  let top = rect.bottom + window.scrollY + 5;
+  let left = rect.left + window.scrollX;
+  
+  // Check if tooltip would go below viewport
+  if (rect.bottom + tooltipRect.height + 5 > viewportHeight) {
+    // Position above the element instead
+    top = rect.top + window.scrollY - tooltipRect.height - 5;
+    
+    // If it still doesn't fit above, position at the top of viewport
+    if (top < window.scrollY) {
+      top = window.scrollY + 10;
+    }
+  }
+  
+  // Check if tooltip would go beyond right edge of viewport
+  if (left + tooltipRect.width > viewportWidth) {
+    left = viewportWidth - tooltipRect.width - 10;
+  }
+  
+  // Check if tooltip would go beyond left edge of viewport
+  if (left < window.scrollX) {
+    left = window.scrollX + 10;
+  }
+  
+  tooltip.style.top = `${top}px`;
+  tooltip.style.left = `${left}px`;
   
   // Close button
   tooltip.querySelector('.help-tooltip-close').onclick = () => {
