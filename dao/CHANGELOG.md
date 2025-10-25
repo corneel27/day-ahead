@@ -1,5 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.6
+- Correct time-error with transition day light saving
+- Added extra check missing price-data, error-logging and stop calculation (idea from @balk)
+- Extra check op "plugged in" and "home" for warning "te weinig tijd"
+- Correct wrong pv->dc calculation
+- Added mapping for "Aan" and "Uit" for "entity set operating mode" (thanks @CopyCatz)
+- Moved remote resources for webpages to local (thanks @simnet)
+- Updated several used pyhton-modules
+
+
 # 2025.10.5
 This version is identical with testversion 2025.10.5.rc6<br>
 Changed:
