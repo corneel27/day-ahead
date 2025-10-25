@@ -49,17 +49,27 @@
     <div class="options-ui">
       <!-- Options Sub-tabs -->
       <div class="options-tabs">
-        <button class="option-tab-btn active" data-option-tab="optimisations">Optimisations</button>
-        <button class="option-tab-btn" data-option-tab="general">General</button>
+        <button class="option-tab-btn active" data-option-tab="general">General</button>
         <button class="option-tab-btn" data-option-tab="database">Database</button>
         <button class="option-tab-btn" data-option-tab="dashboard">Dashboard</button>
         <button class="option-tab-btn" data-option-tab="prices">Prices</button>
+        <button class="option-tab-btn" data-option-tab="optimisations">Optimisations</button>
         <button class="option-tab-btn" data-option-tab="reports">Reports</button>
         <button class="option-tab-btn" data-option-tab="scheduler">Scheduler</button>
       </div>
       
+      <!-- General Options -->
+      <div id="options-general" class="option-tab-content" style="display:block;">
+        <div class="option-section">
+          <h4>General Configuration</h4>
+          <div class="options-list">
+            <!-- General options will be dynamically added here -->
+          </div>
+        </div>
+      </div>
+      
       <!-- Optimisations Options -->
-      <div id="options-optimisations" class="option-tab-content" style="display:block;">
+      <div id="options-optimisations" class="option-tab-content" style="display:none;">
         <div class="option-section">
           <h4>Optimisation Configuration</h4>
           
@@ -135,16 +145,6 @@
         </div>
       </div>
       
-      <!-- General Options -->
-      <div id="options-general" class="option-tab-content" style="display:none;">
-        <div class="option-section">
-          <h4>General Configuration</h4>
-          <div class="options-list">
-            <!-- General options will be dynamically added here -->
-          </div>
-        </div>
-      </div>
-      
       <!-- Database Options -->
       <div id="options-database" class="option-tab-content" style="display:none;">
         <div class="option-section">
@@ -172,21 +172,20 @@
           <p class="form-help">Configure energy pricing, taxes, and supplier costs</p>
           
           <div class="prices-section">
-            <h5>Day Ahead Pricing</h5>
-            <div class="form-group">
-              <label for="prices-source" data-help-category="prices" data-help-field="source">Source Day Ahead:</label>
-              <select id="prices-source" class="form-input">
-                <option value="nordpool">Nord Pool</option>
-                <option value="entsoe">ENTSO-E</option>
-                <option value="epex">EPEX</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label for="prices-entsoe-key" data-help-category="prices" data-help-field="entsoe_key">ENTSO-E API Key:</label>
-              <p class="form-help">Reference to ENTSO-E API key secret (e.g., !secret entsoe-api-key)</p>
-              <input type="text" id="prices-entsoe-key" class="form-input" 
-                     placeholder="!secret entsoe-api-key">
+            <h5>Invoice Settings</h5>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="prices-last-invoice" data-help-category="prices" data-help-field="last_invoice">Last Invoice Date:</label>
+                <input type="date" id="prices-last-invoice" class="form-input">
+              </div>
+              
+              <div class="form-group">
+                <label for="prices-tax-refund" data-help-category="prices" data-help-field="tax_refund">Tax Refund:</label>
+                <select id="prices-tax-refund" class="form-input">
+                  <option value="False">False</option>
+                  <option value="True">True</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -291,24 +290,6 @@
                 <button class="btn btn-secondary btn-json-edit" onclick="openJSONEditor('prices-vat-production', 'VAT Production')">
                   <span class="material-icons">edit</span> Edit
                 </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="prices-section">
-            <h5>Invoice Settings</h5>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="prices-last-invoice" data-help-category="prices" data-help-field="last_invoice">Last Invoice Date:</label>
-                <input type="date" id="prices-last-invoice" class="form-input">
-              </div>
-              
-              <div class="form-group">
-                <label for="prices-tax-refund" data-help-category="prices" data-help-field="tax_refund">Tax Refund:</label>
-                <select id="prices-tax-refund" class="form-input">
-                  <option value="False">False</option>
-                  <option value="True">True</option>
-                </select>
               </div>
             </div>
           </div>
@@ -1015,7 +996,7 @@
 <script>
   // State management
   let currentTab = 'options';
-  let currentOptionTab = 'optimisations'; // Track current options sub-tab
+  let currentOptionTab = 'general'; // Track current options sub-tab
   let currentOptimisationTab = 'solar'; // Track current optimisation sub-tab
   let originalData = {
     options: null,
@@ -3005,10 +2986,6 @@
   function loadPricesConfiguration() {
     const prices = currentData.options.prices || {};
     
-    // Load day ahead pricing
-    document.getElementById('prices-source').value = prices['source day ahead'] || 'nordpool';
-    document.getElementById('prices-entsoe-key').value = prices['entsoe-api-key'] || '';
-    
     // Load regular tariffs
     document.getElementById('prices-regular-high').value = prices['regular high'] || '';
     document.getElementById('prices-regular-low').value = prices['regular low'] || '';
@@ -3049,8 +3026,6 @@
     };
     
     const prices = {
-      'source day ahead': document.getElementById('prices-source').value,
-      'entsoe-api-key': document.getElementById('prices-entsoe-key').value.trim(),
       'regular high': parseFloat(document.getElementById('prices-regular-high').value) || 0,
       'regular low': parseFloat(document.getElementById('prices-regular-low').value) || 0,
       'switch to low': parseInt(document.getElementById('prices-switch-to-low').value) || 0,
@@ -3209,7 +3184,8 @@
     
     // External Data Group
     const externalDataGroup = createOptionGroup('External Data', [
-      createSelectOption('Source Day Ahead', ['prices', 'source day ahead'], ['nordpool', 'entsoe', 'epex'], 'Day ahead price source'),
+      createSelectOption('Source Day Ahead', ['prices', 'source day ahead'], ['nordpool', 'entsoe', 'easyenergy', 'tibber'], 'Day ahead price source'),
+      createSecretReferenceOption('ENTSO-E API Key', ['prices', 'entsoe-api-key'], 'Reference to ENTSO-E API key secret'),
       createSecretReferenceOption('Meteoserver Key', ['meteoserver-key'], 'Reference to meteoserver API key secret'),
       createSecretReferenceOption('Tibber API Token', ['tibber', 'api_token'], 'Reference to Tibber API token secret')
     ]);
@@ -3425,14 +3401,6 @@
     ]);
     
     container.appendChild(graphicsGroup);
-    
-    // Prices Group
-    const pricesGroup = createOptionGroup('Prices', [
-      createCheckboxOption('Tax Refund', ['prices', 'tax refund'], 'Enable tax refund calculation'),
-      createTextOption('Last Invoice', ['prices', 'last invoice'], 'Last invoice date (YYYY-MM-DD)')
-    ]);
-    
-    container.appendChild(pricesGroup);
     
     // Notifications Group
     const notificationsGroup = createOptionGroup('Notifications', [
@@ -4255,8 +4223,6 @@
 
   // Prices configuration event listeners - add change listeners to all prices input fields
   const pricesInputIds = [
-    'prices-source',
-    'prices-entsoe-key',
     'prices-regular-high',
     'prices-regular-low',
     'prices-switch-to-low',
