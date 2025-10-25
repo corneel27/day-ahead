@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.10.6.rc2
+Correct time-error with transition day light saving
+
 # 2025.10.6.rc1
 - Added extra check missing price-data, error-logging and stop calculation (idea from @balk)
 - Extra check op "plugged in" and "home" for warning "te weinig tijd"

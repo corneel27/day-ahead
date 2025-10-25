@@ -967,6 +967,7 @@ class Report(DaBase):
             query_str = str(query.compile(connection))
             logging.debug(f"query get sensor data:\n {query_str}")
             df_raw = pd.read_sql(query, connection)
+            connection.close()
 
         if len(df_raw) == 0:
             df_raw = pd.DataFrame(columns=[agg, "tijd", "tot", col_name])
@@ -1129,6 +1130,7 @@ class Report(DaBase):
         )
         with self.db_da.engine.connect() as connection:
             result_row = connection.execute(query).first()
+            connection.close()
         if result_row is not None:
             result = datetime.datetime.fromtimestamp(dict(result_row)["time"])
         else:
@@ -1535,6 +1537,7 @@ class Report(DaBase):
 
             with self.db_da.engine.connect() as connection:
                 code_result = pd.read_sql(query, connection)
+                connection.close()
             code_result["vanaf"] = pd.to_datetime(code_result["vanaf"])
             code_result["tijd"] = pd.to_datetime(code_result["vanaf"])
             code_result["tot"] = pd.to_datetime(code_result["tot"])
@@ -1654,6 +1657,7 @@ class Report(DaBase):
                 )
                 with self.db_da.engine.connect() as connection:
                     prog_result = pd.read_sql_query(query, connection)
+                    connection.close()
 
                 prog_result["tijd"] = pd.to_datetime(prog_result["tijd"])
                 prog_result["tot"] = prog_result["tijd"]
@@ -1742,6 +1746,7 @@ class Report(DaBase):
 
         with self.db_da.engine.connect() as connection:
             code_result = pd.read_sql(query, connection)
+            connection.close()
         code_result["tijd"] = pd.to_datetime(code_result["vanaf"])
         code_result["tot"] = pd.to_datetime(code_result["tot"])
         code_result.index = code_result["tijd"]
@@ -1918,6 +1923,7 @@ class Report(DaBase):
                     query_str = str(query.compile(connection))
                     logging.debug(f"Query: \n {query_str}")
                     result_cat = pd.read_sql_query(query, connection)
+                    connection.close()
                 result_cat.index = result_cat[
                     interval
                 ]  # pd.to_datetime(result_cat["vanaf"])
@@ -1975,6 +1981,8 @@ class Report(DaBase):
                 query_str = str(query.compile(connection))
                 logging.debug(query_str)
                 df_prices = pd.read_sql_query(query, connection)
+                connection.close()
+                
             logging.debug(f"Prijzen \n{df_prices.to_string()}\n")
             """
 
@@ -2055,6 +2063,7 @@ class Report(DaBase):
                         query_str = str(query.compile(connection))
                         logging.debug(f"query get prognose data:\n {query_str}")
                         df_prog = pd.read_sql_query(query, connection)
+                        connection.close()
 
                     df_prog.index = pd.to_datetime(df_prog["tijd"])
                     df_prog["datasoort"] = "expected"
@@ -2584,6 +2593,8 @@ class Report(DaBase):
         # Execute the query and load results into a DataFrame
         with self.db_ha.engine.connect() as connection:
             df_raw = pd.read_sql(query, connection)
+            connection.close()
+
         if len(df_raw) > 0:
             # Convert UNIX timestamps to datetime
             df_raw["tijd"] = df_raw.apply(

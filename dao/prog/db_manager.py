@@ -359,6 +359,8 @@ class DBmanagerObj(object):
         # Execute the query and fetch the result into a pandas DataFrame
         with self.engine.connect() as connection:
             result = connection.execute(query)
+            connection.close()
+
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
         df["tijd"] = pd.to_datetime(df["tijd"])
         return df
@@ -416,6 +418,7 @@ class DBmanagerObj(object):
             # Execute the query and fetch the result into a pandas DataFrame
             with self.engine.connect() as connection:
                 result = connection.execute(query)
+                connection.close()
             df = pd.DataFrame(result.fetchall(), columns=result.keys())
             df["tijd"] = pd.to_datetime(df["tijd"])
             return df
@@ -500,6 +503,7 @@ class DBmanagerObj(object):
 
         with self.engine.connect() as connection:
             result = connection.execute(query)
+            connection.close()
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
         now_ts = datetime.datetime.now().timestamp()
         df["datasoort"] = np.where(df["time"] <= now_ts, "recorded", "expected")
@@ -543,6 +547,7 @@ class DBmanagerObj(object):
 
         with self.engine.connect() as connection:
             result = connection.execute(query)
+            connection.close()
 
         data = pd.DataFrame(result.fetchall(), columns=result.keys())
         if len(data.index) == 1:
