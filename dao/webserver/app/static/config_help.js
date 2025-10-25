@@ -19,10 +19,18 @@ function getHelpText(category, field) {
   return 'No help available for this field yet. Please check the documentation.';
 }
 
-// Format help text with support for line breaks, lists, bold, and italic
+// Format help text with support for line breaks, lists, bold, italic, and inline code
 function formatHelpText(text) {
+  // First, protect inline code (text between backticks) from other formatting
+  const codeBlocks = [];
+  let formatted = text.replace(/`([^`]+)`/g, (match, code) => {
+    const index = codeBlocks.length;
+    codeBlocks.push(code);
+    return `\x00CODEBLOCK${index}\x00`;
+  });
+  
   // Convert newlines to <br>
-  let formatted = text.replace(/\n/g, '<br>');
+  formatted = formatted.replace(/\n/g, '<br>');
   
   // Convert bullet points (lines starting with • or -) to list items
   formatted = formatted.replace(/^[•\-]\s+(.+?)(<br>|$)/gm, '<li>$1</li>');
@@ -37,6 +45,11 @@ function formatHelpText(text) {
   
   // Convert *text* or _text_ to italic
   formatted = formatted.replace(/\*(.+?)\*|_(.+?)_/g, '<em>$1$2</em>');
+  
+  // Restore inline code blocks with <code> tags
+  formatted = formatted.replace(/\x00CODEBLOCK(\d+)\x00/g, (match, index) => {
+    return '<code>' + codeBlocks[parseInt(index)] + '</code>';
+  });
   
   return formatted;
 }

@@ -102,6 +102,17 @@ label {
   color: #495057;
 }
 
+.help-tooltip-content code {
+  font-family: 'Courier New', Consolas, Monaco, monospace;
+  font-size: 13px;
+  background-color: #f8f9fa;
+  color: #e83e8c;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid #e9ecef;
+  white-space: nowrap;
+}
+
 .help-tooltip-content br {
   display: block;
   content: "";
