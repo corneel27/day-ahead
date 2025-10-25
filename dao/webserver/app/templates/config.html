@@ -484,7 +484,7 @@
           <p class="form-help">Add multiple strings or leave empty to use direct configuration</p>
         </div>
         
-        <div id="solar-strings-container" class="strings-container">
+        <div id="solar-strings-container" class="strings-container-scrollable">
           <!-- Strings will be added here -->
         </div>
         
@@ -5641,11 +5641,31 @@
     font-size: 14px;
   }
 
+  .strings-container-scrollable {
+    max-height: 400px;
+    overflow-x: auto;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 15px;
+    background-color: white;
+  }
+
+  .strings-container-scrollable .empty-state-small {
+    margin: 0;
+  }
+
   .string-item {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 8px;
     padding: 15px;
+    margin-bottom: 12px;
+  }
+
+  .string-item:last-child {
+    margin-bottom: 0;
   }
 
   .string-header {
@@ -5678,8 +5698,9 @@
 
   .string-fields {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
     gap: 10px;
+    min-width: 550px;
   }
 
   .string-field {
