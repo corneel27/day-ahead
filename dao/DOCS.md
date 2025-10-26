@@ -1255,7 +1255,7 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
    * upper limit: bovenste SoC limiet  
    * optimal lower level: onderste SoC limiet voor langere tijd  
    * entity min soc end opt: (default 0) entity in home assistant (input_number), waarmee je de 
-     minimale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben 
+     minimale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben. Hiermee kun je dus de hele grafiek een beetje "optillen" terwijl de SoC tussendoor wel lager kan worden. 
    * entity max soc end opt: (default 100) entity in home assistant (input_number), waarmee je de
      maximale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben <br>
      **opmerking:** met deze twee instellingen kunt je bereiken dat de batterij aan het eind "leeg" of "vol" is. Een lage batterij 
