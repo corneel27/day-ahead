@@ -1,0 +1,18 @@
+.App {
+  min-height: 100vh;
+}
+
+.jsonforms-control {
+  margin-bottom: 16px;
+}
+
+/* Custom styling for categorization */
+.MuiTabs-root {
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 24px;
+}
+
+/* Improve group spacing */
+.MuiPaper-root .MuiPaper-root {
+  margin-bottom: 16px;
+}

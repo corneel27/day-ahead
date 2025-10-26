@@ -1,0 +1,29 @@
+{
+  "name": "dao-jsonforms-config",
+  "version": "1.0.0",
+  "description": "Day Ahead Optimizer Configuration UI using JSONForms",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@jsonforms/core": "^3.6.0",
+    "@jsonforms/react": "^3.6.0",
+    "@jsonforms/material-renderers": "^3.6.0",
+    "@mui/material": "^5.15.0",
+    "@mui/icons-material": "^5.15.0",
+    "@mui/x-date-pickers": "^6.18.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^7.1.12"
+  }
+}

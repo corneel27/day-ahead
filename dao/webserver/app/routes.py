@@ -781,7 +781,8 @@ def search_ha_entities():
     """Search Home Assistant entities by domain or pattern"""
     try:
         domain = request.args.get('domain', '')
-        pattern = request.args.get('pattern', '')
+        # Support both 'pattern' and 'q' for search query
+        pattern = request.args.get('pattern', '') or request.args.get('q', '')
         
         # Get HA config from options.json
         options = get_json_file(app_datapath + "options.json")
@@ -842,13 +843,20 @@ def search_ha_entities():
         filtered = []
         pattern_lower = pattern.lower() if pattern else ''
         
+        # Parse multiple domains if provided (comma-separated)
+        domains = []
+        if domain:
+            domains = [d.strip() for d in domain.split(',')]
+        
         for e in entities:
             entity_id = e['entity_id']
             friendly_name = e.get('attributes', {}).get('friendly_name', entity_id)
             
-            # Apply domain filter
-            if domain and not entity_id.startswith(f"{domain}."):
-                continue
+            # Apply domain filter (support multiple domains)
+            if domains:
+                entity_domain = entity_id.split('.')[0]
+                if entity_domain not in domains:
+                    continue
             
             # Apply pattern filter (case-insensitive)
             if pattern_lower:
@@ -875,4 +883,25 @@ def search_ha_entities():
     except Exception as e:
         logging.error(f"Error in search_ha_entities: {e}")
         return jsonify({'error': 'Failed to search Home Assistant entities'}), 500
+
+
+@app.route("/api/schema", methods=["GET"])
+def get_schema():
+    """
+    API endpoint to retrieve the JSON schema
+    """
+    try:
+        schema_file = "../options_schema.json"
+        with open(schema_file, "r") as f:
+            schema_data = json.load(f)
+        return jsonify(schema_data)
+    except FileNotFoundError:
+        logging.error(f"Schema file not found: {schema_file}")
+        return jsonify({"error": "Schema file not found"}), 404
+    except json.JSONDecodeError as e:
+        logging.error(f"Invalid JSON in schema file: {e}")
+        return jsonify({"error": "Invalid JSON in schema file"}), 500
+    except Exception as e:
+        logging.error(f"Error reading schema file: {e}")
+        return jsonify({"error": "Failed to read schema"}), 500
 

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block selectie %}{% endblock %}
+{% block content %}
+
+<div id="root"></div>
+
+{% if config.ENV == 'development' %}
+<!-- For development, the app will be served from Vite dev server -->
+<!-- For production, load the built files -->
+<script type="module" src="http://localhost:3000/@vite/client"></script>
+<script type="module" src="http://localhost:3000/src/main.jsx"></script>
+{% else %}
+<!-- Production build served from Flask static folder -->
+<script type="module" crossorigin src="{{ url_for('static', filename='config/assets/index.js') }}"></script>
+<link rel="stylesheet" crossorigin href="{{ url_for('static', filename='config/assets/index.css') }}">
+{% endif %}
+
+{% endblock %}
