@@ -1741,16 +1741,38 @@ class DaCalc(DaBase):
                     # Ensure pump is running for designated number of hours
 
                     # Additional constraints to ensure the minimum run length (range 1-5 hours)
-                    for u in range(0, U, min_run_length):
-                        if u < U - min_run_length + 1:
-                            if min_run_length > 1:
-                                model += hp_on[u] == hp_on[u + 1]
-                            if min_run_length > 2:
-                                model += hp_on[u + 1] == hp_on[u + 2]
-                            if min_run_length > 3:
-                                model += hp_on[u + 2] == hp_on[u + 3]
-                            if min_run_length > 4:
-                                model += hp_on[u + 3] == hp_on[u + 4]
+                    for u in range(0, U, int(min_run_length * 3600 / self.interval_s)):
+                        if u < U + 1 - int(min_run_length * 3600 / self.interval_s):
+                            if self.interval == "1hour":
+                                if min_run_length > 1:
+                                    model += hp_on[u] == hp_on[u + 1]
+                                if min_run_length > 2:
+                                    model += hp_on[u + 1] == hp_on[u + 2]
+                                if min_run_length > 3:
+                                    model += hp_on[u + 2] == hp_on[u + 3]
+                                if min_run_length > 4:
+                                    model += hp_on[u + 3] == hp_on[u + 4]
+                            else:  #  15min
+                                if min_run_length > 1:
+                                    model += hp_on[u] == hp_on[u + 1]
+                                    model += hp_on[u + 1] == hp_on[u + 2]
+                                    model += hp_on[u + 2] == hp_on[u + 3]
+                                    model += hp_on[u + 3] == hp_on[u + 4]
+                                if min_run_length > 2:
+                                    model += hp_on[u + 4] == hp_on[u + 5]
+                                    model += hp_on[u + 5] == hp_on[u + 6]
+                                    model += hp_on[u + 6] == hp_on[u + 7]
+                                    model += hp_on[u + 7] == hp_on[u + 8]
+                                if min_run_length > 3:
+                                    model += hp_on[u + 8] == hp_on[u + 9]
+                                    model += hp_on[u + 9] == hp_on[u + 10]
+                                    model += hp_on[u + 10] == hp_on[u + 11]
+                                    model += hp_on[u + 11] == hp_on[u + 12]
+                                if min_run_length > 4:
+                                    model += hp_on[u + 12] == hp_on[u + 13]
+                                    model += hp_on[u + 13] == hp_on[u + 14]
+                                    model += hp_on[u + 14] == hp_on[u + 15]
+                                    model += hp_on[u + 15] == hp_on[u + 16]
                 else:
                     logging.info(
                         f"Geen warmtevraag - warmtepomp wordt niet ingepland\n"
