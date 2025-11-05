@@ -1451,7 +1451,7 @@ class DaCalc(DaBase):
         # charger_ampere = [[model.add_var(var_type=CONTINUOUS, lb=0,
         #                     ub= charge_stages[e][-1]["ampere"])
         #                     for cs in range(ECS[e])] for e in range(EV)]
-        charger_power = [
+        stage_consumption = [
             [
                 [
                     model.add_var(var_type=CONTINUOUS, lb=0, ub=max_power[e])
@@ -1461,14 +1461,14 @@ class DaCalc(DaBase):
             ]
             for e in range(EV)
         ]
-        charger_factor = [
+        stage_factor = [
             [
                 [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(U)]
                 for _ in range(ECS[e])
             ]
             for e in range(EV)
         ]
-        charger_on = [
+        stage_on = [
             [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(ECS[e])]
             for e in range(EV)
         ]
@@ -1480,6 +1480,13 @@ class DaCalc(DaBase):
             ]
             for e in range(EV)
         ]  # consumption charger
+        p_ev = [
+            [
+                model.add_var(var_type=CONTINUOUS, lb=0) # , ub=max_power[e])
+                for _ in range(U)
+            ]
+            for e in range(EV)
+        ]  # consumption vermogen
         ev_accu_in = [
             [
                 model.add_var(var_type=CONTINUOUS, lb=0, ub=max_power[e])
@@ -1493,36 +1500,48 @@ class DaCalc(DaBase):
                 for u in range(ready_u[e] + 1):
                     # laden, alles uitgedrukt in vermogen kW
                     for cs in range(ECS[e]):
+                        model += stage_on[e][cs][u] == stage_factor[e][cs][u] >= 0
+                    for cs in range(ECS[e]):
                         # daadwerkelijk ac vermogen = vermogen van de stap x oplaadfactor (0..1)
                         model += (
-                            charger_power[e][cs][u]
+                            stage_consumption[e][cs][u]
                             == ev_charge_stages[e][cs]["power"]
-                            * charger_factor[e][cs][u]
+                            * stage_factor[e][cs][u]
                         )
+                        """
                         # idem met schakelaar
                         model += (
-                            charger_power[e][cs][u]
-                            <= max_power[e] * charger_on[e][cs][u]
+                            stage_consumption[e][cs][u]
+                            <= max_power[e] * stage_on[e][cs][u]
                         )
+                        """
                     # som van alle oplaadfactoren is 1
                     model += (
-                        xsum(charger_factor[e][cs][u] for cs in range(ECS[e]))
+                        xsum(stage_factor[e][cs][u] for cs in range(ECS[e]))
                     ) == 1
                     # som van alle schakelaars boven 0 A en kleiner of gelijk aan 1
                     model += (
-                        xsum(charger_on[e][cs][u] for cs in range(ECS[e])[1:])
+                        xsum(stage_on[e][cs][u] for cs in range(ECS[e])[1:])
                     ) <= 1
                     if u == ready_u[e]:
                         hr_fraction = (ready - tijd[u]).total_seconds() / 3600
                     else:
                         hr_fraction = hour_fraction[u]
                     model += c_ev[e][u] == xsum(
-                        charger_power[e][cs][u] * hr_fraction for cs in range(ECS[e])
+                        stage_consumption[e][cs][u] * hr_fraction
+                        for cs in range(ECS[e])
                     )
+
+                    # het vermogen per ev per uur
+                    model += p_ev[e][u] == xsum(
+                        ev_charge_stages[e][cs]["power"] * stage_on[e][cs][u]
+                        for cs in range(ECS[e])[1:]
+                    )
+
                     model += ev_accu_in[e][u] == xsum(
                         ev_charge_stages[e][cs]["accu_power"]
                         * hr_fraction
-                        * charger_factor[e][cs][u]
+                        * stage_factor[e][cs][u]
                         for cs in range(ECS[e])
                     )
                 model += energy_needed[e] == xsum(
@@ -1530,6 +1549,7 @@ class DaCalc(DaBase):
                 )
                 for u in range(U)[ready_u[e] + 1 :]:
                     model += c_ev[e][u] == 0
+                    model += p_ev[e][u] == 0
 
                 """
                 max_beschikbaar = 0
@@ -1547,6 +1567,7 @@ class DaCalc(DaBase):
                 model += xsum(c_ev[e][u] for u in range(U)) == 0
                 for u in range(U):
                     model += c_ev[e][u] == 0
+                    model += p_ev[e][u] == 0
 
         ##################################################################
         #            salderen                                            #
@@ -1582,8 +1603,8 @@ class DaCalc(DaBase):
 
         # netto per uur alleen leveren of terugleveren niet tegelijk?
         for u in range(U):
-            model += c_l[u] <= c_l_on[u] * 20
-            model += c_t[u] <= c_t_on[u] * 20
+            model += c_l[u] <= c_l_on[u] * self.grid_max_power * hour_fraction[u]
+            model += c_t[u] <= c_t_on[u] * self.grid_max_power * hour_fraction[u]
             model += c_l_on[u] + c_t_on[u] <= 1
 
         #####################################
@@ -2277,7 +2298,15 @@ class DaCalc(DaBase):
                     model += c_ma_u[m][u] == xsum(
                         c_ma_kw[m][kw] for kw in ma_uur_kw[m][u]
                     )
-
+        """
+        # vermogen levering niet groter dan grid_max_power
+        p_l = [model.add_var(var_type=CONTINUOUS, lb=0, ub=self.grid_max_power) for _ in range(U)]
+        for u in range(U):
+            model += p_l[u] == (
+                    (c_l[u] - xsum(c_ev[e][u] for e in range(EV))) / hour_fraction[u]
+                    + xsum(p_ev[e][u] for e in range(EV))
+            )
+        """
         #####################################################
         # alle verbruiken in de totaal balans in kWh
         #####################################################
@@ -2892,19 +2921,19 @@ class DaCalc(DaBase):
                         logging.info(
                             f"Inzet-factor laden {self.ev_options[e]['name']} per stap"
                         )
-                        print("uur", end=" ")
+                        print("uur   ", end=" ")
                         for cs in range(ECS[e]):
                             print(
                                 f" {ev_charge_stages[e][cs]['ampere']:4.1f}A", end=" "
                             )
-                        print()
+                        print("     cons  power")
                         for u in range(ready_u[e] + 1):
                             print(f"{uur[u]}", end="    ")
                             for cs in range(ECS[e]):
                                 print(
-                                    f"{abs(charger_factor[e][cs][u].x):.2f}", end="   "
+                                    f"{stage_factor[e][cs][u].x:.2f}({stage_on[e][cs][u].x})", end="   "
                                 )
-                            print()
+                            print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f}")
                 entity_charge_switch = self.ev_options[e]["charge switch"]
                 entity_charging_ampere = self.ev_options[e][
                     "entity set charging ampere"
@@ -2925,16 +2954,16 @@ class DaCalc(DaBase):
 
                 # print(uur[0], end="  ")
                 for cs in range(ECS[e])[1:]:
-                    # print(f"{charger_factor[e][cs][0].x:.2f}", end="  ")
-                    if charger_factor[e][cs][0].x > 0:
+                    # print(f"{stage_factor[e][cs][0].x:.2f}", end="  ")
+                    if stage_factor[e][cs][0].x > 0:
                         new_ampere_state = ev_charge_stages[e][cs]["ampere"]
                         if new_ampere_state > 0:
                             new_switch_state = "on"
-                        if (charger_factor[e][cs][0].x < 1) and (
+                        if (stage_factor[e][cs][0].x < 1) and (
                             energy_needed[e] > (ev_accu_in[e][0].x + 0.01)
                         ):
                             new_ts = (
-                                start_dt.timestamp() + charger_factor[e][cs][0].x * 3600
+                                start_dt.timestamp() + stage_factor[e][cs][0].x * 3600
                             )
                             stop_laden = dt.datetime.fromtimestamp(int(new_ts))
                             new_state_stop_laden = stop_laden.strftime("%Y-%m-%d %H:%M")
