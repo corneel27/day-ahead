@@ -495,7 +495,7 @@ class DBmanagerObj(object):
             query = query.group_by("uur")
         if end is not None:
             query = query.where(values_table.c.time < self.unix_timestamp(end))
-        query = query.order_by("uur")
+        query = query.order_by("time")
 
         with self.engine.connect() as connection:
             result = connection.execute(query)
