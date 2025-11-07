@@ -1,5 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.0.rc1
+
+- Respect minimal run length heatpump in hours with 15min-interva
+- Suppress resource warning "unclosed database in sqlite3.Connection"
+- Fix sorting-error mysql prices
+- Fix error loading ev with too much power and exceeding grid-maximum (reported by @sMoKeFiSh)
+- Update errors in DOCS.md
+
 # 2025.10.6.rc2
 Correct time-error with transition day light saving
 

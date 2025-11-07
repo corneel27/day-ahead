@@ -4,6 +4,7 @@ import os
 import fnmatch
 import time
 import pytz
+import warnings
 from requests import get
 import json
 import hassapi as hass
@@ -208,6 +209,7 @@ class DaBase(hass.Hass):
         self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.db_da.log_pool_status()
+        warnings.simplefilter("ignore", ResourceWarning)
 
     def set_value(self, entity_id: str, value: Union[int, float, str]) -> StateList:
         try:
