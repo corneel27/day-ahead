@@ -285,6 +285,7 @@ class DaCalc(DaBase):
                     {
                         "uur": uur,
                         "tijd": tijd,
+                        "spot": p_spot,
                         "p_l": pl,
                         "p_t": pt,
                         "base": b_l,
@@ -1500,13 +1501,20 @@ class DaCalc(DaBase):
                 for u in range(ready_u[e] + 1):
                     # laden, alles uitgedrukt in vermogen kW
                     for cs in range(ECS[e]):
-                        model += stage_on[e][cs][u] == stage_factor[e][cs][u] >= 0
+                        model += stage_on[e][cs][u] - stage_factor[e][cs][u] <= 0.9999
+                        model += stage_on[e][cs][u] - stage_factor[e][cs][u] >= 0
                     for cs in range(ECS[e]):
-                        # daadwerkelijk ac vermogen = vermogen van de stap x oplaadfactor (0..1)
+                        # daadwerkelijk ac verbruik (kWh) per stage =
+                        # vermogen van de stap x oplaadfactor (0..1) x uur-fractie
+                        if u == ready_u[e]:
+                            hr_fraction = (ready - tijd[u]).total_seconds() / 3600
+                        else:
+                            hr_fraction = hour_fraction[u]
                         model += (
                             stage_consumption[e][cs][u]
                             == ev_charge_stages[e][cs]["power"]
                             * stage_factor[e][cs][u]
+                            * hr_fraction
                         )
                         """
                         # idem met schakelaar
@@ -1520,15 +1528,13 @@ class DaCalc(DaBase):
                         xsum(stage_factor[e][cs][u] for cs in range(ECS[e]))
                     ) == 1
                     # som van alle schakelaars boven 0 A en kleiner of gelijk aan 1
+                    """
                     model += (
-                        xsum(stage_on[e][cs][u] for cs in range(ECS[e])[1:])
+                        xsum(stage_on[e][cs][u] for cs in range(ECS[e]))
                     ) <= 1
-                    if u == ready_u[e]:
-                        hr_fraction = (ready - tijd[u]).total_seconds() / 3600
-                    else:
-                        hr_fraction = hour_fraction[u]
+                    """
                     model += c_ev[e][u] == xsum(
-                        stage_consumption[e][cs][u] * hr_fraction
+                        stage_consumption[e][cs][u]
                         for cs in range(ECS[e])
                     )
 
