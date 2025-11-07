@@ -1831,7 +1831,7 @@ rest:
       - name: DA Price
         unique_id: da_price
         unit_of_measurement: 'euro/kWh'
-        value_template: "{{ (value_json.data[now().hour].da_ex) | round(5) }}"
+        value_template: {{ (value_json.data[utcnow().hour].da_ex) | round(5) }}
         json_attributes:
           - data
   - resource: http://192.168.178.64:5000/api/report/consumption/vandaag_en_morgen
