@@ -1249,7 +1249,7 @@ class Report(DaBase):
             if not isinstance(row.tijd, datetime.datetime):
                 print(row)
             if interval == "uur":
-                tijd_str = str(row.tijd)[10:16]
+                tijd_str = str(row.tijd)[10:14] +"00"
             elif interval == "dag":
                 tijd_str = str(row.tijd)[0:10]
             else:
@@ -1275,17 +1275,17 @@ class Report(DaBase):
                 col_4,
                 col_5,
             ]
-        if interval != "uur":
-            fi_df = fi_df.groupby([interval], as_index=False).agg(
-                {
-                    "vanaf": "min",
-                    "tot": "max",
-                    "consumption": "sum",
-                    "production": "sum",
-                    "cost": "sum",
-                    "profit": "sum",
-                    "datasoort": get_datasoort,
-                }
+
+        fi_df = fi_df.groupby([interval], as_index=False).agg(
+            {
+                "vanaf": "min",
+                "tot": "max",
+                "consumption": "sum",
+                "production": "sum",
+                "cost": "sum",
+                "profit": "sum",
+                "datasoort": get_datasoort,
+            }
             )
         return fi_df
 
@@ -1636,22 +1636,49 @@ class Report(DaBase):
                 )
                 p1 = prog_table.alias("p1")
                 # Build the SQLAlchemy query
-                query = select(
-                    self.db_da.from_unixtime(p1.c.time).label("tijd"),
-                    p1.c.value.label(key),
-                    literal("expected").label("datasoort"),
-                ).where(
+                """
+            query = (
+                select(
+                    column,
+                    func.min(self.db_da.from_unixtime(t1.c.time)).label("vanaf"),
+                    func.max(self.db_da.from_unixtime(t1.c.time)).label("tot"),
+                    func.sum(t1.c.value).label(key),
+                )
+                .where(
                     and_(
-                        p1.c.variabel == v1.c.id,
                         v1.c.code == key,
-                        p1.c.time
+                        t1.c.variabel == v1.c.id,
+                        t1.c.time
                         >= self.db_da.unix_timestamp(
-                            last_moment.strftime("%Y-%m-%d %H:%M:%S")
+                            vanaf.strftime("%Y-%m-%d %H:%M:%S")
                         ),
-                        p1.c.time
+                        t1.c.time
                         < self.db_da.unix_timestamp(tot.strftime("%Y-%m-%d %H:%M:%S")),
                     )
                 )
+                .group_by(groupby_str)
+            )
+                """
+                query = (
+                    select(
+                        self.db_da.hour_start(p1.c.time).label("uur"),
+                        func.min(self.db_da.from_unixtime(p1.c.time)).label("tijd"),
+                        func.sum(p1.c.value).label(key)
+                    ).where(
+                        and_(
+                            v1.c.code == key,
+                            p1.c.variabel == v1.c.id,
+                            p1.c.time
+                            >= self.db_da.unix_timestamp(
+                                last_moment.strftime("%Y-%m-%d %H:%M:%S")
+                            ),
+                            p1.c.time
+                            < self.db_da.unix_timestamp(tot.strftime("%Y-%m-%d %H:%M:%S")),
+                        )
+                    )
+                    .group_by("uur")
+                )
+
                 with self.db_da.engine.connect() as connection:
                     prog_result = pd.read_sql_query(query, connection)
 
@@ -1705,13 +1732,13 @@ class Report(DaBase):
         column2 = func.min(self.db_da.from_unixtime(t1.c.time)).label("tijd")
         if rep_interval == "maand":
             column = self.db_da.month(t1.c.time).label("maand")
-            column2 = func.min(self.db_da.month_start(t1.c.time).label("tijd"))
+            column2 = func.min(self.db_da.month_start(t1.c.time)).label("tijd")
         elif rep_interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
-            column2 = func.min(self.db_da.day_start(t1.c.time).label("tijd"))
+            column2 = func.min(self.db_da.day_start(t1.c.time)).label("tijd")
         else:  # rep_interval == "uur"
             column = self.db_da.hour(t1.c.time).label("uur")
-            column2 = func.min(self.db_da.hour_start(t1.c.time).label("tijd"))
+            column2 = func.min(self.db_da.hour_start(t1.c.time)).label("tijd")
 
         if get_interval == "uur" and rep_interval != "uur":
             column = self.db_da.hour_start(t1.c.time).label("uur")
