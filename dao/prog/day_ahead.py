@@ -101,9 +101,9 @@ class DaCalc(DaBase):
                 f"de berekening wordt afgebroken"
             )
             return None
-        """
+
         if self.interval == "15min":
-            end = datetime.datetime.strptime(price_data["time"].iloc[-1], "%Y-%m-%d %H:%M")
+            end = price_data["time"].iloc[-1]
             num_quaters = round((end - start).total_seconds() / 900)
             if len(price_data) < num_quaters - 1:
                 logging.error(
@@ -111,7 +111,7 @@ class DaCalc(DaBase):
                     f"de berekening wordt afgebroken"
                 )
                 return None
-        """
+
         while price_data.iloc[0]["time"] < start_interval_dt:
             price_data = price_data.iloc[1:]
         price_data.index = pd.to_datetime(price_data["time"])
