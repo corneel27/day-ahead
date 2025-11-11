@@ -222,12 +222,12 @@ class DBmanagerObj(object):
     def hour(self, column) -> func:
         if self.db_dialect == "sqlite":
             return func.strftime(
-                "%H:%M", func.datetime(column, "unixepoch", "localtime")
+                "%H:00", func.datetime(column, "unixepoch", "localtime")
             )
         elif self.db_dialect == "postgresql":
-            return func.to_char(func.to_timestamp(column), "HH24:MI")
+            return func.to_char(func.to_timestamp(column), "HH24:00")
         else:  # mysql/mariadb
-            return func.time_format(func.time(func.from_unixtime(column)), "%H:%i")
+            return func.time_format(func.time(func.from_unixtime(column)), "%H:00")
 
     def hour_start(self, column) -> func:
         if self.db_dialect == "sqlite":

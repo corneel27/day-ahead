@@ -90,11 +90,28 @@ class DaCalc(DaBase):
                         print(line, end="")
 
         report = Report(self.file_name)
+        start = dt.datetime.fromtimestamp(start_hour)
         price_data = report.get_price_data(
             dt.datetime.fromtimestamp(start_hour), end=None, interval=self.interval
         )
-        if price_data is None:
-            return
+
+        if len(price_data) <= 5:
+            logging.error(
+                f"Er ontbreken kwartier- of uurwaarden van de day-ahead tarieven, "
+                f"de berekening wordt afgebroken"
+            )
+            return None
+
+        if self.interval == "15min":
+            end = datetime.datetime.strptime(price_data["time"].iloc[-1], "%Y-%m-%d %H:%M")
+            num_quaters = round((end - start).total_seconds() / 900)
+            if len(price_data) < num_quaters - 1:
+                logging.error(
+                    f"Er ontbreken kwartierwaarden van de day-ahead tarieven, "
+                    f"de berekening wordt afgebroken"
+                )
+                return None
+
         while price_data.iloc[0]["time"] < start_interval_dt:
             price_data = price_data.iloc[1:]
         price_data.index = pd.to_datetime(price_data["time"])

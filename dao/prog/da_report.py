@@ -2157,6 +2157,11 @@ class Report(DaBase):
             df_result.loc["Total"] = df_result.sum(axis=0, numeric_only=True)
             df_result[rep_interval] = df_result[rep_interval].astype(object)
             df_result.at[df_result.index[-1], rep_interval] = "Totaal"
+            for key in calc_dict["series"]:
+                agg = calc_dict["series"][key]["agg"]
+                if agg == "mean" and key in df_result.columns:
+                    mean = df_result[key][:-1].mean()
+                    df_result.at[df_result.index[-1], key] = mean
             header_col = []
             if "with header" in calc_dict:
                 with_header = calc_dict["with header"]
@@ -2872,28 +2877,6 @@ class Report(DaBase):
         df_da = self.db_da.get_column_data(
             "values", "da", start=start, end=end, agg_func=agg_func
         )
-        if len(df_da) <= 5:
-            logging.error(
-                f"Er ontbreken kwartier- of uurwaarden van de day-ahead tarieven, "
-                f"de berekening wordt afgebroken"
-            )
-            return None
-
-        if interval == "15min":
-            end = datetime.datetime.strptime(df_da["time"].iloc[-1], "%Y-%m-%d %H:%M")
-            num_quaters = round((end - start).total_seconds() / 900)
-            if len(df_da) < num_quaters - 1:
-                logging.error(
-                    f"Er ontbreken kwartierwaarden van de day-ahead tarieven, "
-                    f"de berekening wordt afgebroken"
-                )
-                return None
-                # time0= df_da.loc[]
-                df_da["tijd"] = pd.to_datetime(df_da["time"])
-                df_da = interpolate(df_da, "value", False)
-                df_da["time"] = df_da["tijd"].apply(
-                    lambda x: x.strftime("%Y-%m-%d %H:%M")
-                )
         old_dagstr = ""
         taxes_l = 0
         taxes_t = 0
