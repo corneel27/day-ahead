@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
- 2025.11.1.rc1
+# 2025.11.1.rc2
+Fixed calc error
+
+# 2025.11.1.rc1
  Fixed report errors
 
 # 2025.11.0.rc1
