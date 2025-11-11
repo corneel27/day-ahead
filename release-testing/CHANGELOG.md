@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+ 2025.11.1.rc1
+ Fixed report errors
+
 # 2025.11.0.rc1
 
 - Respect minimal run length heatpump in hours with 15min-interva
