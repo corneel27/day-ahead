@@ -898,6 +898,7 @@ class Report(DaBase):
                     column,
                     column2,
                     self.db_ha.from_unixtime(t2.c.start_ts).label("tot"),
+                    t2.c.start_ts.label("utc"),
                     case(
                         (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
                     ).label(col_name),
@@ -907,6 +908,7 @@ class Report(DaBase):
                     column,
                     column2,
                     func.max(self.db_ha.from_unixtime(t2.c.start_ts)).label("tot"),
+                    t2.c.start_ts.label("utc"),
                     func.sum(
                         case(
                             (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
