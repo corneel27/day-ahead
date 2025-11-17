@@ -101,9 +101,9 @@ class DaCalc(DaBase):
                 f"de berekening wordt afgebroken"
             )
             return None
-        """
+
         if self.interval == "15min":
-            end = datetime.datetime.strptime(price_data["time"].iloc[-1], "%Y-%m-%d %H:%M")
+            end = price_data["time"].iloc[-1]
             num_quaters = round((end - start).total_seconds() / 900)
             if len(price_data) < num_quaters - 1:
                 logging.error(
@@ -111,7 +111,7 @@ class DaCalc(DaBase):
                     f"de berekening wordt afgebroken"
                 )
                 return None
-        """
+
         while price_data.iloc[0]["time"] < start_interval_dt:
             price_data = price_data.iloc[1:]
         price_data.index = pd.to_datetime(price_data["time"])
@@ -1663,7 +1663,7 @@ class DaCalc(DaBase):
                 model += hp_on[u] == 0
         else:
             # self.hp_enabled == True
-            # "adjustment" : keuze uit "on/off | power | heating curve", default "power"
+            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
             self.hp_adjustment = self.config.get(
                 ["adjustment"], self.heating_options, "power"
             ).lower()
@@ -1740,7 +1740,7 @@ class DaCalc(DaBase):
                     else:
                         self.set_value(entity_avg_temp, round(avg_temp, 1))
 
-                    logging.debug(f"Voorspelde buiten temperatuur: {avg_temp}")
+                    logging.debug(f"Voorspelde gemiddelde buiten temperatuur: {avg_temp}")
 
                     # Get COP and heatpump power from HA
                     entity_hp_cop = self.config.get(
@@ -1754,7 +1754,7 @@ class DaCalc(DaBase):
                     entity_hp_power = self.config.get(
                         ["entity hp power"], self.heating_options, None
                     )
-                    if entity_hp_cop is not None:
+                    if entity_hp_power is not None:
                         hp_power = float(self.get_state(entity_hp_power).state)
                     else:
                         hp_power = 1.5
@@ -1779,10 +1779,15 @@ class DaCalc(DaBase):
 
                     # Add the contraints
                     for u in range(U):
-                        model += c_hp[u] == hp_power * hp_on[u]
-                        # Energy consumption per hour is equal to power if it runs in that hour
+                        model += c_hp[u] == hp_power * hp_on[u] * hour_fraction[u]
+                        # ieder interval/uur maar een aan
+                        if boiler_heated_by_heatpump:
+                            model += hp_on[u] + boiler_on[u] <= 1
+
+                    # Energy consumption per hour is equal to power if it runs in that hour
                     model += xsum(hp_on[u] for u in range(U)) == int(hp_hours * 3600/self.interval_s)
                     # Ensure pump is running for designated number of hours
+
 
                     # Additional constraints to ensure the minimum run length (range 1-5 hours)
                     for u in range(0, U, int(min_run_length * 3600 / self.interval_s)):
@@ -1876,7 +1881,7 @@ class DaCalc(DaBase):
                     model += hp_on[u] == xsum(hp_s_on[s][u] for s in range(S)[1:])
                     for s in range(S):
                         model += p_hp[s][u] <= stages[s]["max_power"] * hp_s_on[s][u]
-                    # ieder uur maar een aan
+                    # ieder interval/uur maar een aan
                     if boiler_heated_by_heatpump:
                         model += (xsum(hp_s_on[s][u] for s in range(S))) + boiler_on[
                             u
