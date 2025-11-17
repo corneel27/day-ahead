@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.1.rc3 
+
+Fixed error with heatpump and heatpump-boiler with on/off adjustment
+Fixed error with on/off adjustement and not configured power-entity
+Fixed apparmor.txt for network-access 
+
 # 2025.11.1.rc2
 Fixed calc error
 
