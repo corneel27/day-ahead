@@ -1667,6 +1667,7 @@ class DaCalc(DaBase):
             self.hp_adjustment = self.config.get(
                 ["adjustment"], self.heating_options, "power"
             ).lower()
+            logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
             # degree days
             degree_days = self.meteo.calc_graaddagen(weighted=True)
@@ -1763,6 +1764,11 @@ class DaCalc(DaBase):
                     e_needed = heat_needed / cop
                     # Elektrical energy needed in kWh
                     hp_hours = math.ceil(e_needed / hp_power)
+                    interval_avail = U
+                    if boiler_heated_by_heatpump and boiler_start is not None and boiler_start < U:
+                        interval_avail = interval_avail - est_needed_intv[boiler_start] - 1
+                    hours_avail = math.floor(interval_avail * self.interval_s/3600)
+
                     # Number of hours the heat pump still has to run
                     if hp_hours < min_run_length:
                         # Ensure pump runs for at least min_run_length hours
@@ -1770,6 +1776,7 @@ class DaCalc(DaBase):
                     if (hp_hours % min_run_length) != 0:
                         hp_hours += min_run_length - (hp_hours % min_run_length)
                         # Ensure hp_hours is multiple of min_run_length
+                    hp_hours = min (hp_hours, hours_avail)
                     e_needed = hp_hours * hp_power
                     # Elektrical energy to be optimized in kWh
                     logging.info(
@@ -1787,7 +1794,6 @@ class DaCalc(DaBase):
                     # Energy consumption per hour is equal to power if it runs in that hour
                     model += xsum(hp_on[u] for u in range(U)) == int(hp_hours * 3600/self.interval_s)
                     # Ensure pump is running for designated number of hours
-
 
                     # Additional constraints to ensure the minimum run length (range 1-5 hours)
                     for u in range(0, U, int(min_run_length * 3600 / self.interval_s)):
@@ -1830,7 +1836,7 @@ class DaCalc(DaBase):
                     model += hp_on[0] == 0
             else:
                 # hp_adjustment == "power" or "heating curve"
-                logging.info(f"Warmtepomp met power-regeling wordt ingepland\n")
+                logging.info(f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland\n")
                 stages = self.heating_options["stages"]
                 S = len(stages)
                 c_hp = [
@@ -1898,6 +1904,7 @@ class DaCalc(DaBase):
                     )
                 # max heat power in kW
                 max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
+                logging.info(f"Maximaal warmteproducerend vermogen: {max_heat_power} W")
 
                 # een of meer intervallen minder als boiler via wp gaat
                 if boiler_heated_by_heatpump and not (boiler_start is None) and boiler_start < U:
@@ -1907,10 +1914,10 @@ class DaCalc(DaBase):
                 max_heat_prod = sum(
                     max_heat_power * hour_fraction[u] for u in range(U - boiler_int)
                 )
+                logging.info(f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod} kWh")
                 # som van alle geproduceerde warmte == benodigde warmte
-                model += xsum(h_hp[u] for u in range(U)) == min(
-                    heat_needed, max_heat_prod
-                )
+                heat_needed = min(heat_needed, max_heat_prod)
+                model += xsum(h_hp[u] for u in range(U)) == heat_needed
 
         ########################################################################
         # apparaten /machines

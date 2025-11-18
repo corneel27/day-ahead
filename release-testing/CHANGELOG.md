@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.1.rc4
+Changes in "heatpump":
+- maximization of the total heat to produce to prevent "no solution"
+- extra logging heatpump
+
 # 2025.11.1.rc3 
 
 Fixed error with heatpump and heatpump-boiler with on/off adjustment
