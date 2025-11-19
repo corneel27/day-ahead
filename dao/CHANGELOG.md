@@ -1,5 +1,23 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.1
+- upgrade python numpy-module
+- upgrade debian-base<br>
+
+Changes in "heatpump":
+- maximization of the total heat to produce to prevent "no solution"
+- extra logging heatpump
+- Fixed error with heatpump and heatpump-boiler with on/off adjustment
+- Fixed error with on/off adjustement and not configured power-entity<br>
+   <br>
+- Fixed apparmor.txt for network-access 
+- Fixed report errors
+- Respect minimal run length heatpump in hours with 15min-interva
+- Suppress resource warning "unclosed database in sqlite3.Connection"
+- Fix sorting-error mysql prices
+- Fix error loading ev with too much power and exceeding grid-maximum (reported by @sMoKeFiSh)
+- Update errors in DOCS.md
+
 
 # 2025.11.0
 - Respect minimal run length heatpump in hours with 15min-interva

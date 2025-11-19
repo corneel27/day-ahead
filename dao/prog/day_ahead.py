@@ -1904,7 +1904,7 @@ class DaCalc(DaBase):
                     )
                 # max heat power in kW
                 max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
-                logging.info(f"Maximaal warmteproducerend vermogen: {max_heat_power} W")
+                logging.info(f"Maximaal warmteproducerend vermogen: {max_heat_power} kW")
 
                 # een of meer intervallen minder als boiler via wp gaat
                 if boiler_heated_by_heatpump and not (boiler_start is None) and boiler_start < U:
