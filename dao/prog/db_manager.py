@@ -317,6 +317,53 @@ class DBmanagerObj(object):
             connection.close()
         self.log_pool_status()
 
+    def get_time_latest_record(self, code: str) -> datetime.datetime:
+        """
+        Zoekt de tijd op van het laatst aanwezige record van "code"
+        :param code: de code van het record
+        :return: datum en tijd van het laatst aanwezige record
+        """
+        """
+        query = ("SELECT from_unixtime(`time`) tijd, `value` "
+                 "FROM `values`, `variabel` "
+                 "WHERE `variabel`.`code` = '" + code +
+                 "'  and `values`.`variabel` = `variabel`.`id` "
+                 "ORDER BY `time` desc LIMIT 1")
+        """
+        # Reflect existing tables from the database
+        with self.engine.connect() as connection:
+            values_table = Table(
+                "values", self.metadata, autoload_with=connection
+            )
+            variabel_table = Table(
+                "variabel", self.metadata, autoload_with=connection
+            )
+
+        # Construct the query
+        query = (
+            select(
+                self.from_unixtime(values_table.c.time).label("tijd"),
+                values_table.c.value,
+            )
+            .where(
+                and_(
+                    variabel_table.c.code == code,
+                    values_table.c.variabel == variabel_table.c.id,
+                )
+            )
+            .order_by(values_table.c.time.desc())
+            .limit(1)
+        )
+
+        # Execute the query and fetch the result
+        with self.engine.connect() as connection:
+            result = connection.execute(query)
+            result = result.scalar()
+            if type(result) is str:
+                result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
+        return result
+
+
     def get_prognose_field(self, field: str, start, end=None, interval="1hour"):
         values_table = Table("prognoses", self.metadata, autoload_with=self.engine)
         t1 = values_table.alias("t1")

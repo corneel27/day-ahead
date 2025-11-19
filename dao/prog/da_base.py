@@ -123,6 +123,8 @@ class DaBase(hass.Hass):
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
         self.meteo = Meteo(self.config, self.db_da)
+        if country =="NL":
+            self.knmi_station = self.meteo.which_station()
         self.solar = self.config.get(["solar"])
         self.interval = self.config.get(["interval"], None, "1hour").lower()
 

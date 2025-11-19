@@ -7,6 +7,7 @@ import pytz
 import ephem
 from requests import get
 import matplotlib.pyplot as plt
+import knmi
 from dao.prog.da_graph import GraphBuilder
 from dao.prog.da_config import Config
 from dao.prog.db_manager import DBmanagerObj
@@ -179,6 +180,24 @@ class Meteo:
         else:
             value = 0.0
         return value
+
+    def which_station(self) -> str:
+        """
+        berekent welk weerstation het dichtst bij is
+        :param latitude:
+        :param longitude:
+        :return: code weerstation
+        """
+        stations = knmi.stations
+        distance = None
+        result = None
+        for key in stations:
+            station = stations[key]
+            afstand = (self.latitude-station.latitude)**2 + (self.longitude-station.longitude)**2
+            if result is None or afstand < distance:
+                distance = afstand
+                result = key
+        return str(result)
 
     def solar_rad(
         self, utc_time: float, radiation: float, h_col: float, a_col: float
@@ -622,3 +641,14 @@ class Meteo:
         acol = math.radians(orientation)
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot
+
+"""
+def main():
+    from dao.prog.da_base import DaBase
+    dbase = DaBase("../data/options.json")
+    meteo = Meteo(dbase.config, dbase.db_da)
+    station = meteo.which_station()
+
+if __name__ == "__main__":
+    main()
+"""

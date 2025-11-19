@@ -15,7 +15,11 @@ import warnings
 from typing import Tuple, Optional, Union, Dict, Any
 import datetime as dt
 from pathlib import Path
+
+from knmi import variables
+
 import dao.prog.da_base
+import knmi
 
 # ML imports
 from xgboost import XGBRegressor
@@ -26,60 +30,6 @@ from scipy import stats
 from dao.prog.da_base import DaBase
 
 warnings.filterwarnings('ignore')
-
-def solar_performance_metric(rad, ambient, gamma=-0.0035, NOCT=45.0):
-    """
-    Compute an effective solar performance metric that accounts for irradiance,
-    module temperature, and efficiency losses.
-
-    This metric represents an adjusted irradiance value (in W/m²-equivalent)
-    that approximates the combined effects of irradiance level, temperature,
-    and cell performance characteristics. It is useful for estimating
-    photovoltaic (PV) performance under non-standard test conditions.
-
-    Parameters
-    ----------
-    rad : float or array_like
-        Solar irradiance in joules per square centimeter per hour (J/cm²/h).
-        Typical range: 0–3600 J/cm²/h (equivalent to 0–1000 W/m²).
-    ambient : float or array_like
-        Ambient temperature in degrees Celsius (°C).
-    gamma : float, optional
-        Temperature coefficient of power (per °C). Defaults to -0.0035.
-        Negative values indicate power decreases with increasing temperature.
-    NOCT : float, optional
-        Nominal Operating Cell Temperature in degrees Celsius (°C).
-        Defaults to 45.0. Used in estimating cell temperature rise under
-        irradiance.
-
-    Returns
-    -------
-    metric : float or ndarray
-        Effective solar performance metric (0–1000 range), representing
-        adjusted irradiance in W/m²-equivalent after accounting for
-        temperature and irradiance nonlinearity.
-
-    References
-    ----------
-    - IEC 61853-1: Photovoltaic (PV) module performance testing and energy rating
-    - Duffie, J.A., & Beckman, W.A. (2013). *Solar Engineering of Thermal Processes*.
-
-    """
-    conv = 10000.0 / 3600.0  # J/cm²/h -> W/m²
-    R = rad * conv      # W/m²
-
-    T = ambient + (NOCT - 20.0) / 800.0 * R
-    a = 1.0 - 0.2 * np.exp(-R / 200.0)
-    irradiance_factor = (R / 1000.0) ** a
-
-    temp_factor = 1.0 + gamma * (T - 25.0)
-    temp_factor = np.maximum(temp_factor, 0.0)  # element-wise
-
-    metric = 1000.0 * irradiance_factor * temp_factor
-    metric = np.clip(metric, 0.0, 1000.0)       # element-wise clip
-
-    return metric
-
 
 def create_features(df):
     """
@@ -107,7 +57,7 @@ def create_features(df):
         - 'quarter' : int, quarter of the year (1–4)
         - 'month' : int, month of the year (1–12)
         - 'season' : int, mapped season (0=winter, 1=spring, 2=summer, 3=autumn)
-        - 'solar_performance' : float, estimated solar performance metric
+
     """
     df = df.copy()
     df['day_of_week'] = df.index.dayofweek
@@ -120,7 +70,6 @@ def create_features(df):
         6: 2, 7: 2, 8: 2,     # summer
         9: 3, 10: 3, 11: 3    # autumn
     })
-    df['solar_performance'] = solar_performance_metric(df['irradiance'], df['temperature']).astype(float)
     return df
 
 
@@ -150,7 +99,7 @@ class SolarPredictor(DaBase):
         self.model = None
         self.feature_columns = [
             'temperature', 'precipitation', 'irradiance',
-            'day_of_week', 'hour', 'quarter', 'month', 'season', 'solar_performance'
+            'day_of_week', 'hour', 'quarter', 'month', 'season'
         ]
         self.is_trained = False
         self.training_stats = {}
@@ -407,14 +356,16 @@ class SolarPredictor(DaBase):
                     irradiance_corr = season_hour_data['solar_kwh'].corr(season_hour_data['irradiance'])
                     
                     if irradiance_corr > 0.5:
-                        performance_ratio = season_hour_data['solar_kwh'] / (season_hour_data['solar_performance'] + 1e-6)
-                        Q1 = performance_ratio.quantile(0.25)
-                        Q3 = performance_ratio.quantile(0.75)
+                        # Use direct irradiance vs solar production ratio for outlier detection
+                        irradiance_ratio = season_hour_data['solar_kwh'] / (
+                                    season_hour_data['irradiance'] + 1e-6)
+                        Q1 = irradiance_ratio.quantile(0.25)
+                        Q3 = irradiance_ratio.quantile(0.75)
                         IQR = Q3 - Q1
-                        
-                        ratio_outliers = (performance_ratio < (Q1 - 2.0 * IQR)) | (performance_ratio > (Q3 + 2.0 * IQR))
+                        ratio_outliers = (irradiance_ratio < (Q1 - 2.0 * IQR)) | (
+                                    irradiance_ratio > (Q3 + 2.0 * IQR))
                         seasonal_outlier_mask.loc[season_hour_data.index] = ratio_outliers
-        
+
         # Apply outlier removal
         final_clean_data = clean_data[~seasonal_outlier_mask]
         
@@ -679,12 +630,11 @@ class SolarPredictor(DaBase):
         275,20220101,    2,   50,  117,    0,    0
         
         YYYYMMDD,HH:dag einde uur in utc -> HH-1 begin uur utc
-        FH        : Uurgemiddelde windsnelheid (in 0.1 m/s) -> winds /10
         T         : Temperatuur (in 0.1 graden Celsius) -> temp /10
         Q         : Globale straling (in J/cm2) -> gr -
         RH        : Uursom van de neerslag (in 0.1 mm) (-1 voor <0.05 mm) -> neersl / 10
         '''
-        df = df.rename(columns={"   FH": "winds", "    T": "temp", "    Q": "gr", "   RH": "neersl"})
+        df = df.rename(columns={"    T": "temp", "    Q": "gr", "   RH": "neersl"})
 
 
         save_df = pd.DataFrame(columns = ["time", "code", "value"])
@@ -695,7 +645,6 @@ class SolarPredictor(DaBase):
             hour = row.HH-1
             dati = dt.datetime(year, month, day, hour, tzinfo=dt.timezone.utc)
             utc = int(dati.timestamp())
-            save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds/10]
             save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp/10]
             save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
             save_df.loc[save_df.shape[0]] = [utc, "neersl", max(0, row.neersl/10)]
@@ -703,11 +652,7 @@ class SolarPredictor(DaBase):
         os.remove(filename)
         return
 
-    def get_weatherdata(self, start:dt.datetime):
-        """
-
-
-        :return:
+    def import_knmi_df(self):
         """
         # import and delete meteo-files
         meteo_files = []
@@ -717,9 +662,36 @@ class SolarPredictor(DaBase):
                 meteo_files.append(map+f)
         for meteo_file in meteo_files:
             self.import_weatherdata(meteo_file)
+        """
+        # get dataframe with knmi-py
+        # datetime of latest data-reord
+        latest_dt = self.db_da.get_time_latest_record("gr")
+        latest_dt = dt.datetime(year=2025, month=11, day=17)
+        knmi_df = knmi.get_hour_data_dataframe([self.knmi_station], start=latest_dt, end = dt.datetime.now(), variables=["T","Q","RH"])
+        if len(knmi_df) > 0:
+            knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr", "RH": "neersl"})
+            knmi_df["utc"] = knmi_df.index
+            knmi_df["utc"] = pd.to_datetime(knmi_df["utc"], utc=True) # , format='%Y-%m-%d %H:%M:%S')
+            save_df = pd.DataFrame(columns=["time", "code", "value"])
+            for row in knmi_df.itertuples():
+                utc = int(row.utc.timestamp())
+                save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
+                save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
+                save_df.loc[save_df.shape[0]] = [utc, "neersl", max(0, row.neersl / 10)]
+            self.db_da.savedata(save_df, tablename="values")
+        return
 
-        # make weather-dataframe
-        weather_data = pd.DataFrame(columns=["utc", "gr", "temp", "winds", "neersl"])
+    def get_weatherdata(self, start:dt.datetime):
+        """
+
+
+        :return:
+        """
+        self.import_knmi_df()
+
+        # get weather-dataframe from database
+        weather_data = pd.DataFrame(columns=["utc", "gr", "temp", "neersl"])
+
         for weather_item in weather_data.columns[1:]:
             df_item = self.db_da.get_column_data("values", weather_item, start=start)
             if len(weather_data) == 0:
@@ -764,7 +736,7 @@ def main():
     arg = sys.argv[1]
     if arg.lower() == "train":
         now = dt.datetime.now()
-        start = dt.datetime(year=now.year - 1, month=now.month, day=1)
+        start = dt.datetime(year=now.year - 1, month=now.month, day=now.day)
         solar_predictor.run_train(start)
 
 if __name__ == "__main__":
