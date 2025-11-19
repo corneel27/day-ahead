@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.1.rc5
+- upgrade python numpy-module
+- upgrade debian-base
+
 # 2025.11.1.rc4
 Changes in "heatpump":
 - maximization of the total heat to produce to prevent "no solution"
@@ -7,9 +11,9 @@ Changes in "heatpump":
 
 # 2025.11.1.rc3 
 
-Fixed error with heatpump and heatpump-boiler with on/off adjustment
-Fixed error with on/off adjustement and not configured power-entity
-Fixed apparmor.txt for network-access 
+- Fixed error with heatpump and heatpump-boiler with on/off adjustment
+- Fixed error with on/off adjustement and not configured power-entity
+- Fixed apparmor.txt for network-access 
 
 # 2025.11.1.rc2
 Fixed calc error
