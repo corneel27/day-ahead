@@ -4016,6 +4016,13 @@ class DaCalc(DaBase):
             plt.show()
         plt.close("all")
 
+        if self.notification_entity is not None and self.notification_berekening:
+            self.set_value(
+                self.notification_entity,
+                "DAO calc afgerond " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+            )
+    
+
     def calc_optimum_debug(self):
         self.debug = True
         self.calc_optimum()
