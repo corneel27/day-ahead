@@ -193,7 +193,9 @@ class Meteo:
         result = None
         for key in stations:
             station = stations[key]
-            afstand = (self.latitude-station.latitude)**2 + (self.longitude-station.longitude)**2
+            afstand = (self.latitude - station.latitude) ** 2 + (
+                self.longitude - station.longitude
+            ) ** 2
             if result is None or afstand < distance:
                 distance = afstand
                 result = key
@@ -641,6 +643,7 @@ class Meteo:
         acol = math.radians(orientation)
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot
+
 
 """
 def main():

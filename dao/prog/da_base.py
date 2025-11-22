@@ -123,7 +123,7 @@ class DaBase(hass.Hass):
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
         self.meteo = Meteo(self.config, self.db_da)
-        if country =="NL":
+        if country == "NL":
             self.knmi_station = self.meteo.which_station()
         self.solar = self.config.get(["solar"])
         self.interval = self.config.get(["interval"], None, "1hour").lower()
@@ -210,7 +210,7 @@ class DaBase(hass.Hass):
         self.last_activity_entity = self.config.get(
             ["notifications", "last activity entity"], None, None
         )
-        # self.set_last_activity()
+        self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.db_da.log_pool_status()
         warnings.simplefilter("ignore", ResourceWarning)

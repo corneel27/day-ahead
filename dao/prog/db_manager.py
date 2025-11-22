@@ -332,12 +332,8 @@ class DBmanagerObj(object):
         """
         # Reflect existing tables from the database
         with self.engine.connect() as connection:
-            values_table = Table(
-                "values", self.metadata, autoload_with=connection
-            )
-            variabel_table = Table(
-                "variabel", self.metadata, autoload_with=connection
-            )
+            values_table = Table("values", self.metadata, autoload_with=connection)
+            variabel_table = Table("variabel", self.metadata, autoload_with=connection)
 
         # Construct the query
         query = (
@@ -361,8 +357,9 @@ class DBmanagerObj(object):
             result = result.scalar()
             if type(result) is str:
                 result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
+            else:
+                result = None
         return result
-
 
     def get_prognose_field(self, field: str, start, end=None, interval="1hour"):
         values_table = Table("prognoses", self.metadata, autoload_with=self.engine)

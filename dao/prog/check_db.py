@@ -17,7 +17,8 @@ from sqlalchemy import (
     update,
     text,
     and_,
-    delete, literal_column
+    delete,
+    literal_column,
 )
 import pandas as pd
 
@@ -101,10 +102,10 @@ class CheckDB:
         return
 
     def get_all_var_data(
-                self,
-                tablename: str,
-                column_name: str,
-        ):
+        self,
+        tablename: str,
+        column_name: str,
+    ):
         """
         Retourneert een dataframe
         :param tablename: de naam van de tabel "prognoses" of "values"
@@ -112,12 +113,14 @@ class CheckDB:
         :return:
         """
 
-        variabel_table = Table("variabel", self.db_da.metadata, autoload_with=self.engine)
+        variabel_table = Table(
+            "variabel", self.db_da.metadata, autoload_with=self.engine
+        )
         values_table = Table(tablename, self.db_da.metadata, autoload_with=self.engine)
         query = select(
             values_table.c.time.label("time"),
-            literal_column("'"+column_name+"'").label("code"),
-            values_table.c.value.label("value")
+            literal_column("'" + column_name + "'").label("code"),
+            values_table.c.value.label("value"),
         ).where(
             and_(
                 variabel_table.c.code == column_name,
@@ -134,11 +137,9 @@ class CheckDB:
         self,
         tablename: str,
         variabel_id: int,
-        ):
+    ):
         values_table = Table(tablename, self.db_da.metadata, autoload_with=self.engine)
-        delete_stmt = delete(
-            values_table
-        ).where(
+        delete_stmt = delete(values_table).where(
             values_table.c.variabel == variabel_id,
         )
         with self.engine.connect() as connection:
@@ -147,12 +148,12 @@ class CheckDB:
         return
 
     def move_meteodata_to_prognoses(self):
-        variabelen =[
+        variabelen = [
             [4, "gr", "Globale straling", "J/cm2"],
             [5, "temp", "Temperatuur", "°C"],
             [6, "solar_rad", "PV radiation", "J/cm2"],
             [23, "winds", "Windsnelheid", "m/s"],
-            [24, "neersl", "Neerslag", "mm"]
+            [24, "neersl", "Neerslag", "mm"],
         ]
         for var in variabelen:
             # get the data from "values"
@@ -297,8 +298,6 @@ class CheckDB:
             print('Table "variabel" geupdated met neerslag.')
             print(f'Meteo-data verhuizen van "values" naar "prognoses"')
             self.move_meteodata_to_prognoses()
-
-
 
         """
         if l_version < 20250700:
