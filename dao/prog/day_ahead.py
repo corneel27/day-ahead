@@ -131,12 +131,8 @@ class DaCalc(DaBase):
                 f"(meteo en/of dynamische prijzen) "
                 f"er kan niet worden gerekend"
             )
-            if self.notification_entity is not None:
-                self.set_value(
-                    self.notification_entity,
-                    f"Er ontbreken voor een aantal uur gegevens; "
-                    f"er kan niet worden gerekend",
-                )
+            self.notify("Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend","201")
+            
             return
         if u_data <= 8 or u_prices <= 8:
             logging.warning(
@@ -144,17 +140,11 @@ class DaCalc(DaBase):
                 f"(en/of dynamische prijzen)\n"
                 f"controleer of alle gegevens zijn opgehaald"
             )
-            if self.notification_entity is not None:
-                self.set_value(
-                    self.notification_entity,
-                    f"Er ontbreken voor een aantal uur gegevens",
-                )
+            self.notify("Er ontbreken voor een aantal uur gegevens","202")
+            
 
-        if self.notification_entity is not None and self.notification_berekening:
-            self.set_value(
-                self.notification_entity,
-                "DAO calc gestart " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
-            )
+        self.notify("DAO calc gestart", "101", self.notification_berekening)
+        
 
         prog_data = prog_data.reset_index(drop=True)
         price_data = price_data.reset_index(drop=True)
@@ -4016,16 +4006,29 @@ class DaCalc(DaBase):
             plt.show()
         plt.close("all")
 
-        if self.notification_entity is not None and self.notification_berekening:
-            self.set_value(
-                self.notification_entity,
-                "DAO calc afgerond " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
-            )
+        self.notify("DAO calc afgerond", "102", self.notification_berekening)
     
 
     def calc_optimum_debug(self):
         self.debug = True
         self.calc_optimum()
+
+    def notify(self, message, status, notification_berekening = True):
+        """
+        send notification
+        """
+        if self.daostatus_entity is not None:
+            self.set_value(
+                self.daostatus_entity,
+                status,
+            )
+        if self.notification_entity is not None and notification_berekening:
+            self.set_value(
+                self.notification_entity,
+                message + " " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+            )
+
+
 
 
 def main():

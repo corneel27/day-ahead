@@ -183,6 +183,9 @@ class DaBase(hass.Hass):
         self.notification_entity = self.config.get(
             ["notifications", "notification entity"], None, None
         )
+        self.daostatus_entity = self.config.get(
+            ["notifications", "daostatus_entity"], None, None
+        )
         self.notification_opstarten = self.config.get(
             ["notifications", "opstarten"], None, False
         )
