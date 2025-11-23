@@ -720,8 +720,8 @@ Het is allemaal optioneel.
 |                           | entity actual level           | string           |                                    |                                                    |
 |                           | upper limit                   | getal            |                                    | %                                                  |
 |                           | lower limit                   | getal            |                                    | %                                                  |
-|                           | optimal lower level           | getal of string  |                                    | %                                                  |
-|                           | penalty low soc               | getal of string  |                                    | %                                                  |
+|                           | optimal lower level           | getal of string  | lower limit                        | %                                                  |
+|                           | penalty low soc               | getal of string  | 0.0025                             | %                                                  |
 |                           | entity actual level           | string           |                                    | euro/%.uur                                         |
 |                           | entity min soc end opt        | string           | 0                                  |                                                    |
 |                           | entity max soc end opt        | string           | 100                                |                                                    |
@@ -1257,9 +1257,9 @@ opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zo
    * entity actual level: entiteit die in procenten de actuele SoC van de batterij presenteert  
    * capacity: capaciteit van de batterij in kWh  
    * lower limit: onderste SoC limiet (tijdelijk)  
-   * upper limit: bovenste SoC limiet  
-   * optimal lower level: onderste SoC limiet voor langere tijd  
-   * penalty low soc: de kosten per uur en per procent dat de SoC onder de optimal low soc verblijft
+   * upper limit: bovenste SoC limiet in %
+   * optimal lower level: onderste SoC limiet voor langere tijd in %, default lowerlimit, dus dan geen optimal lower level
+   * penalty low soc: de kosten per uur en per procent dat de SoC onder de optimal low soc verblijft in euro/%.uur (default 0.0025 euro/%.uur)
    * entity min soc end opt: (default 0) entity in home assistant (input_number), waarmee je de 
      minimale SoC in procenten kunt opgeven die de batterij aan het einde van de berekening moet hebben. Hiermee kun je dus de hele grafiek een beetje "optillen" terwijl de SoC tussendoor wel lager kan worden. 
    * entity max soc end opt: (default 100) entity in home assistant (input_number), waarmee je de
