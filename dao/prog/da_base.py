@@ -178,7 +178,9 @@ class DaBase(hass.Hass):
 
         self.history_options = self.config.get(["history"])
         # self.strategy = self.config.get(["strategy"], None, "minimize cost").lower()
-        self.strategy = self.get_setting_state("strategy", None, exp_type="string", default="minimize cost")
+        self.strategy = self.get_setting_state(
+            "strategy", None, exp_type="string", default="minimize cost"
+        )
         self.tibber_options = self.config.get(["tibber"], None, None)
         self.notification_entity = self.config.get(
             ["notifications", "notification entity"], None, None
@@ -484,7 +486,9 @@ class DaBase(hass.Hass):
         if entity_id is not None:
             self.set_state(entity_id, value)
 
-    def get_entity_state(self, entity_key: str, options: dict) -> int | float | str | None:
+    def get_entity_state(
+        self, entity_key: str, options: dict
+    ) -> int | float | str | None:
         entity_id = self.config.get([entity_key], options, None)
         if entity_id is not None:
             result = self.get_state(entity_id).state
@@ -492,7 +496,9 @@ class DaBase(hass.Hass):
             result = None
         return result
 
-    def get_setting_state(self, key: str, options: dict, exp_type: str = "number", default: any = 1) -> int | float | str | None:
+    def get_setting_state(
+        self, key: str, options: dict, exp_type: str = "number", default: any = 1
+    ) -> int | float | str | None:
         """
         retourneert de waarde van een settings
         :param key: een string in de settings die ook een entity kan zijn
@@ -503,22 +509,24 @@ class DaBase(hass.Hass):
         """
         setting_value = self.config.get([key], options, default)
         if exp_type == "number":
-            if (type(setting_value) is int or type(setting_value) is float):
+            if type(setting_value) is int or type(setting_value) is float:
                 return setting_value
-            else: #setting_value is een string (entity?)
+            else:  # setting_value is een string (entity?)
                 try:
                     state = self.get_state(setting_value).state
                     return state
                 except Exception as ex:
                     logging.warning(f"No value found for {key}, {setting_value}")
                     return default
-        else: # expected:string
+        else:  # expected:string
             if type(setting_value) is str:
                 try:
                     state = self.get_state(setting_value).state
                     return state
                 except Exception as ex:
                     return setting_value
+            else:
+                return setting_value
 
     def clean_data(self):
         """
