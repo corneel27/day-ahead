@@ -345,7 +345,7 @@ class Meteo:
         df1 = df1[:96]
         logging.info(f"Meteodata model {model}")
         logging.info(
-            f"Aantal uitgevoerde ophaalpogingen: {count+1} van maximaal: {self.meteoserver_attemps}"
+            f"Aantal uitgevoerde ophaalpogingen: {count + 1} van maximaal: {self.meteoserver_attemps}"
         )
         logging.info(f"Aantal records: {len(df1)}")
         logging.info(f"Data {model}: \n{df1.to_string(index=True)}")

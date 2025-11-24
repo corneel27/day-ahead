@@ -788,7 +788,7 @@ class Report(DaBase):
         if vanaf + datetime.timedelta(days=366) < vanaf_m:
             logging.warning(
                 f'"last invoice" ({self.prices_options["last invoice"]}) '
-                f'is verouderd en moet worden bijgewerkt'
+                f"is verouderd en moet worden bijgewerkt"
             )
             vanaf = vanaf_m - datetime.timedelta(days=366)
         tot = max_tot
@@ -1249,7 +1249,7 @@ class Report(DaBase):
             if not isinstance(row.tijd, datetime.datetime):
                 print(row)
             if interval == "uur":
-                tijd_str = str(row.tijd)[10:14] +"00"
+                tijd_str = str(row.tijd)[10:14] + "00"
             elif interval == "dag":
                 tijd_str = str(row.tijd)[0:10]
             else:
@@ -1286,7 +1286,7 @@ class Report(DaBase):
                 "profit": "sum",
                 "datasoort": get_datasoort,
             }
-            )
+        )
         return fi_df
 
     def aggregate_balance_df(self, df: pd.DataFrame, interval: str):
@@ -1663,8 +1663,9 @@ class Report(DaBase):
                     select(
                         self.db_da.hour_start(p1.c.time).label("uur"),
                         func.min(self.db_da.from_unixtime(p1.c.time)).label("tijd"),
-                        func.sum(p1.c.value).label(key)
-                    ).where(
+                        func.sum(p1.c.value).label(key),
+                    )
+                    .where(
                         and_(
                             v1.c.code == key,
                             p1.c.variabel == v1.c.id,
@@ -1673,7 +1674,9 @@ class Report(DaBase):
                                 last_moment.strftime("%Y-%m-%d %H:%M:%S")
                             ),
                             p1.c.time
-                            < self.db_da.unix_timestamp(tot.strftime("%Y-%m-%d %H:%M:%S")),
+                            < self.db_da.unix_timestamp(
+                                tot.strftime("%Y-%m-%d %H:%M:%S")
+                            ),
                         )
                     )
                     .group_by("uur")

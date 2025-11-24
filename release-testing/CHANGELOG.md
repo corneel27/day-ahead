@@ -1,5 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.2.rc1
+## Fixes
+Fix heatpump-error: calculation heat needed next day
+Fix error boiler: take low production-prices error into calculation
+## New
+Implement setting for soc penalty when soc below optimal soc level
+
+
 # 2025.11.1.rc5
 - upgrade python numpy-module
 - upgrade debian-base
