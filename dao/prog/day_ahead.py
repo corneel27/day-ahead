@@ -54,7 +54,7 @@ class DaCalc(DaBase):
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2025, month=10, day=14, hour=13, minute=20)
+        # _start_dt = datetime.datetime(year=2025, month=11, day=23, hour=12, minute=45)
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
@@ -1033,7 +1033,7 @@ class DaCalc(DaBase):
                 # needed_time = [0 for _ in range(U)]
                 # needed_heat = sp * (setpoint - act_temp - 4 - cooling*plan_periode)/3600 in kWh
 
-                # consumption in one interval = vermogen
+                # consumption in one interval = kWh per uur of per 15min
                 cons_interval = power_boiler * self.interval_s / 3600000
                 # tempverlies door menging bij starten opwarmen in K
                 # mix_los = 1.2
@@ -1133,6 +1133,7 @@ class DaCalc(DaBase):
                 model += xsum(boiler_st[u] for u in range(U)) == 1
 
                 # korte bocht oplossing
+                """
                 if boiler_start is None:
                     for u in range(U):
                         model += c_b[u] == 0.0
@@ -1160,23 +1161,31 @@ class DaCalc(DaBase):
                         else:
                             model += c_b[u] == 0.0
                             model += boiler_on[u] == 0
-
-                # beste oplossing die nog niet werkt
                 """
+                # beste oplossing die nog niet werkt
+
                 for u in range(U)[0:boiler_start_index]:
                     model += c_b[u] == 0
                     model += boiler_on[u] == 0
                     model += boiler_st[u] == 0
-                for u in range(U)[boiler_end_index+1:U]:
+                for u in range(U)[boiler_end_index+1:]:
                     model += boiler_st[u] == 0
                     # for j in range(U)[u:min(u + est_needed_intv[u-1] - 2, U)]:
                     #    model += boiler_on[u] == 0
+                # + est_needed_intv[boiler_end_index]]:
+                model += xsum(boiler_st[u] for u in range(U)[boiler_start_index:boiler_end_index]) == 1
                 for u in range(U)[boiler_start_index:boiler_end_index + est_needed_intv[boiler_end_index]]:
                     model += c_b[u] == xsum(
                             boiler_st[j] * est_needed_elec_st[j][u - j]
                             for j in range(U)[u - est_needed_intv[u] + 1 : u + 1]
                             if u - j < len(est_needed_elec_st[j])
                         )
+                    """ # for debugging
+                    print(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
+                    for j in range(U)[u - est_needed_intv[u]: u + 1]:
+                        if u - j < len(est_needed_elec_st[j]):
+                            print(f"j: {j}, est_needed_elec_st[j][u - j]: {est_needed_elec_st[j][u - j]}")
+                    """
                     model += boiler_on[u] == xsum(
                             boiler_st[j]
                             for j in range(U)[
@@ -1185,7 +1194,7 @@ class DaCalc(DaBase):
                             ]
                             if u - j < len(est_needed_elec_st[j])
                         )
-                """
+
                 """
                     j_vanaf = u - est_needed_intv[u]
                     j_tot = min(u + 1, len(cb_hr_run))
@@ -1201,9 +1210,6 @@ class DaCalc(DaBase):
                         #    max(boiler_start_index, u - est_needed_intv[u] + 1): u + 1]
                         # if u - j < len(est_needed_elec_st[j])
                     # )
-                
-                for u in range(U)[boiler_end_index:]:
-                    model += boiler_st[u] == 0
 
             
                 for u in range(U)[
@@ -1688,7 +1694,7 @@ class DaCalc(DaBase):
 
             # degree days
             degree_days = self.meteo.calc_graaddagen(weighted=True)
-            if U > 24:
+            if U > self.steps_day:
                 degree_days += self.meteo.calc_graaddagen(
                     date=dt.datetime.combine(
                         dt.date.today() + dt.timedelta(days=1), dt.datetime.min.time()
@@ -1744,7 +1750,7 @@ class DaCalc(DaBase):
                 if self.hp_heat_demand:
                     logging.info(f"On/off warmtepomp wordt ingepland")
                     avg_temp = self.meteo.get_avg_temperature()
-                    if U > 24:
+                    if U > self.steps_day:
                         avg_temp += self.meteo.get_avg_temperature(
                             date=dt.datetime.combine(
                                 dt.date.today() + dt.timedelta(days=1),
@@ -2949,11 +2955,11 @@ class DaCalc(DaBase):
         # boiler
         ############################################
         # debug logging boiler results
-        logging.debug("\n")
-        logging.debug("  uur st on  cons   temp")
+        logging.debug("\nBOILER")
+        logging.debug("nr  uur st on  cons   temp")
         for u in range(U):
             logging.debug(
-                f"{uur[u]}  {boiler_st[u].x:.0f}  {boiler_on[u].x:.0f}  {c_b[u].x:.2f}  {boiler_temp[u].x:.2f}"
+                f"{u:.0f} {uur[u]}  {boiler_st[u].x:.0f}  {boiler_on[u].x:.0f}  {c_b[u].x:.2f}  {boiler_temp[u].x:.2f}"
             )
         logging.debug("\n")
 
