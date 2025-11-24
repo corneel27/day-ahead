@@ -4080,7 +4080,7 @@ class DaCalc(DaBase):
         self.debug = True
         self.calc_optimum()
 
-    def notify(self, message,notification_berekening == True):
+    def notify(self, message,notification_berekening=True):
         """
         send notification
         """

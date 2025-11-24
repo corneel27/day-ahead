@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.2.rc2
+Fix notification error
+
 # 2025.11.2.rc1
 ## Fixes
 Fix heatpump-error: calculation heat needed next day
