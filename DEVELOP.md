@@ -64,6 +64,18 @@ pip install --upgrade pip
 pip install -r dao/requirements.txt
 ```
 
+#### 3.1 In case of error
+In case you get an error like this: `ERROR: No matching distribution found for mip==1.16rc0` or equivalent you need to install manually.
+* Edit dao/requirements.txt and remove the line with mip
+* pip install -r dao/requirements.txt
+* Install mip: tar -xzf dao/miplib_amd64.tar.gz -C dao/prog
+* pip install --ignore-requires-python mip==1.16rc0
+* export PMIP_CBC_LIBRARY=~/day-ahead/dao/prog/miplib/lib/libCbc.so
+* export LD_LIBRARY_PATH=~/day-ahead/dao/prog/miplib/lib/
+
+Repeat the two export statements under Option 1 below when starting up the environment a second time.
+
+#### 3.2 Install in editable mode
 If you're developing the package itself, you can also install it in editable mode:
 
 ```bash
@@ -137,6 +149,10 @@ cd /path/to/day-ahead
 source venv/bin/activate  # On macOS/Linux
 # or
 venv\Scripts\activate     # On Windows
+
+# In case of manual mip install:
+export PMIP_CBC_LIBRARY=~/day-ahead/dao/prog/miplib/lib/libCbc.so
+export LD_LIBRARY_PATH=~/day-ahead/dao/prog/miplib/lib/
 
 # Set PYTHONPATH and navigate to webserver directory
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
