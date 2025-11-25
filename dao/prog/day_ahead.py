@@ -1051,9 +1051,6 @@ class DaCalc(DaBase):
                         / self.interval_s
                     )
                     # verdelen van benodigde elektra over de intervallen
-                    if u + num_intervals >= U:
-                        boiler_end_index = min(boiler_end_index, u)
-                        break
                     est_needed_intv[u] = num_intervals
                     est_needed_elec_st.append([])
                     # cb_hr_run.append([])
@@ -1081,6 +1078,9 @@ class DaCalc(DaBase):
                         * p_avg
                     )
                     est_netto_cost[u] = est_elec_cost[u] - est_boiler_endvalue[u]
+                    if u + num_intervals >= U:
+                        boiler_end_index = min(boiler_end_index, u)
+                        break
                     if (
                         (u >= boiler_start_index)
                         and (u <= boiler_end_index)
@@ -1167,12 +1167,12 @@ class DaCalc(DaBase):
                             for j in range(U)[u - est_needed_intv[u] + 1 : u + 1]
                             if u - j < len(est_needed_elec_st[j])
                         )
-                    """ # for debugging
+                    # for debugging
                     print(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
                     for j in range(U)[u - est_needed_intv[u]: u + 1]:
-                        if u - j < len(est_needed_elec_st[j]):
+                        if est_needed_intv[u]>0 and u - j < len(est_needed_elec_st[j]):
                             print(f"j: {j}, est_needed_elec_st[j][u - j]: {est_needed_elec_st[j][u - j]}")
-                    """
+
                     model += boiler_on[u] == xsum(
                             boiler_st[j]
                             for j in range(U)[
@@ -2942,10 +2942,10 @@ class DaCalc(DaBase):
         # boiler
         ############################################
         # debug logging boiler results
-        logging.debug("\nBOILER")
-        logging.debug("nr  uur st on  cons   temp")
+        logging.info("\nBOILER")
+        logging.info("nr  uur st on  cons   temp")
         for u in range(U):
-            logging.debug(
+            logging.info(
                 f"{u:.0f} {uur[u]}  {boiler_st[u].x:.0f}  {boiler_on[u].x:.0f}  {c_b[u].x:.2f}  {boiler_temp[u].x:.2f}"
             )
         logging.debug("\n")
@@ -4080,11 +4080,14 @@ class DaCalc(DaBase):
         self.debug = True
         self.calc_optimum()
 
-    def notify(self, message,notification_berekening=True):
+    def notify(self, message:str,notification_calculation:bool=False):
         """
-        send notification
+        sent notification to HA
+        :param message: the
+        :param notification_calculation: send notification of starting a calculation
+        :return: -
         """
-        if self.notification_entity is not None and notification_berekening:
+        if self.notification_entity is not None and notification_calculation:
             self.set_value(
                 self.notification_entity,
                 message + " " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
