@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.2.rc3
+- Fix several boiler errors
+- Fix heatpump errors
+- Debian base 9.1.0 
+
 # 2025.11.2.rc2
 Fix notification error
 
