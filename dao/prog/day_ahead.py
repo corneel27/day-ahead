@@ -874,6 +874,8 @@ class DaCalc(DaBase):
             logging.info(
                 f"Boiler niet aanwezig of staat uit, boiler wordt niet ingepland"
             )
+            boiler_start_index = None
+            boiler_end_index = None
         else:
             entity_boiler_instant_start = self.config.get(
                 ["entity instant start"], self.boiler_options, None
@@ -1167,12 +1169,12 @@ class DaCalc(DaBase):
                             for j in range(U)[u - est_needed_intv[u] + 1 : u + 1]
                             if u - j < len(est_needed_elec_st[j])
                         )
-                    # for debugging
+                    """ # for debugging
                     print(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
                     for j in range(U)[u - est_needed_intv[u]: u + 1]:
                         if est_needed_intv[u]>0 and u - j < len(est_needed_elec_st[j]):
                             print(f"j: {j}, est_needed_elec_st[j][u - j]: {est_needed_elec_st[j][u - j]}")
-
+                    """
                     model += boiler_on[u] == xsum(
                             boiler_st[j]
                             for j in range(U)[
@@ -1680,15 +1682,20 @@ class DaCalc(DaBase):
             logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
             # degree days
-            degree_days = self.meteo.calc_graaddagen(weighted=True)
+            degree_days_today = self.meteo.calc_graaddagen(weighted=True)
+            logging.info(f"Gewogen graaddagen vandaag: {degree_days_today:.1f} K.day")
             if U > self.steps_day:
-                degree_days += self.meteo.calc_graaddagen(
+                degree_days_tomorrow = self.meteo.calc_graaddagen(
                     date=dt.datetime.combine(
                         dt.date.today() + dt.timedelta(days=1), dt.datetime.min.time()
                     ),
                     weighted=True,
                 )
-            logging.info(f"Gewogen graaddagen: {degree_days:.1f} K.day")
+                logging.info(f"Gewogen graaddagen morgen: {degree_days_tomorrow:.1f} K.day")
+            else:
+                degree_days_tomorrow = 0
+            degree_days = degree_days_today + degree_days_tomorrow
+            logging.info(f"Gewogen graaddagen totaal: {degree_days:.1f} K.day")
 
             # degree days factor kWh th / K.day
             degree_days_factor = float(
@@ -1697,6 +1704,7 @@ class DaCalc(DaBase):
                 )
             )
             logging.info(f"Degree days factor: {degree_days_factor:.1f} kWh/K.day")
+            logging.info(f"Totaal benodigde warmte: {(degree_days * degree_days_factor):.1f} kWh")
 
             # heat produced
             entity_heat_produced = self.config.get(
@@ -1709,7 +1717,7 @@ class DaCalc(DaBase):
             logging.info(f"Reeds geproduceerde warmte: {heat_produced:.1f} kWh")
 
             # heat needed
-            heat_needed = max(0.0, degree_days * degree_days_factor - heat_produced)
+            heat_needed = max(0.0, (degree_days * degree_days_factor) - heat_produced)
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
 
             # heat demand
@@ -1725,26 +1733,30 @@ class DaCalc(DaBase):
             if self.hp_adjustment == "on/off":
                 # vanaf hier code ronald
                 # hp_adjustment == "on/off"
-                logging.debug("Implementatie on/off warmtepomp")
+                logging.debug("WP-regeling: 'on/off'")
                 min_run_length = int(
                     self.config.get(["min run length"], self.heating_options, 1)
                 )  # Minimum run lengte hp in uren - 1h als niet gedefinieerd
                 min_run_length = min(
                     max(min_run_length, 1), 5
                 )  # Alleen waarde tussen 1 en 5 uur mogelijk
-                logging.debug(f"Warmtepomp draait minimaal {min_run_length} uren")
+                logging.info(f"Warmtepomp draait minimaal {min_run_length} uren")
 
-                if self.hp_heat_demand:
+                if self.hp_heat_demand and heat_needed > 0:
                     logging.info(f"On/off warmtepomp wordt ingepland")
-                    avg_temp = self.meteo.get_avg_temperature()
+                    avg_temp_today = self.meteo.get_avg_temperature()
+                    logging.info(f"Gem. buitentemperatuur vandaag: {avg_temp_today:.1f} °C")
                     if U > self.steps_day:
-                        avg_temp += self.meteo.get_avg_temperature(
+                        avg_temp_tomorrow = self.meteo.get_avg_temperature(
                             date=dt.datetime.combine(
                                 dt.date.today() + dt.timedelta(days=1),
                                 dt.datetime.min.time(),
                             )
                         )
-                        avg_temp = avg_temp / 2
+                        logging.info(f"Gem. buitentemperatuur morgen: {avg_temp_today:.1f} °C")
+                        avg_temp = (avg_temp_today + avg_temp_tomorrow) / 2
+                    else:
+                        avg_temp = avg_temp_today
                     entity_avg_temp = self.config.get(
                         ["entity avg outside temp"], self.heating_options, None
                     )
@@ -1754,9 +1766,8 @@ class DaCalc(DaBase):
                         )
                     else:
                         self.set_value(entity_avg_temp, round(avg_temp, 1))
-
-                    logging.debug(
-                        f"Voorspelde gemiddelde buiten temperatuur: {avg_temp}"
+                    logging.info(
+                        f"Voorspelde gemiddelde buiten temperatuur: {avg_temp} °C"
                     )
 
                     # Get COP and heatpump power from HA
@@ -1783,11 +1794,11 @@ class DaCalc(DaBase):
                     interval_avail = U
                     if (
                         boiler_heated_by_heatpump
-                        and boiler_start is not None
-                        and boiler_start < U
+                        and boiler_end_index is not None
+                        and boiler_end_index < U
                     ):
                         interval_avail = (
-                            interval_avail - est_needed_intv[boiler_start] - 1
+                            interval_avail - est_needed_intv[boiler_end_index] - 1
                         )
                     hours_avail = math.floor(interval_avail * self.interval_s / 3600)
 
@@ -1861,7 +1872,7 @@ class DaCalc(DaBase):
             else:
                 # hp_adjustment == "power" or "heating curve"
                 logging.info(
-                    f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland\n"
+                    f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland."
                 )
                 stages = self.heating_options["stages"]
                 S = len(stages)
@@ -2942,10 +2953,10 @@ class DaCalc(DaBase):
         # boiler
         ############################################
         # debug logging boiler results
-        logging.info("\nBOILER")
-        logging.info("nr  uur st on  cons   temp")
+        logging.debug("\nBOILER")
+        logging.debug("nr  uur st on  cons   temp")
         for u in range(U):
-            logging.info(
+            logging.debug(
                 f"{u:.0f} {uur[u]}  {boiler_st[u].x:.0f}  {boiler_on[u].x:.0f}  {c_b[u].x:.2f}  {boiler_temp[u].x:.2f}"
             )
         logging.debug("\n")
