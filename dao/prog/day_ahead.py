@@ -1075,7 +1075,7 @@ class DaCalc(DaBase):
                         U - u - est_needed_intv[u]
                     )
                     est_boiler_endvalue[u] = (
-                        (est_boiler_endtemp[u] - boiler_ondergrens)
+                        (est_boiler_endtemp[u] - boiler_act_temp) # boiler_ondergrens)
                         * (spec_heat_boiler / (3600 * cop_boiler))
                         * p_avg
                     )
@@ -1166,15 +1166,16 @@ class DaCalc(DaBase):
                 for u in range(U)[boiler_start_index:boiler_end_index + est_needed_intv[boiler_end_index]]:
                     model += c_b[u] == xsum(
                             boiler_st[j] * est_needed_elec_st[j][u - j]
-                            for j in range(U)[u - est_needed_intv[u] + 1 : u + 1]
+                            for j in range(U)[max(0,u - est_needed_intv[u] + 1) : u + 1]
                             if u - j < len(est_needed_elec_st[j])
                         )
-                    """ # for debugging
+                    # for debugging
                     print(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
-                    for j in range(U)[u - est_needed_intv[u]: u + 1]:
+                    for j in range(U)[max(0, u - est_needed_intv[u]+1): u + 1]:
+                        # print(f"len(est_needed_elec_st[j]): {len(est_needed_elec_st[j])}")
                         if est_needed_intv[u]>0 and u - j < len(est_needed_elec_st[j]):
                             print(f"j: {j}, est_needed_elec_st[j][u - j]: {est_needed_elec_st[j][u - j]}")
-                    """
+
                     model += boiler_on[u] == xsum(
                             boiler_st[j]
                             for j in range(U)[
@@ -2454,18 +2455,11 @@ class DaCalc(DaBase):
                 * p_bat
                 for b in range(B)
             )
-        )
-        """
             # waarde energie boiler
             - (boiler_temp[U] - boiler_temp[0])
             * (spec_heat_boiler / (3600 * cop_boiler))
             * p_avg
         )
-        """
-
-        # waarde opslag accu
-        # +(boiler_temp[U] - boiler_ondergrens) * (spec_heat_boiler/(3600 * cop_boiler)) *
-        # p_avg # waarde energie boiler
 
         #####################################################
         #        strategy optimization
