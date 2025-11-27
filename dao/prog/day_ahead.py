@@ -1169,13 +1169,14 @@ class DaCalc(DaBase):
                             for j in range(U)[max(0,u - est_needed_intv[u] + 1) : u + 1]
                             if u - j < len(est_needed_elec_st[j])
                         )
+                    """
                     # for debugging
                     print(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
                     for j in range(U)[max(0, u - est_needed_intv[u]+1): u + 1]:
                         # print(f"len(est_needed_elec_st[j]): {len(est_needed_elec_st[j])}")
                         if est_needed_intv[u]>0 and u - j < len(est_needed_elec_st[j]):
                             print(f"j: {j}, est_needed_elec_st[j][u - j]: {est_needed_elec_st[j][u - j]}")
-
+                    """
                     model += boiler_on[u] == xsum(
                             boiler_st[j]
                             for j in range(U)[
