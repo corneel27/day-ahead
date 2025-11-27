@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.11.2.rc4
+Fix boiler calculation: take heat content into account
+
 # 2025.11.2.rc3
 - Fix several boiler errors
 - Fix heatpump errors
