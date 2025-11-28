@@ -1159,7 +1159,7 @@ mode: single
 Met "True" of "False" geeft je aan of je een notificatie wilt bij het opstarten van het programma
 en bij het uitvoeren van een optimaliseringsberekening
 * use_json_notification (default "False")<br>
-Hiermee stel je in dat meldingen in JSON formaat worden gestuurd, inclusief een statuscode waarop je bijvoorbeeld een automation kan afstarten. Voorbeeld:  `{"message": "DAO calc afgerond", "status": 210, "timestamp": "28-11-2025 12:35:09"}`. (Overzicht van statuscodes)[prog/statuscodes.md].
+Hiermee stel je in dat meldingen in JSON formaat worden gestuurd, inclusief een statuscode waarop je bijvoorbeeld een automation kan afstarten. Voorbeeld:  `{"message": "DAO calc afgerond", "status": 210, "timestamp": "28-11-2025 12:35:09"}`. [Overzicht van statuscodes](prog/statuscodes.md).
 *  last activity entity (default "")<br>
 In deze entity (helper van het type input_datetime) wordt de datum-tijd weggeschreven als er door het programma 
 een activiteit is uitgevoerd (berekening, ophalen prijzen enz). Als deze helper niet uurlijks wordt geupdate kun je daar in
