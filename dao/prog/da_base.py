@@ -690,6 +690,8 @@ class DaBase(hass.Hass):
         :param message: The message to be sent to Home Assistant
         :param status: Status code to be sent to Home Assistant
         :param notification_calculation: boolean to follow original setting "notifications": { "berekening": "True" }}. 
+            Should default to True; The "DAO calc gestart" and afgerond notifications include the parameter
+            to follow the configuration {"berekening": "True"}
         :return: -
 
         This function issues a notification to Home Assistant using the original "message + date/time" format unless
