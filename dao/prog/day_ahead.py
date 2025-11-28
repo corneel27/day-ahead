@@ -21,7 +21,6 @@ from utils import (
     calc_adjustment_heatcurve,
 )
 import logging
-import json
 from da_base import DaBase
 
 
