@@ -100,6 +100,7 @@ class DaCalc(DaBase):
                 f"Er ontbreken kwartier- of uurwaarden van de day-ahead tarieven, "
                 f"de berekening wordt afgebroken"
             )
+            self.notify("Er ontbreken kwartier- of uurwaarden van de day-ahead tarieven",306)
             return None
 
         if self.interval == "15min":
@@ -110,6 +111,7 @@ class DaCalc(DaBase):
                     f"Er ontbreken kwartierwaarden van de day-ahead tarieven, "
                     f"de berekening wordt afgebroken"
                 )
+                self.notify("Er ontbreken kwartierwaarden van de day-ahead tarieven",307)
                 return None
 
         while price_data.iloc[0]["time"] < start_interval_dt:
@@ -131,12 +133,8 @@ class DaCalc(DaBase):
                 f"(meteo en/of dynamische prijzen) "
                 f"er kan niet worden gerekend"
             )
-            if self.notification_entity is not None:
-                self.set_value(
-                    self.notification_entity,
-                    f"Er ontbreken voor een aantal uur gegevens; "
-                    f"er kan niet worden gerekend",
-                )
+            self.notify("Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend",301)
+            
             return
         if u_data <= 8 or u_prices <= 8:
             logging.warning(
@@ -144,17 +142,14 @@ class DaCalc(DaBase):
                 f"(en/of dynamische prijzen)\n"
                 f"controleer of alle gegevens zijn opgehaald"
             )
-            if self.notification_entity is not None:
-                self.set_value(
-                    self.notification_entity,
-                    f"Er ontbreken voor een aantal uur gegevens",
-                )
+            self.notify("Er ontbreken voor een aantal uur gegevens",302)
+            
 
-        if self.notification_entity is not None and self.notification_berekening:
-            self.set_value(
-                self.notification_entity,
-                "DAO calc gestart " + dt.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
-            )
+        If self.debug:
+            self.notify("DAO calc met debug gestart", 202, self.notification_berekening)
+        else:
+            self.notify("DAO calc gestart", 201, self.notification_berekening)
+        
 
         prog_data = prog_data.reset_index(drop=True)
         price_data = price_data.reset_index(drop=True)
@@ -796,6 +791,7 @@ class DaCalc(DaBase):
                     f"'min soc end opt' ({min_soc_end_opt}); "
                     f"het programma kan nu geen optimale oplossing berekenem"
                 )
+                self.notify("max soc end opt moet groter zijn dan min soc end opt",305)
                 return
 
             model += soc[b][U] >= max(opt_low_level[b] / 2, min_soc_end_opt)
@@ -2437,7 +2433,9 @@ class DaCalc(DaBase):
             logging.info(f"Rekentijd: {end_calc-start_calc:<5.2f} sec")
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
+                self.notify("geen oplossing voor Minimize Cost", 304)
                 return
+            
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
             logging.info(f"Strategie: {strategie}")
@@ -2445,6 +2443,7 @@ class DaCalc(DaBase):
             model.optimize()
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
+                self.notify("geen oplossing voor Minimize Consumption", 303)
                 return
             min_delivery = max(0.0, delivery.x)
             logging.info("Eerste berekening")
@@ -4016,9 +4015,16 @@ class DaCalc(DaBase):
             plt.show()
         plt.close("all")
 
+        self.notify("DAO calc afgerond", 210, self.notification_berekening)
+    
+
     def calc_optimum_debug(self):
         self.debug = True
         self.calc_optimum()
+
+    
+
+
 
 
 def main():

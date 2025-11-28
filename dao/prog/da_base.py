@@ -183,6 +183,9 @@ class DaBase(hass.Hass):
         self.notification_entity = self.config.get(
             ["notifications", "notification entity"], None, None
         )
+        self.use_json_notification = self.config.get(
+            ["notifications", "use_json_notification"], None, None
+        )
         self.notification_opstarten = self.config.get(
             ["notifications", "opstarten"], None, False
         )
@@ -680,3 +683,42 @@ class DaBase(hass.Hass):
         # sys.stdout = old_stdout
         # log_file.close()
         """
+    
+    def notify(self, message:str, status:int , notification_calculation:bool=True):
+        """
+        send notification if entity is set in config
+        :param message: The message to be sent to Home Assistant
+        :param status: Status code to be sent to Home Assistant
+        :param notification_calculation: boolean to follow original setting "notifications": { "berekening": "True" }}. 
+            Should default to True; The "DAO calc gestart" and afgerond notifications include the parameter
+            to follow the configuration {"berekening": "True"}
+        :return: -
+
+        This function issues a notification to Home Assistant using the original "message + date/time" format unless
+        use_json_notification is set to True in the configuration.
+        In that case, a JSON object will be sent with the message, a timestamp and a code
+        This code can trigger an automation. See statuscodes.md
+        """
+        if self.notification_entity is not None and self.use_json_notification:
+            # build notification message
+            notify_dict = {
+                "message": message,
+                "status": status,
+                "timestamp": datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+            }
+            # serialize to json
+            json_output = json.dumps(notify_dict)
+            # send the notification
+            self.set_value(
+                self.notification_entity,
+                json_output
+            )
+        elif self.notification_entity is not None and notification_calculation:
+            self.set_value(
+                self.notification_entity,
+                message + " " + datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+            )
+        
+
+
+        
