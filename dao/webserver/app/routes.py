@@ -12,6 +12,10 @@ from logging.handlers import TimedRotatingFileHandler
 from dao.prog.da_config import Config
 from dao.prog.da_report import Report
 from dao.prog.version import __version__
+from flask import jsonify
+import json
+import requests
+import os
 
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
@@ -563,6 +567,19 @@ def settings():
     )
 
 
+@app.route("/config", methods=["GET"])
+def config_page():
+    """
+    Single-page configuration interface for both options and secrets
+    """
+    return render_template(
+        "config.html",
+        title="Configuration",
+        active_menu="settings",
+        version=__version__,
+    )
+
+
 '''
 @app.route('/api/prognose/<string:fld>', methods=['GET'])
 def api_prognose(fld: str):
@@ -624,3 +641,238 @@ def run_api(bewerking: str):
         )
     else:
         return "Onbekende bewerking: " + bewerking
+
+
+
+def get_json_file(fname):
+    with open(fname, "r") as file:
+        return json.load(file)
+
+
+def save_json_file(fname, data):
+    with open(fname, "w") as file:
+        json.dump(data, file, indent=2)
+
+
+@app.route("/api/settings/options.json", methods=["GET", "POST"])
+def options_get():
+    if request.method == "POST":
+        try:
+            data = request.get_json()
+            if data is None:
+                return jsonify({"error": "No JSON data provided"}), 400
+            
+            save_json_file(app_datapath + "options.json", data)
+            return jsonify({"message": "Options saved successfully", "success": True}), 200
+        except json.JSONDecodeError as e:
+            logging.error(f"Invalid JSON in options: {str(e)}")
+            return jsonify({"error": "Invalid JSON format"}), 400
+        except Exception as e:
+            logging.error(f"Error saving options: {str(e)}")
+            return jsonify({"error": "Error saving options"}), 500
+    else:  # GET
+        return jsonify(get_json_file(app_datapath + "options.json"))
+
+
+@app.route("/api/settings/secrets.json", methods=["GET", "POST"])
+def secrets_get():
+    if request.method == "POST":
+        try:
+            data = request.get_json()
+            if data is None:
+                return jsonify({"error": "No JSON data provided"}), 400
+            
+            save_json_file(app_datapath + "secrets.json", data)
+            return jsonify({"message": "Secrets saved successfully", "success": True}), 200
+        except json.JSONDecodeError as e:
+            logging.error(f"Invalid JSON in secrets: {str(e)}")
+            return jsonify({"error": "Invalid JSON format"}), 400
+        except Exception as e:
+            logging.error(f"Error saving secrets: {str(e)}")
+            return jsonify({"error": "Error saving secrets"}), 500
+    else:  # GET
+        return jsonify(get_json_file(app_datapath + "secrets.json"))
+
+
+@app.route('/api/ha/entities', methods=['GET'])
+def get_ha_entities():
+    """Proxy endpoint to fetch Home Assistant entities"""
+    try:
+        # Get HA config from options.json
+        options = get_json_file(app_datapath + "options.json")
+        secrets = get_json_file(app_datapath + "secrets.json")
+        
+        # Get Home Assistant configuration
+        ha_config = options.get('homeassistant', {})
+        
+        # Determine base URL
+        protocol = ha_config.get('protocol api', 'http')
+        host = ha_config.get('host', ha_config.get('ip adress', 'supervisor'))
+        port = ha_config.get('ip port')
+        
+        # Build the correct URL based on whether it's supervisor or external HA
+        if host == 'supervisor':
+            # Running as HA add-on
+            base_url = f"{protocol}://{host}/core/api/states"
+        elif port:
+            # External HA with custom port
+            base_url = f"{protocol}://{host}:{port}/api/states"
+        else:
+            # External HA with default port
+            base_url = f"{protocol}://{host}/api/states"
+        
+        # Get token - try multiple sources
+        ha_token = ha_config.get('token')
+        
+        # Skip if it's a Home Assistant secret reference (e.g., "!secret ha_token")
+        if ha_token and (ha_token.startswith('!secret') or len(ha_token) < 50):
+            ha_token = None
+        
+        if not ha_token:
+            ha_token = secrets.get('ha_api_token')
+        if not ha_token:
+            ha_token = os.environ.get('SUPERVISOR_TOKEN')
+        
+        if not ha_token:
+            return jsonify({'error': 'Home Assistant token not configured'}), 500
+        
+        # Strip any whitespace from token
+        ha_token = ha_token.strip()
+        
+        # Fetch entities from Home Assistant
+        headers = {
+            'Authorization': f'Bearer {ha_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        response = requests.get(base_url, headers=headers, timeout=10)
+        
+        if response.status_code == 401:
+            return jsonify({'error': 'Invalid Home Assistant token. Please check your token configuration.'}), 401
+        
+        response.raise_for_status()
+        
+        entities = response.json()
+        
+        # Transform data to include only relevant information
+        entity_list = [
+            {
+                'entity_id': e['entity_id'],
+                'friendly_name': e.get('attributes', {}).get('friendly_name', e['entity_id']),
+                'domain': e['entity_id'].split('.')[0],
+                'state': e['state'],
+                'unit': e.get('attributes', {}).get('unit_of_measurement', '')
+            }
+            for e in entities
+        ]
+        
+        return jsonify(entity_list)
+    
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error fetching HA entities: {e}")
+        return jsonify({'error': 'Could not connect to Home Assistant'}), 500
+    except Exception as e:
+        logging.error(f"Error in get_ha_entities: {e}")
+        return jsonify({'error': 'Failed to fetch Home Assistant entities'}), 500
+
+
+@app.route('/api/ha/entities/search', methods=['GET'])
+def search_ha_entities():
+    """Search Home Assistant entities by domain or pattern"""
+    try:
+        domain = request.args.get('domain', '')
+        pattern = request.args.get('pattern', '')
+        
+        # Get HA config from options.json
+        options = get_json_file(app_datapath + "options.json")
+        secrets = get_json_file(app_datapath + "secrets.json")
+        
+        ha_config = options.get('homeassistant', {})
+        
+        # Determine base URL
+        protocol = ha_config.get('protocol api', 'http')
+        host = ha_config.get('host', ha_config.get('ip adress', 'supervisor'))
+        port = ha_config.get('ip port')
+        
+        # Build the correct URL based on whether it's supervisor or external HA
+        if host == 'supervisor':
+            # Running as HA add-on
+            base_url = f"{protocol}://{host}/core/api/states"
+        elif port:
+            # External HA with custom port
+            base_url = f"{protocol}://{host}:{port}/api/states"
+        else:
+            # External HA with default port
+            base_url = f"{protocol}://{host}/api/states"
+        
+        # Get token - try multiple sources
+        ha_token = ha_config.get('token')
+        
+        # Skip if it's a Home Assistant secret reference (e.g., "!secret ha_token")
+        if ha_token and (ha_token.startswith('!secret') or len(ha_token) < 50):
+            ha_token = None
+        
+        if not ha_token:
+            ha_token = secrets.get('ha_api_token')
+        if not ha_token:
+            ha_token = os.environ.get('SUPERVISOR_TOKEN')
+        
+        if not ha_token:
+            return jsonify({'error': 'Home Assistant token not configured'}), 500
+        
+        # Strip any whitespace from token
+        ha_token = ha_token.strip()
+        
+        # Fetch entities
+        headers = {
+            'Authorization': f'Bearer {ha_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        response = requests.get(base_url, headers=headers, timeout=10)
+        
+        if response.status_code == 401:
+            return jsonify({'error': 'Invalid Home Assistant token. Please check your token configuration.'}), 401
+        
+        response.raise_for_status()
+        
+        entities = response.json()
+        
+        # Filter entities
+        filtered = []
+        pattern_lower = pattern.lower() if pattern else ''
+        
+        for e in entities:
+            entity_id = e['entity_id']
+            friendly_name = e.get('attributes', {}).get('friendly_name', entity_id)
+            
+            # Apply domain filter
+            if domain and not entity_id.startswith(f"{domain}."):
+                continue
+            
+            # Apply pattern filter (case-insensitive)
+            if pattern_lower:
+                if (pattern_lower not in entity_id.lower() and 
+                    pattern_lower not in friendly_name.lower()):
+                    continue
+            
+            filtered.append({
+                'entity_id': entity_id,
+                'friendly_name': friendly_name,
+                'domain': entity_id.split('.')[0],
+                'state': e['state'],
+                'unit': e.get('attributes', {}).get('unit_of_measurement', '')
+            })
+        
+        # Limit results
+        filtered = filtered[:100]
+        
+        return jsonify(filtered)
+    
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error searching HA entities: {e}")
+        return jsonify({'error': 'Could not connect to Home Assistant'}), 500
+    except Exception as e:
+        logging.error(f"Error in search_ha_entities: {e}")
+        return jsonify({'error': 'Failed to search Home Assistant entities'}), 500
+
