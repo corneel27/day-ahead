@@ -208,7 +208,7 @@ class DaBase(hass.Hass):
         self.last_activity_entity = self.config.get(
             ["notifications", "last activity entity"], None, None
         )
-        self.set_last_activity()
+        # self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.db_da.log_pool_status()
         warnings.simplefilter("ignore", ResourceWarning)
@@ -408,7 +408,7 @@ class DaBase(hass.Hass):
                 * hour_fraction
             )
         max_power = self.config.get(["max power"], solar_opt, None)
-        if not max_power is None:
+        if max_power is not None:
             prod = min(prod, max_power)
         return prod
 
@@ -497,7 +497,7 @@ class DaBase(hass.Hass):
         return result
 
     def get_setting_state(
-        self, key: str, options: dict, exp_type: str = "number", default: any = 1
+        self, key: str, options: dict, exp_type: str = "number", default=1
     ) -> int | float | str | None:
         """
         retourneert de waarde van een settings
@@ -515,7 +515,7 @@ class DaBase(hass.Hass):
                 try:
                     state = self.get_state(setting_value).state
                     return state
-                except Exception as ex:
+                except Exception:
                     logging.warning(f"No value found for {key}, {setting_value}")
                     return default
         else:  # expected:string
@@ -523,7 +523,7 @@ class DaBase(hass.Hass):
                 try:
                     state = self.get_state(setting_value).state
                     return state
-                except Exception as ex:
+                except Exception:
                     return setting_value
             else:
                 return setting_value
