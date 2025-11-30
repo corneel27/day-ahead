@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.0.rc1
+- To prevent startup-error in DAO-container: deleted "set_last_activity" from init scheduler
+- Fixed error minimal_run_length with on/off adjustment heatpump
+- Fixed potential index-error boiler-module 
+- Prevent scheduling extra consumption boiler after heating boiler
+ 
 # 2025.11.2.rc4
 Fix boiler calculation: take heat content into account
 
