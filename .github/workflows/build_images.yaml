@@ -65,7 +65,7 @@ jobs:
 
       - name: Build and publish ${{ matrix.release }} dao-image
         if: ${{ github.ref_name == env.VERSION }}
-        uses: home-assistant/builder@2025.09.0
+        uses: home-assistant/builder@2025.11.0
         with:
           args: |
             --generic $VERSION \
