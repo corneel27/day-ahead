@@ -3230,6 +3230,13 @@ class DaCalc(DaBase):
                                     )
                 else:
                     logging.info(f"{ev_name} is niet thuis of niet ingeplugd")
+                    if old_switch_state == "on":
+                        if self.debug:
+                            logging.info(f"Laden van {ev_name} zou zijn uitgezet")
+                        else:
+                            self.set_value(entity_charging_ampere, 0)
+                            self.turn_off(entity_charge_switch)
+                            logging.info(f"Laden van {ev_name} uitgezet")
                 logging.info(
                     f"Evaluatie status laden {ev_name} op "
                     f""
