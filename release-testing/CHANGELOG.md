@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.0.rc2
+ - 
+
 # 2025.12.0.rc1
 - To prevent startup-error in DAO-container: deleted "set_last_activity" from init scheduler
 - Fixed error minimal_run_length with on/off adjustment heatpump
