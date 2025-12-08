@@ -1,7 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 # 2025.12.0.rc2
- - 
+- Fixed several issues heatpump and boiler
+- Implemented min_run_length heatpump voor power-adjustment
+- Configured energytaxes for 2026 in options_start.json and options_example.json
 
 # 2025.12.0.rc1
 - To prevent startup-error in DAO-container: deleted "set_last_activity" from init scheduler
