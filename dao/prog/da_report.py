@@ -2919,6 +2919,32 @@ class Report(DaBase):
             ]
         return df
 
+    def get_heatpump_run_hours(self, entity):
+        if entity is None or not self.wp_consumption_sensors:
+            return -1
+        now = datetime.datetime.now()
+        vanaf = datetime.datetime(
+            now.year, now.month, now.day, now.hour
+        ) - datetime.timedelta(hours=5)
+        if entity is not None:
+            sensor_data = self.get_sensor_sum(
+                sensor_list=[entity], vanaf=vanaf, tot=now, col_name="hp"
+            )
+        else:
+            sensor_data = self.get_sensor_sum(
+                sensor_list=self.wp_consumption_sensors, vanaf=vanaf, tot=now, col_name="hp"
+        )
+        if len(sensor_data) == 0:
+            return -2
+        count = 0
+        df = sensor_data.iloc[::-1]
+        for row in df.itertuples():
+            if row.hp > 0:
+                count += 1
+            else:
+                break
+        return count
+
     def get_soc_data(
         self, field: str, start: datetime.datetime, end: datetime.datetime
     ) -> pd.DataFrame:

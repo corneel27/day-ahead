@@ -131,7 +131,9 @@ class DaCalc(DaBase):
                 f"(meteo en/of dynamische prijzen) "
                 f"er kan niet worden gerekend"
             )
-            self.notify("Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend")
+            self.notify(
+                "Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend"
+            )
             return
         if u_data <= 8 or u_prices <= 8:
             logging.warning(
@@ -467,7 +469,10 @@ class DaCalc(DaBase):
             )
             opt_low_lvl = float(
                 self.get_setting_state(
-                    "optimal lower level", self.battery_options[b], default=lower_limit[b])
+                    "optimal lower level",
+                    self.battery_options[b],
+                    default=lower_limit[b],
+                )
             )
             opt_low_level.append(opt_low_lvl)
 
@@ -1062,7 +1067,7 @@ class DaCalc(DaBase):
                     for j in range(num_intervals + 1):
                         use = min(
                             max(0, est_needed_elec[u] - used),
-                            cons_interval * interval_fraction[min(u+j,U-1)],
+                            cons_interval * interval_fraction[min(u + j, U - 1)],
                         )
                         est_elec_cost[u] += use * pl[min(u + j, U - 1)]
                         est_needed_elec_st[u].append(use)
@@ -1075,7 +1080,7 @@ class DaCalc(DaBase):
                         U - u - est_needed_intv[u]
                     )
                     est_boiler_endvalue[u] = (
-                        (est_boiler_endtemp[u] - boiler_act_temp) # boiler_ondergrens)
+                        (est_boiler_endtemp[u] - boiler_act_temp)  # boiler_ondergrens)
                         * (spec_heat_boiler / (3600 * cop_boiler))
                         * p_avg
                     )
@@ -1158,20 +1163,29 @@ class DaCalc(DaBase):
                     model += boiler_on[u] == 0
                     model += boiler_st[u] == 0
 
-                for u in range(U)[boiler_end_index+1:]:
+                for u in range(U)[boiler_end_index + 1 :]:
                     # print(f"u {u}, {uur[u]}")
                     model += c_b[u] == 0
                     model += boiler_st[u] == 0
-                    if u > boiler_end_index + est_needed_intv[boiler_end_index]-1:
+                    if u > boiler_end_index + est_needed_intv[boiler_end_index] - 1:
                         model += boiler_on[u] == 0
 
-                model += xsum(boiler_st[u] for u in range(U)[boiler_start_index:boiler_end_index]) == 1
-                for u in range(U)[boiler_start_index:boiler_end_index + est_needed_intv[boiler_end_index]]:
+                model += (
+                    xsum(
+                        boiler_st[u]
+                        for u in range(U)[boiler_start_index:boiler_end_index]
+                    )
+                    == 1
+                )
+                for u in range(U)[
+                    boiler_start_index : boiler_end_index
+                    + est_needed_intv[boiler_end_index]
+                ]:
                     model += c_b[u] == xsum(
-                            boiler_st[j] * est_needed_elec_st[j][u - j]
-                            for j in range(U)[max(0,u - est_needed_intv[u] + 1) : u + 1]
-                            if u - j < len(est_needed_elec_st[j])
-                        )
+                        boiler_st[j] * est_needed_elec_st[j][u - j]
+                        for j in range(U)[max(0, u - est_needed_intv[u] + 1) : u + 1]
+                        if u - j < len(est_needed_elec_st[j])
+                    )
                     """
                     # for debugging
                     print(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
@@ -1181,13 +1195,12 @@ class DaCalc(DaBase):
                             print(f"j: {j}, est_needed_elec_st[j][u - j]: {est_needed_elec_st[j][u - j]}")
                     """
                     model += boiler_on[u] == xsum(
-                            boiler_st[j]
-                            for j in range(U)[
-                                max(boiler_start_index, u - est_needed_intv[u] + 1) : u
-                                + 1
-                            ]
-                            if u - j < len(est_needed_elec_st[j])
-                        )
+                        boiler_st[j]
+                        for j in range(U)[
+                            max(boiler_start_index, u - est_needed_intv[u] + 1) : u + 1
+                        ]
+                        if u - j < len(est_needed_elec_st[j])
+                    )
 
                 """
                     j_vanaf = u - est_needed_intv[u]
@@ -1336,7 +1349,7 @@ class DaCalc(DaBase):
                     ready.hour < start_dt.hour
                 ):
                     ready = ready + dt.timedelta(days=1)
-            hours_available = max(0, (ready - start_dt).total_seconds() / 3600)
+            hours_avail = max(0, (ready - start_dt).total_seconds() / 3600)
             ev_stages = self.ev_options[e]["charge stages"]
             if ev_stages[0]["ampere"] != 0.0:
                 ev_stages = [{"ampere": 0.0, "efficiency": 1}] + ev_stages
@@ -1403,7 +1416,7 @@ class DaCalc(DaBase):
             logging.info(f"Ingeplugged:{ev_plugged_in[e]}")
             e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
             max_possible = (
-                max_power[e] * hours_available * ev_charge_stages[e][-1]["efficiency"]
+                max_power[e] * hours_avail * ev_charge_stages[e][-1]["efficiency"]
             )
             if (
                 (e_needed > max_possible)
@@ -1653,7 +1666,7 @@ class DaCalc(DaBase):
         p_hp = None
         h_hp = None
         c_hp = [
-            model.add_var(var_type=CONTINUOUS, lb=0, ub=10) for _ in range(U)
+            model.add_var(var_type=CONTINUOUS, lb=0, ub=20) for _ in range(U)
         ]  # Electricity consumption per hour
         hp_on = [
             model.add_var(var_type=BINARY) for _ in range(U)
@@ -1696,7 +1709,9 @@ class DaCalc(DaBase):
                     ),
                     weighted=True,
                 )
-                logging.info(f"Gewogen graaddagen morgen: {degree_days_tomorrow:.1f} K.day")
+                logging.info(
+                    f"Gewogen graaddagen morgen: {degree_days_tomorrow:.1f} K.day"
+                )
             else:
                 degree_days_tomorrow = 0
             degree_days = degree_days_today + degree_days_tomorrow
@@ -1709,7 +1724,9 @@ class DaCalc(DaBase):
                 )
             )
             logging.info(f"Degree days factor: {degree_days_factor:.1f} kWh/K.day")
-            logging.info(f"Totaal benodigde warmte: {(degree_days * degree_days_factor):.1f} kWh")
+            logging.info(
+                f"Totaal benodigde warmte: {(degree_days * degree_days_factor):.1f} kWh"
+            )
 
             # heat produced
             entity_heat_produced = self.config.get(
@@ -1728,29 +1745,45 @@ class DaCalc(DaBase):
             # heat demand
             entity_hp_heat_demand = self.config.get(
                 ["entity hp heat demand"], self.heating_options, None
-            )  # Is er warmte vraag - zo ja, dan inplannen
+            )  # Is er warmte vraag - zo ja, dan inplannen vanaf interval 0
             self.hp_heat_demand = (entity_hp_heat_demand is None) or (
                 self.get_state(entity_hp_heat_demand).state == "on"
             )
             logging.info(
                 f"Actuele warmtevraag: {'Ja' if self.hp_heat_demand else 'Nee'}"
             )
-            if self.hp_adjustment == "on/off":
-                # vanaf hier code ronald
-                # hp_adjustment == "on/off"
-                logging.debug("WP-regeling: 'on/off'")
-                min_run_length = int(
-                    self.config.get(["min run length"], self.heating_options, 1)
-                )  # Minimum run lengte hp in uren - 1h als niet gedefinieerd
-                min_run_length = min(
-                    max(min_run_length, 1), 5
-                )  # Alleen waarde tussen 1 en 5 uur mogelijk
-                logging.info(f"Warmtepomp draait minimaal {min_run_length} uren")
 
-                if self.hp_heat_demand and heat_needed > 0:
+            # implement min_run_length
+            min_run_length = int(
+                self.config.get(["min run length"], self.heating_options, 1)
+            )  # Minimum run lengte hp in uren - 1h als niet gedefinieerd
+            min_run_length = min(
+                max(min_run_length, 1), 5
+            )  # Alleen waarde tussen 1 en 5 uur mogelijk
+            logging.info(f"Minimale runlengte {min_run_length} uur")
+
+            # een of meer intervallen minder als boiler via wp gaat
+            if (
+                    boiler_heated_by_heatpump
+                    and not (boiler_start is None)
+                    and boiler_start < U
+            ):
+                boiler_int = est_needed_intv[boiler_start] + 1
+            else:
+                boiler_int = 0
+
+            # geproduceerde warmte kWh per uur
+            h_hp = [
+                model.add_var(var_type=CONTINUOUS, lb=0, ub=10000) for _ in range(U)
+            ]
+
+            if self.hp_adjustment == "on/off":
+                if heat_needed > 0:
                     logging.info(f"On/off warmtepomp wordt ingepland")
                     avg_temp_today = self.meteo.get_avg_temperature()
-                    logging.info(f"Gem. buitentemperatuur vandaag: {avg_temp_today:.1f} °C")
+                    logging.info(
+                        f"Gem. buitentemperatuur vandaag: {avg_temp_today:.1f} °C"
+                    )
                     if U > self.steps_day:
                         avg_temp_tomorrow = self.meteo.get_avg_temperature(
                             date=dt.datetime.combine(
@@ -1758,7 +1791,9 @@ class DaCalc(DaBase):
                                 dt.datetime.min.time(),
                             )
                         )
-                        logging.info(f"Gem. buitentemperatuur morgen: {avg_temp_tomorrow:.1f} °C")
+                        logging.info(
+                            f"Gem. buitentemperatuur morgen: {avg_temp_tomorrow:.1f} °C"
+                        )
                         avg_temp = (avg_temp_today + avg_temp_tomorrow) / 2
                     else:
                         avg_temp = avg_temp_today
@@ -1783,6 +1818,7 @@ class DaCalc(DaBase):
                         cop = float(self.get_state(entity_hp_cop).state)
                     else:
                         cop = 4
+                    logging.info(f"COP: {cop:.1f}")
                     # Default COP if no entity from HA
                     entity_hp_power = self.config.get(
                         ["entity hp power"], self.heating_options, None
@@ -1790,37 +1826,59 @@ class DaCalc(DaBase):
                     if entity_hp_power is not None:
                         hp_power = float(self.get_state(entity_hp_power).state)
                     else:
-                        hp_power = 1.5
-                    # Default power in kW if no entity from HA
+                        hp_power = 1.5 # Default power in kW if no entity from HA
+                    logging.info(f"Elektrisch vermogen: {hp_power:.1f} kW-e")
+                    logging.info(f"Thermisch vermogen: {hp_power * cop:.1f} kW-th")
 
                     e_needed = heat_needed / cop
                     # Elektrical energy needed in kWh
                     hp_hours = math.ceil(e_needed / hp_power)
-                    interval_avail = U
-                    if (
-                        boiler_heated_by_heatpump
-                        and boiler_end_index is not None
-                        and boiler_end_index < U
-                    ):
-                        interval_avail = (
-                            interval_avail - est_needed_intv[boiler_end_index] - 1
-                        )
+                    interval_avail = U - boiler_int -1
                     hours_avail = math.floor(interval_avail * self.interval_s / 3600)
+                    logging.info(f"Beschikbaar zijn: {hours_avail} uur")
                     hp_hours = min(hp_hours, hours_avail)
 
                     # Number of hours the heat pump still has to run
                     if hp_hours < min_run_length:
                         # Ensure pump runs for at least min_run_length hours
                         hp_hours = min(min_run_length, hours_avail)
-                    # if (hp_hours % min_run_length) != 0:
-                        # hp_hours += min_run_length - (hp_hours % min_run_length)
-                        # Ensure hp_hours is multiple of min_run_length
+                    hp_hours = math.ceil(hp_hours)
+                    logging.info(f"Ingepland worden: {hp_hours} uur")
+
+                    # constraint 6 : -> consumption
+                    for u in range(U):
+                        model += c_hp[u] == hp_power * hp_on[u] * hour_fraction[u]
+                        model += h_hp[u] == c_hp[u] * cop
+                    '''        
+                    # running block:
+                    run_hours = report.get_heatpump_run_hours()
+                    if run_hours < 0:
+                        logging.info(f"Kan starturen wp niet bepalen")
+                        if run_hours == -1:
+                            logging.info(f"geen wp-sensor(s) geconfigureerd bij 'report'")
+                        if run_hours == -2:
+                            logging.info(f"geen data in geconfigureerde wp-sensor(s)'")
+                        first_block_len = min_run_length
+                        first_block_start = None
+                    elif run_hours == 0:
+                        first_block_len = min_run_length
+                        first_block_start = None
+                    elif run_hours < min_run_length:
+                        first_block_len = min_run_length - run_hours
+                        first_block_start = 0
+                    else:  # run_hours >= min_run_length
+                        first_block_len = min_run_length
+                        first_block_start = None
+                    if run_hours == 0:
+                        logging.info(f"Warmtepomp staat stil")
+                    else:
+                        logging.info(f"Warmtepomp draait minimaal {run_hours} uur")
                     # number of bloks
                     blocks_num = math.ceil(hp_hours / min_run_length)
                     # length of lastblock
-                    last_block_len = hp_hours % min_run_length
+                    last_block_len = (hp_hours - first_block_len) % min_run_length
                     if last_block_len == 0:
-                        last_block_len = 5
+                        last_block_len = min_run_length
 
                     e_needed = hp_hours * hp_power
                     # Elektrical energy to be optimized in kWh
@@ -1828,49 +1886,46 @@ class DaCalc(DaBase):
                         f"Elektriciteit benodigd:{e_needed:.1f} kWh, cop: {cop:.1f}, "
                         f"vermogen: {hp_power:.1f} kW, warmtepomp draait: {hp_hours} uur"
                     )
-                    logging.info(f"Aantal blokken: {blocks_num} van {min_run_length} uur")
                     if last_block_len < min_run_length:
-                        logging.info(f"Aantal blokken: {blocks_num-1} van {min_run_length} uur")
+                        logging.info(
+                            f"Aantal blokken: {blocks_num - 1} van {min_run_length} uur"
+                        )
                         logging.info(f"Laatste blok: {last_block_len} uur")
                         logging.info(f"Totaal aantal blokken: {blocks_num}")
                     else:
-                        logging.info(f"Aantal blokken: {blocks_num} van {min_run_length} uur")
+                        logging.info(
+                            f"Aantal blokken: {blocks_num} van {min_run_length} uur"
+                        )
 
-                    # Add the contraints
-                    """ 
-                    https://math.stackexchange.com/questions/4929841/consecutive-binary-block-in-mip-modeling-with-variable-length
-                    constr 1
-                    A−t ≤ (tmax−t)(1−Xt) for all t
-                    hp_start_index − u ≤ (U−u) * (1−hp_on[u]) for all u
-                    constr 2
-                    t−(A+P) ≤ t(1−Xt) for all t
-                    u−(hp_start_index+run_length-1) ≤ u * (1−hp_on[u]) for all u
-                    constr 3
-                    ∑tXt = P+1
-                    xsum(hp_on[u] for u in range(U)) == run_length
-                    """
                     # alles omzetten naar het goede interval:
                     block_len = []
-                    if self.interval == "15min":
-                        for j in range(blocks_num)[:-1]:
-                            block_len.append(min_run_length * 4)
-                        block_len.append(last_block_len * 4)
-                    else:
-                        for j in range(blocks_num)[:-1]:
-                            block_len.append(min_run_length)
-                        block_len.append(last_block_len)
+                    # eerste blok
+                    block_len.append(first_block_len * 3600/self.interval_s)
+                    # tussenliggende blokken
+                    for j in range(blocks_num)[1:-1]:
+                        block_len.append(min_run_length * 3600/self.interval_s)
+                    # laatste
+                    block_len.append(last_block_len * 3600/self.interval_s)
+
                     # constraint 1
                     # A−t ≤ (tmax−t)(1−Xt) for all t
                     # "vertaald": hp_start_index − u ≤ (U−u) * (1−hp_on[u]) for all u
 
-                    hp_bl_on = [[model.add_var(var_type=BINARY)
-                                 for _ in range(U)]
-                                for _ in range(blocks_num)]
-                    hp_start_index = [model.add_var(var_type=INTEGER, lb=0, ub=U - 1)
-                                      for _ in range(blocks_num)]
+                    hp_bl_on = [
+                        [model.add_var(var_type=BINARY) for _ in range(U)]
+                        for _ in range(blocks_num)
+                    ]
+                    hp_start_index = [
+                        model.add_var(var_type=INTEGER, lb=0, ub=U - 1)
+                        for _ in range(blocks_num)
+                    ]
+                    if first_block_start is not None:
+                        model += hp_start_index[0] == first_block_start * 3600/self.interval_s
                     for j in range(blocks_num):
                         for u in range(U):
-                            model += (hp_start_index[j] - u) <= (U - u) * (1 - hp_bl_on[j][u])
+                            model += (hp_start_index[j] - u) <= (U - u) * (
+                                1 - hp_bl_on[j][u]
+                            )
 
                     # constraint 2
                     # t−(A+P) ≤ t(1−Xt) for all t
@@ -1878,7 +1933,8 @@ class DaCalc(DaBase):
                     for j in range(blocks_num):
                         for u in range(U):
                             model += (u - (hp_start_index[j] + block_len[j] - 1)) <= (
-                                        u * (1 - hp_bl_on[j][u]))
+                                u * (1 - hp_bl_on[j][u])
+                            )
 
                     # constraint 3
                     # ∑tXt = P+1
@@ -1889,87 +1945,40 @@ class DaCalc(DaBase):
                     # aanvullend
                     # Constraint 4: blocks mogen niet overlappen
                     for j in range(blocks_num)[1:]:
-                        model += hp_start_index[j - 1] + block_len[j-1] <= hp_start_index[j]
+                        model += (
+                            hp_start_index[j - 1] + block_len[j - 1]
+                            <= hp_start_index[j]
+                        )
 
                     for u in range(U):
                         # constraint 5: hp_bl_on -> hp_on
-                        model += hp_on[u] == xsum(hp_bl_on[j][u] for j in range(blocks_num))
-                        #constraint 6 : -> consumption
+                        model += hp_on[u] == xsum(
+                            hp_bl_on[j][u] for j in range(blocks_num)
+                        )
+                        # constraint 6 : -> consumption
                         model += c_hp[u] == hp_power * hp_on[u] * hour_fraction[u]
                         # constrant 7: ieder interval/uur of boiler of wp
                         if boiler_heated_by_heatpump:
                             model += hp_on[u] + boiler_on[u] <= 1
-
-                    """
-
-                    # Energy consumption per hour is equal to power if it runs in that hour
-                    model += xsum(hp_on[u] for u in range(U)) == int(
-                        hp_hours * 3600 / self.interval_s
-                    )
-                    # Ensure pump is running for designated number of hours
-
-                    # Additional constraints to ensure the minimum run length (range 1-5 hours)
-                    min_run_intervals = int(min_run_length * 3600 / self.interval_s)
+                        '''
+                    # constraint 6 : -> consumption
                     for u in range(U):
-                        if u < U - min_run_intervals:
-                            for j in range(min_run_intervals+1)[1:]:
-                                model += hp_on[u] == hp_on[u+j]
-
-                        # for u in range(0, U, int(min_run_length * 3600 / self.interval_s)):
-                        if u < U - min_run_intervals:
-                            if self.interval == "1hour":
-                                if min_run_length > 1:
-                                    model += hp_on[u] == hp_on[u + 1]
-                                if min_run_length > 2:
-                                    model += hp_on[u + 1] == hp_on[u + 2]
-                                if min_run_length > 3:
-                                    model += hp_on[u + 2] == hp_on[u + 3]
-                                if min_run_length > 4:
-                                    model += hp_on[u + 3] == hp_on[u + 4]
-                            else:  #  15min
-                                if min_run_length >= 1:
-                                    model += hp_on[u] == hp_on[u + 1]
-                                    model += hp_on[u + 1] == hp_on[u + 2]
-                                    model += hp_on[u + 2] == hp_on[u + 3]
-                                    model += hp_on[u + 3] == hp_on[u + 4]
-                                if min_run_length >= 2:
-                                    model += hp_on[u + 4] == hp_on[u + 5]
-                                    model += hp_on[u + 5] == hp_on[u + 6]
-                                    model += hp_on[u + 6] == hp_on[u + 7]
-                                    model += hp_on[u + 7] == hp_on[u + 8]
-                                if min_run_length >= 3:
-                                    model += hp_on[u + 8] == hp_on[u + 9]
-                                    model += hp_on[u + 9] == hp_on[u + 10]
-                                    model += hp_on[u + 10] == hp_on[u + 11]
-                                    model += hp_on[u + 11] == hp_on[u + 12]
-                                if min_run_length >= 4:
-                                    model += hp_on[u + 12] == hp_on[u + 13]
-                                    model += hp_on[u + 13] == hp_on[u + 14]
-                                    model += hp_on[u + 14] == hp_on[u + 15]
-                                    model += hp_on[u + 15] == hp_on[u + 16]
-                                if min_run_length == 6:
-                                    model += hp_on[u + 16] == hp_on[u + 17]
-                                    model += hp_on[u + 17] == hp_on[u + 18]
-                                    model += hp_on[u + 18] == hp_on[u + 19]
-                                    model += hp_on[u + 19] == hp_on[u + 20]
-                    """
+                        model += c_hp[u] == hp_power * hp_on[u] * hour_fraction[u]
                 else:
                     logging.info(
-                        f"Geen warmtevraag - warmtepomp wordt niet ingepland\n"
+                        f"Geen warmtebehoefte - warmtepomp wordt niet ingepland"
                     )
                     model += c_hp[0] == 0
                     model += hp_on[0] == 0
+                model += xsum(h_hp[u] for u in range(U)) >= heat_needed
+                # tot hier hp_adjustment == on/off
             else:
-                # hp_adjustment == "power" or "heating curve"
+                # vanaf hier hp_adjustment == "power" or "heating curve"
                 logging.info(
                     f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland."
                 )
                 stages = self.heating_options["stages"]
                 S = len(stages)
-                c_hp = [
-                    model.add_var(var_type=CONTINUOUS, lb=0, ub=stages[-1]["max_power"])
-                    for _ in range(U)
-                ]  # elektriciteitsverbruik in kWh/h
                 # p_hp[s][u]: het gevraagde vermogen in W in dat uur
                 p_hp = [
                     [
@@ -1989,7 +1998,7 @@ class DaCalc(DaBase):
                     model.add_var(var_type=BINARY) for _ in range(U)
                 ]  # If on the pump will run in that hour
 
-                # verbruik per uur
+                # verbruik per interval
                 for u in range(U):
                     # verbruik in kWh is totaal vermogen in W/1000
                     model += (
@@ -1999,28 +2008,14 @@ class DaCalc(DaBase):
                         / 1000
                     )
 
-                # geproduceerde warmte kWh per uur
-                h_hp = [
-                    model.add_var(var_type=CONTINUOUS, lb=0, ub=10000) for _ in range(U)
-                ]
-
-                #  als er geen warmtevraag is eerste uur geen verbruik
-                if not self.hp_heat_demand:
-                    model += c_hp[0] == 0
-                    model += hp_on[0] == 0
-
                 # beschikbaar vermogen x aan/uit, want p_hpx[u] X hpx_on[u] kan niet
                 for u in range(U):
                     model += hp_on[u] == xsum(hp_s_on[s][u] for s in range(S)[1:])
                     for s in range(S):
                         model += p_hp[s][u] <= stages[s]["max_power"] * hp_s_on[s][u]
                     # ieder interval/uur maar een aan
-                    if boiler_heated_by_heatpump:
-                        model += (xsum(hp_s_on[s][u] for s in range(S))) + boiler_on[
-                            u
-                        ] == 1
-                    else:
-                        model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
+                    model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
+
                     # geproduceerde warmte = vermogen in W * COP_schijf /1000 in kWh
                     model += (
                         h_hp[u]
@@ -2035,24 +2030,162 @@ class DaCalc(DaBase):
                     f"Maximaal warmteproducerend vermogen: {max_heat_power} kW"
                 )
 
-                # een of meer intervallen minder als boiler via wp gaat
-                if (
-                    boiler_heated_by_heatpump
-                    and not (boiler_start is None)
-                    and boiler_start < U
-                ):
-                    boiler_int = est_needed_intv[boiler_start] + 1
-                else:
-                    boiler_int = 0
                 max_heat_prod = sum(
                     max_heat_power * hour_fraction[u] for u in range(U - boiler_int)
                 )
+                # logging.info(
+                #    f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh"
+                # )
+                min_heat_power = stages[1]["max_power"] * stages[1]["cop"] / 1000
                 logging.info(
-                    f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod} kWh"
+                    f"Minimaal warmteproducerend vermogen: {min_heat_power} kW"
                 )
+                min_heat_prod = sum(
+                    min_heat_power * hour_fraction[u] for u in range(U - boiler_int)
+                )
+                hours_avail = (U-boiler_int)*self.interval_s/3600
+                logging.info(f"Aantal beschikbare uren: {hours_avail:.2f}")
+                logging.info(f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh")
+                logging.info(f"Minimaal te produceren hoeveelheid warmte: {min_heat_prod:.1f} kWh")
+
                 # som van alle geproduceerde warmte == benodigde warmte
                 heat_needed = min(heat_needed, max_heat_prod)
+                if heat_needed < min_heat_prod:
+                    hp_hours = heat_needed/min_heat_power
+                else:
+                    hp_hours = hours_avail*0.9
+                hp_hours = math.floor(hp_hours)
+                logging.info(f"Aantal in te plannen uren: {hp_hours:.1f}")
+
                 model += xsum(h_hp[u] for u in range(U)) == heat_needed
+
+            # tot hier alleen power en heat-curve regeling
+
+            # vanaf hier voor weer voor alle regelingen
+            # als er geen warmtevraag is eerste interval geen verbruik
+            if not self.hp_heat_demand:
+                model += c_hp[0] == 0
+                model += hp_on[0] == 0
+
+            # running block:
+            run_hours = report.get_heatpump_run_hours(entity_heat_produced)
+            if run_hours < 0:
+                logging.info(f"Kan starturen wp niet bepalen")
+                if run_hours == -1:
+                    logging.info(f"geen wp-sensor(s) geconfigureerd bij 'report'")
+                if run_hours == -2:
+                    logging.info(f"geen data in geconfigureerde wp-sensor(s)'")
+                first_block_len = min_run_length
+                first_block_start = None
+            elif run_hours == 0:
+                first_block_len = min_run_length
+                first_block_start = None
+            elif run_hours < min_run_length:
+                first_block_len = min_run_length - run_hours
+                first_block_start = 0
+            else:  # run_hours >= min_run_length
+                first_block_len = min_run_length
+                first_block_start = None
+            if run_hours == 0:
+                logging.info(f"Warmtepomp staat stil")
+            else:
+                logging.info(f"Warmtepomp draait al minimaal {run_hours} uur")
+            # number of bloks
+            blocks_num = math.ceil(min(hours_avail / 4, hp_hours / min_run_length))
+            # if self.hp_adjustment!="on/off":
+            min_run_length = max(min_run_length, math.floor(hours_avail/blocks_num))
+            # length of lastblock
+            last_block_len = (hp_hours - first_block_len) % min_run_length
+            if last_block_len == 0:
+                last_block_len = min_run_length
+            if last_block_len < min_run_length:
+                logging.info(
+                    f"Aantal blokken: {blocks_num - 1} van {min_run_length} uur"
+                )
+                logging.info(f"Laatste blok: {last_block_len:.1f} uur")
+                logging.info(f"Totaal aantal blokken: {blocks_num}")
+            else:
+                logging.info(
+                    f"Aantal blokken: {blocks_num} van {min_run_length} uur"
+                )
+
+            # Add the contraints
+            """ 
+            https://math.stackexchange.com/questions/4929841/consecutive-binary-block-in-mip-modeling-with-variable-length
+            constr 1
+            A−t ≤ (tmax−t)(1−Xt) for all t
+            hp_start_index − u ≤ (U−u) * (1−hp_on[u]) for all u
+            constr 2
+            t−(A+P) ≤ t(1−Xt) for all t
+            u−(hp_start_index+run_length-1) ≤ u * (1−hp_on[u]) for all u
+            constr 3
+            ∑tXt = P+1
+            xsum(hp_on[u] for u in range(U)) == run_length
+            """
+
+            # alles omzetten naar het goede interval:
+            block_len = []
+            # eerste blok
+            block_len.append(int(first_block_len * 3600/self.interval_s))
+            # tussenliggende blokken
+            for j in range(blocks_num)[1:-1]:
+                block_len.append(int(min_run_length * 3600/self.interval_s))
+            # laatste
+            block_len.append(int(last_block_len * 3600/self.interval_s))
+
+            # constraint 1
+            # A−t ≤ (tmax−t)(1−Xt) for all t
+            # "vertaald": hp_start_index − u ≤ (U−u) * (1−hp_on[u]) for all u
+
+            hp_bl_on = [
+                [model.add_var(var_type=BINARY) for _ in range(U)]
+                for _ in range(blocks_num)
+            ]
+            hp_start_index = [
+                model.add_var(var_type=INTEGER, lb=0, ub=U - 1)
+                for _ in range(blocks_num)
+            ]
+            if first_block_start is not None:
+                model += hp_start_index[0] == first_block_start * 3600/self.interval_s
+            for j in range(blocks_num):
+                for u in range(U):
+                    model += (hp_start_index[j] - u) <= (U - u) * (
+                        1 - hp_bl_on[j][u]
+                    )
+
+            # constraint 2
+            # t−(A+P) ≤ t(1−Xt) for all t
+            # "vertaald": u−(hp_start_index+run_length-1) ≤ u * (1−hp_bl_on[u]) for all u
+            for j in range(blocks_num):
+                for u in range(U):
+                    model += (u - (hp_start_index[j] + block_len[j] - 1)) <= (
+                        u * (1 - hp_bl_on[j][u])
+                    )
+
+            # constraint 3
+            # ∑tXt = P+1
+            # "vertaald": xsum(hp_on[u] for all u) == min_run_length
+            for j in range(blocks_num):
+                model += xsum(hp_bl_on[j][u] for u in range(U)) == block_len[j]
+
+            # aanvullend
+            # Constraint 4: blocks mogen niet overlappen
+            for j in range(blocks_num)[1:]:
+                model += (
+                    hp_start_index[j - 1] + block_len[j - 1]
+                    <= hp_start_index[j]
+                )
+
+            for u in range(U):
+                # constraint 5: hp_bl_on -> hp_on
+                model += hp_on[u] == xsum(
+                    hp_bl_on[j][u] for j in range(blocks_num)
+                )
+
+            # constrant 7: ieder interval/uur of boiler of wp
+            for u in range(U):
+                if boiler_heated_by_heatpump:
+                    model += hp_on[u] + boiler_on[u] <= 1
 
         ########################################################################
         # apparaten /machines
@@ -2531,11 +2664,7 @@ class DaCalc(DaBase):
         # alles in kWh * prijs = kosten in euro
         model += cost == (
             xsum(c_l[u] * pl[u] - c_t[u] * pt[u] for u in range(U))
-            + xsum(
-                cycle_cost[b]
-                + penalty_cost[b]
-                for b in range(B)
-            )
+            + xsum(cycle_cost[b] + penalty_cost[b] for b in range(B))
             + xsum(
                 (soc_mid[b][0] - soc_mid[b][U])
                 * one_soc[b]
@@ -2691,13 +2820,16 @@ class DaCalc(DaBase):
         import numpy as np
 
         if self.hp_present and self.hp_enabled:
-            logging.info("\nInzet warmtepomp")
-            if self.hp_adjustment == "on/off":
-                if self.hp_heat_demand:
-                    logging.info(f"u     tar    cons")
-                    for u in range(U):
-                        logging.info(f"{uur[u]} {pl[u]:6.4f} {c_hp[u].x:6.2f}")
-            else:
+            logging.info("Inzet warmtepomp")
+            logging.info("Blokken:")
+            for j in range(blocks_num):
+                logging.info(f"Bloknr {j} start {int(hp_start_index[j].x)} "
+                             f"lengte {block_len[j]}"
+                             f" laatste {int(hp_start_index[j].x)+block_len[j]}" )
+            logging.info(f"u   uur   tar    hp_on heat cons")
+            for u in range(U):
+                logging.info(f"{u}   {uur[u]} {pl[u]:6.4f} {int(hp_on[u].x)}   {h_hp[u].x:6.2f}  {c_hp[u].x:6.2f}")
+            if self.hp_adjustment != "on/off":
                 df_hp = pd.DataFrame(columns=["uur", "tar"])
                 df_hp["uur"] = uur
                 df_hp["tar"] = pl
@@ -4168,13 +4300,12 @@ class DaCalc(DaBase):
             plt.show()
         plt.close("all")
         self.notify("DAO calc afgerond", self.notification_berekening)
-    
 
     def calc_optimum_debug(self):
         self.debug = True
         self.calc_optimum()
 
-    def notify(self, message:str,notification_calculation:bool=False):
+    def notify(self, message: str, notification_calculation: bool = False):
         """
         sent notification to HA
         :param message: the
