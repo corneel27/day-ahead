@@ -1760,7 +1760,7 @@ class DaCalc(DaBase):
             min_run_length = min(
                 max(min_run_length, 1), 5
             )  # Alleen waarde tussen 1 en 5 uur mogelijk
-            logging.info(f"Warmtepomp draait minimaal {min_run_length} uren aaneen")
+            logging.info(f"Minimale runlengte {min_run_length} uur")
 
             # een of meer intervallen minder als boiler via wp gaat
             if (
@@ -1826,9 +1826,9 @@ class DaCalc(DaBase):
                     if entity_hp_power is not None:
                         hp_power = float(self.get_state(entity_hp_power).state)
                     else:
-                        hp_power = 1.5
-                    logging.info(f"Vermogen(e): {hp_power:.1f}")
-                    # Default power in kW if no entity from HA
+                        hp_power = 1.5 # Default power in kW if no entity from HA
+                    logging.info(f"Elektrisch vermogen: {hp_power:.1f} kW-e")
+                    logging.info(f"Thermisch vermogen: {hp_power * cop:.1f} kW-th")
 
                     e_needed = heat_needed / cop
                     # Elektrical energy needed in kWh
@@ -1842,6 +1842,7 @@ class DaCalc(DaBase):
                     if hp_hours < min_run_length:
                         # Ensure pump runs for at least min_run_length hours
                         hp_hours = min(min_run_length, hours_avail)
+                    hp_hours = math.ceil(hp_hours)
                     logging.info(f"Ingepland worden: {hp_hours} uur")
 
                     # constraint 6 : -> consumption
@@ -1965,13 +1966,14 @@ class DaCalc(DaBase):
                         model += c_hp[u] == hp_power * hp_on[u] * hour_fraction[u]
                 else:
                     logging.info(
-                        f"Geen warmtebehoefte - warmtepomp wordt niet ingepland\n"
+                        f"Geen warmtebehoefte - warmtepomp wordt niet ingepland"
                     )
                     model += c_hp[0] == 0
                     model += hp_on[0] == 0
-                model += xsum(h_hp[u] for u in range(U)) <= heat_needed
+                model += xsum(h_hp[u] for u in range(U)) >= heat_needed
+                # tot hier hp_adjustment == on/off
             else:
-                # hp_adjustment == "power" or "heating curve"
+                # vanaf hier hp_adjustment == "power" or "heating curve"
                 logging.info(
                     f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland."
                 )
@@ -2052,9 +2054,10 @@ class DaCalc(DaBase):
                     hp_hours = heat_needed/min_heat_power
                 else:
                     hp_hours = hours_avail*0.9
+                hp_hours = math.floor(hp_hours)
                 logging.info(f"Aantal in te plannen uren: {hp_hours:.1f}")
 
-                model += xsum(h_hp[u] for u in range(U)) >= heat_needed
+                model += xsum(h_hp[u] for u in range(U)) == heat_needed
 
             # tot hier alleen power en heat-curve regeling
 
@@ -2088,9 +2091,9 @@ class DaCalc(DaBase):
             else:
                 logging.info(f"Warmtepomp draait al minimaal {run_hours} uur")
             # number of bloks
-            blocks_num = math.ceil(min(hours_avail / 8, hp_hours / min_run_length))
-            if self.hp_adjustment!="on/off":
-                min_run_length = max(min_run_length, math.floor(hours_avail/blocks_num))
+            blocks_num = math.ceil(min(hours_avail / 4, hp_hours / min_run_length))
+            # if self.hp_adjustment!="on/off":
+            min_run_length = max(min_run_length, math.floor(hours_avail/blocks_num))
             # length of lastblock
             last_block_len = (hp_hours - first_block_len) % min_run_length
             if last_block_len == 0:
@@ -2123,10 +2126,10 @@ class DaCalc(DaBase):
             # alles omzetten naar het goede interval:
             block_len = []
             # eerste blok
-            block_len.append(first_block_len * 3600/self.interval_s)
+            block_len.append(int(first_block_len * 3600/self.interval_s))
             # tussenliggende blokken
             for j in range(blocks_num)[1:-1]:
-                block_len.append(min_run_length * 3600/self.interval_s)
+                block_len.append(int(min_run_length * 3600/self.interval_s))
             # laatste
             block_len.append(int(last_block_len * 3600/self.interval_s))
 
