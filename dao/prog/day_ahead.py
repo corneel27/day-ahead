@@ -1755,7 +1755,7 @@ class DaCalc(DaBase):
 
             # implement min_run_length
             min_run_length = int(
-                self.config.get(["min run length"], self.heating_options, 1)
+                self.config.get(["min run length"], self.heating_options, 3)
             )  # Minimum run lengte hp in uren - 1h als niet gedefinieerd
             min_run_length = min(
                 max(min_run_length, 1), 5
@@ -1778,6 +1778,10 @@ class DaCalc(DaBase):
             ]
 
             if self.hp_adjustment == "on/off":
+                hp_hours = 0
+                interval_avail = U - boiler_int - 1
+                hours_avail = math.floor(interval_avail * self.interval_s / 3600)
+                logging.info(f"Beschikbaar zijn: {hours_avail} uur")
                 if heat_needed > 0:
                     logging.info(f"On/off warmtepomp wordt ingepland")
                     avg_temp_today = self.meteo.get_avg_temperature()
@@ -1833,9 +1837,6 @@ class DaCalc(DaBase):
                     e_needed = heat_needed / cop
                     # Elektrical energy needed in kWh
                     hp_hours = math.ceil(e_needed / hp_power)
-                    interval_avail = U - boiler_int -1
-                    hours_avail = math.floor(interval_avail * self.interval_s / 3600)
-                    logging.info(f"Beschikbaar zijn: {hours_avail} uur")
                     hp_hours = min(hp_hours, hours_avail)
 
                     # Number of hours the heat pump still has to run
@@ -2093,7 +2094,8 @@ class DaCalc(DaBase):
             # number of bloks
             blocks_num = math.ceil(min(hours_avail / 4, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
-            min_run_length = max(min_run_length, math.floor(hours_avail/blocks_num))
+            if blocks_num > 0:
+                min_run_length = max(min_run_length, math.floor(hours_avail/blocks_num))
             # length of lastblock
             last_block_len = (hp_hours - first_block_len) % min_run_length
             if last_block_len == 0:
