@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.0.rc4
+When calculated heatpump hours is more than 80% of the available hours: the configured  "min_run_length" will not be respected
+
 # 2025.12.0.rc3
 Fixed issue with heatpump when no heat is required (reported by @sailor_dg)
 

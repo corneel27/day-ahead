@@ -2092,97 +2092,104 @@ class DaCalc(DaBase):
             else:
                 logging.info(f"Warmtepomp draait al minimaal {run_hours} uur")
             # number of bloks
-            blocks_num = math.ceil(min(hours_avail / 4, hp_hours / min_run_length))
+            if hp_hours / hours_avail > 0.8:
+                blocks_num = 0  # dus geen block-optimalisering
+            else:
+                blocks_num = math.ceil(min(hours_avail / 5, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
             if blocks_num > 0:
+                # block-optimalisering
                 min_run_length = max(min_run_length, math.floor(hours_avail/blocks_num))
-            # length of lastblock
-            last_block_len = (hp_hours - first_block_len) % min_run_length
-            if last_block_len == 0:
-                last_block_len = min_run_length
-            if last_block_len < min_run_length:
+                # length of lastblock
+                last_block_len = (hp_hours - first_block_len) % min_run_length
+                if last_block_len == 0:
+                    last_block_len = min_run_length
                 logging.info(
-                    f"Aantal blokken: {blocks_num - 1} van {min_run_length} uur"
+                    f"Eerste blok van {first_block_len} uur"
                 )
-                logging.info(f"Laatste blok: {last_block_len:.1f} uur")
+                if last_block_len < min_run_length:
+                    logging.info(
+                        f"Tussenin {blocks_num - 2} blokken van {min_run_length} uur"
+                    )
+                    logging.info(f"Laatste blok van {last_block_len:.1f} uur")
+                else:
+                    logging.info(
+                        f"Dan nog {blocks_num-1} blokken van {min_run_length} uur"
+                    )
                 logging.info(f"Totaal aantal blokken: {blocks_num}")
-            else:
-                logging.info(
-                    f"Aantal blokken: {blocks_num} van {min_run_length} uur"
-                )
 
-            # Add the contraints
-            """ 
-            https://math.stackexchange.com/questions/4929841/consecutive-binary-block-in-mip-modeling-with-variable-length
-            constr 1
-            A−t ≤ (tmax−t)(1−Xt) for all t
-            hp_start_index − u ≤ (U−u) * (1−hp_on[u]) for all u
-            constr 2
-            t−(A+P) ≤ t(1−Xt) for all t
-            u−(hp_start_index+run_length-1) ≤ u * (1−hp_on[u]) for all u
-            constr 3
-            ∑tXt = P+1
-            xsum(hp_on[u] for u in range(U)) == run_length
-            """
+                # Add the contraints
+                """ 
+                https://math.stackexchange.com/questions/4929841/consecutive-binary-block-in-mip-modeling-with-variable-length
+                constr 1
+                A−t ≤ (tmax−t)(1−Xt) for all t
+                hp_start_index − u ≤ (U−u) * (1−hp_on[u]) for all u
+                constr 2
+                t−(A+P) ≤ t(1−Xt) for all t
+                u−(hp_start_index+run_length-1) ≤ u * (1−hp_on[u]) for all u
+                constr 3
+                ∑tXt = P+1
+                xsum(hp_on[u] for u in range(U)) == run_length
+                """
 
-            # alles omzetten naar het goede interval:
-            block_len = []
-            # eerste blok
-            block_len.append(int(first_block_len * 3600/self.interval_s))
-            # tussenliggende blokken
-            for j in range(blocks_num)[1:-1]:
-                block_len.append(int(min_run_length * 3600/self.interval_s))
-            # laatste
-            block_len.append(int(last_block_len * 3600/self.interval_s))
+                # alles omzetten naar het goede interval:
+                block_len = []
+                # eerste blok
+                block_len.append(int(first_block_len * 3600/self.interval_s))
+                # tussenliggende blokken
+                for j in range(blocks_num)[1:-1]:
+                    block_len.append(int(min_run_length * 3600/self.interval_s))
+                # laatste
+                block_len.append(int(last_block_len * 3600/self.interval_s))
 
-            # constraint 1
-            # A−t ≤ (tmax−t)(1−Xt) for all t
-            # "vertaald": hp_start_index − u ≤ (U−u) * (1−hp_on[u]) for all u
+                # constraint 1
+                # A−t ≤ (tmax−t)(1−Xt) for all t
+                # "vertaald": hp_start_index − u ≤ (U−u) * (1−hp_on[u]) for all u
 
-            hp_bl_on = [
-                [model.add_var(var_type=BINARY) for _ in range(U)]
-                for _ in range(blocks_num)
-            ]
-            hp_start_index = [
-                model.add_var(var_type=INTEGER, lb=0, ub=U - 1)
-                for _ in range(blocks_num)
-            ]
-            if first_block_start is not None:
-                model += hp_start_index[0] == first_block_start * 3600/self.interval_s
-            for j in range(blocks_num):
-                for u in range(U):
-                    model += (hp_start_index[j] - u) <= (U - u) * (
-                        1 - hp_bl_on[j][u]
+                hp_bl_on = [
+                    [model.add_var(var_type=BINARY) for _ in range(U)]
+                    for _ in range(blocks_num)
+                ]
+                hp_start_index = [
+                    model.add_var(var_type=INTEGER, lb=0, ub=U - 1)
+                    for _ in range(blocks_num)
+                ]
+                if first_block_start is not None:
+                    model += hp_start_index[0] == first_block_start * 3600/self.interval_s
+                for j in range(blocks_num):
+                    for u in range(U):
+                        model += (hp_start_index[j] - u) <= (U - u) * (
+                            1 - hp_bl_on[j][u]
+                        )
+
+                # constraint 2
+                # t−(A+P) ≤ t(1−Xt) for all t
+                # "vertaald": u−(hp_start_index+run_length-1) ≤ u * (1−hp_bl_on[u]) for all u
+                for j in range(blocks_num):
+                    for u in range(U):
+                        model += (u - (hp_start_index[j] + block_len[j] - 1)) <= (
+                            u * (1 - hp_bl_on[j][u])
+                        )
+
+                # constraint 3
+                # ∑tXt = P+1
+                # "vertaald": xsum(hp_on[u] for all u) == min_run_length
+                for j in range(blocks_num):
+                    model += xsum(hp_bl_on[j][u] for u in range(U)) == block_len[j]
+
+                # aanvullend
+                # Constraint 4: blocks mogen niet overlappen
+                for j in range(blocks_num)[1:]:
+                    model += (
+                        hp_start_index[j - 1] + block_len[j - 1]
+                        <= hp_start_index[j]
                     )
 
-            # constraint 2
-            # t−(A+P) ≤ t(1−Xt) for all t
-            # "vertaald": u−(hp_start_index+run_length-1) ≤ u * (1−hp_bl_on[u]) for all u
-            for j in range(blocks_num):
                 for u in range(U):
-                    model += (u - (hp_start_index[j] + block_len[j] - 1)) <= (
-                        u * (1 - hp_bl_on[j][u])
+                    # constraint 5: hp_bl_on -> hp_on
+                    model += hp_on[u] == xsum(
+                        hp_bl_on[j][u] for j in range(blocks_num)
                     )
-
-            # constraint 3
-            # ∑tXt = P+1
-            # "vertaald": xsum(hp_on[u] for all u) == min_run_length
-            for j in range(blocks_num):
-                model += xsum(hp_bl_on[j][u] for u in range(U)) == block_len[j]
-
-            # aanvullend
-            # Constraint 4: blocks mogen niet overlappen
-            for j in range(blocks_num)[1:]:
-                model += (
-                    hp_start_index[j - 1] + block_len[j - 1]
-                    <= hp_start_index[j]
-                )
-
-            for u in range(U):
-                # constraint 5: hp_bl_on -> hp_on
-                model += hp_on[u] == xsum(
-                    hp_bl_on[j][u] for j in range(blocks_num)
-                )
 
             # constrant 7: ieder interval/uur of boiler of wp
             for u in range(U):
@@ -2823,7 +2830,8 @@ class DaCalc(DaBase):
 
         if self.hp_present and self.hp_enabled:
             logging.info("Inzet warmtepomp")
-            logging.info("Blokken:")
+            if blocks_num > 0:
+                logging.info("Blokken:")
             for j in range(blocks_num):
                 logging.info(f"Bloknr {j} start {int(hp_start_index[j].x)} "
                              f"lengte {block_len[j]}"
