@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.0.rc3
+Fixed issue with heatpump when no heat is required (reported by @sailor_dg)
+
 # 2025.12.0.rc2
 - Fixed several issues heatpump and boiler
 - Implemented min_run_length heatpump voor power-adjustment
