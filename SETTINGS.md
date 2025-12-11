@@ -27,39 +27,39 @@ Configuration schema for the Day Ahead Optimizer Home Assistant add-on. This sch
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `config_version` | integer | No | `0` | Configuration version number |
-| `homeassistant` | HomeAssistantConfig | No | [No default](#homeassistantconfig) | Home Assistant connection settings |
-| `database ha` | HADatabaseConfig (optional) | No | `null` | Home Assistant database connection |
-| `database da` | DatabaseConfig (optional) | No | `null` | Day Ahead optimization database connection |
+| `homeassistant` | [HomeAssistantConfig](#homeassistantconfig) | No | | Home Assistant connection settings |
+| `database ha` | [HADatabaseConfig](#hadatabaseconfig) (optional) | No | | Home Assistant database connection |
+| `database da` | [DatabaseConfig](#databaseconfig) (optional) | No | | Day Ahead optimization database connection |
 | `latitude` | number (optional) | No | `null` | Latitude (auto-fetched from HA if not set) |
 | `longitude` | number (optional) | No | `null` | Longitude (auto-fetched from HA if not set) |
 | `time_zone` | string (optional) | No | `null` | Timezone (auto-fetched from HA if not set) |
 | `country` | string (optional) | No | `null` | Country code (auto-fetched from HA if not set) |
-| `meteoserver-key` | string | SecretStr (optional) | No | `null` | Meteoserver API key (can use !secret) |
+| `meteoserver-key` | string | [SecretStr](#secretstr) (optional) | No | | Meteoserver API key (can use !secret) |
 | `meteoserver-model` | string (optional) | No | `"harmonie"` | Meteoserver model: 'harmonie' | 'gfs' |
 | `meteoserver-attemps` | integer (optional) | No | `2` | Number of meteoserver fetch attempts |
-| `prices` | PricingConfig (optional) | No | `null` | Day-ahead pricing and tariff configuration |
+| `prices` | [PricingConfig](#pricingconfig) (optional) | No | | Day-ahead pricing and tariff configuration |
 | `logging level` | string | No | `"info"` | Logging level: 'debug' | 'info' | 'warning' | 'error' |
 | `protocol api` | string (optional) | No | `null` | API protocol (http/https) |
 | `use_calc_baseload` | boolean | string | No | `"false"` | Whether to calculate baseload automatically |
 | `baseload calc periode` | integer | No | `56` | Period in days for baseload calculation |
 | `baseload` | number | list[number] (optional) | No | `null` | Baseload power consumption (watts) - single value or 24 hourly values |
 | `graphical backend` | string | No | `""` | Matplotlib graphical backend |
-| `graphics` | GraphicsConfig | No | [No default](#graphicsconfig) | Graphics and visualization settings |
+| `graphics` | [GraphicsConfig](#graphicsconfig) | No | | Graphics and visualization settings |
 | `interval` | integer | string (optional) | No | `null` | Optimization interval in minutes |
 | `strategy` | string | No | `"minimize cost"` | Optimization strategy |
-| `notifications` | NotificationsConfig (optional) | No | `null` | Notification settings |
-| `grid` | GridConfig | No | [No default](#gridconfig) | Grid connection settings |
-| `history` | HistoryConfig | No | [No default](#historyconfig) | History retention settings |
-| `dashboard` | DashboardConfig | No | [No default](#dashboardconfig) | Dashboard web UI settings |
-| `battery` | list[BatteryConfig] | No | [No default](#optional-vs-required-fields) | Battery configurations |
-| `solar` | list[SolarConfig] | No | [No default](#optional-vs-required-fields) | Solar panel configurations |
-| `electric vehicle` | list[EVConfig] | No | [No default](#optional-vs-required-fields) | Electric vehicle configurations |
-| `machines` | list[MachineConfig] | No | [No default](#optional-vs-required-fields) | Appliance/machine configurations |
-| `boiler` | BoilerConfig (optional) | No | `null` | Hot water boiler configuration |
-| `heating` | HeatingConfig (optional) | No | `null` | Heating system / heat pump configuration |
-| `tibber` | TibberConfig (optional) | No | `null` | Tibber API integration |
-| `report` | ReportConfig | No | [No default](#reportconfig) | Reporting entity configuration |
-| `scheduler` | SchedulerConfig | No | [No default](#schedulerconfig) | Task scheduler configuration |
+| `notifications` | [NotificationsConfig](#notificationsconfig) (optional) | No | | Notification settings |
+| `grid` | [GridConfig](#gridconfig) | No | | Grid connection settings |
+| `history` | [HistoryConfig](#historyconfig) | No | | History retention settings |
+| `dashboard` | [DashboardConfig](#dashboardconfig) | No | | Dashboard web UI settings |
+| `battery` | list[[BatteryConfig](#batteryconfig)] | No | | Battery configurations |
+| `solar` | list[[SolarConfig](#solarconfig)] | No | | Solar panel configurations |
+| `electric vehicle` | list[[EVConfig](#evconfig)] | No | | Electric vehicle configurations |
+| `machines` | list[[MachineConfig](#machineconfig)] | No | | Appliance/machine configurations |
+| `boiler` | [BoilerConfig](#boilerconfig) (optional) | No | | Hot water boiler configuration |
+| `heating` | [HeatingConfig](#heatingconfig) (optional) | No | | Heating system / heat pump configuration |
+| `tibber` | [TibberConfig](#tibberconfig) (optional) | No | | Tibber API integration |
+| `report` | [ReportConfig](#reportconfig) | No | | Reporting entity configuration |
+| `scheduler` | [SchedulerConfig](#schedulerconfig) | No | | Task scheduler configuration |
 
 ###  BatteryConfig
 
@@ -67,16 +67,16 @@ Battery configuration for optimization.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `name` | string | ✅ | — | Battery name/identifier |
-| `entity actual level` | string | ✅ | — | HA entity for current battery SOC |
-| `capacity` | number | ✅ | — | Battery capacity in kWh |
-| `upper limit` | integer | FlexValue | ✅ | — | Maximum SOC % (can be HA entity) |
-| `lower limit` | integer | FlexValue | ✅ | — | Minimum SOC % (can be HA entity) |
-| `optimal lower level` | integer | FlexValue (optional) | No | `null` | Optimal lower SOC % for cost optimization |
+| `name` | string | Yes | — | Battery name/identifier |
+| `entity actual level` | string | Yes | — | HA entity for current battery SOC |
+| `capacity` | number | Yes | — | Battery capacity in kWh |
+| `upper limit` | integer | [FlexValue](#flexvalue) | Yes | | Maximum SOC % (can be HA entity) |
+| `lower limit` | integer | [FlexValue](#flexvalue) | Yes | | Minimum SOC % (can be HA entity) |
+| `optimal lower level` | integer | [FlexValue](#flexvalue) (optional) | No | | Optimal lower SOC % for cost optimization |
 | `entity min soc end opt` | string (optional) | No | `null` | HA entity for minimum SOC at end of optimization period |
 | `entity max soc end opt` | string (optional) | No | `null` | HA entity for maximum SOC at end of optimization period |
-| `charge stages` | list[BatteryStage] | ✅ | — | Charge power/efficiency curve |
-| `discharge stages` | list[BatteryStage] | ✅ | — | Discharge power/efficiency curve |
+| `charge stages` | list[[BatteryStage](#batterystage)] | Yes | | Charge power/efficiency curve |
+| `discharge stages` | list[[BatteryStage](#batterystage)] | Yes | | Discharge power/efficiency curve |
 | `reduced hours` | object (optional) | No | `null` | Hour -> max power mapping for reduced power hours |
 | `minimum power` | integer (optional) | No | `null` | Minimum power in watts |
 | `dc_to_bat efficiency` | number (optional) | No | `null` | DC to battery efficiency |
@@ -102,8 +102,8 @@ Single charge/discharge stage with power and efficiency.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `power` | number | ✅ | — | Power level in Watts |
-| `efficiency` | number | ✅ | — | Efficiency at this power level (0-1) |
+| `power` | number | Yes | — | Power level in Watts |
+| `efficiency` | number | Yes | — | Efficiency at this power level (0-1) |
 
 ###  BoilerConfig
 
@@ -111,19 +111,19 @@ Hot water boiler configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `boiler present` | boolean | string | ✅ | — | Whether boiler is present/enabled |
-| `entity actual temp.` | string | ✅ | — | HA entity for actual water temperature |
-| `entity setpoint` | string | ✅ | — | HA entity for temperature setpoint |
-| `entity hysterese` | string | ✅ | — | HA entity for temperature hysteresis |
+| `boiler present` | boolean | string | Yes | — | Whether boiler is present/enabled |
+| `entity actual temp.` | string | Yes | — | HA entity for actual water temperature |
+| `entity setpoint` | string | Yes | — | HA entity for temperature setpoint |
+| `entity hysterese` | string | Yes | — | HA entity for temperature hysteresis |
 | `entity boiler enabled` | string (optional) | No | `null` | HA entity for boiler enabled status |
 | `entity instant start` | string (optional) | No | `null` | HA entity for instant start |
-| `cop` | number | ✅ | — | Coefficient of Performance |
-| `cooling rate` | number | ✅ | — | Cooling rate in degrees per hour |
-| `volume` | number | ✅ | — | Water volume in liters |
-| `heating allowed below` | number | ✅ | — | Temperature below which heating is allowed |
-| `elec. power` | number | ✅ | — | Electrical power in watts |
-| `activate service` | string | ✅ | — | Service type to activate boiler (e.g., 'press', 'switch') |
-| `activate entity` | string | ✅ | — | HA entity to activate boiler |
+| `cop` | number | Yes | — | Coefficient of Performance |
+| `cooling rate` | number | Yes | — | Cooling rate in degrees per hour |
+| `volume` | number | Yes | — | Water volume in liters |
+| `heating allowed below` | number | Yes | — | Temperature below which heating is allowed |
+| `elec. power` | number | Yes | — | Electrical power in watts |
+| `activate service` | string | Yes | — | Service type to activate boiler (e.g., 'press', 'switch') |
+| `activate entity` | string | Yes | — | HA entity to activate boiler |
 
 ###  DashboardConfig
 
@@ -147,7 +147,7 @@ Can be either SQLite or MySQL/MariaDB.
 | `server` | string (optional) | No | `null` | MySQL server hostname |
 | `port` | integer (optional) | No | `null` | MySQL server port |
 | `username` | string (optional) | No | `null` | MySQL username |
-| `password` | string | SecretStr (optional) | No | `null` | MySQL password (can use !secret) |
+| `password` | string | [SecretStr](#secretstr) (optional) | No | | MySQL password (can use !secret) |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
 
 ###  EVChargeScheduler
@@ -156,9 +156,9 @@ EV charge scheduling configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `entity set level` | string | ✅ | — | HA entity to set target charge level |
-| `level margin` | integer | ✅ | — | Margin in % for charge level completion |
-| `entity ready datetime` | string | ✅ | — | HA entity for ready datetime (when charging should complete) |
+| `entity set level` | string | Yes | — | HA entity to set target charge level |
+| `level margin` | integer | Yes | — | Margin in % for charge level completion |
+| `entity ready datetime` | string | Yes | — | HA entity for ready datetime (when charging should complete) |
 
 ###  EVChargeStage
 
@@ -166,8 +166,8 @@ Single EV charging stage with amperage and efficiency.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `ampere` | integer | ✅ | — | Charging current in amperes |
-| `efficiency` | number | ✅ | — | Charging efficiency at this amperage (0-1) |
+| `ampere` | integer | Yes | — | Charging current in amperes |
+| `efficiency` | number | Yes | — | Charging efficiency at this amperage (0-1) |
 
 ###  EVConfig
 
@@ -175,20 +175,20 @@ Electric Vehicle configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `name` | string | ✅ | — | EV name/identifier |
-| `capacity` | number | ✅ | — | Battery capacity in kWh |
-| `entity position` | string | ✅ | — | HA device tracker for vehicle position |
-| `entity max amperage` | string | ✅ | — | HA entity for maximum charging amperage |
-| `charge three phase` | boolean | string | ✅ | — | Whether vehicle charges on three phases |
-| `charge stages` | list[EVChargeStage] | ✅ | — | Charging amperage/efficiency curve |
-| `entity actual level` | string | ✅ | — | HA entity for current battery level % |
-| `entity plugged in` | string | ✅ | — | HA binary sensor for plugged in status |
+| `name` | string | Yes | — | EV name/identifier |
+| `capacity` | number | Yes | — | Battery capacity in kWh |
+| `entity position` | string | Yes | — | HA device tracker for vehicle position |
+| `entity max amperage` | string | Yes | — | HA entity for maximum charging amperage |
+| `charge three phase` | boolean | string | Yes | — | Whether vehicle charges on three phases |
+| `charge stages` | list[[EVChargeStage](#evchargestage)] | Yes | | Charging amperage/efficiency curve |
+| `entity actual level` | string | Yes | — | HA entity for current battery level % |
+| `entity plugged in` | string | Yes | — | HA binary sensor for plugged in status |
 | `entity instant start` | string (optional) | No | `null` | HA entity for instant start charging |
 | `entity instant level` | string (optional) | No | `null` | HA entity for instant charge level target |
-| `charge scheduler` | EVChargeScheduler (optional) | No | `null` | Charge scheduling configuration |
-| `charge switch` | string | ✅ | — | HA switch entity to control charging |
-| `entity set charging ampere` | string | ✅ | — | HA entity to set charging amperage |
-| `entity stop charging` | string | ✅ | — | HA entity for stop charging datetime |
+| `charge scheduler` | [EVChargeScheduler](#evchargescheduler) (optional) | No | | Charge scheduling configuration |
+| `charge switch` | string | Yes | — | HA switch entity to control charging |
+| `entity set charging ampere` | string | Yes | — | HA entity to set charging amperage |
+| `entity stop charging` | string | Yes | — | HA entity for stop charging datetime |
 
 ###  FlexValue
 
@@ -204,7 +204,7 @@ Examples:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `value` | integer | number | string | boolean | ✅ | — | Value |
+| `value` | integer | number | string | boolean | Yes | — | Value |
 | `is_entity` | boolean | No | `false` | True if value is a HA entity ID |
 
 ###  GraphicsConfig
@@ -240,7 +240,7 @@ Home Assistant database connection configuration.
 | `port` | integer (optional) | No | `null` | Database port (defaults: mysql=3306, postgresql=5432) |
 | `database` | string | No | `"homeassistant"` | Database name |
 | `username` | string | No | `"homeassistant"` | Database username |
-| `password` | string | SecretStr (optional) | No | `null` | Database password (can use !secret) |
+| `password` | string | [SecretStr](#secretstr) (optional) | No | | Database password (can use !secret) |
 
 ###  HeatingConfig
 
@@ -248,11 +248,11 @@ Heating system / heat pump configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `heater present` | boolean | string | ✅ | — | Whether heating system is present/enabled |
-| `entity hp enabled` | string | ✅ | — | HA binary sensor for heat pump enabled status |
-| `degree days factor` | number | ✅ | — | Degree days factor for heat demand calculation |
-| `adjustment` | string | ✅ | — | Adjustment mode: 'on/off' | 'power' | 'heating curve' |
-| `stages` | list[HeatingStage] | ✅ | — | Heating power/COP stages |
+| `heater present` | boolean | string | Yes | — | Whether heating system is present/enabled |
+| `entity hp enabled` | string | Yes | — | HA binary sensor for heat pump enabled status |
+| `degree days factor` | number | Yes | — | Degree days factor for heat demand calculation |
+| `adjustment` | string | Yes | — | Adjustment mode: 'on/off' | 'power' | 'heating curve' |
+| `stages` | list[[HeatingStage](#heatingstage)] | Yes | | Heating power/COP stages |
 | `entity adjust heating curve` | string (optional) | No | `null` | HA entity to adjust heating curve |
 | `adjustment factor` | number (optional) | No | `null` | Factor for heating curve adjustment |
 | `min run length` | integer (optional) | No | `null` | Minimum run length in time intervals |
@@ -269,8 +269,8 @@ Single heating stage with power and COP.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `max_power` | number | ✅ | — | Maximum power in watts for this stage |
-| `cop` | number | ✅ | — | Coefficient of Performance at this power level |
+| `max_power` | number | Yes | — | Maximum power in watts for this stage |
+| `cop` | number | Yes | — | Coefficient of Performance at this power level |
 
 ###  HistoryConfig
 
@@ -289,7 +289,7 @@ Home Assistant connection configuration.
 | `host` | string (optional) | No | `null` | Home Assistant IP address (auto-detected if not set) |
 | `ip port` | integer (optional) | No | `null` | Home Assistant port (default: 8123) |
 | `ssl` | boolean (optional) | No | `null` | Whether to use SSL/HTTPS |
-| `hasstoken` | string | SecretStr (optional) | No | `null` | Home Assistant long-lived access token (can use !secret) |
+| `hasstoken` | string | [SecretStr](#secretstr) (optional) | No | | Home Assistant long-lived access token (can use !secret) |
 | `protocol api` | string (optional) | No | `null` | API protocol (http or https) |
 
 ###  MachineConfig
@@ -298,13 +298,13 @@ Appliance/machine configuration (washing machine, dishwasher, etc.).
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `name` | string | ✅ | — | Machine name/identifier |
-| `programs` | list[MachineProgram] | ✅ | — | Available programs with power profiles |
-| `entity start window` | string | ✅ | — | HA entity for start window datetime |
-| `entity end window` | string | ✅ | — | HA entity for end window datetime |
-| `entity selected program` | string | ✅ | — | HA entity for selected program |
-| `entity calculated start` | string | ✅ | — | HA entity for calculated optimal start time |
-| `entity calculated end` | string | ✅ | — | HA entity for calculated end time |
+| `name` | string | Yes | — | Machine name/identifier |
+| `programs` | list[[MachineProgram](#machineprogram)] | Yes | | Available programs with power profiles |
+| `entity start window` | string | Yes | — | HA entity for start window datetime |
+| `entity end window` | string | Yes | — | HA entity for end window datetime |
+| `entity selected program` | string | Yes | — | HA entity for selected program |
+| `entity calculated start` | string | Yes | — | HA entity for calculated optimal start time |
+| `entity calculated end` | string | Yes | — | HA entity for calculated end time |
 | `entity instant start` | string (optional) | No | `null` | HA entity for instant start |
 
 ###  MachineProgram
@@ -313,8 +313,8 @@ Single machine program with power profile.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `name` | string | ✅ | — | Program name (e.g., 'eco', 'quick wash', 'off') |
-| `power` | list[number] | ✅ | — | Power consumption in watts for each time interval |
+| `name` | string | Yes | — | Program name (e.g., 'eco', 'quick wash', 'off') |
+| `power` | list[number] | Yes | — | Power consumption in watts for each time interval |
 
 ###  NotificationsConfig
 
@@ -322,10 +322,10 @@ Notification settings for Home Assistant.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `notification entity` | string | ✅ | — | HA entity for notifications |
+| `notification entity` | string | Yes | — | HA entity for notifications |
 | `opstarten` | boolean | string | No | `"false"` | Send notification on startup |
 | `berekening` | boolean | string | No | `"false"` | Send notification on calculation completion |
-| `last activity entity` | string | ✅ | — | HA entity to track last activity timestamp |
+| `last activity entity` | string | Yes | — | HA entity to track last activity timestamp |
 
 ###  PricingConfig
 
@@ -333,19 +333,19 @@ Day-ahead pricing and tariff configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `source day ahead` | string | ✅ | — | Source for day-ahead prices: 'nordpool' | 'entsoe' | 'tibber' |
-| `entsoe-api-key` | string | SecretStr (optional) | No | `null` | ENTSO-E API key (can use !secret) |
-| `regular high` | number | ✅ | — | Regular high tariff fallback (euro/kWh) |
-| `regular low` | number | ✅ | — | Regular low tariff fallback (euro/kWh) |
-| `switch to low` | integer | ✅ | — | Hour to switch to low tariff |
-| `energy taxes consumption` | object | ✅ | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) |
-| `energy taxes production` | object | ✅ | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) |
-| `cost supplier consumption` | object | ✅ | — | Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) |
-| `cost supplier production` | object | ✅ | — | Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT) |
-| `vat consumption` | object | ✅ | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) |
-| `vat production` | object | ✅ | — | VAT percentage for production by date (YYYY-MM-DD -> %) |
-| `last invoice` | string | ✅ | — | Date of last invoice (YYYY-MM-DD) |
-| `tax refund` | boolean | string | ✅ | — | Whether tax refund applies |
+| `source day ahead` | string | Yes | — | Source for day-ahead prices: 'nordpool' | 'entsoe' | 'tibber' |
+| `entsoe-api-key` | string | [SecretStr](#secretstr) (optional) | No | | ENTSO-E API key (can use !secret) |
+| `regular high` | number | Yes | — | Regular high tariff fallback (euro/kWh) |
+| `regular low` | number | Yes | — | Regular low tariff fallback (euro/kWh) |
+| `switch to low` | integer | Yes | — | Hour to switch to low tariff |
+| `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) |
+| `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) |
+| `cost supplier consumption` | object | Yes | — | Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) |
+| `cost supplier production` | object | Yes | — | Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT) |
+| `vat consumption` | object | Yes | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) |
+| `vat production` | object | Yes | — | VAT percentage for production by date (YYYY-MM-DD -> %) |
+| `last invoice` | string | Yes | — | Date of last invoice (YYYY-MM-DD) |
+| `tax refund` | boolean | string | Yes | — | Whether tax refund applies |
 
 ###  ReportConfig
 
@@ -397,7 +397,7 @@ Gets resolved to actual value from secrets.json:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `secret_key` | string | ✅ | — | Secret Key |
+| `secret_key` | string | Yes | — | Secret Key |
 
 ###  SolarConfig
 
@@ -405,13 +405,13 @@ Solar panel configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `name` | string | ✅ | — | Solar installation name/identifier |
+| `name` | string | Yes | — | Solar installation name/identifier |
 | `entity pv switch` | string (optional) | No | `null` | HA entity to enable/disable this solar installation |
 | `tilt` | number (optional) | No | `null` | Panel tilt (for single installation) |
 | `orientation` | number (optional) | No | `null` | Panel orientation (for single installation) |
 | `capacity` | number (optional) | No | `null` | Installed capacity (for single installation) |
 | `yield` | number (optional) | No | `null` | Yield factor (for single installation) |
-| `strings` | list[SolarString] (optional) | No | `null` | Multiple panel strings with different configurations |
+| `strings` | list[[SolarString](#solarstring)] (optional) | No | | Multiple panel strings with different configurations |
 
 ###  SolarString
 
@@ -419,10 +419,10 @@ Configuration for a single solar panel string.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `tilt` | number | ✅ | — | Panel tilt angle in degrees (0=horizontal, 90=vertical) |
-| `orientation` | number | ✅ | — | Panel orientation in degrees (0=south, 90=west, -90=east) |
-| `capacity` | number | ✅ | — | Installed capacity in kWp |
-| `yield` | number | ✅ | — | Yield factor for production calculation |
+| `tilt` | number | Yes | — | Panel tilt angle in degrees (0=horizontal, 90=vertical) |
+| `orientation` | number | Yes | — | Panel orientation in degrees (0=south, 90=west, -90=east) |
+| `capacity` | number | Yes | — | Installed capacity in kWp |
+| `yield` | number | Yes | — | Yield factor for production calculation |
 
 ###  TibberConfig
 
@@ -430,5 +430,5 @@ Tibber API integration configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `api_token` | string | SecretStr | ✅ | — | Tibber API token (can use !secret) |
+| `api_token` | string | [SecretStr](#secretstr) | Yes | | Tibber API token (can use !secret) |
 | `api url` | string (optional) | No | `"https://api.tibber.com/v1-beta/gql"` | Tibber API URL |
