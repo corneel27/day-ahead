@@ -16,6 +16,5 @@ whl
 .idea/
 __pycache__/
 ../CODEOWNERS
-
-
+.venv
 

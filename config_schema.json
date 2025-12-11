@@ -1,0 +1,2234 @@
+{
+  "$defs": {
+    "BatteryConfig": {
+      "additionalProperties": true,
+      "description": "Battery configuration for optimization.",
+      "properties": {
+        "name": {
+          "description": "Battery name/identifier",
+          "title": "Name",
+          "type": "string"
+        },
+        "entity actual level": {
+          "description": "HA entity for current battery SOC",
+          "title": "Entity Actual Level",
+          "type": "string"
+        },
+        "capacity": {
+          "description": "Battery capacity in kWh",
+          "exclusiveMinimum": 0.0,
+          "title": "Capacity",
+          "type": "number"
+        },
+        "upper limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/FlexValue"
+            }
+          ],
+          "description": "Maximum SOC % (can be HA entity)",
+          "ge": 0,
+          "le": 100,
+          "title": "Upper Limit"
+        },
+        "lower limit": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "$ref": "#/$defs/FlexValue"
+            }
+          ],
+          "description": "Minimum SOC % (can be HA entity)",
+          "ge": 0,
+          "le": 100,
+          "title": "Lower Limit"
+        },
+        "optimal lower level": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "$ref": "#/$defs/FlexValue"
+                }
+              ],
+              "ge": 0,
+              "le": 100
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optimal lower SOC % for cost optimization",
+          "title": "Optimal Lower Level"
+        },
+        "entity min soc end opt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for minimum SOC at end of optimization period",
+          "title": "Entity Min Soc End Opt"
+        },
+        "entity max soc end opt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for maximum SOC at end of optimization period",
+          "title": "Entity Max Soc End Opt"
+        },
+        "charge stages": {
+          "description": "Charge power/efficiency curve",
+          "items": {
+            "$ref": "#/$defs/BatteryStage"
+          },
+          "minItems": 1,
+          "title": "Charge Stages",
+          "type": "array"
+        },
+        "discharge stages": {
+          "description": "Discharge power/efficiency curve",
+          "items": {
+            "$ref": "#/$defs/BatteryStage"
+          },
+          "minItems": 1,
+          "title": "Discharge Stages",
+          "type": "array"
+        },
+        "reduced hours": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Hour -> max power mapping for reduced power hours",
+          "title": "Reduced Hours"
+        },
+        "minimum power": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Minimum power in watts",
+          "title": "Minimum Power"
+        },
+        "dc_to_bat efficiency": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "DC to battery efficiency",
+          "title": "Dc To Bat Efficiency"
+        },
+        "dc_to_bat max power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "DC to battery max power in watts",
+          "title": "Dc To Bat Max Power"
+        },
+        "bat_to_dc efficiency": {
+          "anyOf": [
+            {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Battery to DC efficiency",
+          "title": "Bat To Dc Efficiency"
+        },
+        "bat_to_dc max power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Battery to DC max power in watts",
+          "title": "Bat To Dc Max Power"
+        },
+        "cycle cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cost per battery cycle in euros",
+          "title": "Cycle Cost"
+        },
+        "entity set power feedin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity to set power feed-in to grid",
+          "title": "Entity Set Power Feedin"
+        },
+        "entity set operating mode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity to set battery operating mode",
+          "title": "Entity Set Operating Mode"
+        },
+        "entity set operating mode on": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Value for operating mode ON",
+          "title": "Entity Set Operating Mode On"
+        },
+        "entity set operating mode off": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Value for operating mode OFF",
+          "title": "Entity Set Operating Mode Off"
+        },
+        "entity stop inverter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity to stop inverter",
+          "title": "Entity Stop Inverter"
+        },
+        "entity balance switch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for grid balancing switch",
+          "title": "Entity Balance Switch"
+        },
+        "entity from battery": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for power from battery",
+          "title": "Entity From Battery"
+        },
+        "entity from pv": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for power from PV",
+          "title": "Entity From Pv"
+        },
+        "entity from ac": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for power from AC",
+          "title": "Entity From Ac"
+        },
+        "entity calculated soc": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for calculated SOC",
+          "title": "Entity Calculated Soc"
+        },
+        "solar": {
+          "anyOf": [
+            {
+              "items": {},
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "DC-coupled solar panels attached to this battery",
+          "title": "Solar"
+        }
+      },
+      "required": [
+        "name",
+        "entity actual level",
+        "capacity",
+        "upper limit",
+        "lower limit",
+        "charge stages",
+        "discharge stages"
+      ],
+      "title": "BatteryConfig",
+      "type": "object"
+    },
+    "BatteryStage": {
+      "additionalProperties": true,
+      "description": "Single charge/discharge stage with power and efficiency.",
+      "properties": {
+        "power": {
+          "description": "Power level in Watts",
+          "minimum": 0.0,
+          "title": "Power",
+          "type": "number"
+        },
+        "efficiency": {
+          "description": "Efficiency at this power level (0-1)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Efficiency",
+          "type": "number"
+        }
+      },
+      "required": [
+        "power",
+        "efficiency"
+      ],
+      "title": "BatteryStage",
+      "type": "object"
+    },
+    "BoilerConfig": {
+      "additionalProperties": true,
+      "description": "Hot water boiler configuration.",
+      "properties": {
+        "boiler present": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Whether boiler is present/enabled",
+          "title": "Boiler Present"
+        },
+        "entity actual temp.": {
+          "description": "HA entity for actual water temperature",
+          "title": "Entity Actual Temp.",
+          "type": "string"
+        },
+        "entity setpoint": {
+          "description": "HA entity for temperature setpoint",
+          "title": "Entity Setpoint",
+          "type": "string"
+        },
+        "entity hysterese": {
+          "description": "HA entity for temperature hysteresis",
+          "title": "Entity Hysterese",
+          "type": "string"
+        },
+        "entity boiler enabled": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for boiler enabled status",
+          "title": "Entity Boiler Enabled"
+        },
+        "entity instant start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for instant start",
+          "title": "Entity Instant Start"
+        },
+        "cop": {
+          "description": "Coefficient of Performance",
+          "exclusiveMinimum": 0.0,
+          "title": "Cop",
+          "type": "number"
+        },
+        "cooling rate": {
+          "description": "Cooling rate in degrees per hour",
+          "minimum": 0.0,
+          "title": "Cooling Rate",
+          "type": "number"
+        },
+        "volume": {
+          "description": "Water volume in liters",
+          "exclusiveMinimum": 0.0,
+          "title": "Volume",
+          "type": "number"
+        },
+        "heating allowed below": {
+          "description": "Temperature below which heating is allowed",
+          "title": "Heating Allowed Below",
+          "type": "number"
+        },
+        "elec. power": {
+          "description": "Electrical power in watts",
+          "exclusiveMinimum": 0.0,
+          "title": "Elec. Power",
+          "type": "number"
+        },
+        "activate service": {
+          "description": "Service type to activate boiler (e.g., 'press', 'switch')",
+          "title": "Activate Service",
+          "type": "string"
+        },
+        "activate entity": {
+          "description": "HA entity to activate boiler",
+          "title": "Activate Entity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "boiler present",
+        "entity actual temp.",
+        "entity setpoint",
+        "entity hysterese",
+        "cop",
+        "cooling rate",
+        "volume",
+        "heating allowed below",
+        "elec. power",
+        "activate service",
+        "activate entity"
+      ],
+      "title": "BoilerConfig",
+      "type": "object"
+    },
+    "DashboardConfig": {
+      "additionalProperties": true,
+      "description": "Dashboard web UI configuration.",
+      "properties": {
+        "port": {
+          "default": 5000,
+          "description": "Web UI port number",
+          "maximum": 65535,
+          "minimum": 1024,
+          "title": "Port",
+          "type": "integer"
+        }
+      },
+      "title": "DashboardConfig",
+      "type": "object"
+    },
+    "DatabaseConfig": {
+      "additionalProperties": true,
+      "description": "Day Ahead database configuration (database da).\n\nCan be either SQLite or MySQL/MariaDB.",
+      "properties": {
+        "engine": {
+          "default": "sqlite",
+          "description": "Database engine: 'sqlite' | 'mysql'",
+          "title": "Engine",
+          "type": "string"
+        },
+        "db_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Database path for SQLite (e.g., '../data')",
+          "title": "Db Path"
+        },
+        "database": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Database filename for SQLite or database name for MySQL",
+          "title": "Database"
+        },
+        "server": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "MySQL server hostname",
+          "title": "Server"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "MySQL server port",
+          "title": "Port"
+        },
+        "username": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "MySQL username",
+          "title": "Username"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/SecretStr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "MySQL password (can use !secret)",
+          "title": "Password"
+        },
+        "time_zone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Database timezone",
+          "title": "Time Zone"
+        }
+      },
+      "title": "DatabaseConfig",
+      "type": "object"
+    },
+    "EVChargeScheduler": {
+      "additionalProperties": true,
+      "description": "EV charge scheduling configuration.",
+      "properties": {
+        "entity set level": {
+          "description": "HA entity to set target charge level",
+          "title": "Entity Set Level",
+          "type": "string"
+        },
+        "level margin": {
+          "description": "Margin in % for charge level completion",
+          "minimum": 0,
+          "title": "Level Margin",
+          "type": "integer"
+        },
+        "entity ready datetime": {
+          "description": "HA entity for ready datetime (when charging should complete)",
+          "title": "Entity Ready Datetime",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity set level",
+        "level margin",
+        "entity ready datetime"
+      ],
+      "title": "EVChargeScheduler",
+      "type": "object"
+    },
+    "EVChargeStage": {
+      "additionalProperties": true,
+      "description": "Single EV charging stage with amperage and efficiency.",
+      "properties": {
+        "ampere": {
+          "description": "Charging current in amperes",
+          "minimum": 0,
+          "title": "Ampere",
+          "type": "integer"
+        },
+        "efficiency": {
+          "description": "Charging efficiency at this amperage (0-1)",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Efficiency",
+          "type": "number"
+        }
+      },
+      "required": [
+        "ampere",
+        "efficiency"
+      ],
+      "title": "EVChargeStage",
+      "type": "object"
+    },
+    "EVConfig": {
+      "additionalProperties": true,
+      "description": "Electric Vehicle configuration.",
+      "properties": {
+        "name": {
+          "description": "EV name/identifier",
+          "title": "Name",
+          "type": "string"
+        },
+        "capacity": {
+          "description": "Battery capacity in kWh",
+          "exclusiveMinimum": 0.0,
+          "title": "Capacity",
+          "type": "number"
+        },
+        "entity position": {
+          "description": "HA device tracker for vehicle position",
+          "title": "Entity Position",
+          "type": "string"
+        },
+        "entity max amperage": {
+          "description": "HA entity for maximum charging amperage",
+          "title": "Entity Max Amperage",
+          "type": "string"
+        },
+        "charge three phase": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Whether vehicle charges on three phases",
+          "title": "Charge Three Phase"
+        },
+        "charge stages": {
+          "description": "Charging amperage/efficiency curve",
+          "items": {
+            "$ref": "#/$defs/EVChargeStage"
+          },
+          "minItems": 1,
+          "title": "Charge Stages",
+          "type": "array"
+        },
+        "entity actual level": {
+          "description": "HA entity for current battery level %",
+          "title": "Entity Actual Level",
+          "type": "string"
+        },
+        "entity plugged in": {
+          "description": "HA binary sensor for plugged in status",
+          "title": "Entity Plugged In",
+          "type": "string"
+        },
+        "entity instant start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for instant start charging",
+          "title": "Entity Instant Start"
+        },
+        "entity instant level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for instant charge level target",
+          "title": "Entity Instant Level"
+        },
+        "charge scheduler": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EVChargeScheduler"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Charge scheduling configuration"
+        },
+        "charge switch": {
+          "description": "HA switch entity to control charging",
+          "title": "Charge Switch",
+          "type": "string"
+        },
+        "entity set charging ampere": {
+          "description": "HA entity to set charging amperage",
+          "title": "Entity Set Charging Ampere",
+          "type": "string"
+        },
+        "entity stop charging": {
+          "description": "HA entity for stop charging datetime",
+          "title": "Entity Stop Charging",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "capacity",
+        "entity position",
+        "entity max amperage",
+        "charge three phase",
+        "charge stages",
+        "entity actual level",
+        "entity plugged in",
+        "charge switch",
+        "entity set charging ampere",
+        "entity stop charging"
+      ],
+      "title": "EVConfig",
+      "type": "object"
+    },
+    "FlexValue": {
+      "additionalProperties": false,
+      "description": "A flexible value that can be either a literal or a Home Assistant entity ID.\n\nSupports all HA entity types: int, float, str, bool\n\nExamples:\n    FlexValue(value=95)                    # Literal integer\n    FlexValue(value=\"sensor.battery_soc\")  # HA entity ID\n    FlexValue(value=True)                  # Literal boolean\n    FlexValue(value=\"binary_sensor.grid\")  # HA entity ID",
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "title": "Value"
+        },
+        "is_entity": {
+          "default": false,
+          "description": "True if value is a HA entity ID",
+          "title": "Is Entity",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "FlexValue",
+      "type": "object"
+    },
+    "GraphicsConfig": {
+      "additionalProperties": true,
+      "description": "Graphics and visualization settings.",
+      "properties": {
+        "style": {
+          "default": "dark_background",
+          "description": "Matplotlib style (e.g., 'dark_background', 'default')",
+          "title": "Style",
+          "type": "string"
+        },
+        "show": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "false",
+          "description": "Whether to show graphics",
+          "title": "Show"
+        },
+        "battery balance": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "true",
+          "description": "Show battery balance in graphs",
+          "title": "Battery Balance"
+        },
+        "prices consumption": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "true",
+          "description": "Show consumption prices in graphs",
+          "title": "Prices Consumption"
+        },
+        "prices production": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "false",
+          "description": "Show production prices in graphs",
+          "title": "Prices Production"
+        },
+        "prices spot": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "true",
+          "description": "Show spot prices in graphs",
+          "title": "Prices Spot"
+        },
+        "average consumption": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "true",
+          "description": "Show average consumption in graphs",
+          "title": "Average Consumption"
+        }
+      },
+      "title": "GraphicsConfig",
+      "type": "object"
+    },
+    "GridConfig": {
+      "additionalProperties": true,
+      "description": "Electrical grid connection configuration.",
+      "properties": {
+        "max_power": {
+          "default": 17,
+          "description": "Maximum grid power in kW",
+          "exclusiveMinimum": 0.0,
+          "title": "Max Power",
+          "type": "number"
+        }
+      },
+      "title": "GridConfig",
+      "type": "object"
+    },
+    "HADatabaseConfig": {
+      "additionalProperties": true,
+      "description": "Home Assistant database connection configuration.",
+      "properties": {
+        "engine": {
+          "default": "mysql",
+          "description": "Database engine type",
+          "enum": [
+            "mysql",
+            "sqlite",
+            "postgresql"
+          ],
+          "title": "Engine",
+          "type": "string"
+        },
+        "server": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "core-mariadb",
+          "description": "Database server hostname (required for mysql/postgresql)",
+          "title": "Server"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Database port (defaults: mysql=3306, postgresql=5432)",
+          "title": "Port"
+        },
+        "database": {
+          "default": "homeassistant",
+          "description": "Database name",
+          "title": "Database",
+          "type": "string"
+        },
+        "username": {
+          "default": "homeassistant",
+          "description": "Database username",
+          "title": "Username",
+          "type": "string"
+        },
+        "password": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/SecretStr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Database password (can use !secret)",
+          "title": "Password"
+        }
+      },
+      "title": "HADatabaseConfig",
+      "type": "object"
+    },
+    "HeatingConfig": {
+      "additionalProperties": true,
+      "description": "Heating system / heat pump configuration.",
+      "properties": {
+        "heater present": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Whether heating system is present/enabled",
+          "title": "Heater Present"
+        },
+        "entity hp enabled": {
+          "description": "HA binary sensor for heat pump enabled status",
+          "title": "Entity Hp Enabled",
+          "type": "string"
+        },
+        "degree days factor": {
+          "description": "Degree days factor for heat demand calculation",
+          "exclusiveMinimum": 0.0,
+          "title": "Degree Days Factor",
+          "type": "number"
+        },
+        "adjustment": {
+          "description": "Adjustment mode: 'on/off' | 'power' | 'heating curve'",
+          "title": "Adjustment",
+          "type": "string"
+        },
+        "stages": {
+          "description": "Heating power/COP stages",
+          "items": {
+            "$ref": "#/$defs/HeatingStage"
+          },
+          "minItems": 1,
+          "title": "Stages",
+          "type": "array"
+        },
+        "entity adjust heating curve": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity to adjust heating curve",
+          "title": "Entity Adjust Heating Curve"
+        },
+        "adjustment factor": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Factor for heating curve adjustment",
+          "title": "Adjustment Factor"
+        },
+        "min run length": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Minimum run length in time intervals",
+          "title": "Min Run Length"
+        },
+        "entity hp heat produced": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for heat produced",
+          "title": "Entity Hp Heat Produced"
+        },
+        "entity hp heat demand": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for heat demand",
+          "title": "Entity Hp Heat Demand"
+        },
+        "entity avg temp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for average temperature",
+          "title": "Entity Avg Temp"
+        },
+        "entity hp cop": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for heat pump COP",
+          "title": "Entity Hp Cop"
+        },
+        "entity hp power": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for heat pump power",
+          "title": "Entity Hp Power"
+        },
+        "entity hp switch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity to control heat pump on/off",
+          "title": "Entity Hp Switch"
+        }
+      },
+      "required": [
+        "heater present",
+        "entity hp enabled",
+        "degree days factor",
+        "adjustment",
+        "stages"
+      ],
+      "title": "HeatingConfig",
+      "type": "object"
+    },
+    "HeatingStage": {
+      "additionalProperties": true,
+      "description": "Single heating stage with power and COP.",
+      "properties": {
+        "max_power": {
+          "description": "Maximum power in watts for this stage",
+          "exclusiveMinimum": 0.0,
+          "title": "Max Power",
+          "type": "number"
+        },
+        "cop": {
+          "description": "Coefficient of Performance at this power level",
+          "exclusiveMinimum": 0.0,
+          "title": "Cop",
+          "type": "number"
+        }
+      },
+      "required": [
+        "max_power",
+        "cop"
+      ],
+      "title": "HeatingStage",
+      "type": "object"
+    },
+    "HistoryConfig": {
+      "additionalProperties": true,
+      "description": "History and data retention settings.",
+      "properties": {
+        "save days": {
+          "default": 7,
+          "description": "Number of days to retain historical data",
+          "minimum": 1,
+          "title": "Save Days",
+          "type": "integer"
+        }
+      },
+      "title": "HistoryConfig",
+      "type": "object"
+    },
+    "HomeAssistantConfig": {
+      "additionalProperties": true,
+      "description": "Home Assistant connection configuration.",
+      "properties": {
+        "host": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Home Assistant IP address (auto-detected if not set)",
+          "title": "Host"
+        },
+        "ip port": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Home Assistant port (default: 8123)",
+          "title": "Ip Port"
+        },
+        "ssl": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether to use SSL/HTTPS",
+          "title": "Ssl"
+        },
+        "hasstoken": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/SecretStr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Home Assistant long-lived access token (can use !secret)",
+          "title": "Hasstoken"
+        },
+        "protocol api": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "API protocol (http or https)",
+          "title": "Protocol Api"
+        }
+      },
+      "title": "HomeAssistantConfig",
+      "type": "object"
+    },
+    "MachineConfig": {
+      "additionalProperties": true,
+      "description": "Appliance/machine configuration (washing machine, dishwasher, etc.).",
+      "properties": {
+        "name": {
+          "description": "Machine name/identifier",
+          "title": "Name",
+          "type": "string"
+        },
+        "programs": {
+          "description": "Available programs with power profiles",
+          "items": {
+            "$ref": "#/$defs/MachineProgram"
+          },
+          "minItems": 1,
+          "title": "Programs",
+          "type": "array"
+        },
+        "entity start window": {
+          "description": "HA entity for start window datetime",
+          "title": "Entity Start Window",
+          "type": "string"
+        },
+        "entity end window": {
+          "description": "HA entity for end window datetime",
+          "title": "Entity End Window",
+          "type": "string"
+        },
+        "entity selected program": {
+          "description": "HA entity for selected program",
+          "title": "Entity Selected Program",
+          "type": "string"
+        },
+        "entity calculated start": {
+          "description": "HA entity for calculated optimal start time",
+          "title": "Entity Calculated Start",
+          "type": "string"
+        },
+        "entity calculated end": {
+          "description": "HA entity for calculated end time",
+          "title": "Entity Calculated End",
+          "type": "string"
+        },
+        "entity instant start": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for instant start",
+          "title": "Entity Instant Start"
+        }
+      },
+      "required": [
+        "name",
+        "programs",
+        "entity start window",
+        "entity end window",
+        "entity selected program",
+        "entity calculated start",
+        "entity calculated end"
+      ],
+      "title": "MachineConfig",
+      "type": "object"
+    },
+    "MachineProgram": {
+      "additionalProperties": true,
+      "description": "Single machine program with power profile.",
+      "properties": {
+        "name": {
+          "description": "Program name (e.g., 'eco', 'quick wash', 'off')",
+          "title": "Name",
+          "type": "string"
+        },
+        "power": {
+          "description": "Power consumption in watts for each time interval",
+          "items": {
+            "type": "number"
+          },
+          "title": "Power",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "power"
+      ],
+      "title": "MachineProgram",
+      "type": "object"
+    },
+    "NotificationsConfig": {
+      "additionalProperties": true,
+      "description": "Notification settings for Home Assistant.",
+      "properties": {
+        "notification entity": {
+          "description": "HA entity for notifications",
+          "title": "Notification Entity",
+          "type": "string"
+        },
+        "opstarten": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "false",
+          "description": "Send notification on startup",
+          "title": "Opstarten"
+        },
+        "berekening": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "default": "false",
+          "description": "Send notification on calculation completion",
+          "title": "Berekening"
+        },
+        "last activity entity": {
+          "description": "HA entity to track last activity timestamp",
+          "title": "Last Activity Entity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "notification entity",
+        "last activity entity"
+      ],
+      "title": "NotificationsConfig",
+      "type": "object"
+    },
+    "PricingConfig": {
+      "additionalProperties": true,
+      "description": "Day-ahead pricing and tariff configuration.",
+      "properties": {
+        "source day ahead": {
+          "description": "Source for day-ahead prices: 'nordpool' | 'entsoe' | 'tibber'",
+          "title": "Source Day Ahead",
+          "type": "string"
+        },
+        "entsoe-api-key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/SecretStr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ENTSO-E API key (can use !secret)",
+          "title": "Entsoe-Api-Key"
+        },
+        "regular high": {
+          "description": "Regular high tariff fallback (euro/kWh)",
+          "title": "Regular High",
+          "type": "number"
+        },
+        "regular low": {
+          "description": "Regular low tariff fallback (euro/kWh)",
+          "title": "Regular Low",
+          "type": "number"
+        },
+        "switch to low": {
+          "description": "Hour to switch to low tariff",
+          "maximum": 23,
+          "minimum": 0,
+          "title": "Switch To Low",
+          "type": "integer"
+        },
+        "energy taxes consumption": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+          "title": "Energy Taxes Consumption",
+          "type": "object"
+        },
+        "energy taxes production": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+          "title": "Energy Taxes Production",
+          "type": "object"
+        },
+        "cost supplier consumption": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+          "title": "Cost Supplier Consumption",
+          "type": "object"
+        },
+        "cost supplier production": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+          "title": "Cost Supplier Production",
+          "type": "object"
+        },
+        "vat consumption": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "VAT percentage for consumption by date (YYYY-MM-DD -> %)",
+          "title": "Vat Consumption",
+          "type": "object"
+        },
+        "vat production": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "description": "VAT percentage for production by date (YYYY-MM-DD -> %)",
+          "title": "Vat Production",
+          "type": "object"
+        },
+        "last invoice": {
+          "description": "Date of last invoice (YYYY-MM-DD)",
+          "title": "Last Invoice",
+          "type": "string"
+        },
+        "tax refund": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "Whether tax refund applies",
+          "title": "Tax Refund"
+        }
+      },
+      "required": [
+        "source day ahead",
+        "regular high",
+        "regular low",
+        "switch to low",
+        "energy taxes consumption",
+        "energy taxes production",
+        "cost supplier consumption",
+        "cost supplier production",
+        "vat consumption",
+        "vat production",
+        "last invoice",
+        "tax refund"
+      ],
+      "title": "PricingConfig",
+      "type": "object"
+    },
+    "ReportConfig": {
+      "additionalProperties": true,
+      "description": "Reporting and sensor entity configuration.",
+      "properties": {
+        "entities grid consumption": {
+          "description": "HA entities for grid consumption",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Grid Consumption",
+          "type": "array"
+        },
+        "entities grid production": {
+          "description": "HA entities for grid production",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Grid Production",
+          "type": "array"
+        },
+        "entities solar production ac": {
+          "description": "HA entities for AC solar production",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Solar Production Ac",
+          "type": "array"
+        },
+        "entities solar production dc": {
+          "description": "HA entities for DC solar production",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Solar Production Dc",
+          "type": "array"
+        },
+        "entities ev consumption": {
+          "description": "HA entities for EV consumption",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Ev Consumption",
+          "type": "array"
+        },
+        "entities wp consumption": {
+          "description": "HA entities for heat pump (warmtepomp) consumption",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Wp Consumption",
+          "type": "array"
+        },
+        "entities boiler consumption": {
+          "description": "HA entities for boiler consumption",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Boiler Consumption",
+          "type": "array"
+        },
+        "entities battery consumption": {
+          "description": "HA entities for battery consumption",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Battery Consumption",
+          "type": "array"
+        },
+        "entities battery production": {
+          "description": "HA entities for battery production",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Battery Production",
+          "type": "array"
+        },
+        "entities machine consumption": {
+          "description": "HA entities for machine consumption",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Machine Consumption",
+          "type": "array"
+        },
+        "co2 intensity sensor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for CO2 intensity",
+          "title": "Co2 Intensity Sensor"
+        },
+        "sensors": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Additional sensors configuration",
+          "title": "Sensors"
+        }
+      },
+      "title": "ReportConfig",
+      "type": "object"
+    },
+    "SchedulerConfig": {
+      "additionalProperties": true,
+      "description": "Task scheduler configuration.\n\nMaps time patterns to action names.\nTime patterns can be:\n- Specific times: \"0435\", \"1255\"\n- Wildcards: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n\nActions include:\n- get_meteo_data\n- get_tibber_data\n- get_day_ahead_prices\n- calc_optimum\n- clean_data\n- calc_baseloads",
+      "properties": {},
+      "title": "SchedulerConfig",
+      "type": "object"
+    },
+    "SecretStr": {
+      "additionalProperties": false,
+      "description": "A secret string reference that gets resolved from secrets.json.\n\nExample in options.json:\n    {\"db_password\": \"!secret db_password\"}\n    \nGets resolved to actual value from secrets.json:\n    {\"db_password\": \"my_actual_password_123\"}",
+      "properties": {
+        "secret_key": {
+          "title": "Secret Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "secret_key"
+      ],
+      "title": "SecretStr",
+      "type": "object"
+    },
+    "SolarConfig": {
+      "additionalProperties": true,
+      "description": "Solar panel configuration.",
+      "properties": {
+        "name": {
+          "description": "Solar installation name/identifier",
+          "title": "Name",
+          "type": "string"
+        },
+        "entity pv switch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity to enable/disable this solar installation",
+          "title": "Entity Pv Switch"
+        },
+        "tilt": {
+          "anyOf": [
+            {
+              "maximum": 90.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Panel tilt (for single installation)",
+          "title": "Tilt"
+        },
+        "orientation": {
+          "anyOf": [
+            {
+              "maximum": 180.0,
+              "minimum": -180.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Panel orientation (for single installation)",
+          "title": "Orientation"
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Installed capacity (for single installation)",
+          "title": "Capacity"
+        },
+        "yield": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Yield factor (for single installation)",
+          "title": "Yield"
+        },
+        "strings": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/SolarString"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Multiple panel strings with different configurations",
+          "title": "Strings"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "SolarConfig",
+      "type": "object"
+    },
+    "SolarString": {
+      "additionalProperties": true,
+      "description": "Configuration for a single solar panel string.",
+      "properties": {
+        "tilt": {
+          "description": "Panel tilt angle in degrees (0=horizontal, 90=vertical)",
+          "maximum": 90.0,
+          "minimum": 0.0,
+          "title": "Tilt",
+          "type": "number"
+        },
+        "orientation": {
+          "description": "Panel orientation in degrees (0=south, 90=west, -90=east)",
+          "maximum": 180.0,
+          "minimum": -180.0,
+          "title": "Orientation",
+          "type": "number"
+        },
+        "capacity": {
+          "description": "Installed capacity in kWp",
+          "exclusiveMinimum": 0.0,
+          "title": "Capacity",
+          "type": "number"
+        },
+        "yield": {
+          "description": "Yield factor for production calculation",
+          "exclusiveMinimum": 0.0,
+          "title": "Yield",
+          "type": "number"
+        }
+      },
+      "required": [
+        "tilt",
+        "orientation",
+        "capacity",
+        "yield"
+      ],
+      "title": "SolarString",
+      "type": "object"
+    },
+    "TibberConfig": {
+      "additionalProperties": true,
+      "description": "Tibber API integration configuration.",
+      "properties": {
+        "api_token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/SecretStr"
+            }
+          ],
+          "description": "Tibber API token (can use !secret)",
+          "title": "Api Token"
+        },
+        "api url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "https://api.tibber.com/v1-beta/gql",
+          "description": "Tibber API URL",
+          "title": "Api Url"
+        }
+      },
+      "required": [
+        "api_token"
+      ],
+      "title": "TibberConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "description": "Configuration schema for the Day Ahead Optimizer Home Assistant add-on. This schema defines all available configuration options including battery settings, solar panels, pricing, scheduler, graphics, and more.",
+  "properties": {
+    "config_version": {
+      "default": 0,
+      "description": "Configuration version number",
+      "title": "Config Version",
+      "type": "integer"
+    },
+    "homeassistant": {
+      "$ref": "#/$defs/HomeAssistantConfig",
+      "description": "Home Assistant connection settings"
+    },
+    "database ha": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HADatabaseConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Home Assistant database connection"
+    },
+    "database da": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DatabaseConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Day Ahead optimization database connection"
+    },
+    "latitude": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Latitude (auto-fetched from HA if not set)",
+      "title": "Latitude"
+    },
+    "longitude": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Longitude (auto-fetched from HA if not set)",
+      "title": "Longitude"
+    },
+    "time_zone": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Timezone (auto-fetched from HA if not set)",
+      "title": "Time Zone"
+    },
+    "country": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Country code (auto-fetched from HA if not set)",
+      "title": "Country"
+    },
+    "meteoserver-key": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/SecretStr"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Meteoserver API key (can use !secret)",
+      "title": "Meteoserver-Key"
+    },
+    "meteoserver-model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": "harmonie",
+      "description": "Meteoserver model: 'harmonie' | 'gfs'",
+      "title": "Meteoserver-Model"
+    },
+    "meteoserver-attemps": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": 2,
+      "description": "Number of meteoserver fetch attempts",
+      "title": "Meteoserver-Attemps"
+    },
+    "prices": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PricingConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Day-ahead pricing and tariff configuration"
+    },
+    "logging level": {
+      "default": "info",
+      "description": "Logging level: 'debug' | 'info' | 'warning' | 'error'",
+      "title": "Logging Level",
+      "type": "string"
+    },
+    "protocol api": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "API protocol (http/https)",
+      "title": "Protocol Api"
+    },
+    "use_calc_baseload": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "default": "false",
+      "description": "Whether to calculate baseload automatically",
+      "title": "Use Calc Baseload"
+    },
+    "baseload calc periode": {
+      "default": 56,
+      "description": "Period in days for baseload calculation",
+      "minimum": 1,
+      "title": "Baseload Calc Periode",
+      "type": "integer"
+    },
+    "baseload": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Baseload power consumption (watts) - single value or 24 hourly values",
+      "title": "Baseload"
+    },
+    "graphical backend": {
+      "default": "",
+      "description": "Matplotlib graphical backend",
+      "title": "Graphical Backend",
+      "type": "string"
+    },
+    "graphics": {
+      "$ref": "#/$defs/GraphicsConfig",
+      "description": "Graphics and visualization settings"
+    },
+    "interval": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optimization interval in minutes",
+      "title": "Interval"
+    },
+    "strategy": {
+      "default": "minimize cost",
+      "description": "Optimization strategy",
+      "title": "Strategy",
+      "type": "string"
+    },
+    "notifications": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NotificationsConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Notification settings"
+    },
+    "grid": {
+      "$ref": "#/$defs/GridConfig",
+      "description": "Grid connection settings"
+    },
+    "history": {
+      "$ref": "#/$defs/HistoryConfig",
+      "description": "History retention settings"
+    },
+    "dashboard": {
+      "$ref": "#/$defs/DashboardConfig",
+      "description": "Dashboard web UI settings"
+    },
+    "battery": {
+      "description": "Battery configurations",
+      "items": {
+        "$ref": "#/$defs/BatteryConfig"
+      },
+      "title": "Battery",
+      "type": "array"
+    },
+    "solar": {
+      "description": "Solar panel configurations",
+      "items": {
+        "$ref": "#/$defs/SolarConfig"
+      },
+      "title": "Solar",
+      "type": "array"
+    },
+    "electric vehicle": {
+      "description": "Electric vehicle configurations",
+      "items": {
+        "$ref": "#/$defs/EVConfig"
+      },
+      "title": "Electric Vehicle",
+      "type": "array"
+    },
+    "machines": {
+      "description": "Appliance/machine configurations",
+      "items": {
+        "$ref": "#/$defs/MachineConfig"
+      },
+      "title": "Machines",
+      "type": "array"
+    },
+    "boiler": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BoilerConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Hot water boiler configuration"
+    },
+    "heating": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HeatingConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Heating system / heat pump configuration"
+    },
+    "tibber": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TibberConfig"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Tibber API integration"
+    },
+    "report": {
+      "$ref": "#/$defs/ReportConfig",
+      "description": "Reporting entity configuration"
+    },
+    "scheduler": {
+      "$ref": "#/$defs/SchedulerConfig",
+      "description": "Task scheduler configuration"
+    }
+  },
+  "title": "Day Ahead Optimizer Configuration",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
