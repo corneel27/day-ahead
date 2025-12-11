@@ -28,16 +28,16 @@ Configuration schema for the Day Ahead Optimizer Home Assistant add-on. This sch
 |-------|------|----------|---------|-------------|
 | `config_version` | integer | No | `0` | Configuration version number |
 | `homeassistant` | [HomeAssistantConfig](#homeassistantconfig) | No | | Home Assistant connection settings |
-| `database ha` | [HADatabaseConfig](#hadatabaseconfig) (optional) | No | `null` | Home Assistant database connection |
-| `database da` | [DatabaseConfig](#databaseconfig) (optional) | No | `null` | Day Ahead optimization database connection |
+| `database ha` | [HADatabaseConfig](#hadatabaseconfig) (optional) | No |  | Home Assistant database connection |
+| `database da` | [DatabaseConfig](#databaseconfig) (optional) | No |  | Day Ahead optimization database connection |
 | `latitude` | number (optional) | No | `null` | Latitude (auto-fetched from HA if not set) |
 | `longitude` | number (optional) | No | `null` | Longitude (auto-fetched from HA if not set) |
 | `time_zone` | string (optional) | No | `null` | Timezone (auto-fetched from HA if not set) |
 | `country` | string (optional) | No | `null` | Country code (auto-fetched from HA if not set) |
-| `meteoserver-key` | string | [SecretStr](#secretstr) (optional) | No | `null` | Meteoserver API key (can use !secret) |
+| `meteoserver-key` | string | [SecretStr](#secretstr) (optional) | No |  | Meteoserver API key (can use !secret) |
 | `meteoserver-model` | string (optional) | No | `"harmonie"` | Meteoserver model: 'harmonie' | 'gfs' |
 | `meteoserver-attemps` | integer (optional) | No | `2` | Number of meteoserver fetch attempts |
-| `prices` | [PricingConfig](#pricingconfig) (optional) | No | `null` | Day-ahead pricing and tariff configuration |
+| `prices` | [PricingConfig](#pricingconfig) (optional) | No |  | Day-ahead pricing and tariff configuration |
 | `logging level` | string | No | `"info"` | Logging level: 'debug' | 'info' | 'warning' | 'error' |
 | `protocol api` | string (optional) | No | `null` | API protocol (http/https) |
 | `use_calc_baseload` | boolean | string | No | `"false"` | Whether to calculate baseload automatically |
@@ -47,7 +47,7 @@ Configuration schema for the Day Ahead Optimizer Home Assistant add-on. This sch
 | `graphics` | [GraphicsConfig](#graphicsconfig) | No | | Graphics and visualization settings |
 | `interval` | integer | string (optional) | No | `null` | Optimization interval in minutes |
 | `strategy` | string | No | `"minimize cost"` | Optimization strategy |
-| `notifications` | [NotificationsConfig](#notificationsconfig) (optional) | No | `null` | Notification settings |
+| `notifications` | [NotificationsConfig](#notificationsconfig) (optional) | No |  | Notification settings |
 | `grid` | [GridConfig](#gridconfig) | No | | Grid connection settings |
 | `history` | [HistoryConfig](#historyconfig) | No | | History retention settings |
 | `dashboard` | [DashboardConfig](#dashboardconfig) | No | | Dashboard web UI settings |
@@ -55,9 +55,9 @@ Configuration schema for the Day Ahead Optimizer Home Assistant add-on. This sch
 | `solar` | list[[SolarConfig](#solarconfig)] | No | [No default](#optional-vs-required-fields) | Solar panel configurations |
 | `electric vehicle` | list[[EVConfig](#evconfig)] | No | [No default](#optional-vs-required-fields) | Electric vehicle configurations |
 | `machines` | list[[MachineConfig](#machineconfig)] | No | [No default](#optional-vs-required-fields) | Appliance/machine configurations |
-| `boiler` | [BoilerConfig](#boilerconfig) (optional) | No | `null` | Hot water boiler configuration |
-| `heating` | [HeatingConfig](#heatingconfig) (optional) | No | `null` | Heating system / heat pump configuration |
-| `tibber` | [TibberConfig](#tibberconfig) (optional) | No | `null` | Tibber API integration |
+| `boiler` | [BoilerConfig](#boilerconfig) (optional) | No |  | Hot water boiler configuration |
+| `heating` | [HeatingConfig](#heatingconfig) (optional) | No |  | Heating system / heat pump configuration |
+| `tibber` | [TibberConfig](#tibberconfig) (optional) | No |  | Tibber API integration |
 | `report` | [ReportConfig](#reportconfig) | No | | Reporting entity configuration |
 | `scheduler` | [SchedulerConfig](#schedulerconfig) | No | | Task scheduler configuration |
 
@@ -147,7 +147,7 @@ Can be either SQLite or MySQL/MariaDB.
 | `server` | string (optional) | No | `null` | MySQL server hostname |
 | `port` | integer (optional) | No | `null` | MySQL server port |
 | `username` | string (optional) | No | `null` | MySQL username |
-| `password` | string | [SecretStr](#secretstr) (optional) | No | `null` | MySQL password (can use !secret) |
+| `password` | string | [SecretStr](#secretstr) (optional) | No |  | MySQL password (can use !secret) |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
 
 ###  EVChargeScheduler
@@ -185,7 +185,7 @@ Electric Vehicle configuration.
 | `entity plugged in` | string | Yes | — | HA binary sensor for plugged in status |
 | `entity instant start` | string (optional) | No | `null` | HA entity for instant start charging |
 | `entity instant level` | string (optional) | No | `null` | HA entity for instant charge level target |
-| `charge scheduler` | [EVChargeScheduler](#evchargescheduler) (optional) | No | `null` | Charge scheduling configuration |
+| `charge scheduler` | [EVChargeScheduler](#evchargescheduler) (optional) | No |  | Charge scheduling configuration |
 | `charge switch` | string | Yes | — | HA switch entity to control charging |
 | `entity set charging ampere` | string | Yes | — | HA entity to set charging amperage |
 | `entity stop charging` | string | Yes | — | HA entity for stop charging datetime |
@@ -240,7 +240,7 @@ Home Assistant database connection configuration.
 | `port` | integer (optional) | No | `null` | Database port (defaults: mysql=3306, postgresql=5432) |
 | `database` | string | No | `"homeassistant"` | Database name |
 | `username` | string | No | `"homeassistant"` | Database username |
-| `password` | string | [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) |
+| `password` | string | [SecretStr](#secretstr) (optional) | No |  | Database password (can use !secret) |
 
 ###  HeatingConfig
 
@@ -289,7 +289,7 @@ Home Assistant connection configuration.
 | `host` | string (optional) | No | `null` | Home Assistant IP address (auto-detected if not set) |
 | `ip port` | integer (optional) | No | `null` | Home Assistant port (default: 8123) |
 | `ssl` | boolean (optional) | No | `null` | Whether to use SSL/HTTPS |
-| `hasstoken` | string | [SecretStr](#secretstr) (optional) | No | `null` | Home Assistant long-lived access token (can use !secret) |
+| `hasstoken` | string | [SecretStr](#secretstr) (optional) | No |  | Home Assistant long-lived access token (can use !secret) |
 | `protocol api` | string (optional) | No | `null` | API protocol (http or https) |
 
 ###  MachineConfig
@@ -334,7 +334,7 @@ Day-ahead pricing and tariff configuration.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `source day ahead` | string | Yes | — | Source for day-ahead prices: 'nordpool' | 'entsoe' | 'tibber' |
-| `entsoe-api-key` | string | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) |
+| `entsoe-api-key` | string | [SecretStr](#secretstr) (optional) | No |  | ENTSO-E API key (can use !secret) |
 | `regular high` | number | Yes | — | Regular high tariff fallback (euro/kWh) |
 | `regular low` | number | Yes | — | Regular low tariff fallback (euro/kWh) |
 | `switch to low` | integer | Yes | — | Hour to switch to low tariff |

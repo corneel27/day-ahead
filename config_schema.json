@@ -16,7 +16,7 @@
         },
         "capacity": {
           "description": "Battery capacity in kWh",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Capacity",
           "type": "number"
         },
@@ -146,8 +146,8 @@
         "dc_to_bat efficiency": {
           "anyOf": [
             {
-              "maximum": 1.0,
-              "minimum": 0.0,
+              "maximum": 1,
+              "minimum": 0,
               "type": "number"
             },
             {
@@ -174,8 +174,8 @@
         "bat_to_dc efficiency": {
           "anyOf": [
             {
-              "maximum": 1.0,
-              "minimum": 0.0,
+              "maximum": 1,
+              "minimum": 0,
               "type": "number"
             },
             {
@@ -375,14 +375,14 @@
       "properties": {
         "power": {
           "description": "Power level in Watts",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Power",
           "type": "number"
         },
         "efficiency": {
           "description": "Efficiency at this power level (0-1)",
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "Efficiency",
           "type": "number"
         }
@@ -453,19 +453,19 @@
         },
         "cop": {
           "description": "Coefficient of Performance",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Cop",
           "type": "number"
         },
         "cooling rate": {
           "description": "Cooling rate in degrees per hour",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Cooling Rate",
           "type": "number"
         },
         "volume": {
           "description": "Water volume in liters",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Volume",
           "type": "number"
         },
@@ -476,7 +476,7 @@
         },
         "elec. power": {
           "description": "Electrical power in watts",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Elec. Power",
           "type": "number"
         },
@@ -672,8 +672,8 @@
         },
         "efficiency": {
           "description": "Charging efficiency at this amperage (0-1)",
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "Efficiency",
           "type": "number"
         }
@@ -696,7 +696,7 @@
         },
         "capacity": {
           "description": "Battery capacity in kWh",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Capacity",
           "type": "number"
         },
@@ -944,7 +944,7 @@
         "max_power": {
           "default": 17,
           "description": "Maximum grid power in kW",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Max Power",
           "type": "number"
         }
@@ -1048,7 +1048,7 @@
         },
         "degree days factor": {
           "description": "Degree days factor for heat demand calculation",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Degree Days Factor",
           "type": "number"
         },
@@ -1201,13 +1201,13 @@
       "properties": {
         "max_power": {
           "description": "Maximum power in watts for this stage",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Max Power",
           "type": "number"
         },
         "cop": {
           "description": "Coefficient of Performance at this power level",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Cop",
           "type": "number"
         }
@@ -1677,6 +1677,7 @@
         "sensors": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -1738,8 +1739,8 @@
         "tilt": {
           "anyOf": [
             {
-              "maximum": 90.0,
-              "minimum": 0.0,
+              "maximum": 90,
+              "minimum": 0,
               "type": "number"
             },
             {
@@ -1753,8 +1754,8 @@
         "orientation": {
           "anyOf": [
             {
-              "maximum": 180.0,
-              "minimum": -180.0,
+              "maximum": 180,
+              "minimum": -180,
               "type": "number"
             },
             {
@@ -1768,7 +1769,7 @@
         "capacity": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0.0,
+              "exclusiveMinimum": 0,
               "type": "number"
             },
             {
@@ -1782,7 +1783,7 @@
         "yield": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0.0,
+              "exclusiveMinimum": 0,
               "type": "number"
             },
             {
@@ -1822,27 +1823,27 @@
       "properties": {
         "tilt": {
           "description": "Panel tilt angle in degrees (0=horizontal, 90=vertical)",
-          "maximum": 90.0,
-          "minimum": 0.0,
+          "maximum": 90,
+          "minimum": 0,
           "title": "Tilt",
           "type": "number"
         },
         "orientation": {
           "description": "Panel orientation in degrees (0=south, 90=west, -90=east)",
-          "maximum": 180.0,
-          "minimum": -180.0,
+          "maximum": 180,
+          "minimum": -180,
           "title": "Orientation",
           "type": "number"
         },
         "capacity": {
           "description": "Installed capacity in kWp",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Capacity",
           "type": "number"
         },
         "yield": {
           "description": "Yield factor for production calculation",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Yield",
           "type": "number"
         }
