@@ -68,14 +68,20 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
         # Format required column
         required_mark = "Yes" if is_required else "No"
         
-        # Check if this is a model reference (type contains a link)
-        is_model_ref = '[' in field_type and '](' in field_type
+        # Check if this is a pure model reference (starts with [ and no pipe or 'optional')
+        # Pure model refs: [BatteryConfig](#...)
+        # Union types: string | [SecretStr](#...) (optional)
+        is_pure_model_ref = (
+            field_type.startswith('[') and 
+            '|' not in field_type and 
+            not field_type.endswith('(optional)')
+        )
         
-        if is_model_ref:
-            # Empty default column for model references
+        if is_pure_model_ref:
+            # Empty default column for pure model references
             lines.append(f"| `{field_name}` | {field_type} | {required_mark} | | {description} |")
         else:
-            # Include default value for primitive types
+            # Include default value for primitive types and union types
             default = get_default_from_schema(field_schema, is_required, schema.get('$defs', {}))
             lines.append(f"| `{field_name}` | {field_type} | {required_mark} | {default} | {description} |")
     
@@ -147,6 +153,13 @@ def get_default_from_schema(field_schema: dict[str, Any], is_required: bool, def
         return "[No default](#optional-vs-required-fields)"
     
     default = field_schema['default']
+    
+    # For union types that include a model reference (like str | SecretStr),
+    # if default is null, don't show it - treat as no default
+    if default is None and 'anyOf' in field_schema:
+        for sub_schema in field_schema['anyOf']:
+            if '$ref' in sub_schema:
+                return ""  # Empty default for union types with model refs
     
     if default is None:
         return "`null`"
