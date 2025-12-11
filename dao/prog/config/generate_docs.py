@@ -58,7 +58,6 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
         # Extract field info from JSON schema
         field_type = get_type_from_schema(field_schema, schema.get('$defs', {}))
         is_required = field_name in required
-        default = get_default_from_schema(field_schema, is_required, schema.get('$defs', {}))
         description = field_schema.get('description', field_schema.get('title', ''))
         
         # Validate description exists
@@ -67,9 +66,18 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
             description = "MISSING DESCRIPTION"
         
         # Format required column
-        required_mark = "✅" if is_required else "No"
+        required_mark = "Yes" if is_required else "No"
         
-        lines.append(f"| `{field_name}` | {field_type} | {required_mark} | {default} | {description} |")
+        # Check if this is a model reference (type contains a link)
+        is_model_ref = '[' in field_type and '](' in field_type
+        
+        if is_model_ref:
+            # Empty default column for model references
+            lines.append(f"| `{field_name}` | {field_type} | {required_mark} | | {description} |")
+        else:
+            # Include default value for primitive types
+            default = get_default_from_schema(field_schema, is_required, schema.get('$defs', {}))
+            lines.append(f"| `{field_name}` | {field_type} | {required_mark} | {default} | {description} |")
     
     lines.append("")
     return "\n".join(lines), validation_errors
@@ -80,7 +88,8 @@ def get_type_from_schema(field_schema: dict[str, Any], defs: dict[str, Any]) -> 
     # Handle $ref
     if '$ref' in field_schema:
         ref_path = field_schema['$ref'].split('/')[-1]
-        return ref_path
+        anchor = ref_path.lower()
+        return f"[{ref_path}](#{anchor})"
     
     # Handle anyOf (used for Optional types)
     if 'anyOf' in field_schema:
