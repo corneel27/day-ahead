@@ -3,7 +3,7 @@ Solar configuration models.
 """
 
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 
 
 class SolarString(BaseModel):
@@ -78,6 +78,31 @@ class SolarConfig(BaseModel):
         extra='allow',
         populate_by_name=True
     )
+    
+    @model_validator(mode='after')
+    def validate_config_completeness(self) -> 'SolarConfig':
+        """Ensure either flat config or strings are provided."""
+        has_flat = all([
+            self.tilt is not None,
+            self.orientation is not None,
+            self.capacity is not None,
+            self.yield_factor is not None
+        ])
+        has_strings = self.strings is not None and len(self.strings) > 0
+        
+        if not has_flat and not has_strings:
+            raise ValueError(
+                "Solar configuration must provide either all flat fields "
+                "(tilt, orientation, capacity, yield) or strings list"
+            )
+        
+        if has_flat and has_strings:
+            raise ValueError(
+                "Solar configuration cannot have both flat fields and strings. "
+                "Use either flat config OR strings, not both."
+            )
+        
+        return self
     
     @property
     def is_multi_string(self) -> bool:

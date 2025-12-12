@@ -5,6 +5,7 @@ Battery configuration models.
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from ..base import FlexValue
+from .solar import SolarConfig
 
 
 class BatteryStage(BaseModel):
@@ -79,39 +80,33 @@ class BatteryConfig(BaseModel):
         alias="reduced hours",
         description="Hour -> max power mapping for reduced power hours"
     )
-    minimum_power: Optional[int] = Field(
-        default=None,
+    minimum_power: int = Field(
         alias="minimum power",
         description="Minimum power in watts"
     )
     
     # DC/Battery conversion
-    dc_to_bat_efficiency: Optional[float] = Field(
-        default=None,
+    dc_to_bat_efficiency: float = Field(
         alias="dc_to_bat efficiency",
         ge=0, le=1,
         description="DC to battery efficiency"
     )
-    dc_to_bat_max_power: Optional[float] = Field(
-        default=None,
+    dc_to_bat_max_power: float = Field(
         alias="dc_to_bat max power",
         description="DC to battery max power in watts"
     )
-    bat_to_dc_efficiency: Optional[float] = Field(
-        default=None,
+    bat_to_dc_efficiency: float = Field(
         alias="bat_to_dc efficiency",
         ge=0, le=1,
         description="Battery to DC efficiency"
     )
-    bat_to_dc_max_power: Optional[float] = Field(
-        default=None,
+    bat_to_dc_max_power: float = Field(
         alias="bat_to_dc max power",
         description="Battery to DC max power in watts"
     )
     
     # Cost
-    cycle_cost: Optional[float] = Field(
-        default=None,
+    cycle_cost: float = Field(
         alias="cycle cost",
         description="Cost per battery cycle in euros"
     )
@@ -171,7 +166,7 @@ class BatteryConfig(BaseModel):
     )
     
     # DC-coupled solar (nested!)
-    solar: Optional[list] = Field(
+    solar: Optional[list[SolarConfig]] = Field(
         default=None,
         description="DC-coupled solar panels attached to this battery"
     )

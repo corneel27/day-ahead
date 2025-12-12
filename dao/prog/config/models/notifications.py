@@ -2,13 +2,15 @@
 Notification configuration models.
 """
 
+from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 
 class NotificationsConfig(BaseModel):
     """Notification settings for Home Assistant."""
     
-    notification_entity: str = Field(
+    notification_entity: Optional[str] = Field(
+        default=None,
         alias="notification entity",
         description="HA entity for notifications"
     )
@@ -20,7 +22,8 @@ class NotificationsConfig(BaseModel):
         default="false",
         description="Send notification on calculation completion"
     )
-    last_activity_entity: str = Field(
+    last_activity_entity: Optional[str] = Field(
+        default=None,
         alias="last activity entity",
         description="HA entity to track last activity timestamp"
     )
