@@ -131,86 +131,38 @@
           "title": "Reduced Hours"
         },
         "minimum power": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "Minimum power in watts",
-          "title": "Minimum Power"
+          "title": "Minimum Power",
+          "type": "integer"
         },
         "dc_to_bat efficiency": {
-          "anyOf": [
-            {
-              "maximum": 1.0,
-              "minimum": 0.0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "DC to battery efficiency",
-          "title": "Dc To Bat Efficiency"
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Dc To Bat Efficiency",
+          "type": "number"
         },
         "dc_to_bat max power": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "DC to battery max power in watts",
-          "title": "Dc To Bat Max Power"
+          "title": "Dc To Bat Max Power",
+          "type": "number"
         },
         "bat_to_dc efficiency": {
-          "anyOf": [
-            {
-              "maximum": 1.0,
-              "minimum": 0.0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "Battery to DC efficiency",
-          "title": "Bat To Dc Efficiency"
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Bat To Dc Efficiency",
+          "type": "number"
         },
         "bat_to_dc max power": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "Battery to DC max power in watts",
-          "title": "Bat To Dc Max Power"
+          "title": "Bat To Dc Max Power",
+          "type": "number"
         },
         "cycle cost": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "Cost per battery cycle in euros",
-          "title": "Cycle Cost"
+          "title": "Cycle Cost",
+          "type": "number"
         },
         "entity set power feedin": {
           "anyOf": [
@@ -345,7 +297,9 @@
         "solar": {
           "anyOf": [
             {
-              "items": {},
+              "items": {
+                "$ref": "#/$defs/SolarConfig"
+              },
               "type": "array"
             },
             {
@@ -364,7 +318,13 @@
         "upper limit",
         "lower limit",
         "charge stages",
-        "discharge stages"
+        "discharge stages",
+        "minimum power",
+        "dc_to_bat efficiency",
+        "dc_to_bat max power",
+        "bat_to_dc efficiency",
+        "bat_to_dc max power",
+        "cycle cost"
       ],
       "title": "BatteryConfig",
       "type": "object"
@@ -569,7 +529,7 @@
             }
           ],
           "default": null,
-          "description": "MySQL server hostname",
+          "description": "MySQL server hostname (required for mysql)",
           "title": "Server"
         },
         "port": {
@@ -582,7 +542,7 @@
             }
           ],
           "default": null,
-          "description": "MySQL server port",
+          "description": "MySQL server port (required for mysql)",
           "title": "Port"
         },
         "username": {
@@ -595,7 +555,7 @@
             }
           ],
           "default": null,
-          "description": "MySQL username",
+          "description": "MySQL username (required for mysql)",
           "title": "Username"
         },
         "password": {
@@ -976,7 +936,7 @@
               "type": "null"
             }
           ],
-          "default": "core-mariadb",
+          "default": null,
           "description": "Database server hostname (required for mysql/postgresql)",
           "title": "Server"
         },
@@ -1409,9 +1369,17 @@
       "description": "Notification settings for Home Assistant.",
       "properties": {
         "notification entity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "HA entity for notifications",
-          "title": "Notification Entity",
-          "type": "string"
+          "title": "Notification Entity"
         },
         "opstarten": {
           "anyOf": [
@@ -1440,15 +1408,19 @@
           "title": "Berekening"
         },
         "last activity entity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "HA entity to track last activity timestamp",
-          "title": "Last Activity Entity",
-          "type": "string"
+          "title": "Last Activity Entity"
         }
       },
-      "required": [
-        "notification entity",
-        "last activity entity"
-      ],
       "title": "NotificationsConfig",
       "type": "object"
     },

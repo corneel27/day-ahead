@@ -78,12 +78,12 @@ Battery configuration for optimization.
 | `charge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Charge power/efficiency curve |
 | `discharge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Discharge power/efficiency curve |
 | `reduced hours` | object (optional) | No | `null` | Hour -> max power mapping for reduced power hours |
-| `minimum power` | integer (optional) | No | `null` | Minimum power in watts |
-| `dc_to_bat efficiency` | number (optional) | No | `null` | DC to battery efficiency |
-| `dc_to_bat max power` | number (optional) | No | `null` | DC to battery max power in watts |
-| `bat_to_dc efficiency` | number (optional) | No | `null` | Battery to DC efficiency |
-| `bat_to_dc max power` | number (optional) | No | `null` | Battery to DC max power in watts |
-| `cycle cost` | number (optional) | No | `null` | Cost per battery cycle in euros |
+| `minimum power` | integer | Yes | — | Minimum power in watts |
+| `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency |
+| `dc_to_bat max power` | number | Yes | — | DC to battery max power in watts |
+| `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency |
+| `bat_to_dc max power` | number | Yes | — | Battery to DC max power in watts |
+| `cycle cost` | number | Yes | — | Cost per battery cycle in euros |
 | `entity set power feedin` | string (optional) | No | `null` | HA entity to set power feed-in to grid |
 | `entity set operating mode` | string (optional) | No | `null` | HA entity to set battery operating mode |
 | `entity set operating mode on` | string (optional) | No | `null` | Value for operating mode ON |
@@ -94,7 +94,7 @@ Battery configuration for optimization.
 | `entity from pv` | string (optional) | No | `null` | HA entity for power from PV |
 | `entity from ac` | string (optional) | No | `null` | HA entity for power from AC |
 | `entity calculated soc` | string (optional) | No | `null` | HA entity for calculated SOC |
-| `solar` | list[unknown] (optional) | No | `null` | DC-coupled solar panels attached to this battery |
+| `solar` | list[[SolarConfig](#solarconfig)] (optional) | No | `null` | DC-coupled solar panels attached to this battery |
 
 ###  BatteryStage
 
@@ -144,9 +144,9 @@ Can be either SQLite or MySQL/MariaDB.
 | `engine` | string | No | `"sqlite"` | Database engine: 'sqlite' | 'mysql' |
 | `db_path` | string (optional) | No | `null` | Database path for SQLite (e.g., '../data') |
 | `database` | string (optional) | No | `null` | Database filename for SQLite or database name for MySQL |
-| `server` | string (optional) | No | `null` | MySQL server hostname |
-| `port` | integer (optional) | No | `null` | MySQL server port |
-| `username` | string (optional) | No | `null` | MySQL username |
+| `server` | string (optional) | No | `null` | MySQL server hostname (required for mysql) |
+| `port` | integer (optional) | No | `null` | MySQL server port (required for mysql) |
+| `username` | string (optional) | No | `null` | MySQL username (required for mysql) |
 | `password` | string | [SecretStr](#secretstr) (optional) | No |  | MySQL password (can use !secret) |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
 
@@ -236,7 +236,7 @@ Home Assistant database connection configuration.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `engine` | string | No | `"mysql"` | Database engine type |
-| `server` | string (optional) | No | `"core-mariadb"` | Database server hostname (required for mysql/postgresql) |
+| `server` | string (optional) | No | `null` | Database server hostname (required for mysql/postgresql) |
 | `port` | integer (optional) | No | `null` | Database port (defaults: mysql=3306, postgresql=5432) |
 | `database` | string | No | `"homeassistant"` | Database name |
 | `username` | string | No | `"homeassistant"` | Database username |
@@ -322,10 +322,10 @@ Notification settings for Home Assistant.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `notification entity` | string | Yes | — | HA entity for notifications |
+| `notification entity` | string (optional) | No | `null` | HA entity for notifications |
 | `opstarten` | boolean | string | No | `"false"` | Send notification on startup |
 | `berekening` | boolean | string | No | `"false"` | Send notification on calculation completion |
-| `last activity entity` | string | Yes | — | HA entity to track last activity timestamp |
+| `last activity entity` | string (optional) | No | `null` | HA entity to track last activity timestamp |
 
 ###  PricingConfig
 
