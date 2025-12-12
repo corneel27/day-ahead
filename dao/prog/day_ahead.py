@@ -951,8 +951,9 @@ class DaCalc(DaBase):
                 == "true"
             )
             # interval-index waarop boiler kan worden verwarmd
-            if boiler_instant_start:
+            if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
                 boiler_start_index = 0
+                boiler_start = 0
             else:
                 boiler_start_index = int(
                     max(
@@ -969,17 +970,20 @@ class DaCalc(DaBase):
             # interval-index waarop boiler nog aan kan
             # (41-40)/0.4=2.5
             boiler_end_temp = boiler_act_temp - U * boiler_cooling
-            boiler_end_index = int(
-                min(
-                    U - 1,
-                    max(
-                        0,
-                        math.floor(
-                            (boiler_act_temp - boiler_ondergrens) / boiler_cooling
+            if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
+                boiler_end_index = 1
+            else:
+                boiler_end_index = int(
+                    min(
+                        U - 1,
+                        max(
+                            0,
+                            math.floor(
+                                (boiler_act_temp - boiler_ondergrens) / boiler_cooling
+                            ),
                         ),
-                    ),
+                    )
                 )
-            )
             boiler_temp = [
                 model.add_var(
                     var_type=CONTINUOUS,
@@ -1169,11 +1173,10 @@ class DaCalc(DaBase):
 
                 for u in range(U)[boiler_end_index + 1 :]:
                     # print(f"u {u}, {uur[u]}")
-                    model += c_b[u] == 0
                     model += boiler_st[u] == 0
                     if u > boiler_end_index + est_needed_intv[boiler_end_index] - 1:
                         model += boiler_on[u] == 0
-
+                        model += c_b[u] == 0
                 model += (
                     xsum(
                         boiler_st[u]
