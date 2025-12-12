@@ -3,7 +3,7 @@ Database configuration models.
 """
 
 from typing import Optional, Literal
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 from .base import SecretStr
 
 
@@ -15,7 +15,7 @@ class HADatabaseConfig(BaseModel):
         description="Database engine type"
     )
     server: Optional[str] = Field(
-        default="core-mariadb",
+        default=None,
         description="Database server hostname (required for mysql/postgresql)"
     )
     port: Optional[int] = Field(
@@ -40,58 +40,19 @@ class HADatabaseConfig(BaseModel):
         populate_by_name=True
     )
     
-    @field_validator('port', mode='before')
-    @classmethod
-    def set_default_port(cls, v: Optional[int], info) -> Optional[int]:
-        """Set default port based on engine if not specified."""
-        if v is not None:
-            return v
+    @model_validator(mode='after')
+    def validate_engine_requirements(self) -> 'HADatabaseConfig':
+        """Validate engine-specific requirements and set defaults."""
+        if self.engine in ('mysql', 'postgresql'):
+            # Validate server is provided
+            if not self.server:
+                raise ValueError(f"'server' is required when engine is '{self.engine}'")
+            
+            # Set default port if not provided
+            if self.port is None:
+                self.port = 3306 if self.engine == 'mysql' else 5432
         
-        # Get engine from validation context
-        engine = info.data.get('engine', 'mysql')
-        if engine == 'mysql':
-            return 3306
-        elif engine == 'postgresql':
-            return 5432
-        return None  # SQLite doesn't use port
-    
-    @field_validator('server', mode='after')
-    @classmethod
-    def validate_server_required(cls, v: Optional[str], info) -> Optional[str]:
-        """Ensure server is provided for mysql/postgresql."""
-        engine = info.data.get('engine', 'mysql')
-        if engine in ('mysql', 'postgresql') and not v:
-            raise ValueError(f"'server' is required for {engine} database")
-        return v
-
-
-class MySQLDatabaseConfig(BaseModel):
-    """MySQL-specific database configuration (for optimization database)."""
-    
-    server: str = Field(
-        default="localhost",
-        description="MySQL server hostname"
-    )
-    port: int = Field(
-        default=3306,
-        description="MySQL server port"
-    )
-    database: str = Field(
-        default="day_ahead",
-        description="Database name for optimization data"
-    )
-    username: str = Field(
-        default="day_ahead_user",
-        description="Database username"
-    )
-    password: str | SecretStr = Field(
-        description="Database password (can use !secret)"
-    )
-    
-    model_config = ConfigDict(
-        extra='allow',
-        populate_by_name=True
-    )
+        return self
 
 
 class DatabaseConfig(BaseModel):
@@ -119,15 +80,15 @@ class DatabaseConfig(BaseModel):
     # MySQL fields
     server: Optional[str] = Field(
         default=None,
-        description="MySQL server hostname"
+        description="MySQL server hostname (required for mysql)"
     )
     port: Optional[int] = Field(
         default=None,
-        description="MySQL server port"
+        description="MySQL server port (required for mysql)"
     )
     username: Optional[str] = Field(
         default=None,
-        description="MySQL username"
+        description="MySQL username (required for mysql)"
     )
     password: Optional[str | SecretStr] = Field(
         default=None,
@@ -143,3 +104,19 @@ class DatabaseConfig(BaseModel):
         extra='allow',
         populate_by_name=True
     )
+    
+    @model_validator(mode='after')
+    def validate_engine_requirements(self) -> 'DatabaseConfig':
+        """Validate engine-specific requirements."""
+        if self.engine == 'mysql':
+            if not self.server:
+                raise ValueError("'server' is required when engine is 'mysql'")
+            if not self.port:
+                raise ValueError("'port' is required when engine is 'mysql'")
+            if not self.username:
+                raise ValueError("'username' is required when engine is 'mysql'")
+        elif self.engine == 'sqlite':
+            if not self.db_path and not self.database:
+                raise ValueError("Either 'db_path' or 'database' is required for sqlite")
+        
+        return self
