@@ -54,7 +54,8 @@ class DaCalc(DaBase):
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2025, month=11, day=23, hour=12, minute=45)
+        # _start_dt = datetime.datetime(year=2025, month=12, day=12, hour=17, minute=45)
+        # _start_soc = 15
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
@@ -923,7 +924,11 @@ class DaCalc(DaBase):
                 self.boiler_options["cooling rate"] * self.interval_s / 3600
             )
             # 45 oC grens daaronder kan worden verwarmd
-            boiler_bovengrens = self.boiler_options["heating allowed below"]
+            # boiler_bovengrens = self.boiler_options["heating allowed below"]
+            boiler_bovengrens = float(
+                self.get_setting_state("heating allowed below", self.boiler_options)
+            )
+
             # maximeren op setpoint
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
             # 37 oC als boiler onder ondergrens komt moet er worden verwarmd
@@ -947,8 +952,9 @@ class DaCalc(DaBase):
                 == "true"
             )
             # interval-index waarop boiler kan worden verwarmd
-            if boiler_instant_start:
+            if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
                 boiler_start_index = 0
+                boiler_start = 0
             else:
                 boiler_start_index = int(
                     max(
@@ -965,17 +971,20 @@ class DaCalc(DaBase):
             # interval-index waarop boiler nog aan kan
             # (41-40)/0.4=2.5
             boiler_end_temp = boiler_act_temp - U * boiler_cooling
-            boiler_end_index = int(
-                min(
-                    U - 1,
-                    max(
-                        0,
-                        math.floor(
-                            (boiler_act_temp - boiler_ondergrens) / boiler_cooling
+            if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
+                boiler_end_index = 1
+            else:
+                boiler_end_index = int(
+                    min(
+                        U - 1,
+                        max(
+                            0,
+                            math.floor(
+                                (boiler_act_temp - boiler_ondergrens) / boiler_cooling
+                            ),
                         ),
-                    ),
+                    )
                 )
-            )
             boiler_temp = [
                 model.add_var(
                     var_type=CONTINUOUS,
@@ -1165,11 +1174,10 @@ class DaCalc(DaBase):
 
                 for u in range(U)[boiler_end_index + 1 :]:
                     # print(f"u {u}, {uur[u]}")
-                    model += c_b[u] == 0
                     model += boiler_st[u] == 0
                     if u > boiler_end_index + est_needed_intv[boiler_end_index] - 1:
                         model += boiler_on[u] == 0
-
+                        model += c_b[u] == 0
                 model += (
                     xsum(
                         boiler_st[u]
@@ -1837,6 +1845,8 @@ class DaCalc(DaBase):
                     e_needed = heat_needed / cop
                     # Elektrical energy needed in kWh
                     hp_hours = math.ceil(e_needed / hp_power)
+                    if hp_hours > hours_avail:
+                        heat_needed = hours_avail * hp_power * cop
                     hp_hours = min(hp_hours, hours_avail)
 
                     # Number of hours the heat pump still has to run
@@ -1991,16 +2001,29 @@ class DaCalc(DaBase):
                     for s in range(S)
                 ]
 
+                """
                 # schijven aan/uit, iedere schijf kan maar een keer in een interval
                 hp_s_on = [
                     [model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(S)
                 ]
+                """
+                # hp_s_w[s][u] : weegfactor per stage s per interval u
+                hp_s_w = [
+                    [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(S)]
+                    for _ in range(U)
+                    ]
+
                 hp_on = [
                     model.add_var(var_type=BINARY) for _ in range(U)
                 ]  # If on the pump will run in that hour
 
                 # verbruik per interval
                 for u in range(U):
+                    # som van alle weegfactoren == 1
+                    if boiler_heated_by_heatpump:
+                        model += xsum(hp_s_w[u][s] for s in range(S)) + boiler_on[u] == 1
+                    else:
+                        model += xsum(hp_s_w[u][s] for s in range(S)) == 1
                     # verbruik in kWh is totaal vermogen in W/1000
                     model += (
                         c_hp[u]
@@ -2011,11 +2034,20 @@ class DaCalc(DaBase):
 
                 # beschikbaar vermogen x aan/uit, want p_hpx[u] X hpx_on[u] kan niet
                 for u in range(U):
-                    model += hp_on[u] == xsum(hp_s_on[s][u] for s in range(S)[1:])
+                    model += hp_on[u] == xsum(hp_s_w[u][s] for s in range(S)[1:])
                     for s in range(S):
-                        model += p_hp[s][u] <= stages[s]["max_power"] * hp_s_on[s][u]
+                        model += p_hp[s][u] == stages[s]["max_power"] * hp_s_w[u][s]
+                    """
                     # ieder interval/uur maar een aan
                     model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
+                    """
+                    model.add_sos(
+                        [
+                            (hp_s_w[u][s], stages[s]["max_power"])
+                            for s in range(S)
+                        ],
+                        2,
+                    )
 
                     # geproduceerde warmte = vermogen in W * COP_schijf /1000 in kWh
                     model += (
@@ -2095,9 +2127,12 @@ class DaCalc(DaBase):
             if hp_hours / hours_avail > 0.8:
                 blocks_num = 0  # dus geen block-optimalisering
             else:
-                blocks_num = math.ceil(min(hours_avail / 5, hp_hours / min_run_length))
+                blocks_num = math.ceil(min(hours_avail / 4, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
-            if blocks_num > 0:
+            if blocks_num == 0:
+                logging.info(f'Omdat de wp meer dan 75% van de uren draait wordt de wp zonder '
+                             f'"min_run_length"={min_run_length} ingepland.')
+            else:
                 # block-optimalisering
                 min_run_length = max(min_run_length, math.floor(hours_avail/blocks_num))
                 # length of lastblock
@@ -2836,9 +2871,12 @@ class DaCalc(DaBase):
                 logging.info(f"Bloknr {j} start {int(hp_start_index[j].x)} "
                              f"lengte {block_len[j]}"
                              f" laatste {int(hp_start_index[j].x)+block_len[j]}" )
-            logging.info(f"u   uur   tar    hp_on heat cons")
+            logging.info(f"u   uur   tar    hp_s_on hp_on heat cons")
             for u in range(U):
-                logging.info(f"{u}   {uur[u]} {pl[u]:6.4f} {int(hp_on[u].x)}   {h_hp[u].x:6.2f}  {c_hp[u].x:6.2f}")
+                sum_hp_bl_on = 0
+                for j in range(blocks_num):
+                    sum_hp_bl_on += hp_bl_on[j][u].x
+                logging.info(f"{u}   {uur[u]} {pl[u]:6.4f}  {sum_hp_bl_on:6.2f} {int(hp_on[u].x)}   {h_hp[u].x:6.2f}  {c_hp[u].x:6.2f}")
             if self.hp_adjustment != "on/off":
                 df_hp = pd.DataFrame(columns=["uur", "tar"])
                 df_hp["uur"] = uur

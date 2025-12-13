@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.0.rc5
+- Made boiler setting "heating allowed below" flex setting
+- When boiler_act_temp is below lower limit (=setpoint - hysterese) direct heating will be activated.
+
 # 2025.12.0.rc4
 When calculated heatpump hours is more than 80% of the available hours: the configured  "min_run_length" will not be respected
 
