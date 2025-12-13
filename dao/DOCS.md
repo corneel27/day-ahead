@@ -604,8 +604,11 @@ Vanaf versie 2025.10.5 maken een aantal instellingen gebruik van "flex setting".
 D.w.z. dat je ze direct kunt ingeven in je instellingen, maar je kunt bij settings met "dynamic setting" in plaats van een getal 
 of string ook een HA-entiteit opgeven bij die instelling. In dat geval zal DAO de instelling ophalen uit HA.
 Dit heeft voor een aantal instellingen voordelen.<br>
+Deze twee waren al "flex setting":
+- battery: entity min soc end opt
+- battery: entity max soc end opt
+
 De volgende settings kunnen vanaf 2025.10.5 met "flex setting" ingesteld worden en in volgende versies volgen er meer:
-- degree_days_factor
 - boiler_setpoint
 - boiler_hysterese
 - strategy
@@ -615,6 +618,10 @@ De volgende settings kunnen vanaf 2025.10.5 met "flex setting" ingesteld worden 
 Daar zijn m.i.v. 2025.11.2 de volgende bijgekomen:
 - optimal low level
 - penalty_low_soc (nieuw)
+
+Vanaf versie 2025.12.0 is daar bijgekomen:
+- boiler setting: heating allowed below
+
 
 Enkele voorbeelden (van het gebruik van flex setting): 
 1. tot nu toe was het boiler-setpoint en boiler hysterese een vast getal, als je daar een entiteit in HA van maakt dan kun je eens in de week of twee weken

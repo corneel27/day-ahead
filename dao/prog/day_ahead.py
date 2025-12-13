@@ -54,7 +54,8 @@ class DaCalc(DaBase):
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2025, month=11, day=23, hour=12, minute=45)
+        # _start_dt = datetime.datetime(year=2025, month=12, day=12, hour=17, minute=45)
+        # _start_soc = 15
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
@@ -1844,6 +1845,8 @@ class DaCalc(DaBase):
                     e_needed = heat_needed / cop
                     # Elektrical energy needed in kWh
                     hp_hours = math.ceil(e_needed / hp_power)
+                    if hp_hours > hours_avail:
+                        heat_needed = hours_avail * hp_power * cop
                     hp_hours = min(hp_hours, hours_avail)
 
                     # Number of hours the heat pump still has to run
@@ -2121,10 +2124,10 @@ class DaCalc(DaBase):
             else:
                 logging.info(f"Warmtepomp draait al minimaal {run_hours} uur")
             # number of bloks
-            # if hp_hours / hours_avail > 0.75:
+            if hp_hours / hours_avail > 0.8:
                 blocks_num = 0  # dus geen block-optimalisering
-            # else:
-            blocks_num = math.ceil(min(hours_avail / 4, hp_hours / min_run_length))
+            else:
+                blocks_num = math.ceil(min(hours_avail / 4, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
             if blocks_num == 0:
                 logging.info(f'Omdat de wp meer dan 75% van de uren draait wordt de wp zonder '
