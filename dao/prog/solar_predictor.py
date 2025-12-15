@@ -117,7 +117,6 @@ class SolarPredictor(DaBase):
         self.model = None
         self.feature_columns = [
             "temperature",
-            "precipitation",
             "irradiance",
             "day_of_week",
             "hour",
@@ -257,7 +256,7 @@ class SolarPredictor(DaBase):
             )
 
         # Validate required columns
-        # required_cols = ['temperature', 'precipitation', 'irradiance']
+        # required_cols = ['temperature', 'irradiance']
         # missing_cols = [col for col in required_cols if col not in weather_df.columns]
         # if missing_cols:
         #     raise ValueError(f"Weather data missing required columns: {missing_cols}")
@@ -438,7 +437,7 @@ class SolarPredictor(DaBase):
 
         Args:
             weather_data: Path to weather CSV or DataFrame with columns:
-                         ['datetime', 'temperature', 'precipitation', 'irradiance']
+                         ['datetime', 'temperature', 'irradiance']
             solar_data: Path to solar CSV or DataFrame with columns:
                        ['datetime', 'solar_kwh']
             model_save_path: Path where to save the trained model
@@ -602,8 +601,8 @@ class SolarPredictor(DaBase):
 
         Args:
             weather_data: Either a dictionary with single prediction data or DataFrame with multiple predictions
-                        For single prediction (dict), required keys: temperature, precipitation, irradiance, datetime
-                        For batch prediction (DataFrame), required columns: temperature, precipitation, irradiance, datetime
+                        For single prediction (dict), required keys: temperature, irradiance, datetime
+                        For batch prediction (DataFrame), required columns: temperature, irradiance, datetime
 
         Returns:
             Predicted solar production in kWh
@@ -642,9 +641,12 @@ class SolarPredictor(DaBase):
             weather_data = self._load_and_process_weather_data(weather_data)
 
             # Select required features
-            X = weather_data[self.feature_columns]
-            predictions = self.model.predict(X)
-            return np.maximum(0, predictions)  # Ensure non-negative
+            featured_df = weather_data[self.feature_columns]
+            prediction = self.model.predict(featured_df)
+            prediction = np.maximum(0, prediction)  # Ensure non-negative
+            result = pd.DataFrame( {"date_time": featured_df.index, "prediction" :prediction} )
+            result["date_time"] = result["date_time"].dt.tz_convert(self.time_zone)
+            return result
 
     # @classmethod
     def load_model(self, model_path: str):  # -> 'SolarPredictor':
@@ -696,16 +698,15 @@ class SolarPredictor(DaBase):
                 count += 1
         df = pd.read_csv(filename, skiprows=count)
         """
-        STN,YYYYMMDD,HH,   FH,    T,    Q,   RH
-        275,20220101,    1,   50,  119,    0,    0
-        275,20220101,    2,   50,  117,    0,    0
+        STN,YYYYMMDD,HH,   FH,    T,    Q 
+        275,20220101,    1,   50,  119,    0
+        275,20220101,    2,   50,  117,    0
         
         YYYYMMDD,HH:dag einde uur in utc -> HH-1 begin uur utc
         T         : Temperatuur (in 0.1 graden Celsius) -> temp /10
         Q         : Globale straling (in J/cm2) -> gr -
-        RH        : Uursom van de neerslag (in 0.1 mm) (-1 voor <0.05 mm) -> neersl / 10
         """
-        df = df.rename(columns={"    T": "temp", "    Q": "gr", "   RH": "neersl"})
+        df = df.rename(columns={"    T": "temp", "    Q": "gr"})
         save_df = pd.DataFrame(columns=["time", "code", "value"])
         for row in df.itertuples():
             year = int(str(row.YYYYMMDD)[0:4])
@@ -716,7 +717,6 @@ class SolarPredictor(DaBase):
             utc = int(dati.timestamp())
             save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
             save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
-            save_df.loc[save_df.shape[0]] = [utc, "neersl", max(0, row.neersl / 10)]
         self.db_da.savedata(save_df, tablename="values")
         os.remove(filename)
         return
@@ -741,15 +741,16 @@ class SolarPredictor(DaBase):
         # datetime of latest data-reord
         # tot gisterem
         end = dt.datetime.now().date() - dt.timedelta(days=1)
-        latest_dt = self.db_da.get_time_latest_record("gr").date()
-        # latest_dt = dt.datetime(year=2025, month=11, day=17)
-        if latest_dt is None:  # er zijn nog geen data
+        latest_record = self.db_da.get_time_latest_record("gr")
+        if latest_record is None:  # er zijn nog geen data
             latest_dt = start
+        else:
+            latest_dt = latest_record.date()
         knmi_df = knmi.get_hour_data_dataframe(
-            [self.knmi_station], start=latest_dt, end=end, variables=["T", "Q", "RH"]
+            [self.knmi_station], start=latest_dt, end=end, variables=["T", "Q"]
         )
         if len(knmi_df) > 0:
-            knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr", "RH": "neersl"})
+            knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
             knmi_df["utc"] = knmi_df.index
             knmi_df["utc"] = pd.to_datetime(
                 knmi_df["utc"], utc=True
@@ -759,7 +760,6 @@ class SolarPredictor(DaBase):
                 utc = int(row.utc.timestamp())
                 save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
                 save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
-                save_df.loc[save_df.shape[0]] = [utc, "neersl", max(0, row.neersl / 10)]
             self.db_da.savedata(save_df, tablename="values")
         else:
             if end - latest_dt > dt.timedelta(days=1):
@@ -788,7 +788,7 @@ class SolarPredictor(DaBase):
         else:
             table_name = "values"
         # get weather-dataframe from database
-        weather_data = pd.DataFrame(columns=["utc", "gr", "temp", "neersl"])
+        weather_data = pd.DataFrame(columns=["utc", "gr", "temp"])
         for weather_item in weather_data.columns[1:]:
             df_item = self.db_da.get_column_data(
                 table_name, weather_item, start=start, end=end
@@ -802,8 +802,7 @@ class SolarPredictor(DaBase):
             columns={
                 "utc": "datetime",
                 "gr": "irradiance",
-                "temp": "temperature",
-                "neersl": "precipitation",
+                "temp": "temperature"
             }
         )
         return weather_data
@@ -854,27 +853,27 @@ class SolarPredictor(DaBase):
         weather_data = self.get_weatherdata(start=start)
         solar_options = self.config.get(["solar"], None, None)
         for solar_option in solar_options:
-            if self.config.get(["prediction"], solar_option, "False").lower() == "true":
+            if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
                 self.train_solar_option(weather_data, solar_option, start)
         batteries = self.config.get(["battery"], None, None)
         for battery in batteries:
             solar_options = self.config.get(["solar"], battery, None)
             for solar_option in solar_options:
-                if self.config.get(["prediction"], solar_option, "False").lower() == "true":
+                if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
                     self.train_solar_option(weather_data, solar_option, start)
 
-    def predict_solar_option(
-        self, solar_option: dict, start: dt.datetime, end: dt.datetime
+    def predict_solar_device(
+        self, solar_name:str, start: dt.datetime, end: dt.datetime
     ) -> pd.DataFrame:
         """
         berekent de voorspelling voor een pv-installatie
-        :param solar_option, solar-definition
+        :param solar_name, de naam van de installatie
         :param start: start-tijdstip voorspelling
         :param end: eind-tijdstip voorspelling
         :return: dataframe met berekende voorspellingen per uur
         """
-        self.solar_name = self.solar_name = self.config.get(["name"], solar_option, "default")
-        file_name = "../data/prediction/models/" + self.solar_name + ".pkl"
+        # self.solar_name = self.solar_name = self.config.get(["name"], solar_option, "default")
+        file_name = "../data/prediction/models/" + solar_name + ".pkl"
         if os.path.isfile(file_name):
             self.load_model(file_name)
         else:
@@ -889,16 +888,14 @@ class SolarPredictor(DaBase):
     def test_solar_predictor(self, start, end):
         solar_options = self.config.get(["solar"], None, None)
         for solar_option in solar_options:
-            if self.config.get(["prediction"], solar_option, "False").lower() == "true":
-                self.predict_solar_option(solar_option, start, end)
+            if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+                self.predict_solar_device(solar_option["name"], start, end)
         batteries = self.config.get(["battery"], None, None)
         for battery in batteries:
             solar_options = self.config.get(["solar"], battery, None)
             for solar_option in solar_options:
-                if self.config.get(["prediction"], solar_option, "False").lower() == "true":
-                    self.predict_solar_option(solar_option, start, end)
-
-
+                if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+                    self.predict_solar_device(solar_option["name"], start, end)
 
 def main():
     arg = sys.argv[1]
@@ -909,8 +906,8 @@ def main():
         solar_predictor.run_train(start)
     if arg.lower() == "predict":
         solar_predictor.test_solar_predictor(
-            start=dt.datetime(year=2025, month=11, day=20),
-            end=dt.datetime(year=2025, month=11, day=21),
+            start=dt.datetime(year=2025, month=12, day=15),
+            end=dt.datetime(year=2025, month=12, day=16),
         )
 
 

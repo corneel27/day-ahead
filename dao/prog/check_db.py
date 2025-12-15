@@ -292,7 +292,7 @@ class CheckDB:
             self.upsert_variabel(variabel_tabel, record_2025_10_5)
             print('Table "variabel" geupdated met windsnelheid.')
 
-        if l_version < 20251102:
+        if l_version < 20251201:
             record_2025_11_2 = [24, "neersl", "Neerslag", "mm"]
             self.upsert_variabel(variabel_tabel, record_2025_11_2)
             print('Table "variabel" geupdated met neerslag.')
