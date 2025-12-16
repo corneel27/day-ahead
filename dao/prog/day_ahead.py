@@ -2151,14 +2151,20 @@ class DaCalc(DaBase):
             if hp_hours / hours_avail > 0.8:
                 blocks_num = 0  # dus geen block-optimalisering
             else:
-                blocks_num = math.ceil(max(hours_avail / 4, hp_hours / min_run_length))
+                if self.hp_adjustment == "on/off":
+                    blocks_num = math.ceil(hp_hours / min_run_length)
+                else:
+                    blocks_num = math.ceil(max(hours_avail / 4, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
             if blocks_num == 0:
                 logging.info(f'Omdat de wp meer dan 75% van de uren draait wordt de wp zonder '
                              f'"min_run_length"={min_run_length} ingepland.')
             else:
                 # block-optimalisering
-                min_run_length = max(min_run_length, math.floor(hours_avail/blocks_num))
+                if self.hp_adjustment == "on/off":
+                    min_run_length = max(min_run_length, math.floor(hp_hours / blocks_num))
+                else:
+                    min_run_length = max(min_run_length, math.floor(hours_avail / blocks_num))
                 # length of lastblock
                 last_block_len = (hp_hours - first_block_len) % min_run_length
                 if last_block_len == 0:
