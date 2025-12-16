@@ -1,7 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# 2025.12.0.rc6
+# 2025.12.0.rc7
+- Fixed too much run-hours heatpump for on/off adjustment (reported by @sailor_dg)
 
+# 2025.12.0.rc6
 - Log warning when degreeday - factor is less than 0.1 kWh/K.day (reported bij @DaBit)
 - Fixed error when heat-demand is less than lowest day-production (reported bij @DaBit)
 - Fixed error when heat-demand is 0 kWh-th
