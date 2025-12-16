@@ -951,6 +951,10 @@ class DaCalc(DaBase):
                 ).lower()
                 == "true"
             )
+            # delta t in een step
+            # heat rate = power * cop * sec.p.interval /spec vermogen in K/step
+            heat_rate = power_boiler * cop_boiler * self.interval_s / (spec_heat_boiler*1000)
+            max_steps = int((boiler_setpoint - boiler_ondergrens) / heat_rate) + 1
             # interval-index waarop boiler kan worden verwarmd
             if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
                 boiler_start_index = 0
@@ -960,7 +964,7 @@ class DaCalc(DaBase):
                     max(
                         0,
                         min(
-                            self.steps_day - 1,
+                            U - 1 - max_steps,
                             math.floor(
                                 (boiler_act_temp - boiler_bovengrens) / boiler_cooling
                             ),
@@ -976,9 +980,9 @@ class DaCalc(DaBase):
             else:
                 boiler_end_index = int(
                     min(
-                        U - 1,
+                        U-max_steps,
                         max(
-                            0,
+                            boiler_start_index + 1,
                             math.floor(
                                 (boiler_act_temp - boiler_ondergrens) / boiler_cooling
                             ),
@@ -1437,7 +1441,7 @@ class DaCalc(DaBase):
                 wished_level[e] = actual_soc[e] - 1 + max_possible * 100 / ev_capacity
                 logging.info(f"Bijgesteld gewenst laadniveau:{wished_level[e]:.1f} %")
                 e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
-            e_needed = max(0, e_needed)  #  nooit minder dan 0
+            e_needed = max(0, e_needed)  # nooit minder dan 0
             energy_needed.append(e_needed)  # in kWh
             logging.info(f"Benodigde netto energie: {energy_needed[e]:.3f} kWh")
             # uitgedrukt in aantal uren; bijvoorbeeld 1,5
@@ -1683,30 +1687,23 @@ class DaCalc(DaBase):
             self.config.get(["heater present"], self.heating_options, "False").lower()
             == "true"
         )
-        if self.hp_present:
+        if not self.hp_present:
+            logging.info(
+                "Warmtepomp niet aanwezig - warmtepomp wordt niet ingepland"
+            )
+            self.hp_enabled = False
+        else:
             entity_hp_enabled = self.config.get(
                 ["entity hp enabled"], self.heating_options, None
             )
             self.hp_enabled = (entity_hp_enabled is None) or (
                 self.get_state(entity_hp_enabled).state == "on"
             )
-        else:
-            self.hp_enabled = False
-        if not self.hp_enabled:
-            logging.info(
-                "Warmtepomp niet aanwezig of enabled - warmtepomp wordt niet ingepland\n"
-            )
-            for u in range(U):
-                model += c_hp[u] == 0
-                model += hp_on[u] == 0
-        else:
-            # self.hp_enabled == True
-            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
-            self.hp_adjustment = self.config.get(
-                ["adjustment"], self.heating_options, "power"
-            ).lower()
-            logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
-
+            if not self.hp_enabled:
+                logging.info(
+                    "Warmtepomp staat uit - warmtepomp wordt niet ingepland"
+                )
+        if self.hp_enabled:
             # degree days
             degree_days_today = self.meteo.calc_graaddagen(weighted=True)
             logging.info(f"Gewogen graaddagen vandaag: {degree_days_today:.1f} K.day")
@@ -1731,7 +1728,11 @@ class DaCalc(DaBase):
                     "degree days factor", self.heating_options, default=1
                 )
             )
-            logging.info(f"Degree days factor: {degree_days_factor:.1f} kWh/K.day")
+            if degree_days_factor < 0.1:
+                logging.warning(f"Je graaddag factor ({degree_days_factor:.4f} kWh/K.day) "
+                                f"staat heel laag ingesteld. klopt dit wel?")
+            else:
+                logging.info(f"Degree days factor: {degree_days_factor:.1f} kWh/K.day")
             logging.info(
                 f"Totaal benodigde warmte: {(degree_days * degree_days_factor):.1f} kWh"
             )
@@ -1749,6 +1750,21 @@ class DaCalc(DaBase):
             # heat needed
             heat_needed = max(0.0, (degree_days * degree_days_factor) - heat_produced)
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
+            if heat_needed <= 0:
+                logging.info(f"Geen warmte nodig: warmtepomp wordt niet ingepland")
+                self.hp_enabled = False
+
+        if not self.hp_enabled:
+            for u in range(U):
+                model += c_hp[u] == 0
+                model += hp_on[u] == 0
+        else:
+            # self.hp_enabled == True
+            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
+            self.hp_adjustment = self.config.get(
+                ["adjustment"], self.heating_options, "power"
+            ).lower()
+            logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
             # heat demand
             entity_hp_heat_demand = self.config.get(
@@ -1763,7 +1779,7 @@ class DaCalc(DaBase):
 
             # implement min_run_length
             min_run_length = int(
-                self.config.get(["min run length"], self.heating_options, 3)
+                self.config.get(["min run length"], self.heating_options, 1)
             )  # Minimum run lengte hp in uren - 1h als niet gedefinieerd
             min_run_length = min(
                 max(min_run_length, 1), 5
@@ -1838,8 +1854,13 @@ class DaCalc(DaBase):
                     if entity_hp_power is not None:
                         hp_power = float(self.get_state(entity_hp_power).state)
                     else:
-                        hp_power = 1.5 # Default power in kW if no entity from HA
-                    logging.info(f"Elektrisch vermogen: {hp_power:.1f} kW-e")
+                        hp_power = 1.5  # Default power in kW if no entity from HA
+                    if hp_power > 50:
+                        logging.warning(f"Het elektrisch-vermogen van de wp is te hoog: "
+                                        f"{hp_power:.1f} kW-e"
+                                        f"Voor de planning wordt uitgegaan van 1,5 kW-e")
+                    else:
+                        logging.info(f"Elektrisch vermogen: {hp_power:.1f} kW-e")
                     logging.info(f"Thermisch vermogen: {hp_power * cop:.1f} kW-th")
 
                     e_needed = heat_needed / cop
@@ -1988,13 +2009,15 @@ class DaCalc(DaBase):
                 logging.info(
                     f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland."
                 )
-                stages = self.heating_options["stages"]
-                S = len(stages)
+                hp_stages = self.heating_options["stages"]
+                if hp_stages[0]["max_power"] != 0.0:
+                    hp_stages = [{"max_power":  0, "cop": 8},] + hp_stages
+                S = len(hp_stages)
                 # p_hp[s][u]: het gevraagde vermogen in W in dat uur
                 p_hp = [
                     [
                         model.add_var(
-                            var_type=CONTINUOUS, lb=0, ub=stages[s]["max_power"]
+                            var_type=CONTINUOUS, lb=0, ub=hp_stages[s]["max_power"]
                         )
                         for _ in range(U)
                     ]
@@ -2036,14 +2059,14 @@ class DaCalc(DaBase):
                 for u in range(U):
                     model += hp_on[u] == xsum(hp_s_w[u][s] for s in range(S)[1:])
                     for s in range(S):
-                        model += p_hp[s][u] == stages[s]["max_power"] * hp_s_w[u][s]
+                        model += p_hp[s][u] == hp_stages[s]["max_power"] * hp_s_w[u][s]
                     """
                     # ieder interval/uur maar een aan
                     model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
                     """
                     model.add_sos(
                         [
-                            (hp_s_w[u][s], stages[s]["max_power"])
+                            (hp_s_w[u][s], hp_stages[s]["max_power"])
                             for s in range(S)
                         ],
                         2,
@@ -2053,12 +2076,13 @@ class DaCalc(DaBase):
                     model += (
                         h_hp[u]
                         == xsum(
-                            (p_hp[s][u] * stages[s]["cop"] / 1000) for s in range(S)
+                            (p_hp[s][u] * hp_stages[s]["cop"] / 1000) for s in range(S)
                         )
                         * hour_fraction[u]
                     )
+
                 # max heat power in kW
-                max_heat_power = stages[-1]["max_power"] * stages[-1]["cop"] / 1000
+                max_heat_power = hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
                 logging.info(
                     f"Maximaal warmteproducerend vermogen: {max_heat_power} kW"
                 )
@@ -2069,7 +2093,7 @@ class DaCalc(DaBase):
                 # logging.info(
                 #    f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh"
                 # )
-                min_heat_power = stages[1]["max_power"] * stages[1]["cop"] / 1000
+                min_heat_power = hp_stages[1]["max_power"] * hp_stages[1]["cop"] / 1000
                 logging.info(
                     f"Minimaal warmteproducerend vermogen: {min_heat_power} kW"
                 )
@@ -2090,7 +2114,7 @@ class DaCalc(DaBase):
                 hp_hours = math.floor(hp_hours)
                 logging.info(f"Aantal in te plannen uren: {hp_hours:.1f}")
 
-                model += xsum(h_hp[u] for u in range(U)) == heat_needed
+                model += xsum(h_hp[u] for u in range(U)) >= heat_needed
 
             # tot hier alleen power en heat-curve regeling
 
@@ -2127,7 +2151,7 @@ class DaCalc(DaBase):
             if hp_hours / hours_avail > 0.8:
                 blocks_num = 0  # dus geen block-optimalisering
             else:
-                blocks_num = math.ceil(min(hours_avail / 4, hp_hours / min_run_length))
+                blocks_num = math.ceil(max(hours_avail / 4, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
             if blocks_num == 0:
                 logging.info(f'Omdat de wp meer dan 75% van de uren draait wordt de wp zonder '
@@ -2297,7 +2321,8 @@ class DaCalc(DaBase):
                 )
             ma_instant_start.append(machine_instant_start)
             logging.info(
-                f"Apparaat {self.machines[m]['name']} direct starten staat {'aan' if machine_instant_start else 'uit'}"
+                f"Apparaat {self.machines[m]['name']} direct starten staat "
+                f"{'aan' if machine_instant_start else 'uit'}"
             )
 
             # initialize yesterday
@@ -2870,18 +2895,19 @@ class DaCalc(DaBase):
             for j in range(blocks_num):
                 logging.info(f"Bloknr {j} start {int(hp_start_index[j].x)} "
                              f"lengte {block_len[j]}"
-                             f" laatste {int(hp_start_index[j].x)+block_len[j]}" )
+                             f" laatste {int(hp_start_index[j].x)+block_len[j]-1}")
             logging.info(f"u   uur   tar    hp_s_on hp_on heat cons")
             for u in range(U):
                 sum_hp_bl_on = 0
                 for j in range(blocks_num):
                     sum_hp_bl_on += hp_bl_on[j][u].x
-                logging.info(f"{u}   {uur[u]} {pl[u]:6.4f}  {sum_hp_bl_on:6.2f} {int(hp_on[u].x)}   {h_hp[u].x:6.2f}  {c_hp[u].x:6.2f}")
+                logging.info(f"{u}   {uur[u]} {pl[u]:6.4f}  {sum_hp_bl_on:6.2f} {int(hp_on[u].x)}"
+                             f"   {h_hp[u].x:6.2f}  {c_hp[u].x:6.2f}")
             if self.hp_adjustment != "on/off":
                 df_hp = pd.DataFrame(columns=["uur", "tar"])
                 df_hp["uur"] = uur
                 df_hp["tar"] = pl
-                for s in range(len(self.heating_options["stages"])):
+                for s in range(len(hp_stages)):
                     values = []
                     for u in range(U):
                         values.append(p_hp[s][u].x)
