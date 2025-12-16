@@ -1,5 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.0.rc6
+
+- Log warning when degreeday - factor is less than 0.1 kWh/K.day (reported bij @DaBit)
+- Fixed error when heat-demand is less than lowest day-production (reported bij @DaBit)
+- Fixed error when heat-demand is 0 kWh-th
+- Log warning when calculated power from Home Assistant is more than 50 kW-e (reported by @lievering)
+
 # 2025.12.0.rc5
 - Made boiler setting "heating allowed below" flex setting
 - When boiler_act_temp is below lower limit (=setpoint - hysterese) direct heating will be activated.
