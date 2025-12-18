@@ -371,6 +371,7 @@
               "type": "string"
             }
           ],
+          "default": true,
           "description": "Whether boiler is present/enabled",
           "title": "Boiler Present"
         },
@@ -416,6 +417,7 @@
           "title": "Entity Instant Start"
         },
         "cop": {
+          "default": 3.0,
           "description": "Coefficient of Performance",
           "exclusiveMinimum": 0.0,
           "title": "Cop",
@@ -428,6 +430,7 @@
           "type": "number"
         },
         "volume": {
+          "default": 200.0,
           "description": "Water volume in liters",
           "exclusiveMinimum": 0.0,
           "title": "Volume",
@@ -439,6 +442,7 @@
           "type": "number"
         },
         "elec. power": {
+          "default": 1000.0,
           "description": "Electrical power in watts",
           "exclusiveMinimum": 0.0,
           "title": "Elec. Power",
@@ -456,15 +460,11 @@
         }
       },
       "required": [
-        "boiler present",
         "entity actual temp.",
         "entity setpoint",
         "entity hysterese",
-        "cop",
         "cooling rate",
-        "volume",
         "heating allowed below",
-        "elec. power",
         "activate service",
         "activate entity"
       ],
@@ -676,11 +676,6 @@
           "title": "Entity Position",
           "type": "string"
         },
-        "entity max amperage": {
-          "description": "HA entity for maximum charging amperage",
-          "title": "Entity Max Amperage",
-          "type": "string"
-        },
         "charge three phase": {
           "anyOf": [
             {
@@ -690,6 +685,7 @@
               "type": "string"
             }
           ],
+          "default": true,
           "description": "Whether vehicle charges on three phases",
           "title": "Charge Three Phase"
         },
@@ -770,8 +766,6 @@
         "name",
         "capacity",
         "entity position",
-        "entity max amperage",
-        "charge three phase",
         "charge stages",
         "entity actual level",
         "entity plugged in",
@@ -1011,21 +1005,32 @@
               "type": "string"
             }
           ],
+          "default": false,
           "description": "Whether heating system is present/enabled",
           "title": "Heater Present"
         },
         "entity hp enabled": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "HA binary sensor for heat pump enabled status",
-          "title": "Entity Hp Enabled",
-          "type": "string"
+          "title": "Entity Hp Enabled"
         },
         "degree days factor": {
+          "default": 1.0,
           "description": "Degree days factor for heat demand calculation",
           "exclusiveMinimum": 0.0,
           "title": "Degree Days Factor",
           "type": "number"
         },
         "adjustment": {
+          "default": "power",
           "description": "Adjustment mode",
           "enum": [
             "on/off",
@@ -1071,18 +1076,11 @@
           "title": "Adjustment Factor"
         },
         "min run length": {
-          "anyOf": [
-            {
-              "minimum": 1,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": 1,
           "description": "Minimum run length in time intervals",
-          "title": "Min Run Length"
+          "minimum": 1,
+          "title": "Min Run Length",
+          "type": "integer"
         },
         "entity hp heat produced": {
           "anyOf": [
@@ -1164,10 +1162,6 @@
         }
       },
       "required": [
-        "heater present",
-        "entity hp enabled",
-        "degree days factor",
-        "adjustment",
         "stages"
       ],
       "title": "HeatingConfig",
@@ -1242,20 +1236,7 @@
           "description": "Home Assistant port (default: 8123)",
           "title": "Ip Port"
         },
-        "ssl": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Whether to use SSL/HTTPS",
-          "title": "Ssl"
-        },
-        "hasstoken": {
+        "token": {
           "anyOf": [
             {
               "type": "string"
@@ -1269,7 +1250,7 @@
           ],
           "default": null,
           "description": "Home Assistant long-lived access token (can use !secret)",
-          "title": "Hasstoken"
+          "title": "Token"
         },
         "protocol api": {
           "anyOf": [
@@ -1451,6 +1432,7 @@
       "description": "Day-ahead pricing and tariff configuration.",
       "properties": {
         "source day ahead": {
+          "default": "nordpool",
           "description": "Source for day-ahead prices",
           "enum": [
             "nordpool",
@@ -1475,25 +1457,6 @@
           "default": null,
           "description": "ENTSO-E API key (can use !secret)",
           "title": "Entsoe-Api-Key"
-        },
-        "regular high": {
-          "description": "Regular high tariff fallback (euro/kWh)",
-          "minimum": 0.0,
-          "title": "Regular High",
-          "type": "number"
-        },
-        "regular low": {
-          "description": "Regular low tariff fallback (euro/kWh)",
-          "minimum": 0.0,
-          "title": "Regular Low",
-          "type": "number"
-        },
-        "switch to low": {
-          "description": "Hour to switch to low tariff",
-          "maximum": 23,
-          "minimum": 0,
-          "title": "Switch To Low",
-          "type": "integer"
         },
         "energy taxes consumption": {
           "additionalProperties": {
@@ -1562,10 +1525,6 @@
         }
       },
       "required": [
-        "source day ahead",
-        "regular high",
-        "regular low",
-        "switch to low",
         "energy taxes consumption",
         "energy taxes production",
         "cost supplier consumption",
@@ -1898,8 +1857,8 @@
   "description": "Configuration schema for the Day Ahead Optimizer Home Assistant add-on. This schema defines all available configuration options including battery settings, solar panels, pricing, scheduler, graphics, and more.",
   "properties": {
     "config_version": {
+      "const": 0,
       "default": 0,
-      "description": "Configuration version number",
       "title": "Config Version",
       "type": "integer"
     },
@@ -1990,12 +1949,8 @@
         },
         {
           "$ref": "#/$defs/SecretStr"
-        },
-        {
-          "type": "null"
         }
       ],
-      "default": null,
       "description": "Meteoserver API key (can use !secret)",
       "title": "Meteoserver-Key"
     },
@@ -2240,6 +2195,9 @@
       "description": "Task scheduler configuration"
     }
   },
+  "required": [
+    "meteoserver-key"
+  ],
   "title": "Day Ahead Optimizer Configuration",
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#"
