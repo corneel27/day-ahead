@@ -327,7 +327,7 @@ class SolarPredictor(DaBase):
         Returns:
             Clean data with outliers removed
         """
-        print("Detecting outliers...")
+        logging.info("Detecting outliers...")
         original_size = len(merged_data)
 
         # 1. Context-aware outlier detection by hour
@@ -417,10 +417,10 @@ class SolarPredictor(DaBase):
 
         outliers_removed = original_size - len(final_clean_data)
         if outliers_removed > 0:
-            print(
-                f"Outliers removed: {outliers_removed} ({outliers_removed / original_size * 100:.1f}%)"
+            logging.info(
+                f"Outliers removed: {outliers_removed} "
+                f"({outliers_removed / original_size * 100:.1f}%)"
             )
-
         return final_clean_data
 
     def train(
@@ -448,15 +448,15 @@ class SolarPredictor(DaBase):
         Returns:
             Dictionary with training statistics
         """
-        print("Starting solar prediction model training...")
+        logging.info("Starting solar prediction model training...")
 
         # Load and process data
-        print("Loading and processing data...")
+        logging.info("Loading and processing data...")
         weather_features = self._load_and_process_weather_data(weather_data)
         solar_df = self._load_and_process_solar_data(solar_data)
 
         # Merge datasets
-        print("Merging weather and solar data...")
+        logging.info("Merging weather and solar data...")
         # Align timezone information
         if weather_features.index.tz is None:
             weather_features.index = weather_features.index.tz_localize(
@@ -471,13 +471,13 @@ class SolarPredictor(DaBase):
         merged_data = weather_features.join(solar_df, how="inner")
         merged_data = merged_data.dropna()
 
-        print(f"Merged dataset: {len(merged_data)} records")
-        print(f"Date range: {merged_data.index.min()} to {merged_data.index.max()}")
+        logging.info(f"Merged dataset: {len(merged_data)} records")
+        logging.info(f"Date range: {merged_data.index.min()} to {merged_data.index.max()}")
 
         # Outlier detection
         if remove_outliers:
             merged_data = self._detect_outliers(merged_data)
-            print(f"Clean dataset: {len(merged_data)} records")
+            logging.info(f"Clean dataset: {len(merged_data)} records")
 
         # Prepare features and target
         X = merged_data[self.feature_columns].copy()
@@ -493,12 +493,12 @@ class SolarPredictor(DaBase):
         X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
 
-        print(f"Training samples: {len(X_train)}")
-        print(f"Testing samples: {len(X_test)}")
+        logging.info(f"Training samples: {len(X_train)}")
+        logging.info(f"Testing samples: {len(X_test)}")
 
         # Model training
         if tune_hyperparameters:
-            print("Tuning hyperparameters...")
+            logging.info("Tuning hyperparameters...")
             param_grid = {
                 "n_estimators": [100, 200, 300],
                 "max_depth": [3, 4, 6],
@@ -523,7 +523,7 @@ class SolarPredictor(DaBase):
 
             grid_search.fit(X_train_subset, y_train_subset)
             best_params = grid_search.best_params_
-            print(f"Best parameters: {best_params}")
+            logging.info(f"Best parameters: {best_params}")
         else:
             # Use default parameters
             best_params = {
@@ -534,7 +534,7 @@ class SolarPredictor(DaBase):
             }
 
         # Train final model
-        print("Training final model...")
+        logging.info("Training final model...")
         self.model = XGBRegressor(
             **best_params, random_state=self.random_state, objective="reg:squarederror"
         )
@@ -580,17 +580,17 @@ class SolarPredictor(DaBase):
         joblib.dump(self.model, model_save_path)
         self.is_trained = True
 
-        print(f"\nModel Training Complete!")
-        print(f"Model saved to: {model_save_path}")
-        print(f"Training MAE: {train_mae:.4f} kWh")
-        print(f"Testing MAE: {test_mae:.4f} kWh")
-        print(f"Training R²: {train_r2:.4f}")
-        print(f"Testing R²: {test_r2:.4f}")
-        print("\nSorted features:")
+        logging.info(f"\nModel Training Complete!")
+        logging.info(f"Model saved to: {model_save_path}")
+        logging.info(f"Training MAE: {train_mae:.4f} kWh")
+        logging.info(f"Testing MAE: {test_mae:.4f} kWh")
+        logging.info(f"Training R²: {train_r2:.4f}")
+        logging.info(f"Testing R²: {test_r2:.4f}")
+        logging.info("\nSorted features:")
         importance = self.training_stats["feature_importance"]
         sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
         for i, (feature, score) in enumerate(sorted_features):
-            print(f"  {i + 1}. {feature}: {score:.3f}")
+            logging.info(f"  {i + 1}. {feature}: {score:.3f}")
         return self.training_stats
 
     def predict(
@@ -721,10 +721,11 @@ class SolarPredictor(DaBase):
         os.remove(filename)
         return
 
-    def import_knmi_df(self, start: dt.datetime):
+    def import_knmi_df(self, start: dt.datetime, end: dt.datetime):
         """
         haalt data op bij knmi en slaat deze op in dao-database
         :param start: begin-datum waarvan data aanwezig moeten zijn
+        :parame end: datum tot data aanwezig meten zijn
         :return:
         """
         """
@@ -739,34 +740,40 @@ class SolarPredictor(DaBase):
         """
         # get dataframe with knmi-py
         # datetime of latest data-reord
-        # tot gisterem
-        end = dt.datetime.now().date() - dt.timedelta(days=1)
+
         latest_record = self.db_da.get_time_latest_record("gr")
         if latest_record is None:  # er zijn nog geen data
             latest_dt = start
+            logging.info(f"Er zijn nog geen knmi-data aanwezig")
         else:
-            latest_dt = latest_record.date()
+            latest_dt = latest_record
+            logging.info(f"Er zijn knmi-data aanwezig tot {latest_dt}")
+        if latest_dt >= end:
+            logging.info(f"Er worden geen knmi-data opgehaald")
+            return
+
         knmi_df = knmi.get_hour_data_dataframe(
-            [self.knmi_station], start=latest_dt, end=end, variables=["T", "Q"]
-        )
-        if len(knmi_df) > 0:
-            knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
-            knmi_df["utc"] = knmi_df.index
-            knmi_df["utc"] = pd.to_datetime(
-                knmi_df["utc"], utc=True
-            )  # , format='%Y-%m-%d %H:%M:%S')
-            save_df = pd.DataFrame(columns=["time", "code", "value"])
-            for row in knmi_df.itertuples():
-                utc = int(row.utc.timestamp())
-                save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
-                save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
-            self.db_da.savedata(save_df, tablename="values")
-        else:
-            if end - latest_dt > dt.timedelta(days=1):
-                logging.error(
-                    f"Er zijn geen data van knmi binnengekomen, "
-                    f"weerstation {self.weerstation}"
-                )
+                [self.knmi_station], start=latest_dt, end=end, variables=["T", "Q"]
+            )
+        if len(knmi_df) == 0:
+            logging.info(f"Er zijn geen aanvullende knmi-data beschikbaar")
+            return
+
+        knmi_eerste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize()
+        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize()
+        logging.info(f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
+                     f"{knmi_laatste}")
+        knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
+        knmi_df["utc"] = knmi_df.index
+        knmi_df["utc"] = pd.to_datetime(
+            knmi_df["utc"], utc=True
+        )  # , format='%Y-%m-%d %H:%M:%S')
+        save_df = pd.DataFrame(columns=["time", "code", "value"])
+        for row in knmi_df.itertuples():
+            utc = int(row.utc.timestamp())
+            save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
+            save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
+        self.db_da.savedata(save_df, tablename="values")
         return
 
     def get_weatherdata(
@@ -776,12 +783,18 @@ class SolarPredictor(DaBase):
         vult database aan met ontbrekende data
         load weather_data from dao-database
         :param start: begindatum laden vanaf
+        :param end: einddatum if None: tot gisteren 00:00
+        :param prognose: boolean, False: meetdata ophalen
+            True: prognoses ophalen
         :return: dataframe with weatherdata
         """
         # haal ontbrekende data op bij knmi
 
+        if end is None:
+            end = dt.datetime(start.year+1, start.month, start.day)
         if not prognose:
-            self.import_knmi_df(start)
+            # knmi data evt aanvullen
+            self.import_knmi_df(start, end)
 
         if prognose:
             table_name = "prognoses"
@@ -882,7 +895,7 @@ class SolarPredictor(DaBase):
             )
         weather_data = self.get_weatherdata(start, end, prognose=True)
         prediction = self.predict(weather_data)
-        print(prediction)
+        logging.info(prediction)
         return prediction
 
     def test_solar_predictor(self, start, end):
