@@ -2156,7 +2156,8 @@ class DaCalc(DaBase):
                 if self.hp_adjustment == "on/off":
                     blocks_num = math.ceil(hp_hours / min_run_length)
                 else:
-                    blocks_num = math.ceil(max(hours_avail / 4, hp_hours / min_run_length))
+                    blocks_num = math.ceil(min(hours_avail / (3 + min_run_length), hp_hours / min_run_length))
+                    # blocks_num = math.ceil(max(hours_avail / 4, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
             if blocks_num == 0:
                 logging.info(f'Omdat de wp meer dan 75% van de uren draait wordt de wp zonder '
