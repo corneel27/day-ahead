@@ -65,6 +65,12 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
             validation_errors.append(f"ERROR: {model_title}.{field_name} - Missing description")
             description = "MISSING DESCRIPTION"
         
+        # Append enum options to description if present
+        if 'enum' in field_schema:
+            enum_values = field_schema['enum']
+            enum_str = ' | '.join(f'`{v}`' for v in enum_values)
+            description = f"{description}. Options: {enum_str}"
+        
         # Format required column
         required_mark = "Yes" if is_required else "No"
         
