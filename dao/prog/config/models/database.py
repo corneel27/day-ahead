@@ -20,6 +20,7 @@ class HADatabaseConfig(BaseModel):
     )
     port: Optional[int] = Field(
         default=None,
+        ge=1, le=65535,
         description="Database port (defaults: mysql=3306, postgresql=5432)"
     )
     database: str = Field(
@@ -59,12 +60,12 @@ class DatabaseConfig(BaseModel):
     """
     Day Ahead database configuration (database da).
     
-    Can be either SQLite or MySQL/MariaDB.
+    Can be either SQLite, MySQL/MariaDB, or PostgreSQL.
     """
     
-    engine: str = Field(
+    engine: Literal['sqlite', 'mysql', 'postgresql'] = Field(
         default="sqlite",
-        description="Database engine: 'sqlite' | 'mysql'"
+        description="Database engine type"
     )
     
     # SQLite fields
@@ -84,7 +85,8 @@ class DatabaseConfig(BaseModel):
     )
     port: Optional[int] = Field(
         default=None,
-        description="MySQL server port (required for mysql)"
+        ge=1, le=65535,
+        description="MySQL/PostgreSQL server port (required for mysql/postgresql)"
     )
     username: Optional[str] = Field(
         default=None,
@@ -108,13 +110,13 @@ class DatabaseConfig(BaseModel):
     @model_validator(mode='after')
     def validate_engine_requirements(self) -> 'DatabaseConfig':
         """Validate engine-specific requirements."""
-        if self.engine == 'mysql':
+        if self.engine in ('mysql', 'postgresql'):
             if not self.server:
-                raise ValueError("'server' is required when engine is 'mysql'")
+                raise ValueError(f"'server' is required when engine is '{self.engine}'")
             if not self.port:
-                raise ValueError("'port' is required when engine is 'mysql'")
+                raise ValueError(f"'port' is required when engine is '{self.engine}'")
             if not self.username:
-                raise ValueError("'username' is required when engine is 'mysql'")
+                raise ValueError(f"'username' is required when engine is '{self.engine}'")
         elif self.engine == 'sqlite':
             if not self.db_path and not self.database:
                 raise ValueError("Either 'db_path' or 'database' is required for sqlite")
