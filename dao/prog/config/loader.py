@@ -5,10 +5,24 @@ Configuration loader with support for versioning, migration, and unknown key pre
 import json
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Type
+from pydantic import BaseModel
 from .migrations.migrator import migrate_config
+from .versions.v0 import ConfigurationV0
+# Uncomment when creating v1:
+# from .versions.v1 import ConfigurationV1
 
 logger = logging.getLogger(__name__)
+
+# Current configuration version - update this when creating new versions
+CURRENT_VERSION = 0
+
+# Version models registry: maps version number -> Pydantic model class
+VERSION_MODELS: dict[int, Type[BaseModel]] = {
+    0: ConfigurationV0,
+    # Uncomment when creating v1:
+    # 1: ConfigurationV1,
+}
 
 
 class ConfigurationLoader:
@@ -86,20 +100,53 @@ class ConfigurationLoader:
         self._raw_options = config_data.copy()
         
         # Check if migration needed
-        current_version = config_data.get("config_version")
-        
-        if current_version is None:
-            # Create backup before first migration
-            self._create_backup()
+        config_version = config_data.get("config_version")
+ 
+        if config_version is None:
             logger.info("Configuration needs migration from unversioned to v0")
-        
-        # Apply migrations
-        migrated_data = migrate_config(config_data)
+        elif config_version < CURRENT_VERSION:
+            logger.info(f"Configuration needs migration from v{config_version} to v{CURRENT_VERSION}")
+
+        # Create backup before migration
+        self._create_backup()
+
+        # Apply migrations to current version
+        migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
         
         # Update raw options with migrated version
         self._raw_options = migrated_data.copy()
         
         return migrated_data
+    
+    def load_and_validate(self) -> BaseModel:
+        """
+        Load configuration, apply migrations, and validate with Pydantic.
+        
+        This is the recommended way to load configuration - it automatically:
+        1. Detects the current version
+        2. Migrates to CURRENT_VERSION if needed
+        3. Validates with the appropriate Pydantic model
+        
+        Returns:
+            Validated Pydantic model (type depends on CURRENT_VERSION)
+        """
+        # Migrate to current version
+        migrated_data = self.load_and_migrate()
+        
+        # Get the model class for current version
+        version = migrated_data.get("config_version", CURRENT_VERSION)
+        
+        if version not in VERSION_MODELS:
+            raise RuntimeError(
+                f"No Pydantic model defined for version {version}. "
+                f"Available versions: {list(VERSION_MODELS.keys())}"
+            )
+        
+        model_class = VERSION_MODELS[version]
+        logger.info(f"Validating configuration with {model_class.__name__}")
+        
+        # Validate and return
+        return model_class(**migrated_data)
     
     def save(self, config_data: dict[str, Any]) -> None:
         """

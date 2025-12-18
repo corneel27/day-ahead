@@ -29,19 +29,23 @@ class HeatingConfig(BaseModel):
     """Heating system / heat pump configuration."""
     
     heater_present: bool | str = Field(
+        default=False,
         alias="heater present",
         description="Whether heating system is present/enabled"
     )
-    entity_hp_enabled: str = Field(
+    entity_hp_enabled: Optional[str] = Field(
+        default=None,
         alias="entity hp enabled",
         description="HA binary sensor for heat pump enabled status"
     )
     degree_days_factor: float = Field(
+        default=1.0,
         alias="degree days factor",
         gt=0,
         description="Degree days factor for heat demand calculation"
     )
     adjustment: Literal['on/off', 'power', 'heating curve'] = Field(
+        default='power',
         description="Adjustment mode"
     )
     stages: list[HeatingStage] = Field(
@@ -58,8 +62,8 @@ class HeatingConfig(BaseModel):
         alias="adjustment factor",
         description="Factor for heating curve adjustment"
     )
-    min_run_length: Optional[int] = Field(
-        default=None,
+    min_run_length: int = Field(
+        default=1,
         alias="min run length",
         ge=1,
         description="Minimum run length in time intervals"

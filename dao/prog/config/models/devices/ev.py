@@ -3,7 +3,7 @@ Electric Vehicle configuration models.
 """
 
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 class EVChargeStage(BaseModel):
@@ -58,11 +58,8 @@ class EVConfig(BaseModel):
         alias="entity position",
         description="HA device tracker for vehicle position"
     )
-    entity_max_amperage: str = Field(
-        alias="entity max amperage",
-        description="HA entity for maximum charging amperage"
-    )
     charge_three_phase: bool | str = Field(
+        default=True,
         alias="charge three phase",
         description="Whether vehicle charges on three phases"
     )
@@ -106,6 +103,20 @@ class EVConfig(BaseModel):
         alias="entity stop charging",
         description="HA entity for stop charging datetime"
     )
+    
+    @model_validator(mode='after')
+    def validate_charging_method(self) -> 'EVConfig':
+        """Ensure either instant charging entities OR charge scheduler is configured."""
+        has_instant = self.entity_instant_start is not None and self.entity_instant_level is not None
+        has_scheduler = self.charge_scheduler is not None
+        
+        if not has_instant and not has_scheduler:
+            raise ValueError(
+                "EV must have either instant charging entities "
+                "(entity_instant_start + entity_instant_level) OR charge_scheduler configured"
+            )
+        
+        return self
     
     model_config = ConfigDict(
         extra='allow',

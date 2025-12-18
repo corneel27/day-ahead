@@ -73,10 +73,9 @@ class Config:
             # Load configuration using Pydantic loader with automatic migration
             # ConfigurationLoader expects the path to options.json file, not directory
             loader = ConfigurationLoader(config_path=options_file)
-            migrated_data = loader.load_and_migrate()
             
-            # Convert migrated dict to Pydantic model
-            self._config = ConfigurationV0(**migrated_data)
+            # Load, migrate, and validate with appropriate version model
+            self._config = loader.load_and_validate()
             
         except Exception as e:
             # Store the error for debugging

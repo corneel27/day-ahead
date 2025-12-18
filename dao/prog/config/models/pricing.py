@@ -12,6 +12,7 @@ class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
     
     source_day_ahead: Literal['nordpool', 'entsoe', 'tibber'] = Field(
+        default='nordpool',
         alias="source day ahead",
         description="Source for day-ahead prices"
     )
@@ -19,21 +20,6 @@ class PricingConfig(BaseModel):
         default=None,
         alias="entsoe-api-key",
         description="ENTSO-E API key (can use !secret)"
-    )
-    regular_high: float = Field(
-        alias="regular high",
-        ge=0,
-        description="Regular high tariff fallback (euro/kWh)"
-    )
-    regular_low: float = Field(
-        alias="regular low",
-        ge=0,
-        description="Regular low tariff fallback (euro/kWh)"
-    )
-    switch_to_low: int = Field(
-        alias="switch to low",
-        ge=0, le=23,
-        description="Hour to switch to low tariff"
     )
     
     # Date-based tariff configurations (date string -> value)

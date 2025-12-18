@@ -7,7 +7,7 @@ get migrated to this version with no format changes.
 """
 
 from typing import Optional, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 from ..models.base import SecretStr
 from ..models.database import HADatabaseConfig, DatabaseConfig
@@ -37,10 +37,7 @@ class ConfigurationV0(BaseModel):
     """
     
     # Version
-    config_version: int = Field(
-        default=0,
-        description="Configuration version number"
-    )
+    config_version: Literal[0] = 0
     
     # Connection
     homeassistant: HomeAssistantConfig = Field(
@@ -80,8 +77,7 @@ class ConfigurationV0(BaseModel):
     )
     
     # Meteoserver
-    meteoserver_key: Optional[str | SecretStr] = Field(
-        default=None,
+    meteoserver_key: str | SecretStr = Field(
         alias="meteoserver-key",
         description="Meteoserver API key (can use !secret)"
     )
@@ -131,6 +127,15 @@ class ConfigurationV0(BaseModel):
         default=None,
         description="Baseload power consumption (watts) - single value or 24 hourly values"
     )
+    
+    @field_validator('baseload')
+    @classmethod
+    def validate_baseload_length(cls, v):
+        """Validate baseload has exactly 24 values if it's a list."""
+        if v is not None and isinstance(v, list):
+            if len(v) != 24:
+                raise ValueError(f"baseload must have exactly 24 hourly values, got {len(v)}")
+        return v
     
     # Graphics
     graphical_backend: str = Field(
