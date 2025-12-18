@@ -2,7 +2,7 @@
 Heating system / heat pump configuration models.
 """
 
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
@@ -41,8 +41,8 @@ class HeatingConfig(BaseModel):
         gt=0,
         description="Degree days factor for heat demand calculation"
     )
-    adjustment: str = Field(
-        description="Adjustment mode: 'on/off' | 'power' | 'heating curve'"
+    adjustment: Literal['on/off', 'power', 'heating curve'] = Field(
+        description="Adjustment mode"
     )
     stages: list[HeatingStage] = Field(
         min_length=1,

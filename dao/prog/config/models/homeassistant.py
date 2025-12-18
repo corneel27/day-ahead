@@ -2,7 +2,7 @@
 Home Assistant connection configuration models.
 """
 
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, Field, ConfigDict
 from .base import SecretStr
 
@@ -28,10 +28,10 @@ class HomeAssistantConfig(BaseModel):
         default=None,
         description="Home Assistant long-lived access token (can use !secret)"
     )
-    protocol_api: Optional[str] = Field(
+    protocol_api: Optional[Literal['http', 'https']] = Field(
         default=None,
         alias="protocol api",
-        description="API protocol (http or https)"
+        description="API protocol"
     )
     
     model_config = ConfigDict(

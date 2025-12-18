@@ -6,7 +6,7 @@ Version 0 represents the initial Pydantic migration - unversioned configs
 get migrated to this version with no format changes.
 """
 
-from typing import Optional
+from typing import Optional, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
 from ..models.base import SecretStr
@@ -85,10 +85,10 @@ class ConfigurationV0(BaseModel):
         alias="meteoserver-key",
         description="Meteoserver API key (can use !secret)"
     )
-    meteoserver_model: Optional[str] = Field(
+    meteoserver_model: Literal['harmonie', 'gfs'] = Field(
         default="harmonie",
         alias="meteoserver-model",
-        description="Meteoserver model: 'harmonie' | 'gfs'"
+        description="Meteoserver model"
     )
     meteoserver_attemps: Optional[int] = Field(
         default=2,
@@ -104,15 +104,15 @@ class ConfigurationV0(BaseModel):
     )
     
     # General settings
-    logging_level: str = Field(
+    logging_level: Literal['debug', 'info', 'warning', 'error'] = Field(
         default="info",
         alias="logging level",
-        description="Logging level: 'debug' | 'info' | 'warning' | 'error'"
+        description="Logging level"
     )
-    protocol_api: Optional[str] = Field(
+    protocol_api: Optional[Literal['http', 'https']] = Field(
         default=None,
         alias="protocol api",
-        description="API protocol (http/https)"
+        description="API protocol"
     )
     
     # Baseload
@@ -148,7 +148,7 @@ class ConfigurationV0(BaseModel):
         default=None,
         description="Optimization interval in minutes"
     )
-    strategy: str = Field(
+    strategy: Literal['minimize cost', 'minimize consumption'] = Field(
         default="minimize cost",
         description="Optimization strategy"
     )

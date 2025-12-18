@@ -82,6 +82,7 @@ class BatteryConfig(BaseModel):
     )
     minimum_power: int = Field(
         alias="minimum power",
+        ge=0,
         description="Minimum power in watts"
     )
     
@@ -93,6 +94,7 @@ class BatteryConfig(BaseModel):
     )
     dc_to_bat_max_power: float = Field(
         alias="dc_to_bat max power",
+        gt=0,
         description="DC to battery max power in watts"
     )
     bat_to_dc_efficiency: float = Field(
@@ -102,12 +104,14 @@ class BatteryConfig(BaseModel):
     )
     bat_to_dc_max_power: float = Field(
         alias="bat_to_dc max power",
+        gt=0,
         description="Battery to DC max power in watts"
     )
     
     # Cost
     cycle_cost: float = Field(
         alias="cycle cost",
+        ge=0,
         description="Cost per battery cycle in euros"
     )
     
