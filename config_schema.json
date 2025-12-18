@@ -132,6 +132,7 @@
         },
         "minimum power": {
           "description": "Minimum power in watts",
+          "minimum": 0,
           "title": "Minimum Power",
           "type": "integer"
         },
@@ -144,6 +145,7 @@
         },
         "dc_to_bat max power": {
           "description": "DC to battery max power in watts",
+          "exclusiveMinimum": 0.0,
           "title": "Dc To Bat Max Power",
           "type": "number"
         },
@@ -156,11 +158,13 @@
         },
         "bat_to_dc max power": {
           "description": "Battery to DC max power in watts",
+          "exclusiveMinimum": 0.0,
           "title": "Bat To Dc Max Power",
           "type": "number"
         },
         "cycle cost": {
           "description": "Cost per battery cycle in euros",
+          "minimum": 0.0,
           "title": "Cycle Cost",
           "type": "number"
         },
@@ -485,11 +489,16 @@
     },
     "DatabaseConfig": {
       "additionalProperties": true,
-      "description": "Day Ahead database configuration (database da).\n\nCan be either SQLite or MySQL/MariaDB.",
+      "description": "Day Ahead database configuration (database da).\n\nCan be either SQLite, MySQL/MariaDB, or PostgreSQL.",
       "properties": {
         "engine": {
           "default": "sqlite",
-          "description": "Database engine: 'sqlite' | 'mysql'",
+          "description": "Database engine type",
+          "enum": [
+            "sqlite",
+            "mysql",
+            "postgresql"
+          ],
           "title": "Engine",
           "type": "string"
         },
@@ -535,6 +544,8 @@
         "port": {
           "anyOf": [
             {
+              "maximum": 65535,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -542,7 +553,7 @@
             }
           ],
           "default": null,
-          "description": "MySQL server port (required for mysql)",
+          "description": "MySQL/PostgreSQL server port (required for mysql/postgresql)",
           "title": "Port"
         },
         "username": {
@@ -943,6 +954,8 @@
         "port": {
           "anyOf": [
             {
+              "maximum": 65535,
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -1013,7 +1026,12 @@
           "type": "number"
         },
         "adjustment": {
-          "description": "Adjustment mode: 'on/off' | 'power' | 'heating curve'",
+          "description": "Adjustment mode",
+          "enum": [
+            "on/off",
+            "power",
+            "heating curve"
+          ],
           "title": "Adjustment",
           "type": "string"
         },
@@ -1256,6 +1274,10 @@
         "protocol api": {
           "anyOf": [
             {
+              "enum": [
+                "http",
+                "https"
+              ],
               "type": "string"
             },
             {
@@ -1263,7 +1285,7 @@
             }
           ],
           "default": null,
-          "description": "API protocol (http or https)",
+          "description": "API protocol",
           "title": "Protocol Api"
         }
       },
@@ -1429,7 +1451,12 @@
       "description": "Day-ahead pricing and tariff configuration.",
       "properties": {
         "source day ahead": {
-          "description": "Source for day-ahead prices: 'nordpool' | 'entsoe' | 'tibber'",
+          "description": "Source for day-ahead prices",
+          "enum": [
+            "nordpool",
+            "entsoe",
+            "tibber"
+          ],
           "title": "Source Day Ahead",
           "type": "string"
         },
@@ -1451,11 +1478,13 @@
         },
         "regular high": {
           "description": "Regular high tariff fallback (euro/kWh)",
+          "minimum": 0.0,
           "title": "Regular High",
           "type": "number"
         },
         "regular low": {
           "description": "Regular low tariff fallback (euro/kWh)",
+          "minimum": 0.0,
           "title": "Regular Low",
           "type": "number"
         },
@@ -1971,17 +2000,14 @@
       "title": "Meteoserver-Key"
     },
     "meteoserver-model": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
       "default": "harmonie",
-      "description": "Meteoserver model: 'harmonie' | 'gfs'",
-      "title": "Meteoserver-Model"
+      "description": "Meteoserver model",
+      "enum": [
+        "harmonie",
+        "gfs"
+      ],
+      "title": "Meteoserver-Model",
+      "type": "string"
     },
     "meteoserver-attemps": {
       "anyOf": [
@@ -2011,13 +2037,23 @@
     },
     "logging level": {
       "default": "info",
-      "description": "Logging level: 'debug' | 'info' | 'warning' | 'error'",
+      "description": "Logging level",
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error"
+      ],
       "title": "Logging Level",
       "type": "string"
     },
     "protocol api": {
       "anyOf": [
         {
+          "enum": [
+            "http",
+            "https"
+          ],
           "type": "string"
         },
         {
@@ -2025,7 +2061,7 @@
         }
       ],
       "default": null,
-      "description": "API protocol (http/https)",
+      "description": "API protocol",
       "title": "Protocol Api"
     },
     "use_calc_baseload": {
@@ -2096,6 +2132,10 @@
     "strategy": {
       "default": "minimize cost",
       "description": "Optimization strategy",
+      "enum": [
+        "minimize cost",
+        "minimize consumption"
+      ],
       "title": "Strategy",
       "type": "string"
     },

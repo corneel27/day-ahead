@@ -35,11 +35,11 @@ Configuration schema for the Day Ahead Optimizer Home Assistant add-on. This sch
 | `time_zone` | string (optional) | No | `null` | Timezone (auto-fetched from HA if not set) |
 | `country` | string (optional) | No | `null` | Country code (auto-fetched from HA if not set) |
 | `meteoserver-key` | string | [SecretStr](#secretstr) (optional) | No |  | Meteoserver API key (can use !secret) |
-| `meteoserver-model` | string (optional) | No | `"harmonie"` | Meteoserver model: 'harmonie' | 'gfs' |
+| `meteoserver-model` | string | No | `"harmonie"` | Meteoserver model |
 | `meteoserver-attemps` | integer (optional) | No | `2` | Number of meteoserver fetch attempts |
 | `prices` | [PricingConfig](#pricingconfig) (optional) | No |  | Day-ahead pricing and tariff configuration |
-| `logging level` | string | No | `"info"` | Logging level: 'debug' | 'info' | 'warning' | 'error' |
-| `protocol api` | string (optional) | No | `null` | API protocol (http/https) |
+| `logging level` | string | No | `"info"` | Logging level |
+| `protocol api` | string (optional) | No | `null` | API protocol |
 | `use_calc_baseload` | boolean | string | No | `"false"` | Whether to calculate baseload automatically |
 | `baseload calc periode` | integer | No | `56` | Period in days for baseload calculation |
 | `baseload` | number | list[number] (optional) | No | `null` | Baseload power consumption (watts) - single value or 24 hourly values |
@@ -137,15 +137,15 @@ Dashboard web UI configuration.
 
 Day Ahead database configuration (database da).
 
-Can be either SQLite or MySQL/MariaDB.
+Can be either SQLite, MySQL/MariaDB, or PostgreSQL.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `engine` | string | No | `"sqlite"` | Database engine: 'sqlite' | 'mysql' |
+| `engine` | string | No | `"sqlite"` | Database engine type |
 | `db_path` | string (optional) | No | `null` | Database path for SQLite (e.g., '../data') |
 | `database` | string (optional) | No | `null` | Database filename for SQLite or database name for MySQL |
 | `server` | string (optional) | No | `null` | MySQL server hostname (required for mysql) |
-| `port` | integer (optional) | No | `null` | MySQL server port (required for mysql) |
+| `port` | integer (optional) | No | `null` | MySQL/PostgreSQL server port (required for mysql/postgresql) |
 | `username` | string (optional) | No | `null` | MySQL username (required for mysql) |
 | `password` | string | [SecretStr](#secretstr) (optional) | No |  | MySQL password (can use !secret) |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
@@ -251,7 +251,7 @@ Heating system / heat pump configuration.
 | `heater present` | boolean | string | Yes | — | Whether heating system is present/enabled |
 | `entity hp enabled` | string | Yes | — | HA binary sensor for heat pump enabled status |
 | `degree days factor` | number | Yes | — | Degree days factor for heat demand calculation |
-| `adjustment` | string | Yes | — | Adjustment mode: 'on/off' | 'power' | 'heating curve' |
+| `adjustment` | string | Yes | — | Adjustment mode |
 | `stages` | list[[HeatingStage](#heatingstage)] | Yes | — | Heating power/COP stages |
 | `entity adjust heating curve` | string (optional) | No | `null` | HA entity to adjust heating curve |
 | `adjustment factor` | number (optional) | No | `null` | Factor for heating curve adjustment |
@@ -290,7 +290,7 @@ Home Assistant connection configuration.
 | `ip port` | integer (optional) | No | `null` | Home Assistant port (default: 8123) |
 | `ssl` | boolean (optional) | No | `null` | Whether to use SSL/HTTPS |
 | `hasstoken` | string | [SecretStr](#secretstr) (optional) | No |  | Home Assistant long-lived access token (can use !secret) |
-| `protocol api` | string (optional) | No | `null` | API protocol (http or https) |
+| `protocol api` | string (optional) | No | `null` | API protocol |
 
 ###  MachineConfig
 
@@ -333,7 +333,7 @@ Day-ahead pricing and tariff configuration.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `source day ahead` | string | Yes | — | Source for day-ahead prices: 'nordpool' | 'entsoe' | 'tibber' |
+| `source day ahead` | string | Yes | — | Source for day-ahead prices |
 | `entsoe-api-key` | string | [SecretStr](#secretstr) (optional) | No |  | ENTSO-E API key (can use !secret) |
 | `regular high` | number | Yes | — | Regular high tariff fallback (euro/kWh) |
 | `regular low` | number | Yes | — | Regular low tariff fallback (euro/kWh) |
