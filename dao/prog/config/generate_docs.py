@@ -58,38 +58,30 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
         # Extract field info from JSON schema
         field_type = get_type_from_schema(field_schema, schema.get('$defs', {}))
         is_required = field_name in required
-        description = field_schema.get('description', field_schema.get('title', ''))
+        description = field_schema.get('description', '')
         
-        # Validate description exists
+        # Validate description exists (use title as fallback for SecretStr/FlexValue internal fields)
         if not description:
-            validation_errors.append(f"ERROR: {model_title}.{field_name} - Missing description")
-            description = "MISSING DESCRIPTION"
+            title = field_schema.get('title', '')
+            if title:
+                # For internal model fields like SecretStr.secret_key, use title
+                description = title
+            else:
+                validation_errors.append(f"ERROR: {model_title}.{field_name} - Missing description")
+                description = "MISSING DESCRIPTION"
         
         # Append enum options to description if present
         if 'enum' in field_schema:
             enum_values = field_schema['enum']
-            enum_str = ' | '.join(f'`{v}`' for v in enum_values)
+            enum_str = ', '.join(f'`{v}`' for v in enum_values)
             description = f"{description}. Options: {enum_str}"
         
         # Format required column
         required_mark = "Yes" if is_required else "No"
         
-        # Check if this is a pure model reference (starts with [ and no pipe or 'optional')
-        # Pure model refs: [BatteryConfig](#...)
-        # Union types: string | [SecretStr](#...) (optional)
-        is_pure_model_ref = (
-            field_type.startswith('[') and 
-            '|' not in field_type and 
-            not field_type.endswith('(optional)')
-        )
-        
-        if is_pure_model_ref:
-            # Empty default column for pure model references
-            lines.append(f"| `{field_name}` | {field_type} | {required_mark} | | {description} |")
-        else:
-            # Include default value for primitive types and union types
-            default = get_default_from_schema(field_schema, is_required, schema.get('$defs', {}))
-            lines.append(f"| `{field_name}` | {field_type} | {required_mark} | {default} | {description} |")
+        # Get default value for all field types
+        default = get_default_from_schema(field_schema, is_required, schema.get('$defs', {}))
+        lines.append(f"| `{field_name}` | {field_type} | {required_mark} | {default} | {description} |")
     
     lines.append("")
     return "\n".join(lines), validation_errors
@@ -103,7 +95,7 @@ def get_type_from_schema(field_schema: dict[str, Any], defs: dict[str, Any]) -> 
         anchor = ref_path.lower()
         return f"[{ref_path}](#{anchor})"
     
-    # Handle anyOf (used for Optional types)
+    # Handle anyOf (used for Optional types and unions)
     if 'anyOf' in field_schema:
         types = []
         has_null = False
@@ -112,7 +104,11 @@ def get_type_from_schema(field_schema: dict[str, Any], defs: dict[str, Any]) -> 
                 has_null = True
             else:
                 types.append(get_type_from_schema(sub_schema, defs))
-        type_str = " | ".join(types) if types else "unknown"
+        # Use 'or' for readability instead of pipe which breaks markdown tables
+        if len(types) > 1:
+            type_str = " or ".join(types)
+        else:
+            type_str = types[0] if types else "unknown"
         return f"{type_str} (optional)" if has_null else type_str
     
     # Handle arrays
@@ -141,31 +137,24 @@ def get_default_from_schema(field_schema: dict[str, Any], is_required: bool, def
     
     # Check if default is specified
     if 'default' not in field_schema:
-        # Check if it's a reference to another model
+        # Model references (not Optional) → uses default_factory, can omit but NOT set to null
         if '$ref' in field_schema:
-            ref_path = field_schema['$ref'].split('/')[-1]
-            # Create anchor link to the model's section (lowercase, no special chars)
-            anchor = ref_path.lower()
-            return f"[No default](#{anchor})"
+            return "_See nested fields_"
         
-        # Check anyOf for references
+        # Union types with model refs → may have default_factory
         if 'anyOf' in field_schema:
             for sub_schema in field_schema['anyOf']:
                 if '$ref' in sub_schema:
-                    ref_path = sub_schema['$ref'].split('/')[-1]
-                    anchor = ref_path.lower()
-                    return f"[No default](#{anchor})"
+                    # If it's Optional[ModelType], can be null
+                    if any(s.get('type') == 'null' for s in field_schema['anyOf']):
+                        return "`null`"
+                    # Otherwise, has default_factory
+                    return "_See nested fields_"
         
-        return "[No default](#optional-vs-required-fields)"
+        # Simple types without default → defaults to None/null
+        return "`null`"
     
     default = field_schema['default']
-    
-    # For union types that include a model reference (like str | SecretStr),
-    # if default is null, don't show it - treat as no default
-    if default is None and 'anyOf' in field_schema:
-        for sub_schema in field_schema['anyOf']:
-            if '$ref' in sub_schema:
-                return ""  # Empty default for union types with model refs
     
     if default is None:
         return "`null`"
@@ -243,10 +232,10 @@ def main():
     lines.append("")
     lines.append("| Default Value | Meaning |")
     lines.append("|---------------|---------|")
-    lines.append("| `null` | Optional field, defaults to null/none |")
-    lines.append("| `\"value\"`, `123`, `true`, etc. | Optional field with default value |")
-    lines.append("| `[]`, `{{}}` | Optional field, empty by default |")
-    lines.append("| [No default](#optional-vs-required-fields) | Optional, no default set |")
+    lines.append("| `null` | Optional field, defaults to null/none (not set) |")
+    lines.append("| `\"value\"`, `123`, `true`, etc. | Optional field with this default value |")
+    lines.append("| `[]`, `{{}}` | Optional field, empty collection by default |")
+    lines.append("| _See nested fields_ | Uses defaults from nested model (cannot be set to `null`) |")
     lines.append("| `—` | **Required** field - must be provided |")
     lines.append("")
     

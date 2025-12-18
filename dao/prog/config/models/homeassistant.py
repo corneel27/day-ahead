@@ -20,13 +20,10 @@ class HomeAssistantConfig(BaseModel):
         alias="ip port",
         description="Home Assistant port (default: 8123)"
     )
-    ssl: Optional[bool] = Field(
-        default=None,
-        description="Whether to use SSL/HTTPS"
-    )
     hasstoken: Optional[str | SecretStr] = Field(
         default=None,
-        description="Home Assistant long-lived access token (can use !secret)"
+        description="Home Assistant long-lived access token (can use !secret)",
+        alias="token"
     )
     protocol_api: Optional[Literal['http', 'https']] = Field(
         default=None,

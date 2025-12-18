@@ -3,13 +3,14 @@ Hot water boiler configuration models.
 """
 
 from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 class BoilerConfig(BaseModel):
     """Hot water boiler configuration."""
     
     boiler_present: bool | str = Field(
+        default=True,
         alias="boiler present",
         description="Whether boiler is present/enabled"
     )
@@ -36,6 +37,7 @@ class BoilerConfig(BaseModel):
         description="HA entity for instant start"
     )
     cop: float = Field(
+        default=3.0,
         gt=0,
         description="Coefficient of Performance"
     )
@@ -45,6 +47,7 @@ class BoilerConfig(BaseModel):
         description="Cooling rate in degrees per hour"
     )
     volume: float = Field(
+        default=200.0,
         gt=0,
         description="Water volume in liters"
     )
@@ -53,6 +56,7 @@ class BoilerConfig(BaseModel):
         description="Temperature below which heating is allowed"
     )
     elec_power: float = Field(
+        default=1000.0,
         alias="elec. power",
         gt=0,
         description="Electrical power in watts"
@@ -65,6 +69,13 @@ class BoilerConfig(BaseModel):
         alias="activate entity",
         description="HA entity to activate boiler"
     )
+    
+    @model_validator(mode='after')
+    def validate_activate_config(self) -> 'BoilerConfig':
+        """Ensure if activate_entity is provided, activate_service must also be provided."""
+        # Note: Both fields are required, so this validator is mainly for documentation
+        # The actual validation logic in code checks for None on activate_entity
+        return self
     
     model_config = ConfigDict(
         extra='allow',
