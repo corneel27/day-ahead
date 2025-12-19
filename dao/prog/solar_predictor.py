@@ -580,7 +580,7 @@ class SolarPredictor(DaBase):
         joblib.dump(self.model, model_save_path)
         self.is_trained = True
 
-        logging.info(f"\nModel Training Complete!")
+        logging.info(f"Model training van {self.solar_name} complete")
         logging.info(f"Model saved to: {model_save_path}")
         logging.info(f"Training MAE: {train_mae:.4f} kWh")
         logging.info(f"Testing MAE: {test_mae:.4f} kWh")
@@ -759,12 +759,12 @@ class SolarPredictor(DaBase):
             logging.info(f"Er zijn geen aanvullende knmi-data beschikbaar")
             return
 
-        knmi_eerste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize()
-        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize()
+        knmi_df["utc"] = knmi_df.index
+        knmi_eerste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize(self.time_zone)
+        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize(self.time_zone)
         logging.info(f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
                      f"{knmi_laatste}")
         knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
-        knmi_df["utc"] = knmi_df.index
         knmi_df["utc"] = pd.to_datetime(
             knmi_df["utc"], utc=True
         )  # , format='%Y-%m-%d %H:%M:%S')
