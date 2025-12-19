@@ -14,9 +14,6 @@ from .versions.v0 import ConfigurationV0
 
 logger = logging.getLogger(__name__)
 
-# Current configuration version - update this when creating new versions
-CURRENT_VERSION = 0
-
 # Version models registry: maps version number -> Pydantic model class
 VERSION_MODELS: dict[int, Type[BaseModel]] = {
     0: ConfigurationV0,
@@ -24,6 +21,8 @@ VERSION_MODELS: dict[int, Type[BaseModel]] = {
     # 1: ConfigurationV1,
 }
 
+# Derive current version from registry
+CURRENT_VERSION = max(VERSION_MODELS.keys())
 
 class ConfigurationLoader:
     """
