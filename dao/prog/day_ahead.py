@@ -135,7 +135,7 @@ class DaCalc(DaBase):
             self.notify(
                 "Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend"
             )
-            return
+            return None
         if u_data <= 8 or u_prices <= 8:
             logging.warning(
                 f"Er ontbreken voor een aantal uur meteogegevens "
@@ -409,7 +409,8 @@ class DaCalc(DaBase):
                 hour = int(key)
                 power = value / 1000
                 for u in range(U):
-                    if uur[u] == hour:
+                    int_uur = uur[u] if self.interval == "1hour" else int(uur[u][0:2])
+                    if int_uur == hour:
                         red_power[u] = power
             reduced_power.append(red_power)
             if reduced:
@@ -797,7 +798,7 @@ class DaCalc(DaBase):
                     f"'min soc end opt' ({min_soc_end_opt}); "
                     f"het programma kan nu geen optimale oplossing berekenem"
                 )
-                return
+                return None
 
             model += soc[b][U] >= max(opt_low_level[b] / 2, min_soc_end_opt)
             model += soc[b][U] <= max_soc_end_opt
@@ -1204,7 +1205,8 @@ class DaCalc(DaBase):
                     for j in range(U)[max(0, u - est_needed_intv[u]+1): u + 1]:
                         # print(f"len(est_needed_elec_st[j]): {len(est_needed_elec_st[j])}")
                         if est_needed_intv[u]>0 and u - j < len(est_needed_elec_st[j]):
-                            print(f"j: {j}, est_needed_elec_st[j][u - j]: {est_needed_elec_st[j][u - j]}")
+                            print(f"j: {j}, est_needed_elec_st[j][u - j]: "
+                                  f"{est_needed_elec_st[j][u - j]}")
                     """
                     model += boiler_on[u] == xsum(
                         boiler_st[j]
@@ -1548,7 +1550,7 @@ class DaCalc(DaBase):
                 model.add_var(var_type=CONTINUOUS, lb=0)  # , ub=max_power[e])
                 for _ in range(U)
             ]
-            for e in range(EV)
+            for _ in range(EV)
         ]  # consumption vermogen
         ev_accu_in = [
             [
@@ -2154,7 +2156,8 @@ class DaCalc(DaBase):
                 if self.hp_adjustment == "on/off":
                     blocks_num = math.ceil(hp_hours / min_run_length)
                 else:
-                    blocks_num = math.ceil(max(hours_avail / 4, hp_hours / min_run_length))
+                    blocks_num = math.ceil(min(hours_avail / (3 + min_run_length), hp_hours / min_run_length))
+                    # blocks_num = math.ceil(max(hours_avail / 4, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
             if blocks_num == 0:
                 logging.info(f'Omdat de wp meer dan 75% van de uren draait wordt de wp zonder '
@@ -2202,7 +2205,7 @@ class DaCalc(DaBase):
                 # eerste blok
                 block_len.append(int(first_block_len * 3600/self.interval_s))
                 # tussenliggende blokken
-                for j in range(blocks_num)[1:-1]:
+                for _ in range(blocks_num)[1:-1]:
                     block_len.append(int(min_run_length * 3600/self.interval_s))
                 # laatste
                 block_len.append(int(last_block_len * 3600/self.interval_s))
@@ -2785,7 +2788,7 @@ class DaCalc(DaBase):
             logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
-                return
+                return None
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
             logging.info(f"Strategie: {strategie}")
@@ -2793,7 +2796,7 @@ class DaCalc(DaBase):
             model.optimize()
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
-                return
+                return None
             min_delivery = max(0.0, delivery.x)
             logging.info("Eerste berekening")
             logging.info(f"Kosten (euro): {cost.x:<6.2f}")
@@ -2808,14 +2811,14 @@ class DaCalc(DaBase):
                     logging.warning(
                         f"Geen oplossing in na herberekening voor: {self.strategy}"
                     )
-                    return
+                    return None
             logging.info("Herberekening")
             logging.info(f"Kosten (euro): {cost.x:<6.2f}")
             logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
         else:
             logging.error("Kies een strategie in options")
             # strategie = 'niet gekozen'
-            return
+            return None
 
         # Suppress FutureWarning messages
         import warnings
@@ -2826,7 +2829,7 @@ class DaCalc(DaBase):
             logging.error(
                 f"Er is helaas geen oplossing gevonden, kijk naar je instellingen."
             )
-            return
+            return None
 
         # er is een oplossing
         # afdrukken van de resultaten
@@ -3218,12 +3221,13 @@ class DaCalc(DaBase):
 
         logging.info(
             "\nCalculation profit after optimize in €\n"
-            f"Cost before optimize            {old_cost_da: 7.2f}\n"
+            f"Cost before optimize           {old_cost_da: 7.2f}\n"
             f"Cost consumption   {cost_consumption: 7.2f}\n"
             f"Cycle cost         {total_cycle_cost: 7.2f}\n"
             f"Penalty cost       {total_penalty_cost: 7.2f}\n"
             f"Battery storage    {battery_storage: 7.2f}\n"
             f"Boiler storage     {boiler_storage: 7.2f}\n"
+            f"Profit production  {profit_production: 7.2f}\n"
             f"Total              {total_cost: 7.2f}\n"
             f"Cost after optimize            {cost.x: 7.2f}\n"
             f"Profit:                        {old_cost_da - cost.x: 7.2f}"
@@ -3252,7 +3256,8 @@ class DaCalc(DaBase):
         logging.debug("nr  uur st on  cons   temp")
         for u in range(U):
             logging.debug(
-                f"{u:.0f} {uur[u]}  {boiler_st[u].x:.0f}  {boiler_on[u].x:.0f}  {c_b[u].x:.2f}  {boiler_temp[u].x:.2f}"
+                f"{u:.0f} {uur[u]}  {boiler_st[u].x:.0f}  {boiler_on[u].x:.0f}  {c_b[u].x:.2f}  "
+                f"{boiler_temp[u].x:.2f}"
             )
         logging.debug("\n")
 
@@ -3331,6 +3336,23 @@ class DaCalc(DaBase):
                                     end="   ",
                                 )
                             print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f}")
+
+                start_ev_laden = stop_ev_laden = None
+                for u in range(U):
+                    if c_ev[e][u].x > 0:
+                        if start_ev_laden is None:
+                            start_ev_laden = tijd[u]
+                    else:
+                        if start_ev_laden is not None and c_ev[e][u-1].x > 0:
+                            stop_ev_laden = tijd[u]
+                if start_ev_laden is not None:
+                    if stop_ev_laden is None:
+                        stop_ev_laden = tijd[U-1]+ dt.timedelta(seconds=self.interval_s)
+                    logging.info(f"{self.ev_options[e]['name']} wordt geladen tussen "
+                                 f"{start_ev_laden} en {stop_ev_laden}")
+                else:
+                    logging.info(f"Laden van {self.ev_options[e]['name']} is niet ingepland")
+
                 entity_charge_switch = self.ev_options[e]["charge switch"]
                 entity_charging_ampere = self.ev_options[e][
                     "entity set charging ampere"
@@ -3487,7 +3509,7 @@ class DaCalc(DaBase):
                 battery_state_on_value = self.config.get(
                     ["entity set operating mode on"], self.battery_options[b], "Aan"
                 )
-                battery_state_off_value = entity_pv_switch = self.config.get(
+                battery_state_off_value = self.config.get(
                     ["entity set operating mode off"], self.battery_options[b], "Uit"
                 )
                 bat_name = self.battery_options[b]["name"]
@@ -4380,6 +4402,7 @@ class DaCalc(DaBase):
             plt.show()
         plt.close("all")
         self.notify("DAO calc afgerond", self.notification_berekening)
+        return None
 
     def calc_optimum_debug(self):
         self.debug = True

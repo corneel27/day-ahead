@@ -5,6 +5,7 @@ dao/data/log/dashboard*
 dao/data/secrets.json
 dao/data/options.json
 dao/data/baseload/*.json
+dao/data/prediction/models/*.pkl
 dao/data/*.db
 dao/data/tst_options
 dao/prog/tst_py

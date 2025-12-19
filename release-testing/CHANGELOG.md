@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2025.12.0.rc8
+- Reduce number of blocks with low "min_run_length"
+- Fix error implementation "reduced hours" for "15min" interval (reported by @CrazyHenk44)
+- New line in logging with planned start- and end-time of charging ev (feature request @diamanten)
 # 2025.12.0.rc7
 - Fixed too much run-hours heatpump for on/off adjustment (reported by @sailor_dg)
 
