@@ -3221,12 +3221,13 @@ class DaCalc(DaBase):
 
         logging.info(
             "\nCalculation profit after optimize in €\n"
-            f"Cost before optimize            {old_cost_da: 7.2f}\n"
+            f"Cost before optimize           {old_cost_da: 7.2f}\n"
             f"Cost consumption   {cost_consumption: 7.2f}\n"
             f"Cycle cost         {total_cycle_cost: 7.2f}\n"
             f"Penalty cost       {total_penalty_cost: 7.2f}\n"
             f"Battery storage    {battery_storage: 7.2f}\n"
             f"Boiler storage     {boiler_storage: 7.2f}\n"
+            f"Profit production  {profit_production: 7.2f}\n"
             f"Total              {total_cost: 7.2f}\n"
             f"Cost after optimize            {cost.x: 7.2f}\n"
             f"Profit:                        {old_cost_da - cost.x: 7.2f}"
@@ -3335,6 +3336,23 @@ class DaCalc(DaBase):
                                     end="   ",
                                 )
                             print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f}")
+
+                start_ev_laden = stop_ev_laden = None
+                for u in range(U):
+                    if c_ev[e][u].x > 0:
+                        if start_ev_laden is None:
+                            start_ev_laden = tijd[u]
+                    else:
+                        if start_ev_laden is not None and c_ev[e][u-1].x > 0:
+                            stop_ev_laden = tijd[u]
+                if start_ev_laden is not None:
+                    if stop_ev_laden is None:
+                        stop_ev_laden = tijd[U-1]+ dt.timedelta(seconds=self.interval_s)
+                    logging.info(f"{self.ev_options[e]['name']} wordt geladen tussen "
+                                 f"{start_ev_laden} en {stop_ev_laden}")
+                else:
+                    logging.info(f"Laden van {self.ev_options[e]['name']} is niet ingepland")
+
                 entity_charge_switch = self.ev_options[e]["charge switch"]
                 entity_charging_ampere = self.ev_options[e][
                     "entity set charging ampere"
