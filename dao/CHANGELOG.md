@@ -1,5 +1,22 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.0
+- Fixed several issues heatpump and boiler
+- Implemented min_run_length heatpump voor power-adjustment
+- Configured energytaxes for 2026 in options_start.json and options_example.json
+- Fixed potential index-error boiler-module 
+- Prevent scheduling extra consumption boiler after heating boiler
+- Made boiler setting "heating allowed below" flex setting
+- When boiler_act_temp is below lower limit (=setpoint - hysterese) direct heating will be activated.
+- Log warning when degreeday - factor is less than 0.1 kWh/K.day (reported bij @DaBit)
+- Fixed error when heat-demand is less than lowest day-production (reported bij @DaBit)
+- Fixed error when heat-demand is 0 kWh-th
+- Log warning when calculated power from Home Assistant is more than 50 kW-e (reported by @lievering)
+- Reduce number of blocks with low "min_run_length"
+- Fix error implementation "reduced hours" for "15min" interval (reported by @CrazyHenk44)
+- New line in logging with planned start- and end-time of charging ev (feature request @diamanten)
+- Fixed issue with heatpump when no heat is required (reported by @sailor_dg)
+
 # 2025.11.1
 - upgrade python numpy-module
 - upgrade debian-base<br>
