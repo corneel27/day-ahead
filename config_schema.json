@@ -2045,6 +2045,7 @@
         },
         "last invoice": {
           "description": "Date of last invoice (YYYY-MM-DD)",
+          "format": "date",
           "title": "Last Invoice",
           "type": "string",
           "x-help": "Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.",
