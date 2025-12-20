@@ -16,7 +16,7 @@ class GridConfig(BaseModel):
         json_schema_extra={
             "x-help": "Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.",
             "x-unit": "kW",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Must be > 0, typical 7-25 kW for residential"
         }
     )
@@ -53,8 +53,6 @@ Optimizer ensures combined consumption never exceeds this limit:
 - System will prioritize loads within this constraint
 - Consider upgrade if frequently hitting limits
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Grid-Configuration',
-            'x-category': 'infrastructure',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Grid-Configuration'
         }
     )

@@ -5,7 +5,7 @@ Pricing configuration models.
 from typing import Optional, Literal
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from .base import SecretStr
-from datetime import datetime
+from datetime import date
 
 
 class PricingConfig(BaseModel):
@@ -17,7 +17,7 @@ class PricingConfig(BaseModel):
         description="Source for day-ahead prices",
         json_schema_extra={
             "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
-            "x-category": "basic"
+            "x-ui-section": "General"
         }
     )
     entsoe_api_key: Optional[str | SecretStr] = Field(
@@ -26,7 +26,7 @@ class PricingConfig(BaseModel):
         description="ENTSO-E API key (can use !secret)",
         json_schema_extra={
             "x-help": "API key for ENTSO-E Transparency Platform. Required if source_day_ahead='entsoe'. Get free key at transparency.entsoe.eu. Use !secret for security.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Required for entsoe source, use !secret",
             "x-docs-url": "https://transparency.entsoe.eu/"
         }
@@ -39,7 +39,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Energy taxes on consumption (excluding VAT) indexed by effective date. Format: {'2024-01-01': 0.05}. Use date when tariff changes.",
             "x-unit": "€/kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
@@ -49,7 +49,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Energy taxes on feed-in/production (excluding VAT) indexed by effective date. Often zero or negative. Format: {'2024-01-01': 0.0}.",
             "x-unit": "€/kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
@@ -59,7 +59,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Supplier markup/fees for consumption (excluding VAT) indexed by effective date. Fixed part of electricity cost. Format: {'2024-01-01': 0.02}.",
             "x-unit": "€/kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
@@ -69,7 +69,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
             "x-unit": "€/kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
@@ -79,7 +79,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 21}. Applied to market price + taxes + supplier costs.",
             "x-unit": "%",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         }
     )
@@ -89,18 +89,18 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.",
             "x-unit": "%",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         }
     )
     
     # Invoice settings
-    last_invoice: str = Field(
+    last_invoice: date = Field(
         alias="last invoice",
         description="Date of last invoice (YYYY-MM-DD)",
         json_schema_extra={
             "x-help": "Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Must be YYYY-MM-DD format"
         }
     )
@@ -109,7 +109,7 @@ class PricingConfig(BaseModel):
         description="Whether tax refund applies",
         json_schema_extra={
             "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -121,16 +121,6 @@ class PricingConfig(BaseModel):
         for date, percentage in v.items():
             if not (0 <= percentage <= 100):
                 raise ValueError(f"VAT percentage must be between 0 and 100, got {percentage} for date {date}")
-        return v
-    
-    @field_validator('last_invoice')
-    @classmethod
-    def validate_date_format(cls, v: str) -> str:
-        """Validate date is in YYYY-MM-DD format."""
-        try:
-            datetime.strptime(v, "%Y-%m-%d")
-        except ValueError:
-            raise ValueError(f"Date must be in YYYY-MM-DD format, got: {v}")
         return v
     
     model_config = ConfigDict(
@@ -181,8 +171,6 @@ System uses tariff active on optimization date.
 - Keep last_invoice updated for accurate cost tracking
 - Check your electricity bill for exact tariff components
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration',
-            'x-category': 'infrastructure',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration'
         }
     )

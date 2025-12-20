@@ -15,7 +15,7 @@ class EVChargeStage(BaseModel):
         json_schema_extra={
             "x-help": "Charging current in amperes for this stage. Typical values: 6A (1.4kW), 10A (2.3kW), 16A (3.7kW), 32A (7.4kW) for single-phase.",
             "x-unit": "A",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Must be >= 0, typically 6-32A"
         }
     )
@@ -25,7 +25,7 @@ class EVChargeStage(BaseModel):
         json_schema_extra={
             "x-help": "Charging efficiency ratio at this amperage level. Accounts for charger losses, cable losses, and battery acceptance. Typically 0.85-0.95.",
             "x-unit": "ratio",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "0.0-1.0, typically 0.85-0.95"
         }
     )
@@ -34,7 +34,7 @@ class EVChargeStage(BaseModel):
         extra='allow',
         json_schema_extra={
             "x-help": "Define charging curve by specifying amperage and efficiency pairs. Multiple stages allow accurate modeling of variable efficiency.",
-            "x-category": "basic"
+            "x-ui-section": "General"
         }
     )
 
@@ -48,7 +48,7 @@ class EVChargeScheduler(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant entity to set the target battery level for scheduled charging. System will optimize when to charge to reach this level.",
             "x-unit": "%",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "input_number,number"
         }
@@ -60,7 +60,7 @@ class EVChargeScheduler(BaseModel):
         json_schema_extra={
             "x-help": "Acceptable margin below target level. Example: target=80%, margin=5% means 75-80% is acceptable. Provides flexibility in optimization.",
             "x-unit": "%",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-validation-hint": "Must be >= 0, typically 5-10%"
         }
     )
@@ -69,7 +69,7 @@ class EVChargeScheduler(BaseModel):
         description="HA entity for ready datetime (when charging should complete)",
         json_schema_extra={
             "x-help": "Home Assistant datetime entity specifying when vehicle must be charged. System will optimize charging schedule to minimize cost while meeting deadline.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "input_datetime,datetime"
         }
@@ -80,7 +80,7 @@ class EVChargeScheduler(BaseModel):
         populate_by_name=True,
         json_schema_extra={
             "x-help": "Advanced scheduler that optimizes charging to reach target level by specific deadline, minimizing cost by charging during cheapest hours.",
-            "x-category": "advanced"
+            "x-ui-section": "General"
         }
     )
 
@@ -92,7 +92,7 @@ class EVConfig(BaseModel):
         description="EV name/identifier",
         json_schema_extra={
             "x-help": "Unique name for this electric vehicle. Use descriptive names like 'Tesla Model 3' or 'Polestar 2' for multiple vehicles.",
-            "x-category": "basic"
+            "x-ui-section": "General"
         }
     )
     capacity: float = Field(
@@ -101,7 +101,7 @@ class EVConfig(BaseModel):
         json_schema_extra={
             "x-help": "Usable battery capacity in kilowatt-hours. Check vehicle specifications (often less than advertised total capacity).",
             "x-unit": "kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "Must be > 0, typically 40-100 kWh"
         }
     )
@@ -110,7 +110,7 @@ class EVConfig(BaseModel):
         description="HA device tracker for vehicle position",
         json_schema_extra={
             "x-help": "Home Assistant device tracker entity to detect if vehicle is home. Charging is only scheduled when vehicle is at home location.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "device_tracker"
         }
@@ -121,7 +121,7 @@ class EVConfig(BaseModel):
         description="Whether vehicle charges on three phases",
         json_schema_extra={
             "x-help": "True for three-phase charging (11kW/22kW), False for single-phase (3.7kW/7.4kW). Can also be HA entity ID for dynamic resolution.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -131,7 +131,7 @@ class EVConfig(BaseModel):
         description="Charging amperage/efficiency curve",
         json_schema_extra={
             "x-help": "Charging curve defined by amperage stages and their efficiencies. At least one stage required. Multiple stages enable optimization of charging speed.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-validation-hint": "At least 1 stage required"
         }
     )
@@ -141,7 +141,7 @@ class EVConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant sensor showing current battery State of Charge in percent. Required for charge optimization.",
             "x-unit": "%",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor"
         }
@@ -151,7 +151,7 @@ class EVConfig(BaseModel):
         description="HA binary sensor for plugged in status",
         json_schema_extra={
             "x-help": "Home Assistant binary sensor indicating if vehicle is plugged into charger. Charging is only possible when plugged in.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "binary_sensor"
         }
@@ -162,10 +162,9 @@ class EVConfig(BaseModel):
         description="HA entity for instant start charging",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to trigger immediate charging. Use with entity_instant_level for instant charging mode. Alternative to charge_scheduler.",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "switch,input_boolean",
-            "x-related-fields": ["entity_instant_level"]
+            "x-entity-filter": "switch,input_boolean"
         }
     )
     entity_instant_level: Optional[str] = Field(
@@ -175,10 +174,9 @@ class EVConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity for instant charge target level. When instant_start triggers, system charges to this level immediately. Alternative to charge_scheduler.",
             "x-unit": "%",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_number,number,sensor",
-            "x-related-fields": ["entity_instant_start"]
+            "x-entity-filter": "input_number,number,sensor"
         }
     )
     charge_scheduler: Optional[EVChargeScheduler] = Field(
@@ -187,8 +185,7 @@ class EVConfig(BaseModel):
         description="Charge scheduling configuration",
         json_schema_extra={
             "x-help": "Optional: Advanced scheduler for time-based charging. Optimizes when to charge to meet deadline at lowest cost. Alternative to instant charging.",
-            "x-category": "advanced",
-            "x-related-fields": ["entity_instant_start", "entity_instant_level"]
+            "x-ui-section": "General"
         }
     )
     charge_switch: str = Field(
@@ -196,7 +193,7 @@ class EVConfig(BaseModel):
         description="HA switch entity to control charging",
         json_schema_extra={
             "x-help": "Home Assistant switch entity to start/stop charging. System will control this to execute optimized charging schedule.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "switch"
         }
@@ -207,7 +204,7 @@ class EVConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant entity to control charging current in amperes. System will adjust this to optimize charging speed and cost.",
             "x-unit": "A",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "number,input_number"
         }
@@ -217,7 +214,7 @@ class EVConfig(BaseModel):
         description="HA entity for stop charging datetime",
         json_schema_extra={
             "x-help": "Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "input_datetime,datetime"
         }
@@ -274,8 +271,6 @@ Use `charge_scheduler` for time-based optimization:
 - Three-phase charging (11/22kW) much faster than single-phase (3.7/7.4kW)
 - Consider time-of-use tariffs when setting charge deadlines
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/EV-Configuration',
-            'x-category': 'devices',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/EV-Configuration'
         }
     )

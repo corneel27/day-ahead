@@ -15,7 +15,7 @@ class DashboardConfig(BaseModel):
         json_schema_extra={
             "x-help": "Port number for Day Ahead Optimizer web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).",
             "x-unit": "port",
-            "x-category": "basic",
+            "x-ui-section": "Connection Settings",
             "x-validation-hint": "1024-65535, default 5000"
         }
     )
@@ -59,8 +59,6 @@ Access dashboard at:
 - Use reverse proxy for external access
 - Dashboard updates after each optimization
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Dashboard-Configuration',
-            'x-category': 'integration',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Dashboard'
         }
     )
