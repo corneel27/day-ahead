@@ -17,7 +17,7 @@ class BatteryStage(BaseModel):
         json_schema_extra={
             "x-help": "Power level for this charge/discharge stage. Stages define how battery efficiency changes at different power levels.",
             "x-unit": "W",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Must be 0 or greater, stages should be sorted by power"
         }
     )
@@ -27,7 +27,7 @@ class BatteryStage(BaseModel):
         json_schema_extra={
             "x-help": "Energy conversion efficiency at this power level. Value between 0 and 1, where 1 = 100% efficient.",
             "x-unit": "ratio (0-1)",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Must be between 0 and 1"
         }
     )
@@ -36,7 +36,7 @@ class BatteryStage(BaseModel):
         extra='allow',
         json_schema_extra={
             "x-help": "Defines power and efficiency at a specific operating point. Multiple stages create a power/efficiency curve.",
-            "x-category": "advanced"
+            "x-ui-section": "Power Configuration"
         }
     )
 
@@ -48,7 +48,7 @@ class BatteryConfig(BaseModel):
         description="Battery name/identifier",
         json_schema_extra={
             "x-help": "Unique name to identify this battery in logs and reports. Use a descriptive name like 'Home Battery' or 'Garage Battery'.",
-            "x-category": "basic"
+            "x-ui-section": "Power Configuration"
         }
     )
     entity_actual_level: str = Field(
@@ -57,7 +57,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant entity that reports the current State of Charge (SOC) percentage. Usually a sensor from your battery inverter.",
             "x-unit": "%",
-            "x-category": "basic",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor"
         }
@@ -68,7 +68,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Total usable energy storage capacity of your battery. Check your battery specifications. For multiple batteries, sum their capacities.",
             "x-unit": "kWh",
-            "x-category": "basic",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Must be greater than 0"
         }
     )
@@ -84,7 +84,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Minimum State of Charge in percent. Battery will never discharge below this level. Supports FlexValue pattern: use integer or HA entity ID.",
             "x-unit": "%",
-            "x-category": "basic",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "0-100%, protects battery from deep discharge",
             "x-ui-widget": "entity-picker-or-number"
         }
@@ -97,7 +97,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Target SOC level for cost optimization. System will prefer this level over minimum. Supports FlexValue pattern.",
             "x-unit": "%",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Optional, should be >= lower_limit",
             "x-ui-widget": "entity-picker-or-number"
         }
@@ -108,7 +108,7 @@ class BatteryConfig(BaseModel):
         description="HA entity for minimum SOC at end of optimization period",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity specifying minimum battery level required at end of optimization window. Useful for ensuring battery charge overnight.",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor,input_number"
         }
@@ -119,7 +119,7 @@ class BatteryConfig(BaseModel):
         description="HA entity for maximum SOC at end of optimization period",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity specifying maximum battery level at end of optimization window. Rarely needed but available for advanced scenarios.",
-            "x-category": "expert",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor,input_number"
         }
@@ -130,7 +130,7 @@ class BatteryConfig(BaseModel):
         description="Charge power/efficiency curve",
         json_schema_extra={
             "x-help": "Power stages for charging with corresponding efficiencies. Defines charge curve from AC grid to battery. At least one stage required.",
-            "x-category": "basic",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "At least 1 stage required, ordered by power"
         }
     )
@@ -140,7 +140,7 @@ class BatteryConfig(BaseModel):
         description="Discharge power/efficiency curve",
         json_schema_extra={
             "x-help": "Power stages for discharging with corresponding efficiencies. Defines discharge curve from battery to AC grid. At least one stage required.",
-            "x-category": "basic",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "At least 1 stage required, ordered by power"
         }
     )
@@ -152,7 +152,7 @@ class BatteryConfig(BaseModel):
         description="Hour -> max power mapping for reduced power hours",
         json_schema_extra={
             "x-help": "Optional: Restrict battery power during specific hours. Example: {'22': 1000, '23': 1000} limits to 1000W from 22:00-23:59. Useful for noise reduction at night.",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Keys are hour strings (0-23), values are watts"
         }
     )
@@ -163,7 +163,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Minimum power threshold in watts. Operations below this power level will be rounded to zero. Prevents inefficient micro-charging/discharging.",
             "x-unit": "W",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Must be >= 0, typically 50-200W"
         }
     )
@@ -176,7 +176,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Efficiency of DC-coupled solar to battery conversion. Typically 0.95-0.98 for modern DC-coupled systems. Only relevant if DC-coupled solar is configured.",
             "x-unit": "ratio",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
@@ -187,7 +187,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Maximum power for DC-coupled solar charging in watts. Determines how much DC solar power can flow directly to battery.",
             "x-unit": "W",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Must be > 0"
         }
     )
@@ -198,7 +198,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Efficiency of battery to DC bus conversion. Typically 0.95-0.98. Only relevant for DC-coupled loads or reverse DC flow scenarios.",
             "x-unit": "ratio",
-            "x-category": "expert",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
@@ -209,7 +209,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
             "x-unit": "W",
-            "x-category": "expert",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Must be > 0"
         }
     )
@@ -222,7 +222,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Degradation cost per full charge-discharge cycle in euros. Used to factor battery wear into optimization. Calculate as: (battery_cost / warranted_cycles). Example: €5000 battery with 6000 cycles = €0.83/cycle.",
             "x-unit": "€",
-            "x-category": "basic",
+            "x-ui-section": "Power Configuration",
             "x-validation-hint": "Must be >= 0, typically €0.50-€1.50 per cycle"
         }
     )
@@ -234,7 +234,7 @@ class BatteryConfig(BaseModel):
         description="HA entity to set power feed-in to grid",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to control grid feed-in power. Used by scheduler to execute optimized battery operations.",
-            "x-category": "basic",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "number,input_number"
         }
@@ -245,10 +245,9 @@ class BatteryConfig(BaseModel):
         description="HA entity to set battery operating mode",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to control battery operating mode (e.g., auto/manual/off). System will switch modes as needed for optimization.",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "select,input_select,switch",
-            "x-related-fields": ["entity_set_operating_mode_on", "entity_set_operating_mode_off"]
+            "x-entity-filter": "select,input_select,switch"
         }
     )
     entity_set_operating_mode_on: Optional[str] = Field(
@@ -257,8 +256,7 @@ class BatteryConfig(BaseModel):
         description="Value for operating mode ON",
         json_schema_extra={
             "x-help": "Value to send to operating mode entity for 'ON' state. Example: 'auto', 'enabled', 'on'. Must match actual entity values.",
-            "x-category": "advanced",
-            "x-related-fields": ["entity_set_operating_mode"]
+            "x-ui-section": "Power Configuration"
         }
     )
     entity_set_operating_mode_off: Optional[str] = Field(
@@ -267,8 +265,7 @@ class BatteryConfig(BaseModel):
         description="Value for operating mode OFF",
         json_schema_extra={
             "x-help": "Value to send to operating mode entity for 'OFF' state. Example: 'manual', 'disabled', 'off'. Must match actual entity values.",
-            "x-category": "advanced",
-            "x-related-fields": ["entity_set_operating_mode"]
+            "x-ui-section": "Power Configuration"
         }
     )
     entity_stop_inverter: Optional[str] = Field(
@@ -277,7 +274,7 @@ class BatteryConfig(BaseModel):
         description="HA entity to stop inverter",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.",
-            "x-category": "expert",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "switch,button"
         }
@@ -288,7 +285,7 @@ class BatteryConfig(BaseModel):
         description="HA entity for grid balancing switch",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.",
-            "x-category": "expert",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "switch"
         }
@@ -302,7 +299,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor showing current power flow from battery in watts. Used for monitoring and validation.",
             "x-unit": "W",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor"
         }
@@ -314,7 +311,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor showing current DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.",
             "x-unit": "W",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor"
         }
@@ -326,7 +323,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor showing current AC grid power flow in watts. Used for monitoring overall system balance.",
             "x-unit": "W",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor"
         }
@@ -338,7 +335,7 @@ class BatteryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor for calculated State of Charge. System can compute SOC from power flows if BMS sensor is unavailable.",
             "x-unit": "%",
-            "x-category": "advanced",
+            "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor"
         }
@@ -350,8 +347,7 @@ class BatteryConfig(BaseModel):
         description="DC-coupled solar panels attached to this battery",
         json_schema_extra={
             "x-help": "Optional: Configure DC-coupled solar panels directly connected to this battery inverter. DC coupling is more efficient than AC coupling. Leave empty for AC-coupled or grid-only batteries.",
-            "x-category": "advanced",
-            "x-related-fields": ["dc_to_bat_efficiency", "dc_to_bat_max_power"]
+            "x-ui-section": "Power Configuration"
         }
     )
     
@@ -377,27 +373,9 @@ Configure your home battery storage system for optimal energy management and cos
 - Configure charge/discharge stages for accurate optimization
 - Monitor battery degradation with cycle_cost setting
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Battery-Configuration',
-            'x-category': 'devices',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Battery-Configuration'
         }
     )
-    
-    @field_validator('upper_limit', 'lower_limit', mode='after')
-    @classmethod
-    def validate_limits(cls, v, info):
-        """Ensure limits are reasonable."""
-        field_name = info.field_name
-        
-        # If it's a FlexValue, we can't validate the actual value yet
-        if isinstance(v, FlexValue):
-            return v
-        
-        # For literal values, ensure they're in range
-        if not (0 <= v <= 100):
-            raise ValueError(f"{field_name} must be between 0 and 100")
-        
-        return v
     
     @field_validator('charge_stages', 'discharge_stages', mode='after')
     @classmethod
