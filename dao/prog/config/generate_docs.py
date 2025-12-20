@@ -16,38 +16,92 @@ import json
 import sys
 from pathlib import Path
 from typing import Any
+from collections import defaultdict
 
 from dao.prog.config.versions.v0 import ConfigurationV0
 
 
-def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = "") -> tuple[str, list[str]]:
+# Icon mapping for x-icon values
+ICON_MAP = {
+    'battery-charging': '🔋',
+    'solar-panel': '☀️',
+    'car-electric': '🚗',
+    'heat-pump': '🌡️',
+    'water-boiler': '💧',
+    'washing-machine': '🧺',
+    'database': '💾',
+    'currency-eur': '💰',
+    'transmission-tower': '⚡',
+    'chart-line': '📈',
+    'bell': '🔔',
+    'database-clock': '⏰',
+    'view-dashboard': '📊',
+    'chart-bar': '📉',
+    'clock-outline': '🕐',
+    'lightning-bolt': '⚡',
+    'home-assistant': '🏠',
+}
+
+
+def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = "", defs: dict[str, Any] = None) -> tuple[str, list[str]]:
     """Generate markdown documentation from a JSON schema.
     
     Args:
         schema: The JSON schema dictionary
         title_prefix: Prefix for markdown headers (e.g., "##" or "###")
+        defs: The $defs dictionary for resolving references
         
     Returns:
         Tuple of (markdown_string, validation_errors)
     """
     validation_errors = []
     lines = []
+    defs = defs or {}
     
     # Get model title and description
     model_title = schema.get('title', 'Unknown')
     model_desc = schema.get('description', '')
     
+    # Get extension fields
+    x_icon = schema.get('x-icon', '')
+    x_help = schema.get('x-help', '')
+    x_docs_url = schema.get('x-docs-url', '')
+    x_category = schema.get('x-category', '')
+    
     if title_prefix:
-        lines.append(f"{title_prefix} {model_title}\n")
+        # Add icon if available
+        icon_emoji = ICON_MAP.get(x_icon, '')
+        title_line = f"{title_prefix}{icon_emoji} {model_title}" if icon_emoji else f"{title_prefix}{model_title}"
+        lines.append(title_line)
+        lines.append("")
+        
+        # Add short description
         if model_desc:
-            lines.append(f"{model_desc}\n")
+            lines.append(f"_{model_desc}_")
+            lines.append("")
+        
+        # Add category badge
+        if x_category:
+            lines.append(f"**Category:** `{x_category}`")
+            lines.append("")
+        
+        # Add detailed help if available
+        if x_help:
+            lines.append(x_help)
+            lines.append("")
+        
+        # Add external docs link if available
+        if x_docs_url:
+            lines.append(f"📚 [**View detailed documentation →**]({x_docs_url})")
+            lines.append("")
     
     # Get properties
     properties = schema.get('properties', {})
     required = set(schema.get('required', []))
     
     if not properties:
-        lines.append("*No configuration fields.*\n")
+        lines.append("*No configuration fields.*")
+        lines.append("")
         return "\n".join(lines), validation_errors
     
     # Create table header
@@ -56,7 +110,7 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
     
     for field_name, field_schema in properties.items():
         # Extract field info from JSON schema
-        field_type = get_type_from_schema(field_schema, schema.get('$defs', {}))
+        field_type = get_type_from_schema(field_schema, defs)
         is_required = field_name in required
         description = field_schema.get('description', '')
         
@@ -70,6 +124,18 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
                 validation_errors.append(f"ERROR: {model_title}.{field_name} - Missing description")
                 description = "MISSING DESCRIPTION"
         
+        # Enhance description with extension fields
+        x_unit = field_schema.get('x-unit', '')
+        x_validation_hint = field_schema.get('x-validation-hint', '')
+        
+        # Add unit to description
+        if x_unit:
+            description = f"{description} (Unit: `{x_unit}`)"
+        
+        # Add validation hint
+        if x_validation_hint:
+            description = f"{description} _{x_validation_hint}_"
+        
         # Append enum options to description if present
         if 'enum' in field_schema:
             enum_values = field_schema['enum']
@@ -80,10 +146,26 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
         required_mark = "Yes" if is_required else "No"
         
         # Get default value for all field types
-        default = get_default_from_schema(field_schema, is_required, schema.get('$defs', {}))
+        default = get_default_from_schema(field_schema, is_required, defs)
         lines.append(f"| `{field_name}` | {field_type} | {required_mark} | {default} | {description} |")
     
     lines.append("")
+    
+    # Add field details section if any fields have x-help
+    fields_with_help = [(name, props) for name, props in properties.items() if props.get('x-help')]
+    if fields_with_help:
+        lines.append("<details>")
+        lines.append("<summary><b>📖 Field Details</b> (click to expand)</summary>")
+        lines.append("")
+        for field_name, field_props in fields_with_help:
+            x_help = field_props.get('x-help', '')
+            lines.append(f"**`{field_name}`**")
+            lines.append("")
+            lines.append(x_help)
+            lines.append("")
+        lines.append("</details>")
+        lines.append("")
+    
     return "\n".join(lines), validation_errors
 
 
@@ -210,6 +292,21 @@ def main():
     # Track all validation errors
     all_errors = []
     
+    # Get all definitions
+    defs = schema.get('$defs', {})
+    
+    # Organize models by x-ui-group
+    # Structure: {x-ui-group: [(x_order, model_name, model_schema)]}
+    grouped_models = defaultdict(list)
+    for model_name, model_schema in defs.items():
+        x_ui_group = model_schema.get('x-ui-group', 'Other')
+        x_order = model_schema.get('x-order', 999)
+        grouped_models[x_ui_group].append((x_order, model_name, model_schema))
+    
+    # Sort models within each group by x-order
+    for group_name in grouped_models:
+        grouped_models[group_name].sort()  # Sort by x-order
+    
     # Generate markdown
     lines = []
     
@@ -217,7 +314,8 @@ def main():
     lines.append("# Day Ahead Optimizer - Configuration Settings")
     lines.append("")
     lines.append("**Auto-generated from Pydantic models using JSON Schema**")
-    lines.append(f"**Configuration Version**: {schema.get('properties', {}).get('config_version', {}).get('default', '0')}")
+    lines.append("")
+    lines.append(f"📋 **Configuration Version:** `{schema.get('properties', {}).get('config_version', {}).get('default', '0')}`")
     lines.append("")
     lines.append("> ⚠️ **Do not edit this file manually!**")
     lines.append("> This documentation is auto-generated from Pydantic models.")
@@ -227,29 +325,84 @@ def main():
     lines.append("> ```")
     lines.append("")
     
-    # Optional vs Required explanation
-    lines.append("## Optional vs Required Fields")
-    lines.append("")
-    lines.append("| Default Value | Meaning |")
-    lines.append("|---------------|---------|")
-    lines.append("| `null` | Optional field, defaults to null/none (not set) |")
-    lines.append("| `\"value\"`, `123`, `true`, etc. | Optional field with this default value |")
-    lines.append("| `[]`, `{{}}` | Optional field, empty collection by default |")
-    lines.append("| _See nested fields_ | Uses defaults from nested model (cannot be set to `null`) |")
-    lines.append("| `—` | **Required** field - must be provided |")
+    # Table of Contents
+    lines.append("## 📑 Table of Contents")
     lines.append("")
     
-    # Generate documentation from top-level schema
-    doc, errors = generate_markdown_from_schema(schema, title_prefix="## ")
-    lines.append(doc)
-    all_errors.extend(errors)
+    # Add quick reference section
+    lines.append("- [Quick Reference](#quick-reference)")
+    lines.append("")
     
-    # Generate documentation for nested models from $defs
-    defs = schema.get('$defs', {})
-    for model_name, model_schema in defs.items():
-        doc, errors = generate_markdown_from_schema(model_schema, title_prefix="### ")
-        lines.append(doc)
-        all_errors.extend(errors)
+    # Sort groups by minimum x-order of models in the group
+    sorted_groups = sorted(
+        grouped_models.items(),
+        key=lambda item: min(order for order, _, _ in item[1])
+    )
+    
+    # Add groups to TOC
+    for group_name, models in sorted_groups:
+        group_anchor = group_name.lower().replace(' ', '-').replace('&', 'and')
+        lines.append(f"- [{group_name}](#{group_anchor})")
+        
+        for order, model_name, model_schema in models:
+            model_anchor = model_name.lower().replace(' ', '-')
+            icon = ICON_MAP.get(model_schema.get('x-icon', ''), '')
+            icon_str = f"{icon} " if icon else ""
+            lines.append(f"  - [{icon_str}{model_name}](#{model_anchor})")
+    
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    
+    # Quick Reference section
+    lines.append("## Quick Reference")
+    lines.append("")
+    lines.append("### Legend")
+    lines.append("")
+    lines.append("| Symbol | Meaning |")
+    lines.append("|--------|---------|")
+    lines.append("| 📖 | Field has detailed help text (expand for details) |")
+    lines.append("| 📚 | External documentation available |")
+    lines.append("")
+    
+    lines.append("### Required vs Optional")
+    lines.append("")
+    lines.append("| Value | Meaning |")
+    lines.append("|-------|---------|")
+    lines.append("| Yes | Required field - must be provided in configuration |")
+    lines.append("| No | Optional field |")
+    lines.append("")
+    
+    lines.append("### Default Values")
+    lines.append("")
+    lines.append("| Value | Meaning |")
+    lines.append("|-------|---------|")
+    lines.append("| `—` | No default (required field) |")
+    lines.append("| `null` | Optional, defaults to null/none |")
+    lines.append("| `value` | Optional with this default value |")
+    lines.append("")
+    
+    lines.append("---")
+    lines.append("")
+    
+    # Generate documentation grouped by x-ui-group
+    for group_name, models in sorted_groups:
+        lines.append(f"## {group_name}")
+        lines.append("")
+        
+        group_anchor = group_name.lower().replace(' ', '-').replace('&', 'and')
+        lines.append(f'<a id="{group_anchor}"></a>')
+        lines.append("")
+        
+        # Generate docs for each model in this group
+        for order, model_name, model_schema in models:
+            doc, errors = generate_markdown_from_schema(model_schema, title_prefix="### ", defs=defs)
+            lines.append(doc)
+            all_errors.extend(errors)
+            lines.append("")
+        
+        lines.append("---")
+        lines.append("")
     
     # Write to file
     output_path = repo_root / "SETTINGS.md"
@@ -260,20 +413,21 @@ def main():
     print(f"Generated {len(lines)} lines of documentation")
     print(f"Documented {len(schema.get('properties', {}))} top-level fields")
     print(f"Documented {len(defs)} nested models")
+    print(f"Organized into {len(grouped_models)} groups")
     
     # Report validation errors
     if all_errors:
-        print(f"\nERROR: Found {len(all_errors)} validation errors:\n")
+        print(f"\n⚠️ WARNING: Found {len(all_errors)} validation errors:\n")
         for error in all_errors:
             print(f"  {error}")
-        print("\nAdd Field(description='...') to fix these errors")
+        print("\n💡 Add Field(description='...') to fix these errors")
         sys.exit(1)
     
-    print("\nDocumentation and schema generation complete!")
+    print("\n✅ Documentation and schema generation complete!")
     print()
     print("Generated files:")
-    print(f"  - {schema_path.name} - JSON Schema for IDE autocomplete and validation")
-    print(f"  - {output_path.name} - User-friendly markdown documentation")
+    print(f"  - 📄 {schema_path.name} - JSON Schema for IDE autocomplete and validation")
+    print(f"  - 📄 {output_path.name} - User-friendly markdown documentation")
     sys.exit(0)
 
 

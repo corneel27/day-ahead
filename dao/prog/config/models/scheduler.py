@@ -82,9 +82,7 @@ Define when automatic tasks run using time patterns.
 - Clean data during low activity (night)
 - Avoid overlapping long-running tasks
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Scheduler-Configuration',
-            'x-category': 'automation',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Scheduler'
         }
     )
     

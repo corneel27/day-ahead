@@ -16,7 +16,7 @@ class HomeAssistantConfig(BaseModel):
         description="Home Assistant IP address (auto-detected if not set)",
         json_schema_extra={
             "x-help": "Home Assistant IP address or hostname. Usually auto-detected when running as HA add-on. Set manually only if auto-detection fails. Examples: '192.168.1.100', 'homeassistant.local'.",
-            "x-category": "advanced"
+            "x-ui-section": "General"
         }
     )
     ip_port: Optional[int] = Field(
@@ -26,7 +26,7 @@ class HomeAssistantConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant web interface port. Default is 8123. Change only if using custom port. Usually auto-detected when running as add-on.",
             "x-unit": "port",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-validation-hint": "Default 8123, change if custom"
         }
     )
@@ -36,7 +36,7 @@ class HomeAssistantConfig(BaseModel):
         alias="token",
         json_schema_extra={
             "x-help": "Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-validation-hint": "Auto-provided as add-on, use !secret if manual"
         }
     )
@@ -46,7 +46,7 @@ class HomeAssistantConfig(BaseModel):
         description="API protocol",
         json_schema_extra={
             "x-help": "Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. Usually auto-detected. Set manually only if needed.",
-            "x-category": "expert"
+            "x-ui-section": "General"
         }
     )
     
@@ -108,8 +108,6 @@ Only needed if:
 - Test connection from dashboard
 - Check HA logs if issues persist
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Home-Assistant-Connection',
-            'x-category': 'integration',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Home-Assistant-Integration'
         }
     )

@@ -10,14 +10,15 @@ This guide explains how to maintain and extend the Pydantic-based configuration 
 
 ## Table of Contents
 1. [Overview](#overview)
-2. [Making a Key Required/Optional](#making-a-key-requiredoptional)
-3. [Modifying Default Values](#modifying-default-values)
-4. [Extending an Existing Model](#extending-an-existing-model)
-5. [Creating a New Model](#creating-a-new-model)
-6. [Using Direct Config Access](#using-direct-config-access)
-7. [Migration Workflows](#migration-workflows)
-8. [Testing Requirements](#testing-requirements)
-9. [Common Pitfalls](#common-pitfalls)
+2. [JSON Schema Extensions](#json-schema-extensions)
+3. [Making a Key Required/Optional](#making-a-key-requiredoptional)
+4. [Modifying Default Values](#modifying-default-values)
+5. [Extending an Existing Model](#extending-an-existing-model)
+6. [Creating a New Model](#creating-a-new-model)
+7. [Using Direct Config Access](#using-direct-config-access)
+8. [Migration Workflows](#migration-workflows)
+9. [Testing Requirements](#testing-requirements)
+10. [Common Pitfalls](#common-pitfalls)
 
 ---
 
@@ -42,7 +43,297 @@ The configuration system consists of:
 - ✅ **All fields MUST have descriptions** - build fails otherwise
 - ⚠️ Never edit generated docs manually - they regenerate from code!
 
-**📚 See [DOCUMENTATION_VALIDATION.md](DOCUMENTATION_VALIDATION.md) for validation details**
+---
+
+## JSON Schema Extensions
+
+The configuration system uses **JSON Schema extensions** (custom `x-*` fields) to provide rich metadata for documentation generation, UI hints, and better developer experience. All extensions follow the JSON Schema specification for custom properties.
+
+### Why Use Extensions?
+
+- **📄 Better Documentation**: Generate comprehensive SETTINGS.md with examples, tips, and detailed help
+- **🎨 UI Hints**: Guide UI developers on widget types and entity filters
+- **🔍 Validation Help**: Provide clear validation messages and hints
+- **📊 Organization**: Categorize and order fields logically
+- **🔗 External Links**: Link to detailed wiki documentation
+
+### Available Extensions
+
+#### Field-Level Extensions
+
+These go in `json_schema_extra` dict within `Field()`:
+
+| Extension | Type | Purpose | Example |
+|-----------|------|---------|---------|
+| `x-help` | `str` | Detailed help text with markdown, examples, and tips | See example below |
+| `x-unit` | `str` | Physical unit of measurement | `"kWh"`, `"W"`, `"%"`, `"degrees"` |
+| `x-ui-section` | `str` | UI form section/grouping hint | `"Battery Specifications"`, `"SOC Limits"`, `"Power Configuration"` |
+| `x-validation-hint` | `str` | Explain validation constraints | `"Must be > 0, typically 40-100 kWh"` |
+| `x-ui-widget` | `str` | Suggested UI widget type | `"entity-picker"`, `"slider"`, `"time-picker"` |
+| `x-entity-filter` | `str` | Filter for HA entity picker | `"sensor"`, `"switch"`, `"binary_sensor"` |
+| `x-docs-url` | `str` | External documentation URL | `"https://github.com/.../wiki/Battery"` |
+
+**Note:** `x-ui-section` is a **hint** for UI builders on how to group related fields. Documentation generators may ignore it.
+
+#### Model-Level Extensions
+
+These go in `ConfigDict` `json_schema_extra`:
+
+| Extension | Type | Purpose | Example |
+|-----------|------|---------|---------|
+| `x-ui-group` | `str` | TOC section grouping | `"Energy Storage"`, `"Devices"`, `"Infrastructure"` |
+| `x-icon` | `str` | Icon identifier (mapped to emoji) | `"battery-charging"`, `"solar-panel"`, `"ev-plug"` |
+| `x-order` | `int` | Sort order within group | `1`, `2`, `3`, ... |
+| `x-help` | `str` | Detailed model help (markdown) | Multi-line markdown with examples |
+| `x-docs-url` | `str` | External documentation URL | `"https://github.com/.../wiki/Battery-Configuration"` |
+
+### Complete Example: Field with Extensions
+
+```python
+from pydantic import BaseModel, Field
+
+class BatteryConfig(BaseModel):
+    capacity: float = Field(
+        gt=0,
+        description="Battery capacity in kWh",  # ✅ REQUIRED - shown in tables
+        json_schema_extra={
+            # Detailed help with examples and tips
+            "x-help": """Total usable battery capacity in kilowatt-hours.
+
+**Finding Your Capacity:**
+- Check battery specifications (often less than advertised)
+- Look for "usable capacity" or "effective capacity"
+- Example: Tesla Powerwall 2 = 13.5 kWh usable
+
+**Tips:**
+- Use usable capacity, not total capacity
+- Account for manufacturer SOC limits
+- Multiple batteries: sum their capacities
+
+**Common Values:**
+- Home batteries: 5-15 kWh
+- Large systems: 20-50 kWh
+- Tesla Powerwall 2: 13.5 kWh
+- LG RESU 10H: 9.8 kWh""",
+            
+            # Physical unit
+            "x-unit": "kWh",
+            
+            # UI section grouping hint
+            "x-ui-section": "Battery Specifications",
+            
+            # Validation explanation
+            "x-validation-hint": "Must be > 0, typically 5-50 kWh for home systems",
+            
+            # UI widget suggestion
+            "x-ui-widget": "number-input",
+            
+            # External documentation
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Battery-Capacity"
+        }
+    )
+```
+
+### Complete Example: Model with Extensions
+
+```python
+from pydantic import BaseModel, Field, ConfigDict
+
+class BatteryConfig(BaseModel):
+    """Battery configuration for optimization."""
+    
+    name: str = Field(description="Battery identifier")
+    capacity: float = Field(gt=0, description="Battery capacity in kWh")
+    # ... more fields ...
+    
+    model_config = ConfigDict(
+        extra='allow',
+        populate_by_name=True,
+        json_schema_extra={
+            # TOC section grouping
+            'x-ui-group': 'Energy Storage',
+            
+            # Icon identifier (mapped to 🔋 emoji)
+            'x-icon': 'battery-charging',
+            
+            # Sort order (1 = first in group)
+            'x-order': 1,
+            
+            # Detailed model-level help
+            'x-help': '''# Battery Configuration
+
+Configure your home battery storage system for optimal energy management.
+
+## Key Settings
+- **Capacity**: Total storage capacity in kWh
+- **SOC Limits**: Upper and lower charge limits
+- **Power Stages**: Charging/discharging efficiency curves
+- **Control Entities**: Home Assistant entities
+
+## Optimization Strategy
+The optimizer decides when to charge/discharge based on:
+- Electricity prices (charge when cheap, discharge when expensive)
+- Solar production forecasts
+- Battery efficiency and degradation costs
+- SOC limits and constraints
+
+## Tips
+- Set upper_limit to 80-90% for longer battery life
+- Configure charge/discharge stages for accurate optimization
+- Monitor battery degradation with cycle_cost setting
+- Use optimal_lower_level for cost optimization''',
+            
+            # External documentation
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Battery-Configuration'
+        }
+    )
+```
+
+### UI Sections
+
+Use `x-ui-section` to hint at logical grouping of related fields within a form:
+
+**Purpose:** Helps UI builders organize fields into logical sections/groups. Documentation generators may ignore this.
+
+**Common Sections:**
+- **"Battery Specifications"**: Core capacity and identification
+- **"SOC Limits"**: State of charge boundaries
+- **"Power Configuration"**: Power levels and stages
+- **"Efficiency Parameters"**: Conversion efficiencies
+- **"Cost & Degradation"**: Economic parameters
+- **"Control Entities"**: Home Assistant entity controls
+- **"Panel Orientation"**: Solar panel positioning
+- **"Temperature Parameters"**: Heating/cooling settings
+- **"Connection Settings"**: Database/API connections
+- **"Authentication"**: Credentials and tokens
+
+**Note:** This is a **hint**, not a requirement. UI builders can group fields differently based on their UX needs.
+
+### UI Groups
+
+Use `x-ui-group` to organize models into logical documentation sections:
+
+| Group | Purpose | Examples |
+|-------|---------|----------|
+| `"Energy Storage"` | Battery systems | BatteryConfig |
+| `"Energy Production"` | Solar panels | SolarConfig |
+| `"Devices"` | Controllable devices | EVConfig, MachineConfig |
+| `"Heating & Climate"` | Heating systems | HeatingConfig, BoilerConfig |
+| `"Infrastructure"` | Core system config | DatabaseConfig, GridConfig |
+| `"Integration"` | External integrations | TibberConfig, HomeAssistantConfig |
+| `"Pricing & Markets"` | Price data sources | PricingConfig |
+| `"Automation"` | Scheduling & tasks | SchedulerConfig |
+| `"Visualization"` | Graphics & reporting | GraphicsConfig, ReportConfig |
+
+### Icon Identifiers
+
+Use `x-icon` with these identifiers (mapped to emojis in documentation):
+
+| Identifier | Emoji | Used For |
+|------------|-------|----------|
+| `"battery-charging"` | 🔋 | Battery systems |
+| `"solar-panel"` | ☀️ | Solar panels |
+| `"ev-plug"` | 🚗 | Electric vehicles |
+| `"thermometer"` | 🌡️ | Heating systems |
+| `"water-boiler"` | 💧 | Boiler/DHW |
+| `"washing-machine"` | 🧺 | Appliances/machines |
+| `"database"` | 💾 | Databases |
+| `"chart-line"` | 📈 | Graphics/charts |
+| `"report"` | 📉 | Reports |
+| `"bell"` | 🔔 | Notifications |
+| `"clock"` | 🕐 | Scheduler/time |
+| `"home"` | 🏠 | Home Assistant |
+| `"lightning"` | ⚡ | Grid/power/Tibber |
+| `"history"` | ⏰ | History tracking |
+| `"dashboard"` | 📊 | Dashboard UI |
+| `"currency"` | 💰 | Pricing |
+
+### Writing Good Help Text
+
+The `x-help` field supports full Markdown and should include:
+
+1. **Clear Explanation**: What the field does
+2. **Examples**: Concrete values or configurations
+3. **Tips**: Best practices and gotchas
+4. **Common Values**: Typical ranges
+5. **Troubleshooting**: Common issues
+
+**Example Template:**
+```python
+"x-help": """Brief one-line summary.
+
+**What It Does:**
+Clear explanation of the field's purpose and behavior.
+
+**Examples:**
+- Example 1: Description
+- Example 2: Description
+
+**Common Values:**
+- Typical case 1: 10-20
+- Typical case 2: 50-100
+
+**Tips:**
+- Tip 1 for best results
+- Tip 2 to avoid issues
+
+**Related:**
+See also: field1, field2"""
+```
+
+### Validation Hints
+
+Use `x-validation-hint` to explain constraints in human terms:
+
+```python
+# Instead of just: ge=0, le=100
+"x-validation-hint": "0-100%, protects battery from deep discharge"
+
+# Instead of just: gt=0
+"x-validation-hint": "Must be > 0, typically 5-15 kWh for home systems"
+
+# For enums:
+"x-validation-hint": "Options: 'mysql', 'postgresql', 'sqlite'"
+
+# For patterns:
+"x-validation-hint": "Format: HHMM (e.g., '0430', 'xx00' for every hour)"
+```
+
+### Best Practices
+
+1. **Always add extensions to new fields**:
+   - Minimum: `x-category`, `x-unit` (if applicable)
+   - Recommended: Add `x-help` for complex fields
+   - Optional: `x-ui-widget`, `x-entity-filter` for UI hints
+
+2. **Be consistent**:
+   - Use same category names across similar fields
+   - Use standard unit abbreviations (kWh, W, %, °C, etc.)
+   - Follow existing patterns for help text structure
+
+3. **Keep help text focused**:
+   - Don't duplicate what's in the description
+   - Add value with examples and tips
+   - Link to external docs for deep dives
+
+4. **Test generated documentation**:
+   ```bash
+   python3 -m dao.prog.config.generate_docs
+   # Check SETTINGS.md for formatting
+   ```
+
+5. **Update ICON_MAP** if adding new icons:
+   - Edit `dao/prog/config/generate_docs.py`
+   - Add mapping: `"your-icon-id": "🔥"`
+
+### Migration Considerations
+
+Extensions are **metadata only** and do **not** affect:
+- Configuration validation
+- Runtime behavior  
+- Backward compatibility
+
+You can add/modify extensions without creating migrations!
 
 ---
 

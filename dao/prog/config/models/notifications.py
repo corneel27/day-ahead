@@ -15,7 +15,7 @@ class NotificationsConfig(BaseModel):
         description="HA entity for notifications",
         json_schema_extra={
             "x-help": "Optional: Home Assistant notification service entity. Used to send notifications about optimization events. Example: 'notify.mobile_app' or 'notify.persistent_notification'.",
-            "x-category": "basic",
+            "x-ui-section": "Notification Settings",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "notify"
         }
@@ -25,7 +25,7 @@ class NotificationsConfig(BaseModel):
         description="Send notification on startup",
         json_schema_extra={
             "x-help": "Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status. Can be boolean or HA entity ID.",
-            "x-category": "advanced",
+            "x-ui-section": "Notification Settings",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -34,7 +34,7 @@ class NotificationsConfig(BaseModel):
         description="Send notification on calculation completion",
         json_schema_extra={
             "x-help": "Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.). Can be boolean or HA entity ID.",
-            "x-category": "basic",
+            "x-ui-section": "Notification Settings",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -44,7 +44,7 @@ class NotificationsConfig(BaseModel):
         description="HA entity to track last activity timestamp",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to update with last activity timestamp. Useful for monitoring and automations. Example: 'input_datetime.dao_last_run'.",
-            "x-category": "advanced",
+            "x-ui-section": "Notification Settings",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "input_datetime,datetime,sensor"
         }
@@ -90,8 +90,6 @@ Configure Home Assistant notifications for optimization events.
 - Disable during testing to avoid notification spam
 - Consider automations based on last_activity_entity
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Notifications-Configuration',
-            'x-category': 'integration',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Notifications'
         }
     )

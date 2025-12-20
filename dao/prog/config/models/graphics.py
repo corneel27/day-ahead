@@ -13,7 +13,7 @@ class GraphicsConfig(BaseModel):
         description="Matplotlib style (e.g., 'dark_background', 'default')",
         json_schema_extra={
             "x-help": "Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'.",
-            "x-category": "advanced"
+            "x-ui-section": "General"
         }
     )
     show: bool | str = Field(
@@ -21,7 +21,7 @@ class GraphicsConfig(BaseModel):
         description="Whether to show graphics",
         json_schema_extra={
             "x-help": "Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -31,7 +31,7 @@ class GraphicsConfig(BaseModel):
         description="Show battery balance in graphs",
         json_schema_extra={
             "x-help": "Display battery state of charge and power flows in graphs. Shows charge/discharge schedule over time.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -41,7 +41,7 @@ class GraphicsConfig(BaseModel):
         description="Show consumption prices in graphs",
         json_schema_extra={
             "x-help": "Display consumption prices (market + taxes + VAT) in graphs. Helps visualize expensive vs cheap periods.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -51,7 +51,7 @@ class GraphicsConfig(BaseModel):
         description="Show production prices in graphs",
         json_schema_extra={
             "x-help": "Display feed-in/production prices in graphs. Useful if you have solar feed-in to compare consumption vs production value.",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -61,7 +61,7 @@ class GraphicsConfig(BaseModel):
         description="Show spot prices in graphs",
         json_schema_extra={
             "x-help": "Display raw day-ahead spot market prices (before taxes/markup) in graphs. Shows pure market price variations.",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -71,7 +71,7 @@ class GraphicsConfig(BaseModel):
         description="Show average consumption in graphs",
         json_schema_extra={
             "x-help": "Display average/baseline consumption in graphs. Helps understand optimization impact relative to normal usage.",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -108,8 +108,6 @@ Graphs can show:
 - Toggle individual elements to simplify graphs
 - Graphs regenerated each optimization run
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Graphics-Configuration',
-            'x-category': 'visualization',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Graphics'
         }
     )

@@ -15,7 +15,7 @@ class SolarString(BaseModel):
         json_schema_extra={
             "x-help": "Angle of the solar panels relative to horizontal. 0° = flat/horizontal, 30-35° = optimal for Netherlands, 90° = vertical mounting.",
             "x-unit": "degrees",
-            "x-category": "basic",
+            "x-ui-section": "Panel Orientation",
             "x-validation-hint": "Must be between 0 and 90 degrees"
         }
     )
@@ -25,7 +25,7 @@ class SolarString(BaseModel):
         json_schema_extra={
             "x-help": "Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° or 270° = east, 180° = north. South-facing panels produce most energy.",
             "x-unit": "degrees",
-            "x-category": "basic",
+            "x-ui-section": "Panel Orientation",
             "x-validation-hint": "Must be between -180 and 180 degrees"
         }
     )
@@ -35,7 +35,7 @@ class SolarString(BaseModel):
         json_schema_extra={
             "x-help": "Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.",
             "x-unit": "kWp",
-            "x-category": "basic",
+            "x-ui-section": "Panel Orientation",
             "x-validation-hint": "Must be greater than 0"
         }
     )
@@ -46,7 +46,7 @@ class SolarString(BaseModel):
         json_schema_extra={
             "x-help": "Efficiency factor for this string. Typically 0.8-0.9. Accounts for inverter losses, cable losses, shading, and dirt on panels.",
             "x-unit": "ratio",
-            "x-category": "advanced",
+            "x-ui-section": "Panel Orientation",
             "x-validation-hint": "Must be greater than 0, typically 0.8-0.9"
         }
     )
@@ -56,7 +56,7 @@ class SolarString(BaseModel):
         populate_by_name=True,
         json_schema_extra={
             "x-help": "Configuration for a single string of solar panels with the same tilt and orientation. Use multiple strings for panels facing different directions.",
-            "x-category": "advanced"
+            "x-ui-section": "Panel Orientation"
         }
     )
 
@@ -68,7 +68,7 @@ class SolarConfig(BaseModel):
         description="Solar installation name/identifier",
         json_schema_extra={
             "x-help": "Unique name for this solar installation. Use descriptive names like 'Roof South' or 'Garage East' for multiple installations.",
-            "x-category": "basic"
+            "x-ui-section": "Panel Orientation"
         }
     )
     entity_pv_switch: Optional[str] = Field(
@@ -77,7 +77,7 @@ class SolarConfig(BaseModel):
         description="HA entity to enable/disable this solar installation",
         json_schema_extra={
             "x-help": "Optional Home Assistant entity to enable or disable this solar installation in the optimization. Useful for maintenance or testing.",
-            "x-category": "advanced",
+            "x-ui-section": "Panel Orientation",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "switch"
         }
@@ -91,7 +91,7 @@ class SolarConfig(BaseModel):
         json_schema_extra={
             "x-help": "Panel tilt angle for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
             "x-unit": "degrees",
-            "x-category": "basic",
+            "x-ui-section": "Panel Orientation",
             "x-validation-hint": "0-90 degrees, leave empty when using strings"
         }
     )
@@ -102,7 +102,7 @@ class SolarConfig(BaseModel):
         json_schema_extra={
             "x-help": "Panel orientation for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
             "x-unit": "degrees",
-            "x-category": "basic",
+            "x-ui-section": "Panel Orientation",
             "x-validation-hint": "-180 to 180 degrees, leave empty when using strings"
         }
     )
@@ -113,7 +113,7 @@ class SolarConfig(BaseModel):
         json_schema_extra={
             "x-help": "Total capacity for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
             "x-unit": "kWp",
-            "x-category": "basic",
+            "x-ui-section": "Panel Orientation",
             "x-validation-hint": "Greater than 0, leave empty when using strings"
         }
     )
@@ -125,7 +125,7 @@ class SolarConfig(BaseModel):
         json_schema_extra={
             "x-help": "Yield factor for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
             "x-unit": "ratio",
-            "x-category": "basic",
+            "x-ui-section": "Panel Orientation",
             "x-validation-hint": "Greater than 0, typically 0.8-0.9, leave empty when using strings"
         }
     )
@@ -136,7 +136,7 @@ class SolarConfig(BaseModel):
         description="Multiple panel strings with different configurations",
         json_schema_extra={
             "x-help": "Advanced: Configure multiple strings for panels with different orientations or tilts. Use this OR flat config (tilt/orientation/capacity/yield), not both.",
-            "x-category": "advanced"
+            "x-ui-section": "Panel Orientation"
         }
     )
     
@@ -171,9 +171,7 @@ For panels facing different directions, use the 'strings' configuration:
 - Include all inverter and cable losses in yield factor
 - Account for shading in yield factor
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Solar-Configuration',
-            'x-category': 'devices',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Solar-Configuration'
         }
     )
     

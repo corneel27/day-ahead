@@ -16,7 +16,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities measuring grid consumption (import). Used for actual vs optimized comparison and reporting.",
             "x-unit": "kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -28,7 +28,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities measuring grid production (export/feed-in). Used for production reporting and solar surplus calculation.",
             "x-unit": "kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -40,7 +40,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities for AC-coupled solar production. After inverter, directly to AC side. Separate from DC-coupled solar.",
             "x-unit": "kWh",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -52,7 +52,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities for DC-coupled solar production. Before inverter, directly to battery DC bus. Separate from AC-coupled solar.",
             "x-unit": "kWh",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -64,7 +64,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities measuring EV charging consumption. Used for EV-specific energy reporting and cost allocation.",
             "x-unit": "kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -76,7 +76,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities measuring heat pump consumption. Used for heating-specific energy reporting and COP calculation.",
             "x-unit": "kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -88,7 +88,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities measuring hot water boiler consumption. Used for boiler-specific energy reporting.",
             "x-unit": "kWh",
-            "x-category": "basic",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -100,7 +100,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities measuring battery charging (consumption). Used for battery efficiency and cycling cost calculation.",
             "x-unit": "kWh",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -112,7 +112,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities measuring battery discharging (production). Used for battery efficiency and round-trip calculation.",
             "x-unit": "kWh",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -124,7 +124,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of Home Assistant sensor entities measuring appliance/machine consumption (washing machine, dishwasher, etc.). Used for machine-specific reporting.",
             "x-unit": "kWh",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
             "x-entity-filter": "sensor"
         }
@@ -136,7 +136,7 @@ class ReportConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.",
             "x-unit": "gCO2/kWh",
-            "x-category": "advanced",
+            "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
             "x-entity-filter": "sensor"
         }
@@ -146,7 +146,7 @@ class ReportConfig(BaseModel):
         description="Additional sensors configuration",
         json_schema_extra={
             "x-help": "Optional: Additional custom sensor configurations. Advanced use for extending reporting capabilities beyond standard entities.",
-            "x-category": "expert"
+            "x-ui-section": "General"
         }
     )
     
@@ -205,8 +205,6 @@ All entity fields accept lists of HA sensors:
 - CO2 tracking optional but insightful
 - Update when adding new monitoring devices
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Reporting-Configuration',
-            'x-category': 'reporting',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Reports'
         }
     )

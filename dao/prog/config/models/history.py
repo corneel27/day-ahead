@@ -16,7 +16,7 @@ class HistoryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Number of days to retain optimization history in database. Older data is automatically cleaned up. Longer retention enables better trend analysis but increases database size. Minimum 1 day.",
             "x-unit": "days",
-            "x-category": "basic",
+            "x-ui-section": "Retention Settings",
             "x-validation-hint": "Must be >= 1, typical 7-30 days"
         }
     )
@@ -61,8 +61,6 @@ Control how long optimization history is retained in the database.
 - Old data cleaned up automatically
 - Increase for detailed cost analysis
 ''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/History-Configuration',
-            'x-category': 'infrastructure',
-            'x-collapsible': True
+            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/History-Configuration'
         }
     )
