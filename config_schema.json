@@ -7,18 +7,29 @@
         "name": {
           "description": "Battery name/identifier",
           "title": "Name",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Unique name to identify this battery in logs and reports. Use a descriptive name like 'Home Battery' or 'Garage Battery'."
         },
         "entity actual level": {
           "description": "HA entity for current battery SOC",
           "title": "Entity Actual Level",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "sensor",
+          "x-help": "Home Assistant entity that reports the current State of Charge (SOC) percentage. Usually a sensor from your battery inverter.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "%"
         },
         "capacity": {
           "description": "Battery capacity in kWh",
           "exclusiveMinimum": 0.0,
           "title": "Capacity",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Total usable energy storage capacity of your battery. Check your battery specifications. For multiple batteries, sum their capacities.",
+          "x-unit": "kWh",
+          "x-validation-hint": "Must be greater than 0"
         },
         "upper limit": {
           "anyOf": [
@@ -46,7 +57,12 @@
           "description": "Minimum SOC % (can be HA entity)",
           "ge": 0,
           "le": 100,
-          "title": "Lower Limit"
+          "title": "Lower Limit",
+          "x-category": "basic",
+          "x-help": "Minimum State of Charge in percent. Battery will never discharge below this level. Supports FlexValue pattern: use integer or HA entity ID.",
+          "x-ui-widget": "entity-picker-or-number",
+          "x-unit": "%",
+          "x-validation-hint": "0-100%, protects battery from deep discharge"
         },
         "optimal lower level": {
           "anyOf": [
@@ -68,7 +84,12 @@
           ],
           "default": null,
           "description": "Optimal lower SOC % for cost optimization",
-          "title": "Optimal Lower Level"
+          "title": "Optimal Lower Level",
+          "x-category": "advanced",
+          "x-help": "Target SOC level for cost optimization. System will prefer this level over minimum. Supports FlexValue pattern.",
+          "x-ui-widget": "entity-picker-or-number",
+          "x-unit": "%",
+          "x-validation-hint": "Optional, should be >= lower_limit"
         },
         "entity min soc end opt": {
           "anyOf": [
@@ -81,7 +102,11 @@
           ],
           "default": null,
           "description": "HA entity for minimum SOC at end of optimization period",
-          "title": "Entity Min Soc End Opt"
+          "title": "Entity Min Soc End Opt",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor,input_number",
+          "x-help": "Optional: Home Assistant entity specifying minimum battery level required at end of optimization window. Useful for ensuring battery charge overnight.",
+          "x-ui-widget": "entity-picker"
         },
         "entity max soc end opt": {
           "anyOf": [
@@ -94,7 +119,11 @@
           ],
           "default": null,
           "description": "HA entity for maximum SOC at end of optimization period",
-          "title": "Entity Max Soc End Opt"
+          "title": "Entity Max Soc End Opt",
+          "x-category": "expert",
+          "x-entity-filter": "sensor,input_number",
+          "x-help": "Optional: Home Assistant entity specifying maximum battery level at end of optimization window. Rarely needed but available for advanced scenarios.",
+          "x-ui-widget": "entity-picker"
         },
         "charge stages": {
           "description": "Charge power/efficiency curve",
@@ -103,7 +132,10 @@
           },
           "minItems": 1,
           "title": "Charge Stages",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-help": "Power stages for charging with corresponding efficiencies. Defines charge curve from AC grid to battery. At least one stage required.",
+          "x-validation-hint": "At least 1 stage required, ordered by power"
         },
         "discharge stages": {
           "description": "Discharge power/efficiency curve",
@@ -112,7 +144,10 @@
           },
           "minItems": 1,
           "title": "Discharge Stages",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-help": "Power stages for discharging with corresponding efficiencies. Defines discharge curve from battery to AC grid. At least one stage required.",
+          "x-validation-hint": "At least 1 stage required, ordered by power"
         },
         "reduced hours": {
           "anyOf": [
@@ -128,45 +163,72 @@
           ],
           "default": null,
           "description": "Hour -> max power mapping for reduced power hours",
-          "title": "Reduced Hours"
+          "title": "Reduced Hours",
+          "x-category": "advanced",
+          "x-help": "Optional: Restrict battery power during specific hours. Example: {'22': 1000, '23': 1000} limits to 1000W from 22:00-23:59. Useful for noise reduction at night.",
+          "x-validation-hint": "Keys are hour strings (0-23), values are watts"
         },
         "minimum power": {
           "description": "Minimum power in watts",
           "minimum": 0,
           "title": "Minimum Power",
-          "type": "integer"
+          "type": "integer",
+          "x-category": "advanced",
+          "x-help": "Minimum power threshold in watts. Operations below this power level will be rounded to zero. Prevents inefficient micro-charging/discharging.",
+          "x-unit": "W",
+          "x-validation-hint": "Must be >= 0, typically 50-200W"
         },
         "dc_to_bat efficiency": {
           "description": "DC to battery efficiency",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Dc To Bat Efficiency",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Efficiency of DC-coupled solar to battery conversion. Typically 0.95-0.98 for modern DC-coupled systems. Only relevant if DC-coupled solar is configured.",
+          "x-unit": "ratio",
+          "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
         "dc_to_bat max power": {
           "description": "DC to battery max power in watts",
           "exclusiveMinimum": 0.0,
           "title": "Dc To Bat Max Power",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Maximum power for DC-coupled solar charging in watts. Determines how much DC solar power can flow directly to battery.",
+          "x-unit": "W",
+          "x-validation-hint": "Must be > 0"
         },
         "bat_to_dc efficiency": {
           "description": "Battery to DC efficiency",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Bat To Dc Efficiency",
-          "type": "number"
+          "type": "number",
+          "x-category": "expert",
+          "x-help": "Efficiency of battery to DC bus conversion. Typically 0.95-0.98. Only relevant for DC-coupled loads or reverse DC flow scenarios.",
+          "x-unit": "ratio",
+          "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
         "bat_to_dc max power": {
           "description": "Battery to DC max power in watts",
           "exclusiveMinimum": 0.0,
           "title": "Bat To Dc Max Power",
-          "type": "number"
+          "type": "number",
+          "x-category": "expert",
+          "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
+          "x-unit": "W",
+          "x-validation-hint": "Must be > 0"
         },
         "cycle cost": {
           "description": "Cost per battery cycle in euros",
           "minimum": 0.0,
           "title": "Cycle Cost",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Degradation cost per full charge-discharge cycle in euros. Used to factor battery wear into optimization. Calculate as: (battery_cost / warranted_cycles). Example: €5000 battery with 6000 cycles = €0.83/cycle.",
+          "x-unit": "€",
+          "x-validation-hint": "Must be >= 0, typically €0.50-€1.50 per cycle"
         },
         "entity set power feedin": {
           "anyOf": [
@@ -179,7 +241,11 @@
           ],
           "default": null,
           "description": "HA entity to set power feed-in to grid",
-          "title": "Entity Set Power Feedin"
+          "title": "Entity Set Power Feedin",
+          "x-category": "basic",
+          "x-entity-filter": "number,input_number",
+          "x-help": "Optional: Home Assistant entity to control grid feed-in power. Used by scheduler to execute optimized battery operations.",
+          "x-ui-widget": "entity-picker"
         },
         "entity set operating mode": {
           "anyOf": [
@@ -192,7 +258,15 @@
           ],
           "default": null,
           "description": "HA entity to set battery operating mode",
-          "title": "Entity Set Operating Mode"
+          "title": "Entity Set Operating Mode",
+          "x-category": "advanced",
+          "x-entity-filter": "select,input_select,switch",
+          "x-help": "Optional: Home Assistant entity to control battery operating mode (e.g., auto/manual/off). System will switch modes as needed for optimization.",
+          "x-related-fields": [
+            "entity_set_operating_mode_on",
+            "entity_set_operating_mode_off"
+          ],
+          "x-ui-widget": "entity-picker"
         },
         "entity set operating mode on": {
           "anyOf": [
@@ -205,7 +279,12 @@
           ],
           "default": null,
           "description": "Value for operating mode ON",
-          "title": "Entity Set Operating Mode On"
+          "title": "Entity Set Operating Mode On",
+          "x-category": "advanced",
+          "x-help": "Value to send to operating mode entity for 'ON' state. Example: 'auto', 'enabled', 'on'. Must match actual entity values.",
+          "x-related-fields": [
+            "entity_set_operating_mode"
+          ]
         },
         "entity set operating mode off": {
           "anyOf": [
@@ -218,7 +297,12 @@
           ],
           "default": null,
           "description": "Value for operating mode OFF",
-          "title": "Entity Set Operating Mode Off"
+          "title": "Entity Set Operating Mode Off",
+          "x-category": "advanced",
+          "x-help": "Value to send to operating mode entity for 'OFF' state. Example: 'manual', 'disabled', 'off'. Must match actual entity values.",
+          "x-related-fields": [
+            "entity_set_operating_mode"
+          ]
         },
         "entity stop inverter": {
           "anyOf": [
@@ -231,7 +315,11 @@
           ],
           "default": null,
           "description": "HA entity to stop inverter",
-          "title": "Entity Stop Inverter"
+          "title": "Entity Stop Inverter",
+          "x-category": "expert",
+          "x-entity-filter": "switch,button",
+          "x-help": "Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.",
+          "x-ui-widget": "entity-picker"
         },
         "entity balance switch": {
           "anyOf": [
@@ -244,7 +332,11 @@
           ],
           "default": null,
           "description": "HA entity for grid balancing switch",
-          "title": "Entity Balance Switch"
+          "title": "Entity Balance Switch",
+          "x-category": "expert",
+          "x-entity-filter": "switch",
+          "x-help": "Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.",
+          "x-ui-widget": "entity-picker"
         },
         "entity from battery": {
           "anyOf": [
@@ -257,7 +349,12 @@
           ],
           "default": null,
           "description": "HA entity for power from battery",
-          "title": "Entity From Battery"
+          "title": "Entity From Battery",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor showing current power flow from battery in watts. Used for monitoring and validation.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "W"
         },
         "entity from pv": {
           "anyOf": [
@@ -270,7 +367,12 @@
           ],
           "default": null,
           "description": "HA entity for power from PV",
-          "title": "Entity From Pv"
+          "title": "Entity From Pv",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor showing current DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "W"
         },
         "entity from ac": {
           "anyOf": [
@@ -283,7 +385,12 @@
           ],
           "default": null,
           "description": "HA entity for power from AC",
-          "title": "Entity From Ac"
+          "title": "Entity From Ac",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor showing current AC grid power flow in watts. Used for monitoring overall system balance.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "W"
         },
         "entity calculated soc": {
           "anyOf": [
@@ -296,7 +403,12 @@
           ],
           "default": null,
           "description": "HA entity for calculated SOC",
-          "title": "Entity Calculated Soc"
+          "title": "Entity Calculated Soc",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor for calculated State of Charge. System can compute SOC from power flows if BMS sensor is unavailable.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "%"
         },
         "solar": {
           "anyOf": [
@@ -312,7 +424,13 @@
           ],
           "default": null,
           "description": "DC-coupled solar panels attached to this battery",
-          "title": "Solar"
+          "title": "Solar",
+          "x-category": "advanced",
+          "x-help": "Optional: Configure DC-coupled solar panels directly connected to this battery inverter. DC coupling is more efficient than AC coupling. Leave empty for AC-coupled or grid-only batteries.",
+          "x-related-fields": [
+            "dc_to_bat_efficiency",
+            "dc_to_bat_max_power"
+          ]
         }
       },
       "required": [
@@ -331,7 +449,14 @@
         "cycle cost"
       ],
       "title": "BatteryConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "devices",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Battery-Configuration",
+      "x-help": "# Battery Configuration\n\nConfigure your home battery storage system for optimal energy management and cost savings.\n\n## Key Settings\n- **Capacity**: Total storage capacity in kWh\n- **SOC Limits**: Upper and lower charge limits to protect battery health\n- **Power Stages**: Define charging/discharging efficiency curves\n- **Control Entities**: Home Assistant entities to control the battery\n\n## Tips\n- Set upper_limit to 80-90% for longer battery life\n- Configure charge/discharge stages for accurate optimization\n- Monitor battery degradation with cycle_cost setting\n",
+      "x-icon": "battery-charging",
+      "x-order": 1,
+      "x-ui-group": "Energy Storage"
     },
     "BatteryStage": {
       "additionalProperties": true,
@@ -341,14 +466,22 @@
           "description": "Power level in Watts",
           "minimum": 0.0,
           "title": "Power",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Power level for this charge/discharge stage. Stages define how battery efficiency changes at different power levels.",
+          "x-unit": "W",
+          "x-validation-hint": "Must be 0 or greater, stages should be sorted by power"
         },
         "efficiency": {
           "description": "Efficiency at this power level (0-1)",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Efficiency",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Energy conversion efficiency at this power level. Value between 0 and 1, where 1 = 100% efficient.",
+          "x-unit": "ratio (0-1)",
+          "x-validation-hint": "Must be between 0 and 1"
         }
       },
       "required": [
@@ -356,7 +489,9 @@
         "efficiency"
       ],
       "title": "BatteryStage",
-      "type": "object"
+      "type": "object",
+      "x-category": "advanced",
+      "x-help": "Defines power and efficiency at a specific operating point. Multiple stages create a power/efficiency curve."
     },
     "BoilerConfig": {
       "additionalProperties": true,
@@ -373,22 +508,40 @@
           ],
           "default": true,
           "description": "Whether boiler is present/enabled",
-          "title": "Boiler Present"
+          "title": "Boiler Present",
+          "x-category": "basic",
+          "x-help": "Enable hot water boiler optimization. Set to true to include boiler in optimization, false to disable. Can also be HA entity ID for dynamic control.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "entity actual temp.": {
           "description": "HA entity for actual water temperature",
           "title": "Entity Actual Temp.",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "sensor",
+          "x-help": "Home Assistant sensor showing current hot water temperature in °C. Required for thermal state tracking and heating decisions.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "°C"
         },
         "entity setpoint": {
           "description": "HA entity for temperature setpoint",
           "title": "Entity Setpoint",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "input_number,number,sensor",
+          "x-help": "Home Assistant entity for target water temperature. System will heat water to this temperature. Typical: 55-65°C for domestic hot water.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "°C"
         },
         "entity hysterese": {
           "description": "HA entity for temperature hysteresis",
           "title": "Entity Hysterese",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "input_number,number,sensor",
+          "x-help": "Home Assistant entity for temperature hysteresis in °C. Prevents excessive cycling. If setpoint=60°C and hysteresis=5°C, heating starts at 55°C.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "°C"
         },
         "entity boiler enabled": {
           "anyOf": [
@@ -401,7 +554,11 @@
           ],
           "default": null,
           "description": "HA entity for boiler enabled status",
-          "title": "Entity Boiler Enabled"
+          "title": "Entity Boiler Enabled",
+          "x-category": "advanced",
+          "x-entity-filter": "binary_sensor",
+          "x-help": "Optional: Home Assistant binary sensor indicating if boiler is enabled. System will only optimize when boiler is enabled.",
+          "x-ui-widget": "entity-picker"
         },
         "entity instant start": {
           "anyOf": [
@@ -414,49 +571,85 @@
           ],
           "default": null,
           "description": "HA entity for instant start",
-          "title": "Entity Instant Start"
+          "title": "Entity Instant Start",
+          "x-category": "advanced",
+          "x-entity-filter": "switch,input_boolean,button",
+          "x-help": "Optional: Home Assistant entity to trigger immediate boiler heating. Overrides optimized schedule for on-demand hot water.",
+          "x-ui-widget": "entity-picker"
         },
         "cop": {
           "default": 3.0,
           "description": "Coefficient of Performance",
           "exclusiveMinimum": 0.0,
           "title": "Cop",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Coefficient of Performance if using heat pump water heater. For resistive heating element, use 1.0. For heat pump water heater, typically 2.5-4.0.",
+          "x-unit": "ratio",
+          "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
         },
         "cooling rate": {
           "description": "Cooling rate in degrees per hour",
           "minimum": 0.0,
           "title": "Cooling Rate",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Rate at which water temperature drops when not heating, in °C per hour. Depends on insulation quality. Typical: 0.5-2.0°C/h for well-insulated boilers.",
+          "x-unit": "°C/h",
+          "x-validation-hint": "Must be >= 0, typically 0.5-2.0°C/h"
         },
         "volume": {
           "default": 200.0,
           "description": "Water volume in liters",
           "exclusiveMinimum": 0.0,
           "title": "Volume",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Hot water tank volume in liters. Affects thermal inertia and heating time. Typical residential: 100-300 liters.",
+          "x-unit": "L",
+          "x-validation-hint": "Must be > 0, typically 100-300L"
         },
         "heating allowed below": {
           "description": "Temperature below which heating is allowed",
           "title": "Heating Allowed Below",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Maximum temperature for starting heating cycle. Heating only occurs when water is below this temperature. Typically same as or slightly above setpoint.",
+          "x-unit": "°C",
+          "x-validation-hint": "Should be >= setpoint"
         },
         "elec. power": {
           "default": 1000.0,
           "description": "Electrical power in watts",
           "exclusiveMinimum": 0.0,
           "title": "Elec. Power",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Electrical power consumption of heating element or heat pump compressor in watts. Typical: 1000-3000W for resistive, 400-800W for heat pump water heater.",
+          "x-unit": "W",
+          "x-validation-hint": "Must be > 0, typically 1000-3000W"
         },
         "activate service": {
           "description": "Service type to activate boiler (e.g., 'press', 'switch')",
           "title": "Activate Service",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Home Assistant service type to trigger boiler heating. Use 'press' for button entities, 'switch' for switch entities, or custom service names.",
+          "x-related-fields": [
+            "activate_entity"
+          ]
         },
         "activate entity": {
           "description": "HA entity to activate boiler",
           "title": "Activate Entity",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "button,switch",
+          "x-help": "Home Assistant entity used to activate boiler heating. System will trigger this entity using activate_service when heating is needed.",
+          "x-related-fields": [
+            "activate_service"
+          ],
+          "x-ui-widget": "entity-picker"
         }
       },
       "required": [
@@ -469,7 +662,14 @@
         "activate entity"
       ],
       "title": "BoilerConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "devices",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Boiler-Configuration",
+      "x-help": "# Hot Water Boiler Configuration\n\nOptimize hot water heating based on electricity prices, usage patterns, and thermal characteristics.\n\n## How It Works\n\nThe system models boiler as a thermal battery:\n- Water stores heat energy based on volume and temperature\n- Heat is lost over time based on cooling_rate\n- System schedules heating during cheap electricity periods\n- Ensures hot water availability when needed\n\n## Key Parameters\n\n### Temperature Control\n- **setpoint**: Target temperature (typically 55-65°C)\n- **hysterese**: Dead band to prevent cycling (typically 3-5°C)\n- **heating_allowed_below**: Max temp to start heating\n\n### Physical Properties\n- **volume**: Tank size affects how much heat can be stored\n- **cooling_rate**: Heat loss rate (better insulation = lower rate)\n- **elec_power**: Heating power affects heating duration\n- **cop**: Efficiency (1.0 for resistive, 2.5-4.0 for heat pump)\n\n### Activation\n- **activate_entity**: Button/switch to trigger heating\n- **activate_service**: Service type ('press' or 'switch')\n\n## Tips\n- Larger volume = more thermal storage capacity\n- Better insulation = lower cooling_rate = more flexibility\n- Heat pump water heaters (COP > 1.0) much more efficient than resistive\n- Schedule heating during solar production or cheap grid periods\n- Instant start available for emergency hot water needs\n",
+      "x-icon": "water-boiler",
+      "x-order": 5,
+      "x-ui-group": "Heating & Climate"
     },
     "DashboardConfig": {
       "additionalProperties": true,
@@ -481,11 +681,22 @@
           "maximum": 65535,
           "minimum": 1024,
           "title": "Port",
-          "type": "integer"
+          "type": "integer",
+          "x-category": "basic",
+          "x-help": "Port number for Day Ahead Optimizer web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).",
+          "x-unit": "port",
+          "x-validation-hint": "1024-65535, default 5000"
         }
       },
       "title": "DashboardConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "integration",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Dashboard-Configuration",
+      "x-help": "# Dashboard Configuration\n\nConfigure web dashboard for monitoring and controlling Day Ahead Optimizer.\n\n## Dashboard Features\n\n- View optimization results\n- Monitor device schedules\n- Check price forecasts\n- Review historical data\n- Trigger manual optimization\n- View graphs and reports\n\n## Access\n\nAccess dashboard at:\n- **Local**: http://homeassistant.local:PORT\n- **IP**: http://YOUR_HA_IP:PORT\n\n## Port Selection\n\n- Default: 5000\n- Must be unused port\n- Check no conflicts with other services\n- Must be >= 1024 (non-privileged)\n\n## Tips\n\n- Add to Home Assistant sidebar via iframe card\n- Enable Ingress for secure access\n- Use reverse proxy for external access\n- Dashboard updates after each optimization\n",
+      "x-icon": "view-dashboard",
+      "x-order": 16,
+      "x-ui-group": "Integration"
     },
     "DatabaseConfig": {
       "additionalProperties": true,
@@ -500,7 +711,9 @@
             "postgresql"
           ],
           "title": "Engine",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Database engine for Day Ahead optimizer data. SQLite is simplest (no server needed), MySQL/PostgreSQL for advanced setups or shared databases."
         },
         "db_path": {
           "anyOf": [
@@ -513,7 +726,10 @@
           ],
           "default": null,
           "description": "Database path for SQLite (e.g., '../data')",
-          "title": "Db Path"
+          "title": "Db Path",
+          "x-category": "basic",
+          "x-help": "Directory path for SQLite database file. Relative to add-on root. Example: '../data' stores in persistent data folder. Only for SQLite.",
+          "x-validation-hint": "Required for SQLite (or use database field)"
         },
         "database": {
           "anyOf": [
@@ -526,7 +742,10 @@
           ],
           "default": null,
           "description": "Database filename for SQLite or database name for MySQL",
-          "title": "Database"
+          "title": "Database",
+          "x-category": "basic",
+          "x-help": "For SQLite: filename (e.g., 'day_ahead.db'). For MySQL/PostgreSQL: database name. At least one of db_path or database required for SQLite.",
+          "x-validation-hint": "Filename for SQLite, database name for MySQL/PostgreSQL"
         },
         "server": {
           "anyOf": [
@@ -539,7 +758,10 @@
           ],
           "default": null,
           "description": "MySQL server hostname (required for mysql)",
-          "title": "Server"
+          "title": "Server",
+          "x-category": "advanced",
+          "x-help": "Hostname or IP of MySQL/PostgreSQL server. Required for server-based engines. Examples: 'localhost', '192.168.1.100'.",
+          "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
           "anyOf": [
@@ -554,7 +776,11 @@
           ],
           "default": null,
           "description": "MySQL/PostgreSQL server port (required for mysql/postgresql)",
-          "title": "Port"
+          "title": "Port",
+          "x-category": "advanced",
+          "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
+          "x-unit": "port",
+          "x-validation-hint": "1-65535, required for mysql/postgresql"
         },
         "username": {
           "anyOf": [
@@ -567,7 +793,10 @@
           ],
           "default": null,
           "description": "MySQL username (required for mysql)",
-          "title": "Username"
+          "title": "Username",
+          "x-category": "advanced",
+          "x-help": "Database username for authentication. Required for MySQL/PostgreSQL.",
+          "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "password": {
           "anyOf": [
@@ -583,7 +812,10 @@
           ],
           "default": null,
           "description": "MySQL password (can use !secret)",
-          "title": "Password"
+          "title": "Password",
+          "x-category": "advanced",
+          "x-help": "Database password. Use secrets.json with '!secret password_key' for security. Never store passwords directly in config.",
+          "x-validation-hint": "Use !secret for passwords"
         },
         "time_zone": {
           "anyOf": [
@@ -596,11 +828,20 @@
           ],
           "default": null,
           "description": "Database timezone",
-          "title": "Time Zone"
+          "title": "Time Zone",
+          "x-category": "expert",
+          "x-help": "Optional: Timezone for database timestamps. Examples: 'Europe/Amsterdam', 'UTC'. Usually not needed if database and system timezones match."
         }
       },
       "title": "DatabaseConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "infrastructure",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Database-Configuration",
+      "x-help": "# Day Ahead Database Configuration\n\nDatabase for storing Day Ahead optimizer calculations, schedules, and results.\n\n## Engine Options\n\n### SQLite (Recommended for most users)\n- **Pros**: No server setup, simple, included with Home Assistant\n- **Cons**: Single-user, not suitable for multiple HA instances\n- **Config**: Specify db_path and/or database filename\n\n### MySQL/MariaDB\n- **Pros**: Multi-user, robust, good performance\n- **Cons**: Requires separate database server\n- **Config**: server, port, username, password, database name\n\n### PostgreSQL\n- **Pros**: Advanced features, excellent for large datasets\n- **Cons**: Requires separate database server, more complex\n- **Config**: server, port, username, password, database name\n\n## Security\n\n**Never store passwords in options.json!**\n\nUse secrets.json:\n```json\n{\n  \"db_password\": \"actual_password_here\"\n}\n```\n\nThen in options.json:\n```json\n\"password\": \"!secret db_password\"\n```\n\n## Tips\n\n- SQLite for single HA instance (simplest)\n- MySQL for shared database or multiple instances\n- Use strong passwords for server-based databases\n- Ensure database is backed up (contains optimization history)\n- Check database size periodically (can grow with history)\n",
+      "x-icon": "database",
+      "x-order": 10,
+      "x-ui-group": "Infrastructure"
     },
     "EVChargeScheduler": {
       "additionalProperties": true,
@@ -609,18 +850,31 @@
         "entity set level": {
           "description": "HA entity to set target charge level",
           "title": "Entity Set Level",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "input_number,number",
+          "x-help": "Home Assistant entity to set the target battery level for scheduled charging. System will optimize when to charge to reach this level.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "%"
         },
         "level margin": {
           "description": "Margin in % for charge level completion",
           "minimum": 0,
           "title": "Level Margin",
-          "type": "integer"
+          "type": "integer",
+          "x-category": "advanced",
+          "x-help": "Acceptable margin below target level. Example: target=80%, margin=5% means 75-80% is acceptable. Provides flexibility in optimization.",
+          "x-unit": "%",
+          "x-validation-hint": "Must be >= 0, typically 5-10%"
         },
         "entity ready datetime": {
           "description": "HA entity for ready datetime (when charging should complete)",
           "title": "Entity Ready Datetime",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "input_datetime,datetime",
+          "x-help": "Home Assistant datetime entity specifying when vehicle must be charged. System will optimize charging schedule to minimize cost while meeting deadline.",
+          "x-ui-widget": "entity-picker"
         }
       },
       "required": [
@@ -629,7 +883,9 @@
         "entity ready datetime"
       ],
       "title": "EVChargeScheduler",
-      "type": "object"
+      "type": "object",
+      "x-category": "advanced",
+      "x-help": "Advanced scheduler that optimizes charging to reach target level by specific deadline, minimizing cost by charging during cheapest hours."
     },
     "EVChargeStage": {
       "additionalProperties": true,
@@ -639,14 +895,22 @@
           "description": "Charging current in amperes",
           "minimum": 0,
           "title": "Ampere",
-          "type": "integer"
+          "type": "integer",
+          "x-category": "basic",
+          "x-help": "Charging current in amperes for this stage. Typical values: 6A (1.4kW), 10A (2.3kW), 16A (3.7kW), 32A (7.4kW) for single-phase.",
+          "x-unit": "A",
+          "x-validation-hint": "Must be >= 0, typically 6-32A"
         },
         "efficiency": {
           "description": "Charging efficiency at this amperage (0-1)",
           "maximum": 1.0,
           "minimum": 0.0,
           "title": "Efficiency",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Charging efficiency ratio at this amperage level. Accounts for charger losses, cable losses, and battery acceptance. Typically 0.85-0.95.",
+          "x-unit": "ratio",
+          "x-validation-hint": "0.0-1.0, typically 0.85-0.95"
         }
       },
       "required": [
@@ -654,7 +918,9 @@
         "efficiency"
       ],
       "title": "EVChargeStage",
-      "type": "object"
+      "type": "object",
+      "x-category": "basic",
+      "x-help": "Define charging curve by specifying amperage and efficiency pairs. Multiple stages allow accurate modeling of variable efficiency."
     },
     "EVConfig": {
       "additionalProperties": true,
@@ -663,18 +929,28 @@
         "name": {
           "description": "EV name/identifier",
           "title": "Name",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Unique name for this electric vehicle. Use descriptive names like 'Tesla Model 3' or 'Polestar 2' for multiple vehicles."
         },
         "capacity": {
           "description": "Battery capacity in kWh",
           "exclusiveMinimum": 0.0,
           "title": "Capacity",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Usable battery capacity in kilowatt-hours. Check vehicle specifications (often less than advertised total capacity).",
+          "x-unit": "kWh",
+          "x-validation-hint": "Must be > 0, typically 40-100 kWh"
         },
         "entity position": {
           "description": "HA device tracker for vehicle position",
           "title": "Entity Position",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "device_tracker",
+          "x-help": "Home Assistant device tracker entity to detect if vehicle is home. Charging is only scheduled when vehicle is at home location.",
+          "x-ui-widget": "entity-picker"
         },
         "charge three phase": {
           "anyOf": [
@@ -687,7 +963,10 @@
           ],
           "default": true,
           "description": "Whether vehicle charges on three phases",
-          "title": "Charge Three Phase"
+          "title": "Charge Three Phase",
+          "x-category": "basic",
+          "x-help": "True for three-phase charging (11kW/22kW), False for single-phase (3.7kW/7.4kW). Can also be HA entity ID for dynamic resolution.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "charge stages": {
           "description": "Charging amperage/efficiency curve",
@@ -696,17 +975,29 @@
           },
           "minItems": 1,
           "title": "Charge Stages",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-help": "Charging curve defined by amperage stages and their efficiencies. At least one stage required. Multiple stages enable optimization of charging speed.",
+          "x-validation-hint": "At least 1 stage required"
         },
         "entity actual level": {
           "description": "HA entity for current battery level %",
           "title": "Entity Actual Level",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "sensor",
+          "x-help": "Home Assistant sensor showing current battery State of Charge in percent. Required for charge optimization.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "%"
         },
         "entity plugged in": {
           "description": "HA binary sensor for plugged in status",
           "title": "Entity Plugged In",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "binary_sensor",
+          "x-help": "Home Assistant binary sensor indicating if vehicle is plugged into charger. Charging is only possible when plugged in.",
+          "x-ui-widget": "entity-picker"
         },
         "entity instant start": {
           "anyOf": [
@@ -719,7 +1010,14 @@
           ],
           "default": null,
           "description": "HA entity for instant start charging",
-          "title": "Entity Instant Start"
+          "title": "Entity Instant Start",
+          "x-category": "advanced",
+          "x-entity-filter": "switch,input_boolean",
+          "x-help": "Optional: Home Assistant entity to trigger immediate charging. Use with entity_instant_level for instant charging mode. Alternative to charge_scheduler.",
+          "x-related-fields": [
+            "entity_instant_level"
+          ],
+          "x-ui-widget": "entity-picker"
         },
         "entity instant level": {
           "anyOf": [
@@ -732,7 +1030,15 @@
           ],
           "default": null,
           "description": "HA entity for instant charge level target",
-          "title": "Entity Instant Level"
+          "title": "Entity Instant Level",
+          "x-category": "advanced",
+          "x-entity-filter": "input_number,number,sensor",
+          "x-help": "Optional: Home Assistant entity for instant charge target level. When instant_start triggers, system charges to this level immediately. Alternative to charge_scheduler.",
+          "x-related-fields": [
+            "entity_instant_start"
+          ],
+          "x-ui-widget": "entity-picker",
+          "x-unit": "%"
         },
         "charge scheduler": {
           "anyOf": [
@@ -744,22 +1050,41 @@
             }
           ],
           "default": null,
-          "description": "Charge scheduling configuration"
+          "description": "Charge scheduling configuration",
+          "x-category": "advanced",
+          "x-help": "Optional: Advanced scheduler for time-based charging. Optimizes when to charge to meet deadline at lowest cost. Alternative to instant charging.",
+          "x-related-fields": [
+            "entity_instant_start",
+            "entity_instant_level"
+          ]
         },
         "charge switch": {
           "description": "HA switch entity to control charging",
           "title": "Charge Switch",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "switch",
+          "x-help": "Home Assistant switch entity to start/stop charging. System will control this to execute optimized charging schedule.",
+          "x-ui-widget": "entity-picker"
         },
         "entity set charging ampere": {
           "description": "HA entity to set charging amperage",
           "title": "Entity Set Charging Ampere",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "number,input_number",
+          "x-help": "Home Assistant entity to control charging current in amperes. System will adjust this to optimize charging speed and cost.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "A"
         },
         "entity stop charging": {
           "description": "HA entity for stop charging datetime",
           "title": "Entity Stop Charging",
-          "type": "string"
+          "type": "string",
+          "x-category": "advanced",
+          "x-entity-filter": "input_datetime,datetime",
+          "x-help": "Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.",
+          "x-ui-widget": "entity-picker"
         }
       },
       "required": [
@@ -774,7 +1099,14 @@
         "entity stop charging"
       ],
       "title": "EVConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "devices",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/EV-Configuration",
+      "x-help": "# Electric Vehicle Configuration\n\nOptimize EV charging based on electricity prices, solar production, and charging deadlines.\n\n## Charging Modes\n\n### Instant Charging\nUse `entity_instant_start` + `entity_instant_level` for immediate charging:\n- Trigger instant_start to charge now\n- System charges to instant_level immediately\n- Simpler but less cost-optimized\n\n### Scheduled Charging\nUse `charge_scheduler` for time-based optimization:\n- Set target level and ready datetime\n- System optimizes when to charge for lowest cost\n- Ensures vehicle is ready by deadline\n- More complex but better cost optimization\n\n## Requirements\n- Must configure EITHER instant charging OR scheduler (not both)\n- Vehicle must be home (device tracker)\n- Vehicle must be plugged in (binary sensor)\n- Charger must support amperage control\n\n## Tips\n- Use multiple charge stages for better efficiency modeling\n- Three-phase charging (11/22kW) much faster than single-phase (3.7/7.4kW)\n- Consider time-of-use tariffs when setting charge deadlines\n",
+      "x-icon": "car-electric",
+      "x-order": 3,
+      "x-ui-group": "Devices"
     },
     "FlexValue": {
       "additionalProperties": false,
@@ -795,20 +1127,26 @@
               "type": "boolean"
             }
           ],
-          "title": "Value"
+          "title": "Value",
+          "x-category": "advanced",
+          "x-help": "Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name')."
         },
         "is_entity": {
           "default": false,
           "description": "True if value is a HA entity ID",
           "title": "Is Entity",
-          "type": "boolean"
+          "type": "boolean",
+          "x-category": "expert",
+          "x-help": "Automatically set to true if value contains '.' (entity ID pattern). Used internally to determine resolution strategy."
         }
       },
       "required": [
         "value"
       ],
       "title": "FlexValue",
-      "type": "object"
+      "type": "object",
+      "x-category": "utility",
+      "x-help": "FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs."
     },
     "GraphicsConfig": {
       "additionalProperties": true,
@@ -818,7 +1156,9 @@
           "default": "dark_background",
           "description": "Matplotlib style (e.g., 'dark_background', 'default')",
           "title": "Style",
-          "type": "string"
+          "type": "string",
+          "x-category": "advanced",
+          "x-help": "Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'."
         },
         "show": {
           "anyOf": [
@@ -831,7 +1171,10 @@
           ],
           "default": "false",
           "description": "Whether to show graphics",
-          "title": "Show"
+          "title": "Show",
+          "x-category": "basic",
+          "x-help": "Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "battery balance": {
           "anyOf": [
@@ -844,7 +1187,10 @@
           ],
           "default": "true",
           "description": "Show battery balance in graphs",
-          "title": "Battery Balance"
+          "title": "Battery Balance",
+          "x-category": "basic",
+          "x-help": "Display battery state of charge and power flows in graphs. Shows charge/discharge schedule over time.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "prices consumption": {
           "anyOf": [
@@ -857,7 +1203,10 @@
           ],
           "default": "true",
           "description": "Show consumption prices in graphs",
-          "title": "Prices Consumption"
+          "title": "Prices Consumption",
+          "x-category": "basic",
+          "x-help": "Display consumption prices (market + taxes + VAT) in graphs. Helps visualize expensive vs cheap periods.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "prices production": {
           "anyOf": [
@@ -870,7 +1219,10 @@
           ],
           "default": "false",
           "description": "Show production prices in graphs",
-          "title": "Prices Production"
+          "title": "Prices Production",
+          "x-category": "advanced",
+          "x-help": "Display feed-in/production prices in graphs. Useful if you have solar feed-in to compare consumption vs production value.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "prices spot": {
           "anyOf": [
@@ -883,7 +1235,10 @@
           ],
           "default": "true",
           "description": "Show spot prices in graphs",
-          "title": "Prices Spot"
+          "title": "Prices Spot",
+          "x-category": "advanced",
+          "x-help": "Display raw day-ahead spot market prices (before taxes/markup) in graphs. Shows pure market price variations.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "average consumption": {
           "anyOf": [
@@ -896,11 +1251,21 @@
           ],
           "default": "true",
           "description": "Show average consumption in graphs",
-          "title": "Average Consumption"
+          "title": "Average Consumption",
+          "x-category": "basic",
+          "x-help": "Display average/baseline consumption in graphs. Helps understand optimization impact relative to normal usage.",
+          "x-ui-widget": "entity-picker-or-boolean"
         }
       },
       "title": "GraphicsConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "visualization",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Graphics-Configuration",
+      "x-help": "# Graphics & Visualization\n\nConfigure graphs and visualizations of optimization results.\n\n## Graph Types\n\nGraphs can show:\n- **Battery balance**: SOC and charge/discharge schedule\n- **Prices**: Consumption, production, and spot prices\n- **Average consumption**: Baseline vs optimized usage\n\n## When to Use\n\n- Enable during testing to visualize optimization\n- Useful for understanding system behavior\n- Can be displayed in Home Assistant dashboard\n- Disable in production if graphs not needed (saves resources)\n\n## Tips\n\n- Graphs saved to add-on data directory\n- Use dark_background style to match HA theme\n- Toggle individual elements to simplify graphs\n- Graphs regenerated each optimization run\n",
+      "x-icon": "chart-line",
+      "x-order": 13,
+      "x-ui-group": "Visualization"
     },
     "GridConfig": {
       "additionalProperties": true,
@@ -911,11 +1276,22 @@
           "description": "Maximum grid power in kW",
           "exclusiveMinimum": 0.0,
           "title": "Max Power",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.",
+          "x-unit": "kW",
+          "x-validation-hint": "Must be > 0, typical 7-25 kW for residential"
         }
       },
       "title": "GridConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "infrastructure",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Grid-Configuration",
+      "x-help": "# Grid Connection Configuration\n\nDefine electrical grid connection limits to prevent overload.\n\n## Maximum Grid Power\n\nBased on your main fuse/circuit breaker:\n- **1-phase 32A**: 7.4 kW (32A × 230V)\n- **3-phase 25A**: 17.3 kW (25A × 230V × 3)\n- **3-phase 35A**: 24.2 kW (35A × 230V × 3)\n\n## Why This Matters\n\nOptimizer ensures combined consumption never exceeds this limit:\n- Prevents main fuse from tripping\n- Ensures legal compliance with grid connection\n- Coordinates multiple high-power devices (EV, heat pump, boiler)\n\n## Tips\n\n- Check your electrical panel for fuse/breaker rating\n- Account for baseload when calculating available power\n- System will prioritize loads within this constraint\n- Consider upgrade if frequently hitting limits\n",
+      "x-icon": "transmission-tower",
+      "x-order": 12,
+      "x-ui-group": "Infrastructure"
     },
     "HADatabaseConfig": {
       "additionalProperties": true,
@@ -930,7 +1306,9 @@
             "postgresql"
           ],
           "title": "Engine",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Database engine where Home Assistant stores history data. Most HA installations use SQLite, but MySQL/MariaDB and PostgreSQL are also supported."
         },
         "server": {
           "anyOf": [
@@ -943,7 +1321,10 @@
           ],
           "default": null,
           "description": "Database server hostname (required for mysql/postgresql)",
-          "title": "Server"
+          "title": "Server",
+          "x-category": "basic",
+          "x-help": "Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.",
+          "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
           "anyOf": [
@@ -957,20 +1338,28 @@
             }
           ],
           "default": null,
-          "description": "Database port (defaults: mysql=3306, postgresql=5432)",
-          "title": "Port"
+          "description": "Database port",
+          "title": "Port",
+          "x-category": "basic",
+          "x-help": "Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.",
+          "x-unit": "port",
+          "x-validation-hint": "1-65535, defaults: mysql=3306, postgresql=5432"
         },
         "database": {
           "default": "homeassistant",
           "description": "Database name",
           "title": "Database",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation."
         },
         "username": {
           "default": "homeassistant",
           "description": "Database username",
           "title": "Username",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Username for database authentication. Default 'homeassistant' matches standard HA installation."
         },
         "password": {
           "anyOf": [
@@ -986,11 +1375,16 @@
           ],
           "default": null,
           "description": "Database password (can use !secret)",
-          "title": "Password"
+          "title": "Password",
+          "x-category": "basic",
+          "x-help": "Database password. Use secrets.json with '!secret password_key' pattern for security. Never store passwords directly in config.",
+          "x-validation-hint": "Use !secret for passwords"
         }
       },
       "title": "HADatabaseConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "infrastructure",
+      "x-help": "Home Assistant database connection for reading historical sensor data (prices, solar, baseload)."
     },
     "HeatingConfig": {
       "additionalProperties": true,
@@ -1007,7 +1401,10 @@
           ],
           "default": false,
           "description": "Whether heating system is present/enabled",
-          "title": "Heater Present"
+          "title": "Heater Present",
+          "x-category": "basic",
+          "x-help": "Enable heating system optimization. Set to true to include heat pump in optimization, false to disable. Can also be HA entity ID for dynamic control.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "entity hp enabled": {
           "anyOf": [
@@ -1020,14 +1417,22 @@
           ],
           "default": null,
           "description": "HA binary sensor for heat pump enabled status",
-          "title": "Entity Hp Enabled"
+          "title": "Entity Hp Enabled",
+          "x-category": "advanced",
+          "x-entity-filter": "binary_sensor",
+          "x-help": "Optional: Home Assistant binary sensor indicating if heat pump is enabled and operational. System will only optimize when enabled.",
+          "x-ui-widget": "entity-picker"
         },
         "degree days factor": {
           "default": 1.0,
           "description": "Degree days factor for heat demand calculation",
           "exclusiveMinimum": 0.0,
           "title": "Degree Days Factor",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
+          "x-unit": "factor",
+          "x-validation-hint": "Must be > 0, typically 0.5-2.0"
         },
         "adjustment": {
           "default": "power",
@@ -1038,7 +1443,9 @@
             "heating curve"
           ],
           "title": "Adjustment",
-          "type": "string"
+          "type": "string",
+          "x-category": "advanced",
+          "x-help": "Heat pump control mode: 'on/off' = simple binary control, 'power' = variable power control, 'heating curve' = adjust heating curve based on weather."
         },
         "stages": {
           "description": "Heating power/COP stages",
@@ -1047,7 +1454,10 @@
           },
           "minItems": 1,
           "title": "Stages",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-help": "Power and efficiency stages for heat pump. At least one stage required. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
+          "x-validation-hint": "At least 1 stage, must be sorted by max_power"
         },
         "entity adjust heating curve": {
           "anyOf": [
@@ -1060,7 +1470,11 @@
           ],
           "default": null,
           "description": "HA entity to adjust heating curve",
-          "title": "Entity Adjust Heating Curve"
+          "title": "Entity Adjust Heating Curve",
+          "x-category": "advanced",
+          "x-entity-filter": "number,input_number",
+          "x-help": "Optional: Home Assistant entity to adjust heating curve. Used when adjustment mode is 'heating curve'. Controls water temperature based on outdoor temperature.",
+          "x-ui-widget": "entity-picker"
         },
         "adjustment factor": {
           "anyOf": [
@@ -1073,14 +1487,22 @@
           ],
           "default": null,
           "description": "Factor for heating curve adjustment",
-          "title": "Adjustment Factor"
+          "title": "Adjustment Factor",
+          "x-category": "expert",
+          "x-help": "Optional: Multiplier for heating curve adjustments. Higher values = more aggressive adjustments. Typical: 0.5-2.0.",
+          "x-unit": "factor",
+          "x-validation-hint": "Typically 0.5-2.0 if specified"
         },
         "min run length": {
           "default": 1,
           "description": "Minimum run length in time intervals",
           "minimum": 1,
           "title": "Min Run Length",
-          "type": "integer"
+          "type": "integer",
+          "x-category": "advanced",
+          "x-help": "Minimum number of consecutive time intervals heat pump must run once started. Prevents excessive on/off cycling which reduces efficiency and equipment life. Typical: 2-4 intervals (2-4 hours).",
+          "x-unit": "intervals",
+          "x-validation-hint": "Must be >= 1, typically 2-4 for 1h intervals"
         },
         "entity hp heat produced": {
           "anyOf": [
@@ -1093,7 +1515,12 @@
           ],
           "default": null,
           "description": "HA entity for heat produced",
-          "title": "Entity Hp Heat Produced"
+          "title": "Entity Hp Heat Produced",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor showing total heat energy produced. Used for monitoring and validation.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "kWh"
         },
         "entity hp heat demand": {
           "anyOf": [
@@ -1106,7 +1533,12 @@
           ],
           "default": null,
           "description": "HA entity for heat demand",
-          "title": "Entity Hp Heat Demand"
+          "title": "Entity Hp Heat Demand",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor showing current heat demand. Can be used instead of degree-day calculation for more accurate demand forecasting.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "W"
         },
         "entity avg temp": {
           "anyOf": [
@@ -1119,7 +1551,12 @@
           ],
           "default": null,
           "description": "HA entity for average temperature",
-          "title": "Entity Avg Temp"
+          "title": "Entity Avg Temp",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor for outdoor average temperature. Used for degree-day calculations and COP adjustments.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "°C"
         },
         "entity hp cop": {
           "anyOf": [
@@ -1132,7 +1569,12 @@
           ],
           "default": null,
           "description": "HA entity for heat pump COP",
-          "title": "Entity Hp Cop"
+          "title": "Entity Hp Cop",
+          "x-category": "expert",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor showing current COP. Can be used for monitoring or to override stage-based COP calculations.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "ratio"
         },
         "entity hp power": {
           "anyOf": [
@@ -1145,7 +1587,12 @@
           ],
           "default": null,
           "description": "HA entity for heat pump power",
-          "title": "Entity Hp Power"
+          "title": "Entity Hp Power",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor showing current electrical power consumption. Used for monitoring and validation.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "W"
         },
         "entity hp switch": {
           "anyOf": [
@@ -1158,14 +1605,25 @@
           ],
           "default": null,
           "description": "HA entity to control heat pump on/off",
-          "title": "Entity Hp Switch"
+          "title": "Entity Hp Switch",
+          "x-category": "basic",
+          "x-entity-filter": "switch",
+          "x-help": "Optional: Home Assistant switch to control heat pump on/off. Used by scheduler to execute optimized heating schedule.",
+          "x-ui-widget": "entity-picker"
         }
       },
       "required": [
         "stages"
       ],
       "title": "HeatingConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "devices",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Heat-Pump-Configuration",
+      "x-help": "# Heat Pump Configuration\n\nOptimize heat pump operation based on electricity prices, heat demand, and weather conditions.\n\n## Key Concepts\n\n### COP (Coefficient of Performance)\nRatio of heat output to electrical input. Higher is better:\n- COP 3.0 = 3 kW heat from 1 kW electricity (300% efficient)\n- COP 4.0 = 4 kW heat from 1 kW electricity (400% efficient)\n- Varies with outdoor temperature and power level\n\n### Adjustment Modes\n- **on/off**: Simple binary control (least flexible)\n- **power**: Variable power control (recommended for variable-speed pumps)\n- **heating curve**: Adjust water temperature based on outdoor temp (most advanced)\n\n### Stages\nDefine power levels and corresponding COP values:\n- Single stage: Fixed power heat pump\n- Multiple stages: Variable-speed compressor with better efficiency\n- Must be sorted by power (ascending)\n\n## Tips\n- Use degree_days_factor to calibrate heat demand for your building\n- Set min_run_length to prevent excessive cycling (2-4h typical)\n- Higher COP = cheaper heating, maximize runtime during high-COP conditions\n- Consider solar production when scheduling heating loads\n",
+      "x-icon": "heat-pump",
+      "x-order": 4,
+      "x-ui-group": "Heating & Climate"
     },
     "HeatingStage": {
       "additionalProperties": true,
@@ -1175,13 +1633,21 @@
           "description": "Maximum power in watts for this stage",
           "exclusiveMinimum": 0.0,
           "title": "Max Power",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Maximum electrical power consumption for this heating stage in watts. Heat pumps often have multiple stages (e.g., compressor speeds).",
+          "x-unit": "W",
+          "x-validation-hint": "Must be > 0, stages must be sorted ascending"
         },
         "cop": {
           "description": "Coefficient of Performance at this power level",
           "exclusiveMinimum": 0.0,
           "title": "Cop",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Coefficient of Performance (COP) at this power level. COP = heat_output / electrical_input. Typical values: 3.0-5.0 (3-5x more heat than electricity used).",
+          "x-unit": "ratio",
+          "x-validation-hint": "Must be > 0, typically 2.5-5.5"
         }
       },
       "required": [
@@ -1189,7 +1655,9 @@
         "cop"
       ],
       "title": "HeatingStage",
-      "type": "object"
+      "type": "object",
+      "x-category": "basic",
+      "x-help": "Define heat pump performance curve by power stages and corresponding COP values. Multiple stages allow accurate modeling of variable-speed compressors."
     },
     "HistoryConfig": {
       "additionalProperties": true,
@@ -1200,11 +1668,22 @@
           "description": "Number of days to retain historical data",
           "minimum": 1,
           "title": "Save Days",
-          "type": "integer"
+          "type": "integer",
+          "x-category": "basic",
+          "x-help": "Number of days to retain optimization history in database. Older data is automatically cleaned up. Longer retention enables better trend analysis but increases database size. Minimum 1 day.",
+          "x-unit": "days",
+          "x-validation-hint": "Must be >= 1, typical 7-30 days"
         }
       },
       "title": "HistoryConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "infrastructure",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/History-Configuration",
+      "x-help": "# History & Data Retention\n\nControl how long optimization history is retained in the database.\n\n## What Gets Stored\n\n- Optimization results (costs, schedules)\n- Price data (day-ahead, tariffs)\n- Device schedules (battery, EV, heating)\n- Solar production forecasts\n- Baseload consumption data\n\n## Retention Guidelines\n\n- **7 days**: Minimal retention, recent data only\n- **14 days**: Two weeks for comparison\n- **30 days**: Monthly trends and analysis\n- **90+ days**: Long-term analysis (larger database)\n\n## Database Growth\n\n- More retention = larger database\n- Typical: ~1-5 MB per day (depends on devices)\n- Monitor database size if using SQLite\n- Consider periodic backups\n\n## Tips\n\n- Start with 7-14 days, increase if needed\n- Check database size regularly\n- Old data cleaned up automatically\n- Increase for detailed cost analysis\n",
+      "x-icon": "database-clock",
+      "x-order": 15,
+      "x-ui-group": "Infrastructure"
     },
     "HomeAssistantConfig": {
       "additionalProperties": true,
@@ -1221,7 +1700,9 @@
           ],
           "default": null,
           "description": "Home Assistant IP address (auto-detected if not set)",
-          "title": "Host"
+          "title": "Host",
+          "x-category": "advanced",
+          "x-help": "Home Assistant IP address or hostname. Usually auto-detected when running as HA add-on. Set manually only if auto-detection fails. Examples: '192.168.1.100', 'homeassistant.local'."
         },
         "ip port": {
           "anyOf": [
@@ -1234,7 +1715,11 @@
           ],
           "default": null,
           "description": "Home Assistant port (default: 8123)",
-          "title": "Ip Port"
+          "title": "Ip Port",
+          "x-category": "advanced",
+          "x-help": "Home Assistant web interface port. Default is 8123. Change only if using custom port. Usually auto-detected when running as add-on.",
+          "x-unit": "port",
+          "x-validation-hint": "Default 8123, change if custom"
         },
         "token": {
           "anyOf": [
@@ -1250,7 +1735,10 @@
           ],
           "default": null,
           "description": "Home Assistant long-lived access token (can use !secret)",
-          "title": "Token"
+          "title": "Token",
+          "x-category": "advanced",
+          "x-help": "Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.",
+          "x-validation-hint": "Auto-provided as add-on, use !secret if manual"
         },
         "protocol api": {
           "anyOf": [
@@ -1267,11 +1755,20 @@
           ],
           "default": null,
           "description": "API protocol",
-          "title": "Protocol Api"
+          "title": "Protocol Api",
+          "x-category": "expert",
+          "x-help": "Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. Usually auto-detected. Set manually only if needed."
         }
       },
       "title": "HomeAssistantConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "integration",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Home-Assistant-Connection",
+      "x-help": "# Home Assistant Connection\n\nConfigure connection to Home Assistant for API access.\n\n## Auto-Detection (Recommended)\n\nWhen running as Home Assistant add-on:\n- ✅ IP address auto-detected\n- ✅ Port auto-detected\n- ✅ Access token auto-provided\n- ✅ Protocol auto-detected\n\n**Leave all fields empty for automatic configuration.**\n\n## Manual Configuration\n\nOnly needed if:\n- Running outside Home Assistant\n- Auto-detection fails\n- Using custom HA setup\n\n### Long-Lived Access Token\n\n1. In Home Assistant: Profile → Security\n2. Scroll to \"Long-Lived Access Tokens\"\n3. Click \"Create Token\"\n4. Name it \"Day Ahead Optimizer\"\n5. Copy token immediately (shown once!)\n6. Store in secrets.json:\n   ```json\n   {\"ha_token\": \"your_token_here\"}\n   ```\n7. Reference in config:\n   ```json\n   \"token\": \"!secret ha_token\"\n   ```\n\n## Troubleshooting\n\n- **Connection refused**: Check IP/port\n- **Unauthorized**: Token invalid or expired\n- **SSL errors**: Check protocol setting\n- **Timeout**: Network connectivity issues\n\n## Tips\n\n- Prefer auto-detection when possible\n- Always use !secret for tokens\n- Test connection from dashboard\n- Check HA logs if issues persist\n",
+      "x-icon": "home-assistant",
+      "x-order": 20,
+      "x-ui-group": "Integration"
     },
     "MachineConfig": {
       "additionalProperties": true,
@@ -1280,7 +1777,9 @@
         "name": {
           "description": "Machine name/identifier",
           "title": "Name",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Unique name for this appliance. Use descriptive names like 'Washing Machine', 'Dishwasher', or 'Dryer' for multiple machines."
         },
         "programs": {
           "description": "Available programs with power profiles",
@@ -1289,32 +1788,55 @@
           },
           "minItems": 1,
           "title": "Programs",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-help": "List of available programs with their power profiles. Must include at least one program. Always include an 'off' program with zero power consumption.",
+          "x-validation-hint": "At least 1 program required, include 'off' program"
         },
         "entity start window": {
           "description": "HA entity for start window datetime",
           "title": "Entity Start Window",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "input_datetime,datetime",
+          "x-help": "Home Assistant datetime entity for earliest allowed start time. Machine can start any time after this. Example: 'Now' or '18:00 today'.",
+          "x-ui-widget": "entity-picker"
         },
         "entity end window": {
           "description": "HA entity for end window datetime",
           "title": "Entity End Window",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "input_datetime,datetime",
+          "x-help": "Home Assistant datetime entity for latest allowed completion time. Machine must finish before this deadline. Example: '08:00 tomorrow'.",
+          "x-ui-widget": "entity-picker"
         },
         "entity selected program": {
           "description": "HA entity for selected program",
           "title": "Entity Selected Program",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "input_select,select",
+          "x-help": "Home Assistant entity to select which program to run. Must match program names defined in 'programs' list.",
+          "x-ui-widget": "entity-picker"
         },
         "entity calculated start": {
           "description": "HA entity for calculated optimal start time",
           "title": "Entity Calculated Start",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-entity-filter": "input_datetime,datetime",
+          "x-help": "Home Assistant entity where system writes the calculated optimal start time. User/automation can use this to trigger machine.",
+          "x-ui-widget": "entity-picker"
         },
         "entity calculated end": {
           "description": "HA entity for calculated end time",
           "title": "Entity Calculated End",
-          "type": "string"
+          "type": "string",
+          "x-category": "advanced",
+          "x-entity-filter": "input_datetime,datetime",
+          "x-help": "Home Assistant entity where system writes the calculated program end time. Useful for notifications and planning.",
+          "x-ui-widget": "entity-picker"
         },
         "entity instant start": {
           "anyOf": [
@@ -1327,7 +1849,11 @@
           ],
           "default": null,
           "description": "HA entity for instant start",
-          "title": "Entity Instant Start"
+          "title": "Entity Instant Start",
+          "x-category": "advanced",
+          "x-entity-filter": "input_boolean,switch,button",
+          "x-help": "Optional: Home Assistant entity to force immediate start, bypassing optimization. Useful for urgent wash cycles.",
+          "x-ui-widget": "entity-picker"
         }
       },
       "required": [
@@ -1340,7 +1866,14 @@
         "entity calculated end"
       ],
       "title": "MachineConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "devices",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Machine-Configuration",
+      "x-help": "# Appliance / Machine Configuration\n\nOptimize operation of flexible load appliances (washing machines, dishwashers, dryers, etc.) based on electricity prices and constraints.\n\n## How It Works\n\nThe system optimizes when to start appliances within time windows:\n1. User sets start window (earliest start) and end window (must finish by)\n2. User selects program (each program has a power profile)\n3. System calculates optimal start time to minimize cost\n4. System writes calculated start time to HA entity\n5. User/automation triggers machine at optimal time\n\n## Programs\n\nEach program defines power consumption over time:\n- **Power profile**: List of watts per time interval\n- **Duration**: Length of power list (e.g., 5 values = 5 hours)\n- **'off' program**: Required, with zero power consumption\n\nExamples:\n- Eco wash: `[1800, 1800, 400, 400, 100]` (5 hours)\n- Quick wash: `[2200, 500, 100]` (3 hours)\n- Off: `[]` or `[0]`\n\n## Time Windows\n\n- **Start window**: Earliest allowed start (e.g., \"now\" or \"20:00\")\n- **End window**: Latest allowed finish (e.g., \"08:00 next day\")\n- System finds cheapest start time within window\n- Machine must complete before end window\n\n## Tips\n\n- Define accurate power profiles for each program\n- Set realistic time windows (at least program duration)\n- Wider time windows = better optimization opportunities\n- Combine with solar production forecasts\n- Use instant start for urgent loads\n- Multiple machines can be optimized together\n",
+      "x-icon": "washing-machine",
+      "x-order": 6,
+      "x-ui-group": "Devices"
     },
     "MachineProgram": {
       "additionalProperties": true,
@@ -1349,7 +1882,9 @@
         "name": {
           "description": "Program name (e.g., 'eco', 'quick wash', 'off')",
           "title": "Name",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Descriptive name for this program. Examples: 'eco', 'quick wash', 'intensive', 'off'. Must include an 'off' program with zero power."
         },
         "power": {
           "description": "Power consumption in watts for each time interval",
@@ -1357,7 +1892,11 @@
             "type": "number"
           },
           "title": "Power",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-help": "Power profile as list of watts per time interval. Length defines program duration. Example: [2000, 2000, 500, 500, 100] for 5-hour wash cycle.",
+          "x-unit": "W",
+          "x-validation-hint": "List of power values, one per interval (typically 1h each)"
         }
       },
       "required": [
@@ -1365,7 +1904,9 @@
         "power"
       ],
       "title": "MachineProgram",
-      "type": "object"
+      "type": "object",
+      "x-category": "basic",
+      "x-help": "Define power profile for a machine program. Each program has a name and power consumption pattern over time."
     },
     "NotificationsConfig": {
       "additionalProperties": true,
@@ -1382,7 +1923,11 @@
           ],
           "default": null,
           "description": "HA entity for notifications",
-          "title": "Notification Entity"
+          "title": "Notification Entity",
+          "x-category": "basic",
+          "x-entity-filter": "notify",
+          "x-help": "Optional: Home Assistant notification service entity. Used to send notifications about optimization events. Example: 'notify.mobile_app' or 'notify.persistent_notification'.",
+          "x-ui-widget": "entity-picker"
         },
         "opstarten": {
           "anyOf": [
@@ -1395,7 +1940,10 @@
           ],
           "default": "false",
           "description": "Send notification on startup",
-          "title": "Opstarten"
+          "title": "Opstarten",
+          "x-category": "advanced",
+          "x-help": "Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status. Can be boolean or HA entity ID.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "berekening": {
           "anyOf": [
@@ -1408,7 +1956,10 @@
           ],
           "default": "false",
           "description": "Send notification on calculation completion",
-          "title": "Berekening"
+          "title": "Berekening",
+          "x-category": "basic",
+          "x-help": "Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.). Can be boolean or HA entity ID.",
+          "x-ui-widget": "entity-picker-or-boolean"
         },
         "last activity entity": {
           "anyOf": [
@@ -1421,11 +1972,22 @@
           ],
           "default": null,
           "description": "HA entity to track last activity timestamp",
-          "title": "Last Activity Entity"
+          "title": "Last Activity Entity",
+          "x-category": "advanced",
+          "x-entity-filter": "input_datetime,datetime,sensor",
+          "x-help": "Optional: Home Assistant entity to update with last activity timestamp. Useful for monitoring and automations. Example: 'input_datetime.dao_last_run'.",
+          "x-ui-widget": "entity-picker"
         }
       },
       "title": "NotificationsConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "integration",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Notifications-Configuration",
+      "x-help": "# Notifications Configuration\n\nConfigure Home Assistant notifications for optimization events.\n\n## Notification Types\n\n### Startup Notifications (opstarten)\n- Sent when add-on starts/restarts\n- Useful for monitoring system health\n- Helps diagnose startup issues\n\n### Calculation Notifications (berekening)\n- Sent after each optimization run\n- Includes optimization summary:\n  - Total costs (consumption/production)\n  - Battery charge schedule\n  - Device scheduling results\n  - Warnings or errors\n\n## Setup\n\n1. Configure notification service in HA\n2. Set notification_entity to your service\n3. Enable desired notification types\n4. Optional: Track activity with timestamp entity\n\n## Tips\n\n- Use mobile app notifications for important alerts\n- Use persistent notifications for detailed results\n- Disable during testing to avoid notification spam\n- Consider automations based on last_activity_entity\n",
+      "x-icon": "bell",
+      "x-order": 14,
+      "x-ui-group": "Integration"
     },
     "PricingConfig": {
       "additionalProperties": true,
@@ -1440,7 +2002,9 @@
             "tibber"
           ],
           "title": "Source Day Ahead",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration."
         },
         "entsoe-api-key": {
           "anyOf": [
@@ -1456,7 +2020,11 @@
           ],
           "default": null,
           "description": "ENTSO-E API key (can use !secret)",
-          "title": "Entsoe-Api-Key"
+          "title": "Entsoe-Api-Key",
+          "x-category": "basic",
+          "x-docs-url": "https://transparency.entsoe.eu/",
+          "x-help": "API key for ENTSO-E Transparency Platform. Required if source_day_ahead='entsoe'. Get free key at transparency.entsoe.eu. Use !secret for security.",
+          "x-validation-hint": "Required for entsoe source, use !secret"
         },
         "energy taxes consumption": {
           "additionalProperties": {
@@ -1464,7 +2032,11 @@
           },
           "description": "Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT)",
           "title": "Energy Taxes Consumption",
-          "type": "object"
+          "type": "object",
+          "x-category": "basic",
+          "x-help": "Energy taxes on consumption (excluding VAT) indexed by effective date. Format: {'2024-01-01': 0.05}. Use date when tariff changes.",
+          "x-unit": "€/kWh",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         },
         "energy taxes production": {
           "additionalProperties": {
@@ -1472,7 +2044,11 @@
           },
           "description": "Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT)",
           "title": "Energy Taxes Production",
-          "type": "object"
+          "type": "object",
+          "x-category": "basic",
+          "x-help": "Energy taxes on feed-in/production (excluding VAT) indexed by effective date. Often zero or negative. Format: {'2024-01-01': 0.0}.",
+          "x-unit": "€/kWh",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         },
         "cost supplier consumption": {
           "additionalProperties": {
@@ -1480,7 +2056,11 @@
           },
           "description": "Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT)",
           "title": "Cost Supplier Consumption",
-          "type": "object"
+          "type": "object",
+          "x-category": "basic",
+          "x-help": "Supplier markup/fees for consumption (excluding VAT) indexed by effective date. Fixed part of electricity cost. Format: {'2024-01-01': 0.02}.",
+          "x-unit": "€/kWh",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         },
         "cost supplier production": {
           "additionalProperties": {
@@ -1488,7 +2068,11 @@
           },
           "description": "Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT)",
           "title": "Cost Supplier Production",
-          "type": "object"
+          "type": "object",
+          "x-category": "basic",
+          "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
+          "x-unit": "€/kWh",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         },
         "vat consumption": {
           "additionalProperties": {
@@ -1496,7 +2080,11 @@
           },
           "description": "VAT percentage for consumption by date (YYYY-MM-DD -> %)",
           "title": "Vat Consumption",
-          "type": "object"
+          "type": "object",
+          "x-category": "basic",
+          "x-help": "VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 21}. Applied to market price + taxes + supplier costs.",
+          "x-unit": "%",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         },
         "vat production": {
           "additionalProperties": {
@@ -1504,12 +2092,19 @@
           },
           "description": "VAT percentage for production by date (YYYY-MM-DD -> %)",
           "title": "Vat Production",
-          "type": "object"
+          "type": "object",
+          "x-category": "basic",
+          "x-help": "VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.",
+          "x-unit": "%",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         },
         "last invoice": {
           "description": "Date of last invoice (YYYY-MM-DD)",
           "title": "Last Invoice",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.",
+          "x-validation-hint": "Must be YYYY-MM-DD format"
         },
         "tax refund": {
           "anyOf": [
@@ -1521,7 +2116,10 @@
             }
           ],
           "description": "Whether tax refund applies",
-          "title": "Tax Refund"
+          "title": "Tax Refund",
+          "x-category": "advanced",
+          "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.",
+          "x-ui-widget": "entity-picker-or-boolean"
         }
       },
       "required": [
@@ -1535,7 +2133,14 @@
         "tax refund"
       ],
       "title": "PricingConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "infrastructure",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration",
+      "x-help": "# Pricing & Tariff Configuration\n\nConfigure electricity market prices and tariff components for accurate cost optimization.\n\n## Price Components\n\nTotal electricity cost consists of:\n1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)\n2. **Energy taxes**: Government energy taxes\n3. **Supplier costs**: Your supplier's markup/fees\n4. **VAT**: Value-added tax on sum of above\n\nConsumption price = (market + taxes + supplier) × (1 + VAT)\n\n## Date-Based Tariffs\n\nAll tariff fields use date-indexed dictionaries:\n```json\n{\n  \"2024-01-01\": 0.05,\n  \"2024-07-01\": 0.06\n}\n```\n\nSystem uses tariff active on optimization date.\n\n## Data Sources\n\n- **nordpool**: Nord Pool (Nordic/Baltic markets)\n- **entsoe**: ENTSO-E Transparency Platform (all European markets)\n- **tibber**: Tibber API (if using Tibber as supplier)\n\n## Tips\n\n- All prices are EXCLUDING VAT (VAT applied separately)\n- Update tariffs when your supplier changes prices\n- Use !secret for API keys\n- Production costs often lower than consumption (or negative for feed-in credit)\n- Keep last_invoice updated for accurate cost tracking\n- Check your electricity bill for exact tariff components\n",
+      "x-icon": "currency-eur",
+      "x-order": 11,
+      "x-ui-group": "Pricing & Markets"
     },
     "ReportConfig": {
       "additionalProperties": true,
@@ -1547,7 +2152,12 @@
             "type": "string"
           },
           "title": "Entities Grid Consumption",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities measuring grid consumption (import). Used for actual vs optimized comparison and reporting.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities grid production": {
           "description": "HA entities for grid production",
@@ -1555,7 +2165,12 @@
             "type": "string"
           },
           "title": "Entities Grid Production",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities measuring grid production (export/feed-in). Used for production reporting and solar surplus calculation.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities solar production ac": {
           "description": "HA entities for AC solar production",
@@ -1563,7 +2178,12 @@
             "type": "string"
           },
           "title": "Entities Solar Production Ac",
-          "type": "array"
+          "type": "array",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities for AC-coupled solar production. After inverter, directly to AC side. Separate from DC-coupled solar.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities solar production dc": {
           "description": "HA entities for DC solar production",
@@ -1571,7 +2191,12 @@
             "type": "string"
           },
           "title": "Entities Solar Production Dc",
-          "type": "array"
+          "type": "array",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities for DC-coupled solar production. Before inverter, directly to battery DC bus. Separate from AC-coupled solar.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities ev consumption": {
           "description": "HA entities for EV consumption",
@@ -1579,7 +2204,12 @@
             "type": "string"
           },
           "title": "Entities Ev Consumption",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities measuring EV charging consumption. Used for EV-specific energy reporting and cost allocation.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities wp consumption": {
           "description": "HA entities for heat pump (warmtepomp) consumption",
@@ -1587,7 +2217,12 @@
             "type": "string"
           },
           "title": "Entities Wp Consumption",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities measuring heat pump consumption. Used for heating-specific energy reporting and COP calculation.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities boiler consumption": {
           "description": "HA entities for boiler consumption",
@@ -1595,7 +2230,12 @@
             "type": "string"
           },
           "title": "Entities Boiler Consumption",
-          "type": "array"
+          "type": "array",
+          "x-category": "basic",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities measuring hot water boiler consumption. Used for boiler-specific energy reporting.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities battery consumption": {
           "description": "HA entities for battery consumption",
@@ -1603,7 +2243,12 @@
             "type": "string"
           },
           "title": "Entities Battery Consumption",
-          "type": "array"
+          "type": "array",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities measuring battery charging (consumption). Used for battery efficiency and cycling cost calculation.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities battery production": {
           "description": "HA entities for battery production",
@@ -1611,7 +2256,12 @@
             "type": "string"
           },
           "title": "Entities Battery Production",
-          "type": "array"
+          "type": "array",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities measuring battery discharging (production). Used for battery efficiency and round-trip calculation.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "entities machine consumption": {
           "description": "HA entities for machine consumption",
@@ -1619,7 +2269,12 @@
             "type": "string"
           },
           "title": "Entities Machine Consumption",
-          "type": "array"
+          "type": "array",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "List of Home Assistant sensor entities measuring appliance/machine consumption (washing machine, dishwasher, etc.). Used for machine-specific reporting.",
+          "x-ui-widget": "entity-list-picker",
+          "x-unit": "kWh"
         },
         "co2 intensity sensor": {
           "anyOf": [
@@ -1632,7 +2287,12 @@
           ],
           "default": null,
           "description": "HA entity for CO2 intensity",
-          "title": "Co2 Intensity Sensor"
+          "title": "Co2 Intensity Sensor",
+          "x-category": "advanced",
+          "x-entity-filter": "sensor",
+          "x-help": "Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.",
+          "x-ui-widget": "entity-picker",
+          "x-unit": "gCO2/kWh"
         },
         "sensors": {
           "anyOf": [
@@ -1645,18 +2305,34 @@
           ],
           "default": null,
           "description": "Additional sensors configuration",
-          "title": "Sensors"
+          "title": "Sensors",
+          "x-category": "expert",
+          "x-help": "Optional: Additional custom sensor configurations. Advanced use for extending reporting capabilities beyond standard entities."
         }
       },
       "title": "ReportConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "reporting",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Reporting-Configuration",
+      "x-help": "# Reporting & Sensors Configuration\n\nConfigure Home Assistant sensors for comprehensive energy reporting.\n\n## Purpose\n\nConnect actual energy measurements to Day Ahead Optimizer:\n- Compare actual vs optimized usage\n- Track device-specific consumption\n- Calculate efficiency metrics\n- Generate cost reports\n- Monitor carbon footprint\n\n## Entity Lists\n\nAll entity fields accept lists of HA sensors:\n```json\n\"entities_grid_consumption\": [\n  \"sensor.grid_import_meter\",\n  \"sensor.backup_meter\"\n]\n```\n\n## Key Measurements\n\n### Grid\n- **Consumption**: Total import from grid\n- **Production**: Total export/feed-in to grid\n\n### Solar\n- **AC**: After inverter, to AC distribution\n- **DC**: Before inverter, directly to battery\n\n### Devices\n- **EV**: Charging consumption\n- **Heat Pump**: Heating/cooling consumption\n- **Boiler**: Hot water heating consumption\n- **Battery**: Charge/discharge tracking\n- **Machines**: Appliance consumption\n\n## Tips\n\n- Use energy sensors (kWh cumulative)\n- Multiple sensors per category are summed\n- Essential for accurate cost reporting\n- CO2 tracking optional but insightful\n- Update when adding new monitoring devices\n",
+      "x-icon": "chart-bar",
+      "x-order": 17,
+      "x-ui-group": "Reporting"
     },
     "SchedulerConfig": {
       "additionalProperties": true,
       "description": "Task scheduler configuration.\n\nMaps time patterns to action names.\nTime patterns can be:\n- Specific times: \"0435\", \"1255\"\n- Wildcards: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n\nActions include:\n- get_meteo_data\n- get_tibber_data\n- get_day_ahead_prices\n- calc_optimum\n- clean_data\n- calc_baseloads",
       "properties": {},
       "title": "SchedulerConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "automation",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Scheduler-Configuration",
+      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"0435\": \"get_day_ahead_prices\",\n  \"0445\": \"get_meteo_data\",\n  \"0500\": \"calc_optimum\",\n  \"xx00\": \"calc_baseloads\",\n  \"0300\": \"clean_data\"\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)\n2. **05:00**: Run optimization with fresh data\n3. **Hourly**: Update baseload calculations\n4. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
+      "x-icon": "clock-outline",
+      "x-order": 18,
+      "x-ui-group": "Automation"
     },
     "SecretStr": {
       "additionalProperties": false,
@@ -1664,14 +2340,19 @@
       "properties": {
         "secret_key": {
           "title": "Secret Key",
-          "type": "string"
+          "type": "string",
+          "x-category": "security",
+          "x-help": "Secret key name to resolve from secrets.json. Use '!secret key_name' in config. Never store actual secrets in options.json!",
+          "x-validation-hint": "Use format: !secret key_name"
         }
       },
       "required": [
         "secret_key"
       ],
       "title": "SecretStr",
-      "type": "object"
+      "type": "object",
+      "x-category": "utility",
+      "x-help": "SecretStr provides secure secret management. Secrets stored in separate secrets.json file, never in main config. Reference format: \"!secret key_name\". Essential for passwords, API tokens, and sensitive data."
     },
     "SolarConfig": {
       "additionalProperties": true,
@@ -1680,7 +2361,9 @@
         "name": {
           "description": "Solar installation name/identifier",
           "title": "Name",
-          "type": "string"
+          "type": "string",
+          "x-category": "basic",
+          "x-help": "Unique name for this solar installation. Use descriptive names like 'Roof South' or 'Garage East' for multiple installations."
         },
         "entity pv switch": {
           "anyOf": [
@@ -1693,7 +2376,11 @@
           ],
           "default": null,
           "description": "HA entity to enable/disable this solar installation",
-          "title": "Entity Pv Switch"
+          "title": "Entity Pv Switch",
+          "x-category": "advanced",
+          "x-entity-filter": "switch",
+          "x-help": "Optional Home Assistant entity to enable or disable this solar installation in the optimization. Useful for maintenance or testing.",
+          "x-ui-widget": "entity-picker"
         },
         "tilt": {
           "anyOf": [
@@ -1708,7 +2395,11 @@
           ],
           "default": null,
           "description": "Panel tilt (for single installation)",
-          "title": "Tilt"
+          "title": "Tilt",
+          "x-category": "basic",
+          "x-help": "Panel tilt angle for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
+          "x-unit": "degrees",
+          "x-validation-hint": "0-90 degrees, leave empty when using strings"
         },
         "orientation": {
           "anyOf": [
@@ -1723,7 +2414,11 @@
           ],
           "default": null,
           "description": "Panel orientation (for single installation)",
-          "title": "Orientation"
+          "title": "Orientation",
+          "x-category": "basic",
+          "x-help": "Panel orientation for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
+          "x-unit": "degrees",
+          "x-validation-hint": "-180 to 180 degrees, leave empty when using strings"
         },
         "capacity": {
           "anyOf": [
@@ -1737,7 +2432,11 @@
           ],
           "default": null,
           "description": "Installed capacity (for single installation)",
-          "title": "Capacity"
+          "title": "Capacity",
+          "x-category": "basic",
+          "x-help": "Total capacity for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
+          "x-unit": "kWp",
+          "x-validation-hint": "Greater than 0, leave empty when using strings"
         },
         "yield": {
           "anyOf": [
@@ -1751,7 +2450,11 @@
           ],
           "default": null,
           "description": "Yield factor (for single installation)",
-          "title": "Yield"
+          "title": "Yield",
+          "x-category": "basic",
+          "x-help": "Yield factor for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
+          "x-unit": "ratio",
+          "x-validation-hint": "Greater than 0, typically 0.8-0.9, leave empty when using strings"
         },
         "strings": {
           "anyOf": [
@@ -1767,14 +2470,23 @@
           ],
           "default": null,
           "description": "Multiple panel strings with different configurations",
-          "title": "Strings"
+          "title": "Strings",
+          "x-category": "advanced",
+          "x-help": "Advanced: Configure multiple strings for panels with different orientations or tilts. Use this OR flat config (tilt/orientation/capacity/yield), not both."
         }
       },
       "required": [
         "name"
       ],
       "title": "SolarConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "devices",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Solar-Configuration",
+      "x-help": "# Solar Panel Configuration\n\nConfigure your solar panel installations for accurate production forecasting.\n\n## Configuration Options\n\n### Simple Configuration\nFor panels all facing the same direction, use the flat config:\n- **tilt**: Panel angle (0-90°)\n- **orientation**: Direction panels face (0=south)\n- **capacity**: Total capacity in kWp\n- **yield**: Efficiency factor (0.8-0.9)\n\n### Advanced Configuration (Multiple Strings)\nFor panels facing different directions, use the 'strings' configuration:\n- Each string can have different tilt and orientation\n- Allows accurate modeling of complex installations\n- Example: Panels on both south and east-facing roofs\n\n## Tips\n- Use strings configuration for multi-directional installations\n- Include all inverter and cable losses in yield factor\n- Account for shading in yield factor\n",
+      "x-icon": "solar-panel",
+      "x-order": 2,
+      "x-ui-group": "Energy Production"
     },
     "SolarString": {
       "additionalProperties": true,
@@ -1785,26 +2497,42 @@
           "maximum": 90.0,
           "minimum": 0.0,
           "title": "Tilt",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Angle of the solar panels relative to horizontal. 0° = flat/horizontal, 30-35° = optimal for Netherlands, 90° = vertical mounting.",
+          "x-unit": "degrees",
+          "x-validation-hint": "Must be between 0 and 90 degrees"
         },
         "orientation": {
           "description": "Panel orientation in degrees (0=south, 90=west, -90=east)",
           "maximum": 180.0,
           "minimum": -180.0,
           "title": "Orientation",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° or 270° = east, 180° = north. South-facing panels produce most energy.",
+          "x-unit": "degrees",
+          "x-validation-hint": "Must be between -180 and 180 degrees"
         },
         "capacity": {
           "description": "Installed capacity in kWp",
           "exclusiveMinimum": 0.0,
           "title": "Capacity",
-          "type": "number"
+          "type": "number",
+          "x-category": "basic",
+          "x-help": "Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.",
+          "x-unit": "kWp",
+          "x-validation-hint": "Must be greater than 0"
         },
         "yield": {
           "description": "Yield factor for production calculation",
           "exclusiveMinimum": 0.0,
           "title": "Yield",
-          "type": "number"
+          "type": "number",
+          "x-category": "advanced",
+          "x-help": "Efficiency factor for this string. Typically 0.8-0.9. Accounts for inverter losses, cable losses, shading, and dirt on panels.",
+          "x-unit": "ratio",
+          "x-validation-hint": "Must be greater than 0, typically 0.8-0.9"
         }
       },
       "required": [
@@ -1814,7 +2542,9 @@
         "yield"
       ],
       "title": "SolarString",
-      "type": "object"
+      "type": "object",
+      "x-category": "advanced",
+      "x-help": "Configuration for a single string of solar panels with the same tilt and orientation. Use multiple strings for panels facing different directions."
     },
     "TibberConfig": {
       "additionalProperties": true,
@@ -1830,7 +2560,11 @@
             }
           ],
           "description": "Tibber API token (can use !secret)",
-          "title": "Api Token"
+          "title": "Api Token",
+          "x-category": "basic",
+          "x-docs-url": "https://developer.tibber.com/",
+          "x-help": "Tibber API access token. Get from Tibber app or developer portal. Use !secret for security. Required if using Tibber as price source.",
+          "x-validation-hint": "Use !secret for API tokens"
         },
         "api url": {
           "anyOf": [
@@ -1843,14 +2577,23 @@
           ],
           "default": "https://api.tibber.com/v1-beta/gql",
           "description": "Tibber API URL",
-          "title": "Api Url"
+          "title": "Api Url",
+          "x-category": "expert",
+          "x-help": "Tibber GraphQL API endpoint URL. Default is official API. Change only for testing or custom endpoints."
         }
       },
       "required": [
         "api_token"
       ],
       "title": "TibberConfig",
-      "type": "object"
+      "type": "object",
+      "x-category": "integration",
+      "x-collapsible": true,
+      "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Tibber-Configuration",
+      "x-help": "# Tibber Integration\n\nConnect to Tibber API for real-time prices and consumption data.\n\n## What is Tibber?\n\nTibber is an electricity supplier offering:\n- Real-time spot price electricity\n- Hour-by-hour pricing\n- Smart home integrations\n- Carbon-aware pricing\n\n## Setup\n\n1. Sign up for Tibber account\n2. Get API token from Tibber app:\n   - Settings → Developer → Personal Token\n3. Store in secrets.json:\n   ```json\n   {\"tibber_token\": \"your_token_here\"}\n   ```\n4. Reference in config:\n   ```json\n   \"api_token\": \"!secret tibber_token\"\n   ```\n\n## When to Use\n\n- **Yes**: If Tibber is your electricity supplier\n- **Yes**: Want real-time Tibber prices in optimization\n- **No**: If using other price sources (nordpool, entsoe)\n\n## API Usage\n\n- Fetches hourly prices\n- Retrieves consumption history\n- Updates price forecasts\n- Rate-limited (stay within API limits)\n\n## Tips\n\n- Always use !secret for API token\n- Set pricing source to 'tibber' if using\n- Tibber provides next-day prices after ~13:00 CET\n- Combine with Tibber HA integration for full experience\n",
+      "x-icon": "lightning-bolt",
+      "x-order": 19,
+      "x-ui-group": "Integration"
     }
   },
   "additionalProperties": true,

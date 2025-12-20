@@ -24,10 +24,28 @@ class FlexValue(BaseModel):
         FlexValue(value="binary_sensor.grid")  # HA entity ID
     """
     
-    value: Union[int, float, str, bool]
-    is_entity: bool = Field(default=False, description="True if value is a HA entity ID")
+    value: Union[int, float, str, bool] = Field(
+        json_schema_extra={
+            "x-help": "Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').",
+            "x-category": "advanced"
+        }
+    )
+    is_entity: bool = Field(
+        default=False,
+        description="True if value is a HA entity ID",
+        json_schema_extra={
+            "x-help": "Automatically set to true if value contains '.' (entity ID pattern). Used internally to determine resolution strategy.",
+            "x-category": "expert"
+        }
+    )
     
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(
+        extra='forbid',
+        json_schema_extra={
+            'x-help': '''FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.''',
+            'x-category': 'utility'
+        }
+    )
     
     @field_validator('value', mode='after')
     @classmethod
@@ -89,9 +107,21 @@ class SecretStr(BaseModel):
         {"db_password": "my_actual_password_123"}
     """
     
-    secret_key: str
+    secret_key: str = Field(
+        json_schema_extra={
+            "x-help": "Secret key name to resolve from secrets.json. Use '!secret key_name' in config. Never store actual secrets in options.json!",
+            "x-category": "security",
+            "x-validation-hint": "Use format: !secret key_name"
+        }
+    )
     
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(
+        extra='forbid',
+        json_schema_extra={
+            'x-help': '''SecretStr provides secure secret management. Secrets stored in separate secrets.json file, never in main config. Reference format: "!secret key_name". Essential for passwords, API tokens, and sensitive data.''',
+            'x-category': 'utility'
+        }
+    )
     
     @field_validator('secret_key', mode='before')
     @classmethod
