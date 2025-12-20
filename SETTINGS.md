@@ -236,7 +236,7 @@ Home Assistant database connection configuration.
 |-------|------|----------|---------|-------------|
 | `engine` | string | No | `"mysql"` | Database engine type. Options: `mysql`, `sqlite`, `postgresql` |
 | `server` | string (optional) | No | `null` | Database server hostname (required for mysql/postgresql) |
-| `port` | integer (optional) | No | `null` | Database port (defaults: mysql=3306, postgresql=5432) |
+| `port` | integer (optional) | No | `null` | Database port |
 | `database` | string | No | `"homeassistant"` | Database name |
 | `username` | string | No | `"homeassistant"` | Database username |
 | `password` | string or [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) |
