@@ -103,9 +103,9 @@ class DaCalc(DaBase):
             )
             return None
 
-        end = price_data["time"].iloc[-1]
+        end_prog = price_data["time"].iloc[-1]
         if self.interval == "15min":
-            num_quaters = round((end - start).total_seconds() / 900)
+            num_quaters = round((end_prog - start).total_seconds() / 900)
             if len(price_data) < num_quaters - 1:
                 logging.error(
                     f"Er ontbreken kwartierwaarden van de day-ahead tarieven, "
@@ -244,7 +244,8 @@ class DaCalc(DaBase):
         for s in range(solar_num):
             if solar_ml_prediction[s]:
                 solar_name = self.solar[s]["name"]
-                solar_prog = solar_predictor.predict_solar_device(solar_name, start_hour_dt, end)
+                solar_prog = solar_predictor.predict_solar_device(solar_name, start_hour_dt,
+                                                                  end_prog)
                 solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
                 if self.interval == "15min":
                     solar_prog = interpolate(solar_prog, "prediction", quantity=True)
@@ -276,7 +277,7 @@ class DaCalc(DaBase):
                 interval_fraction.append(1)
             for s in range(solar_num):
                 if solar_ml_prediction[s]:
-                    prod = getattr(row, self.solar[s]["name"])
+                    prod = max(0,getattr(row, self.solar[s]["name"])) * interval_fraction[-1]
                 else:
                     prod = self.calc_prod_solar(
                         self.solar[s], row.time, gr, hour_fraction[-1]
