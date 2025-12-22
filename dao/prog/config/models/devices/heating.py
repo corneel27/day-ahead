@@ -62,7 +62,7 @@ class HeatingConfig(BaseModel):
             "x-help": "Optional: Home Assistant binary sensor indicating if heat pump is enabled and operational. System will only optimize when enabled.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "binary_sensor"
+            "x-ui-widget-filter": "binary_sensor"
         }
     )
     degree_days_factor: float = Field(
@@ -102,7 +102,7 @@ class HeatingConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to adjust heating curve. Used when adjustment mode is 'heating curve'. Controls water temperature based on outdoor temperature.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "number,input_number"
+            "x-ui-widget-filter": "number,input_number"
         }
     )
     adjustment_factor: Optional[float] = Field(
@@ -137,7 +137,7 @@ class HeatingConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_hp_heat_demand: Optional[str] = Field(
@@ -149,7 +149,7 @@ class HeatingConfig(BaseModel):
             "x-unit": "W",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_avg_temp: Optional[str] = Field(
@@ -161,7 +161,7 @@ class HeatingConfig(BaseModel):
             "x-unit": "°C",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_hp_cop: Optional[str] = Field(
@@ -173,7 +173,7 @@ class HeatingConfig(BaseModel):
             "x-unit": "ratio",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_hp_power: Optional[str] = Field(
@@ -185,7 +185,7 @@ class HeatingConfig(BaseModel):
             "x-unit": "W",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_hp_switch: Optional[str] = Field(
@@ -196,7 +196,7 @@ class HeatingConfig(BaseModel):
             "x-help": "Optional: Home Assistant switch to control heat pump on/off. Used by scheduler to execute optimized heating schedule.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "switch"
+            "x-ui-widget-filter": "switch"
         }
     )
     

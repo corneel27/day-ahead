@@ -50,7 +50,7 @@ class EVChargeScheduler(BaseModel):
             "x-unit": "%",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_number,number"
+            "x-ui-widget-filter": "input_number,number"
         }
     )
     level_margin: int = Field(
@@ -71,7 +71,7 @@ class EVChargeScheduler(BaseModel):
             "x-help": "Home Assistant datetime entity specifying when vehicle must be charged. System will optimize charging schedule to minimize cost while meeting deadline.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_datetime,datetime"
+            "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
     
@@ -112,7 +112,7 @@ class EVConfig(BaseModel):
             "x-help": "Home Assistant device tracker entity to detect if vehicle is home. Charging is only scheduled when vehicle is at home location.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "device_tracker"
+            "x-ui-widget-filter": "device_tracker"
         }
     )
     charge_three_phase: bool | str = Field(
@@ -143,7 +143,7 @@ class EVConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_plugged_in: str = Field(
@@ -153,7 +153,7 @@ class EVConfig(BaseModel):
             "x-help": "Home Assistant binary sensor indicating if vehicle is plugged into charger. Charging is only possible when plugged in.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "binary_sensor"
+            "x-ui-widget-filter": "binary_sensor"
         }
     )
     entity_instant_start: Optional[str] = Field(
@@ -164,7 +164,7 @@ class EVConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to trigger immediate charging. Use with entity_instant_level for instant charging mode. Alternative to charge_scheduler.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "switch,input_boolean"
+            "x-ui-widget-filter": "switch,input_boolean"
         }
     )
     entity_instant_level: Optional[str] = Field(
@@ -176,7 +176,7 @@ class EVConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_number,number,sensor"
+            "x-ui-widget-filter": "input_number,number,sensor"
         }
     )
     charge_scheduler: Optional[EVChargeScheduler] = Field(
@@ -195,7 +195,7 @@ class EVConfig(BaseModel):
             "x-help": "Home Assistant switch entity to start/stop charging. System will control this to execute optimized charging schedule.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "switch"
+            "x-ui-widget-filter": "switch"
         }
     )
     entity_set_charging_ampere: str = Field(
@@ -206,7 +206,7 @@ class EVConfig(BaseModel):
             "x-unit": "A",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "number,input_number"
+            "x-ui-widget-filter": "number,input_number"
         }
     )
     entity_stop_charging: str = Field(
@@ -216,7 +216,7 @@ class EVConfig(BaseModel):
             "x-help": "Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_datetime,datetime"
+            "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
     
