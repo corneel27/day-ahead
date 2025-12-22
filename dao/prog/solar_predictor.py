@@ -91,7 +91,7 @@ class SolarPredictor(DaBase):
 
     def __init__(
         self,
-        solar_name: str,
+        solar_name: str = "",
         solar_capacity: float = 5,
         random_state: int = 42,
         # max_hourly_production: Optional[Dict[int, float]] = None,
@@ -127,7 +127,7 @@ class SolarPredictor(DaBase):
         self.is_trained = False
         self.training_stats = {}
         self.solar_entities = []
-
+        """
         # Set default physics-based constraints for typical residential system
         # Uses 5kW system at 45°N latitude (mid-latitude) as reasonable default
         self.max_hourly_production =(
@@ -137,6 +137,7 @@ class SolarPredictor(DaBase):
                 conservative_factor=1.2
             )
         )
+        """
 
     def create_physics_based_constraints(
         self,
@@ -761,7 +762,7 @@ class SolarPredictor(DaBase):
 
         knmi_df["utc"] = knmi_df.index
         knmi_eerste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize(self.time_zone)
-        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize(self.time_zone)
+        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[-1]).tz_localize(self.time_zone)
         logging.info(f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
                      f"{knmi_laatste}")
         knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
@@ -832,6 +833,7 @@ class SolarPredictor(DaBase):
         report = Report()
         tot = dt.datetime(start.year + 1, start.month, start.day)
         count = 0
+        df_solar = pd.DataFrame()
         for sensor in entities:
             df_sensor = report.get_sensor_data(
                 sensor, col_name="solar_kwh", vanaf=start, tot=tot, agg="uur"
@@ -919,8 +921,8 @@ def main():
         solar_predictor.run_train(start)
     if arg.lower() == "predict":
         solar_predictor.test_solar_predictor(
-            start=dt.datetime(year=2025, month=12, day=15),
-            end=dt.datetime(year=2025, month=12, day=16),
+            start=dt.datetime(year=2025, month=12, day=21),
+            end=dt.datetime(year=2025, month=12, day=23),
         )
 
 

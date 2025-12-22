@@ -103,8 +103,8 @@ class DaCalc(DaBase):
             )
             return None
 
+        end = price_data["time"].iloc[-1]
         if self.interval == "15min":
-            end = price_data["time"].iloc[-1]
             num_quaters = round((end - start).total_seconds() / 900)
             if len(price_data) < num_quaters - 1:
                 logging.error(
@@ -207,6 +207,7 @@ class DaCalc(DaBase):
         entity_pv_ac_switch = []
         max_solar_power = []
         pv_ac_varcode = []
+        solar_ml_prediction = []
         solar_num = len(self.solar)
         for s in range(solar_num):
             if s <= 9:
@@ -217,7 +218,8 @@ class DaCalc(DaBase):
                 entity = None
             entity_pv_ac_switch.append(entity)
             max_solar_power.append(self.config.get(["max power"], self.solar[s], None))
-
+            prediction = self.config.get(["ml_prediction"], self.solar[s], "False").lower() == "true"
+            solar_ml_prediction.append(prediction)
         time_first_interval = prog_data["tijd"].iloc[0]
         if self.interval == "1hour":
             first_interval_nr = int(time_first_interval.hour)
@@ -235,6 +237,22 @@ class DaCalc(DaBase):
         hour_fraction = []
         interval_fraction = []
         first_interval = True
+
+        from dao.prog.solar_predictor import SolarPredictor
+        solar_predictor = SolarPredictor()
+        start_hour_dt = dt.datetime.fromtimestamp(start_hour)
+        for s in range(solar_num):
+            if solar_ml_prediction[s]:
+                solar_name = self.solar[s]["name"]
+                solar_prog = solar_predictor.predict_solar_device(solar_name, start_hour_dt, end)
+                solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
+                if self.interval == "15min":
+                    solar_prog = interpolate(solar_prog, "prediction", quantity=True)
+                while solar_prog["tijd"].iloc[0].tz_localize(None) < prog_data["tijd"].iloc[0]:
+                    solar_prog = solar_prog.iloc[1:]
+                solar_prog.reset_index(drop=True, inplace=True)
+                prog_data[solar_name] = solar_prog["prediction"]
+
 
         # prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
@@ -257,9 +275,12 @@ class DaCalc(DaBase):
                 hour_fraction.append(self.interval_s / 3600)
                 interval_fraction.append(1)
             for s in range(solar_num):
-                prod = self.calc_prod_solar(
-                    self.solar[s], row.time, gr, hour_fraction[-1]
-                )
+                if solar_ml_prediction[s]:
+                    prod = getattr(row, self.solar[s]["name"])
+                else:
+                    prod = self.calc_prod_solar(
+                        self.solar[s], row.time, gr, hour_fraction[-1]
+                    )
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org_ac.append(pv_total)
