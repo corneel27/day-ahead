@@ -5,7 +5,6 @@ stage: experimental
 slug: day_ahead_opt-testing
 description: Beta version of DAO. Use only for testing!
 url: https://github.com/corneel27/day-ahead/
-codenotary: cees.van.beek@xs4all.nl
 arch:
   - aarch64
   - amd64
