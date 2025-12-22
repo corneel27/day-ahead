@@ -59,7 +59,7 @@ class BatteryConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     capacity: float = Field(
@@ -75,7 +75,15 @@ class BatteryConfig(BaseModel):
     upper_limit: int | FlexValue = Field(
         alias="upper limit",
         ge=0, le=100,
-        description="Maximum SOC % (can be HA entity)"
+        description="Maximum SOC % (can be HA entity)",
+        json_schema_extra={
+            "x-help": "Maximum State of Charge in percent. Battery will never charge above this level. Supports FlexValue pattern: use integer or HA entity ID.",
+            "x-unit": "%",
+            "x-ui-section": "Power Configuration",
+            "x-validation-hint": "0-100%, protects battery from overcharge",
+            "x-ui-widget": "entity-picker-or-literal",
+            "x-ui-widget-filter": "sensor,input_number"
+        }
     )
     lower_limit: int | FlexValue = Field(
         alias="lower limit",
@@ -86,7 +94,8 @@ class BatteryConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-validation-hint": "0-100%, protects battery from deep discharge",
-            "x-ui-widget": "entity-picker-or-number"
+            "x-ui-widget": "entity-picker-or-literal",
+            "x-ui-widget-filter": "sensor,input_number"
         }
     )
     optimal_lower_level: Optional[int | FlexValue] = Field(
@@ -99,7 +108,8 @@ class BatteryConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-validation-hint": "Optional, should be >= lower_limit",
-            "x-ui-widget": "entity-picker-or-number"
+            "x-ui-widget": "entity-picker-or-literal",
+            "x-ui-widget-filter": "sensor,input_number"
         }
     )
     entity_min_soc_end_opt: Optional[str] = Field(
@@ -110,7 +120,7 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity specifying minimum battery level required at end of optimization window. Useful for ensuring battery charge overnight.",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor,input_number"
+            "x-ui-widget-filter": "sensor,input_number"
         }
     )
     entity_max_soc_end_opt: Optional[str] = Field(
@@ -121,7 +131,7 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity specifying maximum battery level at end of optimization window. Rarely needed but available for advanced scenarios.",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor,input_number"
+            "x-ui-widget-filter": "sensor,input_number"
         }
     )
     charge_stages: list[BatteryStage] = Field(
@@ -236,7 +246,7 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to control grid feed-in power. Used by scheduler to execute optimized battery operations.",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "number,input_number"
+            "x-ui-widget-filter": "number,input_number"
         }
     )
     entity_set_operating_mode: Optional[str] = Field(
@@ -247,7 +257,7 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to control battery operating mode (e.g., auto/manual/off). System will switch modes as needed for optimization.",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "select,input_select,switch"
+            "x-ui-widget-filter": "select,input_select,switch"
         }
     )
     entity_set_operating_mode_on: Optional[str] = Field(
@@ -276,7 +286,7 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "switch,button"
+            "x-ui-widget-filter": "switch,button"
         }
     )
     entity_balance_switch: Optional[str] = Field(
@@ -287,7 +297,7 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "switch"
+            "x-ui-widget-filter": "switch"
         }
     )
     
@@ -301,7 +311,7 @@ class BatteryConfig(BaseModel):
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_from_pv: Optional[str] = Field(
@@ -313,7 +323,7 @@ class BatteryConfig(BaseModel):
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_from_ac: Optional[str] = Field(
@@ -325,7 +335,7 @@ class BatteryConfig(BaseModel):
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_calculated_soc: Optional[str] = Field(
@@ -337,7 +347,7 @@ class BatteryConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     

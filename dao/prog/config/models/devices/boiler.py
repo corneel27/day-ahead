@@ -27,7 +27,7 @@ class BoilerConfig(BaseModel):
             "x-unit": "°C",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entity_setpoint: str = Field(
@@ -38,7 +38,7 @@ class BoilerConfig(BaseModel):
             "x-unit": "°C",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_number,number,sensor"
+            "x-ui-widget-filter": "input_number,number,sensor"
         }
     )
     entity_hysterese: str = Field(
@@ -49,7 +49,7 @@ class BoilerConfig(BaseModel):
             "x-unit": "°C",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_number,number,sensor"
+            "x-ui-widget-filter": "input_number,number,sensor"
         }
     )
     entity_enabled: Optional[str] = Field(
@@ -60,7 +60,7 @@ class BoilerConfig(BaseModel):
             "x-help": "Optional: Home Assistant binary sensor indicating if boiler is enabled. System will only optimize when boiler is enabled.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "binary_sensor"
+            "x-ui-widget-filter": "binary_sensor"
         }
     )
     entity_instant_start: Optional[str] = Field(
@@ -71,7 +71,7 @@ class BoilerConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to trigger immediate boiler heating. Overrides optimized schedule for on-demand hot water.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "switch,input_boolean,button"
+            "x-ui-widget-filter": "switch,input_boolean,button"
         }
     )
     cop: float = Field(
@@ -144,7 +144,7 @@ class BoilerConfig(BaseModel):
             "x-help": "Home Assistant entity used to activate boiler heating. System will trigger this entity using activate_service when heating is needed.",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "button,switch"
+            "x-ui-widget-filter": "button,switch"
         }
     )
     
