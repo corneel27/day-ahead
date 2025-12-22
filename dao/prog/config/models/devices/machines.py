@@ -61,7 +61,7 @@ class MachineConfig(BaseModel):
             "x-help": "Home Assistant datetime entity for earliest allowed start time. Machine can start any time after this. Example: 'Now' or '18:00 today'.",
             "x-ui-section": "Battery Specifications",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_datetime,datetime"
+            "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
     entity_end_window: str = Field(
@@ -71,7 +71,7 @@ class MachineConfig(BaseModel):
             "x-help": "Home Assistant datetime entity for latest allowed completion time. Machine must finish before this deadline. Example: '08:00 tomorrow'.",
             "x-ui-section": "Battery Specifications",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_datetime,datetime"
+            "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
     entity_selected_program: str = Field(
@@ -81,7 +81,7 @@ class MachineConfig(BaseModel):
             "x-help": "Home Assistant entity to select which program to run. Must match program names defined in 'programs' list.",
             "x-ui-section": "Battery Specifications",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_select,select"
+            "x-ui-widget-filter": "input_select,select"
         }
     )
     entity_calculated_start: str = Field(
@@ -91,7 +91,7 @@ class MachineConfig(BaseModel):
             "x-help": "Home Assistant entity where system writes the calculated optimal start time. User/automation can use this to trigger machine.",
             "x-ui-section": "Battery Specifications",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_datetime,datetime"
+            "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
     entity_calculated_end: str = Field(
@@ -101,7 +101,7 @@ class MachineConfig(BaseModel):
             "x-help": "Home Assistant entity where system writes the calculated program end time. Useful for notifications and planning.",
             "x-ui-section": "Battery Specifications",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_datetime,datetime"
+            "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
     entity_instant_start: Optional[str] = Field(
@@ -112,7 +112,7 @@ class MachineConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to force immediate start, bypassing optimization. Useful for urgent wash cycles.",
             "x-ui-section": "Battery Specifications",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_boolean,switch,button"
+            "x-ui-widget-filter": "input_boolean,switch,button"
         }
     )
     

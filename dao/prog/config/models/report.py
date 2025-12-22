@@ -18,7 +18,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_grid_production: list[str] = Field(
@@ -30,7 +30,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_solar_production_ac: list[str] = Field(
@@ -42,7 +42,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_solar_production_dc: list[str] = Field(
@@ -54,7 +54,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_ev_consumption: list[str] = Field(
@@ -66,7 +66,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_wp_consumption: list[str] = Field(
@@ -78,7 +78,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_boiler_consumption: list[str] = Field(
@@ -90,7 +90,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_battery_consumption: list[str] = Field(
@@ -102,7 +102,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_battery_production: list[str] = Field(
@@ -114,7 +114,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     entities_machine_consumption: list[str] = Field(
@@ -126,7 +126,7 @@ class ReportConfig(BaseModel):
             "x-unit": "kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-list-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     co2_intensity_sensor: Optional[str] = Field(
@@ -138,7 +138,7 @@ class ReportConfig(BaseModel):
             "x-unit": "gCO2/kWh",
             "x-ui-section": "General",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "sensor"
+            "x-ui-widget-filter": "sensor"
         }
     )
     sensors: Optional[dict] = Field(

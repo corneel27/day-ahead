@@ -112,7 +112,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `name` | string | Yes | — | Battery name/identifier |
 | `entity actual level` | string | Yes | — | HA entity for current battery SOC (Unit: `%`) |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be greater than 0_ |
-| `upper limit` | integer or [FlexValue](#flexvalue) | Yes | — | Maximum SOC % (can be HA entity) |
+| `upper limit` | integer or [FlexValue](#flexvalue) | Yes | — | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
 | `lower limit` | integer or [FlexValue](#flexvalue) | Yes | — | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
 | `optimal lower level` | integer or [FlexValue](#flexvalue) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
 | `entity min soc end opt` | string (optional) | No | `null` | HA entity for minimum SOC at end of optimization period |
@@ -152,6 +152,10 @@ Home Assistant entity that reports the current State of Charge (SOC) percentage.
 **`capacity`**
 
 Total usable energy storage capacity of your battery. Check your battery specifications. For multiple batteries, sum their capacities.
+
+**`upper limit`**
+
+Maximum State of Charge in percent. Battery will never charge above this level. Supports FlexValue pattern: use integer or HA entity ID.
 
 **`lower limit`**
 

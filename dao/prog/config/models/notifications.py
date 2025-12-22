@@ -17,7 +17,7 @@ class NotificationsConfig(BaseModel):
             "x-help": "Optional: Home Assistant notification service entity. Used to send notifications about optimization events. Example: 'notify.mobile_app' or 'notify.persistent_notification'.",
             "x-ui-section": "Notification Settings",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "notify"
+            "x-ui-widget-filter": "notify"
         }
     )
     opstarten: bool | str = Field(
@@ -46,7 +46,7 @@ class NotificationsConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to update with last activity timestamp. Useful for monitoring and automations. Example: 'input_datetime.dao_last_run'.",
             "x-ui-section": "Notification Settings",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "input_datetime,datetime,sensor"
+            "x-ui-widget-filter": "input_datetime,datetime,sensor"
         }
     )
     

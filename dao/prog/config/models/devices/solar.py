@@ -79,7 +79,7 @@ class SolarConfig(BaseModel):
             "x-help": "Optional Home Assistant entity to enable or disable this solar installation in the optimization. Useful for maintenance or testing.",
             "x-ui-section": "Panel Orientation",
             "x-ui-widget": "entity-picker",
-            "x-entity-filter": "switch"
+            "x-ui-widget-filter": "switch"
         }
     )
     
