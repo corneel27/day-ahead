@@ -253,6 +253,20 @@ class DaCalc(DaBase):
                     solar_prog = solar_prog.iloc[1:]
                 solar_prog.reset_index(drop=True, inplace=True)
                 prog_data[solar_name] = solar_prog["prediction"]
+        for b in range(B):
+            for s in range(len(self.battery_options[b]["solar"])):
+                solar_option = self.battery_options[b]["solar"][s]
+                if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+                    solar_name = solar_option["name"]
+                    solar_prog = solar_predictor.predict_solar_device(solar_name, start_hour_dt,
+                                                                      end_prog)
+                    solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
+                    if self.interval == "15min":
+                        solar_prog = interpolate(solar_prog, "prediction", quantity=True)
+                    while solar_prog["tijd"].iloc[0].tz_localize(None) < prog_data["tijd"].iloc[0]:
+                        solar_prog = solar_prog.iloc[1:]
+                    solar_prog.reset_index(drop=True, inplace=True)
+                    prog_data[solar_name] = solar_prog["prediction"]
 
 
         # prog_data = prog_data.reset_index()
@@ -294,12 +308,15 @@ class DaCalc(DaBase):
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))
                     pv_dc_num += 1
-                    prod = self.calc_prod_solar(
-                        self.battery_options[b]["solar"][s],
-                        row.time,
-                        gr,
-                        hour_fraction[-1],
-                    )
+                    if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+                        prod = max(0, getattr(row, self.solar[s]["name"])) * interval_fraction[-1]
+                    else:
+                        prod = self.calc_prod_solar(
+                            self.battery_options[b]["solar"][s],
+                            row.time,
+                            gr,
+                            hour_fraction[-1],
+                        )
                     pv_total += prod
             pv_org_dc.append(pv_total)
             first_interval = False
@@ -4481,6 +4498,9 @@ def main():
                 continue
             if arg.lower() == "calc_baseloads":
                 da_calc.run_task_function("calc_baseloads")
+                continue
+            if arg.lower() == "train":
+                da_calc.run_task_function("train_ml_predictions")
                 continue
     da_calc.db_da.log_pool_status()
 

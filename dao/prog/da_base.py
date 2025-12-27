@@ -278,6 +278,12 @@ class DaBase(hass.Hass):
                 "function": "clean_data",
                 "file_name": "clean",
             },
+            "train_ml_predictions": {
+                "name": "ML modellen trainen",
+                "cmd": ["python3", "../prog/day_ahead.py", "train"],
+                "function": "train_ml_predictions",
+                "file_name": "train",
+            },
             "consolidate": {
                 "name": "Verbruik/productie consolideren",
                 "cmd": ["python3", "../prog/day_ahead.py", "consolidate"],
@@ -578,6 +584,12 @@ class DaBase(hass.Hass):
 
         report = Report()
         report.calc_save_baseloads()
+
+    @staticmethod
+    def train_ml_predictions():
+        from dao.prog.solar_predictor import SolarPredictor
+        solar_predictor = SolarPredictor()
+        solar_predictor.run_train()
 
     def run_task_function(self, task, logfile: bool = True):
         # klass = globals()["class_name"]

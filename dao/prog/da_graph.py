@@ -139,6 +139,20 @@ class GraphBuilder:
                 stacked_plus = stacked_plus_right = np.zeros(shape=(len(df.index)))
                 stacked_neg = stacked_neg_right = np.zeros(shape=(len(df.index)))
                 ymin_left = ymax_left = ymin_right = ymax_right = 0
+                count_bar = 0
+                stacked = False
+                for serie in g_options["series"]:
+                    s_type = serie["type"]
+                    if s_type == "bar" or s_type== "stacked":
+                        count_bar += 1
+                        if s_type =="stacked":
+                            if stacked:
+                                count_bar -= 1
+                            else:
+                                stacked = True
+                bar_width = 1/(count_bar+1)
+                nr_bar = 0
+                stacked = False
                 for serie in g_options["series"]:
                     if "vaxis" in serie:
                         vax = serie["vaxis"]
@@ -155,6 +169,8 @@ class GraphBuilder:
                     data_array = pd.to_numeric(data_array)
                     if "width" in serie:
                         width = serie["width"]
+                    else:
+                        width = bar_width
                     data_array = data_array.to_list()
                     if ("negativ" in serie) or (
                         ("sign" in serie) and (serie["sign"] == "neg")
@@ -174,15 +190,21 @@ class GraphBuilder:
                     if vax == "right":
                         ymax_right = math.ceil(max(ymax_right, max(data_array)))
                         ymin_right = math.floor(min(ymin_right, min(data_array)))
+                    if s_type == "bar" or s_type == "stacked":
+                        nr_bar += 1
+                        if s_type =="stacked":
+                            if stacked:
+                                nr_bar -= 1
+                            else:
+                                stacked = True
 
                     if s_type == "bar":
                         plot = ax_serie.bar(
-                            ind,
+                            ind + (nr_bar-count_bar)*bar_width + bar_width,
                             data_array,
                             label=label,
                             width=width,
                             color=color,
-                            align="edge",
                         )
                     elif s_type == "line":
                         if "linestyle" in serie:

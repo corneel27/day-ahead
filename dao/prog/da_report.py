@@ -19,6 +19,7 @@ import itertools
 import logging
 from sqlalchemy import Table, select, and_, literal, func, case
 import matplotlib.pyplot as plt
+from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 
 
 class Report(DaBase):
@@ -708,6 +709,49 @@ class Report(DaBase):
                 }
             ],
         }
+
+        style = self.config.get(["graphics", "style"])
+        self.solar_graph_options = {
+            "title": "Solar production",
+            "style": style,
+            "haxis": {"values": "uur", "title": "uren van de dag"},
+            "graphs": [
+                {
+                    "vaxis": [{"title": "J/cm2"},{"title": "kWh"}],
+                    "series": [
+                        {"column": "prognose_straling",
+                             "title": "Straling prognose",
+                             "type": "line",
+                             "color": "purple"},
+                        {"column":"gemeten_straling",
+                            "title": "Straling gemeten",
+                            "source": "da",
+                            "type": "line",
+                            "color": "red"
+                        },
+                        {"column": "gemeten_prod",
+                            "title": "Productie gemeten",
+                            "vaxis" : "right",
+                            "type": "bar",
+                             "color": "blue",
+                        },
+                        {"column": "prognose_dao",
+                         "vaxis": "right",
+                         "type": "bar",
+                         "title": "Prod. progn. DAO",
+                         "color": "yellow",
+                        },
+                        {"column": "prognose_ml",
+                         "vaxis": "right",
+                         "type": "bar",
+                         "title": "Prod. progn. ml",
+                         "color": "green"
+                         }
+                    ]
+                }
+            ]
+        }
+
         """
         self.saving_cost_graph_options = self.saving_cons_graph_options.copy()
         self.saving_cost_graph_options['title'] = "Besparing kosten door batterij"
@@ -2921,6 +2965,72 @@ class Report(DaBase):
             ]
         return df
 
+    def calc_r2(self, serie_x: pd.Series, serie_y: pd.Series) -> float:
+        if serie_x.count() <24 or serie_y.count() <24:
+            return pd.NA
+        return r2_score(serie_x, serie_y)
+
+
+    def calc_solar_data(self, device: dict, day:datetime.date, active_view:str):
+        result = pd.DataFrame(columns=["uur", "straling", "werkelijk", "prognose DAO", "prognose ML"])
+        start = datetime.datetime(day.year, day.month, day.day)
+        end = start + datetime.timedelta(days=1)
+
+        # prognose straling
+        result = self.get_da_data("gr", start, end, "uur", "uur", "prognoses")
+        result.rename({"gr" : "prognose_straling"}, inplace=True, axis=1)
+        result.drop(columns=["vanaf","tot"], inplace=True)
+
+        # gemeten straling
+        rad_real = self.get_da_data("gr", start, end, "uur", "uur", "values")
+        result["gemeten_straling"] = rad_real["gr"]
+
+        # gemeten productie
+        sensors = self.config.get(["entities sensors"], device, [])
+        count=0
+        for sensor in sensors:
+            df_sensor = self.get_sensor_data(sensor, start, end, "gemeten")
+            if count == 0:
+                df_solar = df_sensor
+            else:
+                self.add_col_df(df_sensor, df_solar, "gemeten")
+            count += 1
+        result["gemeten_prod"] = df_solar["gemeten"]
+
+        # voorspelling DAO
+        pred_dao= []
+        for row in result.itertuples():
+            prod = self.calc_prod_solar(device, row.tijd.timestamp(), row.prognose_straling, 1)
+            pred_dao.append(prod)
+        result["prognose_dao"] = pred_dao
+
+        # voorspelling ML
+        from dao.prog.solar_predictor import SolarPredictor
+        solar_predictor = SolarPredictor()
+        solar_prog = solar_predictor.predict_solar_device(device["name"], start, end)
+        solar_prog.index = pd.to_datetime(solar_prog["date_time"]).dt.tz_localize(None)
+        result["prognose_ml"] = solar_prog["prediction"]
+
+        result.drop(columns=["tijd"], inplace=True)
+        result = result[['uur', 'gemeten_straling', 'prognose_straling',
+                         "gemeten_prod", "prognose_dao", "prognose_ml"]]
+        if active_view=="tabel":
+            result.loc["Total"] = result.sum(axis=0, numeric_only=True)
+            result.at[result.index[-1], "uur"] = "Totaal"
+            r2_radiation = self.calc_r2(result["gemeten_straling"], result["prognose_straling"])
+            r2_dao = self.calc_r2(result["gemeten_prod"], result["prognose_dao"])
+            r2_ml = self.calc_r2(result["gemeten_prod"], result["prognose_ml"])
+            result.columns = [
+                ["",   "Straling", "Straling", "Productie","Productie", "Productie"],
+                ["uur", "gemeten", "prognose", "gemeten", "prognose dao", "prognose ml"],
+                ["", "J/cm2", "J/cm2", "kWh", "kWh", "kWh"]
+            ]
+            row = ["R²", "", r2_radiation, "", r2_dao, r2_ml]
+            result.loc[result.shape[0]] = row
+            result.fillna("", inplace=True)
+
+        return result
+
     def get_heatpump_run_hours(self, entity):
         if entity is None or not self.wp_consumption_sensors:
             return -1
@@ -3063,7 +3173,7 @@ class Report(DaBase):
         result = '{ "message":"Success", "data": ' + data_json + " }"
         return result
 
-    def make_graph(self, df, period, _options=None):
+    def make_graph(self, df, period, _options=None, _title:str|None=None):
         if _options:
             options = _options
         else:
@@ -3107,7 +3217,10 @@ class Report(DaBase):
                     }
                 ],
             }
-        options["title"] = options["title"] + " " + period
+        if _title is None:
+            options["title"] = options["title"] + " " + period
+        else:
+            options["title"] = _title
         options["haxis"] = {
             "values": self.periodes[period]["interval"]
             if self.periodes[period]["interval"] in df

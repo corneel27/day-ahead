@@ -292,9 +292,9 @@ class CheckDB:
             self.upsert_variabel(variabel_tabel, record_2025_10_5)
             print('Table "variabel" geupdated met windsnelheid.')
 
-        if l_version < 20251201:
-            record_2025_11_2 = [24, "neersl", "Neerslag", "mm"]
-            self.upsert_variabel(variabel_tabel, record_2025_11_2)
+        if l_version < 20251202:
+            record_2025_12_2 = [24, "neersl", "Neerslag", "mm"]
+            self.upsert_variabel(variabel_tabel, record_2025_12_2)
             print('Table "variabel" geupdated met neerslag.')
             print(f'Meteo-data verhuizen van "values" naar "prognoses"')
             self.move_meteodata_to_prognoses()

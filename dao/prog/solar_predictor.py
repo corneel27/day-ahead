@@ -449,7 +449,7 @@ class SolarPredictor(DaBase):
         Returns:
             Dictionary with training statistics
         """
-        logging.info("Starting solar prediction model training...")
+        logging.info(f"Starting solar prediction model for {self.solar_name} training...")
 
         # Load and process data
         logging.info("Loading and processing data...")
@@ -587,7 +587,7 @@ class SolarPredictor(DaBase):
         logging.info(f"Testing MAE: {test_mae:.4f} kWh")
         logging.info(f"Training R²: {train_r2:.4f}")
         logging.info(f"Testing R²: {test_r2:.4f}")
-        logging.info("\nSorted features:")
+        logging.info("Sorted features:")
         importance = self.training_stats["feature_importance"]
         sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
         for i, (feature, score) in enumerate(sorted_features):
@@ -864,7 +864,15 @@ class SolarPredictor(DaBase):
             "../data/prediction/models/" + self.solar_name + ".pkl",
         )
 
-    def run_train(self, start):
+    def run_train(self, start: dt.datetime = None):
+        """
+        traint alle gedefinieerde ml-objecten
+        :param start: optionele begindatum om te trainen, anders een jaar geleden
+        :return:
+        """
+        if start is None:
+            now = dt.datetime.now()
+            start = dt.datetime(year=now.year - 1, month=now.month, day=now.day)
         weather_data = self.get_weatherdata(start=start)
         solar_options = self.config.get(["solar"], None, None)
         for solar_option in solar_options:
@@ -897,7 +905,7 @@ class SolarPredictor(DaBase):
             )
         weather_data = self.get_weatherdata(start, end, prognose=True)
         prediction = self.predict(weather_data)
-        logging.info(prediction)
+        logging.info(f"ML prediction {solar_name}\n{prediction}")
         return prediction
 
     def test_solar_predictor(self, start, end):
@@ -916,9 +924,7 @@ def main():
     arg = sys.argv[1]
     solar_predictor = SolarPredictor("")
     if arg.lower() == "train":
-        now = dt.datetime.now()
-        start = dt.datetime(year=now.year - 1, month=now.month, day=now.day)
-        solar_predictor.run_train(start)
+        solar_predictor.run_train()
     if arg.lower() == "predict":
         solar_predictor.test_solar_predictor(
             start=dt.datetime(year=2025, month=12, day=21),

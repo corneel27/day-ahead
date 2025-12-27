@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block selectie %}
+<form method="post" id="content_form">
+<div class="selector-container">
+  <input type="hidden" id="current_menu" name="current_menu" value={{ active_menu }}>
+  <div class="spacer">
+    <div class="select subject">
+     <input type="hidden" id="cur_subject" name="cur_subject" value="{{active_subject}}">
+    {% for subject in subjects %}
+      {% if active_subject == subject %}
+        <button name="subject" class="btn chosen btn_mid" value="{{subject}}">{{ subject }}</button>
+      {% else %}
+        <button name="subject" class="btn btn_mid" value="{{subject}}">{{ subject }}</button>
+      {% endif %}
+    {% endfor %}
+    </div>
+  </div>
+  <div class="spacer">
+    <div class="select view">
+     <input type="hidden" id="cur_view" name="cur_view" value="{{active_view}}">
+     {% if active_time  %}
+         <input type="hidden" id="active_time" name="active_time" value="{{active_time}}">
+     {% endif %}
+    {% for view in views %}
+      {% if active_view == view %}
+        <button name="view" class="btn chosen btn_mid" value="{{ view }}">
+          <img src="static/{{view}}.png" alt="first" style="display:inline-block; height:1em; width:auto; border:0" />
+          {{ view }}
+        </button>
+      {% else %}
+        <button name="view" class="btn btn_mid" value="{{view}}">
+          <img src="static/{{view}}.png" alt="first" style="display:inline-block; height:1em; width:auto; border:0" />
+        </button>
+      {% endif %}
+    {% endfor %}
+    </div>
+  </div>
+  <div class="spacer">
+    <div class="select date">
+      <input type="hidden" id="cur_date" name="cur_date" value="{{active_date}}">
+      <button name="action" class="btn btn_mid" value="previous">
+        <img src="static/prev_1.png" alt="prev" style="display:inline-block; height:1em; width:auto;" />
+      </button>
+      <input type="text" id="active_date" name="active_date" required minlength="10" placeholder="jjjj-mm-dd" maxlength="12" size="10" value="{{ active_date }}" />
+      <button name="action" class="btn btn_mid" value="next">
+        <img src="static/next_1.png" alt="next"  style="display:inline-block; height:1em; width:auto;" />
+      </button>
+    </div>
+  </div>
+</div>
+<div class="clear"></div>
+</form>
+{% endblock %}
+
+{% block content %}
+{% if active_view == "grafiek" %}
+<div class="show graph" id="show_graph2">
+  <img src='data:image/png;base64,{{ report_data }}' alt="image" width="1000" height="auto"/>"
+</div>
+{% else %}
+<div class="show table">
+  <style>
+    table th[colspan='3'] {text-align: center;}
+  </style>
+
+  {% for table in report_data %}
+     {{ table|safe }}
+  {% endfor %}
+</div>
+{% endif %}
+
+
+{% endblock %}
