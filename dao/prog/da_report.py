@@ -22,6 +22,12 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 
 
+def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
+    if serie_x.count() < 24 or serie_y.count() < 24:
+        return pd.NA
+    return r2_score(serie_x, serie_y)
+
+
 class Report(DaBase):
     periodes = {}
 
@@ -2965,12 +2971,6 @@ class Report(DaBase):
             ]
         return df
 
-    def calc_r2(self, serie_x: pd.Series, serie_y: pd.Series) -> float:
-        if serie_x.count() <24 or serie_y.count() <24:
-            return pd.NA
-        return r2_score(serie_x, serie_y)
-
-
     def calc_solar_data(self, device: dict, day:datetime.date, active_view:str):
         result = pd.DataFrame(columns=["uur", "straling", "werkelijk", "prognose DAO", "prognose ML"])
         start = datetime.datetime(day.year, day.month, day.day)
@@ -3015,11 +3015,11 @@ class Report(DaBase):
         result = result[['uur', 'gemeten_straling', 'prognose_straling',
                          "gemeten_prod", "prognose_dao", "prognose_ml"]]
         if active_view=="tabel":
+            r2_radiation = calc_r2(result["gemeten_straling"], result["prognose_straling"])
+            r2_dao = calc_r2(result["gemeten_prod"], result["prognose_dao"])
+            r2_ml = calc_r2(result["gemeten_prod"], result["prognose_ml"])
             result.loc["Total"] = result.sum(axis=0, numeric_only=True)
             result.at[result.index[-1], "uur"] = "Totaal"
-            r2_radiation = self.calc_r2(result["gemeten_straling"], result["prognose_straling"])
-            r2_dao = self.calc_r2(result["gemeten_prod"], result["prognose_dao"])
-            r2_ml = self.calc_r2(result["gemeten_prod"], result["prognose_ml"])
             result.columns = [
                 ["",   "Straling", "Straling", "Productie","Productie", "Productie"],
                 ["uur", "gemeten", "prognose", "gemeten", "prognose dao", "prognose ml"],

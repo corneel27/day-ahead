@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.2.rc1
+Implementation ml prediction solar production
+
 # 2025.12.1.rc1
 - Fix error calculating number of heat-blocks heatpump (on/off, reported by @sailor_dg)
 
