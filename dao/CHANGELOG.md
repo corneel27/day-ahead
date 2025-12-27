@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.1
+- Fix error calculating number of heat-blocks heatpump (on/off, reported by @sailor_dg)
+
 # 2025.12.0
 - Fixed several issues heatpump and boiler
 - Implemented min_run_length heatpump voor power-adjustment
