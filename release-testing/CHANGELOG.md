@@ -1,7 +1,106 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 # 2025.12.2.rc1
-Implementation ml prediction solar production
+## Breaking changes!!
+### Read the following paragraphs **FIRST**
+### Implementation ml prediction solar production
+
+This is a first implementation of a ML prediction of solar-production.
+The predictions are a first attempt but at the moment the accurancy is less or 
+equal than the old predictions of DAO.
+
+This product is a co-project of @simnet and @corneel27/kc27.
+
+We will be glad if users of DAO wil test this feature, but be careull.
+When you install this Release Candidate your DAO database will be changed 
+and will not be useable anymore with versions of DAO prior 2025.12.2.
+
+Our advice: make a copy of your "old" DAO-database (with sqlite this is easy) and 
+make this accessable for the new rc; so the production version of DAO (2025.12.1) can go on.
+For users with mysql or postgresql there are tools on internet to copy your data
+to a sqlite-database (for mysql: mysql2sqlite, for postgresql look at his post where someone has documented his move 
+from postgresql to sqlite: https://community.home-assistant.io/t/postgresql-to-sqlite-migration-moving-back-to-sqlite/764151)
+
+For questions: ask on tweakers.
+
+Our advice to test this rc:
+1. Let your production version do his hourly/15-min jobs 
+2. Install this rc with the following steps:
+   - stop the addon if running
+   - install the rc-addon in the way you are used to
+   - copy the database from your production-version to the data-folder
+   - adjust the database-settings of the da-database in your option.json
+   - start the addon, the first start can take more time to make the necessary
+   changes
+   - look at add-logging for possible errors
+   - zet in de scheduler `"active"="false"`, zodat de rc de productie niet in de wielen rijdt.
+   
+3. Make the following changes in your solar-settings:
+4. ````  
+   "solar": [
+    { "name" : "woning",
+      "ml_prediction": "true",
+      "entities sensors": ["sensor.solaredge_woning_ac_energy_kwh"],
+      "max power": 5,
+   ````
+
+Nadere toelichting:
+
+- name must be present and unique in all your solar-device (also the pv_dc devices)
+- ml_prediction is optional, when not present or "false" the "old" prediction of the solar production will be used 
+- entities sensor: a list of one or more sensors which register the total production of this device. This information is used for training the ml-model.
+- max-power: this is maximum power (kW-peak) of the device. This information is used to detect "outliers", before training the model.
+
+5. Restart the addon
+6. Now you can train the model.<br>
+In the run-menu of the dashboard is an a new rule "ML-modellen trainen".
+When you activate this rule: for devices with ml_prediction = True there will be a model calculated.
+7. What happens:
+   - in the dao-database meteo-data (measurements of radiation and temperature) of a nearby knmi station are retrieved and saved.
+   - the first timethere will be data saved of 365 days (this cost more time). 
+   The next time this data will be completed (if available).
+   - From HA database the production data will be retrieved
+   - then a model will be calculated
+   - this model will be saved in your data-folder, so it can be used for prediction of your solar-production.
+8. You get something like this in the logging:
+```
+2025-12-29 23:03:56 info: Day Ahead Optimalisatie gestart: 29-12-2025 23:03:56 taak: train_ml_predictions
+2025-12-29 23:03:57 info: Er zijn knmi-data aanwezig tot 2025-12-28 00:00:00
+2025-12-29 23:03:57 info: Er zijn geen aanvullende knmi-data beschikbaar
+2025-12-29 23:04:09 info: Starting solar prediction model for woning training...
+2025-12-29 23:04:09 info: Loading and processing data...
+2025-12-29 23:04:09 info: Merging weather and solar data...
+2025-12-29 23:04:09 info: Merged dataset: 4604 records
+2025-12-29 23:04:09 info: Date range: 2024-12-29 08:00:00+00:00 to 2025-12-27 15:00:00+00:00
+2025-12-29 23:04:09 info: Detecting outliers...
+2025-12-29 23:04:10 info: Outliers removed: 90 (2.0%)
+2025-12-29 23:04:10 info: Clean dataset: 4514 records
+2025-12-29 23:04:10 info: Training samples: 3611
+2025-12-29 23:04:10 info: Testing samples: 903
+2025-12-29 23:04:10 info: Tuning hyperparameters...
+2025-12-29 23:04:20 info: Best parameters: {'learning_rate': 0.05, 'max_depth': 6, 'n_estimators': 100, 'subsample': 0.9}
+2025-12-29 23:04:20 info: Training final model...
+2025-12-29 23:04:20 info: Model training van woning complete
+2025-12-29 23:04:20 info: Model saved to: ../data/prediction/models/woning.pkl
+2025-12-29 23:04:20 info: Training MAE: 0.1150 kWh
+2025-12-29 23:04:20 info: Testing MAE: 0.1520 kWh
+2025-12-29 23:04:20 info: Training R²: 0.9673
+2025-12-29 23:04:20 info: Testing R²: 0.7891
+2025-12-29 23:04:20 info: Sorted features:
+2025-12-29 23:04:20 info:   1. irradiance: 0.738
+2025-12-29 23:04:20 info:   2. quarter: 0.158
+2025-12-29 23:04:20 info:   3. month: 0.045
+2025-12-29 23:04:20 info:   4. hour: 0.042
+2025-12-29 23:04:20 info:   5. temperature: 0.009
+2025-12-29 23:04:20 info:   6. day_of_week: 0.008
+2025-12-29 23:04:20 info:   7. season: 0.000
+```
+9. In the dashboard is an extra-menu-option available: **Solar**
+Here you can view the effectivity of your calculated model:<br>
+In text:<br>
+![solar_table.png](images/solar_table.png)<br>
+With a graph:<br>
+![solar_graph.png](/images/solar_graph.png)
 
 # 2025.12.1.rc1
 - Fix error calculating number of heat-blocks heatpump (on/off, reported by @sailor_dg)
