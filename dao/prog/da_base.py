@@ -123,6 +123,8 @@ class DaBase(hass.Hass):
         self.db_da = self.config.get_db_da()
         self.db_ha = self.config.get_db_ha()
         self.meteo = Meteo(self.config, self.db_da)
+        if country == "NL":
+            self.knmi_station = self.meteo.which_station()
         self.solar = self.config.get(["solar"])
         self.interval = self.config.get(["interval"], None, "1hour").lower()
 
@@ -208,7 +210,7 @@ class DaBase(hass.Hass):
         self.last_activity_entity = self.config.get(
             ["notifications", "last activity entity"], None, None
         )
-        # self.set_last_activity()
+        self.set_last_activity()
         self.graphics_options = self.config.get(["graphics"])
         self.db_da.log_pool_status()
         warnings.simplefilter("ignore", ResourceWarning)
@@ -275,6 +277,12 @@ class DaBase(hass.Hass):
                 "cmd": ["python3", "../prog/day_ahead.py", "clean_data"],
                 "function": "clean_data",
                 "file_name": "clean",
+            },
+            "train_ml_predictions": {
+                "name": "ML modellen trainen",
+                "cmd": ["python3", "../prog/day_ahead.py", "train"],
+                "function": "train_ml_predictions",
+                "file_name": "train",
             },
             "consolidate": {
                 "name": "Verbruik/productie consolideren",
@@ -576,6 +584,12 @@ class DaBase(hass.Hass):
 
         report = Report()
         report.calc_save_baseloads()
+
+    @staticmethod
+    def train_ml_predictions():
+        from dao.prog.solar_predictor import SolarPredictor
+        solar_predictor = SolarPredictor()
+        solar_predictor.run_train()
 
     def run_task_function(self, task, logfile: bool = True):
         # klass = globals()["class_name"]

@@ -21,52 +21,6 @@ class DaPrices:
         self.interval = self.config.get(["interval"], None, "1hour")
         self.country = self.config.get(["country"], None, "NL")
 
-    def get_time_latest_record(self, code: str) -> datetime.datetime:
-        """
-        Zoekt de tijd op van het laatst aanwezige record van "code"
-        :param code: de code van het record
-        :return: datum en tijd van het laatst aanwezige record
-        """
-        """
-        query = ("SELECT from_unixtime(`time`) tijd, `value` "
-                 "FROM `values`, `variabel` "
-                 "WHERE `variabel`.`code` = '" + code +
-                 "'  and `values`.`variabel` = `variabel`.`id` "
-                 "ORDER BY `time` desc LIMIT 1")
-        """
-        # Reflect existing tables from the database
-        with self.db_da.engine.connect() as connection:
-            values_table = Table(
-                "values", self.db_da.metadata, autoload_with=connection
-            )
-            variabel_table = Table(
-                "variabel", self.db_da.metadata, autoload_with=connection
-            )
-
-        # Construct the query
-        query = (
-            select(
-                self.db_da.from_unixtime(values_table.c.time).label("tijd"),
-                values_table.c.value,
-            )
-            .where(
-                and_(
-                    variabel_table.c.code == code,
-                    values_table.c.variabel == variabel_table.c.id,
-                )
-            )
-            .order_by(values_table.c.time.desc())
-            .limit(1)
-        )
-
-        # Execute the query and fetch the result
-        with self.db_da.engine.connect() as connection:
-            result = connection.execute(query)
-            result = result.scalar()
-            if type(result) is str:
-                result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
-        return result
-
     def get_prices(self, source):
         if self.interval == "1hour":
             resolution = 60
@@ -90,7 +44,7 @@ class DaPrices:
                 end = start + datetime.timedelta(days=2)
 
         if len(sys.argv) <= 2:
-            present = self.get_time_latest_record("da")
+            present = self.db_da.get_time_latest_record("da")
             if not (present is None):
                 tz = pytz.timezone("CET")
                 present = tz.normalize(tz.localize(present))

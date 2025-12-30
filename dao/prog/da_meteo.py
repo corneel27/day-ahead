@@ -7,6 +7,7 @@ import pytz
 import ephem
 from requests import get
 import matplotlib.pyplot as plt
+import knmi
 from dao.prog.da_graph import GraphBuilder
 from dao.prog.da_config import Config
 from dao.prog.db_manager import DBmanagerObj
@@ -180,6 +181,26 @@ class Meteo:
             value = 0.0
         return value
 
+    def which_station(self) -> str:
+        """
+        berekent welk weerstation het dichtst bij is
+        :param latitude:
+        :param longitude:
+        :return: code weerstation
+        """
+        stations = knmi.stations
+        distance = None
+        result = None
+        for key in stations:
+            station = stations[key]
+            afstand = (self.latitude - station.latitude) ** 2 + (
+                self.longitude - station.longitude
+            ) ** 2
+            if result is None or afstand < distance:
+                distance = afstand
+                result = key
+        return str(result)
+
     def solar_rad(
         self, utc_time: float, radiation: float, h_col: float, a_col: float
     ) -> float:
@@ -218,13 +239,14 @@ class Meteo:
             q_tot = q_difc + q_dirc
         return q_tot
 
+    """
     def solar_rad_df(self, global_rad):
-        """
+        '''
         argumemten
             global_rad: df met tijden en globale straling (time, gr)
         berekent netto instraling op collector in J/cm2
         retouneert dataframe met (time, solar_rad)
-        """
+        '''
         # tilt: helling t.o.v. plat vlak in graden
         # orientation: orientatie oost = -90, zuid = 0, west = 90 in graden
         # zoekt de eerste de beste pv installatie op
@@ -258,6 +280,7 @@ class Meteo:
             q_tot = self.solar_rad(int(utc_time) - 3600, radiation, hcol, acol)
             global_rad.loc[(global_rad.tijd == utc_time), "solar_rad"] = q_tot
         return global_rad
+    """
 
     def make_graph_meteo(self, df, file=None, show=False):
         df["uur"] = df.tijd_nl.apply(lambda x: x[11:13])
@@ -340,8 +363,7 @@ class Meteo:
             return pd.DataFrame()
 
         df = pd.DataFrame.from_records(data)
-        df = self.solar_rad_df(df)
-        df1 = df[["tijd", "tijd_nl", "gr", "temp", "solar_rad", "winds"]]
+        df1 = df[["tijd", "tijd_nl", "gr", "temp", "winds", "neersl"]]
         df1 = df1[:96]
         logging.info(f"Meteodata model {model}")
         logging.info(
@@ -370,16 +392,17 @@ class Meteo:
                     "temp",
                     float(row.temp),
                 ]
-                df_db.loc[df_db.shape[0]] = [
-                    str(int(row.tijd)),
-                    "solar_rad",
-                    float(row.solar_rad),
-                ]
                 # winds
                 df_db.loc[df_db.shape[0]] = [
                     str(int(row.tijd)),
                     "winds",
                     float(row.winds),
+                ]
+                # neersl
+                df_db.loc[df_db.shape[0]] = [
+                    str(int(row.tijd)),
+                    "neersl",
+                    float(row.neersl),
                 ]
 
         """
@@ -415,7 +438,7 @@ class Meteo:
             lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")
         )
         logging.debug(f"Meteo data records \n{df_tostring.to_string(index=False)}")
-        self.db_da.savedata(df_db)
+        self.db_da.savedata(df_db, tablename="prognoses")
         """
         if len(df1) > 0:
             if len(df2) > len(df1):
@@ -520,7 +543,7 @@ class Meteo:
 
         # Reflect existing tables from the database
         values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
+            "prognoses", self.db_da.metadata, autoload_with=self.db_da.engine
         )
         variabel_table = Table(
             "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
@@ -620,3 +643,15 @@ class Meteo:
         acol = math.radians(orientation)
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot
+
+
+"""
+def main():
+    from dao.prog.da_base import DaBase
+    dbase = DaBase("../data/options.json")
+    meteo = Meteo(dbase.config, dbase.db_da)
+    station = meteo.which_station()
+
+if __name__ == "__main__":
+    main()
+"""

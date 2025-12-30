@@ -31,41 +31,17 @@
             <div class="selector-container">
             <div class="spacer">
             <div class="select menubox">
-                <button name="menu_home" value="home"
-                    {% if active_menu == "home" %}
-                        class="menubtn menubtn_left active"
-                    {% else %}
-                        class="menubtn menubtn_left"
-                    {% endif %}
-                    >Home</button>
-                <button name="menu_run" value="run"
-                    {% if active_menu == "run" %}
-                        class="menubtn menubtn_mid active"
-                    {% else %}
-                        class="menubtn menubtn_mid "
-                    {% endif %}
-                    >Run</button>
-                <button name="menu_reports" value="reports"
-                    {% if active_menu == "reports" %}
-                        class="menubtn menubtn_mid active"
-                    {% else %}
-                        class="menubtn menubtn_mid "
-                    {% endif %}
-                    >Reports</button>
-                <button name="menu_savings" value="savings"
-                    {% if active_menu == "savings" %}
-                        class="menubtn menubtn_mid active"
-                    {% else %}
-                        class="menubtn menubtn_mid "
-                    {% endif %}
-                    >Savings</button>
-                <button name="menu_settings" value="settings"
-                    {% if active_menu == "settings" %}
-                        class="menubtn menubtn_right active"
-                    {% else %}
-                        class="menubtn menubtn_right"
-                    {% endif %}
-                    >Config</button>
+                {% for key, value in active_menu_list.items() %}
+                    {% set button_name= "menu_" ~ key %}
+                    <button name={{button_name}} value="{{key}}"
+                        {% if active_menu == key %}
+                            class="menubtn menubtn_left active"
+                        {% else %}
+                            class="menubtn menubtn_left"
+                        {% endif %}
+                        >{{value}}
+                    </button>
+                {% endfor %}
             </div>
             </div>
             </div>

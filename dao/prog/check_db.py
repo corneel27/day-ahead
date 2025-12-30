@@ -16,6 +16,9 @@ from sqlalchemy import (
     insert,
     update,
     text,
+    and_,
+    delete,
+    literal_column,
 )
 import pandas as pd
 
@@ -97,6 +100,71 @@ class CheckDB:
             connection.execute(query)
             connection.commit()
         return
+
+    def get_all_var_data(
+        self,
+        tablename: str,
+        column_name: str,
+    ):
+        """
+        Retourneert een dataframe
+        :param tablename: de naam van de tabel "prognoses" of "values"
+        :param column_name: de code van het veld
+        :return:
+        """
+
+        variabel_table = Table(
+            "variabel", self.db_da.metadata, autoload_with=self.engine
+        )
+        values_table = Table(tablename, self.db_da.metadata, autoload_with=self.engine)
+        query = select(
+            values_table.c.time.label("time"),
+            literal_column("'" + column_name + "'").label("code"),
+            values_table.c.value.label("value"),
+        ).where(
+            and_(
+                variabel_table.c.code == column_name,
+                values_table.c.variabel == variabel_table.c.id,
+            )
+        )
+        query = query.order_by("time")
+
+        with self.engine.connect() as connection:
+            df = pd.read_sql(query, connection)
+        return df
+
+    def delete_all_var_data(
+        self,
+        tablename: str,
+        variabel_id: int,
+    ):
+        values_table = Table(tablename, self.db_da.metadata, autoload_with=self.engine)
+        delete_stmt = delete(values_table).where(
+            values_table.c.variabel == variabel_id,
+        )
+        with self.engine.connect() as connection:
+            connection.execute(delete_stmt)
+            connection.commit()
+        return
+
+    def move_meteodata_to_prognoses(self):
+        variabelen = [
+            [4, "gr", "Globale straling", "J/cm2"],
+            [5, "temp", "Temperatuur", "°C"],
+            [6, "solar_rad", "PV radiation", "J/cm2"],
+            [23, "winds", "Windsnelheid", "m/s"],
+            [24, "neersl", "Neerslag", "mm"],
+        ]
+        for var in variabelen:
+            # get the data from "values"
+            if var[0] != 6:
+                df_data = self.get_all_var_data("values", var[1])
+                # save the data in "prognose"
+                df_data["time"] = df_data["time"].astype(str)
+                self.db_da.savedata(df_data, "prognoses")
+            # delete the data from "values"
+            self.delete_all_var_data("values", var[0])
+            print(f"Moved {var[2]} data")
 
     def update_db_da(self):
         # Defining the Engine
@@ -223,6 +291,13 @@ class CheckDB:
             record_2025_10_5 = [23, "winds", "Windsnelheid", "m/s"]
             self.upsert_variabel(variabel_tabel, record_2025_10_5)
             print('Table "variabel" geupdated met windsnelheid.')
+
+        if l_version < 20251202:
+            record_2025_12_2 = [24, "neersl", "Neerslag", "mm"]
+            self.upsert_variabel(variabel_tabel, record_2025_12_2)
+            print('Table "variabel" geupdated met neerslag.')
+            print(f'Meteo-data verhuizen van "values" naar "prognoses"')
+            self.move_meteodata_to_prognoses()
 
         """
         if l_version < 20250700:

@@ -36,6 +36,7 @@ logging.basicConfig(
     handlers=[handler],
     format=f"%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s",
 )
+
 browse = {}
 
 views = {
@@ -118,6 +119,14 @@ web_menu = {
             },
         },
     },
+    "solar": {
+        "name": "Solar",
+        "submenu": {
+            "items": {},
+            "views": views,
+            "actions": actions,
+        }
+    },
     "settings": {
         "name": "Config",
         "submenu": {
@@ -126,6 +135,36 @@ web_menu = {
         },
     },
 }
+
+
+def generate_solar_items():
+    solar_options = config.get(["solar"], None, [])
+    battery_options = config.get(["battery"], None, [])
+    for battery_option in battery_options:
+        sol_options = config.get(["solar"], battery_option, [])
+        if len(sol_options) > 0:
+            solar_options += sol_options
+    result = {}
+    for solar_option in solar_options:
+        ml_prediction = config.get(["ml_prediction"], solar_option, "False").lower() == "true"
+        if ml_prediction:
+            key = config.get(["name"], solar_option, "default")
+            result[key] = solar_option
+    if len(result) == 0:
+        del web_menu["solar"]
+    return result
+
+
+def get_web_menu_items():
+    items = {}
+    for key, value in web_menu.items():
+        items[key] = value["name"]
+    return items
+
+
+solar_items = generate_solar_items()
+web_menu["solar"]["submenu"]["items"] = solar_items
+web_menu_items = get_web_menu_items()
 
 if config is not None:
     sensor_co2_intensity = config.get(["report", "entity co2-intensity"], None, None)
@@ -183,6 +222,12 @@ bewerkingen = {
         "task": "calc_baseloads",
         "file_name": "baseloads",
     },
+    "train_ml_predictions": {
+        "name": "ML modellen trainen",
+        "cmd": ["python3", "../prog/day_ahead.py", "train"],
+        "function": "train_ml_predictions",
+        "file_name": "train",
+    }
 }
 
 
@@ -213,6 +258,8 @@ def menu():
             return run_process()
         elif current_menu == "reports" or current_menu == "savings":
             return reports(current_menu)
+        elif current_menu == "solar":
+            return solar()
         elif current_menu == "settings":
             return settings()
         else:
@@ -226,6 +273,8 @@ def menu():
             return reports("reports")
         elif "menu_savings" in lst:
             return reports("savings")
+        elif "menu_solar" in lst:
+            return solar()
         elif "menu_settings" in lst:
             return settings()
         else:
@@ -306,6 +355,7 @@ def home():
     return render_template(
         "home.html",
         title="Optimization",
+        active_menu_list=web_menu_items,
         active_menu="home",
         subjects=subjects,
         views=views,
@@ -370,6 +420,7 @@ def run_process():
     return render_template(
         "run.html",
         title="Run",
+        active_menu_list=web_menu_items,
         active_menu="run",
         bewerkingen=bewerkingen,
         bewerking=bewerking,
@@ -453,7 +504,7 @@ def reports(active_menu: str):
                 active_view=active_view,
             )
         report_df.round(3)
-    else:  #  savings
+    else:  # savings
         calc_function = getattr(
             report, menu_dict["submenu"][active_subject]["calculate"]
         )
@@ -486,7 +537,7 @@ def reports(active_menu: str):
                 report_data = report.make_graph(
                     report_df, active_period, report.co2_graph_options
                 )
-        else:  #  "savings"
+        else:  # "savings"
             graph_options = getattr(
                 report, menu_dict["submenu"][active_subject]["graph_options"]
             )
@@ -494,6 +545,7 @@ def reports(active_menu: str):
     return render_template(
         "report.html",
         title=title,
+        active_menu_list=web_menu_items,
         active_menu=active_menu,
         subjects=subjects_lst,
         views=views_lst,
@@ -503,6 +555,72 @@ def reports(active_menu: str):
         met_prognose=met_prognose,
         active_subject=active_subject,
         active_view=active_view,
+        report_data=report_data,
+        version=__version__,
+    )
+
+
+@app.route("/solar", methods=["POST", "GET"])
+def solar():
+    report = Report(app_datapath + "/options.json")
+    menu_dict = web_menu["solar"]
+    title = menu_dict["name"]
+    subjects_lst = list(menu_dict["submenu"]["items"].keys())
+    active_subject = subjects_lst[0]
+    views_lst = list(menu_dict["submenu"]["views"].keys())
+    active_view = views_lst[0]
+    active_date = datetime.date.today()
+
+    if request.method in ["POST", "GET"]:
+        lst = request.form.to_dict(flat=False)
+        if "cur_subject" in lst:
+            active_subject = lst["cur_subject"][0]
+            if active_subject not in subjects_lst:
+                active_subject = subjects_lst[0]
+        if "cur_view" in lst:
+            active_view = lst["cur_view"][0]
+        if "subject" in lst:
+            active_subject = lst["subject"][0]
+        if "view" in lst:
+            active_view = lst["view"][0]
+        if "active_date" in lst:
+            active_date = datetime.datetime.strptime(lst["active_date"][0], "%Y-%m-%d").date()
+        if "action" in lst:
+            action = lst["action"][0]
+            if action == "previous":
+                active_date -= datetime.timedelta(days=1)
+            else:
+                active_date += datetime.timedelta(days=1)
+    report_df = report.calc_solar_data(solar_items[active_subject], active_date, active_view)
+    report_df.round(3)
+    if active_view == "tabel":
+        report_data = [
+            report_df.to_html(
+                index=False,
+                justify="right",
+                decimal=",",
+                classes="data",
+                border=0,
+                float_format="{:.3f}".format,
+            )
+        ]
+    else:
+        report_data = (
+            report.make_graph(report_df,
+                              "vandaag",
+                              _options=report.solar_graph_options,
+                              _title=f"Solar production {active_date.strftime('%Y-%m-%d')}")
+        )
+    return render_template(
+        "solar.html",
+        title=title,
+        active_menu_list=web_menu_items,
+        active_menu="solar",
+        subjects=subjects_lst,
+        views=views_lst,
+        active_subject=active_subject,
+        active_view=active_view,
+        active_date=active_date,
         report_data=report_data,
         version=__version__,
     )
@@ -554,6 +672,7 @@ def settings():
     return render_template(
         "settings.html",
         title="Instellingen",
+        active_menu_list=web_menu_items,
         active_menu="settings",
         settings=settngs,
         active_setting=active_setting,
