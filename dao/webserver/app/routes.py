@@ -163,7 +163,8 @@ def get_web_menu_items():
 
 
 solar_items = generate_solar_items()
-web_menu["solar"]["submenu"]["items"] = solar_items
+if "solar" in web_menu.keys():
+    web_menu["solar"]["submenu"]["items"] = solar_items
 web_menu_items = get_web_menu_items()
 
 if config is not None:
