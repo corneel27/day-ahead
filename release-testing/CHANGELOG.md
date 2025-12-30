@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2025.12.2.rc2
+Fix start error web_menu
+
 # 2025.12.2.rc1
 ## Breaking changes!!
 ### Read the following paragraphs **FIRST**
