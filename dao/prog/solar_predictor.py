@@ -4,7 +4,6 @@ Solar Production Prediction Module
 This module provides functionality to train XGBoost models for predicting
 hourly solar production based on weather data and historical solar output.
 """
-import datetime
 
 import pandas as pd
 import numpy as np
@@ -24,63 +23,10 @@ from xgboost import XGBRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from scipy import stats
-
 from dao.prog.da_base import DaBase
+import pvlib
 
 warnings.filterwarnings("ignore")
-
-
-def create_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Perform feature engineering on a time-indexed DataFrame for energy modeling.
-
-    This function generates time-based and weather-related features from
-    the input DataFrame, which is assumed to have a DatetimeIndex and
-    columns for 'temperature' and 'irradiance'. It also computes derived
-    performance metrics for solar energy.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Input DataFrame with at least the following columns:
-        - 'temperature' : float, ambient temperature in °C
-        - 'irradiance' : float, solar irradiance in J/cm²/h
-        The DataFrame index must be a pandas.DatetimeIndex.
-
-    Returns
-    -------
-    pandas.DataFrame
-        A new DataFrame with the following additional columns:
-        - 'day_of_week' : int, day of the week (0=Monday, 6=Sunday)
-        - 'hour' : int, hour of the day (0–23)
-        - 'quarter' : int, quarter of the year (1–4)
-        - 'month' : int, month of the year (1–12)
-        - 'season' : int, mapped season (0=winter, 1=spring, 2=summer, 3=autumn)
-
-    """
-    df = copy.deepcopy(df)
-    df["day_of_week"] = df.index.dayofweek
-    df["hour"] = df.index.hour
-    df["quarter"] = df.index.quarter
-    df["month"] = df.index.month
-    df["season"] = df.index.month.map(
-        {
-            12: 0,
-            1: 0,
-            2: 0,  # winter
-            3: 1,
-            4: 1,
-            5: 1,  # spring
-            6: 2,
-            7: 2,
-            8: 2,  # summer
-            9: 3,
-            10: 3,
-            11: 3,  # autumn
-        }
-    )
-    return df
-
 
 class SolarPredictor(DaBase):
     """
@@ -91,11 +37,11 @@ class SolarPredictor(DaBase):
     """
 
     def __init__(
-        self,
-        solar_name: str = "",
-        solar_capacity: float = 5,
-        random_state: int = 42,
-        # max_hourly_production: Optional[Dict[int, float]] = None,
+            self,
+            solar_name: str = "",
+            solar_capacity: float = 5,
+            random_state: int = 42,
+            # max_hourly_production: Optional[Dict[int, float]] = None,
     ):
         """
         Initialize the SolarPredictor.
@@ -113,7 +59,8 @@ class SolarPredictor(DaBase):
         self.solar_capacity = solar_capacity
         self.latitude = self.config.get(["latitude"], None, 52)
         self.longitude = self.config.get(["longitude"], None, 5.1)
-
+        self.tilt = 45
+        self.azimut = 180
         self.random_state = random_state
         self.model = None
         self.feature_columns = [
@@ -124,6 +71,8 @@ class SolarPredictor(DaBase):
             "quarter",
             "month",
             "season",
+            "week_nr",
+            "angle_of_inc"
         ]
         self.is_trained = False
         self.training_stats = {}
@@ -140,11 +89,82 @@ class SolarPredictor(DaBase):
         )
         """
 
+    def calc_sun_angle(self, time):
+        # time = pd.to_datetime(time)
+
+        solpos = pvlib.solarposition.get_solarposition(
+            time, self.latitude, self.longitude
+        )
+
+        aoi = pvlib.irradiance.aoi(
+            self.tilt,
+            self.azimut,
+            solar_zenith=90 - solpos['apparent_elevation'],
+            solar_azimuth=solpos['azimuth']
+        )
+
+        return aoi.iloc[0]
+
+    def create_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Perform feature engineering on a time-indexed DataFrame for energy modeling.
+
+        This function generates time-based and weather-related features from
+        the input DataFrame, which is assumed to have a DatetimeIndex and
+        columns for 'temperature' and 'irradiance'. It also computes derived
+        performance metrics for solar energy.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+            Input DataFrame with at least the following columns:
+            - 'temperature' : float, ambient temperature in °C
+            - 'irradiance' : float, solar irradiance in J/cm²/h
+            The DataFrame index must be a pandas.DatetimeIndex.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A new DataFrame with the following additional columns:
+            - 'day_of_week' : int, day of the week (0=Monday, 6=Sunday)
+            - 'hour' : int, hour of the day (0–23)
+            - 'quarter' : int, quarter of the year (1–4)
+            - 'month' : int, month of the year (1–12)
+            - 'season' : int, mapped season (0=winter, 1=spring, 2=summer, 3=autumn)
+            - weeknr: int
+
+        """
+        df = copy.deepcopy(df)
+        df["day_of_week"] = df.index.dayofweek
+        df["hour"] = df.index.hour
+        df["quarter"] = df.index.quarter
+        df["month"] = df.index.month
+        df["season"] = df.index.month.map(
+            {
+                12: 0,
+                1: 0,
+                2: 0,  # winter
+                3: 1,
+                4: 1,
+                5: 1,  # spring
+                6: 2,
+                7: 2,
+                8: 2,  # summer
+                9: 3,
+                10: 3,
+                11: 3,  # autumn
+            }
+        )
+        df["week_nr"] = df.index.isocalendar().week
+        df["time"] = pd.to_datetime(df.index)
+        df["angle_of_inc"] = df.apply(lambda x: self.calc_sun_angle(x["time"]), axis=1)
+        return df
+
     def create_physics_based_constraints(
-        self,
-        system_capacity_kw: float,
-        system_efficiency: float = 0.8,
-        conservative_factor: float = 1.2,
+            self,
+            system_capacity_kw: float,
+            system_efficiency: float = 0.8,
+            conservative_factor: float = 1.2,
     ) -> Dict[int, float]:
         """
         Create physics-based maximum hourly production constraints based on solar system capacity.
@@ -189,7 +209,7 @@ class SolarPredictor(DaBase):
             # uren zijn in utc
             # noon = noon_utc - longitude/15
             # Solar hour angle (longitude = solar noon, ±15° per hour)
-            hour_angle = 15.0 * (hour - 12 - self.longitude/15)
+            hour_angle = 15.0 * (hour - 12 - self.longitude / 15)
 
             # Calculate solar elevation angle
             lat_rad = math.radians(self.latitude)
@@ -219,7 +239,7 @@ class SolarPredictor(DaBase):
                 # Calculate theoretical maximum production for this hour
                 # Max kWh = System_kW × Relative_Irradiance × Efficiency × 1_hour
                 theoretical_max = (
-                    system_capacity_kw * relative_irradiance * system_efficiency
+                        system_capacity_kw * relative_irradiance * system_efficiency
                 )
 
                 # Apply conservative factor for outlier detection
@@ -230,7 +250,7 @@ class SolarPredictor(DaBase):
         return
 
     def _load_and_process_weather_data(
-        self, weather_data: Union[str, pd.DataFrame]
+            self, weather_data: Union[str, pd.DataFrame]
     ) -> pd.DataFrame:
         """
         Load and process weather data.
@@ -264,10 +284,10 @@ class SolarPredictor(DaBase):
         #     raise ValueError(f"Weather data missing required columns: {missing_cols}")
 
         # Create features
-        return create_features(weather_df)
+        return self.create_features(weather_df)
 
     def _load_and_process_solar_data(
-        self, solar_data: Union[str, pd.DataFrame]
+            self, solar_data: Union[str, pd.DataFrame]
     ) -> pd.DataFrame:
         """
         Load and process solar production data.
@@ -351,7 +371,7 @@ class SolarPredictor(DaBase):
             Q3 = solar_values.quantile(0.75)
             IQR = Q3 - Q1
             iqr_outliers = (solar_values < (Q1 - 1.5 * IQR)) | (
-                solar_values > (Q3 + 1.5 * IQR)
+                    solar_values > (Q3 + 1.5 * IQR)
             )
 
             # Physics-based constraints: Maximum reasonable solar production by hour
@@ -375,10 +395,10 @@ class SolarPredictor(DaBase):
 
             # Combine methods (outlier if flagged by 2+ methods)
             combined_outliers = (
-                statistical_outliers.astype(int)
-                + iqr_outliers.astype(int)
-                + physics_outliers.astype(int)
-            ) >= 2
+                                        statistical_outliers.astype(int)
+                                        + iqr_outliers.astype(int)
+                                        + physics_outliers.astype(int)
+                                ) >= 2
 
             outlier_mask.loc[hour_data.index] = combined_outliers
 
@@ -402,13 +422,13 @@ class SolarPredictor(DaBase):
                     if irradiance_corr > 0.5:
                         # Use direct irradiance vs solar production ratio for outlier detection
                         irradiance_ratio = season_hour_data["solar_kwh"] / (
-                            season_hour_data["irradiance"] + 1e-6
+                                season_hour_data["irradiance"] + 1e-6
                         )
                         Q1 = irradiance_ratio.quantile(0.25)
                         Q3 = irradiance_ratio.quantile(0.75)
                         IQR = Q3 - Q1
                         ratio_outliers = (irradiance_ratio < (Q1 - 2.0 * IQR)) | (
-                            irradiance_ratio > (Q3 + 2.0 * IQR)
+                                irradiance_ratio > (Q3 + 2.0 * IQR)
                         )
                         seasonal_outlier_mask.loc[season_hour_data.index] = (
                             ratio_outliers
@@ -426,13 +446,13 @@ class SolarPredictor(DaBase):
         return final_clean_data
 
     def train(
-        self,
-        weather_data: Union[str, pd.DataFrame],
-        solar_data: Union[str, pd.DataFrame],
-        model_save_path: str,
-        test_size: float = 0.2,
-        remove_outliers: bool = True,
-        tune_hyperparameters: bool = True,
+            self,
+            weather_data: Union[str, pd.DataFrame],
+            solar_data: Union[str, pd.DataFrame],
+            model_save_path: str,
+            test_size: float = 0.2,
+            remove_outliers: bool = True,
+            tune_hyperparameters: bool = True,
     ) -> Dict[str, Any]:
         """
         Train the solar prediction model.
@@ -599,7 +619,7 @@ class SolarPredictor(DaBase):
         return self.training_stats
 
     def predict(
-        self, weather_data: Union[Dict[str, float], pd.DataFrame]
+            self, weather_data: Union[Dict[str, float], pd.DataFrame]
     ) -> Union[float, np.ndarray]:
         """
         Make predictions using the trained model.
@@ -649,7 +669,7 @@ class SolarPredictor(DaBase):
             featured_df = weather_data[self.feature_columns]
             prediction = self.model.predict(featured_df)
             prediction = np.maximum(0, prediction)  # Ensure non-negative
-            result = pd.DataFrame( {"date_time": featured_df.index, "prediction" :prediction} )
+            result = pd.DataFrame({"date_time": featured_df.index, "prediction": prediction})
             result["date_time"] = result["date_time"].dt.tz_convert(self.time_zone)
             return result
 
@@ -726,7 +746,7 @@ class SolarPredictor(DaBase):
         os.remove(filename)
         return
 
-    def get_and_save_knmi_data(self, start:dt.datetime, end:dt.datetime):
+    def get_and_save_knmi_data(self, start: dt.datetime, end: dt.datetime):
         """
         haalt data op en bewaart ze in dao-db
         :param start: datetime
@@ -734,8 +754,8 @@ class SolarPredictor(DaBase):
         :return: None
         """
         knmi_df = knmi.get_hour_data_dataframe(
-                [self.knmi_station], start=start, end=end, variables=["T", "Q"]
-            )
+            [self.knmi_station], start=start, end=end, variables=["T", "Q"]
+        )
         if len(knmi_df) == 0:
             logging.info(f"Er zijn geen aanvullende knmi-data beschikbaar vanaf {start}-{end}")
             return
@@ -757,7 +777,6 @@ class SolarPredictor(DaBase):
         self.db_da.savedata(save_df, tablename="values")
         return None
 
-
     def import_knmi_df(self, start: dt.datetime, end: dt.datetime):
         """
         haalt data op bij knmi en slaat deze op in dao-database
@@ -777,7 +796,8 @@ class SolarPredictor(DaBase):
         """
         # get dataframe with knmi-py
         # datetime of latest data-reord
-        logging.info(f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}")
+        logging.info(
+            f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}")
         first_dt = self.db_da.get_time_border_record("gr", latest=False)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         if latest_dt is None:  # er zijn nog geen data
@@ -794,9 +814,8 @@ class SolarPredictor(DaBase):
             self.get_and_save_knmi_data(latest_dt, end)
         return None
 
-
     def get_weatherdata(
-        self, start: dt.datetime, end: dt.datetime | None = None, prognose: bool = False
+            self, start: dt.datetime, end: dt.datetime | None = None, prognose: bool = False
     ) -> pd.DataFrame:
         """
         vult database aan met ontbrekende data
@@ -810,7 +829,7 @@ class SolarPredictor(DaBase):
         # haal ontbrekende data op bij knmi
 
         if end is None:
-            end = dt.datetime(start.year+1, start.month, start.day)
+            end = dt.datetime(start.year + 1, start.month, start.day)
         if not prognose:
             # knmi data evt aanvullen
             self.import_knmi_df(start, end)
@@ -866,8 +885,11 @@ class SolarPredictor(DaBase):
         df_solar = df_solar.rename(columns={"utc": "datetime"})
         return df_solar
 
-    def train_solar_option(self, weather_data:pd.DataFrame, solar_option:Dict, start:dt.datetime):
+    def train_solar_option(self, weather_data: pd.DataFrame, solar_option: Dict,
+                           start: dt.datetime):
         self.solar_name = self.config.get(["name"], solar_option, "default")
+        self.tilt = self.config.get(["tilt"], solar_option, 45)
+        self.azimut = self.config.get(["orientation"], solar_option, 0) + 180
         self.solar_entities = self.config.get(["entities sensors"], solar_option, [])
         if not self.solar_entities:
             raise ValueError(
@@ -904,7 +926,7 @@ class SolarPredictor(DaBase):
                     self.train_solar_option(weather_data, solar_option, start)
 
     def predict_solar_device(
-        self, solar_name:str, start: dt.datetime, end: dt.datetime
+            self, solar_name: str, start: dt.datetime, end: dt.datetime
     ) -> pd.DataFrame:
         """
         berekent de voorspelling voor een pv-installatie
@@ -938,6 +960,7 @@ class SolarPredictor(DaBase):
                 if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
                     self.predict_solar_device(solar_option["name"], start, end)
 
+
 def main():
     arg = sys.argv[1]
     if len(sys.argv) > 2:
@@ -958,7 +981,6 @@ def main():
             start=start_dt,
             end=end_dt,
         )
-
 
 
 if __name__ == "__main__":
