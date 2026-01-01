@@ -199,6 +199,11 @@ class Meteo:
             if result is None or afstand < distance:
                 distance = afstand
                 result = key
+        # --- Print de naam van het gevonden station ---
+        if result is not None:
+            gevonden_station = stations[result] 
+            logging.info(f"Dichtstbijzijnde station is: {gevonden_station.name} (Code: {result})")
+        # -----------------------------------------------------
         return str(result)
 
     def solar_rad(
