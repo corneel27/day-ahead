@@ -72,7 +72,7 @@ class SolarPredictor(DaBase):
             "month",
             "season",
             "week_nr",
-            "angle_of_inc"
+            "cos_angle_of_inc"
         ]
         self.is_trained = False
         self.training_stats = {}
@@ -89,7 +89,7 @@ class SolarPredictor(DaBase):
         )
         """
 
-    def calc_sun_angle(self, time):
+    def calc_cos_sun_angle(self, time):
         # time = pd.to_datetime(time)
 
         solpos = pvlib.solarposition.get_solarposition(
@@ -164,7 +164,7 @@ class SolarPredictor(DaBase):
         )
         df["week_nr"] = df.index.isocalendar().week
         df["time"] = pd.to_datetime(df.index)
-        df["angle_of_inc"] = df.apply(lambda x: self.calc_sun_angle(x["time"]), axis=1)
+        df["cos_angle_of_inc"] = df.apply(lambda x: self.calc_cos_sun_angle(x["time"]), axis=1)
         df.drop("time", axis=1, inplace=True)
         logging.info(f"Dataframe with all features\n{df.to_string()}")
         return df
