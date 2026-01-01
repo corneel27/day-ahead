@@ -166,7 +166,7 @@ class SolarPredictor(DaBase):
         df["time"] = pd.to_datetime(df.index)
         df["cos_angle_of_inc"] = df.apply(lambda x: self.calc_cos_sun_angle(x["time"]), axis=1)
         df.drop("time", axis=1, inplace=True)
-        logging.info(f"Dataframe with all features\n{df.to_string()}")
+        logging.debug(f"Dataframe with all features\n{df.to_string()}")
         return df
 
     def create_physics_based_constraints(

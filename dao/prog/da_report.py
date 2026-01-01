@@ -2987,6 +2987,8 @@ class Report(DaBase):
 
         # gemeten productie
         sensors = self.config.get(["entities sensors"], device, [])
+        if not isinstance(sensors, list):
+            sensors = [sensors]
         count=0
         for sensor in sensors:
             df_sensor = self.get_sensor_data(sensor, start, end, "gemeten")
