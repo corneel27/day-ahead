@@ -103,7 +103,14 @@ class SolarPredictor(DaBase):
             solar_azimuth=solpos['azimuth']
         )
 
-        return aoi.iloc[0]
+        result = 0
+        elevation = solpos['apparent_elevation'].iloc[0]
+
+        angle = min(aoi.iloc[0], 90)
+        if elevation > 0:
+            result = math.cos(min(math.radians(angle),90.0))
+
+        return result
 
     def create_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -158,6 +165,8 @@ class SolarPredictor(DaBase):
         df["week_nr"] = df.index.isocalendar().week
         df["time"] = pd.to_datetime(df.index)
         df["angle_of_inc"] = df.apply(lambda x: self.calc_sun_angle(x["time"]), axis=1)
+        df.drop("time", axis=1, inplace=True)
+        logging.info(f"Dataframe with all features\n{df.to_string()}")
         return df
 
     def create_physics_based_constraints(
@@ -648,7 +657,7 @@ class SolarPredictor(DaBase):
             single_df = single_df.set_index("datetime")
 
             # Process through feature engineering
-            processed_df = create_features(single_df)
+            processed_df = self.create_features(single_df)
 
             # Extract features and make prediction
             features = processed_df[self.feature_columns].iloc[0:1]
@@ -895,6 +904,8 @@ class SolarPredictor(DaBase):
             raise ValueError(
                 f"No entities configured in your solar-option of {self.solar_name}"
             )
+        if not isinstance(self.solar_entities, list):
+            self.solar_entities = [self.solar_entities]
         self.solar_capacity = self.config.get(["capacity"], solar_option, 5.0)
         self.create_physics_based_constraints(self.solar_capacity)
         solar_data = self.get_solar_data(start=start, entities=self.solar_entities)
@@ -912,7 +923,7 @@ class SolarPredictor(DaBase):
         """
         if start is None:
             now = dt.datetime.now()
-            start = dt.datetime(year=now.year - 1, month=now.month, day=now.day)
+            start = dt.datetime(year=now.year - 2, month=now.month, day=now.day)
         weather_data = self.get_weatherdata(start=start)
         solar_options = self.config.get(["solar"], None, None)
         for solar_option in solar_options:
