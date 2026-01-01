@@ -4,6 +4,7 @@ Solar Production Prediction Module
 This module provides functionality to train XGBoost models for predicting
 hourly solar production based on weather data and historical solar output.
 """
+import datetime
 
 import pandas as pd
 import numpy as np
@@ -725,6 +726,38 @@ class SolarPredictor(DaBase):
         os.remove(filename)
         return
 
+    def get_and_save_knmi_data(self, start:dt.datetime, end:dt.datetime):
+        """
+        haalt data op en bewaart ze in dao-db
+        :param start: datetime
+        :param end: datetime
+        :return: None
+        """
+        knmi_df = knmi.get_hour_data_dataframe(
+                [self.knmi_station], start=start, end=end, variables=["T", "Q"]
+            )
+        if len(knmi_df) == 0:
+            logging.info(f"Er zijn geen aanvullende knmi-data beschikbaar vanaf {start}-{end}")
+            return
+
+        knmi_df["utc"] = knmi_df.index
+        knmi_eerste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize(self.time_zone)
+        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[-1]).tz_localize(self.time_zone)
+        logging.info(f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
+                     f"{knmi_laatste}")
+        knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
+        knmi_df["utc"] = pd.to_datetime(
+            knmi_df["utc"], utc=True
+        )  # , format='%Y-%m-%d %H:%M:%S')
+        save_df = pd.DataFrame(columns=["time", "code", "value"])
+        for row in knmi_df.itertuples():
+            utc = int(row.utc.timestamp())
+            save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
+            save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
+        self.db_da.savedata(save_df, tablename="values")
+        return None
+
+
     def import_knmi_df(self, start: dt.datetime, end: dt.datetime):
         """
         haalt data op bij knmi en slaat deze op in dao-database
@@ -744,41 +777,23 @@ class SolarPredictor(DaBase):
         """
         # get dataframe with knmi-py
         # datetime of latest data-reord
-
-        latest_record = self.db_da.get_time_latest_record("gr")
-        if latest_record is None:  # er zijn nog geen data
-            latest_dt = start
+        logging.info(f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}")
+        first_dt = self.db_da.get_time_border_record("gr", latest=False)
+        latest_dt = self.db_da.get_time_border_record("gr", latest=True)
+        if latest_dt is None:  # er zijn nog geen data
             logging.info(f"Er zijn nog geen knmi-data aanwezig")
+            self.get_and_save_knmi_data(start, end)
         else:
-            latest_dt = latest_record
-            logging.info(f"Er zijn knmi-data aanwezig tot {latest_dt}")
-        if latest_dt >= end:
+            logging.info(f"Er zijn knmi-data aanwezig vanaf {first_dt} tot {latest_dt}")
+        if first_dt <= start and latest_dt >= end:
             logging.info(f"Er worden geen knmi-data opgehaald")
             return
+        if first_dt > start:
+            self.get_and_save_knmi_data(start, first_dt)
+        if latest_dt < end:
+            self.get_and_save_knmi_data(latest_dt, end)
+        return None
 
-        knmi_df = knmi.get_hour_data_dataframe(
-                [self.knmi_station], start=latest_dt, end=end, variables=["T", "Q"]
-            )
-        if len(knmi_df) == 0:
-            logging.info(f"Er zijn geen aanvullende knmi-data beschikbaar")
-            return
-
-        knmi_df["utc"] = knmi_df.index
-        knmi_eerste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize(self.time_zone)
-        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[-1]).tz_localize(self.time_zone)
-        logging.info(f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
-                     f"{knmi_laatste}")
-        knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
-        knmi_df["utc"] = pd.to_datetime(
-            knmi_df["utc"], utc=True
-        )  # , format='%Y-%m-%d %H:%M:%S')
-        save_df = pd.DataFrame(columns=["time", "code", "value"])
-        for row in knmi_df.itertuples():
-            utc = int(row.utc.timestamp())
-            save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
-            save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
-        self.db_da.savedata(save_df, tablename="values")
-        return
 
     def get_weatherdata(
         self, start: dt.datetime, end: dt.datetime | None = None, prognose: bool = False
@@ -925,13 +940,23 @@ class SolarPredictor(DaBase):
 
 def main():
     arg = sys.argv[1]
+    if len(sys.argv) > 2:
+        arg2 = sys.argv[2]
+        start_dt = dt.datetime.strptime(arg2, "%Y-%m-%d")
+    else:
+        start_dt = None
+    if len(sys.argv) > 3:
+        arg3 = sys.argv[3]
+        end_dt = dt.datetime.strptime(arg3, "%Y-%m-%d")
+    else:
+        end_dt = None
     solar_predictor = SolarPredictor("")
     if arg.lower() == "train":
-        solar_predictor.run_train()
+        solar_predictor.run_train(start=start_dt)
     if arg.lower() == "predict":
         solar_predictor.test_solar_predictor(
-            start=dt.datetime(year=2025, month=12, day=21),
-            end=dt.datetime(year=2025, month=12, day=23),
+            start=start_dt,
+            end=end_dt,
         )
 
 
