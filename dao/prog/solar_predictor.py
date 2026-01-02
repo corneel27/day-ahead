@@ -18,6 +18,7 @@ import knmi
 import copy
 import math
 
+from sqlglot.helper import is_type
 # ML imports
 from xgboost import XGBRegressor
 from sklearn.model_selection import GridSearchCV
@@ -894,20 +895,22 @@ class SolarPredictor(DaBase):
         df_solar = df_solar.rename(columns={"utc": "datetime"})
         return df_solar
 
-    def train_solar_option(self, weather_data: pd.DataFrame, solar_option: Dict,
+    def train_solar_option(self, weather_data: pd.DataFrame, solar_dict: Dict,
                            start: dt.datetime):
-        name = self.config.get(["name"], solar_option, "default")
+        name = self.config.get(["name"], solar_dict, "default")
         self.solar_name = name.replace(" ", "_")
-        self.tilt = self.config.get(["tilt"], solar_option, 45)
-        self.azimut = self.config.get(["orientation"], solar_option, 0) + 180
-        self.solar_entities = self.config.get(["entities sensors"], solar_option, [])
+        self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
+        self.azimut = self.get_property_from_dict("orientation",solar_dict, 0) + 180
+        self.solar_capacity = self.get_property_from_dict("capacity",solar_dict, 5)
+        self.solar_entities = self.config.get(["entities sensors"], solar_dict, [])
+        if not is_type(self.solar_entities, list):
+            self.solar_entities = [self.solar_entities]
         if not self.solar_entities:
             raise ValueError(
                 f"No entities configured in your solar-option of {self.solar_name}"
             )
         if not isinstance(self.solar_entities, list):
             self.solar_entities = [self.solar_entities]
-        self.solar_capacity = self.config.get(["capacity"], solar_option, 5.0)
         self.create_physics_based_constraints(self.solar_capacity)
         solar_data = self.get_solar_data(start=start, entities=self.solar_entities)
         self.train(
@@ -937,23 +940,51 @@ class SolarPredictor(DaBase):
                 if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
                     self.train_solar_option(weather_data, solar_option, start)
 
+    def get_property_from_dict(self, name: str, solar_option: Dict, default: float=None):
+        """
+        retourneert de property
+        :param name:
+        :param solar_option:
+        :param default:
+        :return:
+        """
+        result =self.config.get([name], solar_option, None)
+        if result is None:
+            sum = 0
+            capacity = 0
+            strings = self.config.get(["strings"], solar_option, {})
+            for string in strings:
+                value = self.config.get([name], string, None)
+                cap = self.config.get(["capacity"], string, None)
+                if value is not None and cap is not None:
+                    sum += value * cap
+                    capacity += cap
+            if name == "capacity":
+                result = capacity
+            else:
+                if capacity > 0:
+                    result = sum/capacity
+            if result is None:
+                result = default
+        return result
+
+
     def predict_solar_device(
             self, solar_dict: dict, start: dt.datetime, end: dt.datetime
     ) -> pd.DataFrame:
         """
         berekent de voorspelling voor een pv-installatie
-        :param solar_name, de naam van de installatie
+        :param solar_dict, de configuratie van de installatie
         :param start: start-tijdstip voorspelling
         :param end: eind-tijdstip voorspelling
         :return: dataframe met berekende voorspellingen per uur
         """
-        self.tilt = self.config.get(["tilt"], solar_dict, 45)
-        self.azimut = self.config.get(["orientation"], solar_dict, 0) + 180
-        self.solar_capacity = self.config.get(["capacity"], solar_dict, 5.0)
         name = self.config.get(["name"], solar_dict, "default")
-        self.solar_name = self.solar_name.replace(" ", "_")
-        # self.solar_name = self.solar_name = self.config.get(["name"], solar_option, "default")
-        file_name = "../data/prediction/models/" + solar_name + ".pkl"
+        self.solar_name = name.replace(" ", "_")
+        self.tilt = self.get_property_from_dict("tilt",solar_dict, 45)
+        self.azimut = self.get_property_from_dict("orientation",solar_dict, 0) + 180
+        self.solar_capacity = self.get_property_from_dict("capacity",solar_dict, 5)
+        file_name = "../data/prediction/models/" + self.solar_name + ".pkl"
         if os.path.isfile(file_name):
             self.load_model(file_name)
         else:
@@ -962,7 +993,7 @@ class SolarPredictor(DaBase):
             )
         weather_data = self.get_weatherdata(start, end, prognose=True)
         prediction = self.predict(weather_data)
-        logging.info(f"ML prediction {solar_name}\n{prediction}")
+        logging.info(f"ML prediction {self.solar_name}\n{prediction}")
         return prediction
 
     def test_solar_predictor(self, start, end):
