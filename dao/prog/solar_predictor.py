@@ -683,7 +683,6 @@ class SolarPredictor(DaBase):
             result["date_time"] = result["date_time"].dt.tz_convert(self.time_zone)
             return result
 
-    # @classmethod
     def load_model(self, model_path: str):  # -> 'SolarPredictor':
         """
         Load a trained model from disk.
