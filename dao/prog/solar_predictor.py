@@ -877,7 +877,7 @@ class SolarPredictor(DaBase):
         from dao.prog.da_report import Report
 
         report = Report()
-        tot = dt.datetime(start.year + 1, start.month, start.day)
+        tot = dt.datetime.now()
         count = 0
         df_solar = pd.DataFrame()
         for sensor in entities:
@@ -887,7 +887,11 @@ class SolarPredictor(DaBase):
             if count == 0:
                 df_solar = df_sensor
             else:
-                report.add_col_df(df_sensor, df_solar, "solar_kwh")
+                df_sensor['overlap'] = df_sensor["tijd"].isin(df_solar["tijd"])
+                df_sensor_overlap = df_sensor[df_sensor["overlap"] == True]
+                report.add_col_df(df_sensor_overlap, df_solar, "solar_kwh")
+                df_sensor_new = df_sensor[df_sensor["overlap"] == False]
+                df_solar = pd.concat([df_solar, df_sensor_new])
             count += 1
         df_solar["utc"] = pd.to_datetime(df_solar["utc"], unit="s", utc=True)
         df_solar = df_solar.set_index(df_solar["utc"])
