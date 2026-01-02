@@ -3009,7 +3009,7 @@ class Report(DaBase):
         # voorspelling ML
         from dao.prog.solar_predictor import SolarPredictor
         solar_predictor = SolarPredictor()
-        solar_prog = solar_predictor.predict_solar_device(device["name"], start, end)
+        solar_prog = solar_predictor.predict_solar_device(device, start, end)
         solar_prog.index = pd.to_datetime(solar_prog["date_time"]).dt.tz_localize(None)
         result["prognose_ml"] = solar_prog["prediction"]
 

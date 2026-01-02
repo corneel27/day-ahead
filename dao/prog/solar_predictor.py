@@ -896,7 +896,8 @@ class SolarPredictor(DaBase):
 
     def train_solar_option(self, weather_data: pd.DataFrame, solar_option: Dict,
                            start: dt.datetime):
-        self.solar_name = self.config.get(["name"], solar_option, "default")
+        name = self.config.get(["name"], solar_option, "default")
+        self.solar_name = name.replace(" ", "_")
         self.tilt = self.config.get(["tilt"], solar_option, 45)
         self.azimut = self.config.get(["orientation"], solar_option, 0) + 180
         self.solar_entities = self.config.get(["entities sensors"], solar_option, [])
@@ -937,7 +938,7 @@ class SolarPredictor(DaBase):
                     self.train_solar_option(weather_data, solar_option, start)
 
     def predict_solar_device(
-            self, solar_name: str, start: dt.datetime, end: dt.datetime
+            self, solar_dict: dict, start: dt.datetime, end: dt.datetime
     ) -> pd.DataFrame:
         """
         berekent de voorspelling voor een pv-installatie
@@ -946,6 +947,11 @@ class SolarPredictor(DaBase):
         :param end: eind-tijdstip voorspelling
         :return: dataframe met berekende voorspellingen per uur
         """
+        self.tilt = self.config.get(["tilt"], solar_dict, 45)
+        self.azimut = self.config.get(["orientation"], solar_dict, 0) + 180
+        self.solar_capacity = self.config.get(["capacity"], solar_dict, 5.0)
+        name = self.config.get(["name"], solar_dict, "default")
+        self.solar_name = self.solar_name.replace(" ", "_")
         # self.solar_name = self.solar_name = self.config.get(["name"], solar_option, "default")
         file_name = "../data/prediction/models/" + solar_name + ".pkl"
         if os.path.isfile(file_name):
@@ -963,13 +969,13 @@ class SolarPredictor(DaBase):
         solar_options = self.config.get(["solar"], None, None)
         for solar_option in solar_options:
             if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
-                self.predict_solar_device(solar_option["name"], start, end)
+                self.predict_solar_device(solar_option, start, end)
         batteries = self.config.get(["battery"], None, None)
         for battery in batteries:
             solar_options = self.config.get(["solar"], battery, None)
             for solar_option in solar_options:
                 if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
-                    self.predict_solar_device(solar_option["name"], start, end)
+                    self.predict_solar_device(solar_option, start, end)
 
 
 def main():

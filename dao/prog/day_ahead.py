@@ -244,7 +244,7 @@ class DaCalc(DaBase):
         for s in range(solar_num):
             if solar_ml_prediction[s]:
                 solar_name = self.solar[s]["name"]
-                solar_prog = solar_predictor.predict_solar_device(solar_name, start_hour_dt,
+                solar_prog = solar_predictor.predict_solar_device(self.solar[s], start_hour_dt,
                                                                   end_prog)
                 solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
                 if self.interval == "15min":
@@ -258,7 +258,7 @@ class DaCalc(DaBase):
                 solar_option = self.battery_options[b]["solar"][s]
                 if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
                     solar_name = solar_option["name"]
-                    solar_prog = solar_predictor.predict_solar_device(solar_name, start_hour_dt,
+                    solar_prog = solar_predictor.predict_solar_device(solar_option, start_hour_dt,
                                                                       end_prog)
                     solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
                     if self.interval == "15min":
