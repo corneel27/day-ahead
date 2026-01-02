@@ -504,7 +504,7 @@ class SolarPredictor(DaBase):
         merged_data = merged_data.dropna()
 
         # drop when irradiance=0 and solar_kwh=0
-        merged_data.query('irradiance > 0 or solar_kwh > 0', inplace=True)
+        # merged_data.query('irradiance > 0 or solar_kwh > 0', inplace=True)
 
         logging.info(f"Merged dataset: {len(merged_data)} records")
         logging.info(f"Date range: {merged_data.index.min()} to {merged_data.index.max()}")
