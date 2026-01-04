@@ -18,8 +18,6 @@ import knmi
 import copy
 import math
 
-from sqlglot.helper import is_type
-
 # ML imports
 from xgboost import XGBRegressor
 from sklearn.model_selection import GridSearchCV
@@ -937,7 +935,7 @@ class SolarPredictor(DaBase):
         self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
         self.solar_capacity = self.get_property_from_dict("capacity", solar_dict, 5)
         self.solar_entities = self.config.get(["entities sensors"], solar_dict, [])
-        if not is_type(self.solar_entities, list):
+        if not type(self.solar_entities) is list:
             self.solar_entities = [self.solar_entities]
         if not self.solar_entities:
             raise ValueError(
