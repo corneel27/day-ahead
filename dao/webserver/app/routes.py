@@ -1,3 +1,4 @@
+import collections
 import datetime
 
 # from sqlalchemy.sql.coercions import expect_col_expression_collection
@@ -16,12 +17,18 @@ from dao.prog.version import __version__
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
 images_folder = os.path.join(web_datapath, "images")
-try:
-    config = Config(app_datapath + "options.json")
-except ValueError as ex:
-    logging.error(app_datapath)
-    logging.error(ex)
-    config = None
+config = None
+
+
+def create_config():
+    global config
+    try:
+        config = Config(app_datapath + "options.json")
+    except ValueError as ex:
+        logging.error(app_datapath)
+        logging.error(ex)
+        config = None
+
 
 logname = "dashboard.log"
 handler = TimedRotatingFileHandler(
@@ -125,7 +132,7 @@ web_menu = {
             "items": {},
             "views": views,
             "actions": actions,
-        },
+        }
     },
     "settings": {
         "name": "Config",
@@ -136,8 +143,19 @@ web_menu = {
     },
 }
 
+solar_web_menu = {
+    "solar": {
+        "name": "Solar",
+        "submenu": {
+            "items": {},
+            "views": views,
+            "actions": actions,
+        }
+    },
+}
 
 def generate_solar_items():
+    global web_menu
     solar_options = config.get(["solar"], None, [])
     battery_options = config.get(["battery"], None, [])
     for battery_option in battery_options:
@@ -153,7 +171,13 @@ def generate_solar_items():
             key = config.get(["name"], solar_option, "default")
             result[key] = solar_option
     if len(result) == 0:
-        del web_menu["solar"]
+        if "solar" in web_menu.keys():
+            del web_menu["solar"]
+    else:
+        if not "solar" in web_menu.keys():
+            web_menu.update(solar_web_menu)
+            key_order = ("home", "run", "reports", "savings", "solar", "settings")
+            web_menu = collections.OrderedDict((k, web_menu[k]) for k in key_order)
     return result
 
 
@@ -164,10 +188,19 @@ def get_web_menu_items():
     return items
 
 
-solar_items = generate_solar_items()
-if "solar" in web_menu.keys():
-    web_menu["solar"]["submenu"]["items"] = solar_items
-web_menu_items = get_web_menu_items()
+web_menu_items = {}
+solar_items = {}
+
+
+def check_web_menu_items():
+    global solar_items, web_menu_items
+    create_config()
+    solar_items = generate_solar_items()
+    if len(solar_items) > 0 and "solar" in web_menu.keys():
+        web_menu["solar"]["submenu"]["items"] = solar_items
+    web_menu_items = get_web_menu_items()
+
+check_web_menu_items()
 
 if config is not None:
     sensor_co2_intensity = config.get(["report", "entity co2-intensity"], None, None)
@@ -252,6 +285,7 @@ def get_file_list(path: str, pattern: str) -> list:
 
 @app.route("/", methods=["POST", "GET"])
 def menu():
+    check_web_menu_items()
     lst = request.form.to_dict(flat=False)
     if "current_menu" in lst:
         current_menu = lst["current_menu"][0]
@@ -261,7 +295,7 @@ def menu():
             return run_process()
         elif current_menu == "reports" or current_menu == "savings":
             return reports(current_menu)
-        elif current_menu == "solar":
+        elif current_menu == "solar" and "solar" in web_menu_items.keys():
             return solar()
         elif current_menu == "settings":
             return settings()
@@ -668,6 +702,7 @@ def settings():
                         with open(filename_ext, "w") as f:
                             f.write(updated_data)
                         message = "JSON data updated successfully"
+                        check_web_menu_items()
                     except Exception as err:
                         message = "Error: " + err.args[0]
                     options = updated_data
