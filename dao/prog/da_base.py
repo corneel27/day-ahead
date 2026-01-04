@@ -588,6 +588,7 @@ class DaBase(hass.Hass):
     @staticmethod
     def train_ml_predictions():
         from dao.prog.solar_predictor import SolarPredictor
+
         solar_predictor = SolarPredictor()
         solar_predictor.run_train()
 

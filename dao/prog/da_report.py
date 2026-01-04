@@ -723,39 +723,45 @@ class Report(DaBase):
             "haxis": {"values": "uur", "title": "uren van de dag"},
             "graphs": [
                 {
-                    "vaxis": [{"title": "J/cm2"},{"title": "kWh"}],
+                    "vaxis": [{"title": "J/cm2"}, {"title": "kWh"}],
                     "series": [
-                        {"column": "prognose_straling",
-                             "title": "Straling prognose",
-                             "type": "line",
-                             "color": "purple"},
-                        {"column":"gemeten_straling",
+                        {
+                            "column": "prognose_straling",
+                            "title": "Straling prognose",
+                            "type": "line",
+                            "color": "purple",
+                        },
+                        {
+                            "column": "gemeten_straling",
                             "title": "Straling gemeten",
                             "source": "da",
                             "type": "line",
-                            "color": "red"
+                            "color": "red",
                         },
-                        {"column": "gemeten_prod",
+                        {
+                            "column": "gemeten_prod",
                             "title": "Productie gemeten",
-                            "vaxis" : "right",
+                            "vaxis": "right",
                             "type": "bar",
-                             "color": "blue",
+                            "color": "blue",
                         },
-                        {"column": "prognose_dao",
-                         "vaxis": "right",
-                         "type": "bar",
-                         "title": "Prod. progn. DAO",
-                         "color": "yellow",
+                        {
+                            "column": "prognose_dao",
+                            "vaxis": "right",
+                            "type": "bar",
+                            "title": "Prod. progn. DAO",
+                            "color": "yellow",
                         },
-                        {"column": "prognose_ml",
-                         "vaxis": "right",
-                         "type": "bar",
-                         "title": "Prod. progn. ml",
-                         "color": "green"
-                         }
-                    ]
+                        {
+                            "column": "prognose_ml",
+                            "vaxis": "right",
+                            "type": "bar",
+                            "title": "Prod. progn. ml",
+                            "color": "green",
+                        },
+                    ],
                 }
-            ]
+            ],
         }
 
         """
@@ -2971,15 +2977,17 @@ class Report(DaBase):
             ]
         return df
 
-    def calc_solar_data(self, device: dict, day:datetime.date, active_view:str):
-        result = pd.DataFrame(columns=["uur", "straling", "werkelijk", "prognose DAO", "prognose ML"])
+    def calc_solar_data(self, device: dict, day: datetime.date, active_view: str):
+        result = pd.DataFrame(
+            columns=["uur", "straling", "werkelijk", "prognose DAO", "prognose ML"]
+        )
         start = datetime.datetime(day.year, day.month, day.day)
         end = start + datetime.timedelta(days=1)
 
         # prognose straling
         result = self.get_da_data("gr", start, end, "uur", "uur", "prognoses")
-        result.rename({"gr" : "prognose_straling"}, inplace=True, axis=1)
-        result.drop(columns=["vanaf","tot"], inplace=True)
+        result.rename({"gr": "prognose_straling"}, inplace=True, axis=1)
+        result.drop(columns=["vanaf", "tot"], inplace=True)
 
         # gemeten straling
         rad_real = self.get_da_data("gr", start, end, "uur", "uur", "values")
@@ -2989,7 +2997,7 @@ class Report(DaBase):
         sensors = self.config.get(["entities sensors"], device, [])
         if not isinstance(sensors, list):
             sensors = [sensors]
-        count=0
+        count = 0
         for sensor in sensors:
             df_sensor = self.get_sensor_data(sensor, start, end, "gemeten")
             if count == 0:
@@ -3000,32 +3008,52 @@ class Report(DaBase):
         result["gemeten_prod"] = df_solar["gemeten"]
 
         # voorspelling DAO
-        pred_dao= []
+        pred_dao = []
         for row in result.itertuples():
-            prod = self.calc_prod_solar(device, row.tijd.timestamp(), row.prognose_straling, 1)
+            prod = self.calc_prod_solar(
+                device, row.tijd.timestamp(), row.prognose_straling, 1
+            )
             pred_dao.append(prod)
         result["prognose_dao"] = pred_dao
 
         # voorspelling ML
         from dao.prog.solar_predictor import SolarPredictor
+
         solar_predictor = SolarPredictor()
         solar_prog = solar_predictor.predict_solar_device(device, start, end)
         solar_prog.index = pd.to_datetime(solar_prog["date_time"]).dt.tz_localize(None)
         result["prognose_ml"] = solar_prog["prediction"]
 
         result.drop(columns=["tijd"], inplace=True)
-        result = result[['uur', 'gemeten_straling', 'prognose_straling',
-                         "gemeten_prod", "prognose_dao", "prognose_ml"]]
-        if active_view=="tabel":
-            r2_radiation = calc_r2(result["gemeten_straling"], result["prognose_straling"])
+        result = result[
+            [
+                "uur",
+                "gemeten_straling",
+                "prognose_straling",
+                "gemeten_prod",
+                "prognose_dao",
+                "prognose_ml",
+            ]
+        ]
+        if active_view == "tabel":
+            r2_radiation = calc_r2(
+                result["gemeten_straling"], result["prognose_straling"]
+            )
             r2_dao = calc_r2(result["gemeten_prod"], result["prognose_dao"])
             r2_ml = calc_r2(result["gemeten_prod"], result["prognose_ml"])
             result.loc["Total"] = result.sum(axis=0, numeric_only=True)
             result.at[result.index[-1], "uur"] = "Totaal"
             result.columns = [
-                ["",   "Straling", "Straling", "Productie","Productie", "Productie"],
-                ["uur", "gemeten", "prognose", "gemeten", "prognose dao", "prognose ml"],
-                ["", "J/cm2", "J/cm2", "kWh", "kWh", "kWh"]
+                ["", "Straling", "Straling", "Productie", "Productie", "Productie"],
+                [
+                    "uur",
+                    "gemeten",
+                    "prognose",
+                    "gemeten",
+                    "prognose dao",
+                    "prognose ml",
+                ],
+                ["", "J/cm2", "J/cm2", "kWh", "kWh", "kWh"],
             ]
             row = ["R²", "", r2_radiation, "", r2_dao, r2_ml]
             result.loc[result.shape[0]] = row
@@ -3046,8 +3074,11 @@ class Report(DaBase):
             )
         else:
             sensor_data = self.get_sensor_sum(
-                sensor_list=self.wp_consumption_sensors, vanaf=vanaf, tot=now, col_name="hp"
-        )
+                sensor_list=self.wp_consumption_sensors,
+                vanaf=vanaf,
+                tot=now,
+                col_name="hp",
+            )
         if len(sensor_data) == 0:
             return -2
         count = 0
@@ -3175,7 +3206,7 @@ class Report(DaBase):
         result = '{ "message":"Success", "data": ' + data_json + " }"
         return result
 
-    def make_graph(self, df, period, _options=None, _title:str|None=None):
+    def make_graph(self, df, period, _options=None, _title: str | None = None):
         if _options:
             options = _options
         else:

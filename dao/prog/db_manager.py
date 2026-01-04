@@ -317,7 +317,9 @@ class DBmanagerObj(object):
             connection.close()
         self.log_pool_status()
 
-    def get_time_border_record(self, code: str, latest:bool=True) -> datetime.datetime:
+    def get_time_border_record(
+        self, code: str, latest: bool = True
+    ) -> datetime.datetime:
         """
         Zoekt de tijd op van het laatst aanwezige record van "code"
         :param code: de code van het record
@@ -337,16 +339,13 @@ class DBmanagerObj(object):
             variabel_table = Table("variabel", self.metadata, autoload_with=connection)
 
         # Construct the query
-        query = (
-            select(
-                self.from_unixtime(values_table.c.time).label("tijd"),
-                values_table.c.value,
-            )
-            .where(
-                and_(
-                    variabel_table.c.code == code,
-                    values_table.c.variabel == variabel_table.c.id,
-                )
+        query = select(
+            self.from_unixtime(values_table.c.time).label("tijd"),
+            values_table.c.value,
+        ).where(
+            and_(
+                variabel_table.c.code == code,
+                values_table.c.variabel == variabel_table.c.id,
             )
         )
 

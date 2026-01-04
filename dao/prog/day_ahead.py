@@ -218,7 +218,10 @@ class DaCalc(DaBase):
                 entity = None
             entity_pv_ac_switch.append(entity)
             max_solar_power.append(self.config.get(["max power"], self.solar[s], None))
-            prediction = self.config.get(["ml_prediction"], self.solar[s], "False").lower() == "true"
+            prediction = (
+                self.config.get(["ml_prediction"], self.solar[s], "False").lower()
+                == "true"
+            )
             solar_ml_prediction.append(prediction)
         time_first_interval = prog_data["tijd"].iloc[0]
         if self.interval == "1hour":
@@ -239,35 +242,48 @@ class DaCalc(DaBase):
         first_interval = True
 
         from dao.prog.solar_predictor import SolarPredictor
+
         solar_predictor = SolarPredictor()
         start_hour_dt = dt.datetime.fromtimestamp(start_hour)
         for s in range(solar_num):
             if solar_ml_prediction[s]:
                 solar_name = self.solar[s]["name"]
-                solar_prog = solar_predictor.predict_solar_device(self.solar[s], start_hour_dt,
-                                                                  end_prog)
+                solar_prog = solar_predictor.predict_solar_device(
+                    self.solar[s], start_hour_dt, end_prog
+                )
                 solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
                 if self.interval == "15min":
                     solar_prog = interpolate(solar_prog, "prediction", quantity=True)
-                while solar_prog["tijd"].iloc[0].tz_localize(None) < prog_data["tijd"].iloc[0]:
+                while (
+                    solar_prog["tijd"].iloc[0].tz_localize(None)
+                    < prog_data["tijd"].iloc[0]
+                ):
                     solar_prog = solar_prog.iloc[1:]
                 solar_prog.reset_index(drop=True, inplace=True)
                 prog_data[solar_name] = solar_prog["prediction"]
         for b in range(B):
             for s in range(len(self.battery_options[b]["solar"])):
                 solar_option = self.battery_options[b]["solar"][s]
-                if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+                if (
+                    self.config.get(["ml_prediction"], solar_option, "False").lower()
+                    == "true"
+                ):
                     solar_name = solar_option["name"]
-                    solar_prog = solar_predictor.predict_solar_device(solar_option, start_hour_dt,
-                                                                      end_prog)
+                    solar_prog = solar_predictor.predict_solar_device(
+                        solar_option, start_hour_dt, end_prog
+                    )
                     solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
                     if self.interval == "15min":
-                        solar_prog = interpolate(solar_prog, "prediction", quantity=True)
-                    while solar_prog["tijd"].iloc[0].tz_localize(None) < prog_data["tijd"].iloc[0]:
+                        solar_prog = interpolate(
+                            solar_prog, "prediction", quantity=True
+                        )
+                    while (
+                        solar_prog["tijd"].iloc[0].tz_localize(None)
+                        < prog_data["tijd"].iloc[0]
+                    ):
                         solar_prog = solar_prog.iloc[1:]
                     solar_prog.reset_index(drop=True, inplace=True)
                     prog_data[solar_name] = solar_prog["prediction"]
-
 
         # prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
@@ -291,7 +307,10 @@ class DaCalc(DaBase):
                 interval_fraction.append(1)
             for s in range(solar_num):
                 if solar_ml_prediction[s]:
-                    prod = max(0,getattr(row, self.solar[s]["name"])) * interval_fraction[-1]
+                    prod = (
+                        max(0, getattr(row, self.solar[s]["name"]))
+                        * interval_fraction[-1]
+                    )
                 else:
                     prod = self.calc_prod_solar(
                         self.solar[s], row.time, gr, hour_fraction[-1]
@@ -308,8 +327,16 @@ class DaCalc(DaBase):
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))
                     pv_dc_num += 1
-                    if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
-                        prod = max(0, getattr(row, self.solar[s]["name"])) * interval_fraction[-1]
+                    if (
+                        self.config.get(
+                            ["ml_prediction"], solar_option, "False"
+                        ).lower()
+                        == "true"
+                    ):
+                        prod = (
+                            max(0, getattr(row, self.solar[s]["name"]))
+                            * interval_fraction[-1]
+                        )
                     else:
                         prod = self.calc_prod_solar(
                             self.battery_options[b]["solar"][s],
@@ -993,7 +1020,9 @@ class DaCalc(DaBase):
             )
             # delta t in een step
             # heat rate = power * cop * sec.p.interval /spec vermogen in K/step
-            heat_rate = power_boiler * cop_boiler * self.interval_s / (spec_heat_boiler*1000)
+            heat_rate = (
+                power_boiler * cop_boiler * self.interval_s / (spec_heat_boiler * 1000)
+            )
             max_steps = int((boiler_setpoint - boiler_ondergrens) / heat_rate) + 1
             # interval-index waarop boiler kan worden verwarmd
             if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
@@ -1020,7 +1049,7 @@ class DaCalc(DaBase):
             else:
                 boiler_end_index = int(
                     min(
-                        U-max_steps,
+                        U - max_steps,
                         max(
                             boiler_start_index + 1,
                             math.floor(
@@ -1729,9 +1758,7 @@ class DaCalc(DaBase):
             == "true"
         )
         if not self.hp_present:
-            logging.info(
-                "Warmtepomp niet aanwezig - warmtepomp wordt niet ingepland"
-            )
+            logging.info("Warmtepomp niet aanwezig - warmtepomp wordt niet ingepland")
             self.hp_enabled = False
         else:
             entity_hp_enabled = self.config.get(
@@ -1741,9 +1768,7 @@ class DaCalc(DaBase):
                 self.get_state(entity_hp_enabled).state == "on"
             )
             if not self.hp_enabled:
-                logging.info(
-                    "Warmtepomp staat uit - warmtepomp wordt niet ingepland"
-                )
+                logging.info("Warmtepomp staat uit - warmtepomp wordt niet ingepland")
         if self.hp_enabled:
             # degree days
             degree_days_today = self.meteo.calc_graaddagen(weighted=True)
@@ -1770,8 +1795,10 @@ class DaCalc(DaBase):
                 )
             )
             if degree_days_factor < 0.1:
-                logging.warning(f"Je graaddag factor ({degree_days_factor:.4f} kWh/K.day) "
-                                f"staat heel laag ingesteld. klopt dit wel?")
+                logging.warning(
+                    f"Je graaddag factor ({degree_days_factor:.4f} kWh/K.day) "
+                    f"staat heel laag ingesteld. klopt dit wel?"
+                )
             else:
                 logging.info(f"Degree days factor: {degree_days_factor:.1f} kWh/K.day")
             logging.info(
@@ -1829,9 +1856,9 @@ class DaCalc(DaBase):
 
             # een of meer intervallen minder als boiler via wp gaat
             if (
-                    boiler_heated_by_heatpump
-                    and not (boiler_start is None)
-                    and boiler_start < U
+                boiler_heated_by_heatpump
+                and not (boiler_start is None)
+                and boiler_start < U
             ):
                 boiler_int = est_needed_intv[boiler_start] + 1
             else:
@@ -1897,9 +1924,11 @@ class DaCalc(DaBase):
                     else:
                         hp_power = 1.5  # Default power in kW if no entity from HA
                     if hp_power > 50:
-                        logging.warning(f"Het elektrisch-vermogen van de wp is te hoog: "
-                                        f"{hp_power:.1f} kW-e"
-                                        f"Voor de planning wordt uitgegaan van 1,5 kW-e")
+                        logging.warning(
+                            f"Het elektrisch-vermogen van de wp is te hoog: "
+                            f"{hp_power:.1f} kW-e"
+                            f"Voor de planning wordt uitgegaan van 1,5 kW-e"
+                        )
                     else:
                         logging.info(f"Elektrisch vermogen: {hp_power:.1f} kW-e")
                     logging.info(f"Thermisch vermogen: {hp_power * cop:.1f} kW-th")
@@ -1922,7 +1951,7 @@ class DaCalc(DaBase):
                     for u in range(U):
                         model += c_hp[u] == hp_power * hp_on[u] * hour_fraction[u]
                         model += h_hp[u] == c_hp[u] * cop
-                    '''        
+                    """        
                     # running block:
                     run_hours = report.get_heatpump_run_hours()
                     if run_hours < 0:
@@ -2033,7 +2062,7 @@ class DaCalc(DaBase):
                         # constrant 7: ieder interval/uur of boiler of wp
                         if boiler_heated_by_heatpump:
                             model += hp_on[u] + boiler_on[u] <= 1
-                        '''
+                        """
                     # constraint 6 : -> consumption
                     for u in range(U):
                         model += c_hp[u] == hp_power * hp_on[u] * hour_fraction[u]
@@ -2052,7 +2081,9 @@ class DaCalc(DaBase):
                 )
                 hp_stages = self.heating_options["stages"]
                 if hp_stages[0]["max_power"] != 0.0:
-                    hp_stages = [{"max_power":  0, "cop": 8},] + hp_stages
+                    hp_stages = [
+                        {"max_power": 0, "cop": 8},
+                    ] + hp_stages
                 S = len(hp_stages)
                 # p_hp[s][u]: het gevraagde vermogen in W in dat uur
                 p_hp = [
@@ -2075,7 +2106,7 @@ class DaCalc(DaBase):
                 hp_s_w = [
                     [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(S)]
                     for _ in range(U)
-                    ]
+                ]
 
                 hp_on = [
                     model.add_var(var_type=BINARY) for _ in range(U)
@@ -2085,7 +2116,9 @@ class DaCalc(DaBase):
                 for u in range(U):
                     # som van alle weegfactoren == 1
                     if boiler_heated_by_heatpump:
-                        model += xsum(hp_s_w[u][s] for s in range(S)) + boiler_on[u] == 1
+                        model += (
+                            xsum(hp_s_w[u][s] for s in range(S)) + boiler_on[u] == 1
+                        )
                     else:
                         model += xsum(hp_s_w[u][s] for s in range(S)) == 1
                     # verbruik in kWh is totaal vermogen in W/1000
@@ -2106,10 +2139,7 @@ class DaCalc(DaBase):
                     model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
                     """
                     model.add_sos(
-                        [
-                            (hp_s_w[u][s], hp_stages[s]["max_power"])
-                            for s in range(S)
-                        ],
+                        [(hp_s_w[u][s], hp_stages[s]["max_power"]) for s in range(S)],
                         2,
                     )
 
@@ -2123,7 +2153,9 @@ class DaCalc(DaBase):
                     )
 
                 # max heat power in kW
-                max_heat_power = hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
+                max_heat_power = (
+                    hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
+                )
                 logging.info(
                     f"Maximaal warmteproducerend vermogen: {max_heat_power} kW"
                 )
@@ -2141,17 +2173,21 @@ class DaCalc(DaBase):
                 min_heat_prod = sum(
                     min_heat_power * hour_fraction[u] for u in range(U - boiler_int)
                 )
-                hours_avail = (U-boiler_int)*self.interval_s/3600
+                hours_avail = (U - boiler_int) * self.interval_s / 3600
                 logging.info(f"Aantal beschikbare uren: {hours_avail:.2f}")
-                logging.info(f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh")
-                logging.info(f"Minimaal te produceren hoeveelheid warmte: {min_heat_prod:.1f} kWh")
+                logging.info(
+                    f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh"
+                )
+                logging.info(
+                    f"Minimaal te produceren hoeveelheid warmte: {min_heat_prod:.1f} kWh"
+                )
 
                 # som van alle geproduceerde warmte == benodigde warmte
                 heat_needed = min(heat_needed, max_heat_prod)
                 if heat_needed < min_heat_prod:
-                    hp_hours = heat_needed/min_heat_power
+                    hp_hours = heat_needed / min_heat_power
                 else:
-                    hp_hours = hours_avail*0.9
+                    hp_hours = hours_avail * 0.9
                 hp_hours = math.floor(hp_hours)
                 logging.info(f"Aantal in te plannen uren: {hp_hours:.1f}")
 
@@ -2193,27 +2229,38 @@ class DaCalc(DaBase):
                 blocks_num = 0  # dus geen block-optimalisering
             else:
                 if self.hp_adjustment == "on/off":
-                    blocks_num = 1 + math.ceil((hp_hours - first_block_len) / min_run_length)
+                    blocks_num = 1 + math.ceil(
+                        (hp_hours - first_block_len) / min_run_length
+                    )
                 else:
-                    blocks_num = math.ceil(min(hours_avail / (3 + min_run_length), hp_hours / min_run_length))
+                    blocks_num = math.ceil(
+                        min(
+                            hours_avail / (3 + min_run_length),
+                            hp_hours / min_run_length,
+                        )
+                    )
                     # blocks_num = math.ceil(max(hours_avail / 4, hp_hours / min_run_length))
             # if self.hp_adjustment!="on/off":
             if blocks_num == 0:
-                logging.info(f'Omdat de wp meer dan 75% van de uren draait wordt de wp zonder '
-                             f'"min_run_length"={min_run_length} ingepland.')
+                logging.info(
+                    f"Omdat de wp meer dan 75% van de uren draait wordt de wp zonder "
+                    f'"min_run_length"={min_run_length} ingepland.'
+                )
             else:
                 # block-optimalisering
                 if self.hp_adjustment == "on/off":
-                    min_run_length = max(min_run_length, math.floor(hp_hours / blocks_num))
+                    min_run_length = max(
+                        min_run_length, math.floor(hp_hours / blocks_num)
+                    )
                 else:
-                    min_run_length = max(min_run_length, math.floor(hours_avail / blocks_num))
+                    min_run_length = max(
+                        min_run_length, math.floor(hours_avail / blocks_num)
+                    )
                 # length of lastblock
                 last_block_len = (hp_hours - first_block_len) % min_run_length
                 if last_block_len == 0:
                     last_block_len = min_run_length
-                logging.info(
-                    f"Eerste blok van {first_block_len} uur"
-                )
+                logging.info(f"Eerste blok van {first_block_len} uur")
                 if last_block_len < min_run_length:
                     logging.info(
                         f"Tussenin {blocks_num - 2} blokken van {min_run_length} uur"
@@ -2221,7 +2268,7 @@ class DaCalc(DaBase):
                     logging.info(f"Laatste blok van {last_block_len:.1f} uur")
                 else:
                     logging.info(
-                        f"Dan nog {blocks_num-1} blokken van {min_run_length} uur"
+                        f"Dan nog {blocks_num - 1} blokken van {min_run_length} uur"
                     )
                 logging.info(f"Totaal aantal blokken: {blocks_num}")
 
@@ -2242,12 +2289,12 @@ class DaCalc(DaBase):
                 # alles omzetten naar het goede interval:
                 block_len = []
                 # eerste blok
-                block_len.append(int(first_block_len * 3600/self.interval_s))
+                block_len.append(int(first_block_len * 3600 / self.interval_s))
                 # tussenliggende blokken
                 for _ in range(blocks_num)[1:-1]:
-                    block_len.append(int(min_run_length * 3600/self.interval_s))
+                    block_len.append(int(min_run_length * 3600 / self.interval_s))
                 # laatste
-                block_len.append(int(last_block_len * 3600/self.interval_s))
+                block_len.append(int(last_block_len * 3600 / self.interval_s))
 
                 # constraint 1
                 # A−t ≤ (tmax−t)(1−Xt) for all t
@@ -2262,7 +2309,9 @@ class DaCalc(DaBase):
                     for _ in range(blocks_num)
                 ]
                 if first_block_start is not None:
-                    model += hp_start_index[0] == first_block_start * 3600/self.interval_s
+                    model += (
+                        hp_start_index[0] == first_block_start * 3600 / self.interval_s
+                    )
                 for j in range(blocks_num):
                     for u in range(U):
                         model += (hp_start_index[j] - u) <= (U - u) * (
@@ -2288,15 +2337,12 @@ class DaCalc(DaBase):
                 # Constraint 4: blocks mogen niet overlappen
                 for j in range(blocks_num)[1:]:
                     model += (
-                        hp_start_index[j - 1] + block_len[j - 1]
-                        <= hp_start_index[j]
+                        hp_start_index[j - 1] + block_len[j - 1] <= hp_start_index[j]
                     )
 
                 for u in range(U):
                     # constraint 5: hp_bl_on -> hp_on
-                    model += hp_on[u] == xsum(
-                        hp_bl_on[j][u] for j in range(blocks_num)
-                    )
+                    model += hp_on[u] == xsum(hp_bl_on[j][u] for j in range(blocks_num))
 
             # constrant 7: ieder interval/uur of boiler of wp
             for u in range(U):
@@ -2941,16 +2987,20 @@ class DaCalc(DaBase):
             if blocks_num > 0:
                 logging.info("Blokken:")
             for j in range(blocks_num):
-                logging.info(f"Bloknr {j} start {int(hp_start_index[j].x)} "
-                             f"lengte {block_len[j]}"
-                             f" laatste {int(hp_start_index[j].x)+block_len[j]-1}")
+                logging.info(
+                    f"Bloknr {j} start {int(hp_start_index[j].x)} "
+                    f"lengte {block_len[j]}"
+                    f" laatste {int(hp_start_index[j].x) + block_len[j] - 1}"
+                )
             logging.info(f"u   uur   tar    hp_s_on hp_on heat cons")
             for u in range(U):
                 sum_hp_bl_on = 0
                 for j in range(blocks_num):
                     sum_hp_bl_on += hp_bl_on[j][u].x
-                logging.info(f"{u}   {uur[u]} {pl[u]:6.4f}  {sum_hp_bl_on:6.2f} {int(hp_on[u].x)}"
-                             f"   {h_hp[u].x:6.2f}  {c_hp[u].x:6.2f}")
+                logging.info(
+                    f"{u}   {uur[u]} {pl[u]:6.4f}  {sum_hp_bl_on:6.2f} {int(hp_on[u].x)}"
+                    f"   {h_hp[u].x:6.2f}  {c_hp[u].x:6.2f}"
+                )
             if self.hp_adjustment != "on/off":
                 df_hp = pd.DataFrame(columns=["uur", "tar"])
                 df_hp["uur"] = uur
@@ -3382,15 +3432,21 @@ class DaCalc(DaBase):
                         if start_ev_laden is None:
                             start_ev_laden = tijd[u]
                     else:
-                        if start_ev_laden is not None and c_ev[e][u-1].x > 0:
+                        if start_ev_laden is not None and c_ev[e][u - 1].x > 0:
                             stop_ev_laden = tijd[u]
                 if start_ev_laden is not None:
                     if stop_ev_laden is None:
-                        stop_ev_laden = tijd[U-1]+ dt.timedelta(seconds=self.interval_s)
-                    logging.info(f"{self.ev_options[e]['name']} wordt geladen tussen "
-                                 f"{start_ev_laden} en {stop_ev_laden}")
+                        stop_ev_laden = tijd[U - 1] + dt.timedelta(
+                            seconds=self.interval_s
+                        )
+                    logging.info(
+                        f"{self.ev_options[e]['name']} wordt geladen tussen "
+                        f"{start_ev_laden} en {stop_ev_laden}"
+                    )
                 else:
-                    logging.info(f"Laden van {self.ev_options[e]['name']} is niet ingepland")
+                    logging.info(
+                        f"Laden van {self.ev_options[e]['name']} is niet ingepland"
+                    )
 
                 entity_charge_switch = self.ev_options[e]["charge switch"]
                 entity_charging_ampere = self.ev_options[e][

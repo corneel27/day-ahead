@@ -19,15 +19,17 @@ import copy
 import math
 
 from sqlglot.helper import is_type
+
 # ML imports
 from xgboost import XGBRegressor
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from scipy import stats
 from dao.prog.da_base import DaBase
-import pvlib
+# import pvlib
 
 warnings.filterwarnings("ignore")
+
 
 class SolarPredictor(DaBase):
     """
@@ -38,11 +40,11 @@ class SolarPredictor(DaBase):
     """
 
     def __init__(
-            self,
-            solar_name: str = "",
-            solar_capacity: float = 5,
-            random_state: int = 42,
-            # max_hourly_production: Optional[Dict[int, float]] = None,
+        self,
+        solar_name: str = "",
+        solar_capacity: float = 5,
+        random_state: int = 42,
+        # max_hourly_production: Optional[Dict[int, float]] = None,
     ):
         """
         Initialize the SolarPredictor.
@@ -73,7 +75,7 @@ class SolarPredictor(DaBase):
             "month",
             "season",
             "week_nr",
-            "cos_angle_of_inc"
+            # "cos_angle_of_inc"
         ]
         self.is_trained = False
         self.training_stats = {}
@@ -90,6 +92,7 @@ class SolarPredictor(DaBase):
         )
         """
 
+    """
     def calc_cos_sun_angle(self, time):
         # time = pd.to_datetime(time)
 
@@ -112,6 +115,7 @@ class SolarPredictor(DaBase):
             result = math.cos(min(math.radians(angle),90.0))
 
         return result
+        """
 
     def create_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -165,16 +169,16 @@ class SolarPredictor(DaBase):
         )
         df["week_nr"] = df.index.isocalendar().week
         df["time"] = pd.to_datetime(df.index)
-        df["cos_angle_of_inc"] = df.apply(lambda x: self.calc_cos_sun_angle(x["time"]), axis=1)
+        # df["cos_angle_of_inc"] = df.apply(lambda x: self.calc_cos_sun_angle(x["time"]), axis=1)
         df.drop("time", axis=1, inplace=True)
-        logging.debug(f"Dataframe with all features\n{df.to_string()}")
+        logging.debug(f"Data with all features\n{df.to_string()}")
         return df
 
     def create_physics_based_constraints(
-            self,
-            system_capacity_kw: float,
-            system_efficiency: float = 0.8,
-            conservative_factor: float = 1.2,
+        self,
+        system_capacity_kw: float,
+        system_efficiency: float = 0.8,
+        conservative_factor: float = 1.2,
     ) -> Dict[int, float]:
         """
         Create physics-based maximum hourly production constraints based on solar system capacity.
@@ -249,7 +253,7 @@ class SolarPredictor(DaBase):
                 # Calculate theoretical maximum production for this hour
                 # Max kWh = System_kW × Relative_Irradiance × Efficiency × 1_hour
                 theoretical_max = (
-                        system_capacity_kw * relative_irradiance * system_efficiency
+                    system_capacity_kw * relative_irradiance * system_efficiency
                 )
 
                 # Apply conservative factor for outlier detection
@@ -260,7 +264,7 @@ class SolarPredictor(DaBase):
         return
 
     def _load_and_process_weather_data(
-            self, weather_data: Union[str, pd.DataFrame]
+        self, weather_data: Union[str, pd.DataFrame]
     ) -> pd.DataFrame:
         """
         Load and process weather data.
@@ -297,7 +301,7 @@ class SolarPredictor(DaBase):
         return self.create_features(weather_df)
 
     def _load_and_process_solar_data(
-            self, solar_data: Union[str, pd.DataFrame]
+        self, solar_data: Union[str, pd.DataFrame]
     ) -> pd.DataFrame:
         """
         Load and process solar production data.
@@ -381,7 +385,7 @@ class SolarPredictor(DaBase):
             Q3 = solar_values.quantile(0.75)
             IQR = Q3 - Q1
             iqr_outliers = (solar_values < (Q1 - 1.5 * IQR)) | (
-                    solar_values > (Q3 + 1.5 * IQR)
+                solar_values > (Q3 + 1.5 * IQR)
             )
 
             # Physics-based constraints: Maximum reasonable solar production by hour
@@ -405,10 +409,10 @@ class SolarPredictor(DaBase):
 
             # Combine methods (outlier if flagged by 2+ methods)
             combined_outliers = (
-                                        statistical_outliers.astype(int)
-                                        + iqr_outliers.astype(int)
-                                        + physics_outliers.astype(int)
-                                ) >= 2
+                statistical_outliers.astype(int)
+                + iqr_outliers.astype(int)
+                + physics_outliers.astype(int)
+            ) >= 2
 
             outlier_mask.loc[hour_data.index] = combined_outliers
 
@@ -432,13 +436,13 @@ class SolarPredictor(DaBase):
                     if irradiance_corr > 0.5:
                         # Use direct irradiance vs solar production ratio for outlier detection
                         irradiance_ratio = season_hour_data["solar_kwh"] / (
-                                season_hour_data["irradiance"] + 1e-6
+                            season_hour_data["irradiance"] + 1e-6
                         )
                         Q1 = irradiance_ratio.quantile(0.25)
                         Q3 = irradiance_ratio.quantile(0.75)
                         IQR = Q3 - Q1
                         ratio_outliers = (irradiance_ratio < (Q1 - 2.0 * IQR)) | (
-                                irradiance_ratio > (Q3 + 2.0 * IQR)
+                            irradiance_ratio > (Q3 + 2.0 * IQR)
                         )
                         seasonal_outlier_mask.loc[season_hour_data.index] = (
                             ratio_outliers
@@ -453,16 +457,19 @@ class SolarPredictor(DaBase):
                 f"Outliers removed: {outliers_removed} "
                 f"({outliers_removed / original_size * 100:.1f}%)"
             )
+            if self.log_level >= logging.DEBUG:
+                outliers = merged_data[~merged_data.isin(final_clean_data).all(axis=1)]
+                logging.debug(f"Detectted outliers:\n{outliers.to_string()}")
         return final_clean_data
 
     def train(
-            self,
-            weather_data: Union[str, pd.DataFrame],
-            solar_data: Union[str, pd.DataFrame],
-            model_save_path: str,
-            test_size: float = 0.2,
-            remove_outliers: bool = True,
-            tune_hyperparameters: bool = True,
+        self,
+        weather_data: Union[str, pd.DataFrame],
+        solar_data: Union[str, pd.DataFrame],
+        model_save_path: str,
+        test_size: float = 0.2,
+        remove_outliers: bool = True,
+        tune_hyperparameters: bool = True,
     ) -> Dict[str, Any]:
         """
         Train the solar prediction model.
@@ -480,7 +487,9 @@ class SolarPredictor(DaBase):
         Returns:
             Dictionary with training statistics
         """
-        logging.info(f"Starting solar prediction model for {self.solar_name} training...")
+        logging.info(
+            f"Starting solar prediction model for {self.solar_name} training..."
+        )
 
         # Load and process data
         logging.info("Loading and processing data...")
@@ -507,7 +516,9 @@ class SolarPredictor(DaBase):
         # merged_data.query('irradiance > 0 or solar_kwh > 0', inplace=True)
 
         logging.info(f"Merged dataset: {len(merged_data)} records")
-        logging.info(f"Date range: {merged_data.index.min()} to {merged_data.index.max()}")
+        logging.info(
+            f"Date range: {merged_data.index.min()} to {merged_data.index.max()}"
+        )
 
         # Outlier detection
         if remove_outliers:
@@ -531,6 +542,13 @@ class SolarPredictor(DaBase):
         logging.info(f"Training samples: {len(X_train)}")
         logging.info(f"Testing samples: {len(X_test)}")
 
+        tune_hyperparameters = (
+            self.config.get(
+                ["xgboost", "tune_hyperparameters"], None, f"{tune_hyperparameters}"
+            ).lower()
+            == "true"
+        )
+        logging.info(f"Tune hyperparameters: {tune_hyperparameters}")
         # Model training
         if tune_hyperparameters:
             logging.info("Tuning hyperparameters...")
@@ -540,6 +558,8 @@ class SolarPredictor(DaBase):
                 "learning_rate": [0.05, 0.1, 0.15],
                 "subsample": [0.8, 0.9],
             }
+            param_grid = self.config.get(["xgboost", "param_grid"], None, param_grid)
+            logging.info(f"Parameter grid: {param_grid}")
 
             # Use subset for faster grid search
             subset_size = min(5000, len(X_train))
@@ -567,9 +587,11 @@ class SolarPredictor(DaBase):
                 "learning_rate": 0.1,
                 "subsample": 0.8,
             }
+            best_params = self.config.get(["xgboost", "parameters"], None, best_params)
 
         # Train final model
         logging.info("Training final model...")
+        logging.info(f"Parameters: {best_params}")
         self.model = XGBRegressor(
             **best_params, random_state=self.random_state, objective="reg:squarederror"
         )
@@ -629,7 +651,7 @@ class SolarPredictor(DaBase):
         return self.training_stats
 
     def predict(
-            self, weather_data: Union[Dict[str, float], pd.DataFrame]
+        self, weather_data: Union[Dict[str, float], pd.DataFrame]
     ) -> Union[float, np.ndarray]:
         """
         Make predictions using the trained model.
@@ -679,7 +701,9 @@ class SolarPredictor(DaBase):
             featured_df = weather_data[self.feature_columns]
             prediction = self.model.predict(featured_df)
             prediction = np.maximum(0, prediction)  # Ensure non-negative
-            result = pd.DataFrame({"date_time": featured_df.index, "prediction": prediction})
+            result = pd.DataFrame(
+                {"date_time": featured_df.index, "prediction": prediction}
+            )
             result["date_time"] = result["date_time"].dt.tz_convert(self.time_zone)
             return result
 
@@ -763,17 +787,26 @@ class SolarPredictor(DaBase):
         :return: None
         """
         knmi_df = knmi.get_hour_data_dataframe(
-            [self.knmi_station], start=start, end=end, variables=["T", "Q"]
+            [self.knmi_station],
+            start=start - dt.timedelta(days=1),
+            end=end,
+            variables=["T", "Q"],
         )
         if len(knmi_df) == 0:
-            logging.info(f"Er zijn geen aanvullende knmi-data beschikbaar vanaf {start}-{end}")
+            logging.info(
+                f"Er zijn geen aanvullende knmi-data beschikbaar vanaf {start}-{end}"
+            )
             return
 
         knmi_df["utc"] = knmi_df.index
         knmi_eerste = pd.to_datetime(knmi_df["utc"].iloc[0]).tz_localize(self.time_zone)
-        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[-1]).tz_localize(self.time_zone)
-        logging.info(f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
-                     f"{knmi_laatste}")
+        knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[-1]).tz_localize(
+            self.time_zone
+        )
+        logging.info(
+            f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
+            f"{knmi_laatste}"
+        )
         knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
         knmi_df["utc"] = pd.to_datetime(
             knmi_df["utc"], utc=True
@@ -806,7 +839,8 @@ class SolarPredictor(DaBase):
         # get dataframe with knmi-py
         # datetime of latest data-reord
         logging.info(
-            f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}")
+            f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}"
+        )
         first_dt = self.db_da.get_time_border_record("gr", latest=False)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         if latest_dt is None:  # er zijn nog geen data
@@ -824,7 +858,7 @@ class SolarPredictor(DaBase):
         return None
 
     def get_weatherdata(
-            self, start: dt.datetime, end: dt.datetime | None = None, prognose: bool = False
+        self, start: dt.datetime, end: dt.datetime | None = None, prognose: bool = False
     ) -> pd.DataFrame:
         """
         vult database aan met ontbrekende data
@@ -838,7 +872,7 @@ class SolarPredictor(DaBase):
         # haal ontbrekende data op bij knmi
 
         if end is None:
-            end = dt.datetime(start.year + 1, start.month, start.day)
+            end = dt.datetime.now()
         if not prognose:
             # knmi data evt aanvullen
             self.import_knmi_df(start, end)
@@ -859,11 +893,7 @@ class SolarPredictor(DaBase):
         weather_data["utc"] = pd.to_datetime(weather_data["utc"], unit="s", utc=True)
         weather_data = weather_data.set_index(weather_data["utc"])
         weather_data = weather_data.rename(
-            columns={
-                "utc": "datetime",
-                "gr": "irradiance",
-                "temp": "temperature"
-            }
+            columns={"utc": "datetime", "gr": "irradiance", "temp": "temperature"}
         )
         return weather_data
 
@@ -887,7 +917,7 @@ class SolarPredictor(DaBase):
             if count == 0:
                 df_solar = df_sensor
             else:
-                df_sensor['overlap'] = df_sensor["tijd"].isin(df_solar["tijd"])
+                df_sensor["overlap"] = df_sensor["tijd"].isin(df_solar["tijd"])
                 df_sensor_overlap = df_sensor[df_sensor["overlap"] == True]
                 report.add_col_df(df_sensor_overlap, df_solar, "solar_kwh")
                 df_sensor_new = df_sensor[df_sensor["overlap"] == False]
@@ -898,13 +928,14 @@ class SolarPredictor(DaBase):
         df_solar = df_solar.rename(columns={"utc": "datetime"})
         return df_solar
 
-    def train_solar_option(self, weather_data: pd.DataFrame, solar_dict: Dict,
-                           start: dt.datetime):
+    def train_solar_option(
+        self, weather_data: pd.DataFrame, solar_dict: Dict, start: dt.datetime
+    ):
         name = self.config.get(["name"], solar_dict, "default")
         self.solar_name = name.replace(" ", "_")
         self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
-        self.azimut = self.get_property_from_dict("orientation",solar_dict, 0) + 180
-        self.solar_capacity = self.get_property_from_dict("capacity",solar_dict, 5)
+        self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
+        self.solar_capacity = self.get_property_from_dict("capacity", solar_dict, 5)
         self.solar_entities = self.config.get(["entities sensors"], solar_dict, [])
         if not is_type(self.solar_entities, list):
             self.solar_entities = [self.solar_entities]
@@ -920,6 +951,7 @@ class SolarPredictor(DaBase):
             weather_data,
             solar_data,
             "../data/prediction/models/" + self.solar_name + ".pkl",
+            tune_hyperparameters=True,
         )
 
     def run_train(self, start: dt.datetime = None):
@@ -930,20 +962,28 @@ class SolarPredictor(DaBase):
         """
         if start is None:
             now = dt.datetime.now()
-            start = dt.datetime(year=now.year - 2, month=now.month, day=now.day)
+            start = dt.datetime(year=now.year - 3, month=now.month, day=now.day)
         weather_data = self.get_weatherdata(start=start)
         solar_options = self.config.get(["solar"], None, None)
         for solar_option in solar_options:
-            if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+            if (
+                self.config.get(["ml_prediction"], solar_option, "False").lower()
+                == "true"
+            ):
                 self.train_solar_option(weather_data, solar_option, start)
         batteries = self.config.get(["battery"], None, None)
         for battery in batteries:
             solar_options = self.config.get(["solar"], battery, None)
             for solar_option in solar_options:
-                if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+                if (
+                    self.config.get(["ml_prediction"], solar_option, "False").lower()
+                    == "true"
+                ):
                     self.train_solar_option(weather_data, solar_option, start)
 
-    def get_property_from_dict(self, name: str, solar_option: Dict, default: float=None):
+    def get_property_from_dict(
+        self, name: str, solar_option: Dict, default: float = None
+    ):
         """
         retourneert de property
         :param name:
@@ -951,7 +991,7 @@ class SolarPredictor(DaBase):
         :param default:
         :return:
         """
-        result =self.config.get([name], solar_option, None)
+        result = self.config.get([name], solar_option, None)
         if result is None:
             sum = 0
             capacity = 0
@@ -966,14 +1006,13 @@ class SolarPredictor(DaBase):
                 result = capacity
             else:
                 if capacity > 0:
-                    result = sum/capacity
+                    result = sum / capacity
             if result is None:
                 result = default
         return result
 
-
     def predict_solar_device(
-            self, solar_dict: dict, start: dt.datetime, end: dt.datetime
+        self, solar_dict: dict, start: dt.datetime, end: dt.datetime
     ) -> pd.DataFrame:
         """
         berekent de voorspelling voor een pv-installatie
@@ -984,9 +1023,9 @@ class SolarPredictor(DaBase):
         """
         name = self.config.get(["name"], solar_dict, "default")
         self.solar_name = name.replace(" ", "_")
-        self.tilt = self.get_property_from_dict("tilt",solar_dict, 45)
-        self.azimut = self.get_property_from_dict("orientation",solar_dict, 0) + 180
-        self.solar_capacity = self.get_property_from_dict("capacity",solar_dict, 5)
+        self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
+        self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
+        self.solar_capacity = self.get_property_from_dict("capacity", solar_dict, 5)
         file_name = "../data/prediction/models/" + self.solar_name + ".pkl"
         if os.path.isfile(file_name):
             self.load_model(file_name)
@@ -1002,13 +1041,19 @@ class SolarPredictor(DaBase):
     def test_solar_predictor(self, start, end):
         solar_options = self.config.get(["solar"], None, None)
         for solar_option in solar_options:
-            if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+            if (
+                self.config.get(["ml_prediction"], solar_option, "False").lower()
+                == "true"
+            ):
                 self.predict_solar_device(solar_option, start, end)
         batteries = self.config.get(["battery"], None, None)
         for battery in batteries:
             solar_options = self.config.get(["solar"], battery, None)
             for solar_option in solar_options:
-                if self.config.get(["ml_prediction"], solar_option, "False").lower() == "true":
+                if (
+                    self.config.get(["ml_prediction"], solar_option, "False").lower()
+                    == "true"
+                ):
                     self.predict_solar_device(solar_option, start, end)
 
 
