@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.0.rc2
+Changed is_type() to buildin type()
+
 # 2026.01.0.rc1
 - Fixed error when there more entities for one solar device
 - Fix error when one solar_entity is not encapsulated in a list
