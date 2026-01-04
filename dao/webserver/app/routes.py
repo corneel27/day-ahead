@@ -125,7 +125,7 @@ web_menu = {
             "items": {},
             "views": views,
             "actions": actions,
-        }
+        },
     },
     "settings": {
         "name": "Config",
@@ -146,7 +146,9 @@ def generate_solar_items():
             solar_options += sol_options
     result = {}
     for solar_option in solar_options:
-        ml_prediction = config.get(["ml_prediction"], solar_option, "False").lower() == "true"
+        ml_prediction = (
+            config.get(["ml_prediction"], solar_option, "False").lower() == "true"
+        )
         if ml_prediction:
             key = config.get(["name"], solar_option, "default")
             result[key] = solar_option
@@ -228,7 +230,7 @@ bewerkingen = {
         "cmd": ["python3", "../prog/day_ahead.py", "train"],
         "function": "train_ml_predictions",
         "file_name": "train",
-    }
+    },
 }
 
 
@@ -585,14 +587,18 @@ def solar():
         if "view" in lst:
             active_view = lst["view"][0]
         if "active_date" in lst:
-            active_date = datetime.datetime.strptime(lst["active_date"][0], "%Y-%m-%d").date()
+            active_date = datetime.datetime.strptime(
+                lst["active_date"][0], "%Y-%m-%d"
+            ).date()
         if "action" in lst:
             action = lst["action"][0]
             if action == "previous":
                 active_date -= datetime.timedelta(days=1)
             else:
                 active_date += datetime.timedelta(days=1)
-    report_df = report.calc_solar_data(solar_items[active_subject], active_date, active_view)
+    report_df = report.calc_solar_data(
+        solar_items[active_subject], active_date, active_view
+    )
     report_df.round(3)
     if active_view == "tabel":
         report_data = [
@@ -606,11 +612,11 @@ def solar():
             )
         ]
     else:
-        report_data = (
-            report.make_graph(report_df,
-                              "vandaag",
-                              _options=report.solar_graph_options,
-                              _title=f"Solar production {active_date.strftime('%Y-%m-%d')}")
+        report_data = report.make_graph(
+            report_df,
+            "vandaag",
+            _options=report.solar_graph_options,
+            _title=f"Solar production {active_date.strftime('%Y-%m-%d')}",
         )
     return render_template(
         "solar.html",

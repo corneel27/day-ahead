@@ -317,10 +317,13 @@ class DBmanagerObj(object):
             connection.close()
         self.log_pool_status()
 
-    def get_time_latest_record(self, code: str) -> datetime.datetime:
+    def get_time_border_record(
+        self, code: str, latest: bool = True
+    ) -> datetime.datetime:
         """
         Zoekt de tijd op van het laatst aanwezige record van "code"
         :param code: de code van het record
+        :param latest: boolean, if true latest record else first record
         :return: datum en tijd van het laatst aanwezige record
         """
         """
@@ -336,20 +339,20 @@ class DBmanagerObj(object):
             variabel_table = Table("variabel", self.metadata, autoload_with=connection)
 
         # Construct the query
-        query = (
-            select(
-                self.from_unixtime(values_table.c.time).label("tijd"),
-                values_table.c.value,
+        query = select(
+            self.from_unixtime(values_table.c.time).label("tijd"),
+            values_table.c.value,
+        ).where(
+            and_(
+                variabel_table.c.code == code,
+                values_table.c.variabel == variabel_table.c.id,
             )
-            .where(
-                and_(
-                    variabel_table.c.code == code,
-                    values_table.c.variabel == variabel_table.c.id,
-                )
-            )
-            .order_by(values_table.c.time.desc())
-            .limit(1)
         )
+
+        if latest:
+            query = query.order_by(values_table.c.time.desc()).limit(1)
+        else:
+            query = query.order_by(values_table.c.time.asc()).limit(1)
 
         # Execute the query and fetch the result
         with self.engine.connect() as connection:
@@ -357,8 +360,6 @@ class DBmanagerObj(object):
             result = result.scalar()
             if type(result) is str:
                 result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
-            else:
-                result = None
         return result
 
     def get_prognose_field(self, field: str, start, end=None, interval="1hour"):

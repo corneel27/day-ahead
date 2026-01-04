@@ -1,5 +1,11 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.0.rc1
+- Fixed error when there more entities for one solar device
+- Fix error when one solar_entity is not encapsulated in a list
+- Solar device may have spaces in its name
+- Added knmi weerstation to logging
+
 # 2025.12.2.rc2
 Fix start error web_menu
 

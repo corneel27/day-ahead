@@ -143,14 +143,14 @@ class GraphBuilder:
                 stacked = False
                 for serie in g_options["series"]:
                     s_type = serie["type"]
-                    if s_type == "bar" or s_type== "stacked":
+                    if s_type == "bar" or s_type == "stacked":
                         count_bar += 1
-                        if s_type =="stacked":
+                        if s_type == "stacked":
                             if stacked:
                                 count_bar -= 1
                             else:
                                 stacked = True
-                bar_width = 1/(count_bar+1)
+                bar_width = 1 / (count_bar + 1)
                 nr_bar = 0
                 stacked = False
                 for serie in g_options["series"]:
@@ -192,7 +192,7 @@ class GraphBuilder:
                         ymin_right = math.floor(min(ymin_right, min(data_array)))
                     if s_type == "bar" or s_type == "stacked":
                         nr_bar += 1
-                        if s_type =="stacked":
+                        if s_type == "stacked":
                             if stacked:
                                 nr_bar -= 1
                             else:
@@ -200,7 +200,7 @@ class GraphBuilder:
 
                     if s_type == "bar":
                         plot = ax_serie.bar(
-                            ind + (nr_bar-count_bar)*bar_width + bar_width,
+                            ind + (nr_bar - count_bar) * bar_width + bar_width,
                             data_array,
                             label=label,
                             width=width,

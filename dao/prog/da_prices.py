@@ -44,7 +44,7 @@ class DaPrices:
                 end = start + datetime.timedelta(days=2)
 
         if len(sys.argv) <= 2:
-            present = self.db_da.get_time_latest_record("da")
+            present = self.db_da.get_time_border_record("da")
             if not (present is None):
                 tz = pytz.timezone("CET")
                 present = tz.normalize(tz.localize(present))
