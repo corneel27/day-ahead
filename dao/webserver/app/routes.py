@@ -132,7 +132,7 @@ web_menu = {
             "items": {},
             "views": views,
             "actions": actions,
-        }
+        },
     },
     "settings": {
         "name": "Config",
@@ -150,9 +150,10 @@ solar_web_menu = {
             "items": {},
             "views": views,
             "actions": actions,
-        }
+        },
     },
 }
+
 
 def generate_solar_items():
     global web_menu
@@ -199,6 +200,7 @@ def check_web_menu_items():
     if len(solar_items) > 0 and "solar" in web_menu.keys():
         web_menu["solar"]["submenu"]["items"] = solar_items
     web_menu_items = get_web_menu_items()
+
 
 check_web_menu_items()
 
@@ -285,7 +287,7 @@ def get_file_list(path: str, pattern: str) -> list:
 
 @app.route("/", methods=["POST", "GET"])
 def menu():
-    check_web_menu_items()
+    # check_web_menu_items()
     lst = request.form.to_dict(flat=False)
     if "current_menu" in lst:
         current_menu = lst["current_menu"][0]
@@ -781,7 +783,10 @@ def run_api(bewerking: str):
         with open(filename, "w") as f:
             f.write(log_content)
         return render_template(
-            "api_run.html", log_content=log_content, version=__version__
+            "api_run.html",
+            log_content=log_content,
+            version=__version__,
+            active_menu_list=web_menu_items,
         )
     else:
         return "Onbekende bewerking: " + bewerking
