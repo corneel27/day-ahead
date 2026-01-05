@@ -326,6 +326,8 @@
   "solar": [
     { "name" : "woning",
       "entity pv switch": "input_boolean.pv_woning_aan_uit",
+      "ml_prediction": "true",
+      "entities sensors": "sensor.solaredge_woning_ac_energy_kwh",
       "strings": [
         {
         "tilt": 40,
@@ -343,6 +345,8 @@
     },
     {
       "name": "garage",
+      "ml_prediction": "true",
+      "entities sensors": ["sensor.solaredge_garage_ac_energy_kwh_2"],
       "tilt": 45,
       "orientation": 5,
       "capacity": 1.8,
