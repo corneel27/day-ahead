@@ -844,11 +844,13 @@ class SolarPredictor(DaBase):
         if latest_dt is None:  # er zijn nog geen data
             logging.info(f"Er zijn nog geen knmi-data aanwezig")
             self.get_and_save_knmi_data(start, end)
+            first_dt = self.db_da.get_time_border_record("gr", latest=False)
+            latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         else:
             logging.info(f"Er zijn knmi-data aanwezig vanaf {first_dt} tot {latest_dt}")
         if first_dt <= start and latest_dt >= end:
             logging.info(f"Er worden geen knmi-data opgehaald")
-            return
+            return None
         if first_dt > start:
             self.get_and_save_knmi_data(start, first_dt)
         if latest_dt < end:

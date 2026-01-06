@@ -1,11 +1,18 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.0.rc3
+- Fixed error on first time running ml_training (reported by @simnet)
+- Added "ml_predictions" and "entities sensors" to options_example.json
+- Added "train_ml_predictions" to scheduler and options_example.json
+- Dynamical change of dashboard menu after changing ml_prediction (no restart needed anymore)
+- Fixed error with api_run.html (reported by @DaBit)
+
 # 2026.01.0.rc2
 Changed is_type() to buildin type()
 
 # 2026.01.0.rc1
 - Fixed error when there more entities for one solar device
-- Fix error when one solar_entity is not encapsulated in a list
+- Fixed error when one solar_entity is not encapsulated in a list
 - Solar device may have spaces in its name
 - Added knmi weerstation to logging
 
