@@ -3184,7 +3184,8 @@ class Report(DaBase):
                 vanaf = last_moment
                 tot = last_moment + datetime.timedelta(days=2)
                 df_pv = self.get_pv_prognose(field, vanaf, tot)
-                df = pd.concat([df, df_pv])
+                if len(df_pv) > 0:
+                    df = pd.concat([df, df_pv])
             if cumulate:
                 df[field] = df[field].cumsum()
             df.rename({field: "value"}, axis=1, inplace=True)
