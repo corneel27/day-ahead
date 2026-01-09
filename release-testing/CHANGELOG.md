@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2026.01.0.rc4
+Fixed solar report errors with missing radiation or measured solar data (reported by @Dabit and @balk)
 # 2026.01.0.rc3
 - Fixed error on first time running ml_training (reported by @simnet)
 - Added "ml_predictions" and "entities sensors" to options_example.json

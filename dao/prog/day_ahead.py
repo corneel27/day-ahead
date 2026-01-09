@@ -54,8 +54,8 @@ class DaCalc(DaBase):
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2025, month=12, day=12, hour=17, minute=45)
-        # _start_soc = 15
+        # _start_dt = datetime.datetime(year=2026, month=1, day=8, hour=16, minute=0)
+        # _start_soc = 37
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")

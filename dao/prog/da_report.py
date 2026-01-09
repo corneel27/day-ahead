@@ -1138,16 +1138,18 @@ class Report(DaBase):
             for row in add_from.itertuples():
                 # add_from.at[row.tijd, col_name_from])
                 if row.tijd in add_to.index:
-                    add_to.at[row.tijd, col_name_to] = (
-                        add_to.at[row.tijd, col_name_to] + factor * row[col_index]
-                    )
+                    org_value = add_to.at[row.tijd, col_name_to]
+                    if pd.isna(org_value):
+                        org_value = 0
+                    add_to.at[row.tijd, col_name_to] = org_value + factor * row[col_index]
         else:
             for row in add_from.itertuples():
                 # add_from.at[row.tijd, col_name_from])
                 if row.time in add_to.index:
-                    add_to.at[row.time, col_name_to] = (
-                        add_to.at[row.time, col_name_to] + factor * row[col_index]
-                    )
+                    org_value = add_to.at[row.tijd, col_name_to]
+                    if pd.isna(org_value):
+                        org_value = 0
+                    add_to.at[row.time, col_name_to] = org_value + factor * row[col_index]
         return add_to
 
     def get_latest_present(self, code: str) -> datetime.datetime:
@@ -2978,16 +2980,21 @@ class Report(DaBase):
         return df
 
     def calc_solar_data(self, device: dict, day: datetime.date, active_view: str):
-        result = pd.DataFrame(
-            columns=["uur", "straling", "werkelijk", "prognose DAO", "prognose ML"]
-        )
+        result = pd.DataFrame(columns=["uur", "tijd"])
         start = datetime.datetime(day.year, day.month, day.day)
         end = start + datetime.timedelta(days=1)
+        begin = dati = datetime.datetime(start.year, start.month, start.day, hour=0)
+        hour_int = 0
+        while dati < end:
+            hour_int += 1
+            hour_str = dati.strftime("%H:%M")
+            result.loc[result.shape[0]] = [hour_str, dati]
+            dati = begin + datetime.timedelta(hours=hour_int)
+        result.index = pd.to_datetime(result["tijd"])
 
         # prognose straling
-        result = self.get_da_data("gr", start, end, "uur", "uur", "prognoses")
-        result.rename({"gr": "prognose_straling"}, inplace=True, axis=1)
-        result.drop(columns=["vanaf", "tot"], inplace=True)
+        rad_prog = self.get_da_data("gr", start, end, "uur", "uur", "prognoses")
+        result["prognose_straling"] =rad_prog["gr"]
 
         # gemeten straling
         rad_real = self.get_da_data("gr", start, end, "uur", "uur", "values")
@@ -3005,24 +3012,30 @@ class Report(DaBase):
             else:
                 self.add_col_df(df_sensor, df_solar, "gemeten")
             count += 1
-        result["gemeten_prod"] = df_solar["gemeten"]
+        result["gemeten_prod"] = pd.NA
+        self.add_col_df(df_solar, result, "gemeten", "gemeten_prod" )
 
         # voorspelling DAO
         pred_dao = []
         for row in result.itertuples():
-            prod = self.calc_prod_solar(
-                device, row.tijd.timestamp(), row.prognose_straling, 1
-            )
+            if pd.notna(row.tijd):
+                prod = self.calc_prod_solar(
+                    device, row.tijd.timestamp(), row.prognose_straling, 1
+                )
+            else:
+                prod = pd.NA
             pred_dao.append(prod)
         result["prognose_dao"] = pred_dao
 
         # voorspelling ML
         from dao.prog.solar_predictor import SolarPredictor
-
         solar_predictor = SolarPredictor()
         solar_prog = solar_predictor.predict_solar_device(device, start, end)
-        solar_prog.index = pd.to_datetime(solar_prog["date_time"]).dt.tz_localize(None)
-        result["prognose_ml"] = solar_prog["prediction"]
+        solar_prog["tijd"] = solar_prog["date_time"].dt.tz_localize(None)
+        solar_prog.index = solar_prog["tijd"]
+        result["prognose_ml"] = pd.NA
+        self.add_col_df(solar_prog, result, "prediction","prognose_ml")
+        # result["prognose_ml"] = solar_prog["prediction"]
 
         result.drop(columns=["tijd"], inplace=True)
         result = result[
@@ -3041,7 +3054,7 @@ class Report(DaBase):
             )
             r2_dao = calc_r2(result["gemeten_prod"], result["prognose_dao"])
             r2_ml = calc_r2(result["gemeten_prod"], result["prognose_ml"])
-            result.loc["Total"] = result.sum(axis=0, numeric_only=True)
+            result.loc["Total"] = result.sum(axis=0)
             result.at[result.index[-1], "uur"] = "Totaal"
             result.columns = [
                 ["", "Straling", "Straling", "Productie", "Productie", "Productie"],
