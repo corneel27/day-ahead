@@ -1139,9 +1139,13 @@ class Report(DaBase):
                 # add_from.at[row.tijd, col_name_from])
                 if row.tijd in add_to.index:
                     org_value = add_to.at[row.tijd, col_name_to]
-                    if pd.isna(org_value):
+                    try:
+                        if pd.isna(org_value):
+                            org_value = 0
+                    except ValueError:
                         org_value = 0
-                    add_to.at[row.tijd, col_name_to] = org_value + factor * row[col_index]
+                    if pd.notna(row[col_index]):
+                        add_to.at[row.tijd, col_name_to] = org_value + factor * row[col_index]
         else:
             for row in add_from.itertuples():
                 # add_from.at[row.tijd, col_name_from])
@@ -3019,9 +3023,15 @@ class Report(DaBase):
         pred_dao = []
         for row in result.itertuples():
             if pd.notna(row.tijd):
-                prod = self.calc_prod_solar(
-                    device, row.tijd.timestamp(), row.prognose_straling, 1
-                )
+                straling = row.gemeten_straling
+                if pd.isna(straling):
+                    straling = row.prognose_straling
+                if pd.notna(straling):
+                    prod = self.calc_prod_solar(
+                        device, row.tijd.timestamp(), straling, 1
+                    )
+                else:
+                    prod = pd.NA
             else:
                 prod = pd.NA
             pred_dao.append(prod)
