@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.0.rc5
+- Fixed errors in solar-reports (reported by @balk and @Dabit)
+- Fixed problem with managing battery with short periods (reported by @mirabis)
 
 # 2026.01.0.rc4
 Fixed solar report errors with missing radiation or measured solar data (reported by @Dabit and @balk)
