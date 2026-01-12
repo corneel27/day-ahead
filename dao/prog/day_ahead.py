@@ -54,8 +54,8 @@ class DaCalc(DaBase):
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2026, month=1, day=8, hour=16, minute=0)
-        # _start_soc = 37
+        # _start_dt = datetime.datetime(year=2026, month=1, day=8, hour=18, minute=0)
+        # _start_soc = 18.8
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
@@ -324,6 +324,7 @@ class DaCalc(DaBase):
             pv_dc_num = 0
             for b in range(B):
                 for s in range(len(self.battery_options[b]["solar"])):
+                    solar_option = self.battery_options[b]["solar"][s]
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))
                     pv_dc_num += 1
@@ -334,12 +335,12 @@ class DaCalc(DaBase):
                         == "true"
                     ):
                         prod = (
-                            max(0, getattr(row, self.solar[s]["name"]))
+                            max(0, getattr(row, solar_option["name"]))
                             * interval_fraction[-1]
                         )
                     else:
                         prod = self.calc_prod_solar(
-                            self.battery_options[b]["solar"][s],
+                            solar_option,
                             row.time,
                             gr,
                             hour_fraction[-1],
@@ -612,8 +613,8 @@ class DaCalc(DaBase):
             for b in range(B)
         ]
 
-        # ac_to_dc met aan uit #############################################################
         """
+        # declaraties laden ac_to_dc met aan uit zonder sos #######################################
         #ac_to_dc: wat er gaat er vanuit ac naar de omvormer
         ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=max_charge_power[b])
                      for u in range(U)] for b in range(B)]
@@ -626,8 +627,9 @@ class DaCalc(DaBase):
         # vermogens klasse aan/uit
         ac_to_dc_st_on = [[[model.add_var(var_type=BINARY)
             for u in range(U)] for cs in range(CS[b])] for b in range(B)]
+        # tot hier declaraties laden zonder sos ##################################################
         """
-        # met sos ###################################################################
+        # declaraties laden met sos ###############################################################
         ac_to_dc_samples = [
             [charge_stages[b][cs]["power"] / 1000 for cs in range(CS[b])]
             for b in range(B)
@@ -664,8 +666,10 @@ class DaCalc(DaBase):
             ]
             for b in range(B)
         ]
-        # tot hier met sos
-        # '''
+        # declaraties laden tot hier met sos ####################################################
+
+        """
+        # vanaf hier decalaties ontladen zonder sos #############################################
         ac_from_dc = [
             [
                 model.add_var(
@@ -700,6 +704,51 @@ class DaCalc(DaBase):
             [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(DS[b])]
             for b in range(B)
         ]
+        # tot hier declaraties ontladen zonder sos ###############################################
+        """
+
+        # vanaf hier declaraties ontladen met sos  ###############################################
+        ac_from_dc_samples = [
+            [
+                (
+                    discharge_stages[b][ds]["power"]
+                    / 1000
+                )
+                for ds in range(DS[b])]
+            for b in range(B)
+        ]
+        dc_to_ac_samples = [
+            [
+                (
+                    discharge_stages[b][ds]["power"]
+                    / (discharge_stages[b][ds]["efficiency"] * 1000)
+                )
+                for ds in range(DS[b])
+            ]
+            for b in range(B)
+        ]
+        ac_from_dc = [
+            [
+                model.add_var(
+                    var_type=CONTINUOUS,
+                    lb=0,
+                    ub=min(reduced_power[b][u], max_discharge_power[b]),
+                )
+                for u in range(U)
+            ]
+            for b in range(B)
+        ]
+        ac_from_dc_on = [
+            [model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(B)
+        ]
+        ac_from_dc_w = [
+            [
+                [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(DS[b])]
+                for _ in range(U)
+            ]
+            for b in range(B)
+        ]
+        # tot hier declaraties ontladen met sos ###############################################
 
         # energiebalans dc
         dc_from_ac = [
@@ -771,7 +820,7 @@ class DaCalc(DaBase):
         for b in range(B):
             for u in range(U):
                 # laden, alles uitgedrukt in vermogen kW
-                # met aan/uit
+                # vanaf hier laden met aan/uit zonder sos
                 """
                 for cs in range(CS[b]):
                     model += (ac_to_dc_st[b][cs][u] <=
@@ -787,8 +836,9 @@ class DaCalc(DaBase):
                 model += dc_from_ac[b][u] == xsum(ac_to_dc_st[b][cs][u] * \
                                     charge_stages[b][cs]["efficiency"] 
                                     for cs in range(CS[b]))
+                # tot hier laden met aan/uit zonder sos #######################################
                 """
-                # met sos
+                # vanaf hier laden met sos ######################################################
                 model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
                 model += (
                     xsum(
@@ -811,9 +861,10 @@ class DaCalc(DaBase):
                     ],
                     2,
                 )
-                # tot hier met sos
+                # tot hier constraints laden met sos
 
-                # ontladen
+                """
+                # vanaf hier ontladen met aan/uit
                 for ds in range(DS[b]):
                     model += (
                         ac_from_dc_st[b][ds][u]
@@ -837,6 +888,33 @@ class DaCalc(DaBase):
                     ac_from_dc_st[b][ds][u] / discharge_stages[b][ds]["efficiency"]
                     for ds in range(DS[b])
                 )
+                #tot hier ontladen met aan/uit
+                """
+
+                # vanaf hier ontladen met sos ######################################################
+                model += xsum(ac_from_dc_w[b][u][ds] for ds in range(DS[b])) <= 1
+                model += (
+                    xsum(
+                        ac_from_dc_w[b][u][ds] * ac_from_dc_samples[b][ds]
+                        for ds in range(DS[b])
+                    )
+                    == ac_from_dc[b][u]
+                )
+                model += (
+                    xsum(
+                        ac_from_dc_w[b][u][ds] * dc_to_ac_samples[b][ds]
+                        for ds in range(DS[b])
+                    )
+                    == dc_to_ac[b][u]
+                )
+                model.add_sos(
+                    [
+                        (ac_from_dc_w[b][u][ds], ac_from_dc_samples[b][ds])
+                        for ds in range(DS[b])
+                    ],
+                    2,
+                )
+                # tot hier constraints ontladen met sos
 
         for b in range(B):
             for u in range(U + 1):
@@ -3111,6 +3189,24 @@ class DaCalc(DaBase):
                         dc_to_ac_eff = 
                             discharge_stages[ds]["efficiency"] * 100.0
                 """
+                if self.log_level == logging.INFO:
+                    # debug laden
+                    if ac_to_dc[b][u].x > 0.0:
+                        logging.info(f"Laad volume in uur {u} {uur[u]} "
+                                     f"{ac_from_dc[b][u].x*hour_fraction[u]} kWh")
+                        for cs in range(CS[b]):
+                            if ac_to_dc_w[b][u][cs].x > 0:
+                                logging.info(f"{cs} {ac_to_dc_w[b][u][cs].x} "
+                                             f"{ac_to_dc_samples[b][cs]}")
+
+                    # debug ontladen
+                    if ac_from_dc[b][u].x > 0.0:
+                        logging.info(f"Ontlaad volume in uur {u} {uur[u]} "
+                                     f"{ac_from_dc[b][u].x*hour_fraction[u]} kWh")
+                        for ds in range(DS[b]):
+                            if ac_from_dc_w[b][u][ds].x > 0:
+                                logging.info(f"{ds} {ac_from_dc_w[b][u][ds].x} "
+                                             f"{ac_from_dc_samples[b][ds]}")
 
                 row = [
                     str(uur[u]),
@@ -3599,7 +3695,7 @@ class DaCalc(DaBase):
             ############################################
             for b in range(B):
                 # vermogen aan ac kant
-                netto_vermogen = int(1000 * (ac_to_dc[b][0].x - ac_from_dc[b][0].x))
+                netto_vermogen_bat = int(1000 * (ac_to_dc[b][0].x - ac_from_dc[b][0].x))
                 minimum_power = int(self.battery_options[b]["minimum power"])
                 battery_state_on_value = self.config.get(
                     ["entity set operating mode on"], self.battery_options[b], "Aan"
@@ -3608,8 +3704,8 @@ class DaCalc(DaBase):
                     ["entity set operating mode off"], self.battery_options[b], "Uit"
                 )
                 bat_name = self.battery_options[b]["name"]
-                if abs(netto_vermogen) <= 20:
-                    netto_vermogen = 0
+                if abs(netto_vermogen_bat) <= 20:
+                    netto_vermogen_bat = 0
                     new_state = battery_state_off_value
                     stop_omvormer = None
                     balance = False
@@ -3617,18 +3713,59 @@ class DaCalc(DaBase):
                     new_state = battery_state_on_value
                     balance = True
                     stop_omvormer = None
-                elif abs(netto_vermogen) < minimum_power:
+                elif abs(netto_vermogen_bat) < minimum_power:
                     new_state = battery_state_on_value
                     balance = False
                     new_ts = (
                         start_dt.timestamp()
-                        + (abs(netto_vermogen) / minimum_power) * self.interval_s
+                        + (abs(netto_vermogen_bat) / minimum_power) * self.interval_s
                     )
                     stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
-                    if netto_vermogen > 0:
-                        netto_vermogen = minimum_power
+                    if netto_vermogen_bat > 0:
+                        netto_vermogen_bat = minimum_power
                     else:
-                        netto_vermogen = -minimum_power
+                        netto_vermogen_bat = -minimum_power
+                elif ac_to_dc[b][0].x > 0.0:  # laden met optimaal vermogen
+                    sum_weight_factor = 0
+                    sum_power = 0 # in W
+                    for cs in range(CS[b]):
+                        wf = ac_to_dc_w[b][0][ds].x
+                        if wf > 0:
+                            sum_weight_factor += wf
+                            sum_power += wf * charge_stages[b][cs]["power"]
+                    if sum_weight_factor < 0.95:
+                        new_state = battery_state_on_value
+                        balance = False
+                        netto_vermogen_bat = round(sum_power/sum_weight_factor)
+                        new_ts = (
+                            start_dt.timestamp() + self.interval_s * sum_weight_factor * interval_fraction[0]
+                        )
+                        stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
+                    else:
+                        new_state = battery_state_on_value
+                        balance = False
+                        stop_omvormer = None
+                elif ac_from_dc[b][0].x > 0.0:  # ontladen met optimaal vermogen
+                        sum_weight_factor = 0
+                        sum_power = 0  # in W
+                        for ds in range(DS[b]):
+                            wf = ac_from_dc_w[b][0][ds].x
+                            if wf > 0:
+                                sum_weight_factor += wf
+                                sum_power += wf * discharge_stages[b][ds]["power"]
+                        if sum_weight_factor < 0.95:
+                            new_state = battery_state_on_value
+                            balance = False
+                            netto_vermogen_bat = - round(sum_power / sum_weight_factor)
+                            new_ts = (
+                                    start_dt.timestamp() + self.interval_s * sum_weight_factor *
+                                    interval_fraction[0]
+                            )
+                            stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
+                        else:
+                            new_state = battery_state_on_value
+                            balance = False
+                            stop_omvormer = None
                 else:
                     new_state = battery_state_on_value
                     balance = False
@@ -3652,7 +3789,7 @@ class DaCalc(DaBase):
                 if self.debug:
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) batterij {bat_name} "
-                        f"zou zijn: {netto_vermogen} W"
+                        f"zou zijn: {netto_vermogen_bat} W"
                     )
                     if stop_omvormer:
                         logging.info(f"tot: {stop_str}")
@@ -3667,7 +3804,7 @@ class DaCalc(DaBase):
                     self.set_entity_value(
                         "entity set power feedin",
                         self.battery_options[b],
-                        netto_vermogen,
+                        netto_vermogen_bat,
                     )
                     self.set_entity_option(
                         "entity set operating mode", self.battery_options[b], new_state
@@ -3678,7 +3815,7 @@ class DaCalc(DaBase):
                     )
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: "
-                        f"{netto_vermogen} W"
+                        f"{netto_vermogen_bat} W"
                         f"{' tot: ' + stop_str if stop_omvormer else ''}"
                     )
                     logging.info(
@@ -4555,7 +4692,7 @@ def main():
             if arg.lower() == "calc_baseloads":
                 da_calc.run_task_function("calc_baseloads")
                 continue
-            if arg.lower() == "train":
+            if arg.lower() == "train_ml_predictions":
                 da_calc.run_task_function("train_ml_predictions")
                 continue
     da_calc.db_da.log_pool_status()

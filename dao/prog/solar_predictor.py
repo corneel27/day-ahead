@@ -697,7 +697,10 @@ class SolarPredictor(DaBase):
 
             # Select required features
             featured_df = weather_data[self.feature_columns]
-            prediction = self.model.predict(featured_df)
+            if len(featured_df) == 0:
+                prediction = []
+            else:
+                prediction = self.model.predict(featured_df)
             prediction = np.maximum(0, prediction)  # Ensure non-negative
             result = pd.DataFrame(
                 {"date_time": featured_df.index, "prediction": prediction}
@@ -1033,7 +1036,9 @@ class SolarPredictor(DaBase):
             raise FileNotFoundError(
                 f"Er is geen model aanwezig voor {self.solar_name},svp eerst trainen."
             )
-        weather_data = self.get_weatherdata(start, end, prognose=True)
+        latest_dt = self.db_da.get_time_border_record("gr", latest=True)
+        prognose = (latest_dt < end)
+        weather_data = self.get_weatherdata(start, end, prognose=prognose)
         prediction = self.predict(weather_data)
         logging.info(f"ML prediction {self.solar_name}\n{prediction}")
         return prediction
