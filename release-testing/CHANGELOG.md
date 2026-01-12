@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2026.01.0.rc6
+Fixed not starting ml-training from run-menu (reported by @balk)
+
 # 2026.01.0.rc5
 - Fixed errors in solar-reports (reported by @balk and @Dabit)
 - Fixed problem with managing battery with short periods (reported by @mirabis)

@@ -4692,7 +4692,7 @@ def main():
             if arg.lower() == "calc_baseloads":
                 da_calc.run_task_function("calc_baseloads")
                 continue
-            if arg.lower() == "train_ml_predictions":
+            if arg.lower() == "train":
                 da_calc.run_task_function("train_ml_predictions")
                 continue
     da_calc.db_da.log_pool_status()
