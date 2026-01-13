@@ -181,6 +181,22 @@ class Meteo:
             value = 0.0
         return value
 
+    @staticmethod
+    def is_aws(station:str):
+        """
+        station :code van een knmi station
+        :return: boolean
+        """
+        start = datetime.date.today() - datetime.timedelta(days=4)
+        end = datetime.date.today() - datetime.timedelta(days=1)
+        knmi_df = knmi.get_hour_data_dataframe(
+            [station],
+            start=start,
+            end=end,
+            variables=["Q"],
+        )
+        return len(knmi_df) > 0
+
     def which_station(self) -> str:
         """
         berekent welk weerstation het dichtst bij is
@@ -196,7 +212,7 @@ class Meteo:
             afstand = (self.latitude - station.latitude) ** 2 + (
                 self.longitude - station.longitude
             ) ** 2
-            if result is None or afstand < distance:
+            if (result is None or afstand < distance) and self.is_aws(key):
                 distance = afstand
                 result = key
         return str(result)

@@ -13,13 +13,19 @@ berekeningen en bewerkingen uit:
 * ophalen van meteogegevens bij Meteoserver
 * berekenen van de optimale inzet van een aanwezige batterij, wp-boiler en elektrische auto.<br>
 
-Het programma draait alleen als addon op HA installaties met een arm64 processor (bijv Raspberry Pi4) of 
-een intel 64 bit processor (amd64)
+Het programma draait alleen als addon op HA-installaties met een arm64 processor (bijv Raspberry Pi4) of 
+een intel 64 bit processor (amd64). Maar het kan ook separate Docker-container worden geinstalleerd
 
 ---
+## Documentatie 
+In de loop van 2025 is begonnen met het verhuizen en actualiseren van de documentie vanaf DOCS.md
+naar de wiki-pagina's op github: https://github.com/corneel27/day-ahead/wiki
+---
+
 ## Installatie
-Deze is uitgebreid beschreven in DOCS.md:
-https://github.com/corneel27/day-ahead/blob/main/dao/DOCS.md
+Deze is uitgebreid beschreven in de wiki: https://github.com/corneel27/day-ahead/wiki/2.-Installatie-en-basis-configuratie
+
+
 
 ---
 ## Optimization
@@ -43,7 +49,7 @@ Aan de hand van de gekozen strategie kan met behulp van het algoritme de meest o
 variabelen worden berekend. Dit zijn:
 * per uur verbruik en kosten op de inkoopmeter
 * per uur teruglevering en opbrengst op de inkoopmeter
-* per uur laad- cq ontlaadvermogen van de batterij en de SoC aan het einde van het uur
+* per uur laad- c.q. ontlaadvermogen van de batterij en de SoC aan het einde van het uur
 * tijdstip waarop de boiler moet worden opgewarmd
 * uurvakken waarin de elektrische auto moet worden geladen
 
