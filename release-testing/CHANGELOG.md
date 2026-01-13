@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.0.rc7
+- Updated several python packages
+- Update README.md, link to wiki: https://github.com/corneel27/day-ahead/wiki
+- Implemented check op AWS (only AWS stations have irradiance data, reported by @steynovich)
+- Fix error calculating charge-power "new style" (reported by @mirabis)
 
 # 2026.01.0.rc6
 Fixed not starting ml-training from run-menu (reported by @balk)
