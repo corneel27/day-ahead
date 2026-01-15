@@ -1145,7 +1145,9 @@ class Report(DaBase):
                     except ValueError:
                         org_value = 0
                     if pd.notna(row[col_index]):
-                        add_to.at[row.tijd, col_name_to] = org_value + factor * row[col_index]
+                        add_to.at[row.tijd, col_name_to] = (
+                            org_value + factor * row[col_index]
+                        )
         else:
             for row in add_from.itertuples():
                 # add_from.at[row.tijd, col_name_from])
@@ -1153,7 +1155,9 @@ class Report(DaBase):
                     org_value = add_to.at[row.tijd, col_name_to]
                     if pd.isna(org_value):
                         org_value = 0
-                    add_to.at[row.time, col_name_to] = org_value + factor * row[col_index]
+                    add_to.at[row.time, col_name_to] = (
+                        org_value + factor * row[col_index]
+                    )
         return add_to
 
     def get_latest_present(self, code: str) -> datetime.datetime:
@@ -2998,7 +3002,7 @@ class Report(DaBase):
 
         # prognose straling
         rad_prog = self.get_da_data("gr", start, end, "uur", "uur", "prognoses")
-        result["prognose_straling"] =rad_prog["gr"]
+        result["prognose_straling"] = rad_prog["gr"]
 
         # gemeten straling
         rad_real = self.get_da_data("gr", start, end, "uur", "uur", "values")
@@ -3017,7 +3021,7 @@ class Report(DaBase):
                 self.add_col_df(df_sensor, df_solar, "gemeten")
             count += 1
         result["gemeten_prod"] = pd.NA
-        self.add_col_df(df_solar, result, "gemeten", "gemeten_prod" )
+        self.add_col_df(df_solar, result, "gemeten", "gemeten_prod")
 
         # voorspelling DAO
         pred_dao = []
@@ -3039,12 +3043,13 @@ class Report(DaBase):
 
         # voorspelling ML
         from dao.prog.solar_predictor import SolarPredictor
+
         solar_predictor = SolarPredictor()
         solar_prog = solar_predictor.predict_solar_device(device, start, end)
         solar_prog["tijd"] = solar_prog["date_time"].dt.tz_localize(None)
         solar_prog.index = solar_prog["tijd"]
         result["prognose_ml"] = pd.NA
-        self.add_col_df(solar_prog, result, "prediction","prognose_ml")
+        self.add_col_df(solar_prog, result, "prediction", "prognose_ml")
         # result["prognose_ml"] = solar_prog["prediction"]
 
         result.drop(columns=["tijd"], inplace=True)

@@ -709,12 +709,7 @@ class DaCalc(DaBase):
 
         # vanaf hier declaraties ontladen met sos  ###############################################
         ac_from_dc_samples = [
-            [
-                (
-                    discharge_stages[b][ds]["power"]
-                    / 1000
-                )
-                for ds in range(DS[b])]
+            [(discharge_stages[b][ds]["power"] / 1000) for ds in range(DS[b])]
             for b in range(B)
         ]
         dc_to_ac_samples = [
@@ -3192,21 +3187,29 @@ class DaCalc(DaBase):
                 if self.log_level == logging.INFO:
                     # debug laden
                     if ac_to_dc[b][u].x > 0.0:
-                        logging.info(f"Laad volume in uur {u} {uur[u]} "
-                                     f"{ac_from_dc[b][u].x*hour_fraction[u]} kWh")
+                        logging.info(
+                            f"Laad volume in uur {u} {uur[u]} "
+                            f"{ac_from_dc[b][u].x * hour_fraction[u]} kWh"
+                        )
                         for cs in range(CS[b]):
                             if ac_to_dc_w[b][u][cs].x > 0:
-                                logging.info(f"{cs} {ac_to_dc_w[b][u][cs].x} "
-                                             f"{ac_to_dc_samples[b][cs]}")
+                                logging.info(
+                                    f"{cs} {ac_to_dc_w[b][u][cs].x} "
+                                    f"{ac_to_dc_samples[b][cs]}"
+                                )
 
                     # debug ontladen
                     if ac_from_dc[b][u].x > 0.0:
-                        logging.info(f"Ontlaad volume in uur {u} {uur[u]} "
-                                     f"{ac_from_dc[b][u].x*hour_fraction[u]} kWh")
+                        logging.info(
+                            f"Ontlaad volume in uur {u} {uur[u]} "
+                            f"{ac_from_dc[b][u].x * hour_fraction[u]} kWh"
+                        )
                         for ds in range(DS[b]):
                             if ac_from_dc_w[b][u][ds].x > 0:
-                                logging.info(f"{ds} {ac_from_dc_w[b][u][ds].x} "
-                                             f"{ac_from_dc_samples[b][ds]}")
+                                logging.info(
+                                    f"{ds} {ac_from_dc_w[b][u][ds].x} "
+                                    f"{ac_from_dc_samples[b][ds]}"
+                                )
 
                 row = [
                     str(uur[u]),
@@ -3727,7 +3730,7 @@ class DaCalc(DaBase):
                         netto_vermogen_bat = -minimum_power
                 elif ac_to_dc[b][0].x > 0.0:  # laden met optimaal vermogen
                     sum_weight_factor = 0
-                    sum_power = 0 # in W
+                    sum_power = 0  # in W
                     for cs in range(CS[b]):
                         wf = ac_to_dc_w[b][0][cs].x
                         if wf > 0:
@@ -3736,9 +3739,10 @@ class DaCalc(DaBase):
                     if sum_weight_factor < 0.95:
                         new_state = battery_state_on_value
                         balance = False
-                        netto_vermogen_bat = round(sum_power/sum_weight_factor)
+                        netto_vermogen_bat = round(sum_power / sum_weight_factor)
                         new_ts = (
-                            start_dt.timestamp() + self.interval_s * sum_weight_factor * interval_fraction[0]
+                            start_dt.timestamp()
+                            + self.interval_s * sum_weight_factor * interval_fraction[0]
                         )
                         stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
                     else:
@@ -3746,26 +3750,26 @@ class DaCalc(DaBase):
                         balance = False
                         stop_omvormer = None
                 elif ac_from_dc[b][0].x > 0.0:  # ontladen met optimaal vermogen
-                        sum_weight_factor = 0
-                        sum_power = 0  # in W
-                        for ds in range(DS[b]):
-                            wf = ac_from_dc_w[b][0][ds].x
-                            if wf > 0:
-                                sum_weight_factor += wf
-                                sum_power += wf * discharge_stages[b][ds]["power"]
-                        if sum_weight_factor < 0.95:
-                            new_state = battery_state_on_value
-                            balance = False
-                            netto_vermogen_bat = - round(sum_power / sum_weight_factor)
-                            new_ts = (
-                                    start_dt.timestamp() + self.interval_s * sum_weight_factor *
-                                    interval_fraction[0]
-                            )
-                            stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
-                        else:
-                            new_state = battery_state_on_value
-                            balance = False
-                            stop_omvormer = None
+                    sum_weight_factor = 0
+                    sum_power = 0  # in W
+                    for ds in range(DS[b]):
+                        wf = ac_from_dc_w[b][0][ds].x
+                        if wf > 0:
+                            sum_weight_factor += wf
+                            sum_power += wf * discharge_stages[b][ds]["power"]
+                    if sum_weight_factor < 0.95:
+                        new_state = battery_state_on_value
+                        balance = False
+                        netto_vermogen_bat = -round(sum_power / sum_weight_factor)
+                        new_ts = (
+                            start_dt.timestamp()
+                            + self.interval_s * sum_weight_factor * interval_fraction[0]
+                        )
+                        stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
+                    else:
+                        new_state = battery_state_on_value
+                        balance = False
+                        stop_omvormer = None
                 else:
                     new_state = battery_state_on_value
                     balance = False

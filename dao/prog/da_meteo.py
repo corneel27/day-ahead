@@ -182,7 +182,7 @@ class Meteo:
         return value
 
     @staticmethod
-    def is_aws(station:int):
+    def is_aws(station: int):
         """
         station :code van een knmi station
         :return: boolean
@@ -199,8 +199,39 @@ class Meteo:
         """
         # onderstaande lijst is gegenereerd met prof/tst.py/generate_list_knmi-aws.py
         # beter bij iedere nieuwe versie autoamtisch checken en vernieuwen op github
-        list_aws = [215, 235, 240, 249, 251, 257, 260, 267, 269, 270, 273, 275, 277, 278, 279, 280,
-                    283, 286, 290, 310, 319, 323, 330, 344, 348, 350, 356, 370, 375, 377, 380]
+        list_aws = [
+            215,
+            235,
+            240,
+            249,
+            251,
+            257,
+            260,
+            267,
+            269,
+            270,
+            273,
+            275,
+            277,
+            278,
+            279,
+            280,
+            283,
+            286,
+            290,
+            310,
+            319,
+            323,
+            330,
+            344,
+            348,
+            350,
+            356,
+            370,
+            375,
+            377,
+            380,
+        ]
         return station in list_aws
 
     def which_station(self) -> str:
