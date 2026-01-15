@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.0.rc8
+Fixed error check AWS (reported by @Kees Schilder)
+
 # 2026.01.0.rc7
 - Updated several python packages
 - Update README.md, link to wiki: https://github.com/corneel27/day-ahead/wiki

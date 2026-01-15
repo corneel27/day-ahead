@@ -182,20 +182,26 @@ class Meteo:
         return value
 
     @staticmethod
-    def is_aws(station:str):
+    def is_aws(station:int):
         """
         station :code van een knmi station
         :return: boolean
         """
+        """ 
         start = datetime.date.today() - datetime.timedelta(days=4)
-        end = datetime.date.today() - datetime.timedelta(days=1)
         knmi_df = knmi.get_hour_data_dataframe(
             [station],
             start=start,
-            end=end,
-            variables=["Q"],
+            end=start,
+            variables=["Q", "T"],
         )
-        return len(knmi_df) > 0
+        result = len(knmi_df) > 0 and not knmi_df.isnull().values.any()
+        """
+        # onderstaande lijst is gegenereerd met prof/tst.py/generate_list_knmi-aws.py
+        # beter bij iedere nieuwe versie autoamtisch checken en vernieuwen op github
+        list_aws = [215, 235, 240, 249, 251, 257, 260, 267, 269, 270, 273, 275, 277, 278, 279, 280,
+                    283, 286, 290, 310, 319, 323, 330, 344, 348, 350, 356, 370, 375, 377, 380]
+        return station in list_aws
 
     def which_station(self) -> str:
         """
@@ -208,13 +214,14 @@ class Meteo:
         distance = None
         result = None
         for key in stations:
-            station = stations[key]
-            afstand = (self.latitude - station.latitude) ** 2 + (
-                self.longitude - station.longitude
-            ) ** 2
-            if (result is None or afstand < distance) and self.is_aws(key):
-                distance = afstand
-                result = key
+            if self.is_aws(key):
+                station = stations[key]
+                afstand = (self.latitude - station.latitude) ** 2 + (
+                    self.longitude - station.longitude
+                ) ** 2
+                if result is None or afstand < distance:
+                    distance = afstand
+                    result = key
         return str(result)
 
     def solar_rad(
