@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.1.rc1
+Fix error with space(s) in solar_name
+
 # 2026.01.0.rc9
 This version is identical to stable version 2026.01.0
 

@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.1
+Fix error with space(s) in solar_name
+
  # 2026.01.0
 With this new stable release comes a second optional method for predicting the porduction of your solar-devices.
 This if fully documented in the wiki: https://github.com/corneel27/day-ahead/wiki/2.-Installatie-en-basis-configuratie#pv-productie-voorspellen <br>
