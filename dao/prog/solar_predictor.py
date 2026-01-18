@@ -1037,7 +1037,7 @@ class SolarPredictor(DaBase):
                 f"Er is geen model aanwezig voor {self.solar_name},svp eerst trainen."
             )
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
-        prognose = (latest_dt < end)
+        prognose = latest_dt < end
         weather_data = self.get_weatherdata(start, end, prognose=prognose)
         prediction = self.predict(weather_data)
         logging.info(f"ML prediction {self.solar_name}\n{prediction}")

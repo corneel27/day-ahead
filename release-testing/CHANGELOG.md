@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.0.rc9
+This version is identical to stable version 2026.01.0
+
 # 2026.01.0.rc8
 Fixed error check AWS (reported by @Kees Schilder)
 
@@ -135,9 +138,9 @@ When you activate this rule: for devices with ml_prediction = True there will be
 9. In the dashboard is an extra-menu-option available: **Solar**
 Here you can view the effectivity of your calculated model:<br>
 In text:<br>
-![solar_table.png](images/solar_table.png)<br>
+![solar_table.png](https://github.com/corneel27/day-ahead/raw/main/dao/images/solar_table.png)<br>
 With a graph:<br>
-![solar_graph.png](/images/solar_graph.png)
+![solar_graph.png](https://github.com/corneel27/day-ahead/raw/main/dao//images/solar_graph.png)
 
 # 2025.12.1.rc1
 - Fix error calculating number of heat-blocks heatpump (on/off, reported by @sailor_dg)

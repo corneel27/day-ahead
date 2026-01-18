@@ -1,6 +1,17 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# 2025.12.1
+ # 2026.01.0
+With this new stable release comes a second optional method for predicting the porduction of your solar-devices.
+This if fully documented in the wiki: https://github.com/corneel27/day-ahead/wiki/2.-Installatie-en-basis-configuratie#pv-productie-voorspellen <br>
+This module is developed by @simnet and implemented by @corneel27/kc27.
+Other changes and fixes:
+- Updated several used python packages
+- charge and discharge of the battery is now fully calculated with "specializes order set" (sos). 
+This gives always the "optimal" (=most efficient) level voor charging and discharging.
+- Update README.md, link to wiki: https://github.com/corneel27/day-ahead/wiki (thanks @Torch1969)
+- From now on new features will only be documented in the wiki, in the future DOCS.md will become deprecated.
+
+ # 2025.12.1
 - Fix error calculating number of heat-blocks heatpump (on/off, reported by @sailor_dg)
 
 # 2025.12.0
