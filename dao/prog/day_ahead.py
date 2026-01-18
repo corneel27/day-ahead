@@ -247,7 +247,7 @@ class DaCalc(DaBase):
         start_hour_dt = dt.datetime.fromtimestamp(start_hour)
         for s in range(solar_num):
             if solar_ml_prediction[s]:
-                solar_name = self.solar[s]["name"]
+                solar_name = self.solar[s]["name"].replace(" ", "_")
                 solar_prog = solar_predictor.predict_solar_device(
                     self.solar[s], start_hour_dt, end_prog
                 )
@@ -268,7 +268,7 @@ class DaCalc(DaBase):
                     self.config.get(["ml_prediction"], solar_option, "False").lower()
                     == "true"
                 ):
-                    solar_name = solar_option["name"]
+                    solar_name = solar_option["name"].replace(" ", "_")
                     solar_prog = solar_predictor.predict_solar_device(
                         solar_option, start_hour_dt, end_prog
                     )
@@ -306,9 +306,10 @@ class DaCalc(DaBase):
                 hour_fraction.append(self.interval_s / 3600)
                 interval_fraction.append(1)
             for s in range(solar_num):
+                solar_name = self.solar[s]["name"].replace(" ", "_")
                 if solar_ml_prediction[s]:
                     prod = (
-                        max(0, getattr(row, self.solar[s]["name"]))
+                        max(0, getattr(row, solar_name))
                         * interval_fraction[-1]
                     )
                 else:
@@ -325,6 +326,7 @@ class DaCalc(DaBase):
             for b in range(B):
                 for s in range(len(self.battery_options[b]["solar"])):
                     solar_option = self.battery_options[b]["solar"][s]
+                    solar_name = solar_option["name"].replace(" ", "_")
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))
                     pv_dc_num += 1
@@ -335,7 +337,7 @@ class DaCalc(DaBase):
                         == "true"
                     ):
                         prod = (
-                            max(0, getattr(row, solar_option["name"]))
+                            max(0, getattr(row, solar_name))
                             * interval_fraction[-1]
                         )
                     else:
