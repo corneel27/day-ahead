@@ -3,7 +3,7 @@
 
 ## Inhoudsopgave  
 [Installatie](#installatie)<br> 
-[DAO starten](#dao-starten)<br>
+[DAO starten](#dao-eerste-keer-starten)<br>
 [Instellingen](#instellingen)<br>
 [Dashboard](#dashboard) <br>
 [Configuratie](#configuratie) <br>
@@ -723,13 +723,12 @@ Het is allemaal optioneel.
 |                           | adjustment factor             | getal            |                                    | K                                                  | 
 | **battery**               |                               | list             |                                    | 0, 1 of meer {..}                                  | 
 |                           | name                          | string           |                                    |                                                    |
-|                           | name                          | string           |                                    |                                                    |
 |                           | entity actual level           | string           |                                    |                                                    |
+|                           | capacity                      | getal            |                                    | kWh                                                |
 |                           | upper limit                   | getal            |                                    | %                                                  |
 |                           | lower limit                   | getal            |                                    | %                                                  |
 |                           | optimal lower level           | getal of string  | lower limit                        | %                                                  |
-|                           | penalty low soc               | getal of string  | 0.0025                             | %                                                  |
-|                           | entity actual level           | string           |                                    | euro/%.uur                                         |
+|                           | penalty low soc               | getal            | 0.0025                             | euro/%.uur                                         |
 |                           | entity min soc end opt        | string           | 0                                  |                                                    |
 |                           | entity max soc end opt        | string           | 100                                |                                                    |
 |                           | charge stages                 | list             |                                    | {power, efficiency}                                | 
@@ -804,8 +803,8 @@ Het is allemaal optioneel.
 |                           | entities battery consumption  | list of string   | []                                 |                                                    | 
 |                           | entities battery production   | list of string   | []                                 |                                                    | 
 |                           | entity co2-intensity          | list of string   | []                                 |                                                    |
-| **scheduler**            | active                       | boolean          | True                               | 
-|                          |                              | list             | {time, task}                       |                                                   | 
+| **scheduler**             | active                        | boolean          | True                               | 
+|                           |                               | list             | {time, task}                       |                                                    | 
 
  
 
@@ -1338,12 +1337,13 @@ aan het einde van het lopende uur
        * Als je deze regel weglaat of je vult ""(default waarde) in. Dan zal het programma je pv installatienooit uitzetten (ook niet bij negatoeve prijzen). 
        Je kunt dit toepassen als je omvormer het uitzetten niet ondersteunt zodat het programma anderszins probeert een (iets minder) 
        optimale oplossing te berekenen. 
-     * strings:<br> een lijst van een of meer strings. Per string geef je op
+     * strings:  
+       een lijst van een of meer strings. Per string geef je op
        * tilt: de helling van de panelen in graden; 0 is vlak, 90 is verticaal  
        * orientation: orientatie in graden, 0 = zuid, -90 is oost, 90 west  
        * capacity: capaciteit in kWp  
        * yield: opbrengstfactor van je panelen als er 1 J/cm² straling op je panelen valt in kWh/J/cm²  
-       Deze bereken je als volgt:  <a name="pv_yield"></a> `yield = kWh/400000` waarbij `kWh` de werkelijke opbrengst is in een jaar.  
+       Deze bereken je als volgt: <a name="pv_yield"></a> `yield = kWh/400000` waarbij `kWh` de werkelijke opbrengst is in een jaar.  
          * Een eerste schatting van de jaarlijkse opbrengst van je panelen is: Wp x 0,85.
            Dus als je 6000 Wp hebt dan is je geschatte jaaropbrengst = 6000 x 0,85 = 5100 kWh. De `yield` wordt dan 0,01275 kWh/J/cm² <br>
          * De gemiddelde direct opvallende straling gesommeerd over een jaar is "ongeveer" 400.000 J/cm².<br>
