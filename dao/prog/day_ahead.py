@@ -308,10 +308,7 @@ class DaCalc(DaBase):
             for s in range(solar_num):
                 solar_name = self.solar[s]["name"].replace(" ", "_")
                 if solar_ml_prediction[s]:
-                    prod = (
-                        max(0, getattr(row, solar_name))
-                        * interval_fraction[-1]
-                    )
+                    prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                 else:
                     prod = self.calc_prod_solar(
                         self.solar[s], row.time, gr, hour_fraction[-1]
@@ -336,10 +333,7 @@ class DaCalc(DaBase):
                         ).lower()
                         == "true"
                     ):
-                        prod = (
-                            max(0, getattr(row, solar_name))
-                            * interval_fraction[-1]
-                        )
+                        prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                     else:
                         prod = self.calc_prod_solar(
                             solar_option,
