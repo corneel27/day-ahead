@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.2
+Correct sensordata from HA with unit_of_measurement="Wh" to "kWh"
+
 # 2026.01.1
 Fix error with space(s) in solar_name
 
