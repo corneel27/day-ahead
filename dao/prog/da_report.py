@@ -958,6 +958,7 @@ class Report(DaBase):
                     case(
                         (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
                     ).label(col_name),
+                    v1.c.unit_of_measurement.label("dim")
                 ]
             else:
                 columns = [
@@ -970,6 +971,7 @@ class Report(DaBase):
                             (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
                         )
                     ).label(col_name),
+                    v1.c.unit_of_measurement.label("dim"),
                 ]
 
             # Build the query to retrieve raw data
@@ -1003,6 +1005,7 @@ class Report(DaBase):
                 self.db_ha.from_unixtime(t1.c.start_ts).label("tijd"),
                 self.db_ha.from_unixtime(t1.c.start_ts).label("tot"),
                 t1.c.mean.label(col_name),
+                v1.c.unit_of_measurement.label("dim"),
             ]
             query = (
                 select(*columns)
@@ -1034,6 +1037,8 @@ class Report(DaBase):
 
         # when NaN in result replace with zero (0)
         df_raw[col_name] = df_raw[col_name].fillna(0)
+        if len(df_raw) > 0 and df_raw.iloc[0]["dim"] == "Wh":
+            df_raw[col_name] = df_raw[col_name] / 1000
 
         # Print the raw DataFrame
         logging.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
