@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.01.2.rc2
+Fixed error in Wh-correction when no ha-data are present
+
 # 2026.01.2.rc1
 Correct sensordata from HA with unit_of_measurement="Wh" to "kWh"
 
