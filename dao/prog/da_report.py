@@ -1037,9 +1037,12 @@ class Report(DaBase):
 
         # when NaN in result replace with zero (0)
         df_raw[col_name] = df_raw[col_name].fillna(0)
-        if len(df_raw) > 0 and df_raw.iloc[0]["dim"] == "Wh":
-            df_raw[col_name] = df_raw[col_name] / 1000
-
+        if len(df_raw) > 0:
+            dim = df_raw.iloc[0]["dim"]
+            if dim == "Wh":
+                df_raw[col_name] = df_raw[col_name] / 1000
+            elif dim == "MWh":
+                df_raw[col_name] = df_raw[col_name] * 1000
         # Print the raw DataFrame
         logging.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
         return df_raw
