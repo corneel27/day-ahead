@@ -13,11 +13,14 @@ from subprocess import PIPE, run
 import logging
 from logging import Handler
 from sqlalchemy import Table, select, func, and_
+
+# from dao.prog.solar_predictor import SolarPredictor
 from dao.prog.utils import get_tibber_data, error_handling
 from dao.prog.version import __version__
 from dao.prog.da_config import Config
 from dao.prog.da_meteo import Meteo
 from dao.prog.da_prices import DaPrices
+from dao.prog.utils import interpolate
 
 # from db_manager import DBmanagerObj
 from typing import Union
@@ -127,6 +130,7 @@ class DaBase(hass.Hass):
             self.knmi_station = self.meteo.which_station()
         self.solar = self.config.get(["solar"])
         self.interval = self.config.get(["interval"], None, "1hour").lower()
+        self.interval_s = 3600 if self.interval == "1hour" else 900
 
         self.prices = DaPrices(self.config, self.db_da)
         self.prices_options = self.config.get(["prices"])
@@ -585,10 +589,60 @@ class DaBase(hass.Hass):
         report = Report()
         report.calc_save_baseloads()
 
+    def calc_solar_predictions(self, solar_option: dict, vanaf: datetime.datetime, tot: datetime.datetime, interval: str = None) -> pd.DataFrame:
+        """
+        berekent de solar production
+        :param solar_option: dict van de solar-device
+        :param vanaf: datetime start
+        :param tot: datetime tot
+        :param interval: 15"min of 1 hour of None, als None wordt self.interval genomen
+        :return:
+        """
+        from dao.prog.solar_predictor import SolarPredictor
+        ml_prediction = (
+                self.config.get(["ml_prediction"], solar_option, "False").lower()
+                == "true"
+        )
+        if interval is None:
+            interval = self.interval
+            interval_s = self.interval_s
+        else:
+            interval_s = 900 if interval == "15min" else 3600
+        solar_name = solar_option["name"].replace(" ", "_")
+        if ml_prediction:
+            solar_predictor = SolarPredictor()
+            solar_prog = solar_predictor.predict_solar_device(solar_option, vanaf, tot)
+            solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
+            if interval == "15min":
+                solar_prog = interpolate(solar_prog, "prediction", quantity=True)
+            while (
+                    solar_prog["tijd"].iloc[0].tz_localize(None)
+                    < vanaf
+            ):
+                solar_prog = solar_prog.iloc[1:]
+        else:
+            solar_prog = pd.DataFrame(columns=["tijd", "prediction"])
+            start_ts = datetime.datetime(year=vanaf.year, month=vanaf.month, day=vanaf.day, hour=vanaf.hour).timestamp()
+            prog_data = self.db_da.get_prognose_data(
+                start=start_ts,
+                end=tot.timestamp(),
+                interval=interval
+            )
+            prog_data.index = pd.to_datetime(prog_data["tijd"])
+            while len(prog_data) > 0 and prog_data.iloc[0]["tijd"] < vanaf:
+                prog_data = prog_data.iloc[1:]
+            index = 0
+            for row in prog_data.itertuples():
+                h_frac = interval_s/3600
+                prod = self.calc_prod_solar(solar_option, row.time, row.glob_rad, h_frac)
+                prod = round(prod, 3)
+                solar_prog.loc[solar_prog.shape[0]] = [row.tijd, prod]
+        solar_prog.reset_index(drop=True, inplace=True)
+        return solar_prog
+
     @staticmethod
     def train_ml_predictions():
         from dao.prog.solar_predictor import SolarPredictor
-
         solar_predictor = SolarPredictor()
         solar_predictor.run_train()
 

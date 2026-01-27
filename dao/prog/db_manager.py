@@ -318,12 +318,13 @@ class DBmanagerObj(object):
         self.log_pool_status()
 
     def get_time_border_record(
-        self, code: str, latest: bool = True
+        self, code: str, latest: bool = True, table_name: str = "values"
     ) -> datetime.datetime:
         """
         Zoekt de tijd op van het laatst aanwezige record van "code"
         :param code: de code van het record
         :param latest: boolean, if true latest record else first record
+        :param table_name: table name van het record
         :return: datum en tijd van het laatst aanwezige record
         """
         """
@@ -335,7 +336,7 @@ class DBmanagerObj(object):
         """
         # Reflect existing tables from the database
         with self.engine.connect() as connection:
-            values_table = Table("values", self.metadata, autoload_with=connection)
+            values_table = Table(table_name, self.metadata, autoload_with=connection)
             variabel_table = Table("variabel", self.metadata, autoload_with=connection)
 
         # Construct the query
@@ -382,7 +383,7 @@ class DBmanagerObj(object):
         )
         if end is not None:
             query = query.where(
-                t1.c.time < self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                t1.c.time < end # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
             )
         else:
             start_dt = datetime.datetime.fromtimestamp(start)
@@ -439,7 +440,7 @@ class DBmanagerObj(object):
             if end is not None:
                 query = query.where(
                     t1.c.time
-                    < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                    < end # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
                 )
             else:
                 start_dt = datetime.datetime.fromtimestamp(start)

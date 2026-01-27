@@ -689,7 +689,7 @@ class SolarPredictor(DaBase):
             # Multiple predictions
             if not isinstance(weather_data, pd.DataFrame):
                 raise ValueError(
-                    "weather_data must be a dictionary or pandas DataFrame"
+                    "ned_nl_data must be a dictionary or pandas DataFrame"
                 )
 
             # Process weather data using the standard method
@@ -865,7 +865,7 @@ class SolarPredictor(DaBase):
     ) -> pd.DataFrame:
         """
         vult database aan met ontbrekende data
-        load weather_data from dao-database
+        load ned_nl_data from dao-database
         :param start: begindatum laden vanaf
         :param end: einddatum if None: tot gisteren 00:00
         :param prognose: boolean, False: meetdata ophalen
@@ -884,6 +884,7 @@ class SolarPredictor(DaBase):
             table_name = "prognoses"
         else:
             table_name = "values"
+        start = dt.datetime(start.year, start.month, start.day, start.hour)
         # get weather-dataframe from database
         weather_data = pd.DataFrame(columns=["utc", "gr", "temp"])
         for weather_item in weather_data.columns[1:]:
@@ -1040,6 +1041,7 @@ class SolarPredictor(DaBase):
         prognose = latest_dt < end
         weather_data = self.get_weatherdata(start, end, prognose=prognose)
         prediction = self.predict(weather_data)
+        prediction["prediction"] = prediction["prediction"].round(3)
         logging.info(f"ML prediction {self.solar_name}\n{prediction}")
         return prediction
 

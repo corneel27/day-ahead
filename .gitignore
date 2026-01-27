@@ -16,6 +16,7 @@ whl
 .idea/
 __pycache__/
 ../CODEOWNERS
+dao/data/*.csv
 
 
 

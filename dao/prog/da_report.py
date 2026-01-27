@@ -12,14 +12,14 @@ from pandas.core.dtypes.inference import is_number
 from dao.prog.da_config import Config
 from dao.prog.da_graph import GraphBuilder
 from dao.prog.da_base import DaBase
-from dao.prog.utils import get_value_from_dict, interpolate
+from dao.prog.utils import get_value_from_dict
 import math
 import json
 import itertools
 import logging
 from sqlalchemy import Table, select, and_, literal, func, case
 import matplotlib.pyplot as plt
-from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
+from sklearn.metrics import r2_score
 
 
 def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
@@ -3129,36 +3129,41 @@ class Report(DaBase):
         df = self.db_da.get_column_data("prognoses", field, start=start, end=end)
         return df
 
-    def get_pv_prognose(self, field, vanaf, tot):
-        df_gr = self.db_da.get_column_data("values", "gr", vanaf, tot)
-        df_gr = df_gr.rename(columns={"value": "gr"})
-        df_gr["time"] = pd.to_datetime(df_gr["time"])
-        df_result = pd.DataFrame(columns=["time", field, "datasoort"])
+    def get_pv_prognose(self, field:str, vanaf:datetime.datetime, tot:datetime.datetime) -> pd.DataFrame:
+        df_result = pd.DataFrame()
         if field == "pv_ac":
             solar_num = len(self.solar)
-            for row in df_gr.itertuples():
-                prod = 0
-                for s in range(solar_num):
-                    netto = self.calc_prod_solar(
-                        self.solar[s], row.time.timestamp(), row.gr, 1
-                    )
-                    prod += netto
-                df_result.loc[df_result.shape[0]] = [row.time, prod, "expected"]
+            for s in range(solar_num):
+                solar_option = self.solar[s]
+                df_data = self.calc_solar_predictions(solar_option, vanaf, tot, interval="1hour")
+                if s == 0:
+                    df_result = df_data
+                else:
+                    df_result["prediction"] = df_result["prediction"] + df_data["prediction"]
+            df_result = df_result.rename(columns={"prediction": field, "date_time": "time"})
         else:  # pv_dc
             battery_options = self.config.get(["battery"])
             B = len(battery_options)
-            for row in df_gr.itertuples():
-                prod = 0
-                for b in range(B):
-                    solar_options = battery_options[b]["solar"]
-                    solar_num = len(solar_options)
-                    for s in range(solar_num):
-                        netto = self.calc_prod_solar(
-                            solar_options[s], row.time.timestamp(), row.gr, 1
-                        )
-                        prod += netto
-                df_result.loc[df_result.shape[0]] = [row.time, prod, "expected"]
-        df_result.index = pd.to_datetime(df_result["time"])
+            count = 0
+            for b in range(B):
+                solar_options = battery_options[b]["solar"]
+                solar_num = len(solar_options)
+                for s in range(solar_num):
+                    solar_option = self.solar[s]
+                    df_data = self.calc_solar_predictions(solar_option, vanaf, tot,
+                                                          interval="1hour")
+                    if count == 0:
+                        df_result = df_data
+                    else:
+                        df_result["prediction"] = df_result["prediction"] + df_data["prediction"]
+                    count += 1
+            df_result = df_result.rename(columns={"prediction": field, "date_time": "time"})
+        df_result["time"] = df_result["tijd"]
+        df_result["datasoort"] = "expected"
+        # df_result["time_ts"] = df_result["time"].apply(lambda x: int(x.timestamp()))
+        df_result.drop("tijd", axis=1, inplace=True)
+        df_result["time"] = df_result["time"].dt.tz_localize(None)
+        df_result.index = df_result["time"]
         return df_result
 
     def get_api_data(self, field: str, _periode: str, cumulate: bool = False):
