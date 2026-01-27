@@ -958,7 +958,7 @@ class Report(DaBase):
                     case(
                         (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
                     ).label(col_name),
-                    v1.c.unit_of_measurement.label("dim")
+                    v1.c.unit_of_measurement.label("dim"),
                 ]
             else:
                 columns = [
@@ -3132,18 +3132,26 @@ class Report(DaBase):
         df = self.db_da.get_column_data("prognoses", field, start=start, end=end)
         return df
 
-    def get_pv_prognose(self, field:str, vanaf:datetime.datetime, tot:datetime.datetime) -> pd.DataFrame:
+    def get_pv_prognose(
+        self, field: str, vanaf: datetime.datetime, tot: datetime.datetime
+    ) -> pd.DataFrame:
         df_result = pd.DataFrame()
         if field == "pv_ac":
             solar_num = len(self.solar)
             for s in range(solar_num):
                 solar_option = self.solar[s]
-                df_data = self.calc_solar_predictions(solar_option, vanaf, tot, interval="1hour")
+                df_data = self.calc_solar_predictions(
+                    solar_option, vanaf, tot, interval="1hour"
+                )
                 if s == 0:
                     df_result = df_data
                 else:
-                    df_result["prediction"] = df_result["prediction"] + df_data["prediction"]
-            df_result = df_result.rename(columns={"prediction": field, "date_time": "time"})
+                    df_result["prediction"] = (
+                        df_result["prediction"] + df_data["prediction"]
+                    )
+            df_result = df_result.rename(
+                columns={"prediction": field, "date_time": "time"}
+            )
         else:  # pv_dc
             battery_options = self.config.get(["battery"])
             B = len(battery_options)
@@ -3153,14 +3161,19 @@ class Report(DaBase):
                 solar_num = len(solar_options)
                 for s in range(solar_num):
                     solar_option = self.solar[s]
-                    df_data = self.calc_solar_predictions(solar_option, vanaf, tot,
-                                                          interval="1hour")
+                    df_data = self.calc_solar_predictions(
+                        solar_option, vanaf, tot, interval="1hour"
+                    )
                     if count == 0:
                         df_result = df_data
                     else:
-                        df_result["prediction"] = df_result["prediction"] + df_data["prediction"]
+                        df_result["prediction"] = (
+                            df_result["prediction"] + df_data["prediction"]
+                        )
                     count += 1
-            df_result = df_result.rename(columns={"prediction": field, "date_time": "time"})
+            df_result = df_result.rename(
+                columns={"prediction": field, "date_time": "time"}
+            )
         df_result["time"] = df_result["tijd"]
         df_result["datasoort"] = "expected"
         # df_result["time_ts"] = df_result["time"].apply(lambda x: int(x.timestamp()))

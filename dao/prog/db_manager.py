@@ -383,7 +383,8 @@ class DBmanagerObj(object):
         )
         if end is not None:
             query = query.where(
-                t1.c.time < end # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                t1.c.time
+                < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
             )
         else:
             start_dt = datetime.datetime.fromtimestamp(start)
@@ -440,7 +441,7 @@ class DBmanagerObj(object):
             if end is not None:
                 query = query.where(
                     t1.c.time
-                    < end # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                    < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
                 )
             else:
                 start_dt = datetime.datetime.fromtimestamp(start)

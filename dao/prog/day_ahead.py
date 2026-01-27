@@ -287,14 +287,17 @@ class DaCalc(DaBase):
         # nieuwe universele methode
         end = prog_data["tijd"].iloc[-1]
         for s in range(solar_num):
-            solar_prog = self.calc_solar_predictions(self.solar[s], start_interval_dt, end, self.interval)
+            solar_prog = self.calc_solar_predictions(
+                self.solar[s], start_interval_dt, end, self.interval
+            )
             solar_name = self.solar[s]["name"].replace(" ", "_")
             prog_data[solar_name] = solar_prog["prediction"]
         for b in range(B):
             for s in range(len(self.battery_options[b]["solar"])):
                 solar_option = self.battery_options[b]["solar"][s]
-                solar_prog = self.calc_solar_predictions(solar_option, start_interval_dt, end,
-                                                         self.interval)
+                solar_prog = self.calc_solar_predictions(
+                    solar_option, start_interval_dt, end, self.interval
+                )
                 solar_name = solar_option["name"].replace(" ", "_")
                 prog_data[solar_name] = solar_prog["prediction"]
 
@@ -564,7 +567,9 @@ class DaCalc(DaBase):
             for s in range(pv_dc_num[b]):
                 pv_prod_dc[b].append([])
                 pv_prod_ac[b].append([])
-                solar_name = self.battery_options[b]["solar"][s]["name"].replace(" ", "_")
+                solar_name = self.battery_options[b]["solar"][s]["name"].replace(
+                    " ", "_"
+                )
                 solar_series = prog_data[solar_name]
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u, in kWh

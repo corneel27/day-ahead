@@ -688,9 +688,7 @@ class SolarPredictor(DaBase):
         else:
             # Multiple predictions
             if not isinstance(weather_data, pd.DataFrame):
-                raise ValueError(
-                    "ned_nl_data must be a dictionary or pandas DataFrame"
-                )
+                raise ValueError("ned_nl_data must be a dictionary or pandas DataFrame")
 
             # Process weather data using the standard method
             weather_data = self._load_and_process_weather_data(weather_data)
