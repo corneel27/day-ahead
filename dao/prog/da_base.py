@@ -589,20 +589,32 @@ class DaBase(hass.Hass):
         report = Report()
         report.calc_save_baseloads()
 
-    def calc_solar_predictions(self, solar_option: dict, vanaf: datetime.datetime, tot: datetime.datetime, interval: str = None) -> pd.DataFrame:
+    def calc_solar_predictions(
+        self,
+        solar_option: dict,
+        vanaf: datetime.datetime,
+        tot: datetime.datetime,
+        interval: str = None,
+        _ml_prediction: bool = None,
+    ) -> pd.DataFrame:
         """
         berekent de solar production
         :param solar_option: dict van de solar-device
         :param vanaf: datetime start
         :param tot: datetime tot
         :param interval: 15"min of 1 hour of None, als None wordt self.interval genomen
+        :param ml_prediction: boolean default None(= from config)
         :return:
         """
         from dao.prog.solar_predictor import SolarPredictor
-        ml_prediction = (
+
+        if _ml_prediction is None:
+            ml_prediction = (
                 self.config.get(["ml_prediction"], solar_option, "False").lower()
                 == "true"
-        )
+            )
+        else:
+            ml_prediction = _ml_prediction
         if interval is None:
             interval = self.interval
             interval_s = self.interval_s
@@ -611,30 +623,44 @@ class DaBase(hass.Hass):
         solar_name = solar_option["name"].replace(" ", "_")
         if ml_prediction:
             solar_predictor = SolarPredictor()
-            solar_prog = solar_predictor.predict_solar_device(solar_option, vanaf, tot)
+            try:
+                solar_prog = solar_predictor.predict_solar_device(
+                    solar_option, vanaf, tot
+                )
+            except FileNotFoundError as ex:
+                logging.warning(ex)
+                logging.info(
+                    f"Voor {solar_option['name']} is geen model "
+                    f"en dus wordt DAO-predictor gebruikt"
+                )
+                result = self.calc_solar_predictions(
+                    solar_option, vanaf, tot, interval=interval, _ml_prediction=False
+                )
+                if _ml_prediction:
+                    result["prediction"] = pd.NA
+                return result
             solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
             if interval == "15min":
                 solar_prog = interpolate(solar_prog, "prediction", quantity=True)
-            while (
-                    solar_prog["tijd"].iloc[0].tz_localize(None)
-                    < vanaf
-            ):
+            while solar_prog["tijd"].iloc[0].tz_localize(None) < vanaf:
                 solar_prog = solar_prog.iloc[1:]
         else:
             solar_prog = pd.DataFrame(columns=["tijd", "prediction"])
-            start_ts = datetime.datetime(year=vanaf.year, month=vanaf.month, day=vanaf.day, hour=vanaf.hour).timestamp()
+            start_ts = datetime.datetime(
+                year=vanaf.year, month=vanaf.month, day=vanaf.day, hour=vanaf.hour
+            ).timestamp()
             prog_data = self.db_da.get_prognose_data(
-                start=start_ts,
-                end=tot.timestamp(),
-                interval=interval
+                start=start_ts, end=tot.timestamp(), interval=interval
             )
             prog_data.index = pd.to_datetime(prog_data["tijd"])
             while len(prog_data) > 0 and prog_data.iloc[0]["tijd"] < vanaf:
                 prog_data = prog_data.iloc[1:]
             index = 0
             for row in prog_data.itertuples():
-                h_frac = interval_s/3600
-                prod = self.calc_prod_solar(solar_option, row.time, row.glob_rad, h_frac)
+                h_frac = interval_s / 3600
+                prod = self.calc_prod_solar(
+                    solar_option, row.time, row.glob_rad, h_frac
+                )
                 prod = round(prod, 3)
                 solar_prog.loc[solar_prog.shape[0]] = [row.tijd, prod]
         solar_prog.reset_index(drop=True, inplace=True)
@@ -643,6 +669,7 @@ class DaBase(hass.Hass):
     @staticmethod
     def train_ml_predictions():
         from dao.prog.solar_predictor import SolarPredictor
+
         solar_predictor = SolarPredictor()
         solar_predictor.run_train()
 

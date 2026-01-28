@@ -3052,9 +3052,13 @@ class Report(DaBase):
         # voorspelling ML
         from dao.prog.solar_predictor import SolarPredictor
 
-        solar_predictor = SolarPredictor()
-        solar_prog = solar_predictor.predict_solar_device(device, start, end)
-        solar_prog["tijd"] = solar_prog["date_time"].dt.tz_localize(None)
+        # solar_predictor = SolarPredictor()
+        # solar_prog = solar_predictor.predict_solar_device(device, start, end)
+        solar_prog = self.calc_solar_predictions(
+            device, start, end, interval="1hour", _ml_prediction=True
+        )
+        if "date_time" in solar_prog.columns:
+            solar_prog["tijd"] = solar_prog["date_time"].dt.tz_localize(None)
         solar_prog.index = solar_prog["tijd"]
         result["prognose_ml"] = pd.NA
         self.add_col_df(solar_prog, result, "prediction", "prognose_ml")
