@@ -527,6 +527,10 @@ class DBmanagerObj(object):
         else:
             time_column = func.min(values_table.c.time).label("time")
             agg_column = func.sum(values_table.c.value).label("value")
+        # test zonder agg
+        time_column = values_table.c.time.label("time")
+        agg_column = values_table.c.value.label("value")
+
         query = select(
             hour_column,
             time_column,
@@ -539,15 +543,28 @@ class DBmanagerObj(object):
                 values_table.c.time >= self.unix_timestamp(start),
             )
         )
+        """
         if agg_func is not None:
-            query = query.group_by("uur")
+            query = query.group_by("uur", "time")
+        """
         if end is not None:
             query = query.where(values_table.c.time < self.unix_timestamp(end))
         query = query.order_by("time")
 
         with self.engine.connect() as connection:
+            query_str = str(query.compile(connection))
+            logging.debug(f"query get column data da:\n {query_str}")
             result = connection.execute(query)
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
+        if agg_func is not None:
+            df.groupby("uur").agg(
+                {
+                    "uur": "min",
+                    "time": "min",
+                    "utc": "min",
+                    "value": "mean" if agg_func == "avg" else "sum",
+                }
+            )
         now_ts = datetime.datetime.now().timestamp()
         df["datasoort"] = np.where(df["time"] <= now_ts, "recorded", "expected")
         df["time"] = df["time"].apply(
