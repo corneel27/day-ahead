@@ -48,18 +48,18 @@ class Config:
     def set(self, key, value):
         self.options[key] = value
 
-    def get_db_da(self, check_create: bool = False):
+    def get_db_da(self, key: str = "database da", check_create: bool = False):
         if Config.db_da is None:
-            db_da_engine = self.get(["database da", "engine"], None, "mysql")
-            db_da_server = self.get(["database da", "server"], None, "core-mariadb")
-            db_da_port = int(self.get(["database da", "port"], None, 0))
+            db_da_engine = self.get([key, "engine"], None, "mysql")
+            db_da_server = self.get([key, "server"], None, "core-mariadb")
+            db_da_port = int(self.get([key, "port"], None, 0))
             if db_da_engine == "sqlite":
-                db_da_name = self.get(["database da", "database"], None, "day_ahead.db")
+                db_da_name = self.get([key, "database"], None, "day_ahead.db")
             else:
-                db_da_name = self.get(["database da", "database"], None, "day_ahead")
-            db_da_user = self.get(["database da", "username"], None, "day_ahead")
-            db_da_password = self.get(["database da", "password"])
-            db_da_path = self.get(["database da", "db_path"], None, "../data")
+                db_da_name = self.get([key, "database"], None, "day_ahead")
+            db_da_user = self.get([key, "username"], None, "day_ahead")
+            db_da_password = self.get([key, "password"])
+            db_da_path = self.get([key, "db_path"], None, "../data")
             db_time_zone = self.get(["time_zone"])
             if check_create:
                 db_url = DBmanagerObj.db_url(
