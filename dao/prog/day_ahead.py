@@ -29,7 +29,6 @@ class DaCalc(DaBase):
         super().__init__(file_name=file_name)
         if self.config is None:
             return
-        self.interval_s = 3600 if self.interval == "1hour" else 900
         self.interval_name = "uur" if self.interval == "1hour" else "kwartier"
         self.steps_day = 24 if self.interval == "1hour" else 96
         self.history_options = self.config.get(["history"])
@@ -241,8 +240,7 @@ class DaCalc(DaBase):
         interval_fraction = []
         first_interval = True
 
-        from dao.prog.solar_predictor import SolarPredictor
-
+        """
         solar_predictor = SolarPredictor()
         start_hour_dt = dt.datetime.fromtimestamp(start_hour)
         for s in range(solar_num):
@@ -284,6 +282,24 @@ class DaCalc(DaBase):
                         solar_prog = solar_prog.iloc[1:]
                     solar_prog.reset_index(drop=True, inplace=True)
                     prog_data[solar_name] = solar_prog["prediction"]
+        """
+
+        # nieuwe universele methode
+        end = prog_data["tijd"].iloc[-1]
+        for s in range(solar_num):
+            solar_prog = self.calc_solar_predictions(
+                self.solar[s], start_interval_dt, end, self.interval
+            )
+            solar_name = self.solar[s]["name"].replace(" ", "_")
+            prog_data[solar_name] = solar_prog["prediction"]
+        for b in range(B):
+            for s in range(len(self.battery_options[b]["solar"])):
+                solar_option = self.battery_options[b]["solar"][s]
+                solar_prog = self.calc_solar_predictions(
+                    solar_option, start_interval_dt, end, self.interval
+                )
+                solar_name = solar_option["name"].replace(" ", "_")
+                prog_data[solar_name] = solar_prog["prediction"]
 
         # prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
@@ -307,12 +323,7 @@ class DaCalc(DaBase):
                 interval_fraction.append(1)
             for s in range(solar_num):
                 solar_name = self.solar[s]["name"].replace(" ", "_")
-                if solar_ml_prediction[s]:
-                    prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
-                else:
-                    prod = self.calc_prod_solar(
-                        self.solar[s], row.time, gr, hour_fraction[-1]
-                    )
+                prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                 solar_prod[s].append(prod)
                 pv_total += prod
             pv_org_ac.append(pv_total)
@@ -324,23 +335,10 @@ class DaCalc(DaBase):
                 for s in range(len(self.battery_options[b]["solar"])):
                     solar_option = self.battery_options[b]["solar"][s]
                     solar_name = solar_option["name"].replace(" ", "_")
+                    prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))
                     pv_dc_num += 1
-                    if (
-                        self.config.get(
-                            ["ml_prediction"], solar_option, "False"
-                        ).lower()
-                        == "true"
-                    ):
-                        prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
-                    else:
-                        prod = self.calc_prod_solar(
-                            solar_option,
-                            row.time,
-                            gr,
-                            hour_fraction[-1],
-                        )
                     pv_total += prod
             pv_org_dc.append(pv_total)
             first_interval = False
@@ -569,14 +567,13 @@ class DaCalc(DaBase):
             for s in range(pv_dc_num[b]):
                 pv_prod_dc[b].append([])
                 pv_prod_ac[b].append([])
+                solar_name = self.battery_options[b]["solar"][s]["name"].replace(
+                    " ", "_"
+                )
+                solar_series = prog_data[solar_name]
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u, in kWh
-                    prod_dc = self.calc_prod_solar(
-                        self.battery_options[b]["solar"][s],
-                        int(tijd[u].timestamp()),
-                        global_rad[u],
-                        hour_fraction[u],
-                    )
+                    prod_dc = solar_series[u] * interval_fraction[u]
                     eff = 1
                     for ds in range(DS[b]):
                         if discharge_stages[b][ds]["power"] / 1000 > prod_dc:
