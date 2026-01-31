@@ -3237,7 +3237,7 @@ class DaCalc(DaBase):
                 df_accu[b].at[df_accu[b].index[-1], "uur"] = "Totaal"
                 df_accu[b].at[df_accu[b].index[-1], "eff"] = "--"
                 df_accu[b].at[df_accu[b].index[-1], "o_eff"] = "--"
-                df_accu[b].at[df_accu[b].index[-1], "SoC"] = ""
+                df_accu[b].at[df_accu[b].index[-1], "SoC"] = pd.NA
             logging.info(
                 f"In- en uitgaande energie per {self.interval_name} batterij "
                 f"{self.battery_options[b]['name']}"
@@ -3362,7 +3362,7 @@ class DaCalc(DaBase):
         # d_f.loc['total'] = d_f.loc['total'].astype(object)
 
         d_f.at[d_f.index[-1], "uur"] = "Totaal"
-        d_f.at[d_f.index[-1], "b_tem"] = ""
+        d_f.at[d_f.index[-1], "b_tem"] = pd.NA
 
         logging.info(f"Berekende prognoses: \n{d_f.to_string(index=False)}\n")
         # , formatters={'uur':'{:03d}'.format}))
@@ -3771,12 +3771,24 @@ class DaCalc(DaBase):
                     stop_str = "2000-01-01 00:00:00"
                 else:
                     stop_str = stop_omvormer.strftime("%Y-%m-%d %H:%M")
+                df_accu[b].rename(
+                    columns={
+                        "dc->": "to_battery",
+                        "pv->dc": "from_pv",
+                        "->dc": "from_ac",
+                    },
+                    inplace=True,
+                )
                 first_row = df_accu[b].iloc[0]
                 from_battery = int(
-                    -first_row["dc->"] * 1000 / hour_fraction_first_interval
+                    -first_row.to_battery.kWh * 1000 / hour_fraction_first_interval
                 )
-                from_pv = int(first_row["pv->dc"] * 1000 / hour_fraction_first_interval)
-                from_ac = int(first_row["->dc"] * 1000 / hour_fraction_first_interval)
+                from_pv = int(
+                    first_row.from_pv.kWh * 1000 / hour_fraction_first_interval
+                )
+                from_ac = int(
+                    first_row.from_ac.kWh * 1000 / hour_fraction_first_interval
+                )
                 calculated_soc = round(soc[b][1].x, 1)
                 grid_set_point = round(
                     1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0

@@ -1,7 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# 2026.02.2.rc3
+# 2026.02.0.rc1
+Fix error api predict pv_dc (reported by @Dogooder)
 
+# 2026.01.2.rc3
 - Adjustments in documentation (#521, @storeman)
 - Fix error calculation of pv-prognose in api should be done with ml_prediction if configured (reported by @Dogooder)
 - Fix error when HA-sensor has unit_of_measurement="MWh" (reported by @itavero)
