@@ -3164,7 +3164,7 @@ class Report(DaBase):
                 solar_options = battery_options[b]["solar"]
                 solar_num = len(solar_options)
                 for s in range(solar_num):
-                    solar_option = self.solar[s]
+                    solar_option = solar_options[s]
                     df_data = self.calc_solar_predictions(
                         solar_option, vanaf, tot, interval="1hour"
                     )
