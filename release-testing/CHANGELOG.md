@@ -1,6 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.02.1.rc1
+Add missing module tzdata
+
 # 2026.02.0.rc2
+### Breaking change
+The file-format ofthe calculated model is changed (update of module pandas).
+The ml_prediction works only after a new training of the models.<br>
+### Changes:
 Update several python modules
 
 # 2026.02.0.rc1

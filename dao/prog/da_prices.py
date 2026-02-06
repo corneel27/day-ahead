@@ -7,6 +7,7 @@ import sys
 from requests import get, post
 from nordpool.elspot import Prices
 import pytz
+import tzdata
 import json
 import math
 import pprint as pp
