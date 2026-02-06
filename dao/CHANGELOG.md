@@ -1,5 +1,16 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.02.0
+- Update several python modules
+- Fix error api predict pv_dc (reported by @Dogooder)
+- Adjustments in documentation (#521, @storeman)
+- Fix error calculation of pv-prognose in api should be done with ml_prediction if configured (reported by @Dogooder)
+- Fix error when HA-sensor has unit_of_measurement="MWh" (reported by @itavero)
+- Catched error when ml_prediction=true and there is no trained model: with warning-logging and use dao-prediction as fallback
+- Fixed groupby-error with mysql(with "ONLY_FULL_GROUP_BY") and postgresql
+- Fixed error in Wh-correction when no ha-data are present
+- Correct sensordata from HA with unit_of_measurement="Wh" to "kWh"
+
 # 2026.01.2
 Correct sensordata from HA with unit_of_measurement="Wh" to "kWh"
 

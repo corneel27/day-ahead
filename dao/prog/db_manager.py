@@ -557,7 +557,7 @@ class DBmanagerObj(object):
             result = connection.execute(query)
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
         if agg_func is not None:
-            df.groupby("uur").agg(
+            df = df.groupby("uur").agg(
                 {
                     "uur": "min",
                     "time": "min",
