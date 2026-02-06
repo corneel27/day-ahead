@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.02.0.rc2
+Update several python modules
+
 # 2026.02.0.rc1
 Fix error api predict pv_dc (reported by @Dogooder)
 
