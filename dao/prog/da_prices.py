@@ -7,6 +7,7 @@ import sys
 from requests import get, post
 from nordpool.elspot import Prices
 import pytz
+import tzdata
 import json
 import math
 import pprint as pp
@@ -21,33 +22,45 @@ class DaPrices:
         self.interval = self.config.get(["interval"], None, "1hour")
         self.country = self.config.get(["country"], None, "NL")
 
-    def get_prices(self, source):
+    def get_prices(
+        self, source, _start: datetime.datetime = None, _end: datetime.datetime = None
+    ):
         if self.interval == "1hour":
             resolution = 60
         else:
             resolution = 15
         now = datetime.datetime.now()
         # start
-        if len(sys.argv) > 2:
-            arg_s = sys.argv[2]
-            start = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
-        else:
-            start = pd.Timestamp(year=now.year, month=now.month, day=now.day, tz="CET")
-        # end
-        if len(sys.argv) > 3:
-            arg_s = sys.argv[3]
-            end = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
-        else:
-            if now.hour < 12:
-                end = start + datetime.timedelta(days=1)
+        if _start is None:
+            if len(sys.argv) > 2:
+                arg_s = sys.argv[2]
+                start = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
             else:
-                end = start + datetime.timedelta(days=2)
+                start = pd.Timestamp(
+                    year=now.year, month=now.month, day=now.day, tz="CET"
+                )
+        else:
+            start = _start
+        # end
+        if _end is None:
+            if len(sys.argv) > 3:
+                arg_s = sys.argv[3]
+                end = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
+            else:
+                if now.hour < 12:
+                    end = start + datetime.timedelta(days=1)
+                else:
+                    end = start + datetime.timedelta(days=2)
+        else:
+            end = _end
 
         if len(sys.argv) <= 2:
             present = self.db_da.get_time_border_record("da")
             if not (present is None):
                 tz = pytz.timezone("CET")
                 present = tz.normalize(tz.localize(present))
+                if end.tzinfo is None:
+                    end = tz.normalize(tz.localize(end))
                 if present >= (end - datetime.timedelta(hours=1)):
                     logging.info(f"Day ahead data already present")
                     return

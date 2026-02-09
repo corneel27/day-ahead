@@ -188,7 +188,9 @@ class GraphBuilder:
                         ymax_left = math.ceil(max(ymax_left, max(data_array)))
                         ymin_left = math.floor(min(ymin_left, min(data_array)))
                     if vax == "right":
-                        ymax_right = math.ceil(max(ymax_right, max(data_array)))
+                        ymax_right = (
+                            math.ceil(max(ymax_right, max(data_array)) * 10) / 10
+                        )
                         ymin_right = math.floor(min(ymin_right, min(data_array)))
                     if s_type == "bar" or s_type == "stacked":
                         nr_bar += 1
@@ -313,8 +315,15 @@ class GraphBuilder:
             # axis.legend(loc = 'center left', bbox_to_anchor=(1, 0.5))
 
             if axis_right:
-                ylim = math.ceil(
-                    max(np.max(stacked_plus_right), -np.min(stacked_neg_right))
+                ylim = (
+                    math.ceil(
+                        max(
+                            max(np.max(stacked_plus_right), ymax_right),
+                            -min(np.min(stacked_neg_right), ymin_right),
+                        )
+                        * 10
+                    )
+                    / 10
                 )
                 if ylim > 0:
                     if np.min(stacked_neg_right) < 0:
@@ -324,9 +333,19 @@ class GraphBuilder:
                 else:
                     axis_right.set_ylim([min(0, ymin_right), ymax_right])
                 axis_right.set_ylabel(g_options["vaxis"][1]["title"])
+                if "format" in g_options["vaxis"][1]:
+                    f_str = g_options["vaxis"][1]["format"]
+                    axis_right.yaxis.set_major_formatter(
+                        ticker.FormatStrFormatter(f_str)
+                    )
 
             if stacked_plus is not None:
-                ylim = math.ceil(max(np.max(stacked_plus), -np.min(stacked_neg)))
+                ylim = math.ceil(
+                    max(
+                        max(np.max(stacked_plus), ymax_left),
+                        -min(np.min(stacked_neg), ymin_left),
+                    )
+                )
                 if ylim > 0:
                     if np.min(stacked_neg) < 0:
                         ax.set_ylim([-ylim, ylim])
@@ -345,5 +364,4 @@ class GraphBuilder:
 
         if show:
             plt.show()
-        else:
-            return fig
+        return fig
