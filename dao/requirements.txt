@@ -18,7 +18,7 @@ pymysql~=1.1.2
 mariadb~=1.1.14
 flask~=3.1.2
 ephem~=4.2
-gunicorn~=24.1.1
+gunicorn~=25.0.3
 cryptography~=46.0.3
 tzlocal~=5.3.1
 mip==1.16rc0
