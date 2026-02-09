@@ -603,7 +603,7 @@ class DaBase(hass.Hass):
         :param vanaf: datetime start
         :param tot: datetime tot
         :param interval: 15"min of 1 hour of None, als None wordt self.interval genomen
-        :param ml_prediction: boolean default None(= from config)
+        :param _ml_prediction: boolean default None(= from config)
         :return:
         """
         from dao.prog.solar_predictor import SolarPredictor
@@ -627,12 +627,17 @@ class DaBase(hass.Hass):
                 solar_prog = solar_predictor.predict_solar_device(
                     solar_option, vanaf, tot
                 )
+                if solar_prog.isnull().any().any():
+                    logging.warning(f"NaN-waarden aangetroffen in voorspelling van {solar_name}"
+                                    f"Deze zijn op '0' gezet")
+                    solar_prog.fillna(0, inplace=True)
             except FileNotFoundError as ex:
                 logging.warning(ex)
                 logging.info(
                     f"Voor {solar_option['name']} is geen model "
                     f"en dus wordt DAO-predictor gebruikt"
                 )
+
                 result = self.calc_solar_predictions(
                     solar_option, vanaf, tot, interval=interval, _ml_prediction=False
                 )
