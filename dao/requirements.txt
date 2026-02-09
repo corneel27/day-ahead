@@ -2,7 +2,7 @@ pandas~=3.0.0
 pytz~=2025.2
 requests~=2.32.5
 matplotlib~=3.10.8
-numpy~=2.4.1
+numpy~=2.4.2
 mysql~=0.0.3
 cffi~=2.0.0
 mysql-connector-python~=9.5.0
@@ -19,7 +19,7 @@ mariadb~=1.1.14
 flask~=3.1.2
 ephem~=4.2
 gunicorn~=25.0.3
-cryptography~=46.0.3
+cryptography~=46.0.4
 tzlocal~=5.3.1
 mip==1.16rc0
 scikit-learn~=1.8.0
