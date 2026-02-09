@@ -3234,15 +3234,21 @@ class DaCalc(DaBase):
                 totals = False
 
             if totals:
-                df_accu[b].at[df_accu[b].index[-1], "uur"] = "Totaal"
-                df_accu[b].at[df_accu[b].index[-1], "eff"] = "--"
-                df_accu[b].at[df_accu[b].index[-1], "o_eff"] = "--"
-                df_accu[b].at[df_accu[b].index[-1], "SoC"] = pd.NA
+                # Kolom "uur" kan string "Totaal" krijgen door eerst naar object te casten
+                df_accu[b].iloc[:, 0] = df_accu[b].iloc[:, 0].astype(object)
+                df_accu[b].iloc[:, 0] = df_accu[b].iloc[:, 0].astype(object)
+                df_accu[b].iloc[-1, 0] = "Totaal"
+                df_accu[b].iloc[-1, 2] = np.nan  # eff (ac->dc)
+                df_accu[b].iloc[-1, 6] = np.nan  # eff (dc->bat)
+                df_accu[b].iloc[-1, 8] = np.nan  # o_eff
+                df_accu[b].iloc[-1, 9] = np.nan  # SoC
+
             logging.info(
                 f"In- en uitgaande energie per {self.interval_name} batterij "
                 f"{self.battery_options[b]['name']}"
                 f"\n{df_accu[b].to_string(index=False)}"
             )
+
 
         # soc dataframe maken
         df_soc = pd.DataFrame(columns=["tijd", "soc"])
