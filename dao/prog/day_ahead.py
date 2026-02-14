@@ -286,6 +286,10 @@ class DaCalc(DaBase):
 
         # nieuwe universele methode
         end = prog_data["tijd"].iloc[-1]
+        if self.interval == "1hour":
+            end += datetime.timedelta(hours=1)
+        else:
+            end += datetime.timedelta(minutes=15)
         for s in range(solar_num):
             solar_prog = self.calc_solar_predictions(
                 self.solar[s], start_interval_dt, end, self.interval
@@ -1089,7 +1093,8 @@ class DaCalc(DaBase):
             heat_rate = (
                 power_boiler * cop_boiler * self.interval_s / (spec_heat_boiler * 1000)
             )
-            max_steps = int((boiler_setpoint - boiler_ondergrens) / heat_rate) + 1
+            boiler_end_temp = max(boiler_ondergrens, boiler_act_temp - U*boiler_cooling)
+            max_steps = math.ceil((boiler_setpoint - boiler_end_temp) / heat_rate)
             # interval-index waarop boiler kan worden verwarmd
             if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
                 boiler_start_index = 0
@@ -3756,7 +3761,7 @@ class DaCalc(DaBase):
                         if wf > 0:
                             sum_weight_factor += wf
                             sum_power += wf * discharge_stages[b][ds]["power"]
-                    if sum_weight_factor < 0.95:
+                    if 0.10 <= sum_weight_factor < 0.95:
                         new_state = battery_state_on_value
                         balance = False
                         netto_vermogen_bat = -round(sum_power / sum_weight_factor)
