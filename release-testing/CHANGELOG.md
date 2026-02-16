@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.02.2.rc2
+No changes
+
 # 2026.02.2.rc1
 - Update several python modules
 - Adjusted the footer of the webpages (reported by steynovitch)
