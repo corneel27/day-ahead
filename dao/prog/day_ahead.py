@@ -1093,7 +1093,9 @@ class DaCalc(DaBase):
             heat_rate = (
                 power_boiler * cop_boiler * self.interval_s / (spec_heat_boiler * 1000)
             )
-            boiler_end_temp = max(boiler_ondergrens, boiler_act_temp - U*boiler_cooling)
+            boiler_end_temp = max(
+                boiler_ondergrens, boiler_act_temp - U * boiler_cooling
+            )
             max_steps = math.ceil((boiler_setpoint - boiler_end_temp) / heat_rate)
             # interval-index waarop boiler kan worden verwarmd
             if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
@@ -3253,7 +3255,6 @@ class DaCalc(DaBase):
                 f"{self.battery_options[b]['name']}"
                 f"\n{df_accu[b].to_string(index=False)}"
             )
-
 
         # soc dataframe maken
         df_soc = pd.DataFrame(columns=["tijd", "soc"])

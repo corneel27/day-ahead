@@ -628,8 +628,10 @@ class DaBase(hass.Hass):
                     solar_option, vanaf, tot
                 )
                 if solar_prog.isnull().any().any():
-                    logging.warning(f"NaN-waarden aangetroffen in voorspelling van {solar_name}"
-                                    f"Deze zijn op '0' gezet")
+                    logging.warning(
+                        f"NaN-waarden aangetroffen in voorspelling van {solar_name}"
+                        f"Deze zijn op '0' gezet"
+                    )
                     solar_prog.fillna(0, inplace=True)
             except FileNotFoundError as ex:
                 logging.warning(ex)

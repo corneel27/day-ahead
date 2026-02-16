@@ -1023,6 +1023,16 @@ class SolarPredictor(DaBase):
         :param end: eind-tijdstip voorspelling
         :return: dataframe met berekende voorspellingen per uur
         """
+
+        def check_prediction(prediction, irradiance):
+            if irradiance <= 0.0:
+                result = 0
+            else:
+                result = prediction
+            if result < 0.0:
+                result = 0
+            return result
+
         name = self.config.get(["name"], solar_dict, "default")
         self.solar_name = name.replace(" ", "_")
         self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
@@ -1039,7 +1049,13 @@ class SolarPredictor(DaBase):
         prognose = latest_dt < end
         weather_data = self.get_weatherdata(start, end, prognose=prognose)
         prediction = self.predict(weather_data)
-        prediction["prediction"] = prediction["prediction"].round(3)
+        weather_data.reset_index(inplace=True)
+        prediction["irradiance"] = weather_data["irradiance"]
+        prediction["prediction"] = prediction.apply(
+            lambda x: check_prediction(x["prediction"], x["irradiance"]), axis=1
+        )
+        prediction["prediction"].round(3)
+        prediction.drop("irradiance", axis=1, inplace=True)
         logging.info(f"ML prediction {self.solar_name}\n{prediction}")
         return prediction
 
