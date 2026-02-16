@@ -1118,7 +1118,8 @@ class Report(DaBase):
         :return: de ingevuld copy_to
         """
         dt = copy_from[col_name].dtype
-        if dt == float:
+        # Use is_numeric_dtype to catch all numeric types (float64, int64, etc.)
+        if pd.api.types.is_numeric_dtype(dt):
             copy_to[col_name] = 0.0
         else:
             copy_to[col_name] = ""

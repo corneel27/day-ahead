@@ -300,8 +300,8 @@ class GraphBuilder:
                 ax.set_xlabel(haxis["title"])
             num_xas = len(df.index)
             if num_xas > 12:
-                ax.xaxis.set_major_locator(ticker.MultipleLocator(round(num_xas / 12)))
-                ax.xaxis.set_minor_locator(ticker.MultipleLocator(1))
+                ax.xaxis.set_major_locator(ticker.MultipleLocator(12))
+                ax.xaxis.set_minor_locator(ticker.MultipleLocator(2))
             if len(str(xlabels[0])) > 2:
                 ax.set_xticks(
                     ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha="right"
