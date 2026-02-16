@@ -1,5 +1,14 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.02.2.rc1
+- Update several python modules
+- Adjusted the footer of the webpages (reported by steynovitch)
+- Removed NaN-values from ml-preditions
+- Fix error in reports (reported by @steynovich)
+- Correct totals battery summary
+- Fix error when period with minimum power is less than 1 minuut (reported by @Dogooder)
+- Fix negative or small values >0 in ml-predictions when irradiance==0 (reported by @Dogooder)
+
 # 2026.02.1.rc1
 Add missing module tzdata
 
