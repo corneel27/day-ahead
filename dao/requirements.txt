@@ -1,4 +1,4 @@
-pandas~=3.0.0
+pandas~=3.0.1
 pytz~=2025.2
 requests~=2.32.5
 matplotlib~=3.10.8
