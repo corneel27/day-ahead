@@ -577,7 +577,7 @@ class DaCalc(DaBase):
                 solar_series = prog_data[solar_name]
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u, in kWh
-                    prod_dc = solar_series[u] * interval_fraction[u]
+                    prod_dc = max(0.0, solar_series[u]) * interval_fraction[u]
                     eff = 1
                     for ds in range(DS[b]):
                         if discharge_stages[b][ds]["power"] / 1000 > prod_dc:
@@ -1057,9 +1057,10 @@ class DaCalc(DaBase):
             )
             # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
             logging.info(f"Boiler hysterese {boiler_hysterese} K")
-            boiler_cooling = (
-                self.boiler_options["cooling rate"] * self.interval_s / 3600
+            cooling_rate = self.get_setting_state(
+                "cooling rate", self.boiler_options, "number", 0.5
             )
+            boiler_cooling = cooling_rate * self.interval_s / 3600
             # 45 oC grens daaronder kan worden verwarmd
             # boiler_bovengrens = self.boiler_options["heating allowed below"]
             boiler_bovengrens = float(
