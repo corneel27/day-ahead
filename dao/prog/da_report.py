@@ -1326,7 +1326,7 @@ class Report(DaBase):
             if not isinstance(row.tijd, datetime.datetime):
                 print(row)
             if interval == "uur":
-                tijd_str = str(row.tijd)[10:14] + "00"
+                tijd_str = str(row.tijd)[0:14] + "00"
             elif interval == "dag":
                 tijd_str = str(row.tijd)[0:10]
             else:

@@ -649,7 +649,7 @@ class DaBase(hass.Hass):
             solar_prog["tijd"] = pd.to_datetime(solar_prog["date_time"])
             if interval == "15min":
                 solar_prog = interpolate(solar_prog, "prediction", quantity=True)
-            while solar_prog["tijd"].iloc[0].tz_localize(None) < vanaf:
+            while len(solar_prog)>0 and solar_prog["tijd"].iloc[0].tz_localize(None) < vanaf:
                 solar_prog = solar_prog.iloc[1:]
         else:
             solar_prog = pd.DataFrame(columns=["tijd", "prediction"])
