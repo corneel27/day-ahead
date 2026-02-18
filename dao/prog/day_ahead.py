@@ -577,7 +577,7 @@ class DaCalc(DaBase):
                 solar_series = prog_data[solar_name]
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u, in kWh
-                    prod_dc = solar_series[u] * interval_fraction[u]
+                    prod_dc = max(0.0, solar_series[u]) * interval_fraction[u]
                     eff = 1
                     for ds in range(DS[b]):
                         if discharge_stages[b][ds]["power"] / 1000 > prod_dc:
