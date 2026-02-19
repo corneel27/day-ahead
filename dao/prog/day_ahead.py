@@ -1142,7 +1142,7 @@ class DaCalc(DaBase):
             ]  # end temp boiler
 
             if (
-                boiler_start_index > boiler_end_index
+                (boiler_start_index > boiler_end_index) or (boiler_end_temp>= boiler_bovengrens)
             ):  # geen boiler opwarming in deze periode
                 logging.info(
                     f"Boiler wordt niet ingepland, omdat de verwachte "
