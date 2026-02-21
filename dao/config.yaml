@@ -1,6 +1,6 @@
 ---
 name: 刀 Day Ahead Optimizer
-version: 2026.02.1
+version: 2026.02.2
 slug: day_ahead_opt
 description: Home Assistant Community Add-ons for day ahead optimizations
 url: https://github.com/corneel27/day-ahead
