@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.02.2.rc4
+- Fix error in calculating heating window boiler
+- Update python module pandas 3.0.0 -> 3.0.1
+
 # 2026.02.2.rc3
 - Fixed error in reports and api with interval "vandaag en morgen"
 - Made boiler cooling_rate flex setting (feature request by @tomvandepoel3)
