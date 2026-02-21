@@ -541,6 +541,12 @@ class DaCalc(DaBase):
                     default=lower_limit[b],
                 )
             )
+            if opt_low_lvl < lower_limit[b]:
+                logging.warning(f"'optimal lower level' is lower defined as 'lower limit'."
+                                f" 'Optimal lower level' is adjusted to "
+                                f"'lower limit' ({lower_limit[b]})")
+                opt_low_lvl = lower_limit[b]
+
             opt_low_level.append(opt_low_lvl)
 
             # penalty in euro/%.hour
