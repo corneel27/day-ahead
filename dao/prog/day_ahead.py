@@ -436,7 +436,9 @@ class DaCalc(DaBase):
         # in kW
         max_charge_power = []
         max_discharge_power = []
-        reduced_power = []
+        reduce_power_high_soc = []
+        reduce_power_low_soc = []
+        reduce_power_hours = []
         max_dc_from_bat_power = []
         max_dc_to_bat_power = []
         avg_eff_dc_to_ac = []
@@ -477,7 +479,7 @@ class DaCalc(DaBase):
                     int_uur = uur[u] if self.interval == "1hour" else int(uur[u][0:2])
                     if int_uur == hour:
                         red_power[u] = power
-            reduced_power.append(red_power)
+            reduce_power_hours.append(red_power)
             if reduced:
                 if self.log_level == logging.DEBUG:
                     logging.debug(
@@ -496,21 +498,82 @@ class DaCalc(DaBase):
                 )
 
             max_dc_from_bat_power.append(
-                self.config.get(
-                    ["bat_to_dc max power"],
+                self.get_setting_state(
+                    "bat_to_dc max power",
                     self.battery_options[b],
+                    "number",
                     2000 * max_discharge_power[b],
                 )
                 / 1000
             )
             max_dc_to_bat_power.append(
-                self.config.get(
-                    ["dc_to_bat max power"],
+                self.get_setting_state(
+                    "dc_to_bat max power",
                     self.battery_options[b],
-                    2000 * max_discharge_power[b],
+                    "number",
+                    2000 * max_charge_power[b],
                 )
                 / 1000
             )
+
+            # reduce power low soc
+            red_power_low_soc = self.config.get(
+                ["reduce_power_low_soc"], self.battery_options[b], []
+            )
+            if len(red_power_low_soc) == 1:
+                logging.warning(
+                    f"For reduced power at low soc there must be two entries, "
+                    f"one found."
+                )
+                red_power_low_soc = []
+            red_power_low_soc = sorted(red_power_low_soc, key=lambda x: x["soc"])
+            for rpl in range(len(red_power_low_soc) - 1):
+                helling = (
+                    red_power_low_soc[rpl + 1]["power"]
+                    - red_power_low_soc[rpl]["power"]
+                ) / (red_power_low_soc[rpl + 1]["soc"] - red_power_low_soc[rpl]["soc"])
+                red_power_low_soc[rpl]["helling"] = helling
+                logging.info(
+                    f"Reduced power applied during discharging at low soc, between "
+                    f"{red_power_low_soc[rpl]['soc']}% and "
+                    f"{red_power_low_soc[rpl + 1]['soc']}% power is reduced from "
+                    f"{red_power_low_soc[rpl]['power']}W until "
+                    f"{red_power_low_soc[rpl + 1]['power']}W"
+                )
+            if not red_power_low_soc:
+                logging.info(f"No reduced power applied during discharging at low soc")
+            reduce_power_low_soc.append(red_power_low_soc)
+
+            # reduce power high soc
+            red_power_high_soc = self.config.get(
+                ["reduce_power_high_soc"], self.battery_options[b], []
+            )
+            if len(red_power_high_soc) == 1:
+                logging.warning(
+                    f"For reduced power at high soc there must be two entries, "
+                    f"one found"
+                )
+                red_power_high_soc = []
+            red_power_high_soc = sorted(red_power_high_soc, key=lambda x: x["soc"])
+            for rph in range(len(red_power_high_soc) - 1):
+                helling = (
+                    red_power_high_soc[rph + 1]["power"]
+                    - red_power_high_soc[rph]["power"]
+                ) / (
+                    red_power_high_soc[rph + 1]["soc"] - red_power_high_soc[rph]["soc"]
+                )
+                red_power_high_soc[rph]["helling"] = helling
+                logging.info(
+                    f"Reduced power applied during charging at high soc, between "
+                    f"{red_power_high_soc[rph]['soc']}% and "
+                    f"{red_power_high_soc[rph + 1]['soc']}% power is reduced from "
+                    f"{red_power_high_soc[rph]['power']}W until "
+                    f"{red_power_high_soc[rph + 1]['power']}W"
+                )
+            if not red_power_low_soc:
+                logging.info(f"No reduced power applied during charging at high soc")
+            reduce_power_high_soc.append(red_power_high_soc)
+
             # DS is aantal discharge stages
             DS.append(len(discharge_stages[b]))
             sum_eff = 0
@@ -541,6 +604,14 @@ class DaCalc(DaBase):
                     default=lower_limit[b],
                 )
             )
+            if opt_low_lvl < lower_limit[b]:
+                logging.warning(
+                    f"'optimal lower level' is lower defined as 'lower limit'."
+                    f" 'Optimal lower level' is adjusted to "
+                    f"'lower limit' ({lower_limit[b]})"
+                )
+                opt_low_lvl = lower_limit[b]
+
             opt_low_level.append(opt_low_lvl)
 
             # penalty in euro/%.hour
@@ -647,7 +718,7 @@ class DaCalc(DaBase):
                 model.add_var(
                     var_type=CONTINUOUS,
                     lb=0,
-                    ub=min(reduced_power[b][u], max_charge_power[b]),
+                    ub=min(reduce_power_hours[b][u], max_charge_power[b]),
                 )
                 for u in range(U)
             ]
@@ -672,7 +743,7 @@ class DaCalc(DaBase):
                 model.add_var(
                     var_type=CONTINUOUS,
                     lb=0,
-                    ub=min(reduced_power[b][u], max_discharge_power[b]),
+                    ub=min(reduce_power[b][u], max_discharge_power[b]),
                 )
                 for u in range(U)
             ]
@@ -724,7 +795,7 @@ class DaCalc(DaBase):
                 model.add_var(
                     var_type=CONTINUOUS,
                     lb=0,
-                    ub=min(reduced_power[b][u], max_discharge_power[b]),
+                    ub=min(reduce_power_hours[b][u], max_discharge_power[b]),
                 )
                 for u in range(U)
             ]
@@ -907,6 +978,33 @@ class DaCalc(DaBase):
                     2,
                 )
                 # tot hier constraints ontladen met sos
+
+        """
+        constraints reduced charging power at low or high soc
+        max_power[u] <= max_power_0 + helling x (soc[u] – soc_0)
+        max_power[u] <= max_power_0 + helling x soc[u] – helling x soc_0
+        max_power[u] - helling x soc[u] <= max_power_0 - helling x soc-0
+        """
+        # low soc
+        for b in range(B):
+            red_power = reduce_power_low_soc[b]
+            for rpl in range(len(red_power) - 1):
+                helling = int(red_power[rpl]["helling"])
+                for u in range(U):
+                    model += (
+                        dc_from_bat[b][u] - helling * soc[b][u]
+                        <= red_power[rpl]["power"] - helling * red_power[rpl]["soc"]
+                    )
+        # high soc
+        for b in range(B):
+            red_power = reduce_power_high_soc[b]
+            for rph in range(len(red_power) - 1):
+                helling = int(red_power[rph]["helling"])
+                for u in range(U):
+                    model += (
+                        dc_to_bat[b][u] - helling * soc[b][u]
+                        <= red_power[rph]["power"] - helling * red_power[rph]["soc"]
+                    )
 
         for b in range(B):
             for u in range(U + 1):
@@ -1141,8 +1239,8 @@ class DaCalc(DaBase):
                 for _ in range(U + 1)
             ]  # end temp boiler
 
-            if (
-                (boiler_start_index > boiler_end_index) or (boiler_end_temp>= boiler_bovengrens)
+            if (boiler_start_index > boiler_end_index) or (
+                boiler_end_temp >= boiler_bovengrens
             ):  # geen boiler opwarming in deze periode
                 logging.info(
                     f"Boiler wordt niet ingepland, omdat de verwachte "
