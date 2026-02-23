@@ -3,6 +3,7 @@
 # 2026.03.0.rc1
 - Made optional battery settings "bat_to_dc max power" and "dc_to_bat max power" flex-setting (feature request by @DaBit)
 - Reduce power during charging at high soc and during discharging at low soc (feature requests form @bartzzz and @arjenhiemstra)
+- Made check 'optimal lower level" lower as "lower limit" (feature request of @mistral2)
 
 # 2026.02.2.rc4
 - Fix error in calculating heating window boiler
