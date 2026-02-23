@@ -185,8 +185,8 @@ class GraphBuilder:
                     labels.append(label)
                     plot = None
                     if vax == "left":
-                        ymax_left = math.ceil(max(ymax_left, max(data_array)))
-                        ymin_left = math.floor(min(ymin_left, min(data_array)))
+                        ymax_left = math.ceil(max(ymax_left, max(data_array)) * 10) / 10
+                        ymin_left = math.floor(min(ymin_left, min(data_array)) *10) / 10
                     if vax == "right":
                         ymax_right = (
                             math.ceil(max(ymax_right, max(data_array)) * 10) / 10
@@ -299,7 +299,7 @@ class GraphBuilder:
             if "title" in haxis and g_nr == (num_graphs - 1):
                 ax.set_xlabel(haxis["title"])
             num_xas = len(df.index)
-            if num_xas > 12:
+            if num_xas > 24:
                 ax.xaxis.set_major_locator(ticker.MultipleLocator(12))
                 ax.xaxis.set_minor_locator(ticker.MultipleLocator(2))
             if len(str(xlabels[0])) > 2:
@@ -340,11 +340,14 @@ class GraphBuilder:
                     )
 
             if stacked_plus is not None:
-                ylim = math.ceil(
-                    max(
-                        max(np.max(stacked_plus), ymax_left),
-                        -min(np.min(stacked_neg), ymin_left),
+                ylim = (
+                    math.ceil(
+                        max(
+                            max(np.max(stacked_plus), ymax_left) * 10,
+                            -min(np.min(stacked_neg), ymin_left) * 10,
+                        )
                     )
+                    / 10
                 )
                 if ylim > 0:
                     if np.min(stacked_neg) < 0:

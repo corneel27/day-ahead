@@ -498,18 +498,20 @@ class DaCalc(DaBase):
                 )
 
             max_dc_from_bat_power.append(
-                self.config.get(
-                    ["bat_to_dc max power"],
+                self.get_setting_state(
+                    "bat_to_dc max power",
                     self.battery_options[b],
+                    "number",
                     2000 * max_discharge_power[b],
                 )
                 / 1000
             )
             max_dc_to_bat_power.append(
-                self.config.get(
-                    ["dc_to_bat max power"],
+                self.get_setting_state(
+                    "dc_to_bat max power",
                     self.battery_options[b],
-                    2000 * max_discharge_power[b],
+                    "number",
+                    2000 * max_charge_power[b],
                 )
                 / 1000
             )
@@ -519,35 +521,38 @@ class DaCalc(DaBase):
                 ["reduce_power_low_soc"], self.battery_options[b], []
             )
             if len(red_power_low_soc) == 1:
-                logging.warning(f"For reduced power at low soc there must be two entries, "
-                                f"one found.")
+                logging.warning(
+                    f"For reduced power at low soc there must be two entries, "
+                    f"one found."
+                )
                 red_power_low_soc = []
             red_power_low_soc = sorted(red_power_low_soc, key=lambda x: x["soc"])
             for rpl in range(len(red_power_low_soc) - 1):
                 helling = (
                     red_power_low_soc[rpl + 1]["power"]
                     - red_power_low_soc[rpl]["power"]
-                ) / (
-                    red_power_low_soc[rpl + 1]["soc"] - red_power_low_soc[rpl]["soc"]
-                )
+                ) / (red_power_low_soc[rpl + 1]["soc"] - red_power_low_soc[rpl]["soc"])
                 red_power_low_soc[rpl]["helling"] = helling
-                logging.info(f"Reduced power applied during discharging at low soc, between "
-                             f"{red_power_low_soc[rpl]["soc"]}% and "
-                             f"{red_power_low_soc[rpl + 1]["soc"]}% power is reduced from "
-                             f"{red_power_low_soc[rpl]["power"]}W until "
-                             f"{red_power_low_soc[rpl + 1]["power"]}W")
+                logging.info(
+                    f"Reduced power applied during discharging at low soc, between "
+                    f"{red_power_low_soc[rpl]['soc']}% and "
+                    f"{red_power_low_soc[rpl + 1]['soc']}% power is reduced from "
+                    f"{red_power_low_soc[rpl]['power']}W until "
+                    f"{red_power_low_soc[rpl + 1]['power']}W"
+                )
             if not red_power_low_soc:
                 logging.info(f"No reduced power applied during discharging at low soc")
             reduce_power_low_soc.append(red_power_low_soc)
-
 
             # reduce power high soc
             red_power_high_soc = self.config.get(
                 ["reduce_power_high_soc"], self.battery_options[b], []
             )
             if len(red_power_high_soc) == 1:
-                logging.warning(f"For reduced power at high soc there must be two entries, "
-                                f"one found")
+                logging.warning(
+                    f"For reduced power at high soc there must be two entries, "
+                    f"one found"
+                )
                 red_power_high_soc = []
             red_power_high_soc = sorted(red_power_high_soc, key=lambda x: x["soc"])
             for rph in range(len(red_power_high_soc) - 1):
@@ -558,11 +563,13 @@ class DaCalc(DaBase):
                     red_power_high_soc[rph + 1]["soc"] - red_power_high_soc[rph]["soc"]
                 )
                 red_power_high_soc[rph]["helling"] = helling
-                logging.info(f"Reduced power applied during charging at high soc, between "
-                             f"{red_power_high_soc[rph]["soc"]}% and "
-                             f"{red_power_high_soc[rph + 1]["soc"]}% power is reduced from "
-                             f"{red_power_high_soc[rph]["power"]}W until "
-                             f"{red_power_high_soc[rph + 1]["power"]}W")
+                logging.info(
+                    f"Reduced power applied during charging at high soc, between "
+                    f"{red_power_high_soc[rph]['soc']}% and "
+                    f"{red_power_high_soc[rph + 1]['soc']}% power is reduced from "
+                    f"{red_power_high_soc[rph]['power']}W until "
+                    f"{red_power_high_soc[rph + 1]['power']}W"
+                )
             if not red_power_low_soc:
                 logging.info(f"No reduced power applied during charging at high soc")
             reduce_power_high_soc.append(red_power_high_soc)
@@ -978,7 +985,7 @@ class DaCalc(DaBase):
         max_power[u] <= max_power_0 + helling x soc[u] – helling x soc_0
         max_power[u] - helling x soc[u] <= max_power_0 - helling x soc-0
         """
-        #low soc
+        # low soc
         for b in range(B):
             red_power = reduce_power_low_soc[b]
             for rpl in range(len(red_power) - 1):
@@ -986,10 +993,9 @@ class DaCalc(DaBase):
                 for u in range(U):
                     model += (
                         dc_from_bat[b][u] - helling * soc[b][u]
-                        <= red_power[rpl]["power"]
-                        - helling * red_power[rpl]["soc"]
+                        <= red_power[rpl]["power"] - helling * red_power[rpl]["soc"]
                     )
-        #high soc
+        # high soc
         for b in range(B):
             red_power = reduce_power_high_soc[b]
             for rph in range(len(red_power) - 1):
@@ -997,8 +1003,7 @@ class DaCalc(DaBase):
                 for u in range(U):
                     model += (
                         dc_to_bat[b][u] - helling * soc[b][u]
-                        <= red_power[rph]["power"]
-                        - helling * red_power[rph]["soc"]
+                        <= red_power[rph]["power"] - helling * red_power[rph]["soc"]
                     )
 
         for b in range(B):
