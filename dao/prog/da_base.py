@@ -526,7 +526,7 @@ class DaBase(hass.Hass):
             else:  # setting_value is een string (entity?)
                 try:
                     state = self.get_state(setting_value).state
-                    return state
+                    return float(state)
                 except Exception:
                     logging.warning(f"No value found for {key}, {setting_value}")
                     return default
