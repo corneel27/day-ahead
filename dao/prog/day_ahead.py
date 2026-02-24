@@ -1535,13 +1535,13 @@ class DaCalc(DaBase):
                     == "on"
                 )
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity plugged in: {ex}" )
                 plugged_in = False
             ev_plugged_in.append(plugged_in)
             try:
                 position = self.get_state(self.ev_options[e]["entity position"]).state
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity position: {ex}" )
                 position = "away"
             ev_position.append(position)
             try:
@@ -1549,7 +1549,7 @@ class DaCalc(DaBase):
                     self.get_state(self.ev_options[e]["entity actual level"]).state
                 )
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity actual level: {ex}" )
                 soc_state = 100.0
 
             # onderstaande regel eventueel voor testen
@@ -2565,7 +2565,7 @@ class DaCalc(DaBase):
                         self.get_state(entity_machine_program).state
                     )
                 except Exception as ex:
-                    logging.error(ex)
+                    logging.error(f"Machines: entity_machine_program: {ex}")
             p = next(
                 (
                     i
