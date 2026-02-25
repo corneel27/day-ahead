@@ -21,7 +21,7 @@ ephem~=4.2
 gunicorn~=25.1.0
 cryptography~=46.0.5
 tzlocal~=5.3.1
-mip==1.16rc0
+mip==1.17
 scikit-learn~=1.8.0
 xgboost~=3.2.0
 scipy~=1.17.0
