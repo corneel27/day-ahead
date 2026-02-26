@@ -981,9 +981,10 @@ class DaCalc(DaBase):
 
         """
         constraints reduced charging power at low or high soc
-        max_power[u] <= max_power_0 + helling x (soc[u] – soc_0)
-        max_power[u] <= max_power_0 + helling x soc[u] – helling x soc_0
-        max_power[u] - helling x soc[u] <= max_power_0 - helling x soc-0
+        max_power[u] x 1000 <= max_power_0 + helling x (soc[u] – soc_0)
+        max_power[u] x 1000 <= max_power_0 + helling x soc[u] – helling x soc_0
+        max_power[u] x 1000 - helling x soc[u] <= max_power_0 - helling x soc_0
+        
         """
         # low soc
         for b in range(B):
@@ -992,7 +993,7 @@ class DaCalc(DaBase):
                 helling = int(red_power[rpl]["helling"])
                 for u in range(U):
                     model += (
-                        dc_from_bat[b][u] - helling * soc[b][u]
+                        dc_from_bat[b][u] * 1000 - helling * soc[b][u]
                         <= red_power[rpl]["power"] - helling * red_power[rpl]["soc"]
                     )
         # high soc
@@ -1002,7 +1003,7 @@ class DaCalc(DaBase):
                 helling = int(red_power[rph]["helling"])
                 for u in range(U):
                     model += (
-                        dc_to_bat[b][u] - helling * soc[b][u]
+                        dc_to_bat[b][u] * 1000 - helling * soc[b][u]
                         <= red_power[rph]["power"] - helling * red_power[rph]["soc"]
                     )
 
@@ -2496,7 +2497,7 @@ class DaCalc(DaBase):
                 for j in range(blocks_num):
                     for u in range(U):
                         model += (u - (hp_start_index[j] + block_len[j] - 1)) <= (
-                            u * (1 - hp_bl_on[j][u])
+                            U * (1 - hp_bl_on[j][u])
                         )
 
                 # constraint 3
