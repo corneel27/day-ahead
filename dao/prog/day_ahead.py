@@ -294,7 +294,7 @@ class DaCalc(DaBase):
             solar_prog = self.calc_solar_predictions(
                 self.solar[s], start_interval_dt, end, self.interval
             )
-            solar_name = self.solar[s]["name"].replace(" ", "_")
+            solar_name = self.solar[s]["name"].replace(" ", "_").replace("-","_")
             prog_data[solar_name] = solar_prog["prediction"]
         for b in range(B):
             for s in range(len(self.battery_options[b]["solar"])):
@@ -302,7 +302,7 @@ class DaCalc(DaBase):
                 solar_prog = self.calc_solar_predictions(
                     solar_option, start_interval_dt, end, self.interval
                 )
-                solar_name = solar_option["name"].replace(" ", "_")
+                solar_name = solar_option["name"].replace(" ", "_").replace("-","_")
                 prog_data[solar_name] = solar_prog["prediction"]
 
         # prog_data = prog_data.reset_index()
@@ -326,7 +326,7 @@ class DaCalc(DaBase):
                 hour_fraction.append(self.interval_s / 3600)
                 interval_fraction.append(1)
             for s in range(solar_num):
-                solar_name = self.solar[s]["name"].replace(" ", "_")
+                solar_name = self.solar[s]["name"].replace(" ", "_").replace("-","_")
                 prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                 solar_prod[s].append(prod)
                 pv_total += prod
@@ -338,7 +338,7 @@ class DaCalc(DaBase):
             for b in range(B):
                 for s in range(len(self.battery_options[b]["solar"])):
                     solar_option = self.battery_options[b]["solar"][s]
-                    solar_name = solar_option["name"].replace(" ", "_")
+                    solar_name = solar_option["name"].replace(" ", "_").replace("-","_")
                     prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))

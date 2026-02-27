@@ -934,7 +934,7 @@ class SolarPredictor(DaBase):
         self, weather_data: pd.DataFrame, solar_dict: Dict, start: dt.datetime
     ):
         name = self.config.get(["name"], solar_dict, "default")
-        self.solar_name = name.replace(" ", "_")
+        self.solar_name = name.replace(" ", "_").replace("-","_")
         self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
         self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
         self.solar_capacity = self.get_property_from_dict("capacity", solar_dict, 5)
@@ -1034,7 +1034,7 @@ class SolarPredictor(DaBase):
             return result
 
         name = self.config.get(["name"], solar_dict, "default")
-        self.solar_name = name.replace(" ", "_")
+        self.solar_name = name.replace(" ", "_").replace("-","_")
         self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
         self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
         self.solar_capacity = self.get_property_from_dict("capacity", solar_dict, 5)
