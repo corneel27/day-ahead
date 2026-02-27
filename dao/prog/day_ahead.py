@@ -53,8 +53,8 @@ class DaCalc(DaBase):
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2026, month=1, day=13, hour=23, minute=0)
-        # _start_soc = 11.0
+        # _start_dt = datetime.datetime(year=2026, month=2, day=25, hour=14, minute=30)
+        # _start_soc = 78.0
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
@@ -294,7 +294,7 @@ class DaCalc(DaBase):
             solar_prog = self.calc_solar_predictions(
                 self.solar[s], start_interval_dt, end, self.interval
             )
-            solar_name = self.solar[s]["name"].replace(" ", "_")
+            solar_name = self.solar[s]["name"].replace(" ", "_").replace("-","_")
             prog_data[solar_name] = solar_prog["prediction"]
         for b in range(B):
             for s in range(len(self.battery_options[b]["solar"])):
@@ -302,7 +302,7 @@ class DaCalc(DaBase):
                 solar_prog = self.calc_solar_predictions(
                     solar_option, start_interval_dt, end, self.interval
                 )
-                solar_name = solar_option["name"].replace(" ", "_")
+                solar_name = solar_option["name"].replace(" ", "_").replace("-","_")
                 prog_data[solar_name] = solar_prog["prediction"]
 
         # prog_data = prog_data.reset_index()
@@ -326,7 +326,7 @@ class DaCalc(DaBase):
                 hour_fraction.append(self.interval_s / 3600)
                 interval_fraction.append(1)
             for s in range(solar_num):
-                solar_name = self.solar[s]["name"].replace(" ", "_")
+                solar_name = self.solar[s]["name"].replace(" ", "_").replace("-","_")
                 prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                 solar_prod[s].append(prod)
                 pv_total += prod
@@ -338,7 +338,7 @@ class DaCalc(DaBase):
             for b in range(B):
                 for s in range(len(self.battery_options[b]["solar"])):
                     solar_option = self.battery_options[b]["solar"][s]
-                    solar_name = solar_option["name"].replace(" ", "_")
+                    solar_name = solar_option["name"].replace(" ", "_").replace("-","_")
                     prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))
@@ -981,9 +981,10 @@ class DaCalc(DaBase):
 
         """
         constraints reduced charging power at low or high soc
-        max_power[u] <= max_power_0 + helling x (soc[u] – soc_0)
-        max_power[u] <= max_power_0 + helling x soc[u] – helling x soc_0
-        max_power[u] - helling x soc[u] <= max_power_0 - helling x soc-0
+        max_power[u] x 1000 <= max_power_0 + helling x (soc[u] – soc_0)
+        max_power[u] x 1000 <= max_power_0 + helling x soc[u] – helling x soc_0
+        max_power[u] x 1000 - helling x soc[u] <= max_power_0 - helling x soc_0
+        
         """
         # low soc
         for b in range(B):
@@ -992,7 +993,7 @@ class DaCalc(DaBase):
                 helling = int(red_power[rpl]["helling"])
                 for u in range(U):
                     model += (
-                        dc_from_bat[b][u] - helling * soc[b][u]
+                        dc_from_bat[b][u] * 1000 - helling * soc[b][u]
                         <= red_power[rpl]["power"] - helling * red_power[rpl]["soc"]
                     )
         # high soc
@@ -1002,7 +1003,7 @@ class DaCalc(DaBase):
                 helling = int(red_power[rph]["helling"])
                 for u in range(U):
                     model += (
-                        dc_to_bat[b][u] - helling * soc[b][u]
+                        dc_to_bat[b][u] * 1000 - helling * soc[b][u]
                         <= red_power[rph]["power"] - helling * red_power[rph]["soc"]
                     )
 
@@ -2496,7 +2497,7 @@ class DaCalc(DaBase):
                 for j in range(blocks_num):
                     for u in range(U):
                         model += (u - (hp_start_index[j] + block_len[j] - 1)) <= (
-                            u * (1 - hp_bl_on[j][u])
+                            U * (1 - hp_bl_on[j][u])
                         )
 
                 # constraint 3

@@ -1,5 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.0.rc2
+
+- Fixed error with flex setting of "dc_to_bat max power" or "bat_to_dc max power" (reported by @DaBit)
+- Fixed error not planning heatpump in first interval when not in run-mode (reported by @f.welvering)
+- Missing hour-values (solar-inverters) are filled up by zero's (suggested by @DaBit)
+- Fixed error when "-" is used in name of solar-devices (reported by @patrickvorgers and @Asclepius8)
+
 # 2026.03.0.rc1
 - Made optional battery settings "bat_to_dc max power" and "dc_to_bat max power" flex-setting (feature request by @DaBit)
 - Reduce power during charging at high soc and during discharging at low soc (feature requests form @bartzzz and @arjenhiemstra)

@@ -526,7 +526,7 @@ class DaBase(hass.Hass):
             else:  # setting_value is een string (entity?)
                 try:
                     state = self.get_state(setting_value).state
-                    return state
+                    return float(state)
                 except Exception:
                     logging.warning(f"No value found for {key}, {setting_value}")
                     return default
@@ -620,7 +620,7 @@ class DaBase(hass.Hass):
             interval_s = self.interval_s
         else:
             interval_s = 900 if interval == "15min" else 3600
-        solar_name = solar_option["name"].replace(" ", "_")
+        solar_name = solar_option["name"].replace(" ", "_").replace("-","_")
         if ml_prediction:
             solar_predictor = SolarPredictor()
             try:
