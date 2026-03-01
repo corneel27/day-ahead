@@ -992,21 +992,21 @@ class DaCalc(DaBase):
         for b in range(B):
             red_power = reduce_power_low_soc[b]
             for rpl in range(len(red_power) - 1):
-                helling = int(red_power[rpl]["helling"])
+                helling = int(red_power[rpl]["helling"]/2)
                 for u in range(U):
                     model += (
-                        dc_from_bat[b][u] * 1000 - helling * soc[b][u]
-                        <= red_power[rpl]["power"] - helling * red_power[rpl]["soc"]
+                        dc_from_bat[b][u] * 1000 - helling * soc[b][u] - helling * soc[b][u+1]
+                        <= red_power[rpl]["power"] - 2 * helling * red_power[rpl]["soc"]
                     )
         # high soc
         for b in range(B):
             red_power = reduce_power_high_soc[b]
             for rph in range(len(red_power) - 1):
-                helling = int(red_power[rph]["helling"])
+                helling = int(red_power[rph]["helling"]/2)
                 for u in range(U):
                     model += (
-                        dc_to_bat[b][u] * 1000 - helling * soc[b][u]
-                        <= red_power[rph]["power"] - helling * red_power[rph]["soc"]
+                        dc_to_bat[b][u] * 1000 - helling * soc[b][u] - helling * soc[b][u+1]
+                        <= red_power[rph]["power"] - 2 * helling * red_power[rph]["soc"]
                     )
 
         for b in range(B):
