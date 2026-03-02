@@ -1056,7 +1056,8 @@ class Report(DaBase):
             df_raw.index = df_raw["tijd"]
             # tot hier voor de test
             """
-            prev_time = pd.to_datetime(vanaf-datetime.timedelta(hours=1))
+            row = None
+            prev_time = pd.to_datetime(vanaf - datetime.timedelta(hours=1))
             for row in df_raw.itertuples():
                 new_tijd = prev_time + datetime.timedelta(hours=1)
                 while new_tijd < row.tijd:
@@ -1073,7 +1074,7 @@ class Report(DaBase):
                 prev_time = row.tijd
             now = datetime.datetime.now()
             tot = min(datetime.datetime(now.year, now.month, now.day, now.hour), tot)
-            if row.tijd < tot - datetime.timedelta(hours=1):
+            if not row is None and row.tijd < tot - datetime.timedelta(hours=1):
                 new_tijd = row.tijd + datetime.timedelta(hours=1)
                 while new_tijd < tot:
                     new_row_values = [
