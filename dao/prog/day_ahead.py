@@ -476,7 +476,7 @@ class DaCalc(DaBase):
                 hour = int(key)
                 power = value / 1000
                 for u in range(U):
-                    int_uur = uur[u] if self.interval == "1hour" else int(uur[u][0:2])
+                    int_uur = int(uur[u][0:2])
                     if int_uur == hour:
                         red_power[u] = power
             reduce_power_hours.append(red_power)
