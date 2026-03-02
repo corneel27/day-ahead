@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.0.rc4
+Fixed error report/api with period "morgen"
+
 # 2026.03.0.rc3
 ### Change
 Changed entity hp heat demand from input_boolean (values "on"/"off" to input_select values "off"/"eco"/"max"(="on")
