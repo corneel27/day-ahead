@@ -1,5 +1,16 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.0.rc3
+### Change
+Changed entity hp heat demand from input_boolean (values "on"/"off" to input_select values "off"/"eco"/"max"(="on")
+
+### Fixes
+- Fixed error "reduce hours" with interval "1hour" (pr by @bramgradussen)
+- Fixed error missing inverter values at the begin/end of period (@reported by @DaBit)
+- Fixed error when reducing power during charging at high soc and during discharging 
+at low soc, taken the mean value of the soc at the start and the soc at the end of the interval (reported by @bartzzz)
+
+
 # 2026.03.0.rc2
 
 - Fixed error with flex setting of "dc_to_bat max power" or "bat_to_dc max power" (reported by @DaBit)

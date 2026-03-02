@@ -1046,34 +1046,49 @@ class Report(DaBase):
         # Print the raw DataFrame
 
         # fill 0 for missing records
-        if agg =="uur":
+        if agg == "uur":
             columns = list(df_raw.columns.values)
             df_insert = pd.DataFrame(columns=columns)
             """
             # vanaf hier voor de test:
             df_raw.reset_index(drop=True, inplace=True)
-            df_raw.drop([2, 3, 4], inplace=True)
+            df_raw.drop([0, 1, 4, 5, 6, 13], inplace=True)
             df_raw.index = df_raw["tijd"]
             # tot hier voor de test
             """
-            prev_row = None
+            prev_time = pd.to_datetime(vanaf-datetime.timedelta(hours=1))
             for row in df_raw.itertuples():
-                if prev_row is not None:
-                    new_tijd = prev_row.tijd + datetime.timedelta(hours=1)
-                    while new_tijd < row.tijd:
-                        new_row_values = [
-                            new_tijd.strftime("%Y-%m-%d %H:%M")[11:14]+"00",
-                            pd.to_datetime(new_tijd),
-                            pd.to_datetime(new_tijd),
-                            new_tijd.timestamp(),
-                            0,
-                            prev_row.dim
-                        ]
-                        df_insert.loc[len(df_insert.index)] = new_row_values
-                        new_tijd += datetime.timedelta(hours=1)
-                prev_row = row
+                new_tijd = prev_time + datetime.timedelta(hours=1)
+                while new_tijd < row.tijd:
+                    new_row_values = [
+                        new_tijd.strftime("%Y-%m-%d %H:%M")[11:14] + "00",
+                        pd.to_datetime(new_tijd),
+                        pd.to_datetime(new_tijd),
+                        new_tijd.timestamp(),
+                        0,
+                        row.dim,
+                    ]
+                    df_insert.loc[len(df_insert.index)] = new_row_values
+                    new_tijd += datetime.timedelta(hours=1)
+                prev_time = row.tijd
+            now = datetime.datetime.now()
+            tot = min(datetime.datetime(now.year, now.month, now.day, now.hour), tot)
+            if row.tijd < tot - datetime.timedelta(hours=1):
+                new_tijd = row.tijd + datetime.timedelta(hours=1)
+                while new_tijd < tot:
+                    new_row_values = [
+                        new_tijd.strftime("%Y-%m-%d %H:%M")[11:14] + "00",
+                        pd.to_datetime(new_tijd),
+                        pd.to_datetime(new_tijd),
+                        new_tijd.timestamp(),
+                        0,
+                        row.dim,
+                    ]
+                    df_insert.loc[len(df_insert.index)] = new_row_values
+                    new_tijd += datetime.timedelta(hours=1)
+
             if len(df_insert) > 0:
-                df_insert.index= df_insert["tijd"]
+                df_insert.index = df_insert["tijd"]
                 df_raw = pd.concat([df_raw, df_insert])
                 df_raw.sort_index(inplace=True)
         logging.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
