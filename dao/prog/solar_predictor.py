@@ -169,7 +169,6 @@ class SolarPredictor(DaBase):
         df["time"] = pd.to_datetime(df.index)
         # df["cos_angle_of_inc"] = df.apply(lambda x: self.calc_cos_sun_angle(x["time"]), axis=1)
         df.drop("time", axis=1, inplace=True)
-        logging.debug(f"Data with all features\n{df.to_string()}")
         return df
 
     def create_physics_based_constraints(
@@ -457,7 +456,7 @@ class SolarPredictor(DaBase):
             )
             if self.log_level >= logging.DEBUG:
                 outliers = merged_data[~merged_data.isin(final_clean_data).all(axis=1)]
-                logging.debug(f"Detectted outliers:\n{outliers.to_string()}")
+                logging.debug(f"Detected outliers:\n{outliers.to_string()}")
         return final_clean_data
 
     def train(
@@ -517,6 +516,7 @@ class SolarPredictor(DaBase):
         logging.info(
             f"Date range: {merged_data.index.min()} to {merged_data.index.max()}"
         )
+        logging.debug(f"Merged dataset all records:\n {merged_data.to_string()}")
 
         # Outlier detection
         if remove_outliers:
