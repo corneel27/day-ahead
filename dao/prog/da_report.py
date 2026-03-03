@@ -3157,11 +3157,12 @@ class Report(DaBase):
         vanaf = datetime.datetime(
             now.year, now.month, now.day, now.hour
         ) - datetime.timedelta(hours=5)
+        sensor_data = None
         if entity is not None:
             sensor_data = self.get_sensor_sum(
                 sensor_list=[entity], vanaf=vanaf, tot=now, col_name="hp"
             )
-        else:
+        if sensor_data is None or len(sensor_data) == 0:
             sensor_data = self.get_sensor_sum(
                 sensor_list=self.wp_consumption_sensors,
                 vanaf=vanaf,
