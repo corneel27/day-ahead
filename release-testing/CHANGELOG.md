@@ -1,5 +1,26 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.0.rc4
+Fixed error report/api with period "morgen"
+
+# 2026.03.0.rc3
+### Change
+Changed entity hp heat demand from input_boolean (values "on"/"off" to input_select values "off"/"eco"/"max"(="on")
+
+### Fixes
+- Fixed error "reduce hours" with interval "1hour" (pr by @bramgradussen)
+- Fixed error missing inverter values at the begin/end of period (@reported by @DaBit)
+- Fixed error when reducing power during charging at high soc and during discharging 
+at low soc, taken the mean value of the soc at the start and the soc at the end of the interval (reported by @bartzzz)
+
+
+# 2026.03.0.rc2
+
+- Fixed error with flex setting of "dc_to_bat max power" or "bat_to_dc max power" (reported by @DaBit)
+- Fixed error not planning heatpump in first interval when not in run-mode (reported by @f.welvering)
+- Missing hour-values (solar-inverters) are filled up by zero's (suggested by @DaBit)
+- Fixed error when "-" is used in name of solar-devices (reported by @patrickvorgers and @Asclepius8)
+
 # 2026.03.0.rc1
 - Made optional battery settings "bat_to_dc max power" and "dc_to_bat max power" flex-setting (feature request by @DaBit)
 - Reduce power during charging at high soc and during discharging at low soc (feature requests form @bartzzz and @arjenhiemstra)

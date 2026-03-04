@@ -43,7 +43,7 @@ class DaCalc(DaBase):
         self.hp_present = False
         self.hp_enabled = False
         self.hp_adjustment = None
-        self.hp_heat_demand = True
+        self.hp_heat_demand = "eco"
         self.boiler_present = False
         self.boiler_enabled = False
         self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
@@ -53,8 +53,8 @@ class DaCalc(DaBase):
     def calc_optimum(
         self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2026, month=1, day=13, hour=23, minute=0)
-        # _start_soc = 11.0
+        # _start_dt = datetime.datetime(year=2026, month=2, day=25, hour=14, minute=30)
+        # _start_soc = 78.0
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
@@ -294,7 +294,7 @@ class DaCalc(DaBase):
             solar_prog = self.calc_solar_predictions(
                 self.solar[s], start_interval_dt, end, self.interval
             )
-            solar_name = self.solar[s]["name"].replace(" ", "_")
+            solar_name = self.solar[s]["name"].replace(" ", "_").replace("-", "_")
             prog_data[solar_name] = solar_prog["prediction"]
         for b in range(B):
             for s in range(len(self.battery_options[b]["solar"])):
@@ -302,7 +302,7 @@ class DaCalc(DaBase):
                 solar_prog = self.calc_solar_predictions(
                     solar_option, start_interval_dt, end, self.interval
                 )
-                solar_name = solar_option["name"].replace(" ", "_")
+                solar_name = solar_option["name"].replace(" ", "_").replace("-", "_")
                 prog_data[solar_name] = solar_prog["prediction"]
 
         # prog_data = prog_data.reset_index()
@@ -326,7 +326,7 @@ class DaCalc(DaBase):
                 hour_fraction.append(self.interval_s / 3600)
                 interval_fraction.append(1)
             for s in range(solar_num):
-                solar_name = self.solar[s]["name"].replace(" ", "_")
+                solar_name = self.solar[s]["name"].replace(" ", "_").replace("-", "_")
                 prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                 solar_prod[s].append(prod)
                 pv_total += prod
@@ -338,7 +338,9 @@ class DaCalc(DaBase):
             for b in range(B):
                 for s in range(len(self.battery_options[b]["solar"])):
                     solar_option = self.battery_options[b]["solar"][s]
-                    solar_name = solar_option["name"].replace(" ", "_")
+                    solar_name = (
+                        solar_option["name"].replace(" ", "_").replace("-", "_")
+                    )
                     prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))
@@ -476,7 +478,7 @@ class DaCalc(DaBase):
                 hour = int(key)
                 power = value / 1000
                 for u in range(U):
-                    int_uur = uur[u] if self.interval == "1hour" else int(uur[u][0:2])
+                    int_uur = int(uur[u][0:2])
                     if int_uur == hour:
                         red_power[u] = power
             reduce_power_hours.append(red_power)
@@ -981,29 +983,34 @@ class DaCalc(DaBase):
 
         """
         constraints reduced charging power at low or high soc
-        max_power[u] <= max_power_0 + helling x (soc[u] – soc_0)
-        max_power[u] <= max_power_0 + helling x soc[u] – helling x soc_0
-        max_power[u] - helling x soc[u] <= max_power_0 - helling x soc-0
+        max_power[u] x 1000 <= max_power_0 + helling x (soc[u] – soc_0)
+        max_power[u] x 1000 <= max_power_0 + helling x soc[u] – helling x soc_0
+        max_power[u] x 1000 - helling x soc[u] <= max_power_0 - helling x soc_0
+        
         """
         # low soc
         for b in range(B):
             red_power = reduce_power_low_soc[b]
             for rpl in range(len(red_power) - 1):
-                helling = int(red_power[rpl]["helling"])
+                helling = int(red_power[rpl]["helling"] / 2)
                 for u in range(U):
                     model += (
-                        dc_from_bat[b][u] - helling * soc[b][u]
-                        <= red_power[rpl]["power"] - helling * red_power[rpl]["soc"]
+                        dc_from_bat[b][u] * 1000
+                        - helling * soc[b][u]
+                        - helling * soc[b][u + 1]
+                        <= red_power[rpl]["power"] - 2 * helling * red_power[rpl]["soc"]
                     )
         # high soc
         for b in range(B):
             red_power = reduce_power_high_soc[b]
             for rph in range(len(red_power) - 1):
-                helling = int(red_power[rph]["helling"])
+                helling = int(red_power[rph]["helling"] / 2)
                 for u in range(U):
                     model += (
-                        dc_to_bat[b][u] - helling * soc[b][u]
-                        <= red_power[rph]["power"] - helling * red_power[rph]["soc"]
+                        dc_to_bat[b][u] * 1000
+                        - helling * soc[b][u]
+                        - helling * soc[b][u + 1]
+                        <= red_power[rph]["power"] - 2 * helling * red_power[rph]["soc"]
                     )
 
         for b in range(B):
@@ -2006,16 +2013,18 @@ class DaCalc(DaBase):
             ).lower()
             logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
-            # heat demand
+            # heat demand: off, eco, max
             entity_hp_heat_demand = self.config.get(
                 ["entity hp heat demand"], self.heating_options, None
-            )  # Is er warmte vraag - zo ja, dan inplannen vanaf interval 0
-            self.hp_heat_demand = (entity_hp_heat_demand is None) or (
-                self.get_state(entity_hp_heat_demand).state == "on"
             )
-            logging.info(
-                f"Actuele warmtevraag: {'Ja' if self.hp_heat_demand else 'Nee'}"
-            )
+            # Is er warmte vraag - zo ja, dan inplannen vanaf interval 0
+            if entity_hp_heat_demand is None:
+                self.hp_heat_demand = "eco"
+            else:
+                self.hp_heat_demand = self.get_state(entity_hp_heat_demand).state
+            if self.hp_heat_demand == "on":
+                self.hp_heat_demand = "max"
+            logging.info(f"Actuele warmtevraag: {self.hp_heat_demand}")
 
             # implement min_run_length
             min_run_length = int(
@@ -2368,10 +2377,15 @@ class DaCalc(DaBase):
             # tot hier alleen power en heat-curve regeling
 
             # vanaf hier voor weer voor alle regelingen
-            # als er geen warmtevraag is eerste interval geen verbruik
-            if not self.hp_heat_demand:
-                model += c_hp[0] == 0
-                model += hp_on[0] == 0
+            # als er geen warmtevraag is eerste uur geen verbruik
+            if self.hp_heat_demand == "off":
+                for u in range(1 if self.interval == "1hour" else 4):
+                    model += c_hp[u] == 0
+                    model += hp_on[u] == 0
+            # als er dringende warmtevraag is eerste uur wel verbruik
+            elif self.hp_heat_demand == "max":
+                for u in range(1 if self.interval == "1hour" else 4):
+                    model += hp_on[u] == 1
 
             # running block:
             run_hours = report.get_heatpump_run_hours(entity_heat_produced)
@@ -2386,12 +2400,14 @@ class DaCalc(DaBase):
             elif run_hours == 0:
                 first_block_len = min_run_length
                 first_block_start = None
-            elif run_hours < min_run_length:
-                first_block_len = min_run_length - run_hours
+            elif run_hours < min_run_length and self.hp_heat_demand in ["eco", "max"]:
+                first_block_len = max(1, min_run_length - run_hours)
                 first_block_start = 0
             else:  # run_hours >= min_run_length
                 first_block_len = min_run_length
                 first_block_start = None
+            if self.hp_heat_demand == "max":
+                first_block_start = 0
             if run_hours == 0:
                 logging.info(f"Warmtepomp staat stil")
             else:
@@ -2496,7 +2512,7 @@ class DaCalc(DaBase):
                 for j in range(blocks_num):
                     for u in range(U):
                         model += (u - (hp_start_index[j] + block_len[j] - 1)) <= (
-                            u * (1 - hp_bl_on[j][u])
+                            U * (1 - hp_bl_on[j][u])
                         )
 
                 # constraint 3
