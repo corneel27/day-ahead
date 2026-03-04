@@ -186,7 +186,9 @@ class GraphBuilder:
                     plot = None
                     if vax == "left":
                         ymax_left = math.ceil(max(ymax_left, max(data_array)) * 10) / 10
-                        ymin_left = math.floor(min(ymin_left, min(data_array)) *10) / 10
+                        ymin_left = (
+                            math.floor(min(ymin_left, min(data_array)) * 10) / 10
+                        )
                     if vax == "right":
                         ymax_right = (
                             math.ceil(max(ymax_right, max(data_array)) * 10) / 10

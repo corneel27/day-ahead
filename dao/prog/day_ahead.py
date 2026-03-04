@@ -43,7 +43,7 @@ class DaCalc(DaBase):
         self.hp_present = False
         self.hp_enabled = False
         self.hp_adjustment = None
-        self.hp_heat_demand = True
+        self.hp_heat_demand = "eco"
         self.boiler_present = False
         self.boiler_enabled = False
         self.grid_max_power = self.config.get(["grid", "max_power"], None, 17)
@@ -294,7 +294,7 @@ class DaCalc(DaBase):
             solar_prog = self.calc_solar_predictions(
                 self.solar[s], start_interval_dt, end, self.interval
             )
-            solar_name = self.solar[s]["name"].replace(" ", "_").replace("-","_")
+            solar_name = self.solar[s]["name"].replace(" ", "_").replace("-", "_")
             prog_data[solar_name] = solar_prog["prediction"]
         for b in range(B):
             for s in range(len(self.battery_options[b]["solar"])):
@@ -302,7 +302,7 @@ class DaCalc(DaBase):
                 solar_prog = self.calc_solar_predictions(
                     solar_option, start_interval_dt, end, self.interval
                 )
-                solar_name = solar_option["name"].replace(" ", "_").replace("-","_")
+                solar_name = solar_option["name"].replace(" ", "_").replace("-", "_")
                 prog_data[solar_name] = solar_prog["prediction"]
 
         # prog_data = prog_data.reset_index()
@@ -326,7 +326,7 @@ class DaCalc(DaBase):
                 hour_fraction.append(self.interval_s / 3600)
                 interval_fraction.append(1)
             for s in range(solar_num):
-                solar_name = self.solar[s]["name"].replace(" ", "_").replace("-","_")
+                solar_name = self.solar[s]["name"].replace(" ", "_").replace("-", "_")
                 prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                 solar_prod[s].append(prod)
                 pv_total += prod
@@ -338,7 +338,9 @@ class DaCalc(DaBase):
             for b in range(B):
                 for s in range(len(self.battery_options[b]["solar"])):
                     solar_option = self.battery_options[b]["solar"][s]
-                    solar_name = solar_option["name"].replace(" ", "_").replace("-","_")
+                    solar_name = (
+                        solar_option["name"].replace(" ", "_").replace("-", "_")
+                    )
                     prod = max(0, getattr(row, solar_name)) * interval_fraction[-1]
                     if pv_dc_num <= 9:
                         pv_dc_varcode.append("pv_dc_" + str(pv_dc_num))
@@ -990,21 +992,25 @@ class DaCalc(DaBase):
         for b in range(B):
             red_power = reduce_power_low_soc[b]
             for rpl in range(len(red_power) - 1):
-                helling = int(red_power[rpl]["helling"])
+                helling = int(red_power[rpl]["helling"] / 2)
                 for u in range(U):
                     model += (
-                        dc_from_bat[b][u] * 1000 - helling * soc[b][u]
-                        <= red_power[rpl]["power"] - helling * red_power[rpl]["soc"]
+                        dc_from_bat[b][u] * 1000
+                        - helling * soc[b][u]
+                        - helling * soc[b][u + 1]
+                        <= red_power[rpl]["power"] - 2 * helling * red_power[rpl]["soc"]
                     )
         # high soc
         for b in range(B):
             red_power = reduce_power_high_soc[b]
             for rph in range(len(red_power) - 1):
-                helling = int(red_power[rph]["helling"])
+                helling = int(red_power[rph]["helling"] / 2)
                 for u in range(U):
                     model += (
-                        dc_to_bat[b][u] * 1000 - helling * soc[b][u]
-                        <= red_power[rph]["power"] - helling * red_power[rph]["soc"]
+                        dc_to_bat[b][u] * 1000
+                        - helling * soc[b][u]
+                        - helling * soc[b][u + 1]
+                        <= red_power[rph]["power"] - 2 * helling * red_power[rph]["soc"]
                     )
 
         for b in range(B):
@@ -1536,13 +1542,13 @@ class DaCalc(DaBase):
                     == "on"
                 )
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity plugged in: {ex}" )
                 plugged_in = False
             ev_plugged_in.append(plugged_in)
             try:
                 position = self.get_state(self.ev_options[e]["entity position"]).state
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity position: {ex}" )
                 position = "away"
             ev_position.append(position)
             try:
@@ -1550,7 +1556,7 @@ class DaCalc(DaBase):
                     self.get_state(self.ev_options[e]["entity actual level"]).state
                 )
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity actual level: {ex}" )
                 soc_state = 100.0
 
             # onderstaande regel eventueel voor testen
@@ -2007,16 +2013,18 @@ class DaCalc(DaBase):
             ).lower()
             logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
-            # heat demand
+            # heat demand: off, eco, max
             entity_hp_heat_demand = self.config.get(
                 ["entity hp heat demand"], self.heating_options, None
-            )  # Is er warmte vraag - zo ja, dan inplannen vanaf interval 0
-            self.hp_heat_demand = (entity_hp_heat_demand is None) or (
-                self.get_state(entity_hp_heat_demand).state == "on"
             )
-            logging.info(
-                f"Actuele warmtevraag: {'Ja' if self.hp_heat_demand else 'Nee'}"
-            )
+            # Is er warmte vraag - zo ja, dan inplannen vanaf interval 0
+            if entity_hp_heat_demand is None:
+                self.hp_heat_demand = "eco"
+            else:
+                self.hp_heat_demand = self.get_state(entity_hp_heat_demand).state
+            if self.hp_heat_demand == "on":
+                self.hp_heat_demand = "max"
+            logging.info(f"Actuele warmtevraag: {self.hp_heat_demand}")
 
             # implement min_run_length
             min_run_length = int(
@@ -2369,10 +2377,15 @@ class DaCalc(DaBase):
             # tot hier alleen power en heat-curve regeling
 
             # vanaf hier voor weer voor alle regelingen
-            # als er geen warmtevraag is eerste interval geen verbruik
-            if not self.hp_heat_demand:
-                model += c_hp[0] == 0
-                model += hp_on[0] == 0
+            # als er geen warmtevraag is eerste uur geen verbruik
+            if self.hp_heat_demand == "off":
+                for u in range(1 if self.interval == "1hour" else 4):
+                    model += c_hp[u] == 0
+                    model += hp_on[u] == 0
+            # als er dringende warmtevraag is eerste uur wel verbruik
+            elif self.hp_heat_demand == "max":
+                for u in range(1 if self.interval == "1hour" else 4):
+                    model += hp_on[u] == 1
 
             # running block:
             run_hours = report.get_heatpump_run_hours(entity_heat_produced)
@@ -2387,12 +2400,14 @@ class DaCalc(DaBase):
             elif run_hours == 0:
                 first_block_len = min_run_length
                 first_block_start = None
-            elif run_hours < min_run_length:
-                first_block_len = min_run_length - run_hours
+            elif run_hours < min_run_length and self.hp_heat_demand in ["eco", "max"]:
+                first_block_len = max(1, min_run_length - run_hours)
                 first_block_start = 0
             else:  # run_hours >= min_run_length
                 first_block_len = min_run_length
                 first_block_start = None
+            if self.hp_heat_demand == "max":
+                first_block_start = 0
             if run_hours == 0:
                 logging.info(f"Warmtepomp staat stil")
             else:
@@ -2566,7 +2581,7 @@ class DaCalc(DaBase):
                         self.get_state(entity_machine_program).state
                     )
                 except Exception as ex:
-                    logging.error(ex)
+                    logging.error(f"Machines: entity_machine_program: {ex}")
             p = next(
                 (
                     i
