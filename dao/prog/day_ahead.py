@@ -625,13 +625,20 @@ class DaCalc(DaBase):
             penalty_low_soc.append(penalty)
 
             if _start_soc is None:
-                start_soc_str = self.get_state(
-                    self.battery_options[b]["entity actual level"]
-                ).state
-                if start_soc_str.lower() == "unavailable":
+                try:
+                    start_soc_str = ""
+                    start_soc_str = self.get_state(
+                        self.battery_options[b]["entity actual level"]
+                    ).state
+                    start_soc_num = float(start_soc_str)
+                    start_soc.append(start_soc_num)
+                except Exception as ex:
+                    logging.warning(f"{ex} :"
+                                    f"No actual level info recieved from "
+                                    f"{self.battery_options[b]["entity actual level"]}, "
+                                    f"but recieved '{start_soc_str}', "
+                                    f"assumed 50%")
                     start_soc.append(50)
-                else:
-                    start_soc.append(float(start_soc_str))
             else:
                 start_soc.append(_start_soc)
             logging.info(
