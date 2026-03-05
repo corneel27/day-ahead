@@ -1104,7 +1104,7 @@ class Report(DaBase):
             row = None
 
             border = self.get_time_border_ha_record(sensor, latest=False)
-            border = max(border, vanaf)
+            border = vanaf if border is None else max(border, vanaf)
             prev_time = pd.to_datetime(border - datetime.timedelta(hours=1))
             for row in df_raw.itertuples():
                 new_tijd = prev_time + datetime.timedelta(hours=1)
