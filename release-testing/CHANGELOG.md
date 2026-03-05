@@ -1,5 +1,17 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.0.rc5
+### New feature:
+- Add Fast Forward and Fast Reverse to web interface Home page (PR from @tomvandepoel3)
+- Improve error handling. Got "could not convert string to float: unavailable" exception without a reference to the problem HA entity. 
+This change should help locate and fix such issues.
+- All used data of the ml-training are output in debug-level of logging (take care much data!!)
+
+### Fixes:
+- Corrected logging when there are no data in wp-sensor(s)
+- Fixed error when retrieving  wp-data (reported by @rescla)
+- Fix error only supply zero's for missing sensor data of the solar inverter after the first record.
+
 # 2026.03.0.rc4
 Fixed error report/api with period "morgen"
 
