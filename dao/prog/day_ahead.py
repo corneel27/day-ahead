@@ -2641,7 +2641,7 @@ class DaCalc(DaBase):
                 planned_start_dt = dt.datetime.strptime(
                     planned_start_str, "%Y-%m-%d %H:%M:%S"
                 )
-                if ma_entity_plan_end is not None:
+                if ma_entity_plan_end[m] is not None:
                     planned_end_str = self.get_state(ma_entity_plan_end[m]).state
                     planned_end_dt = dt.datetime.strptime(
                         planned_end_str, "%Y-%m-%d %H:%M:%S"
