@@ -1,5 +1,6 @@
 import collections
 import datetime
+import time
 
 # from sqlalchemy.sql.coercions import expect_col_expression_collection
 
@@ -19,6 +20,10 @@ app_datapath = "app/static/data/"
 images_folder = os.path.join(web_datapath, "images")
 config = None
 
+# Introduced previous_time and active_view as global variables
+# This is used to enable switching between "grafiek" and "tabel" and retaining the (closest) timestamp
+previous_time = None 
+active_view = "grafiek"
 
 def create_config():
     global config
@@ -324,8 +329,11 @@ def menu():
 def home():
     subjects = ["balans"]
     views = ["grafiek", "tabel"]
+    cur_subject = "grid"
     active_subject = "grid"
-    active_view = "grafiek"
+    cur_view = "grafiek"
+    global active_view 
+    global previous_time
     active_time = None
     action = None
     confirm_delete = False
@@ -337,34 +345,53 @@ def home():
     if request.method == "POST":
         # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
         lst = request.form.to_dict(flat=False)
+        # print('Home:', lst)
         if "cur_subject" in lst:
-            active_subject = lst["cur_subject"][0]
+        #   active_subject = lst["cur_subject"][0]
+            cur_subject = lst["cur_subject"][0]
         if "cur_view" in lst:
-            active_view = lst["cur_view"][0]
+        #   active_view = lst["cur_view"][0]
+            cur_view = lst["cur_view"][0]
         if "subject" in lst:
             active_subject = lst["subject"][0]
         if "view" in lst:
             active_view = lst["view"][0]
         if "active_time" in lst:
-            active_time = float(lst["active_time"][0])
+            # Ignore active_time from POST if switching between grafiek & table; keep the active_time from the previous call
+            if cur_view != active_view:
+                active_time = previous_time
+            else:
+                active_time = float(lst["active_time"][0])
         if "action" in lst:
             action = lst["action"][0]
         if "file_delete" in lst:
             confirm_delete = lst["file_delete"][0] == "delete"
 
+#  Every mouse click on Home page calls the home() function
+#  By design; the get_file_list() is called over and over again to ensure an accurate reflection of the files
+#  Files might have been added/removed since last call
+    
     if active_view == "grafiek":
         active_map = "/images/"
         active_filter = "*.png"
     else:
         active_map = "/log/"
         active_filter = "*.log"
+        
     flist = get_file_list(app_datapath + active_map, active_filter)
     index = 0
+    
     if active_time:
+        # Find index in the current flist with timestamp closest to active_time (possibly from other flist)
+        # The timestamp between e.g. calc_2026-02-17__08-45.png & calc_2026-02-17__08-45.log are NOT identical
+        # The intent is to be able to switch between grafiek and table while keeping the active time
+        active_time = float(active_time)
+        diff_time = active_time # high intialization value
         for i in range(len(flist)):
-            if flist[i]["time"] == active_time:
+            if abs(flist[i]["time"] - active_time) < diff_time:
+                diff_time = abs(flist[i]["time"] - active_time)
                 index = i
-                break
+        
     if action == "first":
         index = 0
     if action == "previous":
@@ -373,11 +400,29 @@ def home():
         index = min(len(flist) - 1, index + 1)
     if action == "last":
         index = len(flist) - 1
+        
+    if action in ["fast_forward", "fast_reverse"]:
+        if type( active_time ) != float:
+            active_time = float(active_time)
+        if action == "fast_forward":
+            target_time = active_time - (6 * 3600) # Add 6 hours
+        if action == "fast_reverse":
+            target_time = active_time + (6 * 3600) # Subtract 6 hours
+        diff_time = active_time # high intialization value
+        for i in range(len(flist)):
+            if abs(flist[i]["time"] - target_time) < diff_time:
+               diff_time = abs(flist[i]["time"] - target_time)
+               index = i
+        
     if action == "delete" and confirm_delete:
         os.remove(app_datapath + active_map + flist[index]["name"])
         flist = get_file_list(app_datapath + active_map, active_filter)
         index = min(len(flist) - 1, index)
+
+
     if len(flist) > 0:
+        # print('Active index:', index )
+        # print('Flist[',index,']:',time.ctime(flist[index]["time"]))
         active_time = str(flist[index]["time"])
         if active_view == "grafiek":
             image = os.path.join(web_datapath + active_map, flist[index]["name"])
@@ -390,6 +435,9 @@ def home():
         active_time = None
         image = None
         tabel = None
+        
+# Remember this active time in global variable
+    previous_time = active_time
 
     return render_template(
         "home.html",

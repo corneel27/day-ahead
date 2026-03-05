@@ -856,6 +856,51 @@ class Report(DaBase):
         self.periodes.update(create_dict("365 dagen", vanaf, tot, "maand"))
         return
 
+    def get_time_border_ha_record(
+        self, sensor: str, latest: bool = True
+    ) -> datetime.datetime:
+        """
+        Zoekt de tijd op van het laatst aanwezige record van "code"
+        :param sensor: de code van het record
+        :param latest: boolean, if true latest record else first record
+        :return: datum en tijd van het laatst aanwezige record
+        """
+
+        with self.db_ha.engine.connect() as connection:
+            statistics = Table(
+                "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
+            )
+            statistics_meta = Table(
+                "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
+            )
+            # Define aliases for the tables
+            t1 = statistics.alias("t1")
+            v1 = statistics_meta.alias("v1")
+
+        # Construct the query
+        query = select(
+            self.db_ha.from_unixtime(t1.c.start_ts).label("tijd"),
+            t1.c.state,
+        ).where(
+            and_(
+                v1.c.statistic_id == sensor,
+                t1.c.metadata_id == v1.c.id
+            )
+        )
+
+        if latest:
+            query = query.order_by(t1.c.start_ts.desc()).limit(1)
+        else:
+            query = query.order_by(t1.c.start_ts.asc()).limit(1)
+
+        # Execute the query and fetch the result
+        with self.db_ha.engine.connect() as connection:
+            result = connection.execute(query)
+            result = result.scalar()
+            if type(result) is str:
+                result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
+        return result
+
     def get_sensor_data(
         self,
         sensor: str,
@@ -1057,7 +1102,10 @@ class Report(DaBase):
             # tot hier voor de test
             """
             row = None
-            prev_time = pd.to_datetime(vanaf - datetime.timedelta(hours=1))
+
+            border = self.get_time_border_ha_record(sensor, latest=False)
+            border = max(border, vanaf)
+            prev_time = pd.to_datetime(border - datetime.timedelta(hours=1))
             for row in df_raw.itertuples():
                 new_tijd = prev_time + datetime.timedelta(hours=1)
                 while new_tijd < row.tijd:
@@ -1074,7 +1122,7 @@ class Report(DaBase):
                 prev_time = row.tijd
             now = datetime.datetime.now()
             tot = min(datetime.datetime(now.year, now.month, now.day, now.hour), tot)
-            if not row is None and row.tijd < tot - datetime.timedelta(hours=1):
+            if row is not None and row.tijd < tot - datetime.timedelta(hours=1):
                 new_tijd = row.tijd + datetime.timedelta(hours=1)
                 while new_tijd < tot:
                     new_row_values = [
@@ -3157,11 +3205,12 @@ class Report(DaBase):
         vanaf = datetime.datetime(
             now.year, now.month, now.day, now.hour
         ) - datetime.timedelta(hours=5)
+        sensor_data = None
         if entity is not None:
             sensor_data = self.get_sensor_sum(
                 sensor_list=[entity], vanaf=vanaf, tot=now, col_name="hp"
             )
-        else:
+        if sensor_data is None or len(sensor_data) == 0:
             sensor_data = self.get_sensor_sum(
                 sensor_list=self.wp_consumption_sensors,
                 vanaf=vanaf,

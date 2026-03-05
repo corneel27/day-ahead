@@ -1542,13 +1542,13 @@ class DaCalc(DaBase):
                     == "on"
                 )
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity plugged in: {ex}" )
                 plugged_in = False
             ev_plugged_in.append(plugged_in)
             try:
                 position = self.get_state(self.ev_options[e]["entity position"]).state
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity position: {ex}" )
                 position = "away"
             ev_position.append(position)
             try:
@@ -1556,7 +1556,7 @@ class DaCalc(DaBase):
                     self.get_state(self.ev_options[e]["entity actual level"]).state
                 )
             except Exception as ex:
-                logging.error(ex)
+                logging.error(f"EV: entity actual level: {ex}" )
                 soc_state = 100.0
 
             # onderstaande regel eventueel voor testen
@@ -2140,7 +2140,7 @@ class DaCalc(DaBase):
                         if run_hours == -1:
                             logging.info(f"geen wp-sensor(s) geconfigureerd bij 'report'")
                         if run_hours == -2:
-                            logging.info(f"geen data in geconfigureerde wp-sensor(s)'")
+                            logging.info(f"geen data in geconfigureerde wp-sensor(s)")
                         first_block_len = min_run_length
                         first_block_start = None
                     elif run_hours == 0:
@@ -2388,13 +2388,17 @@ class DaCalc(DaBase):
                     model += hp_on[u] == 1
 
             # running block:
-            run_hours = report.get_heatpump_run_hours(entity_heat_produced)
+            run_hours = (
+                -1
+                if entity_heat_produced is None
+                else report.get_heatpump_run_hours(entity_heat_produced)
+            )
             if run_hours < 0:
                 logging.info(f"Kan starturen wp niet bepalen")
                 if run_hours == -1:
-                    logging.info(f"geen wp-sensor(s) geconfigureerd bij 'report'")
+                    logging.info(f"geen wp-sensor(s) geconfigureerd")
                 if run_hours == -2:
-                    logging.info(f"geen data in geconfigureerde wp-sensor(s)'")
+                    logging.info(f"geen data in geconfigureerde wp-sensor(s)")
                 first_block_len = min_run_length
                 first_block_start = None
             elif run_hours == 0:
@@ -2410,7 +2414,7 @@ class DaCalc(DaBase):
                 first_block_start = 0
             if run_hours == 0:
                 logging.info(f"Warmtepomp staat stil")
-            else:
+            elif run_hours > 0:
                 logging.info(f"Warmtepomp draait al minimaal {run_hours} uur")
             # number of bloks
             if hp_hours / hours_avail > 0.8:
@@ -2581,7 +2585,7 @@ class DaCalc(DaBase):
                         self.get_state(entity_machine_program).state
                     )
                 except Exception as ex:
-                    logging.error(ex)
+                    logging.error(f"Machines: entity_machine_program: {ex}")
             p = next(
                 (
                     i
