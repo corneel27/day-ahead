@@ -2268,6 +2268,7 @@ class DaCalc(DaBase):
                     f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland."
                 )
                 hp_stages = self.heating_options["stages"]
+                hp_stages = sorted(hp_stages, key=lambda d: d['max_power'])
                 if hp_stages[0]["max_power"] != 0.0:
                     hp_stages = [
                         {"max_power": 0, "cop": 8},
