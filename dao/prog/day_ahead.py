@@ -4231,7 +4231,7 @@ class DaCalc(DaBase):
 
         # grafiek 1
         import numpy as np
-        from dao.prog.da_graph import GraphBuilder
+        from dao.lib.da_graph import GraphBuilder
 
         gr1_df = pd.DataFrame()
         gr1_df["index"] = np.arange(U)

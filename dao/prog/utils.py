@@ -1,5 +1,3 @@
-from calendar import month
-
 from dateutil import easter
 import datetime
 import bisect
@@ -94,8 +92,7 @@ def convert_timestr(time_str: str, now_dt: datetime.datetime) -> datetime.dateti
 
 
 def get_tibber_data():
-    from da_config import Config
-    from db_manager import DBmanagerObj
+    from dao.lib.da_config import Config
 
     def get_datetime_from_str(s):
         # "2022-09-01T01:00:00.000+02:00"
@@ -409,8 +406,7 @@ print(all_interp)
 
 
 def interpolate_prognose_data():
-    from da_config import Config
-    from db_manager import DBmanagerObj
+    from dao.lib.da_config import Config
 
     config = Config("../data/options.json")
     db_da = config.get_db_da()

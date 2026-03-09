@@ -1,4 +1,4 @@
-from dao.prog.da_config import Config
+from dao.lib.da_config import Config
 import datetime
 
 

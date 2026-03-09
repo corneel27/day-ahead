@@ -1,6 +1,4 @@
 from flask import Flask
-import sys
-from dao.prog.da_config import Config
 
 # sys.path.append("../")
 

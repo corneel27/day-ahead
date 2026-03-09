@@ -17,9 +17,9 @@ from sqlalchemy import Table, select, func, and_
 # from dao.prog.solar_predictor import SolarPredictor
 from dao.prog.utils import get_tibber_data, error_handling
 from dao.prog.version import __version__
-from dao.prog.da_config import Config
-from dao.prog.da_meteo import Meteo
-from dao.prog.da_prices import DaPrices
+from dao.lib.da_config import Config
+from dao.lib.da_meteo import Meteo
+from dao.lib.da_prices import DaPrices
 from dao.prog.utils import interpolate
 
 # from db_manager import DBmanagerObj

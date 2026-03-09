@@ -17,7 +17,7 @@
 Added missing module tzdata
 
 ### Breaking change
-The file-format ofthe calculated model is changed (update of module pandas).
+The file-format of the calculated model is changed (update of module pandas).
 The ml_prediction works only after a new training of the models.<br>
 ### Changes:
 - Update several python modules
@@ -211,7 +211,7 @@ Fix error api prognose pv_dc
 - You can configure the meteo-model for your data (option, default **harmonie**) 
 - You can configure the max number of attempts (option, default 2)<br>
 More info in DOCS.md
-- Fixed index-error when more than one batteries are used (reported by @PSMGoossens)
+- Fixed index-error when more than one batterie are used (reported by @PSMGoossens)
 - Improved graphical presentation received meteodata
 - Improved logging getting meteodata
 - Fixed error handling getting meteo-data
