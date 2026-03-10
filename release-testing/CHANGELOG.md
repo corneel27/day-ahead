@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.01.rc1
+Fixed python pad
+
 # 2026.03.0.rc6
 - Fixed error when checking runtime hours heatpump and there no data (reported by @rescla)
 - Fixed error and better warning when no data for actual soc level battery (reported by @tonvanboven)
