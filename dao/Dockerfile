@@ -19,6 +19,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # Copy software for add-on
 RUN mkdir /root/dao
 COPY __init__.py /root/dao
+COPY lib /root/dao/lib/
 COPY prog /root/dao/prog/
 COPY webserver /root/dao/webserver/
 COPY data /tmp/daodata/
