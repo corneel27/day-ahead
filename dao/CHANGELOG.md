@@ -1,6 +1,6 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# 2026.03.0
+# 2026.03.1
 ### New features:
 - Add Fast Forward and Fast Reverse to web interface Home page (PR from @tomvandepoel3)
 - Improve error handling. Got "could not convert string to float: unavailable" exception without a reference to the problem HA entity. 
