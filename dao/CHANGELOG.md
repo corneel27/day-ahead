@@ -1,5 +1,36 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.0
+### New features:
+- Add Fast Forward and Fast Reverse to web interface Home page (PR from @tomvandepoel3)
+- Improve error handling. Got "could not convert string to float: unavailable" exception without a reference to the problem HA entity. 
+This change should help locate and fix such issues.
+- All used data of the ml-training are output in debug-level of logging (take care much data!!)
+### Change
+Changed entity hp heat demand from input_boolean (values "on"/"off" to input_select values "off"/"eco"/"max"(="on")
+
+### Fixes:
+- Corrected logging when there are no data in wp-sensor(s)
+- Fixed error when retrieving  wp-data (reported by @rescla)
+- Fix error only supply zero's for missing sensor data of the solar inverter after the first record.
+- Fixed error when checking runtime hours heatpump and there no data (reported by @rescla)
+- Fixed error and better warning when no data for actual soc level battery (reported by @tonvanboven)
+- Fixed error when optional "entity calculated end" (machine) is not defined (reported by @Xelaph)
+- Fixed error when hp-stages are not sorted ascending max_power (reported by @Mvdw)
+- Update several python modules
+- Fixed error report/api with period "morgen"
+- Fixed error "reduce hours" with interval "1hour" (pr by @bramgradussen)
+- Fixed error missing inverter values at the begin/end of period (@reported by @DaBit)
+- Fixed error when reducing power during charging at high soc and during discharging 
+at low soc, taken the mean value of the soc at the start and the soc at the end of the interval (reported by @bartzzz)
+- Fixed error with flex setting of "dc_to_bat max power" or "bat_to_dc max power" (reported by @DaBit)
+- Fixed error not planning heatpump in first interval when not in run-mode (reported by @f.welvering)
+- Missing hour-values (solar-inverters) are filled up by zero's (suggested by @DaBit)
+- Fixed error when "-" is used in name of solar-devices (reported by @patrickvorgers and @Asclepius8)
+- Made optional battery settings "bat_to_dc max power" and "dc_to_bat max power" flex-setting (feature request by @DaBit)
+- Reduce power during charging at high soc and during discharging at low soc (feature requests form @bartzzz and @arjenhiemstra)
+- Made check 'optimal lower level" lower as "lower limit" (feature request of @mistral2)
+
 # 2026.02.2
 - Fix error in calculating heating window boiler
 - Fixed error in reports and api with interval "vandaag en morgen"
@@ -17,7 +48,7 @@
 Added missing module tzdata
 
 ### Breaking change
-The file-format ofthe calculated model is changed (update of module pandas).
+The file-format of the calculated model is changed (update of module pandas).
 The ml_prediction works only after a new training of the models.<br>
 ### Changes:
 - Update several python modules
@@ -211,7 +242,7 @@ Fix error api prognose pv_dc
 - You can configure the meteo-model for your data (option, default **harmonie**) 
 - You can configure the max number of attempts (option, default 2)<br>
 More info in DOCS.md
-- Fixed index-error when more than one batteries are used (reported by @PSMGoossens)
+- Fixed index-error when more than one batterie are used (reported by @PSMGoossens)
 - Improved graphical presentation received meteodata
 - Improved logging getting meteodata
 - Fixed error handling getting meteo-data

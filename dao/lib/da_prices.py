@@ -1,18 +1,16 @@
-from dao.prog.da_config import Config
+from dao.lib.da_config import Config
 import pandas as pd
-from dao.prog.db_manager import DBmanagerObj
+from dao.lib.db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
 import datetime
 import sys
 from requests import get, post
 from nordpool.elspot import Prices
 import pytz
-import tzdata
 import json
 import math
 import pprint as pp
 import logging
-from sqlalchemy import Table, select, and_
 
 
 class DaPrices:

@@ -24,7 +24,7 @@ import pandas as pd
 
 #  from da_base import DaBase
 #  sys.path.append("../")
-from da_config import Config
+from dao.lib.da_config import Config
 from version import __version__
 from utils import version_number
 

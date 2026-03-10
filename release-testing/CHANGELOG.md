@@ -1,5 +1,13 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.0.rc6
+- Fixed error when checking runtime hours heatpump and there no data (reported by @rescla)
+- Fixed error and better warning when no data for actual soc level battery (reported by @tonvanboven)
+- Fixed error when optional "entity calculated end" (machine) is not defined (reported by @Xelaph)
+- Fixed error when hp-stages are not sorted ascending max_power (reported by @Mvdw)
+- Fix error reduced hours with interval = 15min
+- Update several python modules
+
 # 2026.03.0.rc5
 ### New feature:
 - Add Fast Forward and Fast Reverse to web interface Home page (PR from @tomvandepoel3)

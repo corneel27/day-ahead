@@ -8,9 +8,9 @@ import ephem
 from requests import get
 import matplotlib.pyplot as plt
 import knmi
-from dao.prog.da_graph import GraphBuilder
-from dao.prog.da_config import Config
-from dao.prog.db_manager import DBmanagerObj
+from dao.lib.da_graph import GraphBuilder
+from dao.lib.da_config import Config
+from dao.lib.db_manager import DBmanagerObj
 from sqlalchemy import Table, select, func, and_
 
 

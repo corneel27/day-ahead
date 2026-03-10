@@ -625,13 +625,20 @@ class DaCalc(DaBase):
             penalty_low_soc.append(penalty)
 
             if _start_soc is None:
-                start_soc_str = self.get_state(
-                    self.battery_options[b]["entity actual level"]
-                ).state
-                if start_soc_str.lower() == "unavailable":
+                try:
+                    start_soc_str = ""
+                    start_soc_str = self.get_state(
+                        self.battery_options[b]["entity actual level"]
+                    ).state
+                    start_soc_num = float(start_soc_str)
+                    start_soc.append(start_soc_num)
+                except Exception as ex:
+                    logging.warning(f"{ex} :"
+                                    f"No actual level info recieved from "
+                                    f"{self.battery_options[b]["entity actual level"]}, "
+                                    f"but recieved '{start_soc_str}', "
+                                    f"assumed 50%")
                     start_soc.append(50)
-                else:
-                    start_soc.append(float(start_soc_str))
             else:
                 start_soc.append(_start_soc)
             logging.info(
@@ -2261,6 +2268,7 @@ class DaCalc(DaBase):
                     f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland."
                 )
                 hp_stages = self.heating_options["stages"]
+                hp_stages = sorted(hp_stages, key=lambda d: d['max_power'])
                 if hp_stages[0]["max_power"] != 0.0:
                     hp_stages = [
                         {"max_power": 0, "cop": 8},
@@ -2634,7 +2642,7 @@ class DaCalc(DaBase):
                 planned_start_dt = dt.datetime.strptime(
                     planned_start_str, "%Y-%m-%d %H:%M:%S"
                 )
-                if ma_entity_plan_end is not None:
+                if ma_entity_plan_end[m] is not None:
                     planned_end_str = self.get_state(ma_entity_plan_end[m]).state
                     planned_end_dt = dt.datetime.strptime(
                         planned_end_str, "%Y-%m-%d %H:%M:%S"
@@ -4223,7 +4231,7 @@ class DaCalc(DaBase):
 
         # grafiek 1
         import numpy as np
-        from dao.prog.da_graph import GraphBuilder
+        from dao.lib.da_graph import GraphBuilder
 
         gr1_df = pd.DataFrame()
         gr1_df["index"] = np.arange(U)

@@ -1,6 +1,5 @@
 import collections
 import datetime
-import time
 
 # from sqlalchemy.sql.coercions import expect_col_expression_collection
 
@@ -11,7 +10,7 @@ import os
 from subprocess import PIPE, run
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from dao.prog.da_config import Config
+from dao.lib.da_config import Config
 from dao.prog.da_report import Report
 from dao.prog.version import __version__
 

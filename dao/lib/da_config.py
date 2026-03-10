@@ -2,8 +2,10 @@ import json
 import logging
 import os
 
+from pandas.io.common import file_exists
+
 # from logging import raiseExceptions
-from dao.prog.db_manager import DBmanagerObj
+from dao.lib.db_manager import DBmanagerObj
 import sqlalchemy_utils
 
 
@@ -24,7 +26,10 @@ class Config:
         self.options = self.parse(file_name)
         datapath = os.path.dirname(file_name)
         file_secrets = datapath + "/secrets.json"
-        self.secrets = self.parse(file_secrets)
+        if file_exists(file_secrets):
+            self.secrets = self.parse(file_secrets)
+        else:
+            self.secrets = {}
 
     def get(
         self, keys: list, options: dict = None, default=None

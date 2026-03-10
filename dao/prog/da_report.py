@@ -9,8 +9,8 @@ from io import BytesIO
 from dateutil.relativedelta import relativedelta
 from pandas.core.dtypes.inference import is_number
 
-from dao.prog.da_config import Config
-from dao.prog.da_graph import GraphBuilder
+from dao.lib.da_config import Config
+from dao.lib.da_graph import GraphBuilder
 from dao.prog.da_base import DaBase
 from dao.prog.utils import get_value_from_dict
 import math
@@ -1091,7 +1091,7 @@ class Report(DaBase):
         # Print the raw DataFrame
 
         # fill 0 for missing records
-        if agg == "uur":
+        if (agg == "uur") and (sensor_type == "quantity"):
             columns = list(df_raw.columns.values)
             df_insert = pd.DataFrame(columns=columns)
             """
@@ -1104,7 +1104,7 @@ class Report(DaBase):
             row = None
 
             border = self.get_time_border_ha_record(sensor, latest=False)
-            border = max(border, vanaf)
+            border = vanaf if border is None else max(border, vanaf)
             prev_time = pd.to_datetime(border - datetime.timedelta(hours=1))
             for row in df_raw.itertuples():
                 new_tijd = prev_time + datetime.timedelta(hours=1)
@@ -3147,7 +3147,6 @@ class Report(DaBase):
         result["prognose_dao"] = pred_dao
 
         # voorspelling ML
-        from dao.prog.solar_predictor import SolarPredictor
 
         # solar_predictor = SolarPredictor()
         # solar_prog = solar_predictor.predict_solar_device(device, start, end)
