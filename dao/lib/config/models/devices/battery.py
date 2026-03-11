@@ -112,6 +112,18 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
+    penalty_low_soc: Optional[float | FlexValue] = Field(
+        default=None,
+        alias="penalty low soc",
+        description="Penalty cost per % per hour below optimal lower SOC",
+        json_schema_extra={
+            "x-help": "Cost in euro per %·hour when SOC stays below optimal lower level. Higher values make the optimizer prioritize keeping SOC above the optimal level. Default 0.0025 euro/%·h.",
+            "x-unit": "euro/%·h",
+            "x-ui-section": "Power Configuration",
+            "x-ui-widget": "entity-picker-or-literal",
+            "x-ui-widget-filter": "sensor,input_number"
+        }
+    )
     entity_min_soc_end_opt: Optional[str] = Field(
         default=None,
         alias="entity min soc end opt",
@@ -208,7 +220,7 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    dc_to_bat_max_power: float = Field(
+    dc_to_bat_max_power: float | FlexValue = Field(
         alias="dc_to_bat max power",
         gt=0,
         description="DC to battery max power in watts",
@@ -230,7 +242,7 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    bat_to_dc_max_power: float = Field(
+    bat_to_dc_max_power: float | FlexValue = Field(
         alias="bat_to_dc max power",
         gt=0,
         description="Battery to DC max power in watts",

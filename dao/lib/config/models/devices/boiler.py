@@ -3,6 +3,7 @@ Hot water boiler configuration models.
 """
 
 from typing import Optional
+from ..base import FlexValue
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
@@ -85,7 +86,7 @@ class BoilerConfig(BaseModel):
             "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
         }
     )
-    cooling_rate: float = Field(
+    cooling_rate: float | FlexValue = Field(
         alias="cooling rate",
         ge=0,
         description="Cooling rate in degrees per hour",
@@ -107,7 +108,7 @@ class BoilerConfig(BaseModel):
             "x-validation-hint": "Must be > 0, typically 100-300L"
         }
     )
-    heating_allowed_below: float = Field(
+    heating_allowed_below: float | FlexValue = Field(
         alias="heating allowed below",
         description="Temperature below which heating is allowed",
         json_schema_extra={

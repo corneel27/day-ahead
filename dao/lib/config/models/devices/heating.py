@@ -4,6 +4,7 @@ Heating system / heat pump configuration models.
 
 from typing import Optional, Literal
 from pydantic import BaseModel, Field, field_validator, ConfigDict
+from ..base import FlexValue
 
 
 class HeatingStage(BaseModel):
@@ -65,7 +66,7 @@ class HeatingConfig(BaseModel):
             "x-ui-widget-filter": "binary_sensor"
         }
     )
-    degree_days_factor: float = Field(
+    degree_days_factor: float | FlexValue = Field(
         default=1.0,
         alias="degree days factor",
         gt=0,
