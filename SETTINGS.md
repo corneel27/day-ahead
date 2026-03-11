@@ -8,7 +8,7 @@
 > This documentation is auto-generated from Pydantic models.
 > To update, modify the model docstrings and Field descriptions, then run:
 > ```bash
-> python -m dao.prog.config.generate_docs
+> python -m dao.lib.config.generate_docs
 > ```
 
 ## 📑 Table of Contents
@@ -52,6 +52,7 @@
   - [MachineProgram](#machineprogram)
   - [SecretStr](#secretstr)
   - [SolarString](#solarstring)
+  - [XGBoostConfig](#xgboostconfig)
 
 ---
 
@@ -115,22 +116,26 @@ Configure your home battery storage system for optimal energy management and cos
 | `upper limit` | integer or [FlexValue](#flexvalue) | Yes | — | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
 | `lower limit` | integer or [FlexValue](#flexvalue) | Yes | — | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
 | `optimal lower level` | integer or [FlexValue](#flexvalue) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
+| `penalty low soc` | number or [FlexValue](#flexvalue) (optional) | No | `null` | Penalty cost per % per hour below optimal lower SOC (Unit: `euro/%·h`) |
 | `entity min soc end opt` | string (optional) | No | `null` | HA entity for minimum SOC at end of optimization period |
 | `entity max soc end opt` | string (optional) | No | `null` | HA entity for maximum SOC at end of optimization period |
 | `charge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Charge power/efficiency curve _At least 1 stage required, ordered by power_ |
 | `discharge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Discharge power/efficiency curve _At least 1 stage required, ordered by power_ |
 | `reduced hours` | object (optional) | No | `null` | Hour -> max power mapping for reduced power hours _Keys are hour strings (0-23), values are watts_ |
+| `reduce_power_low_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for low SOC power reduction |
+| `reduce_power_high_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
 | `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `dc_to_bat max power` | number | Yes | — | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
+| `dc_to_bat max power` | number or [FlexValue](#flexvalue) | Yes | — | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `bat_to_dc max power` | number | Yes | — | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
+| `bat_to_dc max power` | number or [FlexValue](#flexvalue) | Yes | — | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
 | `cycle cost` | number | Yes | — | Cost per battery cycle in euros (Unit: `€`) _Must be >= 0, typically €0.50-€1.50 per cycle_ |
 | `entity set power feedin` | string (optional) | No | `null` | HA entity to set power feed-in to grid |
 | `entity set operating mode` | string (optional) | No | `null` | HA entity to set battery operating mode |
-| `entity set operating mode on` | string (optional) | No | `null` | Value for operating mode ON |
-| `entity set operating mode off` | string (optional) | No | `null` | Value for operating mode OFF |
+| `entity set operating mode on` | string (optional) | No | `"Aan"` | Value for operating mode ON |
+| `entity set operating mode off` | string (optional) | No | `"Uit"` | Value for operating mode OFF |
 | `entity stop inverter` | string (optional) | No | `null` | HA entity to stop inverter |
+| `entity stop victron` | string (optional) | No | `null` | HA entity to stop Victron inverter |
 | `entity balance switch` | string (optional) | No | `null` | HA entity for grid balancing switch |
 | `entity from battery` | string (optional) | No | `null` | HA entity for power from battery (Unit: `W`) |
 | `entity from pv` | string (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
@@ -165,6 +170,10 @@ Minimum State of Charge in percent. Battery will never discharge below this leve
 
 Target SOC level for cost optimization. System will prefer this level over minimum. Supports FlexValue pattern.
 
+**`penalty low soc`**
+
+Cost in euro per %·hour when SOC stays below optimal lower level. Higher values make the optimizer prioritize keeping SOC above the optimal level. Default 0.0025 euro/%·h.
+
 **`entity min soc end opt`**
 
 Optional: Home Assistant entity specifying minimum battery level required at end of optimization window. Useful for ensuring battery charge overnight.
@@ -184,6 +193,14 @@ Power stages for discharging with corresponding efficiencies. Defines discharge 
 **`reduced hours`**
 
 Optional: Restrict battery power during specific hours. Example: {'22': 1000, '23': 1000} limits to 1000W from 22:00-23:59. Useful for noise reduction at night.
+
+**`reduce_power_low_soc`**
+
+Optional: List of SOC/power pairs to reduce battery power at low state of charge. Protects battery by limiting power when nearly empty.
+
+**`reduce_power_high_soc`**
+
+Optional: List of SOC/power pairs to reduce battery power at high state of charge. Protects battery by limiting power when nearly full.
 
 **`minimum power`**
 
@@ -228,6 +245,10 @@ Value to send to operating mode entity for 'OFF' state. Example: 'manual', 'disa
 **`entity stop inverter`**
 
 Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.
+
+**`entity stop victron`**
+
+Optional: Home Assistant entity to stop a Victron battery inverter. Use this for Victron-specific stop control.
 
 **`entity balance switch`**
 
@@ -302,6 +323,9 @@ For panels facing different directions, use the 'strings' configuration:
 | `capacity` | number (optional) | No | `null` | Installed capacity (for single installation) (Unit: `kWp`) _Greater than 0, leave empty when using strings_ |
 | `yield` | number (optional) | No | `null` | Yield factor (for single installation) (Unit: `ratio`) _Greater than 0, typically 0.8-0.9, leave empty when using strings_ |
 | `strings` | list[[SolarString](#solarstring)] (optional) | No | `null` | Multiple panel strings with different configurations |
+| `ml_prediction` | boolean | No | `false` | Use ML model to predict solar production for this installation |
+| `entities sensors` | list[string] or string (optional) | No | `null` | HA sensor entities for measuring actual solar production |
+| `max power` | number (optional) | No | `null` | Maximum output power cap in kW (MPPT limit) (Unit: `kW`) |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -333,6 +357,18 @@ Yield factor for simple configuration. Use this OR 'strings', not both. Leave em
 **`strings`**
 
 Advanced: Configure multiple strings for panels with different orientations or tilts. Use this OR flat config (tilt/orientation/capacity/yield), not both.
+
+**`ml_prediction`**
+
+Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.
+
+**`entities sensors`**
+
+Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.
+
+**`max power`**
+
+Optional. Limit the installation output to this value in kW. Use when your inverter/MPPT maximum power is less than the total panel capacity.
 
 </details>
 
@@ -597,7 +633,7 @@ Define power levels and corresponding COP values:
 |-------|------|----------|---------|-------------|
 | `heater present` | boolean or string | No | `false` | Whether heating system is present/enabled |
 | `entity hp enabled` | string (optional) | No | `null` | HA binary sensor for heat pump enabled status |
-| `degree days factor` | number | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
+| `degree days factor` | number or [FlexValue](#flexvalue) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | Yes | — | Heating power/COP stages _At least 1 stage, must be sorted by max_power_ |
 | `entity adjust heating curve` | string (optional) | No | `null` | HA entity to adjust heating curve |
@@ -724,12 +760,14 @@ The system models boiler as a thermal battery:
 | `entity boiler enabled` | string (optional) | No | `null` | HA entity for boiler enabled status |
 | `entity instant start` | string (optional) | No | `null` | HA entity for instant start |
 | `cop` | number | No | `3.0` | Coefficient of Performance (Unit: `ratio`) _Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump_ |
-| `cooling rate` | number | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
+| `cooling rate` | number or [FlexValue](#flexvalue) | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
 | `volume` | number | No | `200.0` | Water volume in liters (Unit: `L`) _Must be > 0, typically 100-300L_ |
-| `heating allowed below` | number | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
+| `heating allowed below` | number or [FlexValue](#flexvalue) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
 | `elec. power` | number | No | `1000.0` | Electrical power in watts (Unit: `W`) _Must be > 0, typically 1000-3000W_ |
 | `activate service` | string | Yes | — | Service type to activate boiler (e.g., 'press', 'switch') |
 | `activate entity` | string | Yes | — | HA entity to activate boiler |
+| `boiler heated by heatpump` | boolean | No | `true` | Whether the boiler is heated by a heat pump |
+| `switch entity` | string (optional) | No | `null` | HA entity to switch boiler on/off |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -785,6 +823,14 @@ Home Assistant service type to trigger boiler heating. Use 'press' for button en
 **`activate entity`**
 
 Home Assistant entity used to activate boiler heating. System will trigger this entity using activate_service when heating is needed.
+
+**`boiler heated by heatpump`**
+
+Set to true if the boiler is heated by a heat pump (COP > 1). Set to false for direct electric resistive heating. Affects optimization calculations.
+
+**`switch entity`**
+
+Optional: Home Assistant switch entity to directly control boiler power. Alternative to activate_entity for simple on/off control.
 
 </details>
 
@@ -852,11 +898,11 @@ Then in options.json:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `engine` | string | No | `"sqlite"` | Database engine type. Options: `sqlite`, `mysql`, `postgresql` |
-| `db_path` | string (optional) | No | `null` | Database path for SQLite (e.g., '../data') _Required for SQLite (or use database field)_ |
+| `db_path` | string | No | `"../data"` | Database path for SQLite (e.g., '../data') _Required for SQLite (or use database field)_ |
 | `database` | string (optional) | No | `null` | Database filename for SQLite or database name for MySQL _Filename for SQLite, database name for MySQL/PostgreSQL_ |
-| `server` | string (optional) | No | `null` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
-| `port` | integer (optional) | No | `null` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
-| `username` | string (optional) | No | `null` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
+| `server` | string | No | `"core-mariadb"` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
+| `port` | integer | No | `0` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
+| `username` | string | No | `"day_ahead"` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
 | `password` | string or [SecretStr](#secretstr) (optional) | No | `null` | MySQL password (can use !secret) _Use !secret for passwords_ |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
 
@@ -1063,7 +1109,7 @@ System uses tariff active on optimization date.
 | `vat consumption` | object | Yes | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `vat production` | object | Yes | — | VAT percentage for production by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `last invoice` | string | Yes | — | Date of last invoice (YYYY-MM-DD) _Must be YYYY-MM-DD format_ |
-| `tax refund` | boolean or string | Yes | — | Whether tax refund applies |
+| `tax refund` | boolean or string | No | `true` | Whether tax refund applies |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1819,8 +1865,9 @@ Home Assistant database connection for reading historical sensor data (prices, s
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `engine` | string | No | `"mysql"` | Database engine type. Options: `mysql`, `sqlite`, `postgresql` |
-| `server` | string (optional) | No | `null` | Database server hostname (required for mysql/postgresql) _Required for mysql/postgresql engines_ |
-| `port` | integer (optional) | No | `null` | Database port (Unit: `port`) _1-65535, defaults: mysql=3306, postgresql=5432_ |
+| `server` | string | No | `"core-mariadb"` | Database server hostname (required for mysql/postgresql) _Required for mysql/postgresql engines_ |
+| `port` | integer | No | `0` | Database port (Unit: `port`) _1-65535, defaults: mysql=3306, postgresql=5432_ |
+| `db_path` | string | No | `"/homeassistant"` | Database path for SQLite |
 | `database` | string | No | `"homeassistant"` | Database name |
 | `username` | string | No | `"homeassistant"` | Database username |
 | `password` | string or [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) _Use !secret for passwords_ |
@@ -1839,6 +1886,10 @@ Hostname or IP address of database server. Required for MySQL/PostgreSQL, not us
 **`port`**
 
 Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.
+
+**`db_path`**
+
+Directory path for SQLite database file.
 
 **`database`**
 
@@ -1905,30 +1956,9 @@ Power profile as list of watts per time interval. Length defines program duratio
 </details>
 
 
-### SecretStr
+### Unknown
 
-_A secret string reference that gets resolved from secrets.json.
-
-Example in options.json:
-    {"db_password": "!secret db_password"}
-    
-Gets resolved to actual value from secrets.json:
-    {"db_password": "my_actual_password_123"}_
-
-SecretStr provides secure secret management. Secrets stored in separate secrets.json file, never in main config. Reference format: "!secret key_name". Essential for passwords, API tokens, and sensitive data.
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `secret_key` | string | Yes | — | Secret Key _Use format: !secret key_name_ |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`secret_key`**
-
-Secret key name to resolve from secrets.json. Use '!secret key_name' in config. Never store actual secrets in options.json!
-
-</details>
+*No configuration fields.*
 
 
 ### SolarString
@@ -1942,6 +1972,7 @@ Configuration for a single string of solar panels with the same tilt and orienta
 | `tilt` | number | Yes | — | Panel tilt angle in degrees (0=horizontal, 90=vertical) (Unit: `degrees`) _Must be between 0 and 90 degrees_ |
 | `orientation` | number | Yes | — | Panel orientation in degrees (0=south, 90=west, -90=east) (Unit: `degrees`) _Must be between -180 and 180 degrees_ |
 | `capacity` | number | Yes | — | Installed capacity in kWp (Unit: `kWp`) _Must be greater than 0_ |
+| `max power` | number (optional) | No | `null` | Maximum output power cap in kW (MPPT limit) (Unit: `kW`) |
 | `yield` | number | Yes | — | Yield factor for production calculation (Unit: `ratio`) _Must be greater than 0, typically 0.8-0.9_ |
 
 <details>
@@ -1959,9 +1990,46 @@ Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° o
 
 Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.
 
+**`max power`**
+
+Optional. Limit the string output to this value in kW. Use when your MPPT maximum power is less than the total panel capacity.
+
 **`yield`**
 
 Efficiency factor for this string. Typically 0.8-0.9. Accounts for inverter losses, cable losses, shading, and dirt on panels.
+
+</details>
+
+
+### XGBoostConfig
+
+_Configuration for the XGBoost solar-prediction model.
+
+``param_grid`` and ``parameters`` are free-form dicts whose internal
+structure is dictated by XGBoost / scikit-learn, not by this project.
+They are left unvalidated so users can pass any valid XGBoost option.
+Any additional keys are also accepted via ``extra='allow'``._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `tune_hyperparameters` | boolean | No | `false` | Run GridSearchCV to find optimal hyper-parameters before training |
+| `param_grid` | object (optional) | No | `null` | Grid of hyper-parameters for GridSearchCV. Keys are XGBoost parameter names, values are lists of candidates. |
+| `parameters` | object (optional) | No | `null` | Fixed hyper-parameters used when tune_hyperparameters is false. Keys are XGBoost parameter names. |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`tune_hyperparameters`**
+
+When enabled, the predictor performs a grid search over 'param_grid' to select the best XGBoost hyper-parameters. Increases training time significantly.
+
+**`param_grid`**
+
+Free-form dict passed directly to sklearn GridSearchCV. Example: {"n_estimators": [100, 200], "max_depth": [3, 6]}. Leave empty to use the built-in defaults.
+
+**`parameters`**
+
+Free-form dict of XGBoost parameters used when tune_hyperparameters is disabled. Example: {"n_estimators": 200, "max_depth": 6, "learning_rate": 0.1}. Leave empty to use the built-in defaults.
 
 </details>
 

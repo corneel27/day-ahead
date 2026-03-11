@@ -99,6 +99,27 @@
           "x-unit": "%",
           "x-validation-hint": "Optional, should be >= lower_limit"
         },
+        "penalty low soc": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/FlexValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Penalty cost per % per hour below optimal lower SOC",
+          "title": "Penalty Low Soc",
+          "x-help": "Cost in euro per %·hour when SOC stays below optimal lower level. Higher values make the optimizer prioritize keeping SOC above the optimal level. Default 0.0025 euro/%·h.",
+          "x-ui-section": "Power Configuration",
+          "x-ui-widget": "entity-picker-or-literal",
+          "x-ui-widget-filter": "sensor,input_number",
+          "x-unit": "euro/%·h"
+        },
         "entity min soc end opt": {
           "anyOf": [
             {
@@ -176,6 +197,22 @@
           "x-ui-section": "Power Configuration",
           "x-validation-hint": "Keys are hour strings (0-23), values are watts"
         },
+        "reduce_power_low_soc": {
+          "description": "SOC thresholds and power limits for low SOC power reduction",
+          "items": {},
+          "title": "Reduce Power Low Soc",
+          "type": "array",
+          "x-help": "Optional: List of SOC/power pairs to reduce battery power at low state of charge. Protects battery by limiting power when nearly empty.",
+          "x-ui-section": "Power Configuration"
+        },
+        "reduce_power_high_soc": {
+          "description": "SOC thresholds and power limits for high SOC power reduction",
+          "items": {},
+          "title": "Reduce Power High Soc",
+          "type": "array",
+          "x-help": "Optional: List of SOC/power pairs to reduce battery power at high state of charge. Protects battery by limiting power when nearly full.",
+          "x-ui-section": "Power Configuration"
+        },
         "minimum power": {
           "description": "Minimum power in watts",
           "minimum": 0,
@@ -198,10 +235,17 @@
           "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
         "dc_to_bat max power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/FlexValue"
+            }
+          ],
           "description": "DC to battery max power in watts",
-          "exclusiveMinimum": 0.0,
+          "gt": 0,
           "title": "Dc To Bat Max Power",
-          "type": "number",
           "x-help": "Maximum power for DC-coupled solar charging in watts. Determines how much DC solar power can flow directly to battery.",
           "x-ui-section": "Power Configuration",
           "x-unit": "W",
@@ -219,10 +263,17 @@
           "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
         "bat_to_dc max power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/FlexValue"
+            }
+          ],
           "description": "Battery to DC max power in watts",
-          "exclusiveMinimum": 0.0,
+          "gt": 0,
           "title": "Bat To Dc Max Power",
-          "type": "number",
           "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
           "x-ui-section": "Power Configuration",
           "x-unit": "W",
@@ -281,7 +332,7 @@
               "type": "null"
             }
           ],
-          "default": null,
+          "default": "Aan",
           "description": "Value for operating mode ON",
           "title": "Entity Set Operating Mode On",
           "x-help": "Value to send to operating mode entity for 'ON' state. Example: 'auto', 'enabled', 'on'. Must match actual entity values.",
@@ -296,7 +347,7 @@
               "type": "null"
             }
           ],
-          "default": null,
+          "default": "Uit",
           "description": "Value for operating mode OFF",
           "title": "Entity Set Operating Mode Off",
           "x-help": "Value to send to operating mode entity for 'OFF' state. Example: 'manual', 'disabled', 'off'. Must match actual entity values.",
@@ -315,6 +366,23 @@
           "description": "HA entity to stop inverter",
           "title": "Entity Stop Inverter",
           "x-help": "Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.",
+          "x-ui-section": "Power Configuration",
+          "x-ui-widget": "entity-picker",
+          "x-ui-widget-filter": "switch,button"
+        },
+        "entity stop victron": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity to stop Victron inverter",
+          "title": "Entity Stop Victron",
+          "x-help": "Optional: Home Assistant entity to stop a Victron battery inverter. Use this for Victron-specific stop control.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget": "entity-picker",
           "x-ui-widget-filter": "switch,button"
@@ -581,10 +649,17 @@
           "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
         },
         "cooling rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/FlexValue"
+            }
+          ],
           "description": "Cooling rate in degrees per hour",
-          "minimum": 0.0,
+          "ge": 0,
           "title": "Cooling Rate",
-          "type": "number",
           "x-help": "Rate at which water temperature drops when not heating, in °C per hour. Depends on insulation quality. Typical: 0.5-2.0°C/h for well-insulated boilers.",
           "x-ui-section": "General",
           "x-unit": "°C/h",
@@ -602,9 +677,16 @@
           "x-validation-hint": "Must be > 0, typically 100-300L"
         },
         "heating allowed below": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/FlexValue"
+            }
+          ],
           "description": "Temperature below which heating is allowed",
           "title": "Heating Allowed Below",
-          "type": "number",
           "x-help": "Maximum temperature for starting heating cycle. Heating only occurs when water is below this temperature. Typically same as or slightly above setpoint.",
           "x-ui-section": "General",
           "x-unit": "°C",
@@ -636,6 +718,31 @@
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker",
           "x-ui-widget-filter": "button,switch"
+        },
+        "boiler heated by heatpump": {
+          "default": true,
+          "description": "Whether the boiler is heated by a heat pump",
+          "title": "Boiler Heated By Heatpump",
+          "type": "boolean",
+          "x-help": "Set to true if the boiler is heated by a heat pump (COP > 1). Set to false for direct electric resistive heating. Affects optimization calculations.",
+          "x-ui-section": "General"
+        },
+        "switch entity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity to switch boiler on/off",
+          "title": "Switch Entity",
+          "x-help": "Optional: Home Assistant switch entity to directly control boiler power. Alternative to activate_entity for simple on/off control.",
+          "x-ui-section": "General",
+          "x-ui-widget": "entity-picker",
+          "x-ui-widget-filter": "switch"
         }
       },
       "required": [
@@ -698,17 +805,10 @@
           "x-ui-section": "Connection Settings"
         },
         "db_path": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": "../data",
           "description": "Database path for SQLite (e.g., '../data')",
           "title": "Db Path",
+          "type": "string",
           "x-help": "Directory path for SQLite database file. Relative to add-on root. Example: '../data' stores in persistent data folder. Only for SQLite.",
           "x-ui-section": "Connection Settings",
           "x-validation-hint": "Required for SQLite (or use database field)"
@@ -730,52 +830,31 @@
           "x-validation-hint": "Filename for SQLite, database name for MySQL/PostgreSQL"
         },
         "server": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": "core-mariadb",
           "description": "MySQL server hostname (required for mysql)",
           "title": "Server",
+          "type": "string",
           "x-help": "Hostname or IP of MySQL/PostgreSQL server. Required for server-based engines. Examples: 'localhost', '192.168.1.100'.",
           "x-ui-section": "Connection Settings",
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
-          "anyOf": [
-            {
-              "maximum": 65535,
-              "minimum": 1,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": 0,
           "description": "MySQL/PostgreSQL server port (required for mysql/postgresql)",
+          "maximum": 65535,
+          "minimum": 0,
           "title": "Port",
+          "type": "integer",
           "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
           "x-ui-section": "Connection Settings",
           "x-unit": "port",
           "x-validation-hint": "1-65535, required for mysql/postgresql"
         },
         "username": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": "day_ahead",
           "description": "MySQL username (required for mysql)",
           "title": "Username",
+          "type": "string",
           "x-help": "Database username for authentication. Required for MySQL/PostgreSQL.",
           "x-ui-section": "Connection Settings",
           "x-validation-hint": "Required for mysql/postgresql engines"
@@ -1274,39 +1353,33 @@
           "x-ui-section": "Connection Settings"
         },
         "server": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": "core-mariadb",
           "description": "Database server hostname (required for mysql/postgresql)",
           "title": "Server",
+          "type": "string",
           "x-help": "Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.",
           "x-ui-section": "Connection Settings",
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
-          "anyOf": [
-            {
-              "maximum": 65535,
-              "minimum": 1,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": 0,
           "description": "Database port",
+          "maximum": 65535,
+          "minimum": 0,
           "title": "Port",
+          "type": "integer",
           "x-help": "Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.",
           "x-ui-section": "Connection Settings",
           "x-unit": "port",
           "x-validation-hint": "1-65535, defaults: mysql=3306, postgresql=5432"
+        },
+        "db_path": {
+          "default": "/homeassistant",
+          "description": "Database path for SQLite",
+          "title": "Db Path",
+          "type": "string",
+          "x-help": "Directory path for SQLite database file.",
+          "x-ui-section": "Connection Settings"
         },
         "database": {
           "default": "homeassistant",
@@ -1387,11 +1460,18 @@
           "x-ui-widget-filter": "binary_sensor"
         },
         "degree days factor": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/FlexValue"
+            }
+          ],
           "default": 1.0,
           "description": "Degree days factor for heat demand calculation",
-          "exclusiveMinimum": 0.0,
+          "gt": 0,
           "title": "Degree Days Factor",
-          "type": "number",
           "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
           "x-ui-section": "General",
           "x-unit": "factor",
@@ -2069,6 +2149,7 @@
               "type": "string"
             }
           ],
+          "default": true,
           "description": "Whether tax refund applies",
           "title": "Tax Refund",
           "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.",
@@ -2083,8 +2164,7 @@
         "cost supplier production",
         "vat consumption",
         "vat production",
-        "last invoice",
-        "tax refund"
+        "last invoice"
       ],
       "title": "PricingConfig",
       "type": "object",
@@ -2283,23 +2363,7 @@
       "x-ui-group": "Automation"
     },
     "SecretStr": {
-      "additionalProperties": false,
-      "description": "A secret string reference that gets resolved from secrets.json.\n\nExample in options.json:\n    {\"db_password\": \"!secret db_password\"}\n    \nGets resolved to actual value from secrets.json:\n    {\"db_password\": \"my_actual_password_123\"}",
-      "properties": {
-        "secret_key": {
-          "title": "Secret Key",
-          "type": "string",
-          "x-help": "Secret key name to resolve from secrets.json. Use '!secret key_name' in config. Never store actual secrets in options.json!",
-          "x-ui-section": "General",
-          "x-validation-hint": "Use format: !secret key_name"
-        }
-      },
-      "required": [
-        "secret_key"
-      ],
-      "title": "SecretStr",
-      "type": "object",
-      "x-help": "SecretStr provides secure secret management. Secrets stored in separate secrets.json file, never in main config. Reference format: \"!secret key_name\". Essential for passwords, API tokens, and sensitive data."
+      "type": "string"
     },
     "SolarConfig": {
       "additionalProperties": true,
@@ -2420,6 +2484,53 @@
           "title": "Strings",
           "x-help": "Advanced: Configure multiple strings for panels with different orientations or tilts. Use this OR flat config (tilt/orientation/capacity/yield), not both.",
           "x-ui-section": "Panel Orientation"
+        },
+        "ml_prediction": {
+          "default": false,
+          "description": "Use ML model to predict solar production for this installation",
+          "title": "Ml Prediction",
+          "type": "boolean",
+          "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
+          "x-ui-section": "ML Prediction"
+        },
+        "entities sensors": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA sensor entities for measuring actual solar production",
+          "title": "Entities Sensors",
+          "x-help": "Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.",
+          "x-ui-section": "ML Prediction",
+          "x-ui-widget": "entity-picker",
+          "x-ui-widget-filter": "sensor"
+        },
+        "max power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum output power cap in kW (MPPT limit)",
+          "title": "Max Power",
+          "x-help": "Optional. Limit the installation output to this value in kW. Use when your inverter/MPPT maximum power is less than the total panel capacity.",
+          "x-ui-section": "Panel Orientation",
+          "x-unit": "kW"
         }
       },
       "required": [
@@ -2468,6 +2579,22 @@
           "x-ui-section": "Panel Orientation",
           "x-unit": "kWp",
           "x-validation-hint": "Must be greater than 0"
+        },
+        "max power": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum output power cap in kW (MPPT limit)",
+          "title": "Max Power",
+          "x-help": "Optional. Limit the string output to this value in kW. Use when your MPPT maximum power is less than the total panel capacity.",
+          "x-ui-section": "Panel Orientation",
+          "x-unit": "kW"
         },
         "yield": {
           "description": "Yield factor for production calculation",
@@ -2537,6 +2664,49 @@
       "x-icon": "lightning-bolt",
       "x-order": 19,
       "x-ui-group": "Integration"
+    },
+    "XGBoostConfig": {
+      "additionalProperties": true,
+      "description": "Configuration for the XGBoost solar-prediction model.\n\n``param_grid`` and ``parameters`` are free-form dicts whose internal\nstructure is dictated by XGBoost / scikit-learn, not by this project.\nThey are left unvalidated so users can pass any valid XGBoost option.\nAny additional keys are also accepted via ``extra='allow'``.",
+      "properties": {
+        "tune_hyperparameters": {
+          "default": false,
+          "description": "Run GridSearchCV to find optimal hyper-parameters before training",
+          "title": "Tune Hyperparameters",
+          "type": "boolean",
+          "x-help": "When enabled, the predictor performs a grid search over 'param_grid' to select the best XGBoost hyper-parameters. Increases training time significantly."
+        },
+        "param_grid": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Grid of hyper-parameters for GridSearchCV. Keys are XGBoost parameter names, values are lists of candidates.",
+          "title": "Param Grid",
+          "x-help": "Free-form dict passed directly to sklearn GridSearchCV. Example: {\"n_estimators\": [100, 200], \"max_depth\": [3, 6]}. Leave empty to use the built-in defaults."
+        },
+        "parameters": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fixed hyper-parameters used when tune_hyperparameters is false. Keys are XGBoost parameter names.",
+          "title": "Parameters",
+          "x-help": "Free-form dict of XGBoost parameters used when tune_hyperparameters is disabled. Example: {\"n_estimators\": 200, \"max_depth\": 6, \"learning_rate\": 0.1}. Leave empty to use the built-in defaults."
+        }
+      },
+      "title": "XGBoostConfig",
+      "type": "object"
     }
   },
   "additionalProperties": true,
@@ -2577,30 +2747,16 @@
       "description": "Day Ahead optimization database connection"
     },
     "latitude": {
-      "anyOf": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Latitude (auto-fetched from HA if not set)",
-      "title": "Latitude"
+      "default": 52.0,
+      "description": "Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
+      "title": "Latitude",
+      "type": "number"
     },
     "longitude": {
-      "anyOf": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Longitude (auto-fetched from HA if not set)",
-      "title": "Longitude"
+      "default": 5.1,
+      "description": "Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
+      "title": "Longitude",
+      "type": "number"
     },
     "time_zone": {
       "anyOf": [
@@ -2780,6 +2936,16 @@
       "title": "Strategy",
       "type": "string"
     },
+    "max gap": {
+      "default": 0.005,
+      "description": "Maximum MIP gap (absolute) for the optimizer",
+      "exclusiveMinimum": 0.0,
+      "maximum": 1.0,
+      "title": "Max Gap",
+      "type": "number",
+      "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
+      "x-unit": "euro"
+    },
     "notifications": {
       "anyOf": [
         {
@@ -2871,6 +3037,10 @@
       ],
       "default": null,
       "description": "Tibber API integration"
+    },
+    "xgboost": {
+      "$ref": "#/$defs/XGBoostConfig",
+      "description": "XGBoost solar-production predictor settings"
     },
     "report": {
       "$ref": "#/$defs/ReportConfig",
