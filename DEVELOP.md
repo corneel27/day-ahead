@@ -146,9 +146,9 @@ From the project root (`day-ahead/`):
 cd /path/to/day-ahead
 
 # Activate your virtual environment if not already active
-source venv/bin/activate  # On macOS/Linux
+source .venv/bin/activate  # On macOS/Linux
 # or
-venv\Scripts\activate     # On Windows
+.venv\Scripts\activate     # On Windows
 
 # In case of manual mip install:
 export PMIP_CBC_LIBRARY=~/day-ahead/dao/prog/miplib/lib/libCbc.so

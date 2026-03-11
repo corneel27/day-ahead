@@ -3609,7 +3609,7 @@ class DaCalc(DaBase):
                 if ev_instant_charge[e]:
                     entity_stop_laden = None
                 else:
-                entity_stop_laden = self.ev_options[e].entity_stop_charging
+                    entity_stop_laden = self.ev_options[e].entity_stop_charging
                 old_switch_state = self.get_state(entity_charge_switch).state
                 old_ampere_state = self.get_state(entity_charging_ampere).state
                 new_ampere_state = 0
