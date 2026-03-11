@@ -37,8 +37,7 @@ class DaCalc(DaBase):
         self.prices_options = self.config.prices
         self.ev_options = list(self.config.electric_vehicle or [])
         self.heating_options = self.config.heating
-        _uc = self.config.use_calc_baseload
-        self.use_calc_baseload = (_uc.lower() == "true" if isinstance(_uc, str) else bool(_uc)) if _uc is not None else False
+        self.use_calc_baseload = self.config.use_calc_baseload
         self.hp_present = False
         self.hp_enabled = False
         self.hp_adjustment = None

@@ -7,7 +7,7 @@ get migrated to this version with no format changes.
 """
 
 from typing import Optional, Literal
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict
 
 from ..models.base import SecretStr
 from ..models.database import HADatabaseConfig, DatabaseConfig
@@ -61,37 +61,68 @@ class ConfigurationV0(BaseModel):
     # Location (auto-fetched from HA, but can be in config)
     latitude: float = Field(
         default=52.0,
-        description="Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)"
+        description="Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Your home"
+        }
     )
     longitude: float = Field(
         default=5.1,
-        description="Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)"
+        description="Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Your home"
+        }
     )
     time_zone: Optional[str] = Field(
         default=None,
         alias="time_zone",
-        description="Timezone (auto-fetched from HA if not set)"
+        description="Timezone (auto-fetched from HA if not set)",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Your home"
+        }
     )
     country: Optional[str] = Field(
         default=None,
-        description="Country code (auto-fetched from HA if not set)"
+        description="Country code (auto-fetched from HA if not set)",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Your home"
+        }
     )
     
     # Meteoserver
     meteoserver_key: str | SecretStr = Field(
         alias="meteoserver-key",
-        description="Meteoserver API key (can use !secret)"
+        description="Meteoserver API key (can use !secret)",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Weather",
+            "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. Use !secret for security. Required for weather forecasts.",
+            "x-validation-hint": "Use !secret for API keys",
+            "x-ui-widget": "secret-picker"
+        }
     )
     meteoserver_model: Literal['harmonie', 'gfs'] = Field(
         default="harmonie",
         alias="meteoserver-model",
-        description="Meteoserver model"
+        description="Meteoserver model",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Weather"
+        }
     )
     meteoserver_attemps: Optional[int] = Field(
         default=2,
         alias="meteoserver-attemps",
         ge=1,
-        description="Number of meteoserver fetch attempts"
+        description="Number of meteoserver fetch attempts",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Weather"
+        }
     )
     
     # Pricing
@@ -104,45 +135,80 @@ class ConfigurationV0(BaseModel):
     logging_level: Literal['debug', 'info', 'warning', 'error'] = Field(
         default="info",
         alias="logging level",
-        description="Logging level"
+        description="Logging level",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Main"
+        }
     )
     protocol_api: Optional[Literal['http', 'https']] = Field(
         default=None,
         alias="protocol api",
-        description="API protocol"
+        description="API protocol",
+        json_schema_extra={
+            "x-ui-group": "Integration",
+            "x-ui-section": "Dashboard"
+        }
     )
     
     # Baseload
-    use_calc_baseload: bool | str = Field(
-        default="false",
+    use_calc_baseload: bool = Field(
+        default=False,
         alias="use_calc_baseload",
-        description="Whether to calculate baseload automatically"
+        description="Whether to calculate baseload automatically",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Baseload",
+            "x-order": 101
+        }
     )
     baseload_calc_periode: int = Field(
         default=56,
         alias="baseload calc periode",
         ge=1,
-        description="Period in days for baseload calculation"
+        description="Period in days for baseload calculation",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Baseload",
+            "x-order": 102,
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/use_calc_baseload",
+                    "schema": {"enum": [True]}
+                }
+            }
+        }
     )
-    baseload: Optional[float | list[float]] = Field(
+    baseload: Optional[list[float]] = Field(
         default=None,
-        description="Baseload power consumption (watts) - single value or 24 hourly values"
+        min_length=24,
+        max_length=24,
+        description="Baseload power consumption (kWh) - 24 hourly values",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Baseload",
+            "x-order": 103,
+            "x-help": "Baseload power consumption in kWh for each hour of the day (24 values). Leave empty to use calculated baseload.",
+            "x-ui-rules": {
+                "effect": "HIDE",
+                "condition": {
+                    "scope": "#/properties/use_calc_baseload",
+                    "schema": {"enum": [True]}
+                }
+            }
+        }
     )
-    
-    @field_validator('baseload')
-    @classmethod
-    def validate_baseload_length(cls, v):
-        """Validate baseload has exactly 24 values if it's a list."""
-        if v is not None and isinstance(v, list):
-            if len(v) != 24:
-                raise ValueError(f"baseload must have exactly 24 hourly values, got {len(v)}")
-        return v
     
     # Graphics
     graphical_backend: str = Field(
         default="",
         alias="graphical backend",
-        description="Matplotlib graphical backend"
+        description="Matplotlib graphical backend",
+        json_schema_extra={
+            "x-ui-group": "Visualization",
+            "x-validation-hint": "Leave empty for auto-detect, use 'Agg' for headless"
+        }
     )
     graphics: GraphicsConfig = Field(
         default_factory=GraphicsConfig,
@@ -150,13 +216,25 @@ class ConfigurationV0(BaseModel):
     )
     
     # Optimization
-    interval: Optional[int | str] = Field(
-        default=None,
-        description="Optimization interval in minutes"
+    interval: Literal['1hour', '15min'] = Field(
+        default='1hour',
+        description="Optimization interval in minutes",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Optimization",
+            "x-help": "Time interval for optimization calculations. '1hour' for hourly optimization, '15min' for quarter-hourly optimization (more detailed, higher computation).",
+            "x-docs-url": "https://github.com/corneel72/day-ahead/wiki/Optimization",
+            "x-order": 1
+        }
     )
     strategy: Literal['minimize cost', 'minimize consumption'] = Field(
         default="minimize cost",
-        description="Optimization strategy"
+        description="Optimization strategy",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Optimization",
+            "x-order": 2
+        }
     )
     max_gap: float = Field(
         default=0.005,
@@ -178,7 +256,10 @@ class ConfigurationV0(BaseModel):
     # Infrastructure
     grid: GridConfig = Field(
         default_factory=GridConfig,
-        description="Grid connection settings"
+        description="Grid connection settings",
+        json_schema_extra={
+            "x-ui-section": "Grid"
+        }
     )
     history: HistoryConfig = Field(
         default_factory=HistoryConfig,
@@ -192,20 +273,32 @@ class ConfigurationV0(BaseModel):
     # Devices (required arrays)
     battery: list[BatteryConfig] = Field(
         default_factory=list,
-        description="Battery configurations"
+        description="Battery configurations",
+        json_schema_extra={
+            "x-ui-section": "Batteries"
+        }
     )
     solar: list[SolarConfig] = Field(
         default_factory=list,
-        description="Solar panel configurations"
+        description="Solar panel configurations",
+        json_schema_extra={
+            "x-ui-section": "Solar Panels"
+        }
     )
     electric_vehicle: list[EVConfig] = Field(
         default_factory=list,
         alias="electric vehicle",
-        description="Electric vehicle configurations"
+        description="Electric vehicle configurations",
+        json_schema_extra={
+            "x-ui-section": "Vehicles"
+        }
     )
     machines: list[MachineConfig] = Field(
         default_factory=list,
-        description="Appliance/machine configurations"
+        description="Appliance/machine configurations",
+        json_schema_extra={
+            "x-ui-section": "Machines"
+        }
     )
     
     # Optional devices

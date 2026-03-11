@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - 'dao/lib/config/**/*.py'
+      - 'scripts/generate_docs.py'
   pull_request:
     paths:
       - 'dao/lib/config/**/*.py'
+      - 'scripts/generate_docs.py'
 
 jobs:
   generate-docs:
@@ -36,7 +38,7 @@ jobs:
         id: generate
         run: |
           echo "Generating JSON schema and markdown documentation..."
-          if python -m dao.lib.config.generate_docs; then
+          if python scripts/generate_docs.py; then
             echo "SUCCESS: Schema and documentation generated successfully"
             echo "SUCCESS: All fields have proper documentation"
             echo "validation=success" >> $GITHUB_OUTPUT
