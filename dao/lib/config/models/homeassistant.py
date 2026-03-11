@@ -16,7 +16,7 @@ class HomeAssistantConfig(BaseModel):
         description="Home Assistant IP address (auto-detected if not set)",
         json_schema_extra={
             "x-help": "Home Assistant IP address or hostname. Usually auto-detected when running as HA add-on. Set manually only if auto-detection fails. Examples: '192.168.1.100', 'homeassistant.local'.",
-            "x-ui-section": "General"
+            "x-ui-section": "Homeassistant"
         }
     )
     ip_port: Optional[int] = Field(
@@ -26,7 +26,7 @@ class HomeAssistantConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant web interface port. Default is 8123. Change only if using custom port. Usually auto-detected when running as add-on.",
             "x-unit": "port",
-            "x-ui-section": "General",
+            "x-ui-section": "Homeassistant",
             "x-validation-hint": "Default 8123, change if custom"
         }
     )
@@ -36,7 +36,8 @@ class HomeAssistantConfig(BaseModel):
         alias="token",
         json_schema_extra={
             "x-help": "Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.",
-            "x-ui-section": "General",
+            "x-ui-section": "Homeassistant",
+            "x-ui-widget": "secret-picker",
             "x-validation-hint": "Auto-provided as add-on, use !secret if manual"
         }
     )
@@ -46,7 +47,7 @@ class HomeAssistantConfig(BaseModel):
         description="API protocol",
         json_schema_extra={
             "x-help": "Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. Usually auto-detected. Set manually only if needed.",
-            "x-ui-section": "General"
+            "x-ui-section": "Homeassistant"
         }
     )
     
@@ -54,7 +55,7 @@ class HomeAssistantConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Integration',
+            'x-ui-group': 'HASS',
             'x-icon': 'home-assistant',
             'x-order': 20,
             'x-help': '''# Home Assistant Connection

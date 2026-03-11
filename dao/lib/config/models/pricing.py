@@ -17,7 +17,7 @@ class PricingConfig(BaseModel):
         description="Source for day-ahead prices",
         json_schema_extra={
             "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
-            "x-ui-section": "General"
+            "x-ui-section": "Prices"
         }
     )
     entsoe_api_key: Optional[str | SecretStr] = Field(
@@ -26,9 +26,18 @@ class PricingConfig(BaseModel):
         description="ENTSO-E API key (can use !secret)",
         json_schema_extra={
             "x-help": "API key for ENTSO-E Transparency Platform. Required if source_day_ahead='entsoe'. Get free key at transparency.entsoe.eu. Use !secret for security.",
-            "x-ui-section": "General",
+            "x-ui-section": "Prices",
             "x-validation-hint": "Required for entsoe source, use !secret",
-            "x-docs-url": "https://transparency.entsoe.eu/"
+            "x-docs-url": "https://transparency.entsoe.eu/",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/source_day_ahead",
+                    "schema": {
+                        "const": "entsoe"
+                    }
+                }
+            }
         }
     )
     
@@ -39,7 +48,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Energy taxes on consumption (excluding VAT) indexed by effective date. Format: {'2024-01-01': 0.05}. Use date when tariff changes.",
             "x-unit": "€/kWh",
-            "x-ui-section": "General",
+            "x-ui-section": "Taxes",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
@@ -49,7 +58,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Energy taxes on feed-in/production (excluding VAT) indexed by effective date. Often zero or negative. Format: {'2024-01-01': 0.0}.",
             "x-unit": "€/kWh",
-            "x-ui-section": "General",
+            "x-ui-section": "Taxes",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
@@ -59,7 +68,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Supplier markup/fees for consumption (excluding VAT) indexed by effective date. Fixed part of electricity cost. Format: {'2024-01-01': 0.02}.",
             "x-unit": "€/kWh",
-            "x-ui-section": "General",
+            "x-ui-section": "Cost",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
@@ -69,7 +78,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
             "x-unit": "€/kWh",
-            "x-ui-section": "General",
+            "x-ui-section": "Cost",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
@@ -79,7 +88,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 21}. Applied to market price + taxes + supplier costs.",
             "x-unit": "%",
-            "x-ui-section": "General",
+            "x-ui-section": "Taxes",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         }
     )
@@ -89,7 +98,7 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.",
             "x-unit": "%",
-            "x-ui-section": "General",
+            "x-ui-section": "Taxes",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         }
     )
@@ -100,7 +109,7 @@ class PricingConfig(BaseModel):
         description="Date of last invoice (YYYY-MM-DD)",
         json_schema_extra={
             "x-help": "Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.",
-            "x-ui-section": "General",
+            "x-ui-section": "Prices",
             "x-validation-hint": "Must be YYYY-MM-DD format"
         }
     )
@@ -110,7 +119,7 @@ class PricingConfig(BaseModel):
         description="Whether tax refund applies",
         json_schema_extra={
             "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.",
-            "x-ui-section": "General",
+            "x-ui-section": "Taxes",
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
@@ -128,7 +137,7 @@ class PricingConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Pricing & Markets',
+            'x-ui-group': 'Pricing',
             'x-icon': 'currency-eur',
             'x-order': 11,
             'x-help': '''# Pricing & Tariff Configuration

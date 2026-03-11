@@ -180,7 +180,7 @@ class BoilerConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Heating & Climate',
+            'x-ui-group': 'Heating',
             'x-icon': 'water-boiler',
             'x-order': 5,
             'x-help': '''# Hot Water Boiler Configuration

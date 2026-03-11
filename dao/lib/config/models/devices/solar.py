@@ -185,7 +185,7 @@ class SolarConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Energy Production',
+            'x-ui-group': 'Energy',
             'x-icon': 'solar-panel',
             'x-order': 2,
             'x-help': '''# Solar Panel Configuration

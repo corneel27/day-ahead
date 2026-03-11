@@ -15,7 +15,6 @@ class DashboardConfig(BaseModel):
         json_schema_extra={
             "x-help": "Port number for Day Ahead Optimizer web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).",
             "x-unit": "port",
-            "x-ui-section": "Connection Settings",
             "x-validation-hint": "1024-65535, default 5000"
         }
     )
@@ -24,6 +23,7 @@ class DashboardConfig(BaseModel):
         extra='allow',
         json_schema_extra={
             'x-ui-group': 'Integration',
+            'x-ui-section': 'Dashboard',
             'x-icon': 'view-dashboard',
             'x-order': 16,
             'x-help': '''# Dashboard Configuration

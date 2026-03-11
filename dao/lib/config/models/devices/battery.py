@@ -81,7 +81,7 @@ class BatteryConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-validation-hint": "0-100%, protects battery from overcharge",
-            "x-ui-widget": "entity-picker-or-literal",
+            "x-ui-widget": "entity-picker-or-number",
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
@@ -94,7 +94,7 @@ class BatteryConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-validation-hint": "0-100%, protects battery from deep discharge",
-            "x-ui-widget": "entity-picker-or-literal",
+            "x-ui-widget": "entity-picker-or-number",
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
@@ -108,7 +108,7 @@ class BatteryConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-validation-hint": "Optional, should be >= lower_limit",
-            "x-ui-widget": "entity-picker-or-literal",
+            "x-ui-widget": "entity-picker-or-number",
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
@@ -120,7 +120,7 @@ class BatteryConfig(BaseModel):
             "x-help": "Cost in euro per %·hour when SOC stays below optimal lower level. Higher values make the optimizer prioritize keeping SOC above the optimal level. Default 0.0025 euro/%·h.",
             "x-unit": "euro/%·h",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker-or-literal",
+            "x-ui-widget": "entity-picker-or-number",
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
@@ -387,6 +387,7 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant sensor for calculated State of Charge. System can compute SOC from power flows if BMS sensor is unavailable.",
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
+            "x-order": 1,
             "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
@@ -398,7 +399,8 @@ class BatteryConfig(BaseModel):
         description="DC-coupled solar panels attached to this battery",
         json_schema_extra={
             "x-help": "Optional: Configure DC-coupled solar panels directly connected to this battery inverter. DC coupling is more efficient than AC coupling. Leave empty for AC-coupled or grid-only batteries.",
-            "x-ui-section": "Power Configuration"
+            "x-ui-section": "Battery Connected Solar",
+            "x-order": 1000
         }
     )
     
@@ -406,7 +408,7 @@ class BatteryConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Energy Storage',
+            'x-ui-group': 'Energy',
             'x-icon': 'battery-charging',
             'x-order': 1,
             'x-help': '''# Battery Configuration

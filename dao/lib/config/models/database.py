@@ -15,7 +15,7 @@ class HADatabaseConfig(BaseModel):
         description="Database engine type",
         json_schema_extra={
             "x-help": "Database engine where Home Assistant stores history data. Most HA installations use SQLite, but MySQL/MariaDB and PostgreSQL are also supported.",
-            "x-ui-section": "Connection Settings"
+            "x-ui-section": "Homeassistant DB"
         }
     )
     server: str = Field(
@@ -23,8 +23,15 @@ class HADatabaseConfig(BaseModel):
         description="Database server hostname (required for mysql/postgresql)",
         json_schema_extra={
             "x-help": "Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.",
-            "x-ui-section": "Connection Settings",
-            "x-validation-hint": "Required for mysql/postgresql engines"
+            "x-ui-section": "Homeassistant DB",
+            "x-validation-hint": "Required for mysql/postgresql engines",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     port: int = Field(
@@ -34,8 +41,15 @@ class HADatabaseConfig(BaseModel):
         json_schema_extra={
             "x-help": "Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.",
             "x-unit": "port",
-            "x-ui-section": "Connection Settings",
-            "x-validation-hint": "1-65535, defaults: mysql=3306, postgresql=5432"
+            "x-ui-section": "Homeassistant DB",
+            "x-validation-hint": "1-65535, defaults: mysql=3306, postgresql=5432",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     db_path: str = Field(
@@ -43,7 +57,7 @@ class HADatabaseConfig(BaseModel):
         description="Database path for SQLite",
         json_schema_extra={
             "x-help": "Directory path for SQLite database file.",
-            "x-ui-section": "Connection Settings"
+            "x-ui-section": "Homeassistant DB"
         }
     )
     database: str = Field(
@@ -51,7 +65,7 @@ class HADatabaseConfig(BaseModel):
         description="Database name",
         json_schema_extra={
             "x-help": "Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation.",
-            "x-ui-section": "Connection Settings"
+            "x-ui-section": "Homeassistant DB"
         }
     )
     username: str = Field(
@@ -59,7 +73,14 @@ class HADatabaseConfig(BaseModel):
         description="Database username",
         json_schema_extra={
             "x-help": "Username for database authentication. Default 'homeassistant' matches standard HA installation.",
-            "x-ui-section": "Connection Settings"
+            "x-ui-section": "Homeassistant DB",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     password: Optional[str | SecretStr] = Field(
@@ -67,8 +88,15 @@ class HADatabaseConfig(BaseModel):
         description="Database password (can use !secret)",
         json_schema_extra={
             "x-help": "Database password. Use secrets.json with '!secret password_key' pattern for security. Never store passwords directly in config.",
-            "x-ui-section": "Connection Settings",
-            "x-validation-hint": "Use !secret for passwords"
+            "x-ui-section": "Homeassistant DB",
+            "x-validation-hint": "Use !secret for passwords",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     
@@ -77,7 +105,17 @@ class HADatabaseConfig(BaseModel):
         populate_by_name=True,
         json_schema_extra={
             "x-help": "Home Assistant database connection for reading historical sensor data (prices, solar, baseload).",
-            "x-ui-section": "Connection Settings"
+            "x-ui-group": "Integration",
+            "title": "Home Assistant Database",
+            "if": {
+                "required": ["engine"],
+                "properties": {
+                    "engine": {"enum": ["mysql", "postgresql"]}
+                }
+            },
+            "then": {
+                "required": ["server", "port", "username"]
+            }
         }
     )
     
@@ -108,7 +146,7 @@ class DatabaseConfig(BaseModel):
         description="Database engine type",
         json_schema_extra={
             "x-help": "Database engine for Day Ahead optimizer data. SQLite is simplest (no server needed), MySQL/PostgreSQL for advanced setups or shared databases.",
-            "x-ui-section": "Connection Settings"
+            "x-ui-section": "DAO Database"
         }
     )
     
@@ -118,8 +156,15 @@ class DatabaseConfig(BaseModel):
         description="Database path for SQLite (e.g., '../data')",
         json_schema_extra={
             "x-help": "Directory path for SQLite database file. Relative to add-on root. Example: '../data' stores in persistent data folder. Only for SQLite.",
-            "x-ui-section": "Connection Settings",
-            "x-validation-hint": "Required for SQLite (or use database field)"
+            "x-ui-section": "DAO Database",
+            "x-validation-hint": "Required for SQLite (or use database field)",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["sqlite"]}
+                }
+            }
         }
     )
     database: Optional[str] = Field(
@@ -127,7 +172,7 @@ class DatabaseConfig(BaseModel):
         description="Database filename for SQLite or database name for MySQL",
         json_schema_extra={
             "x-help": "For SQLite: filename (e.g., 'day_ahead.db'). For MySQL/PostgreSQL: database name. At least one of db_path or database required for SQLite.",
-            "x-ui-section": "Connection Settings",
+            "x-ui-section": "DAO Database",
             "x-validation-hint": "Filename for SQLite, database name for MySQL/PostgreSQL"
         }
     )
@@ -138,8 +183,15 @@ class DatabaseConfig(BaseModel):
         description="MySQL server hostname (required for mysql)",
         json_schema_extra={
             "x-help": "Hostname or IP of MySQL/PostgreSQL server. Required for server-based engines. Examples: 'localhost', '192.168.1.100'.",
-            "x-ui-section": "Connection Settings",
-            "x-validation-hint": "Required for mysql/postgresql engines"
+            "x-ui-section": "DAO Database",
+            "x-validation-hint": "Required for mysql/postgresql engines",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     port: int = Field(
@@ -149,8 +201,15 @@ class DatabaseConfig(BaseModel):
         json_schema_extra={
             "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
             "x-unit": "port",
-            "x-ui-section": "Connection Settings",
-            "x-validation-hint": "1-65535, required for mysql/postgresql"
+            "x-ui-section": "DAO Database",
+            "x-validation-hint": "1-65535, required for mysql/postgresql",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     username: str = Field(
@@ -158,8 +217,15 @@ class DatabaseConfig(BaseModel):
         description="MySQL username (required for mysql)",
         json_schema_extra={
             "x-help": "Database username for authentication. Required for MySQL/PostgreSQL.",
-            "x-ui-section": "Connection Settings",
-            "x-validation-hint": "Required for mysql/postgresql engines"
+            "x-ui-section": "DAO Database",
+            "x-validation-hint": "Required for mysql/postgresql engines",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     password: Optional[str | SecretStr] = Field(
@@ -167,8 +233,15 @@ class DatabaseConfig(BaseModel):
         description="MySQL password (can use !secret)",
         json_schema_extra={
             "x-help": "Database password. Use secrets.json with '!secret password_key' for security. Never store passwords directly in config.",
-            "x-ui-section": "Connection Settings",
-            "x-validation-hint": "Use !secret for passwords"
+            "x-ui-section": "DAO Database",
+            "x-validation-hint": "Use !secret for passwords",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     time_zone: Optional[str] = Field(
@@ -177,7 +250,7 @@ class DatabaseConfig(BaseModel):
         description="Database timezone",
         json_schema_extra={
             "x-help": "Optional: Timezone for database timestamps. Examples: 'Europe/Amsterdam', 'UTC'. Usually not needed if database and system timezones match.",
-            "x-ui-section": "Connection Settings"
+            "x-ui-section": "DAO Database"
         }
     )
     
@@ -185,7 +258,7 @@ class DatabaseConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Infrastructure',
+            'x-ui-group': 'Integration',
             'x-icon': 'database',
             'x-order': 10,
             'x-help': '''# Day Ahead Database Configuration

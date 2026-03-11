@@ -16,7 +16,7 @@ class HistoryConfig(BaseModel):
         json_schema_extra={
             "x-help": "Number of days to retain optimization history in database. Older data is automatically cleaned up. Longer retention enables better trend analysis but increases database size. Minimum 1 day.",
             "x-unit": "days",
-            "x-ui-section": "Retention Settings",
+            "x-ui-section": "History",
             "x-validation-hint": "Must be >= 1, typical 7-30 days"
         }
     )
@@ -25,7 +25,7 @@ class HistoryConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Infrastructure',
+            'x-ui-group': 'Reporting',
             'x-icon': 'database-clock',
             'x-order': 15,
             'x-help': '''# History & Data Retention

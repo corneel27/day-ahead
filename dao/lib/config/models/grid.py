@@ -16,7 +16,6 @@ class GridConfig(BaseModel):
         json_schema_extra={
             "x-help": "Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.",
             "x-unit": "kW",
-            "x-ui-section": "General",
             "x-validation-hint": "Must be > 0, typical 7-25 kW for residential"
         }
     )
@@ -25,7 +24,7 @@ class GridConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Infrastructure',
+            'x-ui-group': 'Energy',
             'x-icon': 'transmission-tower',
             'x-order': 12,
             'x-help': '''# Grid Connection Configuration

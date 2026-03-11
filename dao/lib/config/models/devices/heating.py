@@ -205,7 +205,7 @@ class HeatingConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Heating & Climate',
+            'x-ui-group': 'Heating',
             'x-icon': 'heat-pump',
             'x-order': 4,
             'x-help': '''# Heat Pump Configuration
