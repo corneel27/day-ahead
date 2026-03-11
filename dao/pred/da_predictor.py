@@ -18,7 +18,9 @@ import copy
 import json
 import requests
 
-from dao.lib.da_config import Config
+from pathlib import Path
+from dao.lib.config.loader import ConfigurationLoader
+from dao.lib.config.db_connections import make_db_da
 from dao.lib.da_prices import DaPrices
 
 # ML imports
@@ -133,8 +135,10 @@ class DAPredictor:
         self.is_trained = False
         self.training_stats = {}
         self.forecast_hours: int = 96
-        self.config = Config(self.file_name)
-        self.db_da = self.config.get_db_da(key="database_dap")
+        loader = ConfigurationLoader(Path(self.file_name) if self.file_name else Path("../data/options.json"))
+        self.config = loader.load_and_validate()
+        self._loader = loader
+        self.db_da = make_db_da(self.config, self._loader.secrets)
 
     def _fetch_ned_nl_data(
         self,
@@ -907,10 +911,7 @@ class DAPredictor:
         logging.debug(f"Testing samples: {len(X_test)}")
 
         tune_hyperparameters = (
-            self.config.get(
-                ["xgboost", "tune_hyperparameters"], None, f"{tune_hyperparameters}"
-            ).lower()
-            == "true"
+            (self.config.xgboost.tune_hyperparameters if self.config.xgboost else tune_hyperparameters)
         )
 
         logging.info(f"Tune hyperparameters: {tune_hyperparameters}")
@@ -923,7 +924,7 @@ class DAPredictor:
                 "learning_rate": [0.05, 0.1, 0.15],
                 "subsample": [0.8, 0.9],
             }
-            param_grid = self.config.get(["xgboost", "param_grid"], None, param_grid)
+            param_grid = self.config.xgboost.param_grid if (self.config.xgboost and self.config.xgboost.param_grid is not None) else param_grid
             logging.info(f"Parameter grid: {param_grid}")
 
             # Use subset for faster grid search
@@ -955,7 +956,7 @@ class DAPredictor:
                 "learning_rate": 0.1,
                 "subsample": 0.8,
             }
-            best_params = self.config.get(["xgboost", "parameters"], None, best_params)
+            best_params = self.config.xgboost.parameters if (self.config.xgboost and self.config.xgboost.parameters is not None) else best_params
 
         # Train final model
         logging.info("Training final model...")
@@ -1249,7 +1250,7 @@ class DAPredictor:
             else:
                 uur.append(None)
         result_df["uur"] = uur
-        style = self.config.get(["graphics", "style"], None, "")
+        style = self.config.graphics.style if self.config.graphics else ""
         graph_options = {
             "title": f"Prognose day_ahead prijzen vanaf {start.strftime('%Y-%m-%d %H:%M')}",
             "style": style,

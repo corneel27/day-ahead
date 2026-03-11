@@ -27,6 +27,7 @@ from ..models.devices.ev import EVConfig
 from ..models.devices.boiler import BoilerConfig
 from ..models.devices.heating import HeatingConfig
 from ..models.devices.machines import MachineConfig
+from ..models.xgboost import XGBoostConfig
 
 
 class ConfigurationV0(BaseModel):
@@ -58,13 +59,13 @@ class ConfigurationV0(BaseModel):
     )
     
     # Location (auto-fetched from HA, but can be in config)
-    latitude: Optional[float] = Field(
-        default=None,
-        description="Latitude (auto-fetched from HA if not set)"
+    latitude: float = Field(
+        default=52.0,
+        description="Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)"
     )
-    longitude: Optional[float] = Field(
-        default=None,
-        description="Longitude (auto-fetched from HA if not set)"
+    longitude: float = Field(
+        default=5.1,
+        description="Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)"
     )
     time_zone: Optional[str] = Field(
         default=None,
@@ -211,6 +212,10 @@ class ConfigurationV0(BaseModel):
     tibber: Optional[TibberConfig] = Field(
         default=None,
         description="Tibber API integration"
+    )
+    xgboost: XGBoostConfig = Field(
+        default_factory=XGBoostConfig,
+        description="XGBoost solar-production predictor settings"
     )
     
     # Reporting & Scheduling

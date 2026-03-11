@@ -41,10 +41,10 @@ class ConfigurationLoader:
         
         Args:
             config_path: Path to options.json
-            secrets_path: Path to secrets.json (optional)
+            secrets_path: Path to secrets.json (optional, auto-detected if omitted)
         """
         self.config_path = config_path
-        self.secrets_path = secrets_path
+        self.secrets_path = secrets_path or config_path.parent / "secrets.json"
         self._raw_options: Optional[dict[str, Any]] = None
         self._secrets: Optional[dict[str, str]] = None
     
@@ -74,7 +74,7 @@ class ConfigurationLoader:
         if self._secrets is not None:
             return self._secrets
         
-        if not self.secrets_path or not self.secrets_path.exists():
+        if not self.secrets_path.exists():
             logger.warning("No secrets file found, secret resolution will fail")
             self._secrets = {}
             return self._secrets
@@ -131,6 +131,9 @@ class ConfigurationLoader:
         """
         # Migrate to current version
         migrated_data = self.load_and_migrate()
+        
+        # Ensure secrets are loaded and available via self.secrets
+        self.load_secrets()
         
         # Get the model class for current version
         version = migrated_data.get("config_version", CURRENT_VERSION)

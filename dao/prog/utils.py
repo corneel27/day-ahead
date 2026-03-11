@@ -92,7 +92,9 @@ def convert_timestr(time_str: str, now_dt: datetime.datetime) -> datetime.dateti
 
 
 def get_tibber_data():
-    from dao.lib.da_config import Config
+    from dao.lib.config.loader import ConfigurationLoader
+    from dao.lib.config.db_connections import make_db_da
+    from pathlib import Path
 
     def get_datetime_from_str(s):
         # "2022-09-01T01:00:00.000+02:00"
@@ -107,13 +109,17 @@ def get_tibber_data():
             current_ts += 3600
         return all_hours
 
-    config = Config("../data/options.json")
-    tibber_options = config.get(["tibber"])
-    url = config.get(["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql")
-    db_da = config.get_db_da()
-    prices_options = config.get(["prices"])
+    loader = ConfigurationLoader(Path("../data/options.json"))
+    config = loader.load_and_validate()
+    tibber_options = config.tibber
+    url = (tibber_options.api_url if tibber_options else None) or "https://api.tibber.com/v1-beta/gql"
+    db_da = make_db_da(config, loader.secrets)
+    prices_options = config.prices
+    api_token = tibber_options.api_token
+    if hasattr(api_token, "resolve"):
+        api_token = api_token.resolve(loader.secrets)
     headers = {
-        "Authorization": "Bearer " + tibber_options["api_token"],
+        "Authorization": "Bearer " + api_token,
         "content-type": "application/json",
     }
     now_ts = latest_ts = math.ceil(datetime.datetime.now().timestamp() / 3600) * 3600
@@ -132,9 +138,8 @@ def get_tibber_data():
     # no starttime
     if (len(sys.argv) <= 2) or (start_ts is None):
         # search first missing
-        start_ts = datetime.datetime.strptime(
-            prices_options["last invoice"], "%Y-%m-%d"
-        ).timestamp()
+        last_invoice = prices_options.last_invoice
+        start_ts = datetime.datetime(last_invoice.year, last_invoice.month, last_invoice.day).timestamp()
         timestamps = generate_hourly_timestamps(start_ts, now_ts)
         values_table = Table("values", db_da.metadata, autoload_with=db_da.engine)
         variabel_table = Table("variabel", db_da.metadata, autoload_with=db_da.engine)
@@ -406,10 +411,13 @@ print(all_interp)
 
 
 def interpolate_prognose_data():
-    from dao.lib.da_config import Config
+    from dao.lib.config.loader import ConfigurationLoader
+    from dao.lib.config.db_connections import make_db_da
+    from pathlib import Path
 
-    config = Config("../data/options.json")
-    db_da = config.get_db_da()
+    loader = ConfigurationLoader(Path("../data/options.json"))
+    config = loader.load_and_validate()
+    db_da = make_db_da(config, loader.secrets)
     start_ts = datetime.datetime(year=2024, month=11, day=12).timestamp()
     end_ts = datetime.datetime(year=2024, month=11, day=14).timestamp()
     prognose_data = db_da.get_prognose_data(start=start_ts, end=end_ts)

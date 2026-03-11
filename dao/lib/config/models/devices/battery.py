@@ -166,6 +166,24 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "Keys are hour strings (0-23), values are watts"
         }
     )
+    reduce_power_low_soc: list = Field(
+        default_factory=list,
+        alias="reduce_power_low_soc",
+        description="SOC thresholds and power limits for low SOC power reduction",
+        json_schema_extra={
+            "x-help": "Optional: List of SOC/power pairs to reduce battery power at low state of charge. Protects battery by limiting power when nearly empty.",
+            "x-ui-section": "Power Configuration"
+        }
+    )
+    reduce_power_high_soc: list = Field(
+        default_factory=list,
+        alias="reduce_power_high_soc",
+        description="SOC thresholds and power limits for high SOC power reduction",
+        json_schema_extra={
+            "x-help": "Optional: List of SOC/power pairs to reduce battery power at high state of charge. Protects battery by limiting power when nearly full.",
+            "x-ui-section": "Power Configuration"
+        }
+    )
     minimum_power: int = Field(
         alias="minimum power",
         ge=0,
@@ -261,7 +279,7 @@ class BatteryConfig(BaseModel):
         }
     )
     entity_set_operating_mode_on: Optional[str] = Field(
-        default=None,
+        default="Aan",
         alias="entity set operating mode on",
         description="Value for operating mode ON",
         json_schema_extra={
@@ -270,7 +288,7 @@ class BatteryConfig(BaseModel):
         }
     )
     entity_set_operating_mode_off: Optional[str] = Field(
-        default=None,
+        default="Uit",
         alias="entity set operating mode off",
         description="Value for operating mode OFF",
         json_schema_extra={
@@ -284,6 +302,17 @@ class BatteryConfig(BaseModel):
         description="HA entity to stop inverter",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.",
+            "x-ui-section": "Power Configuration",
+            "x-ui-widget": "entity-picker",
+            "x-ui-widget-filter": "switch,button"
+        }
+    )
+    entity_stop_victron: Optional[str] = Field(
+        default=None,
+        alias="entity stop victron",
+        description="HA entity to stop Victron inverter",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity to stop a Victron battery inverter. Use this for Victron-specific stop control.",
             "x-ui-section": "Power Configuration",
             "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch,button"

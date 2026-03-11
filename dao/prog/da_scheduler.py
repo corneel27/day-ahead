@@ -7,7 +7,9 @@ from da_base import DaBase
 class DaScheduler(DaBase):
     def __init__(self, file_name: str = None):
         super().__init__(file_name)
-        self.scheduler_tasks = self.config.get(["scheduler"])
+        scheduler = self.config.scheduler
+        # SchedulerConfig stores time→task mappings as plain attributes; expose as dict
+        self.scheduler_tasks = dict(scheduler.items()) if scheduler else {}
         self.active = True
         if "active" in self.scheduler_tasks:
             self.active = not (self.scheduler_tasks["active"].lower() == "false")

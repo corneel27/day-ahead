@@ -39,6 +39,16 @@ class SolarString(BaseModel):
             "x-validation-hint": "Must be greater than 0"
         }
     )
+    max_power: Optional[float] = Field(
+        default=None,
+        alias="max power",
+        description="Maximum output power cap in kW (MPPT limit)",
+        json_schema_extra={
+            "x-help": "Optional. Limit the string output to this value in kW. Use when your MPPT maximum power is less than the total panel capacity.",
+            "x-unit": "kW",
+            "x-ui-section": "Panel Orientation"
+        }
+    )
     yield_factor: float = Field(
         alias="yield",
         gt=0,
@@ -139,7 +149,38 @@ class SolarConfig(BaseModel):
             "x-ui-section": "Panel Orientation"
         }
     )
-    
+
+    # ML prediction
+    ml_prediction: bool = Field(
+        default=False,
+        description="Use ML model to predict solar production for this installation",
+        json_schema_extra={
+            "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
+            "x-ui-section": "ML Prediction"
+        }
+    )
+    entities_sensors: Optional[list[str] | str] = Field(
+        default=None,
+        alias="entities sensors",
+        description="HA sensor entities for measuring actual solar production",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.",
+            "x-ui-section": "ML Prediction",
+            "x-ui-widget": "entity-picker",
+            "x-ui-widget-filter": "sensor"
+        }
+    )
+    max_power: Optional[float] = Field(
+        default=None,
+        alias="max power",
+        description="Maximum output power cap in kW (MPPT limit)",
+        json_schema_extra={
+            "x-help": "Optional. Limit the installation output to this value in kW. Use when your inverter/MPPT maximum power is less than the total panel capacity.",
+            "x-unit": "kW",
+            "x-ui-section": "Panel Orientation"
+        }
+    )
+
     model_config = ConfigDict(
         extra='allow',
         populate_by_name=True,

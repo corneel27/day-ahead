@@ -8,7 +8,7 @@ This module provides:
 """
 
 from typing import Any, Union
-from pydantic import BaseModel, Field, field_validator, ValidationInfo, ConfigDict
+from pydantic import BaseModel, Field, field_validator, model_serializer, model_validator, ValidationInfo, ConfigDict
 
 
 class FlexValue(BaseModel):
@@ -120,7 +120,16 @@ class SecretStr(BaseModel):
             'x-help': '''SecretStr provides secure secret management. Secrets stored in separate secrets.json file, never in main config. Reference format: "!secret key_name". Essential for passwords, API tokens, and sensitive data.'''
         }
     )
-    
+
+    @model_validator(mode='before')
+    @classmethod
+    def parse_from_string(cls, v: Any) -> Any:
+        """Accept '!secret key_name' or a plain key name as input, coerce to dict."""
+        if isinstance(v, str):
+            key = v.replace('!secret ', '', 1).strip() if v.startswith('!secret ') else v
+            return {'secret_key': key}
+        return v
+
     @field_validator('secret_key', mode='before')
     @classmethod
     def parse_secret_reference(cls, v: Any, info: ValidationInfo) -> str:
@@ -151,3 +160,8 @@ class SecretStr(BaseModel):
                 f"Available secrets: {', '.join(secrets.keys())}"
             )
         return secrets[self.secret_key]
+
+    @model_serializer
+    def serialize_secret(self) -> str:
+        """Always serializes back to '!secret key_name' — never the resolved value."""
+        return f"!secret {self.secret_key}"

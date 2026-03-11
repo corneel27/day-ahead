@@ -1,4 +1,4 @@
-from dao.lib.da_config import Config
+from dao.lib.config.models.base import SecretStr
 import pandas as pd
 from dao.lib.db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
@@ -14,11 +14,12 @@ import logging
 
 
 class DaPrices:
-    def __init__(self, config: Config, db_da: DBmanagerObj):
+    def __init__(self, config, db_da: DBmanagerObj, country: str = None, secrets: dict = None):
         self.config = config
         self.db_da = db_da
-        self.interval = self.config.get(["interval"], None, "1hour")
-        self.country = self.config.get(["country"], None, "NL")
+        self._secrets = secrets or {}
+        self.interval = str(config.interval or "1hour").lower()
+        self.country = country if country is not None else "NL"
 
     def get_prices(
         self, source, _start: datetime.datetime = None, _end: datetime.datetime = None
@@ -69,7 +70,8 @@ class DaPrices:
                 year=start.year, month=start.month, day=start.day, tz="CET"
             )
             end = pd.Timestamp(year=end.year, month=end.month, day=end.day, tz="CET")
-            api_key = self.config.get(["prices", "entsoe-api-key"])
+            _ak = self.config.prices.entsoe_api_key
+            api_key = _ak.resolve(self._secrets) if isinstance(_ak, SecretStr) else _ak
             client = EntsoePandasClient(api_key=api_key)
             da_prices = pd.DataFrame()
             try:
@@ -241,12 +243,12 @@ class DaPrices:
             )
 
             logging.debug(query)
-            tibber_options = self.config.get(["tibber"])
-            url = self.config.get(
-                ["api url"], tibber_options, "https://api.tibber.com/v1-beta/gql"
-            )
+            _tibber = self.config.tibber
+            _tok = _tibber.api_token
+            api_token = _tok.resolve(self._secrets) if isinstance(_tok, SecretStr) else _tok
+            url = _tibber.api_url or "https://api.tibber.com/v1-beta/gql"
             headers = {
-                "Authorization": "Bearer " + tibber_options["api_token"],
+                "Authorization": "Bearer " + api_token,
                 "content-type": "application/json",
             }
             resp = post(url, headers=headers, data=query)

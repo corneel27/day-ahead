@@ -5,6 +5,7 @@ import fnmatch
 import time
 import pytz
 import warnings
+from dataclasses import dataclass
 from requests import get
 import json
 import hassapi as hass
@@ -17,7 +18,10 @@ from sqlalchemy import Table, select, func, and_
 # from dao.prog.solar_predictor import SolarPredictor
 from dao.prog.utils import get_tibber_data, error_handling
 from dao.prog.version import __version__
-from dao.lib.da_config import Config
+from pathlib import Path
+from dao.lib.config.loader import ConfigurationLoader
+from dao.lib.config.db_connections import make_db_da, make_db_ha
+from dao.lib.config.models.base import SecretStr
 from dao.lib.da_meteo import Meteo
 from dao.lib.da_prices import DaPrices
 from dao.prog.utils import interpolate
@@ -25,6 +29,20 @@ from dao.prog.utils import interpolate
 # from db_manager import DBmanagerObj
 from typing import Union
 from hassapi.models import StateList
+
+
+@dataclass
+class HAContext:
+    """Runtime values fetched from Home Assistant on start-up.
+
+    These are not part of the static configuration in options.json and must
+    never be written back to disk.  Pass instances of this dataclass to any
+    collaborator that needs location or timezone information.
+    """
+    latitude: float
+    longitude: float
+    time_zone: str
+    country: str
 
 
 class NotificationHandler(Handler):
@@ -58,12 +76,15 @@ class DaBase(hass.Hass):
         self.tasks = self.generate_tasks()
         self.log_level = logging.INFO
         self.notification_entity = None
+        self.ha_context: HAContext | None = None
         try:
-            self.config = Config(self.file_name)
-        except ValueError:
+            loader = ConfigurationLoader(Path(self.file_name) if self.file_name else Path("../data/options.json"))
+            self.config = loader.load_and_validate()
+            self._loader = loader
+        except (ValueError, RuntimeError):
             self.config = None
             return
-        log_level_str = self.config.get(["logging level"], None, "info")
+        log_level_str = (self.config.logging_level or "info")
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
             raise ValueError("Invalid log level: %s" % _log_level)
@@ -74,25 +95,20 @@ class DaBase(hass.Hass):
         logging.addLevelName(logging.ERROR, "fout")
         logging.addLevelName(logging.CRITICAL, "kritiek")
         logging.getLogger().setLevel(self.log_level)
-        self.protocol_api = self.config.get(
-            ["homeassistant", "protocol api"], default="http"
-        )
-
-        ha_options = self.config.get(["homeassistant"])
-        if "ip adress" in ha_options:
-            self.ip_address = self.config.get(
-                ["homeassistant", "ip adress"], default="supervisor"
-            )
+        ha = self.config.homeassistant
+        self.protocol_api = ha.protocol_api or "http"
+        # Support legacy typo 'ip adress' via extra fields
+        _extra = ha.model_extra or {} if hasattr(ha, 'model_extra') else {}
+        if "ip adress" in _extra:
+            self.ip_address = _extra["ip adress"] or "supervisor"
             logging.warning(
                 f"the use of 'ip adress' is deprecated, change it to 'host' "
                 f"in the near future 'ip adress' cannot be used any more."
             )
         else:
-            self.ip_address = self.config.get(
-                ["homeassistant", "host"], default="supervisor"
-            )
+            self.ip_address = ha.ip_address or "supervisor"
 
-        self.ip_port = self.config.get(["homeassistant", "ip port"], default=None)
+        self.ip_port = ha.ip_port
         if self.ip_port is None:
             self.hassurl = self.protocol_api + "://" + self.ip_address + "/core/"
         else:
@@ -104,9 +120,13 @@ class DaBase(hass.Hass):
                 + str(self.ip_port)
                 + "/"
             )
-        self.hasstoken = self.config.get(
-            ["homeassistant", "token"], default=os.environ.get("SUPERVISOR_TOKEN")
-        )
+        _tok = ha.hasstoken
+        if _tok is None:
+            self.hasstoken = os.environ.get("SUPERVISOR_TOKEN")
+        elif isinstance(_tok, SecretStr):
+            self.hasstoken = _tok.resolve(self._loader.secrets)
+        else:
+            self.hasstoken = _tok
         super().__init__(hassurl=self.hassurl, token=self.hasstoken)
         headers = {
             "Authorization": "Bearer " + self.hasstoken,
@@ -115,107 +135,63 @@ class DaBase(hass.Hass):
         resp = get(self.hassurl + "api/config", headers=headers)
         resp_dict = json.loads(resp.text)
         logging.debug(f"hass/api/config: {resp.text}")
-        self.config.set("latitude", resp_dict["latitude"])
-        self.config.set("longitude", resp_dict["longitude"])
-        self.config.set("time_zone", resp_dict["time_zone"])
-        self.time_zone = resp_dict["time_zone"]
-        country = resp_dict["country"]
-        if country is None or country == "":
-            country = "NL"
-        self.config.set("country", country)
-        self.db_da = self.config.get_db_da()
-        self.db_ha = self.config.get_db_ha()
-        self.meteo = Meteo(self.config, self.db_da)
+        country = resp_dict["country"] or "NL"
+        self.ha_context = HAContext(
+            latitude=resp_dict["latitude"],
+            longitude=resp_dict["longitude"],
+            time_zone=resp_dict["time_zone"],
+            country=country,
+        )
+        self.time_zone = self.ha_context.time_zone
+        self.db_da = make_db_da(self.config, self._loader.secrets)
+        self.db_ha = make_db_ha(self.config, self._loader.secrets)
+        self.meteo = Meteo(
+            self.config, self.db_da,
+            latitude=self.ha_context.latitude,
+            longitude=self.ha_context.longitude,
+            secrets=self._loader.secrets,
+        )
         if country == "NL":
             self.knmi_station = self.meteo.which_station()
-        self.solar = self.config.get(["solar"])
-        self.interval = self.config.get(["interval"], None, "1hour").lower()
+        self.solar = self.config.solar
+        self.interval = str(self.config.interval or "1hour").lower()
         self.interval_s = 3600 if self.interval == "1hour" else 900
 
-        self.prices = DaPrices(self.config, self.db_da)
-        self.prices_options = self.config.get(["prices"])
+        self.prices = DaPrices(self.config, self.db_da, country=self.ha_context.country, secrets=self._loader.secrets)
+        self.prices_options = self.config.prices
         # eb + ode levering
-        self.taxes_l_def = self.config.get(
-            ["energy taxes consumption"], self.prices_options, None
-        )
-        if self.taxes_l_def is None:
-            logging.warning(f"Vervang 'delivery' in je settings door 'consumption'")
-            self.taxes_l_def = self.config.get(
-                ["energy taxes delivery"], self.prices_options, None
-            )
+        self.taxes_l_def = self.prices_options.energy_taxes_consumption if self.prices_options else None
         # opslag kosten leverancier
-        self.ol_l_def = self.config.get(
-            ["cost supplier consumption"], self.prices_options, None
-        )
-        if self.ol_l_def is None:
-            logging.warning(f"Vervang 'delivery' in je settings door 'consumption'")
-            self.ol_l_def = self.config.get(
-                ["cost supplier delivery"], self.prices_options, None
-            )
+        self.ol_l_def = self.prices_options.cost_supplier_consumption if self.prices_options else None
         # eb+ode teruglevering
-        self.taxes_t_def = self.config.get(
-            ["energy taxes production"], self.prices_options, None
-        )
-        if self.taxes_t_def is None:
-            logging.warning(f"Vervang 'redelivery' in je settings door 'production'")
-            self.taxes_t_def = self.config.get(
-                ["energy taxes redelivery"], self.prices_options, None
-            )
-        self.ol_t_def = self.config.get(
-            ["cost supplier production"], self.prices_options, None
-        )
-        if self.ol_t_def is None:
-            logging.warning(f"Vervang 'redelivery' in je settings door 'production'")
-            self.ol_t_def = self.config.get(
-                ["cost supplier redelivery"], self.prices_options, None
-            )
-        if "vat consumption" in self.prices_options:
-            self.btw_l_def = self.prices_options["vat consumption"]
-        else:
-            self.btw_l_def = self.prices_options["vat"]
-        if "vat production" in self.prices_options:
-            self.btw_t_def = self.prices_options["vat production"]
-        else:
-            self.btw_t_def = self.btw_l_def.copy()
+        self.taxes_t_def = self.prices_options.energy_taxes_production if self.prices_options else None
+        self.ol_t_def = self.prices_options.cost_supplier_production if self.prices_options else None
+        self.btw_l_def = self.prices_options.vat_consumption if self.prices_options else None
+        self.btw_t_def = self.prices_options.vat_production if self.prices_options else self.btw_l_def
+        tax_refund = self.prices_options.tax_refund if self.prices_options else True
         self.salderen = (
-            self.config.get(["tax refund"], self.prices_options, "true").lower()
-            == "true"
+            tax_refund.lower() == "true" if isinstance(tax_refund, str) else bool(tax_refund)
         )
 
-        self.history_options = self.config.get(["history"])
-        # self.strategy = self.config.get(["strategy"], None, "minimize cost").lower()
+        self.history_options = self.config.history
+        # self.strategy = self.config.strategy  (resolved via get_setting_state)
         self.strategy = self.get_setting_state(
             "strategy", None, exp_type="string", default="minimize cost"
         )
-        self.tibber_options = self.config.get(["tibber"], None, None)
-        self.notification_entity = self.config.get(
-            ["notifications", "notification entity"], None, None
+        self.tibber_options = self.config.tibber
+        notif = self.config.notifications
+        self.notification_entity = notif.notification_entity if notif else None
+        _opstarten = notif.opstarten if notif else False
+        self.notification_opstarten = (
+            _opstarten.lower() == "true" if isinstance(_opstarten, str) else bool(_opstarten)
         )
-        self.notification_opstarten = self.config.get(
-            ["notifications", "opstarten"], None, False
+        _berekening = notif.berekening if notif else False
+        self.notification_berekening = (
+            _berekening.lower() == "true" if isinstance(_berekening, str) else bool(_berekening)
         )
-        if (
-            type(self.notification_opstarten) is str
-            and self.notification_opstarten.lower() == "true"
-        ):
-            self.notification_opstarten = True
-        else:
-            self.notification_opstarten = False
-        self.notification_berekening = self.config.get(
-            ["notifications", "berekening"], None, False
-        )
-        if (
-            type(self.notification_berekening) is str
-            and self.notification_berekening.lower() == "true"
-        ):
-            self.notification_berekening = True
-        else:
-            self.notification_berekening = False
-        self.last_activity_entity = self.config.get(
-            ["notifications", "last activity entity"], None, None
-        )
+        self.last_activity_entity = notif.last_activity_entity if notif else None
         self.set_last_activity()
-        self.graphics_options = self.config.get(["graphics"])
+        self.graphics_options = self.config.graphics
         self.db_da.log_pool_status()
         warnings.simplefilter("ignore", ResourceWarning)
 
@@ -304,10 +280,10 @@ class DaBase(hass.Hass):
             f"Day Ahead Optimalisering gestart op: "
             f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
         )
-        if self.config is not None:
+        if self.config is not None and self.ha_context is not None:
             logging.debug(
-                f"Locatie: latitude {str(self.config.get(['latitude']))} "
-                f"longitude: {str(self.config.get(['longitude']))}"
+                f"Locatie: latitude {str(self.ha_context.latitude)} "
+                f"longitude: {str(self.ha_context.longitude)}"
             )
 
     @staticmethod
@@ -349,9 +325,8 @@ class DaBase(hass.Hass):
         report.consolidate_data(start_dt)
 
     def get_day_ahead_prices(self):
-        self.prices.get_prices(
-            self.config.get(["source day ahead"], self.prices_options, "nordpool")
-        )
+        source = self.prices_options.source_day_ahead if self.prices_options else "nordpool"
+        self.prices.get_prices(source)
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """
@@ -399,27 +374,27 @@ class DaBase(hass.Hass):
         :param hour_fraction: de uurfractie
         :return: de productie in kWh
         """
-        if "strings" in solar_opt:
+        if solar_opt.strings:
             prod = 0
-            str_num = len(solar_opt["strings"])
+            str_num = len(solar_opt.strings)
             for str_s in range(str_num):
                 prod_str = (
                     self.meteo.calc_solar_rad(
-                        solar_opt["strings"][str_s],
+                        solar_opt.strings[str_s],
                         act_time,
                         act_gr,
                     )
-                    * solar_opt["strings"][str_s]["yield"]
+                    * solar_opt.strings[str_s].yield_factor
                     * hour_fraction
                 )
                 prod += prod_str
         else:
             prod = (
                 self.meteo.calc_solar_rad(solar_opt, act_time, act_gr)
-                * solar_opt["yield"]
+                * solar_opt.yield_factor
                 * hour_fraction
             )
-        max_power = self.config.get(["max power"], solar_opt, None)
+        max_power = solar_opt.max_power
         if max_power is not None:
             prod = min(prod, max_power)
         return prod
@@ -477,31 +452,44 @@ class DaBase(hass.Hass):
             result = connection.execute(outer_query)
             return result.scalar()
 
+    @staticmethod
+    def _get_option(key: str, options, default=None):
+        """Get a value from a dict or Pydantic model by key (snake_case or original)."""
+        if options is None:
+            return default
+        if isinstance(options, dict):
+            return options.get(key, default)
+        snake_key = key.replace(' ', '_').replace('-', '_')
+        val = getattr(options, snake_key, None)
+        if val is None:
+            val = getattr(options, key, None)
+        return val if val is not None else default
+
     def set_entity_value(
-        self, entity_key: str, options: dict, value: int | float | str
+        self, entity_key: str, options, value: int | float | str
     ):
-        entity_id = self.config.get([entity_key], options, None)
+        entity_id = self._get_option(entity_key, options)
         if entity_id is not None:
             self.set_value(entity_id, value)
 
     def set_entity_option(
-        self, entity_key: str, options: dict, value: int | float | str
+        self, entity_key: str, options, value: int | float | str
     ):
-        entity_id = self.config.get([entity_key], options, None)
+        entity_id = self._get_option(entity_key, options)
         if entity_id is not None:
             self.select_option(entity_id, value)
 
     def set_entity_state(
-        self, entity_key: str, options: dict, value: int | float | str
+        self, entity_key: str, options, value: int | float | str
     ):
-        entity_id = self.config.get([entity_key], options, None)
+        entity_id = self._get_option(entity_key, options)
         if entity_id is not None:
             self.set_state(entity_id, value)
 
     def get_entity_state(
-        self, entity_key: str, options: dict
+        self, entity_key: str, options
     ) -> int | float | str | None:
-        entity_id = self.config.get([entity_key], options, None)
+        entity_id = self._get_option(entity_key, options)
         if entity_id is not None:
             result = self.get_state(entity_id).state
         else:
@@ -509,7 +497,7 @@ class DaBase(hass.Hass):
         return result
 
     def get_setting_state(
-        self, key: str, options: dict, exp_type: str = "number", default=1
+        self, key: str, options, exp_type: str = "number", default=1
     ) -> int | float | str | None:
         """
         retourneert de waarde van een settings
@@ -519,7 +507,7 @@ class DaBase(hass.Hass):
         :param default:
         :return: the waarde van de setting
         """
-        setting_value = self.config.get([key], options, default)
+        setting_value = self._get_option(key, options, default)
         if exp_type == "number":
             if type(setting_value) is int or type(setting_value) is float:
                 return setting_value
@@ -555,9 +543,8 @@ class DaBase(hass.Hass):
             for f in list_files:
                 if fnmatch.fnmatch(f, pattern):
                     creation_time = os.path.getctime(f)
-                    if (current_time - creation_time) >= self.config.get(
-                        ["save days"], self.history_options, 7
-                    ) * day:
+                    save_days = self.history_options.save_days
+                    if (current_time - creation_time) >= save_days * day:
                         os.remove(f)
                         logging.info(f"{f} removed")
             os.chdir(current_dir)
@@ -609,10 +596,7 @@ class DaBase(hass.Hass):
         from dao.prog.solar_predictor import SolarPredictor
 
         if _ml_prediction is None:
-            ml_prediction = (
-                self.config.get(["ml_prediction"], solar_option, "False").lower()
-                == "true"
-            )
+            ml_prediction = solar_option.ml_prediction
         else:
             ml_prediction = _ml_prediction
         if interval is None:
@@ -620,7 +604,7 @@ class DaBase(hass.Hass):
             interval_s = self.interval_s
         else:
             interval_s = 900 if interval == "15min" else 3600
-        solar_name = solar_option["name"].replace(" ", "_").replace("-", "_")
+        solar_name = solar_option.name.replace(" ", "_").replace("-", "_")
         if ml_prediction:
             solar_predictor = SolarPredictor()
             try:
@@ -636,7 +620,7 @@ class DaBase(hass.Hass):
             except FileNotFoundError as ex:
                 logging.warning(ex)
                 logging.info(
-                    f"Voor {solar_option['name']} is geen model "
+                    f"Voor {solar_option.name} is geen model "
                     f"en dus wordt DAO-predictor gebruikt"
                 )
 

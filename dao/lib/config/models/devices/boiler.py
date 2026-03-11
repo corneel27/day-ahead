@@ -147,6 +147,26 @@ class BoilerConfig(BaseModel):
             "x-ui-widget-filter": "button,switch"
         }
     )
+    boiler_heated_by_heatpump: bool = Field(
+        default=True,
+        alias="boiler heated by heatpump",
+        description="Whether the boiler is heated by a heat pump",
+        json_schema_extra={
+            "x-help": "Set to true if the boiler is heated by a heat pump (COP > 1). Set to false for direct electric resistive heating. Affects optimization calculations.",
+            "x-ui-section": "General"
+        }
+    )
+    switch_entity: Optional[str] = Field(
+        default=None,
+        alias="switch entity",
+        description="HA entity to switch boiler on/off",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant switch entity to directly control boiler power. Alternative to activate_entity for simple on/off control.",
+            "x-ui-section": "General",
+            "x-ui-widget": "entity-picker",
+            "x-ui-widget-filter": "switch"
+        }
+    )
     
     @model_validator(mode='after')
     def validate_activate_config(self) -> 'BoilerConfig':

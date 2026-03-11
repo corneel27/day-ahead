@@ -105,6 +105,7 @@ class PricingConfig(BaseModel):
         }
     )
     tax_refund: bool | str = Field(
+        default=True,
         alias="tax refund",
         description="Whether tax refund applies",
         json_schema_extra={
