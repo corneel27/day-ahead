@@ -93,7 +93,7 @@ def convert_timestr(time_str: str, now_dt: datetime.datetime) -> datetime.dateti
 
 def get_tibber_data():
     from dao.lib.config.loader import ConfigurationLoader
-    from dao.lib.config.db_connections import make_db_da
+    from dao.lib.db_connections import make_db_da
     from pathlib import Path
 
     def get_datetime_from_str(s):
@@ -412,7 +412,7 @@ print(all_interp)
 
 def interpolate_prognose_data():
     from dao.lib.config.loader import ConfigurationLoader
-    from dao.lib.config.db_connections import make_db_da
+    from dao.lib.db_connections import make_db_da
     from pathlib import Path
 
     loader = ConfigurationLoader(Path("../data/options.json"))

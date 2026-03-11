@@ -20,7 +20,7 @@ from dao.prog.utils import get_tibber_data, error_handling
 from dao.prog.version import __version__
 from pathlib import Path
 from dao.lib.config.loader import ConfigurationLoader
-from dao.lib.config.db_connections import make_db_da, make_db_ha
+from dao.lib.db_connections import make_db_da, make_db_ha
 from dao.lib.config.models.base import SecretStr
 from dao.lib.da_meteo import Meteo
 from dao.lib.da_prices import DaPrices

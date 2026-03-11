@@ -20,7 +20,7 @@ import requests
 
 from pathlib import Path
 from dao.lib.config.loader import ConfigurationLoader
-from dao.lib.config.db_connections import make_db_da
+from dao.lib.db_connections import make_db_da
 from dao.lib.da_prices import DaPrices
 
 # ML imports
