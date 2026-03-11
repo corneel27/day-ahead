@@ -106,9 +106,6 @@ class ConfigurationLoader:
         elif config_version < CURRENT_VERSION:
             logger.info(f"Configuration needs migration from v{config_version} to v{CURRENT_VERSION}")
 
-        # Create backup before migration
-        self._create_backup()
-
         # Apply migrations to current version
         migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
         
@@ -168,6 +165,7 @@ class ConfigurationLoader:
             save_data = config_data
         
         # Write to disk
+        self._create_backup()
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(save_data, f, indent=2, ensure_ascii=False)
         
