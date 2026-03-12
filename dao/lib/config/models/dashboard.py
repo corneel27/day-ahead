@@ -13,7 +13,7 @@ class DashboardConfig(BaseModel):
         ge=1024, le=65535,
         description="Web UI port number",
         json_schema_extra={
-            "x-help": "Port number for Day Ahead Optimizer web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).",
+            "x-help": "Port number for DAO web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).",
             "x-unit": "port",
             "x-validation-hint": "1024-65535, default 5000"
         }
