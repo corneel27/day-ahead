@@ -100,14 +100,14 @@ class ConfigurationLoader:
         
         # Check if migration needed
         config_version = config_data.get("config_version")
- 
-        if config_version is None:
-            logger.info("Configuration needs migration from unversioned to v0")
-        elif config_version < CURRENT_VERSION:
-            logger.info(f"Configuration needs migration from v{config_version} to v{CURRENT_VERSION}")
 
-        # Apply migrations to current version
-        migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
+        if config_version is None or config_version < CURRENT_VERSION:
+            from_ver = "unversioned" if config_version is None else f"v{config_version}"
+            logger.info(f"Configuration needs migration from {from_ver} to v{CURRENT_VERSION}")
+            migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
+        else:
+            logger.debug("Configuration is up to date, no migration needed")
+            migrated_data = config_data
         
         # Update raw options with migrated version
         self._raw_options = migrated_data.copy()
