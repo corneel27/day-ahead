@@ -95,17 +95,8 @@ class DaBase(hass.Hass):
         logging.addLevelName(logging.CRITICAL, "kritiek")
         logging.getLogger().setLevel(self.log_level)
         ha = self.config.homeassistant
-        self.protocol_api = ha.protocol_api or "http"
-        # Support legacy typo 'ip adress' via extra fields
-        _extra = ha.model_extra or {} if hasattr(ha, 'model_extra') else {}
-        if "ip adress" in _extra:
-            self.ip_address = _extra["ip adress"] or "supervisor"
-            logging.warning(
-                f"the use of 'ip adress' is deprecated, change it to 'host' "
-                f"in the near future 'ip adress' cannot be used any more."
-            )
-        else:
-            self.ip_address = ha.ip_address or "supervisor"
+        self.protocol_api = ha.protocol_api
+        self.ip_address = ha.ip_address
 
         self.ip_port = ha.ip_port
         if self.ip_port is None:
@@ -132,12 +123,11 @@ class DaBase(hass.Hass):
         resp = get(self.hassurl + "api/config", headers=headers)
         resp_dict = json.loads(resp.text)
         logging.debug(f"hass/api/config: {resp.text}")
-        country = resp_dict["country"] or "NL"
         self.ha_context = HAContext(
             latitude=resp_dict["latitude"],
             longitude=resp_dict["longitude"],
             time_zone=resp_dict["time_zone"],
-            country=country,
+            country=resp_dict["country"] or "NL",
         )
         self.time_zone = self.ha_context.time_zone
         self.db_da = make_db_da(self.config, self._loader.secrets)
@@ -148,7 +138,7 @@ class DaBase(hass.Hass):
             longitude=self.ha_context.longitude,
             secrets=self._loader.secrets,
         )
-        if country == "NL":
+        if self.ha_context.country == "NL":
             self.knmi_station = self.meteo.which_station()
         self.solar = self.config.solar
         self.interval = str(self.config.interval or "1hour").lower()

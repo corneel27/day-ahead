@@ -10,8 +10,8 @@ from .base import SecretStr
 class HomeAssistantConfig(BaseModel):
     """Home Assistant connection configuration."""
     
-    ip_address: Optional[str] = Field(
-        default=None,
+    ip_address: str = Field(
+        default="supervisor",
         alias="host",
         description="Home Assistant IP address (auto-detected if not set)",
         json_schema_extra={
@@ -41,8 +41,8 @@ class HomeAssistantConfig(BaseModel):
             "x-validation-hint": "Auto-provided as add-on, use !secret if manual"
         }
     )
-    protocol_api: Optional[Literal['http', 'https']] = Field(
-        default=None,
+    protocol_api: Literal['http', 'https'] = Field(
+        default="http",
         alias="protocol api",
         description="API protocol",
         json_schema_extra={

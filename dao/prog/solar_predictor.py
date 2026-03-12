@@ -55,7 +55,7 @@ class SolarPredictor(DaBase):
                                  For better accuracy, use create_physics_based_constraints()
                                  with your actual system capacity and location.
         """
-        super().__init__(file_name="../data/options.json")
+        super().__init__()
         self.solar_name = solar_name
         self.solar_capacity = solar_capacity
         self.latitude = self.ha_context.latitude if self.ha_context else self.config.latitude
@@ -1024,7 +1024,8 @@ class SolarPredictor(DaBase):
 
         name = self._get_option("name", solar_dict, "default")
         self.solar_name = name.replace(" ", "_").replace("-", "_")
-        self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)\n        self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
+        self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
+        self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
         self.solar_capacity = self.get_property_from_dict("capacity", solar_dict, 5)
         file_name = "../data/prediction/models/" + self.solar_name + ".pkl"
         if os.path.isfile(file_name):
