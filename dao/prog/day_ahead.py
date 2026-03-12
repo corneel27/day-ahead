@@ -33,9 +33,9 @@ class DaCalc(DaBase):
         self.steps_day = 24 if self.interval == "1hour" else 96
         self.history_options = self.config.history
         self.boiler_options = self.config.boiler
-        self.battery_options = list(self.config.battery or [])
+        self.battery_options = self.config.battery
         self.prices_options = self.config.prices
-        self.ev_options = list(self.config.electric_vehicle or [])
+        self.ev_options = self.config.electric_vehicle
         self.heating_options = self.config.heating
         self.use_calc_baseload = self.config.use_calc_baseload
         self.hp_present = False
@@ -45,7 +45,7 @@ class DaCalc(DaBase):
         self.boiler_present = False
         self.boiler_enabled = False
         self.grid_max_power = self.config.grid.max_power if self.config.grid else 17
-        self.machines = list(self.config.machines or [])
+        self.machines = self.config.machines
         # self.start_logging()
 
     def calc_optimum(
@@ -291,7 +291,7 @@ class DaCalc(DaBase):
             solar_name = self.solar[s].name.replace(" ", "_").replace("-", "_")
             prog_data[solar_name] = solar_prog["prediction"]
         for b in range(B):
-            for s in range(len(self.battery_options[b].solar or [])):
+            for s in range(len(self.battery_options[b].solar)):
                 solar_option = self.battery_options[b].solar[s]
                 solar_prog = self.calc_solar_predictions(
                     solar_option, start_interval_dt, end, self.interval
@@ -330,7 +330,7 @@ class DaCalc(DaBase):
             pv_dc_varcode = []
             pv_dc_num = 0
             for b in range(B):
-                for s in range(len(self.battery_options[b].solar or [])):
+                for s in range(len(self.battery_options[b].solar)):
                     solar_option = self.battery_options[b].solar[s]
                     solar_name = (
                         solar_option.name.replace(" ", "_").replace("-", "_")
@@ -616,7 +616,7 @@ class DaCalc(DaBase):
             )
 
             # pv dc mppt
-            pv_dc_num.append(len(self.battery_options[b].solar or []))
+            pv_dc_num.append(len(self.battery_options[b].solar))
             # pv_dc_bat = []
             for s in range(pv_dc_num[b]):
                 pv_prod_dc[b].append([])

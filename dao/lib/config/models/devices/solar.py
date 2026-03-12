@@ -2,8 +2,8 @@
 Solar configuration models.
 """
 
-from typing import Optional
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from typing import Any, Optional
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 
 class SolarString(BaseModel):
@@ -141,8 +141,8 @@ class SolarConfig(BaseModel):
     )
     
     # Option 2: Multiple strings
-    strings: Optional[list[SolarString]] = Field(
-        default=None,
+    strings: list[SolarString] = Field(
+        default_factory=list,
         description="Multiple panel strings with different configurations",
         json_schema_extra={
             "x-help": "Advanced: Configure multiple strings for panels with different orientations or tilts. Use this OR flat config (tilt/orientation/capacity/yield), not both.",
@@ -159,8 +159,8 @@ class SolarConfig(BaseModel):
             "x-ui-section": "ML Prediction"
         }
     )
-    entities_sensors: Optional[list[str] | str] = Field(
-        default=None,
+    entities_sensors: list[str] = Field(
+        default_factory=list,
         alias="entities sensors",
         description="HA sensor entities for measuring actual solar production",
         json_schema_extra={
@@ -216,6 +216,16 @@ For panels facing different directions, use the 'strings' configuration:
         }
     )
     
+    @field_validator('entities_sensors', mode='before')
+    @classmethod
+    def coerce_entities_to_list(cls, v: Any) -> list[str]:
+        """Allow a single entity ID string to be given without wrapping it in a list."""
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [v]
+        return v
+
     @model_validator(mode='after')
     def validate_config_completeness(self) -> 'SolarConfig':
         """Ensure either flat config or strings are provided."""
@@ -225,7 +235,7 @@ For panels facing different directions, use the 'strings' configuration:
             self.capacity is not None,
             self.yield_factor is not None
         ])
-        has_strings = self.strings is not None and len(self.strings) > 0
+        has_strings = bool(self.strings)
         
         if not has_flat and not has_strings:
             raise ValueError(

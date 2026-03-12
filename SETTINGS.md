@@ -141,7 +141,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `entity from pv` | string (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
 | `entity from ac` | string (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
 | `entity calculated soc` | string (optional) | No | `null` | HA entity for calculated SOC (Unit: `%`) |
-| `solar` | list[[SolarConfig](#solarconfig)] (optional) | No | `null` | DC-coupled solar panels attached to this battery |
+| `solar` | list[[SolarConfig](#solarconfig)] | No | `null` | DC-coupled solar panels attached to this battery |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -316,9 +316,9 @@ For panels facing different directions, use the 'strings' configuration:
 | `orientation` | number (optional) | No | `null` | Panel orientation (for single installation) (Unit: `degrees`) _-180 to 180 degrees, leave empty when using strings_ |
 | `capacity` | number (optional) | No | `null` | Installed capacity (for single installation) (Unit: `kWp`) _Greater than 0, leave empty when using strings_ |
 | `yield` | number (optional) | No | `null` | Yield factor (for single installation) (Unit: `ratio`) _Greater than 0, typically 0.8-0.9, leave empty when using strings_ |
-| `strings` | list[[SolarString](#solarstring)] (optional) | No | `null` | Multiple panel strings with different configurations |
+| `strings` | list[[SolarString](#solarstring)] | No | `null` | Multiple panel strings with different configurations |
 | `ml_prediction` | boolean | No | `false` | Use ML model to predict solar production for this installation |
-| `entities sensors` | list[string] or string (optional) | No | `null` | HA sensor entities for measuring actual solar production |
+| `entities sensors` | list[string] | No | `null` | HA sensor entities for measuring actual solar production |
 | `max power` | number (optional) | No | `null` | Maximum output power cap in kW (MPPT limit) (Unit: `kW`) |
 
 <details>

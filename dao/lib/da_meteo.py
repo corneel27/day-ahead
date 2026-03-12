@@ -26,8 +26,8 @@ class Meteo:
         self.meteoserver_attemps = config.meteoserver_attemps
         self.latitude = latitude if latitude is not None else config.latitude
         self.longitude = longitude if longitude is not None else config.longitude
-        self.solar = list(config.solar or [])
-        self.bat = list(config.battery or [])
+        self.solar = config.solar
+        self.bat = config.battery
         self.graphics_style = config.graphics.style
 
     @staticmethod

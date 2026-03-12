@@ -962,13 +962,13 @@ class SolarPredictor(DaBase):
             now = dt.datetime.now()
             start = dt.datetime(year=now.year - 3, month=now.month, day=now.day)
         weather_data = self.get_weatherdata(start=start)
-        solar_options = self.config.solar or []
+        solar_options = self.config.solar
         for solar_option in solar_options:
             if solar_option.ml_prediction:
                 self.train_solar_option(weather_data, solar_option, start)
-        batteries = self.config.battery or []
+        batteries = self.config.battery
         for battery in batteries:
-            for solar_option in (battery.solar or []):
+            for solar_option in battery.solar:
                 if solar_option.ml_prediction:
                     self.train_solar_option(weather_data, solar_option, start)
 
@@ -1048,13 +1048,13 @@ class SolarPredictor(DaBase):
         return prediction
 
     def test_solar_predictor(self, start, end):
-        solar_options = self.config.solar or []
+        solar_options = self.config.solar
         for solar_option in solar_options:
             if solar_option.ml_prediction:
                 self.predict_solar_device(solar_option, start, end)
-        batteries = self.config.battery or []
+        batteries = self.config.battery
         for battery in batteries:
-            for solar_option in (battery.solar or []):
+            for solar_option in battery.solar:
                 if solar_option.ml_prediction:
                     self.predict_solar_device(solar_option, start, end)
 

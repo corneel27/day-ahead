@@ -163,10 +163,10 @@ solar_web_menu = {
 
 def generate_solar_items():
     global web_menu
-    solar_options = list(config.solar or []) if config else []
-    battery_options = config.battery or [] if config else []
+    solar_options = list(config.solar) if config else []
+    battery_options = config.battery if config else []
     for battery_option in battery_options:
-        for sol_opt in (battery_option.solar or []):
+        for sol_opt in battery_option.solar:
             solar_options.append(sol_opt)
     result = {}
     for solar_option in solar_options:
@@ -336,7 +336,7 @@ def home():
     confirm_delete = False
 
     if config is not None:
-        battery_options = config.battery or []
+        battery_options = config.battery
         for b in range(len(battery_options)):
             subjects.append(battery_options[b].name)
     if request.method == "POST":

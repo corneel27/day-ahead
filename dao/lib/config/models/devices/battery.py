@@ -389,8 +389,8 @@ class BatteryConfig(BaseModel):
     )
     
     # DC-coupled solar (nested!)
-    solar: Optional[list[SolarConfig]] = Field(
-        default=None,
+    solar: list[SolarConfig] = Field(
+        default_factory=list,
         description="DC-coupled solar panels attached to this battery",
         json_schema_extra={
             "x-help": "Optional: Configure DC-coupled solar panels directly connected to this battery inverter. DC coupling is more efficient than AC coupling. Leave empty for AC-coupled or grid-only batteries.",

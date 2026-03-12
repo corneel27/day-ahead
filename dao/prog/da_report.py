@@ -3100,9 +3100,7 @@ class Report(DaBase):
         result["gemeten_straling"] = rad_real["gr"]
 
         # gemeten productie
-        sensors = device.entities_sensors or []
-        if not isinstance(sensors, list):
-            sensors = [sensors]
+        sensors = device.entities_sensors
         count = 0
         for sensor in sensors:
             df_sensor = self.get_sensor_data(sensor, start, end, "gemeten")
@@ -3244,7 +3242,7 @@ class Report(DaBase):
             B = len(battery_options) if battery_options else 0
             count = 0
             for b in range(B):
-                solar_options = battery_options[b].solar or []
+                solar_options = battery_options[b].solar
                 solar_num = len(solar_options)
                 for s in range(solar_num):
                     solar_option = solar_options[s]

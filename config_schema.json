@@ -432,20 +432,12 @@
           "x-unit": "%"
         },
         "solar": {
-          "anyOf": [
-            {
-              "items": {
-                "$ref": "#/$defs/SolarConfig"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "DC-coupled solar panels attached to this battery",
+          "items": {
+            "$ref": "#/$defs/SolarConfig"
+          },
           "title": "Solar",
+          "type": "array",
           "x-help": "Optional: Configure DC-coupled solar panels directly connected to this battery inverter. DC coupling is more efficient than AC coupling. Leave empty for AC-coupled or grid-only batteries.",
           "x-order": 1000,
           "x-ui-section": "Battery Connected Solar"
@@ -2573,20 +2565,12 @@
           "x-validation-hint": "Greater than 0, typically 0.8-0.9, leave empty when using strings"
         },
         "strings": {
-          "anyOf": [
-            {
-              "items": {
-                "$ref": "#/$defs/SolarString"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "Multiple panel strings with different configurations",
+          "items": {
+            "$ref": "#/$defs/SolarString"
+          },
           "title": "Strings",
+          "type": "array",
           "x-help": "Advanced: Configure multiple strings for panels with different orientations or tilts. Use this OR flat config (tilt/orientation/capacity/yield), not both.",
           "x-ui-section": "Panel Orientation"
         },
@@ -2599,23 +2583,12 @@
           "x-ui-section": "ML Prediction"
         },
         "entities sensors": {
-          "anyOf": [
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
           "description": "HA sensor entities for measuring actual solar production",
+          "items": {
+            "type": "string"
+          },
           "title": "Entities Sensors",
+          "type": "array",
           "x-help": "Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.",
           "x-ui-section": "ML Prediction",
           "x-ui-widget": "entity-picker",
