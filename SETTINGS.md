@@ -1102,7 +1102,7 @@ Access dashboard at:
 
 **`port`**
 
-Port number for Day Ahead Optimizer web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).
+Port number for DAO web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).
 
 </details>
 
