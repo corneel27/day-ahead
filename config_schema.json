@@ -1769,17 +1769,10 @@
       "description": "Home Assistant connection configuration.",
       "properties": {
         "host": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": "supervisor",
           "description": "Home Assistant IP address (auto-detected if not set)",
           "title": "Host",
+          "type": "string",
           "x-help": "Home Assistant IP address or hostname. Usually auto-detected when running as HA add-on. Set manually only if auto-detection fails. Examples: '192.168.1.100', 'homeassistant.local'.",
           "x-ui-section": "Homeassistant"
         },
@@ -1818,21 +1811,14 @@
           "title": "Token"
         },
         "protocol api": {
-          "anyOf": [
-            {
-              "enum": [
-                "http",
-                "https"
-              ],
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
+          "default": "http",
           "description": "API protocol",
+          "enum": [
+            "http",
+            "https"
+          ],
           "title": "Protocol Api",
+          "type": "string",
           "x-help": "Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. Usually auto-detected. Set manually only if needed.",
           "x-ui-section": "Homeassistant"
         }

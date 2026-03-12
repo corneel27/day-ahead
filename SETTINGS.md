@@ -1760,10 +1760,10 @@ Only needed if:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `host` | string (optional) | No | `null` | Home Assistant IP address (auto-detected if not set) |
+| `host` | string | No | `"supervisor"` | Home Assistant IP address (auto-detected if not set) |
 | `ip port` | integer (optional) | No | `null` | Home Assistant port (default: 8123) (Unit: `port`) _Default 8123, change if custom_ |
 | `token` | [SecretStr](#secretstr) (optional) | No | `null` | Home Assistant long-lived access token (can use !secret) _Auto-provided as add-on, use !secret if manual_ |
-| `protocol api` | string (optional) | No | `null` | API protocol |
+| `protocol api` | string | No | `"http"` | API protocol. Options: `http`, `https` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
