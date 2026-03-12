@@ -35,31 +35,6 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
     migrated["config_version"] = 0
     logger.info("Added config_version=0 to unversioned configuration")
     
-    # Migrate use_calc_baseload from string to boolean
-    if "use_calc_baseload" in migrated:
-        value = migrated["use_calc_baseload"]
-        
-        if isinstance(value, str):
-            # Convert string representations to boolean
-            true_values = {"true", "yes", "1", "on", "enabled"}
-            false_values = {"false", "no", "0", "off", "disabled"}
-            
-            value_lower = value.lower().strip()
-            
-            if value_lower in true_values:
-                migrated["use_calc_baseload"] = True
-                logger.info(f"Converted use_calc_baseload from string '{value}' to boolean True")
-            elif value_lower in false_values:
-                migrated["use_calc_baseload"] = False
-                logger.info(f"Converted use_calc_baseload from string '{value}' to boolean False")
-            else:
-                logger.warning(f"Unknown use_calc_baseload string value '{value}', defaulting to False")
-                migrated["use_calc_baseload"] = False
-        elif not isinstance(value, bool):
-            # Handle other types (int, etc.)
-            migrated["use_calc_baseload"] = bool(value)
-            logger.info(f"Converted use_calc_baseload from {type(value).__name__} to boolean")
-    
     # Migrate scheduler format
     if "scheduler" in migrated and isinstance(migrated["scheduler"], dict):
         old_scheduler = migrated["scheduler"]

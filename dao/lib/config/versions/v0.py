@@ -250,8 +250,8 @@ class ConfigurationV0(BaseModel):
     )
     
     # User Interface
-    notifications: Optional[NotificationsConfig] = Field(
-        default=None,
+    notifications: NotificationsConfig = Field(
+        default_factory=NotificationsConfig,
         description="Notification settings"
     )
     

@@ -163,16 +163,10 @@ class DaBase(hass.Hass):
         )
         self.tibber_options = self.config.tibber
         notif = self.config.notifications
-        self.notification_entity = notif.notification_entity if notif else None
-        _opstarten = notif.opstarten if notif else False
-        self.notification_opstarten = (
-            _opstarten.lower() == "true" if isinstance(_opstarten, str) else bool(_opstarten)
-        )
-        _berekening = notif.berekening if notif else False
-        self.notification_berekening = (
-            _berekening.lower() == "true" if isinstance(_berekening, str) else bool(_berekening)
-        )
-        self.last_activity_entity = notif.last_activity_entity if notif else None
+        self.notification_entity = notif.notification_entity
+        self.notification_opstarten = notif.opstarten
+        self.notification_berekening = notif.berekening
+        self.last_activity_entity = notif.last_activity_entity
         self.set_last_activity()
         self.graphics_options = self.config.graphics
         self.db_da.log_pool_status()
@@ -478,38 +472,6 @@ class DaBase(hass.Hass):
         else:
             result = None
         return result
-
-    def get_setting_state(
-        self, key: str, options, exp_type: str = "number", default=1
-    ) -> int | float | str | None:
-        """
-        retourneert de waarde van een settings
-        :param key: een string in de settings die ook een entity kan zijn
-        :param options:
-        :param exp_type: "string" or "number", default number
-        :param default:
-        :return: the waarde van de setting
-        """
-        setting_value = self._get_option(key, options, default)
-        if exp_type == "number":
-            if type(setting_value) is int or type(setting_value) is float:
-                return setting_value
-            else:  # setting_value is een string (entity?)
-                try:
-                    state = self.get_state(setting_value).state
-                    return float(state)
-                except Exception:
-                    logging.warning(f"No value found for {key}, {setting_value}")
-                    return default
-        else:  # expected:string
-            if type(setting_value) is str:
-                try:
-                    state = self.get_state(setting_value).state
-                    return state
-                except Exception:
-                    return setting_value
-            else:
-                return setting_value
 
     def clean_data(self):
         """

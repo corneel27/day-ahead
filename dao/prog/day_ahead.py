@@ -1107,13 +1107,8 @@ class DaCalc(DaBase):
             boiler_act_temp = float(
                 self.get_state(self.boiler_options.entity_actual_temp).state
             )
-            """
             boiler_setpoint = float(
-                self.get_state(self.boiler_options["entity setpoint"]).state
-            )
-            """
-            boiler_setpoint = float(
-                self.get_setting_state("entity setpoint", self.boiler_options)
+                self.get_state(self.boiler_options.entity_setpoint).state
             )
             if boiler_act_temp > boiler_setpoint + 1:
                 logging.warning(
@@ -1124,7 +1119,7 @@ class DaCalc(DaBase):
             boiler_setpoint = max(boiler_setpoint, boiler_act_temp)
             logging.info(f"Boiler setpoint {boiler_setpoint} °C")
             boiler_hysterese = float(
-                self.get_setting_state("entity hysterese", self.boiler_options)
+                self.get_state(self.boiler_options.entity_hysterese).state
             )
             # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
             logging.info(f"Boiler hysterese {boiler_hysterese} K")

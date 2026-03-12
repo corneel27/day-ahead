@@ -20,22 +20,20 @@ class NotificationsConfig(BaseModel):
             "x-ui-widget-filter": "notify"
         }
     )
-    opstarten: bool | str = Field(
-        default="false",
+    opstarten: bool = Field(
+        default=False,
         description="Send notification on startup",
         json_schema_extra={
-            "x-help": "Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status. Can be boolean or HA entity ID.",
-            "x-ui-section": "Notification Settings",
-            "x-ui-widget": "entity-picker-or-boolean"
+            "x-help": "Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status.",
+            "x-ui-section": "Notification Settings"
         }
     )
-    berekening: bool | str = Field(
-        default="false",
+    berekening: bool = Field(
+        default=False,
         description="Send notification on calculation completion",
         json_schema_extra={
-            "x-help": "Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.). Can be boolean or HA entity ID.",
-            "x-ui-section": "Notification Settings",
-            "x-ui-widget": "entity-picker-or-boolean"
+            "x-help": "Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.).",
+            "x-ui-section": "Notification Settings"
         }
     )
     last_activity_entity: Optional[str] = Field(
