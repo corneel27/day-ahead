@@ -1,6 +1,6 @@
 # Day Ahead Optimizer - Pydantic Configuration Developer Guide
 
-**Last Updated**: 2025-12-11  
+**Last Updated**: 2026-03-12  
 **Configuration Version**: v0  
 **Pydantic Version**: 2.10.3
 
@@ -15,26 +15,19 @@ This guide explains how to maintain and extend the Pydantic-based configuration 
 4. [Modifying Default Values](#modifying-default-values)
 5. [Extending an Existing Model](#extending-an-existing-model)
 6. [Creating a New Model](#creating-a-new-model)
-7. [Using Direct Config Access](#using-direct-config-access)
-8. [Migration Workflows](#migration-workflows)
-9. [Testing Requirements](#testing-requirements)
-10. [Common Pitfalls](#common-pitfalls)
+7. [Migration Workflows](#migration-workflows)
+8. [Testing Requirements](#testing-requirements)
+9. [Common Pitfalls](#common-pitfalls)
 
 ---
 
 ## Overview
 
 The configuration system consists of:
-- **Pydantic Models**: Type-safe configuration models in `dao/prog/config/versions/`
-- **Config Wrapper**: Backward-compatible wrapper in `dao/prog/config/wrapper.py`
-- **Fallback Mode**: Automatic degradation to dict-based behavior on validation errors
-- **Migrations**: Version migration logic in `dao/prog/config/migrations/`
+- **Pydantic Models**: Type-safe configuration models in `dao/lib/config/versions/`
+- **Migrations**: Version migration logic in `dao/lib/config/migrations/`
 - **Auto-Documentation**: GitHub Actions automatically regenerate docs when models change
 - **Documentation Validation**: Build fails if any field lacks a description
-
-**Two Access Patterns**:
-1. **Wrapper (Recommended)**: `config.get(['key'])` - Backward compatible, supports fallback
-2. **Direct (Performance)**: `config.battery[0].name` - Type-safe, faster, no fallback
 
 **Documentation Auto-Generation**:
 - ✅ `config_schema.json` auto-generated from Pydantic schema
@@ -70,7 +63,7 @@ These go in `json_schema_extra` dict within `Field()`:
 | `x-ui-section` | `str` | UI form section/grouping hint | `"Battery Specifications"`, `"SOC Limits"`, `"Power Configuration"` |
 | `x-validation-hint` | `str` | Explain validation constraints | `"Must be > 0, typically 40-100 kWh"` |
 | `x-ui-widget` | `str` | Suggested UI widget type | `"entity-picker"`, `"slider"`, `"time-picker"` |
-| `x-entity-filter` | `str` | Filter for HA entity picker | `"sensor"`, `"switch"`, `"binary_sensor"` |
+| `x-ui-widget-filter` | `str` | Filter for HA entity picker | `"sensor"`, `"switch"`, `"binary_sensor"` |
 | `x-docs-url` | `str` | External documentation URL | `"https://github.com/.../wiki/Battery"` |
 
 **Note:** `x-ui-section` is a **hint** for UI builders on how to group related fields. Documentation generators may ignore it.
@@ -81,7 +74,7 @@ These go in `ConfigDict` `json_schema_extra`:
 
 | Extension | Type | Purpose | Example |
 |-----------|------|---------|---------|
-| `x-ui-group` | `str` | TOC section grouping | `"Energy Storage"`, `"Devices"`, `"Infrastructure"` |
+| `x-ui-group` | `str` | TOC section grouping | `"Energy"`, `"Devices"`, `"Integration"` |
 | `x-icon` | `str` | Icon identifier (mapped to emoji) | `"battery-charging"`, `"solar-panel"`, `"ev-plug"` |
 | `x-order` | `int` | Sort order within group | `1`, `2`, `3`, ... |
 | `x-help` | `str` | Detailed model help (markdown) | Multi-line markdown with examples |
@@ -151,7 +144,7 @@ class BatteryConfig(BaseModel):
         populate_by_name=True,
         json_schema_extra={
             # TOC section grouping
-            'x-ui-group': 'Energy Storage',
+            'x-ui-group': 'Energy',
             
             # Icon identifier (mapped to 🔋 emoji)
             'x-icon': 'battery-charging',
@@ -215,15 +208,15 @@ Use `x-ui-group` to organize models into logical documentation sections:
 
 | Group | Purpose | Examples |
 |-------|---------|----------|
-| `"Energy Storage"` | Battery systems | BatteryConfig |
-| `"Energy Production"` | Solar panels | SolarConfig |
-| `"Devices"` | Controllable devices | EVConfig, MachineConfig |
-| `"Heating & Climate"` | Heating systems | HeatingConfig, BoilerConfig |
-| `"Infrastructure"` | Core system config | DatabaseConfig, GridConfig |
-| `"Integration"` | External integrations | TibberConfig, HomeAssistantConfig |
-| `"Pricing & Markets"` | Price data sources | PricingConfig |
-| `"Automation"` | Scheduling & tasks | SchedulerConfig |
-| `"Visualization"` | Graphics & reporting | GraphicsConfig, ReportConfig |
+| `"Energy"` | Energy systems | BatteryConfig, SolarConfig, GridConfig |
+| `"Devices"` | Controllable devices | EVConfig, MachinesConfig |
+| `"Heating"` | Heating systems | HeatingConfig, BoilerConfig |
+| `"Integration"` | External integrations | DatabaseConfig, TibberConfig, DashboardConfig, NotificationsConfig |
+| `"Pricing"` | Price data sources | PricingConfig |
+| `"DAO"` | Core DAO settings | SchedulerConfig and configuration root fields |
+| `"Reporting"` | Reporting & history | ReportConfig, HistoryConfig |
+| `"Visualization"` | Graphics | GraphicsConfig |
+| `"HASS"` | Home Assistant | HomeAssistantConfig |
 
 ### Icon Identifiers
 
@@ -302,12 +295,12 @@ Use `x-validation-hint` to explain constraints in human terms:
 ### Best Practices
 
 1. **Always add extensions to new fields**:
-   - Minimum: `x-category`, `x-unit` (if applicable)
+   - Minimum: `x-ui-section`, `x-unit` (if applicable)
    - Recommended: Add `x-help` for complex fields
-   - Optional: `x-ui-widget`, `x-entity-filter` for UI hints
+   - Optional: `x-ui-widget`, `x-ui-widget-filter` for UI hints
 
 2. **Be consistent**:
-   - Use same category names across similar fields
+   - Use same section names across similar fields
    - Use standard unit abbreviations (kWh, W, %, °C, etc.)
    - Follow existing patterns for help text structure
 
@@ -318,12 +311,12 @@ Use `x-validation-hint` to explain constraints in human terms:
 
 4. **Test generated documentation**:
    ```bash
-   python3 -m dao.prog.config.generate_docs
+   python scripts/generate_docs.py
    # Check SETTINGS.md for formatting
    ```
 
 5. **Update ICON_MAP** if adding new icons:
-   - Edit `dao/prog/config/generate_docs.py`
+   - Edit `scripts/generate_docs.py`
    - Add mapping: `"your-icon-id": "🔥"`
 
 ### Migration Considerations
@@ -357,7 +350,7 @@ You can add/modify extensions without creating migrations!
 When you add a field with a default value, it's **automatically optional** in Pydantic. Old configurations without this field will use the default.
 
 ```python
-# dao/prog/config/models/devices/battery.py
+# dao/lib/config/models/devices/battery.py
 from pydantic import BaseModel, Field
 
 class BatteryConfig(BaseModel):
@@ -387,7 +380,7 @@ class BatteryConfig(BaseModel):
 Only needed if you want a field to be required WITHOUT a default value:
 
 ```python
-# dao/prog/config/versions/v1.py
+# dao/lib/config/versions/v1.py
 class BatteryV1(BaseModel):
     name: str
     capacity: float
@@ -410,7 +403,7 @@ class BatteryV1(BaseModel):
 #### Step 1: Update the Model
 
 ```python
-# dao/prog/config/versions/v0.py (or new version)
+# dao/lib/config/versions/v0.py (or new version)
 from pydantic import BaseModel, Field
 
 class BatteryV0(BaseModel):
@@ -435,7 +428,7 @@ class BatteryV0(BaseModel):
 Only create a migration if you're making a field required WITHOUT a default:
 
 ```python
-# dao/prog/config/migrations/v0_to_v1.py
+# dao/lib/config/migrations/v0_to_v1.py
 def migrate_v0_to_v1(old_config: dict) -> dict:
     """Migrate from v0 to v1."""
     new_config = old_config.copy()
@@ -446,13 +439,13 @@ def migrate_v0_to_v1(old_config: dict) -> dict:
             if 'efficiency' not in battery:
                 battery['efficiency'] = 0.95  # Provide migration default
     
-    new_config['version'] = 1
+    new_config['config_version'] = 1
     return new_config
 
-# Register in dao/prog/config/migrations/__init__.py
+# Register in dao/lib/config/migrations/migrator.py
 from .v0_to_v1 import migrate_v0_to_v1
 
-MIGRATIONS = {
+MIGRATIONS: dict[tuple[int, int], callable] = {
     (0, 1): migrate_v0_to_v1,
 }
 ```
@@ -460,16 +453,16 @@ MIGRATIONS = {
 #### Step 3: Update Version Number
 
 ```python
-# dao/prog/config/versions/v1.py
+# dao/lib/config/versions/v1.py
 class ConfigurationV1(BaseModel):
-    version: Literal[1] = 1
+    config_version: Literal[1] = 1
     # ... rest of model
 ```
 
 #### Step 4: Update Loader
 
 ```python
-# dao/prog/config/loader.py
+# dao/lib/config/loader.py
 from .versions.v1 import ConfigurationV1
 
 CURRENT_VERSION = 1
@@ -485,13 +478,13 @@ VERSION_MODELS = {
 # dao/tests/config/test_migrations.py
 def test_v0_to_v1_adds_efficiency():
     old_config = {
-        "version": 0,
+        "config_version": 0,
         "battery": [{"name": "Test", "capacity": 10, "max_charge_power": 5}]
     }
     
     new_config = migrate_v0_to_v1(old_config)
     
-    assert new_config['version'] == 1
+    assert new_config['config_version'] == 1
     assert new_config['battery'][0]['efficiency'] == 0.95
 ```
 
@@ -500,7 +493,7 @@ def test_v0_to_v1_adds_efficiency():
 **✅ NON-BREAKING** - No migration needed!
 
 ```python
-# dao/prog/config/versions/v0.py
+# dao/lib/config/versions/v0.py
 class BatteryV0(BaseModel):
     name: str
     capacity: float
@@ -526,7 +519,7 @@ class BatteryV0(BaseModel):
 Changes that don't affect existing behavior:
 
 ```python
-# dao/prog/config/versions/v0.py
+# dao/lib/config/versions/v0.py
 class GraphicsV0(BaseModel):
     # BEFORE
     # style: str = "default"
@@ -560,7 +553,7 @@ interval: Optimization interval
 #### Option 2: Create New Version with Migration
 
 ```python
-# dao/prog/config/migrations/v0_to_v1.py
+# dao/lib/config/migrations/v0_to_v1.py
 def migrate_v0_to_v1(old_config: dict) -> dict:
     new_config = old_config.copy()
     
@@ -571,7 +564,7 @@ def migrate_v0_to_v1(old_config: dict) -> dict:
             # Migrate to new recommended default
             scheduler['interval'] = '15min'
     
-    new_config['version'] = 1
+    new_config['config_version'] = 1
     return new_config
 ```
 
@@ -584,7 +577,7 @@ def migrate_v0_to_v1(old_config: dict) -> dict:
 **✅ NON-BREAKING** - Add directly to current version:
 
 ```python
-# dao/prog/config/models/devices/battery.py
+# dao/lib/config/models/devices/battery.py
 class BatteryConfig(BaseModel):
     name: str
     capacity: float
@@ -648,7 +641,7 @@ class BatteryV0(BaseModel):
 **⚠️ IMPORTANT**: All fields MUST have descriptions or the build will fail!
 
 ```python
-# dao/prog/config/models/heat_pump.py
+# dao/lib/config/models/heat_pump.py
 from pydantic import BaseModel, Field
 
 class HeatPumpV0(BaseModel):
@@ -683,16 +676,16 @@ class HeatPumpV0(BaseModel):
 - Every field needs `Field(description="...")`
 - Descriptions should be clear and meaningful
 - Build will fail if any field lacks description
-- Run `python -m dao.prog.config.generate_docs` to validate locally
+- Run `python scripts/generate_docs.py` to validate locally
 
 ### Step 2: Add to Root Configuration
 
 ```python
-# dao/prog/config/versions/v0.py
+# dao/lib/config/versions/v0.py
 from ..models.heat_pump import HeatPumpV0
 
 class ConfigurationV0(BaseModel):
-    version: Literal[0] = 0
+    config_version: Literal[0] = 0
     
     # Existing fields...
     battery: list[BatteryV0] = Field(default_factory=list)
@@ -704,26 +697,12 @@ class ConfigurationV0(BaseModel):
     )
 ```
 
-### Step 3: Update Wrapper (if needed)
-
-If you need special access methods:
-
-```python
-# dao/prog/config/wrapper.py
-class Config:
-    def get_heat_pumps(self) -> list:
-        """Get all configured heat pumps."""
-        if self._using_fallback:
-            return self.get(['heat_pump']) or []
-        return self._config.heat_pump or []
-```
-
-### Step 4: Add Tests
+### Step 3: Add Tests
 
 ```python
 # dao/tests/config/test_heat_pump.py
 import pytest
-from dao.prog.config.models.heat_pump import HeatPumpV0
+from dao.lib.config.models.heat_pump import HeatPumpV0
 
 def test_heat_pump_basic():
     hp = HeatPumpV0(
@@ -745,7 +724,7 @@ def test_heat_pump_cop_validation():
         )
 ```
 
-### Step 5: Documentation Auto-Updates
+### Step 4: Documentation Auto-Updates
 
 **No manual documentation needed!** 📚
 
@@ -758,11 +737,8 @@ When you commit your new model:
 
 **Manual regeneration (for local testing)**:
 ```bash
-# Generate documentation
-python -m dao.prog.config.generate_docs
-
-# Generate schema
-python -m dao.prog.config.generate_schema
+# Generate documentation and schema
+python scripts/generate_docs.py
 ```
 
 The documentation will automatically include:
@@ -773,127 +749,6 @@ The documentation will automatically include:
 - ✅ Validation constraints
 - ✅ Model docstrings
 
-### Fields
-- `name`: Heat pump identifier
-- `cop`: Coefficient of Performance (1.0-10.0, default: 3.0)
-- `max_power`: Maximum power consumption in kW
-- `entity_id`: Home Assistant entity ID
-- `temperature_sensor`: Optional temperature sensor entity ID
-```
-
----
-
-## Using Direct Config Access
-
-### When to Use Direct Access
-
-**Use Direct Access When**:
-- ✅ Performance-critical code paths
-- ✅ Type hints and IDE autocomplete are important
-- ✅ You're writing new code
-- ✅ Config is guaranteed to be valid (fallback mode won't trigger)
-
-**Use Wrapper When**:
-- ✅ Backward compatibility matters
-- ✅ Config might be invalid (want fallback mode)
-- ✅ Dynamic/computed paths: `config.get(['battery', str(i), 'name'])`
-- ✅ Working with legacy code
-
-### Examples
-
-#### Direct Access (Type-Safe)
-
-```python
-from dao.prog.da_config import Config
-
-config = Config()
-
-# Direct attribute access - fastest, type-safe
-interval = config.scheduler.interval  # str
-style = config.graphics.style  # str
-batteries = config.battery  # list[BatteryV0]
-
-# Array access
-first_battery = config.battery[0]
-battery_name = config.battery[0].name  # str
-battery_capacity = config.battery[0].capacity  # float
-
-# Nested objects
-db_engine = config.database_da.engine  # str
-db_host = config.database_da.host  # str | None
-
-# Type checking works!
-def process_battery(battery: BatteryV0) -> None:
-    # IDE knows all fields and types
-    print(f"{battery.name}: {battery.capacity}kWh")
-
-for battery in config.battery:
-    process_battery(battery)  # ✅ Type-safe
-```
-
-#### Wrapper Access (Backward Compatible)
-
-```python
-from dao.prog.da_config import Config
-
-config = Config()
-
-# get() method - slower, but safe with fallback
-interval = config.get(['scheduler', 'interval'])  # Any
-style = config.get(['graphics', 'style'])  # Any
-batteries = config.get(['battery'])  # Any
-
-# Dynamic paths
-battery_idx = 0
-battery_name = config.get(['battery', str(battery_idx), 'name'])
-
-# With defaults
-unknown_value = config.get(['some', 'missing', 'key'], default='fallback')
-
-# Still works if config is invalid (fallback mode)
-```
-
-#### Mixed Approach (Recommended)
-
-```python
-from dao.prog.da_config import Config
-
-config = Config()
-
-# Use direct access for known paths
-if not config._using_fallback:
-    # Fast path - use Pydantic models
-    for battery in config.battery:
-        optimize_battery(
-            name=battery.name,
-            capacity=battery.capacity,
-            efficiency=battery.efficiency or 0.95
-        )
-else:
-    # Fallback path - use wrapper
-    for i, battery in enumerate(config.get(['battery']) or []):
-        optimize_battery(
-            name=battery.get('name'),
-            capacity=battery.get('capacity'),
-            efficiency=battery.get('efficiency', 0.95)
-        )
-```
-
-### Performance Comparison
-
-```python
-import timeit
-
-# Direct access: ~0.1 µs
-timeit.timeit('config.scheduler.interval', setup='from dao.prog.da_config import Config; config = Config()', number=100000)
-# ~0.01 ms
-
-# Wrapper access: ~2 µs  
-timeit.timeit("config.get(['scheduler', 'interval'])", setup='from dao.prog.da_config import Config; config = Config()', number=100000)
-# ~0.20 ms
-
-# Direct is ~20x faster, but both are fast enough for most uses
-```
 
 ---
 
@@ -903,16 +758,16 @@ timeit.timeit("config.get(['scheduler', 'interval'])", setup='from dao.prog.da_c
 
 1. **Copy previous version**:
 ```bash
-cp dao/prog/config/versions/v0.py dao/prog/config/versions/v1.py
+cp dao/lib/config/versions/v0.py dao/lib/config/versions/v1.py
 ```
 
 2. **Update version number**:
 ```python
-# dao/prog/config/versions/v1.py
+# dao/lib/config/versions/v1.py
 from typing import Literal
 
 class ConfigurationV1(BaseModel):
-    version: Literal[1] = 1  # Change from 0 to 1
+    config_version: Literal[1] = 1  # Change from 0 to 1
     # ... rest of model
 ```
 
@@ -920,7 +775,7 @@ class ConfigurationV1(BaseModel):
 
 4. **Create migration function**:
 ```python
-# dao/prog/config/migrations/v0_to_v1.py
+# dao/lib/config/migrations/v0_to_v1.py
 def migrate_v0_to_v1(old_config: dict) -> dict:
     """Migrate configuration from v0 to v1.
     
@@ -941,23 +796,24 @@ def migrate_v0_to_v1(old_config: dict) -> dict:
         if new_config['scheduler'].get('interval') == '5min':
             new_config['scheduler']['interval'] = '15min'
     
-    new_config['version'] = 1
+    new_config['config_version'] = 1
     return new_config
 ```
 
 5. **Register migration**:
 ```python
-# dao/prog/config/migrations/__init__.py
+# dao/lib/config/migrations/migrator.py
 from .v0_to_v1 import migrate_v0_to_v1
 
-MIGRATIONS = {
+MIGRATIONS: dict[tuple[int, int], callable] = {
+    (-1, 0): migrate_unversioned_to_v0,
     (0, 1): migrate_v0_to_v1,
 }
 ```
 
 6. **Update loader**:
 ```python
-# dao/prog/config/loader.py
+# dao/lib/config/loader.py
 from .versions.v1 import ConfigurationV1
 
 CURRENT_VERSION = 1
@@ -972,23 +828,22 @@ VERSION_MODELS = {
 # dao/tests/config/test_migrations.py
 def test_migrate_v0_to_v1():
     old_config = {
-        "version": 0,
+        "config_version": 0,
         "battery": [{"name": "Test", "capacity": 10}],
         "scheduler": {"interval": "5min"}
     }
     
     new_config = migrate_v0_to_v1(old_config)
     
-    assert new_config['version'] == 1
+    assert new_config['config_version'] == 1
     assert new_config['battery'][0]['efficiency'] == 0.95
     assert new_config['scheduler']['interval'] == '15min'
 ```
 
 ### Backward Compatibility Promise
 
-- **Old configs MUST continue to work** (via migration or fallback)
+- **Old configs MUST continue to work** (via migration)
 - **Migration is automatic** (user doesn't need to do anything)
-- **Fallback mode** catches any issues and keeps system running
 - **Loud warnings** alert users to config problems
 
 ---
@@ -1002,11 +857,11 @@ Every model should have tests:
 ```python
 # dao/tests/config/test_battery.py
 import pytest
-from dao.prog.config.models.battery import BatteryV0
+from dao.lib.config.models.devices.battery import BatteryConfig
 
 def test_battery_basic():
     """Test basic battery creation."""
-    battery = BatteryV0(
+    battery = BatteryConfig(
         name="Test Battery",
         capacity=10.0,
         max_charge_power=5.0
@@ -1017,7 +872,7 @@ def test_battery_basic():
 def test_battery_validation():
     """Test battery validation rules."""
     with pytest.raises(ValueError):
-        BatteryV0(
+        BatteryConfig(
             name="Bad Battery",
             capacity=-5.0,  # Invalid: negative capacity
             max_charge_power=5.0
@@ -1025,12 +880,12 @@ def test_battery_validation():
 
 def test_battery_optional_fields():
     """Test optional fields have correct defaults."""
-    battery = BatteryV0(name="Test", capacity=10, max_charge_power=5)
+    battery = BatteryConfig(name="Test", capacity=10, max_charge_power=5)
     assert battery.efficiency is None
 
 def test_battery_extra_fields_preserved():
     """Test unknown fields are preserved (extra='allow')."""
-    battery = BatteryV0(
+    battery = BatteryConfig(
         name="Test",
         capacity=10,
         max_charge_power=5,
@@ -1047,25 +902,13 @@ Test with real configuration:
 # dao/tests/config/test_integration.py
 def test_load_example_config():
     """Test loading the example configuration."""
-    from dao.prog.da_config import Config
+    from pathlib import Path
+    from dao.lib.config.loader import ConfigurationLoader
     
-    config = Config()
-    assert not config._using_fallback
-    assert config.version == 0
+    loader = ConfigurationLoader(Path("dao/data/options.json"))
+    config = loader.load_and_validate()
+    assert config.config_version == 0
     assert len(config.battery) > 0
-
-def test_wrapper_compatibility():
-    """Test wrapper provides backward-compatible interface."""
-    from dao.prog.da_config import Config
-    
-    config = Config()
-    
-    # get() method works
-    interval = config.get(['scheduler', 'interval'])
-    assert interval is not None
-    
-    # Direct access works
-    assert config.scheduler.interval == interval
 ```
 
 ### Migration Tests
@@ -1076,48 +919,18 @@ Test every migration:
 # dao/tests/config/test_migrations.py
 def test_all_migrations():
     """Test migrating through all versions."""
-    from dao.prog.config.loader import ConfigurationLoader
+    from dao.lib.config.migrations.migrator import migrate_config
+    from dao.lib.config.loader import CURRENT_VERSION
     
-    # Start with v0 config
+    # Start with unversioned config
     old_config = {
-        "version": 0,
         "battery": [{"name": "Test", "capacity": 10}]
     }
     
-    loader = ConfigurationLoader()
-    result = loader.load_dict(old_config)
+    result = migrate_config(old_config, target_version=CURRENT_VERSION)
     
     # Should migrate to current version
-    assert result.version == CURRENT_VERSION
-```
-
-### Fallback Tests
-
-Test fallback mode:
-
-```python
-# dao/tests/config/test_fallback.py
-def test_fallback_mode_activates():
-    """Test fallback mode activates on invalid config."""
-    from dao.prog.config.wrapper import Config
-    
-    # Create config with invalid data
-    invalid_config = {"battery": [{"invalid": "data"}]}
-    
-    config = Config(config_dict=invalid_config)
-    assert config._using_fallback
-    assert config._pydantic_error is not None
-
-def test_fallback_mode_still_works():
-    """Test system continues working in fallback mode."""
-    from dao.prog.config.wrapper import Config
-    
-    config = Config(config_dict={"test": "value"})
-    assert config._using_fallback
-    
-    # get() still works
-    value = config.get(['test'])
-    assert value == "value"
+    assert result['config_version'] == CURRENT_VERSION
 ```
 
 ---
@@ -1193,24 +1006,7 @@ class SchedulerV1(BaseModel):
         return v
 ```
 
-### 4. Not Testing Fallback Mode
-
-**Problem**: Fallback mode fails silently in production.
-
-```python
-# ✅ ALWAYS test both modes
-def test_normal_mode():
-    config = Config()  # Valid config
-    assert not config._using_fallback
-    value = config.get(['key'])
-
-def test_fallback_mode():
-    config = Config(config_dict={"invalid": "data"})
-    assert config._using_fallback
-    value = config.get(['key'], default='fallback')
-```
-
-### 5. Using Mutable Defaults
+### 4. Using Mutable Defaults
 
 **Problem**: Shared mutable default values.
 
@@ -1224,12 +1020,12 @@ class ConfigV0(BaseModel):
     battery: list[BatteryV0] = Field(default_factory=list)
 ```
 
-### 6. Forgetting to Update CURRENT_VERSION
+### 5. Forgetting to Update CURRENT_VERSION
 
 **Problem**: New version not recognized.
 
 ```python
-# dao/prog/config/loader.py
+# dao/lib/config/loader.py
 
 # ❌ BAD - forgot to update
 CURRENT_VERSION = 0  # Should be 1!
@@ -1268,7 +1064,7 @@ VERSION_MODELS = {
 - [ ] Add field WITHOUT default: `field: Type = Field(description="...")`
 - [ ] Create migration to add field to old configs
 - [ ] Update `CURRENT_VERSION` in loader
-- [ ] Register migration in `migrations/__init__.py`
+- [ ] Register migration in `migrations/migrator.py`
 - [ ] Add migration tests
 - [ ] Commit and push - **docs auto-generate!**
 - [ ] **⚠️ Migration required!**
@@ -1282,12 +1078,11 @@ VERSION_MODELS = {
 - [ ] Commit and push - **docs auto-generate!**
 
 ### Creating New Model
-- [ ] Create model file in `dao/prog/config/models/`
+- [ ] Create model file in `dao/lib/config/models/`
 - [ ] Add comprehensive docstring to the model class
 - [ ] Add Field descriptions for all fields
 - [ ] Set `model_config = {"extra": "allow"}` if needed
 - [ ] Add to root `ConfigurationVN`
-- [ ] Add wrapper methods if needed
 - [ ] Write comprehensive tests
 - [ ] Commit and push - **docs auto-generate!**
 
@@ -1300,9 +1095,8 @@ VERSION_MODELS = {
 The repository includes a GitHub Actions workflow (`.github/workflows/generate-docs.yml`) that automatically:
 
 1. **Detects changes** to Pydantic models:
-   - `dao/prog/config/models/**/*.py`
-   - `dao/prog/config/versions/**/*.py`
-   - Generator scripts themselves
+   - `dao/lib/config/**/*.py`
+   - `scripts/generate_docs.py`
 
 2. **Regenerates documentation**:
    - `SETTINGS.md` from model metadata
@@ -1324,11 +1118,8 @@ The repository includes a GitHub Actions workflow (`.github/workflows/generate-d
 Test documentation generation locally before pushing:
 
 ```bash
-# Generate SETTINGS.md
-python -m dao.prog.config.generate_docs
-
-# Generate config_schema.json
-python -m dao.prog.config.generate_schema
+# Generate SETTINGS.md and config_schema.json
+python scripts/generate_docs.py
 
 # Check the output
 git diff SETTINGS.md config_schema.json
@@ -1379,5 +1170,5 @@ entity_actual_level: str = Field(
 
 ---
 
-**Questions?** Check [FALLBACK_MODE.md](FALLBACK_MODE.md) for fallback behavior, [PLAN.md](PLAN.md) for overall architecture, or [.github/workflows/README.md](.github/workflows/README.md) for workflow details.
+**Questions?** See [PLAN.md](PLAN.md) for overall architecture, or [.github/workflows/README.md](.github/workflows/README.md) for workflow details.
 

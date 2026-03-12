@@ -69,7 +69,6 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
     x_icon = schema.get('x-icon', '')
     x_help = schema.get('x-help', '')
     x_docs_url = schema.get('x-docs-url', '')
-    x_category = schema.get('x-category', '')
     
     if title_prefix:
         # Add icon if available
@@ -81,11 +80,6 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
         # Add short description
         if model_desc:
             lines.append(f"_{model_desc}_")
-            lines.append("")
-        
-        # Add category badge
-        if x_category:
-            lines.append(f"**Category:** `{x_category}`")
             lines.append("")
         
         # Add detailed help if available

@@ -8,8 +8,20 @@ MIGRATIONS registry.
 
 import logging
 from typing import Any
+from .unversioned_to_v0 import migrate_unversioned_to_v0
+
+# Uncomment when creating v0→v1 migration:
+# from .v0_to_v1 import migrate_v0_to_v1
 
 logger = logging.getLogger(__name__)
+
+# Migration registry: maps (from_version, to_version) -> migration function
+# Special case: (-1, 0) handles unversioned → v0 migration
+MIGRATIONS: dict[tuple[int, int], callable] = {
+    (-1, 0): migrate_unversioned_to_v0,  # unversioned → v0
+    # Uncomment when creating v0→v1 migration:
+    # (0, 1): migrate_v0_to_v1,
+}
 
 
 def migrate_config(config_data: dict[str, Any], target_version: int) -> dict[str, Any]:
@@ -24,9 +36,6 @@ def migrate_config(config_data: dict[str, Any], target_version: int) -> dict[str
         Migrated configuration dictionary
     """
     current_version = config_data.get("config_version")
-    
-    # Import MIGRATIONS here to avoid circular imports
-    from . import MIGRATIONS
     
     # Handle unversioned configs (use special -1 version marker)
     if current_version is None:
