@@ -1294,7 +1294,7 @@ System uses tariff active on optimization date.
 | `vat consumption` | object | Yes | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `vat production` | object | Yes | — | VAT percentage for production by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `last invoice` | string | Yes | — | Date of last invoice (YYYY-MM-DD) _Must be YYYY-MM-DD format_ |
-| `tax refund` | boolean or string | No | `true` | Whether tax refund applies |
+| `tax refund` | boolean | No | `true` | Whether tax refund applies |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1337,7 +1337,7 @@ Date of last electricity invoice. Used for calculating costs since last billing 
 
 **`tax refund`**
 
-Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.
+Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production.
 
 </details>
 

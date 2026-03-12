@@ -2171,20 +2171,12 @@
           "x-validation-hint": "Must be YYYY-MM-DD format"
         },
         "tax refund": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
           "default": true,
           "description": "Whether tax refund applies",
           "title": "Tax Refund",
-          "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.",
-          "x-ui-section": "Taxes",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "type": "boolean",
+          "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production.",
+          "x-ui-section": "Taxes"
         }
       },
       "required": [
@@ -3029,17 +3021,17 @@
       "x-ui-section": "Optimization"
     },
     "strategy": {
-      "default": "minimize cost",
-      "description": "Optimization strategy",
-      "enum": [
-        "minimize cost",
-        "minimize consumption"
-      ],
-      "title": "Strategy",
-      "type": "string",
+      "$ref": "#/$defs/FlexValue",
+      "default": {
+        "value": "minimize cost"
+      },
+      "description": "Optimization strategy (or HA entity ID returning the strategy string)",
       "x-order": 2,
       "x-ui-group": "DAO",
-      "x-ui-section": "Optimization"
+      "x-ui-section": "Optimization",
+      "x-ui-widget": "entity-picker-or-string",
+      "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID",
+      "title": "Strategy"
     },
     "max gap": {
       "default": 0.005,
