@@ -254,7 +254,7 @@ def get_default_from_schema(field_schema: dict[str, Any], is_required: bool, def
 def main():
     """Generate both JSON schema and markdown documentation."""
     script_dir = Path(__file__).parent
-    repo_root = script_dir.parent.parent.parent
+    repo_root = script_dir.parent
     
     # Step 1: Generate JSON Schema
     print("Generating JSON schema from Pydantic models...")
