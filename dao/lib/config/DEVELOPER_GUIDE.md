@@ -697,7 +697,7 @@ api_key: str | None = (
 
 ### Serialization
 
-`SecretStr` serializes back to `"!secret key_name"` — never the resolved value. This means round-tripping a config through `model_dump()` / `model_validate()` is safe and will never leak secrets into the saved config.
+`SecretStr` serializes to `secret_key` — the bare key name (without the `!secret` prefix) for references, or the literal value for plain-text passwords. The resolved value is never stored inside `SecretStr`, so serialization can never leak it. Round-tripping through `model_dump()` / `model_validate()` is safe.
 
 ---
 

@@ -9,7 +9,7 @@ This module provides:
 
 import re
 from typing import Any, Union
-from pydantic import BaseModel, Field, field_validator, model_serializer, model_validator, ValidationInfo, ConfigDict
+from pydantic import BaseModel, Field, model_serializer, model_validator, ConfigDict
 
 # Matches Home Assistant entity IDs: "domain.object_id"
 # domain must start with a letter (rules out numeric strings like "0.45")
@@ -140,17 +140,6 @@ class SecretStr(BaseModel):
             return {'secret_key': key}
         return v
 
-    @field_validator('secret_key', mode='before')
-    @classmethod
-    def parse_secret_reference(cls, v: Any, info: ValidationInfo) -> str:
-        """Parse secret reference from '!secret key_name' format."""
-        if isinstance(v, str):
-            if v.startswith('!secret '):
-                return v.replace('!secret ', '', 1).strip()
-            # Direct secret key (already resolved)
-            return v
-        raise ValueError(f"Secret must be string, got {type(v)}")
-    
     def resolve(self, secrets: dict[str, str]) -> str:
         """
         Resolve the secret to its actual value.
@@ -173,5 +162,5 @@ class SecretStr(BaseModel):
 
     @model_serializer
     def serialize_secret(self) -> str:
-        """Always serializes back to '!secret key_name' — never the resolved value."""
-        return f"!secret {self.secret_key}"
+        """Serialize back to the original key (or literal) — never the resolved value."""
+        return self.secret_key
