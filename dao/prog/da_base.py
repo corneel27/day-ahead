@@ -21,7 +21,6 @@ from dao.prog.version import __version__
 from pathlib import Path
 from dao.lib.config.loader import ConfigurationLoader
 from dao.lib.db_connections import make_db_da, make_db_ha
-from dao.lib.config.models.base import SecretStr
 from dao.lib.da_meteo import Meteo
 from dao.lib.da_prices import DaPrices
 from dao.prog.utils import interpolate
@@ -123,10 +122,8 @@ class DaBase(hass.Hass):
         _tok = ha.hasstoken
         if _tok is None:
             self.hasstoken = os.environ.get("SUPERVISOR_TOKEN")
-        elif isinstance(_tok, SecretStr):
-            self.hasstoken = _tok.resolve(self._loader.secrets)
         else:
-            self.hasstoken = _tok
+            self.hasstoken = _tok.resolve(self._loader.secrets)
         super().__init__(hassurl=self.hassurl, token=self.hasstoken)
         headers = {
             "Authorization": "Bearer " + self.hasstoken,

@@ -94,7 +94,7 @@ class ConfigurationV0(BaseModel):
     )
     
     # Meteoserver
-    meteoserver_key: str | SecretStr = Field(
+    meteoserver_key: SecretStr = Field(
         alias="meteoserver-key",
         description="Meteoserver API key (can use !secret)",
         json_schema_extra={

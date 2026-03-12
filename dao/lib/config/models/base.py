@@ -155,10 +155,8 @@ class SecretStr(BaseModel):
             KeyError: If secret key not found in secrets
         """
         if self.secret_key not in secrets:
-            raise KeyError(
-                f"Secret '{self.secret_key}' not found in secrets.json. "
-                f"Available secrets: {', '.join(secrets.keys())}"
-            )
+            # Not a secrets.json reference — treat as a literal plain-text value
+            return self.secret_key
         return secrets[self.secret_key]
 
     @model_serializer

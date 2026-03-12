@@ -20,7 +20,7 @@ class PricingConfig(BaseModel):
             "x-ui-section": "Prices"
         }
     )
-    entsoe_api_key: Optional[str | SecretStr] = Field(
+    entsoe_api_key: Optional[SecretStr] = Field(
         default=None,
         alias="entsoe-api-key",
         description="ENTSO-E API key (can use !secret)",

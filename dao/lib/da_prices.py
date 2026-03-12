@@ -1,4 +1,3 @@
-from dao.lib.config.models.base import SecretStr
 import pandas as pd
 from dao.lib.db_manager import DBmanagerObj
 from entsoe import EntsoePandasClient
@@ -71,7 +70,7 @@ class DaPrices:
             )
             end = pd.Timestamp(year=end.year, month=end.month, day=end.day, tz="CET")
             _ak = self.config.prices.entsoe_api_key
-            api_key = _ak.resolve(self._secrets) if isinstance(_ak, SecretStr) else _ak
+            api_key = _ak.resolve(self._secrets) if _ak is not None else None
             client = EntsoePandasClient(api_key=api_key)
             da_prices = pd.DataFrame()
             try:
@@ -245,7 +244,7 @@ class DaPrices:
             logging.debug(query)
             _tibber = self.config.tibber
             _tok = _tibber.api_token
-            api_token = _tok.resolve(self._secrets) if isinstance(_tok, SecretStr) else _tok
+            api_token = _tok.resolve(self._secrets)
             url = _tibber.api_url or "https://api.tibber.com/v1-beta/gql"
             headers = {
                 "Authorization": "Bearer " + api_token,

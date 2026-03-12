@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import knmi
 from dao.lib.da_graph import GraphBuilder
 from dao.lib.db_manager import DBmanagerObj
-from dao.lib.config.models.base import SecretStr
 from sqlalchemy import Table, select, func, and_
 
 
@@ -22,7 +21,7 @@ class Meteo:
         self.db_da = db_da
         _secrets = secrets or {}
         mk = config.meteoserver_key
-        self.meteoserver_key = mk.resolve(_secrets) if isinstance(mk, SecretStr) else mk
+        self.meteoserver_key = mk.resolve(_secrets) if mk is not None else None
         self.meteoserver_model = config.meteoserver_model
         self.meteoserver_attemps = config.meteoserver_attemps
         self.latitude = latitude if latitude is not None else config.latitude

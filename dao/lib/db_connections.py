@@ -23,11 +23,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _resolve_password(pw: Optional[str | SecretStr], secrets: dict) -> Optional[str]:
+def _resolve_password(pw: Optional[SecretStr], secrets: dict) -> Optional[str]:
     """Resolve a SecretStr reference to its plain-text value."""
-    if isinstance(pw, SecretStr):
-        return pw.resolve(secrets)
-    return pw
+    if pw is None:
+        return None
+    return pw.resolve(secrets)
 
 
 def make_db_da(

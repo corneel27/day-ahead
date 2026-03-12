@@ -115,9 +115,7 @@ def get_tibber_data():
     url = (tibber_options.api_url if tibber_options else None) or "https://api.tibber.com/v1-beta/gql"
     db_da = make_db_da(config, loader.secrets)
     prices_options = config.prices
-    api_token = tibber_options.api_token
-    if hasattr(api_token, "resolve"):
-        api_token = api_token.resolve(loader.secrets)
+    api_token = tibber_options.api_token.resolve(loader.secrets)
     headers = {
         "Authorization": "Bearer " + api_token,
         "content-type": "application/json",

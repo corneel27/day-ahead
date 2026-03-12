@@ -83,7 +83,7 @@ class HADatabaseConfig(BaseModel):
             }
         }
     )
-    password: Optional[str | SecretStr] = Field(
+    password: Optional[SecretStr] = Field(
         default=None,
         description="Database password (can use !secret)",
         json_schema_extra={
@@ -228,7 +228,7 @@ class DatabaseConfig(BaseModel):
             }
         }
     )
-    password: Optional[str | SecretStr] = Field(
+    password: Optional[SecretStr] = Field(
         default=None,
         description="MySQL password (can use !secret)",
         json_schema_extra={

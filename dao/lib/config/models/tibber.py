@@ -10,7 +10,7 @@ from .base import SecretStr
 class TibberConfig(BaseModel):
     """Tibber API integration configuration."""
     
-    api_token: str | SecretStr = Field(
+    api_token: SecretStr = Field(
         alias="api_token",
         description="Tibber API token (can use !secret)",
         json_schema_extra={

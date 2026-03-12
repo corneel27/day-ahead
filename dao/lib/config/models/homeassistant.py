@@ -30,7 +30,7 @@ class HomeAssistantConfig(BaseModel):
             "x-validation-hint": "Default 8123, change if custom"
         }
     )
-    hasstoken: Optional[str | SecretStr] = Field(
+    hasstoken: Optional[SecretStr] = Field(
         default=None,
         description="Home Assistant long-lived access token (can use !secret)",
         alias="token",
