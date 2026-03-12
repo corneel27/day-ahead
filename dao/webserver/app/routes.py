@@ -37,18 +37,6 @@ def create_config():
 
 
 logname = "dashboard.log"
-handler = TimedRotatingFileHandler(
-    "../data/log/" + logname,
-    when="midnight",
-    backupCount=1 if config is None else config.history.save_days,
-)
-handler.suffix = "%Y%m%d"
-handler.setLevel(logging.INFO)
-logging.basicConfig(
-    level=logging.DEBUG,
-    handlers=[handler],
-    format=f"%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s",
-)
 
 browse = {}
 
@@ -163,7 +151,7 @@ solar_web_menu = {
 
 def generate_solar_items():
     global web_menu
-    solar_options = list(config.solar) if config else []
+    solar_options = config.solar if config else []
     battery_options = config.battery if config else []
     for battery_option in battery_options:
         for sol_opt in battery_option.solar:
@@ -205,6 +193,20 @@ def check_web_menu_items():
 
 
 check_web_menu_items()
+
+_save_days = config.history.save_days if config is not None else 7
+handler = TimedRotatingFileHandler(
+    "../data/log/" + logname,
+    when="midnight",
+    backupCount=_save_days,
+)
+handler.suffix = "%Y%m%d"
+handler.setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[handler],
+    format=f"%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s",
+)
 
 if config is not None:
     sensor_co2_intensity = config.report.co2_intensity_sensor if config and config.report else None

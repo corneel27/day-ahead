@@ -262,3 +262,21 @@ For panels facing different directions, use the 'strings' configuration:
         if self.is_multi_string:
             return sum(s.capacity for s in self.strings)
         return self.capacity or 0.0
+
+    @property
+    def effective_tilt(self) -> float:
+        """Capacity-weighted average tilt across all strings, or flat tilt. Defaults to 45."""
+        if self.is_multi_string:
+            total = self.total_capacity
+            if total > 0:
+                return sum(s.tilt * s.capacity for s in self.strings) / total
+        return self.tilt if self.tilt is not None else 45.0
+
+    @property
+    def effective_orientation(self) -> float:
+        """Capacity-weighted average orientation across all strings, or flat orientation. Defaults to 0."""
+        if self.is_multi_string:
+            total = self.total_capacity
+            if total > 0:
+                return sum(s.orientation * s.capacity for s in self.strings) / total
+        return self.orientation if self.orientation is not None else 0.0

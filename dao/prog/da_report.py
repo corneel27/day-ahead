@@ -2834,11 +2834,7 @@ class Report(DaBase):
         :param wd : weekdag 0= maandag, 6 = zondag
         :return: de berekende basislast voor die dag
         """
-        from dao.lib.config.loader import ConfigurationLoader
-        from pathlib import Path
-        _loader = ConfigurationLoader(Path("../data/options.json"))
-        config = _loader.load_and_validate()
-        calc_periode = config.baseload_calc_periode or 56
+        calc_periode = self.config.baseload_calc_periode
         calc_start = datetime.datetime.combine(
             (datetime.datetime.now() - datetime.timedelta(days=calc_periode)).date(),
             datetime.time(),
@@ -3234,7 +3230,7 @@ class Report(DaBase):
             )
         else:  # pv_dc
             battery_options = self.config.battery
-            B = len(battery_options) if battery_options else 0
+            B = len(battery_options)
             count = 0
             for b in range(B):
                 solar_options = battery_options[b].solar
@@ -3330,8 +3326,7 @@ class Report(DaBase):
             return result
 
         df["time"] = pd.to_datetime(df["time"])
-        time_zone = self.ha_context.time_zone if self.ha_context else "Europe/Amsterdam"
-        df["time_ts"] = df["time"].dt.tz_localize(time_zone)
+        df["time_ts"] = df["time"].dt.tz_localize(self.time_zone)
         df["time"] = df["time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
         df.rename(columns={"datasoort": "datatype"}, inplace=True)
         cols = df.columns.tolist()

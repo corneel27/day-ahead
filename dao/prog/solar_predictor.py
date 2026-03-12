@@ -24,6 +24,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from scipy import stats
 from dao.prog.da_base import DaBase
+from dao.lib.config.models.devices.solar import SolarConfig
 # import pvlib
 
 warnings.filterwarnings("ignore")
@@ -56,10 +57,12 @@ class SolarPredictor(DaBase):
                                  with your actual system capacity and location.
         """
         super().__init__()
+        if self.config is None:
+            return
         self.solar_name = solar_name
         self.solar_capacity = solar_capacity
-        self.latitude = self.ha_context.latitude if self.ha_context else self.config.latitude
-        self.longitude = self.ha_context.longitude if self.ha_context else self.config.longitude
+        self.latitude = self.ha_context.latitude
+        self.longitude = self.ha_context.longitude
         self.tilt = 45
         self.azimut = 180
         self.random_state = random_state
@@ -927,22 +930,17 @@ class SolarPredictor(DaBase):
         return df_solar
 
     def train_solar_option(
-        self, weather_data: pd.DataFrame, solar_dict: Dict, start: dt.datetime
+        self, weather_data: pd.DataFrame, solar_option: SolarConfig, start: dt.datetime
     ):
-        name = self._get_option("name", solar_dict, "default")
-        self.solar_name = name.replace(" ", "_").replace("-", "_")
-        self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
-        self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
-        self.solar_capacity = self.get_property_from_dict("capacity", solar_dict, 5)
-        self.solar_entities = self._get_option("entities sensors", solar_dict, [])
-        if not type(self.solar_entities) is list:
-            self.solar_entities = [self.solar_entities]
+        self.solar_name = solar_option.name.replace(" ", "_").replace("-", "_")
+        self.tilt = solar_option.effective_tilt
+        self.azimut = solar_option.effective_orientation + 180
+        self.solar_capacity = solar_option.total_capacity
+        self.solar_entities = solar_option.entities_sensors
         if not self.solar_entities:
             raise ValueError(
                 f"No entities configured in your solar-option of {self.solar_name}"
             )
-        if not isinstance(self.solar_entities, list):
-            self.solar_entities = [self.solar_entities]
         self.create_physics_based_constraints(self.solar_capacity)
         solar_data = self.get_solar_data(start=start, entities=self.solar_entities)
         self.train(
@@ -972,42 +970,12 @@ class SolarPredictor(DaBase):
                 if solar_option.ml_prediction:
                     self.train_solar_option(weather_data, solar_option, start)
 
-    def get_property_from_dict(
-        self, name: str, solar_option: Dict, default: float = None
-    ):
-        """
-        retourneert de property
-        :param name:
-        :param solar_option:
-        :param default:
-        :return:
-        """
-        result = self._get_option(name, solar_option, None)
-        if result is None:
-            sum = 0
-            capacity = 0
-            strings = self._get_option("strings", solar_option, {})
-            for string in strings:
-                value = self._get_option(name, string, None)
-                cap = self._get_option("capacity", string, None)
-                if value is not None and cap is not None:
-                    sum += value * cap
-                    capacity += cap
-            if name == "capacity":
-                result = capacity
-            else:
-                if capacity > 0:
-                    result = sum / capacity
-            if result is None:
-                result = default
-        return result
-
     def predict_solar_device(
-        self, solar_dict: dict, start: dt.datetime, end: dt.datetime
+        self, solar_option: SolarConfig, start: dt.datetime, end: dt.datetime
     ) -> pd.DataFrame:
         """
         berekent de voorspelling voor een pv-installatie
-        :param solar_dict, de configuratie van de installatie
+        :param solar_option: de configuratie van de installatie
         :param start: start-tijdstip voorspelling
         :param end: eind-tijdstip voorspelling
         :return: dataframe met berekende voorspellingen per uur
@@ -1022,11 +990,10 @@ class SolarPredictor(DaBase):
                 result = 0
             return result
 
-        name = self._get_option("name", solar_dict, "default")
-        self.solar_name = name.replace(" ", "_").replace("-", "_")
-        self.tilt = self.get_property_from_dict("tilt", solar_dict, 45)
-        self.azimut = self.get_property_from_dict("orientation", solar_dict, 0) + 180
-        self.solar_capacity = self.get_property_from_dict("capacity", solar_dict, 5)
+        self.solar_name = solar_option.name.replace(" ", "_").replace("-", "_")
+        self.tilt = solar_option.effective_tilt
+        self.azimut = solar_option.effective_orientation + 180
+        self.solar_capacity = solar_option.total_capacity
         file_name = "../data/prediction/models/" + self.solar_name + ".pkl"
         if os.path.isfile(file_name):
             self.load_model(file_name)

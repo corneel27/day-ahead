@@ -44,7 +44,7 @@ class DaCalc(DaBase):
         self.hp_heat_demand = "eco"
         self.boiler_present = False
         self.boiler_enabled = False
-        self.grid_max_power = self.config.grid.max_power if self.config.grid else 17
+        self.grid_max_power = self.config.grid.max_power
         self.machines = self.config.machines
         # self.start_logging()
 
@@ -446,6 +446,11 @@ class DaCalc(DaBase):
         for b in range(B):
             pv_prod_ac.append([])
             pv_prod_dc.append([])
+            # model_dump() converts BatteryStage objects to plain dicts so that a
+            # zero-power sentinel entry ({"power": 0.0, "efficiency": 1}) can be
+            # prepended and dict-subscript notation used throughout the MIP model
+            # build loop.  Converting to attribute access would require changing
+            # hundreds of downstream ["power"] / ["efficiency"] references.
             charge_stages.append([s.model_dump() for s in self.battery_options[b].charge_stages])
             if float(charge_stages[b][0]["power"]) != 0.0:
                 charge_stages[b] = [{"power": 0.0, "efficiency": 1}] + charge_stages[b]
@@ -1556,6 +1561,10 @@ class DaCalc(DaBase):
                 ):
                     ready = ready + dt.timedelta(days=1)
             hours_avail = max(0, (ready - start_dt).total_seconds() / 3600)
+            # model_dump() is required here: after building the list, two computed
+            # keys ("power" and "accu_power") are injected into each dict at runtime
+            # based on ampere × voltage and efficiency.  These derived values don't
+            # exist on EVChargeStage, so plain mutable dicts are necessary.
             ev_stages = [s.model_dump() for s in self.ev_options[e].charge_stages]
             if ev_stages[0]["ampere"] != 0.0:
                 ev_stages = [{"ampere": 0.0, "efficiency": 1}] + ev_stages
@@ -2181,6 +2190,12 @@ class DaCalc(DaBase):
                 logging.info(
                     f"Warmtepomp met power-regeling/stooklijnverschuiving wordt ingepland."
                 )
+                # model_dump() converts HeatingStage objects to plain dicts to allow
+                # a zero-power sentinel ({"max_power": 0, "cop": 8}) to be prepended
+                # and dict-subscript notation used for the MIP model var bounds.
+                # Fields match exactly (max_power, cop); no derived keys are added.
+                # Could be converted to attribute access, but kept consistent with
+                # the battery/EV stage patterns above.
                 hp_stages = [s.model_dump() for s in self.heating_options.stages]
                 hp_stages = sorted(hp_stages, key=lambda d: d['max_power'])
                 if hp_stages[0]["max_power"] != 0.0:

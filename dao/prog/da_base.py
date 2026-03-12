@@ -141,7 +141,7 @@ class DaBase(hass.Hass):
         if self.ha_context.country == "NL":
             self.knmi_station = self.meteo.which_station()
         self.solar = self.config.solar
-        self.interval = str(self.config.interval or "1hour").lower()
+        self.interval = self.config.interval
         self.interval_s = 3600 if self.interval == "1hour" else 900
 
         self.prices = DaPrices(self.config, self.db_da, country=self.ha_context.country, secrets=self._loader.secrets)
@@ -428,6 +428,11 @@ class DaBase(hass.Hass):
             logging.debug(f"outer query p_avg: {query_str}")
             result = connection.execute(outer_query)
             return result.scalar()
+
+    # TODO: _get_option and the set_entity_*/get_entity_state helpers below are
+    #   generic HA interaction utilities that don't belong on DaBase. Consider
+    #   extracting them into a dedicated HAEntityHelper class (or mixin) that
+    #   wraps the hass.Hass API, so DaBase stays focused on config/orchestration.
 
     @staticmethod
     def _get_option(key: str, options, default=None):
