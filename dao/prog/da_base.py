@@ -155,15 +155,11 @@ class DaBase(hass.Hass):
         self.ol_t_def = self.prices_options.cost_supplier_production if self.prices_options else None
         self.btw_l_def = self.prices_options.vat_consumption if self.prices_options else None
         self.btw_t_def = self.prices_options.vat_production if self.prices_options else self.btw_l_def
-        tax_refund = self.prices_options.tax_refund if self.prices_options else True
-        self.salderen = (
-            tax_refund.lower() == "true" if isinstance(tax_refund, str) else bool(tax_refund)
-        )
+        self.salderen = self.prices_options.tax_refund if self.prices_options else True
 
         self.history_options = self.config.history
-        # self.strategy = self.config.strategy  (resolved via get_setting_state)
-        self.strategy = self.get_setting_state(
-            "strategy", None, exp_type="string", default="minimize cost"
+        self.strategy = self.config.strategy.resolve(
+            lambda eid: self.get_state(eid).state, target_type=str
         )
         self.tibber_options = self.config.tibber
         notif = self.config.notifications

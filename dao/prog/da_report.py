@@ -3046,12 +3046,7 @@ class Report(DaBase):
         btw_t = 0
         columns = ["time", "da_ex", "da_cons", "da_prod", "datasoort"]
         df = pd.DataFrame(columns=columns)
-        salderen = (
-            self.prices_options.tax_refund
-            if self.prices_options else True
-        )
-        if isinstance(salderen, str):
-            salderen = salderen.lower() == "true"
+        salderen = self.prices_options.tax_refund if self.prices_options else True
         for row in df_da.itertuples():
             if pd.isnull(row.time):
                 continue

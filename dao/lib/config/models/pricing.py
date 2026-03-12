@@ -113,14 +113,13 @@ class PricingConfig(BaseModel):
             "x-validation-hint": "Must be YYYY-MM-DD format"
         }
     )
-    tax_refund: bool | str = Field(
+    tax_refund: bool = Field(
         default=True,
         alias="tax refund",
         description="Whether tax refund applies",
         json_schema_extra={
-            "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.",
-            "x-ui-section": "Taxes",
-            "x-ui-widget": "entity-picker-or-boolean"
+            "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production.",
+            "x-ui-section": "Taxes"
         }
     )
     

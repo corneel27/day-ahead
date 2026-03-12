@@ -9,7 +9,7 @@ get migrated to this version with no format changes.
 from typing import Optional, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
-from ..models.base import SecretStr
+from ..models.base import FlexValue, SecretStr
 from ..models.database import HADatabaseConfig, DatabaseConfig
 from ..models.pricing import PricingConfig
 from ..models.graphics import GraphicsConfig
@@ -227,13 +227,15 @@ class ConfigurationV0(BaseModel):
             "x-order": 1
         }
     )
-    strategy: Literal['minimize cost', 'minimize consumption'] = Field(
-        default="minimize cost",
-        description="Optimization strategy",
+    strategy: FlexValue = Field(
+        default=FlexValue(value="minimize cost"),
+        description="Optimization strategy (or HA entity ID returning the strategy string)",
         json_schema_extra={
             "x-ui-group": "DAO",
             "x-ui-section": "Optimization",
-            "x-order": 2
+            "x-order": 2,
+            "x-ui-widget": "entity-picker-or-string",
+            "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID"
         }
     )
     max_gap: float = Field(
