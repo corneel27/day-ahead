@@ -943,7 +943,7 @@ Then in options.json:
 | `server` | string | No | `"core-mariadb"` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
 | `port` | integer | No | `0` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
 | `username` | string | No | `"day_ahead"` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
-| `password` | string or [SecretStr](#secretstr) (optional) | No | `null` | MySQL password (can use !secret) _Use !secret for passwords_ |
+| `password` | [SecretStr](#secretstr) (optional) | No | `null` | MySQL password (can use !secret) _Use !secret for passwords_ |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
 
 <details>
@@ -1162,7 +1162,7 @@ Tibber is an electricity supplier offering:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `api_token` | string or [SecretStr](#secretstr) | Yes | — | Tibber API token (can use !secret) _Use !secret for API tokens_ |
+| `api_token` | [SecretStr](#secretstr) | Yes | — | Tibber API token (can use !secret) _Use !secret for API tokens_ |
 | `api url` | string (optional) | No | `"https://api.tibber.com/v1-beta/gql"` | Tibber API URL |
 
 <details>
@@ -1193,7 +1193,7 @@ Home Assistant database connection for reading historical sensor data (prices, s
 | `db_path` | string | No | `"/homeassistant"` | Database path for SQLite |
 | `database` | string | No | `"homeassistant"` | Database name |
 | `username` | string | No | `"homeassistant"` | Database username |
-| `password` | string or [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) _Use !secret for passwords_ |
+| `password` | [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) _Use !secret for passwords_ |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1286,7 +1286,7 @@ System uses tariff active on optimization date.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
-| `entsoe-api-key` | string or [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
+| `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `cost supplier consumption` | object | Yes | — | Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
@@ -1762,7 +1762,7 @@ Only needed if:
 |-------|------|----------|---------|-------------|
 | `host` | string (optional) | No | `null` | Home Assistant IP address (auto-detected if not set) |
 | `ip port` | integer (optional) | No | `null` | Home Assistant port (default: 8123) (Unit: `port`) _Default 8123, change if custom_ |
-| `token` | string or [SecretStr](#secretstr) (optional) | No | `null` | Home Assistant long-lived access token (can use !secret) _Auto-provided as add-on, use !secret if manual_ |
+| `token` | [SecretStr](#secretstr) (optional) | No | `null` | Home Assistant long-lived access token (can use !secret) _Auto-provided as add-on, use !secret if manual_ |
 | `protocol api` | string (optional) | No | `null` | API protocol |
 
 <details>

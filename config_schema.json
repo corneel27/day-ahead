@@ -911,9 +911,6 @@
         "password": {
           "anyOf": [
             {
-              "type": "string"
-            },
-            {
               "$ref": "#/$defs/SecretStr"
             },
             {
@@ -922,7 +919,6 @@
           ],
           "default": null,
           "description": "MySQL password (can use !secret)",
-          "title": "Password",
           "x-help": "Database password. Use secrets.json with '!secret password_key' for security. Never store passwords directly in config.",
           "x-ui-rules": {
             "condition": {
@@ -1509,9 +1505,6 @@
         "password": {
           "anyOf": [
             {
-              "type": "string"
-            },
-            {
               "$ref": "#/$defs/SecretStr"
             },
             {
@@ -1520,7 +1513,6 @@
           ],
           "default": null,
           "description": "Database password (can use !secret)",
-          "title": "Password",
           "x-help": "Database password. Use secrets.json with '!secret password_key' pattern for security. Never store passwords directly in config.",
           "x-ui-rules": {
             "condition": {
@@ -1891,9 +1883,6 @@
         "token": {
           "anyOf": [
             {
-              "type": "string"
-            },
-            {
               "$ref": "#/$defs/SecretStr"
             },
             {
@@ -1902,7 +1891,6 @@
           ],
           "default": null,
           "description": "Home Assistant long-lived access token (can use !secret)",
-          "title": "Token",
           "x-help": "Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.",
           "x-ui-section": "Homeassistant",
           "x-ui-widget": "secret-picker",
@@ -2171,9 +2159,6 @@
         "entsoe-api-key": {
           "anyOf": [
             {
-              "type": "string"
-            },
-            {
               "$ref": "#/$defs/SecretStr"
             },
             {
@@ -2182,7 +2167,6 @@
           ],
           "default": null,
           "description": "ENTSO-E API key (can use !secret)",
-          "title": "Entsoe-Api-Key",
           "x-docs-url": "https://transparency.entsoe.eu/",
           "x-help": "API key for ENTSO-E Transparency Platform. Required if source_day_ahead='entsoe'. Get free key at transparency.entsoe.eu. Use !secret for security.",
           "x-ui-rules": {
@@ -2814,16 +2798,8 @@
       "description": "Tibber API integration configuration.",
       "properties": {
         "api_token": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "$ref": "#/$defs/SecretStr"
-            }
-          ],
+          "$ref": "#/$defs/SecretStr",
           "description": "Tibber API token (can use !secret)",
-          "title": "Api Token",
           "x-docs-url": "https://developer.tibber.com/",
           "x-help": "Tibber API access token. Get from Tibber app or developer portal. Use !secret for security. Required if using Tibber as price source.",
           "x-ui-section": "Tibber",
@@ -2985,16 +2961,8 @@
       "x-ui-section": "Your home"
     },
     "meteoserver-key": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "$ref": "#/$defs/SecretStr"
-        }
-      ],
+      "$ref": "#/$defs/SecretStr",
       "description": "Meteoserver API key (can use !secret)",
-      "title": "Meteoserver-Key",
       "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. Use !secret for security. Required for weather forecasts.",
       "x-ui-group": "DAO",
       "x-ui-section": "Weather",
