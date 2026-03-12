@@ -86,9 +86,8 @@ class BoilerConfig(BaseModel):
             "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
         }
     )
-    cooling_rate: float | FlexValue = Field(
+    cooling_rate: FlexValue = Field(
         alias="cooling rate",
-        ge=0,
         description="Cooling rate in degrees per hour",
         json_schema_extra={
             "x-help": "Rate at which water temperature drops when not heating, in °C per hour. Depends on insulation quality. Typical: 0.5-2.0°C/h for well-insulated boilers.",
@@ -108,7 +107,7 @@ class BoilerConfig(BaseModel):
             "x-validation-hint": "Must be > 0, typically 100-300L"
         }
     )
-    heating_allowed_below: float | FlexValue = Field(
+    heating_allowed_below: FlexValue = Field(
         alias="heating allowed below",
         description="Temperature below which heating is allowed",
         json_schema_extra={

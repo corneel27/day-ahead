@@ -56,6 +56,8 @@ class DaCalc(DaBase):
         if _start_dt is not None or _start_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
+        # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
+        ha_getter = lambda eid: self.get_state(eid).state
         if _start_dt is None:
             start_dt = dt.datetime.now()
         else:
@@ -492,22 +494,10 @@ class DaCalc(DaBase):
                 )
 
             max_dc_from_bat_power.append(
-                self.get_setting_state(
-                    "bat_to_dc max power",
-                    self.battery_options[b],
-                    "number",
-                    2000 * max_discharge_power[b],
-                )
-                / 1000
+                self.battery_options[b].bat_to_dc_max_power.resolve(ha_getter, float) / 1000
             )
             max_dc_to_bat_power.append(
-                self.get_setting_state(
-                    "dc_to_bat max power",
-                    self.battery_options[b],
-                    "number",
-                    2000 * max_charge_power[b],
-                )
-                / 1000
+                self.battery_options[b].dc_to_bat_max_power.resolve(ha_getter, float) / 1000
             )
 
             # reduce power low soc
@@ -581,18 +571,13 @@ class DaCalc(DaBase):
             eff_bat_to_dc.append(float(self.battery_options[b].bat_to_dc_efficiency))
             # fractie van 1
 
-            lower_limit.append(
-                float(self.battery_options[b].lower_limit)
-            )
-            upper_limit.append(
-                float(self.battery_options[b].upper_limit)
-            )
+            lower_limit.append(self.battery_options[b].lower_limit.resolve(ha_getter, int))
+            upper_limit.append(self.battery_options[b].upper_limit.resolve(ha_getter, int))
+            _opt_lvl_field = self.battery_options[b].optimal_lower_level
             opt_low_lvl = float(
-                self.get_setting_state(
-                    "optimal lower level",
-                    self.battery_options[b],
-                    default=lower_limit[b],
-                )
+                _opt_lvl_field.resolve(ha_getter, int)
+                if _opt_lvl_field is not None
+                else lower_limit[b]
             )
             if opt_low_lvl < lower_limit[b]:
                 logging.warning(
@@ -605,11 +590,8 @@ class DaCalc(DaBase):
             opt_low_level.append(opt_low_lvl)
 
             # penalty in euro/%.hour
-            penalty = float(
-                self.get_setting_state(
-                    "penalty_low_soc", self.battery_options[b], 0.0025
-                )
-            )
+            _penalty_field = self.battery_options[b].penalty_low_soc
+            penalty = _penalty_field.resolve(ha_getter, float) if _penalty_field is not None else 0.0025
             penalty_low_soc.append(penalty)
 
             if _start_soc is None:
@@ -1146,15 +1128,10 @@ class DaCalc(DaBase):
             )
             # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
             logging.info(f"Boiler hysterese {boiler_hysterese} K")
-            cooling_rate = self.get_setting_state(
-                "cooling rate", self.boiler_options, "number", 0.5
-            )
+            cooling_rate = self.boiler_options.cooling_rate.resolve(ha_getter, float)
             boiler_cooling = cooling_rate * self.interval_s / 3600
             # 45 oC grens daaronder kan worden verwarmd
-            # boiler_bovengrens = self.boiler_options["heating allowed below"]
-            boiler_bovengrens = float(
-                self.get_setting_state("heating allowed below", self.boiler_options)
-            )
+            boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(ha_getter, float)
 
             # maximeren op setpoint
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
@@ -1933,11 +1910,7 @@ class DaCalc(DaBase):
             logging.info(f"Gewogen graaddagen totaal: {degree_days:.1f} K.day")
 
             # degree days factor kWh th / K.day
-            degree_days_factor = float(
-                self.get_setting_state(
-                    "degree days factor", self.heating_options, default=1
-                )
-            )
+            degree_days_factor = self.heating_options.degree_days_factor.resolve(ha_getter, float)
             if degree_days_factor < 0.1:
                 logging.warning(
                     f"Je graaddag factor ({degree_days_factor:.4f} kWh/K.day) "

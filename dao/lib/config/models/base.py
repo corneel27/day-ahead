@@ -7,85 +7,95 @@ This module provides:
 - Base configuration utilities
 """
 
+import re
 from typing import Any, Union
 from pydantic import BaseModel, Field, field_validator, model_serializer, model_validator, ValidationInfo, ConfigDict
+
+# Matches Home Assistant entity IDs: "domain.object_id"
+# domain must start with a letter (rules out numeric strings like "0.45")
+_HA_ENTITY_ID_RE = re.compile(r'^[a-z_][a-z0-9_]*\.[a-z0-9_]+$')
 
 
 class FlexValue(BaseModel):
     """
     A flexible value that can be either a literal or a Home Assistant entity ID.
-    
-    Supports all HA entity types: int, float, str, bool
-    
+
+    Accepts bare literals in config (e.g. ``95``, ``0.5``, ``"sensor.battery_soc"``)
+    and wraps them automatically.  At runtime call ``resolve()`` to get the final
+    value — either the stored literal or a live HA state lookup.
+
     Examples:
         FlexValue(value=95)                    # Literal integer
-        FlexValue(value="sensor.battery_soc")  # HA entity ID
+        FlexValue(value="sensor.battery_soc")  # HA entity ID — resolved at runtime
         FlexValue(value=True)                  # Literal boolean
-        FlexValue(value="binary_sensor.grid")  # HA entity ID
+        FlexValue(value="binary_sensor.grid")  # HA entity ID — resolved at runtime
     """
-    
+
     value: Union[int, float, str, bool] = Field(
         json_schema_extra={
             "x-help": "Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').",
             "x-ui-section": "General"
         }
     )
-    is_entity: bool = Field(
-        default=False,
-        description="True if value is a HA entity ID",
-        json_schema_extra={
-            "x-help": "Automatically set to true if value contains '.' (entity ID pattern). Used internally to determine resolution strategy.",
-            "x-ui-section": "General"
-        }
-    )
-    
+
     model_config = ConfigDict(
         extra='forbid',
         json_schema_extra={
             'x-help': '''FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.'''
         }
     )
-    
-    @field_validator('value', mode='after')
+
+    @model_validator(mode='before')
     @classmethod
-    def detect_entity_id(cls, v: Any, info: ValidationInfo) -> Any:
-        """Automatically detect if value looks like a HA entity ID."""
-        if isinstance(v, str) and '.' in v:
-            # Looks like entity_id (e.g., "sensor.temperature")
-            # Mark it for runtime resolution
-            return v
+    def parse_from_literal(cls, v: Any) -> Any:
+        """Wrap a bare literal (int/float/str/bool) into dict form accepted by the model."""
+        if not isinstance(v, dict):
+            return {'value': v}
         return v
-    
+
     @staticmethod
     def is_entity_id(value: Any) -> bool:
-        """Check if a value looks like a Home Assistant entity ID."""
-        return isinstance(value, str) and '.' in value and not value.startswith('/')
-    
+        """Return True if *value* looks like a Home Assistant entity ID (``domain.object_id``).
+
+        Uses a strict pattern — domain must start with a letter — so numeric strings
+        like ``"0.45"`` are never falsely treated as entity IDs.
+        """
+        return isinstance(value, str) and bool(_HA_ENTITY_ID_RE.match(value))
+
     def resolve(self, ha_state_getter: callable, target_type: type = float) -> Any:
         """
-        Resolve the flex value to its actual value.
-        
+        Resolve to the final value.
+
+        If ``value`` is a HA entity ID (``domain.name`` pattern), calls
+        ``ha_state_getter(entity_id)`` — which must return the state as a string —
+        and converts the result to ``target_type``.
+
+        For literal values the stored value is returned directly (with a cast to
+        ``target_type`` if necessary).
+
         Args:
-            ha_state_getter: Function that takes entity_id and returns state value
-            target_type: Expected type (int, float, str, bool) for conversion
-            
+            ha_state_getter: Callable ``(entity_id: str) -> str`` that returns the
+                current HA state for an entity.  The caller is responsible for wiring
+                this to the AppDaemon ``self.get_state(eid).state`` call (or a test
+                mock).  It is **always required** — pass a no-op mock in tests where
+                you know the value is literal.
+            target_type: Desired Python type for the returned value (``int``,
+                ``float``, ``str``, or ``bool``).  Defaults to ``float``.
+
         Returns:
-            The resolved value with proper type conversion
+            The resolved value cast to *target_type*.
         """
         if self.is_entity_id(self.value):
-            # Get value from Home Assistant
             state_value = ha_state_getter(self.value)
-            # Convert to target type
             if target_type == bool:
                 return state_value.lower() in ('true', 'on', '1') if isinstance(state_value, str) else bool(state_value)
             elif target_type == int:
-                return int(float(state_value))  # Handle "95.0" -> 95
+                return int(float(state_value))  # handle "95.0" → 95
             elif target_type == float:
                 return float(state_value)
-            else:  # str
+            else:
                 return str(state_value)
         else:
-            # Use literal value, ensure type
             if target_type == bool and not isinstance(self.value, bool):
                 return bool(self.value)
             elif target_type == int and not isinstance(self.value, int):
@@ -144,15 +154,17 @@ class SecretStr(BaseModel):
     def resolve(self, secrets: dict[str, str]) -> str:
         """
         Resolve the secret to its actual value.
+
+        If ``secret_key`` exists in *secrets*, returns the corresponding value.
+        Otherwise the key is treated as a literal plain-text value and returned
+        as-is, so fields typed as ``SecretStr`` work for both ``!secret`` references
+        and plain-text credentials without needing a ``SecretStr | str`` union.
         
         Args:
             secrets: Dictionary of secrets loaded from secrets.json
             
         Returns:
-            The actual secret value
-            
-        Raises:
-            KeyError: If secret key not found in secrets
+            The resolved secret value, or the raw key if not found in secrets.
         """
         if self.secret_key not in secrets:
             # Not a secrets.json reference — treat as a literal plain-text value

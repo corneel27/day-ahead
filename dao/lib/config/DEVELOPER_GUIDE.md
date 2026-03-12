@@ -14,10 +14,12 @@ This guide explains how to maintain and extend the Pydantic-based configuration 
 3. [Making a Key Required/Optional](#making-a-key-requiredoptional)
 4. [Modifying Default Values](#modifying-default-values)
 5. [Extending an Existing Model](#extending-an-existing-model)
-6. [Creating a New Model](#creating-a-new-model)
-7. [Migration Workflows](#migration-workflows)
-8. [Testing Requirements](#testing-requirements)
-9. [Common Pitfalls](#common-pitfalls)
+6. [Working with Secrets (SecretStr)](#working-with-secrets-secretstr)
+7. [Working with Dynamic Values (FlexValue)](#working-with-dynamic-values-flexvalue)
+8. [Creating a New Model](#creating-a-new-model)
+9. [Migration Workflows](#migration-workflows)
+10. [Testing Requirements](#testing-requirements)
+11. [Common Pitfalls](#common-pitfalls)
 
 ---
 
@@ -630,6 +632,151 @@ class BatteryV0(BaseModel):
     def capacity_wh(self) -> float:
         """Capacity in Watt-hours."""
         return self.capacity * 1000
+```
+
+---
+
+## Working with Secrets (SecretStr)
+
+Use `SecretStr` (defined in `dao/lib/config/models/base.py`) for **any field that holds a credential** — API tokens, database passwords, or long-lived access tokens. Never type such fields as plain `str`.
+
+### Why Not `str`?
+
+A plain `str` field accepts `"!secret key_name"` as a literal string — it is never looked up in `secrets.json`. `SecretStr` parses the `!secret` prefix and performs the lookup at runtime.
+
+### Field Declaration
+
+```python
+from .base import SecretStr
+
+class MyServiceV0(BaseModel):
+    model_config = {"extra": "allow"}
+
+    api_key: SecretStr = Field(
+        description="API key for My Service (use !secret for security)",
+        json_schema_extra={
+            "x-help": "Store in secrets.json. Use: !secret my_service_api_key",
+            "x-ui-section": "Integration",
+        },
+    )
+    password: Optional[SecretStr] = Field(
+        default=None,
+        description="Password (optional, use !secret)",
+    )
+```
+
+Do **not** use `SecretStr | str` or `str | SecretStr` union types. `SecretStr` already handles both cases:
+
+| Config value | Stored as `secret_key` | `resolve()` returns |
+|---|---|---|
+| `"!secret my_key"` | `"my_key"` | Value looked up from `secrets.json` |
+| `"plain_text_value"` | `"plain_text_value"` | The literal string itself (fallback) |
+
+### Resolving at the Call Site
+
+Call `.resolve(loader.secrets)` (or the appropriate `secrets` dict) wherever you need the actual value. Never store the resolved value long-term — always resolve on demand.
+
+```python
+# ✅ GOOD
+api_key: str = config.my_service.api_key.resolve(loader.secrets)
+
+# ❌ BAD - don't guard with isinstance; SecretStr always has resolve()
+if isinstance(config.my_service.api_key, SecretStr):
+    api_key = config.my_service.api_key.resolve(loader.secrets)
+```
+
+For `Optional[SecretStr]` fields, check for `None` first:
+
+```python
+api_key: str | None = (
+    config.my_service.api_key.resolve(loader.secrets)
+    if config.my_service.api_key is not None
+    else None
+)
+```
+
+### Serialization
+
+`SecretStr` serializes back to `"!secret key_name"` — never the resolved value. This means round-tripping a config through `model_dump()` / `model_validate()` is safe and will never leak secrets into the saved config.
+
+---
+
+## Working with Dynamic Values (FlexValue)
+
+Use `FlexValue` (defined in `dao/lib/config/models/base.py`) for **any field that can be either a static/literal value or a live Home Assistant entity ID**. This allows users to hardcode a number in their config *or* point to a HA sensor that supplies the value at runtime.
+
+### How It Works
+
+`FlexValue` detects whether `value` looks like an entity ID (`domain.anything` pattern). If so, `.resolve()` calls the provided HA state getter to fetch the current state. Otherwise the stored literal is returned.
+
+| Config value | Treated as | `resolve()` returns |
+|---|---|---|
+| `20` | Literal integer | `20` (cast to target type) |
+| `0.5` | Literal float | `0.5` |
+| `"sensor.battery_soc"` | HA entity ID | Live HA state, cast to target type |
+| `"input_number.cooling_rate"` | HA entity ID | Live HA state, cast to target type |
+
+### Field Declaration
+
+Do **not** use `float | FlexValue` or `int | FlexValue` union types. Use just `FlexValue` — bare literals in config are wrapped automatically via `parse_from_literal`.
+
+```python
+from .base import FlexValue
+
+class MyDeviceV0(BaseModel):
+    model_config = {"extra": "allow"}
+
+    max_power: FlexValue = Field(
+        description="Max power in watts (can be HA entity)",
+        json_schema_extra={
+            "x-help": "Integer watts, or HA entity ID (e.g. sensor.inverter_max_power).",
+            "x-unit": "W",
+            "x-ui-widget": "entity-picker-or-number",
+            "x-ui-widget-filter": "sensor,input_number",
+        },
+    )
+    penalty: Optional[FlexValue] = Field(
+        default=None,
+        description="Penalty cost per unit (can be HA entity)",
+    )
+```
+
+For fields with a sensible default, wrap the default in `FlexValue`:
+
+```python
+    degree_days_factor: FlexValue = Field(
+        default=FlexValue(value=1.0),
+        alias="degree days factor",
+        description="Degree days factor (can be HA entity)",
+    )
+```
+
+### Resolving at the Call Site
+
+Pass a callable `(entity_id: str) -> str` as the first argument. In `DaBase`/`DaCalc` this is always `lambda eid: self.get_state(eid).state`. Define it once per method and reuse:
+
+```python
+ha_getter = lambda eid: self.get_state(eid).state
+
+# Required field
+max_power = config.my_device.max_power.resolve(ha_getter, float)
+
+# Optional field — guard for None first
+penalty_field = config.my_device.penalty
+penalty = penalty_field.resolve(ha_getter, float) if penalty_field is not None else 0.0
+```
+
+Always pass the desired Python type as the second argument (`int`, `float`, `str`, or `bool`). This ensures correct conversion whether the value came from a literal or a HA state string.
+
+### Testing
+
+In tests where you know the value is literal, pass a no-op getter that asserts it is never called:
+
+```python
+def no_ha_calls(entity_id: str) -> str:
+    raise AssertionError(f"Unexpected HA lookup: {entity_id}")
+
+result = flex_val.resolve(no_ha_calls, float)  # safe when value is a literal
 ```
 
 ---

@@ -66,10 +66,9 @@ class HeatingConfig(BaseModel):
             "x-ui-widget-filter": "binary_sensor"
         }
     )
-    degree_days_factor: float | FlexValue = Field(
-        default=1.0,
+    degree_days_factor: FlexValue = Field(
+        default=FlexValue(value=1.0),
         alias="degree days factor",
-        gt=0,
         description="Degree days factor for heat demand calculation",
         json_schema_extra={
             "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",

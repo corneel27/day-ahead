@@ -72,9 +72,8 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "Must be greater than 0"
         }
     )
-    upper_limit: int | FlexValue = Field(
+    upper_limit: FlexValue = Field(
         alias="upper limit",
-        ge=0, le=100,
         description="Maximum SOC % (can be HA entity)",
         json_schema_extra={
             "x-help": "Maximum State of Charge in percent. Battery will never charge above this level. Supports FlexValue pattern: use integer or HA entity ID.",
@@ -85,9 +84,8 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
-    lower_limit: int | FlexValue = Field(
+    lower_limit: FlexValue = Field(
         alias="lower limit",
-        ge=0, le=100,
         description="Minimum SOC % (can be HA entity)",
         json_schema_extra={
             "x-help": "Minimum State of Charge in percent. Battery will never discharge below this level. Supports FlexValue pattern: use integer or HA entity ID.",
@@ -98,10 +96,9 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
-    optimal_lower_level: Optional[int | FlexValue] = Field(
+    optimal_lower_level: Optional[FlexValue] = Field(
         default=None,
         alias="optimal lower level",
-        ge=0, le=100,
         description="Optimal lower SOC % for cost optimization",
         json_schema_extra={
             "x-help": "Target SOC level for cost optimization. System will prefer this level over minimum. Supports FlexValue pattern.",
@@ -112,7 +109,7 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
-    penalty_low_soc: Optional[float | FlexValue] = Field(
+    penalty_low_soc: Optional[FlexValue] = Field(
         default=None,
         alias="penalty low soc",
         description="Penalty cost per % per hour below optimal lower SOC",
@@ -220,9 +217,8 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    dc_to_bat_max_power: float | FlexValue = Field(
+    dc_to_bat_max_power: FlexValue = Field(
         alias="dc_to_bat max power",
-        gt=0,
         description="DC to battery max power in watts",
         json_schema_extra={
             "x-help": "Maximum power for DC-coupled solar charging in watts. Determines how much DC solar power can flow directly to battery.",
@@ -242,9 +238,8 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    bat_to_dc_max_power: float | FlexValue = Field(
+    bat_to_dc_max_power: FlexValue = Field(
         alias="bat_to_dc max power",
-        gt=0,
         description="Battery to DC max power in watts",
         json_schema_extra={
             "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",

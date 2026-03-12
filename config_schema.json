@@ -32,58 +32,31 @@
           "x-validation-hint": "Must be greater than 0"
         },
         "upper limit": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "$ref": "#/$defs/FlexValue"
-            }
-          ],
+          "$ref": "#/$defs/FlexValue",
           "description": "Maximum SOC % (can be HA entity)",
-          "ge": 0,
-          "le": 100,
-          "title": "Upper Limit",
           "x-help": "Maximum State of Charge in percent. Battery will never charge above this level. Supports FlexValue pattern: use integer or HA entity ID.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget": "entity-picker-or-number",
           "x-ui-widget-filter": "sensor,input_number",
           "x-unit": "%",
-          "x-validation-hint": "0-100%, protects battery from overcharge"
+          "x-validation-hint": "0-100%, protects battery from overcharge",
+          "title": "Upper Limit"
         },
         "lower limit": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "$ref": "#/$defs/FlexValue"
-            }
-          ],
+          "$ref": "#/$defs/FlexValue",
           "description": "Minimum SOC % (can be HA entity)",
-          "ge": 0,
-          "le": 100,
-          "title": "Lower Limit",
           "x-help": "Minimum State of Charge in percent. Battery will never discharge below this level. Supports FlexValue pattern: use integer or HA entity ID.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget": "entity-picker-or-number",
           "x-ui-widget-filter": "sensor,input_number",
           "x-unit": "%",
-          "x-validation-hint": "0-100%, protects battery from deep discharge"
+          "x-validation-hint": "0-100%, protects battery from deep discharge",
+          "title": "Lower Limit"
         },
         "optimal lower level": {
           "anyOf": [
             {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "$ref": "#/$defs/FlexValue"
-                }
-              ],
-              "ge": 0,
-              "le": 100
+              "$ref": "#/$defs/FlexValue"
             },
             {
               "type": "null"
@@ -91,19 +64,16 @@
           ],
           "default": null,
           "description": "Optimal lower SOC % for cost optimization",
-          "title": "Optimal Lower Level",
           "x-help": "Target SOC level for cost optimization. System will prefer this level over minimum. Supports FlexValue pattern.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget": "entity-picker-or-number",
           "x-ui-widget-filter": "sensor,input_number",
           "x-unit": "%",
-          "x-validation-hint": "Optional, should be >= lower_limit"
+          "x-validation-hint": "Optional, should be >= lower_limit",
+          "title": "Optimal Lower Level"
         },
         "penalty low soc": {
           "anyOf": [
-            {
-              "type": "number"
-            },
             {
               "$ref": "#/$defs/FlexValue"
             },
@@ -113,12 +83,12 @@
           ],
           "default": null,
           "description": "Penalty cost per % per hour below optimal lower SOC",
-          "title": "Penalty Low Soc",
           "x-help": "Cost in euro per %·hour when SOC stays below optimal lower level. Higher values make the optimizer prioritize keeping SOC above the optimal level. Default 0.0025 euro/%·h.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget": "entity-picker-or-number",
           "x-ui-widget-filter": "sensor,input_number",
-          "x-unit": "euro/%·h"
+          "x-unit": "euro/%·h",
+          "title": "Penalty Low Soc"
         },
         "entity min soc end opt": {
           "anyOf": [
@@ -235,21 +205,13 @@
           "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
         "dc_to_bat max power": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/FlexValue"
-            }
-          ],
+          "$ref": "#/$defs/FlexValue",
           "description": "DC to battery max power in watts",
-          "gt": 0,
-          "title": "Dc To Bat Max Power",
           "x-help": "Maximum power for DC-coupled solar charging in watts. Determines how much DC solar power can flow directly to battery.",
           "x-ui-section": "Power Configuration",
           "x-unit": "W",
-          "x-validation-hint": "Must be > 0"
+          "x-validation-hint": "Must be > 0",
+          "title": "Dc To Bat Max Power"
         },
         "bat_to_dc efficiency": {
           "description": "Battery to DC efficiency",
@@ -263,21 +225,13 @@
           "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
         "bat_to_dc max power": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/FlexValue"
-            }
-          ],
+          "$ref": "#/$defs/FlexValue",
           "description": "Battery to DC max power in watts",
-          "gt": 0,
-          "title": "Bat To Dc Max Power",
           "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
           "x-ui-section": "Power Configuration",
           "x-unit": "W",
-          "x-validation-hint": "Must be > 0"
+          "x-validation-hint": "Must be > 0",
+          "title": "Bat To Dc Max Power"
         },
         "cycle cost": {
           "description": "Cost per battery cycle in euros",
@@ -651,21 +605,13 @@
           "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
         },
         "cooling rate": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/FlexValue"
-            }
-          ],
+          "$ref": "#/$defs/FlexValue",
           "description": "Cooling rate in degrees per hour",
-          "ge": 0,
-          "title": "Cooling Rate",
           "x-help": "Rate at which water temperature drops when not heating, in °C per hour. Depends on insulation quality. Typical: 0.5-2.0°C/h for well-insulated boilers.",
           "x-ui-section": "General",
           "x-unit": "°C/h",
-          "x-validation-hint": "Must be >= 0, typically 0.5-2.0°C/h"
+          "x-validation-hint": "Must be >= 0, typically 0.5-2.0°C/h",
+          "title": "Cooling Rate"
         },
         "volume": {
           "default": 200.0,
@@ -679,20 +625,13 @@
           "x-validation-hint": "Must be > 0, typically 100-300L"
         },
         "heating allowed below": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/FlexValue"
-            }
-          ],
+          "$ref": "#/$defs/FlexValue",
           "description": "Temperature below which heating is allowed",
-          "title": "Heating Allowed Below",
           "x-help": "Maximum temperature for starting heating cycle. Heating only occurs when water is below this temperature. Typically same as or slightly above setpoint.",
           "x-ui-section": "General",
           "x-unit": "°C",
-          "x-validation-hint": "Should be >= setpoint"
+          "x-validation-hint": "Should be >= setpoint",
+          "title": "Heating Allowed Below"
         },
         "elec. power": {
           "default": 1000.0,
@@ -933,7 +872,8 @@
             "effect": "SHOW"
           },
           "x-ui-section": "DAO Database",
-          "x-validation-hint": "Use !secret for passwords"
+          "x-validation-hint": "Use !secret for passwords",
+          "title": "Password"
         },
         "time_zone": {
           "anyOf": [
@@ -1162,7 +1102,8 @@
           "default": null,
           "description": "Charge scheduling configuration",
           "x-help": "Optional: Advanced scheduler for time-based charging. Optimizes when to charge to meet deadline at lowest cost. Alternative to instant charging.",
-          "x-ui-section": "General"
+          "x-ui-section": "General",
+          "title": "Charge Scheduler"
         },
         "charge switch": {
           "description": "HA switch entity to control charging",
@@ -1214,7 +1155,7 @@
     },
     "FlexValue": {
       "additionalProperties": false,
-      "description": "A flexible value that can be either a literal or a Home Assistant entity ID.\n\nSupports all HA entity types: int, float, str, bool\n\nExamples:\n    FlexValue(value=95)                    # Literal integer\n    FlexValue(value=\"sensor.battery_soc\")  # HA entity ID\n    FlexValue(value=True)                  # Literal boolean\n    FlexValue(value=\"binary_sensor.grid\")  # HA entity ID",
+      "description": "A flexible value that can be either a literal or a Home Assistant entity ID.\n\nAccepts bare literals in config (e.g. ``95``, ``0.5``, ``\"sensor.battery_soc\"``)\nand wraps them automatically.  At runtime call ``resolve()`` to get the final\nvalue — either the stored literal or a live HA state lookup.\n\nExamples:\n    FlexValue(value=95)                    # Literal integer\n    FlexValue(value=\"sensor.battery_soc\")  # HA entity ID — resolved at runtime\n    FlexValue(value=True)                  # Literal boolean\n    FlexValue(value=\"binary_sensor.grid\")  # HA entity ID — resolved at runtime",
       "properties": {
         "value": {
           "anyOf": [
@@ -1233,14 +1174,6 @@
           ],
           "title": "Value",
           "x-help": "Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').",
-          "x-ui-section": "General"
-        },
-        "is_entity": {
-          "default": false,
-          "description": "True if value is a HA entity ID",
-          "title": "Is Entity",
-          "type": "boolean",
-          "x-help": "Automatically set to true if value contains '.' (entity ID pattern). Used internally to determine resolution strategy.",
           "x-ui-section": "General"
         }
       },
@@ -1527,7 +1460,8 @@
             "effect": "SHOW"
           },
           "x-ui-section": "Homeassistant DB",
-          "x-validation-hint": "Use !secret for passwords"
+          "x-validation-hint": "Use !secret for passwords",
+          "title": "Password"
         }
       },
       "then": {
@@ -1580,22 +1514,16 @@
           "x-ui-widget-filter": "binary_sensor"
         },
         "degree days factor": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "$ref": "#/$defs/FlexValue"
-            }
-          ],
-          "default": 1.0,
+          "$ref": "#/$defs/FlexValue",
+          "default": {
+            "value": 1.0
+          },
           "description": "Degree days factor for heat demand calculation",
-          "gt": 0,
-          "title": "Degree Days Factor",
           "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
           "x-ui-section": "General",
           "x-unit": "factor",
-          "x-validation-hint": "Must be > 0, typically 0.5-2.0"
+          "x-validation-hint": "Must be > 0, typically 0.5-2.0",
+          "title": "Degree Days Factor"
         },
         "adjustment": {
           "default": "power",
@@ -1894,7 +1822,8 @@
           "x-help": "Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.",
           "x-ui-section": "Homeassistant",
           "x-ui-widget": "secret-picker",
-          "x-validation-hint": "Auto-provided as add-on, use !secret if manual"
+          "x-validation-hint": "Auto-provided as add-on, use !secret if manual",
+          "title": "Token"
         },
         "protocol api": {
           "anyOf": [
@@ -2179,7 +2108,8 @@
             "effect": "SHOW"
           },
           "x-ui-section": "Prices",
-          "x-validation-hint": "Required for entsoe source, use !secret"
+          "x-validation-hint": "Required for entsoe source, use !secret",
+          "title": "Entsoe Api Key"
         },
         "energy taxes consumption": {
           "additionalProperties": {
@@ -2804,7 +2734,8 @@
           "x-help": "Tibber API access token. Get from Tibber app or developer portal. Use !secret for security. Required if using Tibber as price source.",
           "x-ui-section": "Tibber",
           "x-ui-widget": "secret-picker",
-          "x-validation-hint": "Use !secret for API tokens"
+          "x-validation-hint": "Use !secret for API tokens",
+          "title": "Api Token"
         },
         "api url": {
           "anyOf": [
@@ -2888,7 +2819,8 @@
     },
     "homeassistant": {
       "$ref": "#/$defs/HomeAssistantConfig",
-      "description": "Home Assistant connection settings"
+      "description": "Home Assistant connection settings",
+      "title": "Homeassistant"
     },
     "database ha": {
       "anyOf": [
@@ -2900,7 +2832,8 @@
         }
       ],
       "default": null,
-      "description": "Home Assistant database connection"
+      "description": "Home Assistant database connection",
+      "title": "Database Ha"
     },
     "database da": {
       "anyOf": [
@@ -2912,7 +2845,8 @@
         }
       ],
       "default": null,
-      "description": "Day Ahead optimization database connection"
+      "description": "Day Ahead optimization database connection",
+      "title": "Database Da"
     },
     "latitude": {
       "default": 52.0,
@@ -2967,7 +2901,8 @@
       "x-ui-group": "DAO",
       "x-ui-section": "Weather",
       "x-ui-widget": "secret-picker",
-      "x-validation-hint": "Use !secret for API keys"
+      "x-validation-hint": "Use !secret for API keys",
+      "title": "Meteoserver Key"
     },
     "meteoserver-model": {
       "default": "harmonie",
@@ -3007,7 +2942,8 @@
         }
       ],
       "default": null,
-      "description": "Day-ahead pricing and tariff configuration"
+      "description": "Day-ahead pricing and tariff configuration",
+      "title": "Prices"
     },
     "logging level": {
       "default": "info",
@@ -3115,7 +3051,8 @@
     },
     "graphics": {
       "$ref": "#/$defs/GraphicsConfig",
-      "description": "Graphics and visualization settings"
+      "description": "Graphics and visualization settings",
+      "title": "Graphics"
     },
     "interval": {
       "default": "1hour",
@@ -3165,20 +3102,24 @@
         }
       ],
       "default": null,
-      "description": "Notification settings"
+      "description": "Notification settings",
+      "title": "Notifications"
     },
     "grid": {
       "$ref": "#/$defs/GridConfig",
       "description": "Grid connection settings",
-      "x-ui-section": "Grid"
+      "x-ui-section": "Grid",
+      "title": "Grid"
     },
     "history": {
       "$ref": "#/$defs/HistoryConfig",
-      "description": "History retention settings"
+      "description": "History retention settings",
+      "title": "History"
     },
     "dashboard": {
       "$ref": "#/$defs/DashboardConfig",
-      "description": "Dashboard web UI settings"
+      "description": "Dashboard web UI settings",
+      "title": "Dashboard"
     },
     "battery": {
       "description": "Battery configurations",
@@ -3226,7 +3167,8 @@
         }
       ],
       "default": null,
-      "description": "Hot water boiler configuration"
+      "description": "Hot water boiler configuration",
+      "title": "Boiler"
     },
     "heating": {
       "anyOf": [
@@ -3238,7 +3180,8 @@
         }
       ],
       "default": null,
-      "description": "Heating system / heat pump configuration"
+      "description": "Heating system / heat pump configuration",
+      "title": "Heating"
     },
     "tibber": {
       "anyOf": [
@@ -3250,19 +3193,23 @@
         }
       ],
       "default": null,
-      "description": "Tibber API integration"
+      "description": "Tibber API integration",
+      "title": "Tibber"
     },
     "xgboost": {
       "$ref": "#/$defs/XGBoostConfig",
-      "description": "XGBoost solar-production predictor settings"
+      "description": "XGBoost solar-production predictor settings",
+      "title": "Xgboost"
     },
     "report": {
       "$ref": "#/$defs/ReportConfig",
-      "description": "Reporting entity configuration"
+      "description": "Reporting entity configuration",
+      "title": "Report"
     },
     "scheduler": {
       "$ref": "#/$defs/SchedulerConfig",
-      "description": "Task scheduler configuration"
+      "description": "Task scheduler configuration",
+      "title": "Scheduler"
     }
   },
   "required": [

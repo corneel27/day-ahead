@@ -113,10 +113,10 @@ Configure your home battery storage system for optimal energy management and cos
 | `name` | string | Yes | — | Battery name/identifier |
 | `entity actual level` | string | Yes | — | HA entity for current battery SOC (Unit: `%`) |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be greater than 0_ |
-| `upper limit` | integer or [FlexValue](#flexvalue) | Yes | — | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
-| `lower limit` | integer or [FlexValue](#flexvalue) | Yes | — | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
-| `optimal lower level` | integer or [FlexValue](#flexvalue) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
-| `penalty low soc` | number or [FlexValue](#flexvalue) (optional) | No | `null` | Penalty cost per % per hour below optimal lower SOC (Unit: `euro/%·h`) |
+| `upper limit` | [FlexValue](#flexvalue) | Yes | — | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
+| `lower limit` | [FlexValue](#flexvalue) | Yes | — | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
+| `optimal lower level` | [FlexValue](#flexvalue) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
+| `penalty low soc` | [FlexValue](#flexvalue) (optional) | No | `null` | Penalty cost per % per hour below optimal lower SOC (Unit: `euro/%·h`) |
 | `entity min soc end opt` | string (optional) | No | `null` | HA entity for minimum SOC at end of optimization period |
 | `entity max soc end opt` | string (optional) | No | `null` | HA entity for maximum SOC at end of optimization period |
 | `charge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Charge power/efficiency curve _At least 1 stage required, ordered by power_ |
@@ -126,9 +126,9 @@ Configure your home battery storage system for optimal energy management and cos
 | `reduce_power_high_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
 | `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `dc_to_bat max power` | number or [FlexValue](#flexvalue) | Yes | — | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
+| `dc_to_bat max power` | [FlexValue](#flexvalue) | Yes | — | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `bat_to_dc max power` | number or [FlexValue](#flexvalue) | Yes | — | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
+| `bat_to_dc max power` | [FlexValue](#flexvalue) | Yes | — | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
 | `cycle cost` | number | Yes | — | Cost per battery cycle in euros (Unit: `€`) _Must be >= 0, typically €0.50-€1.50 per cycle_ |
 | `entity set power feedin` | string (optional) | No | `null` | HA entity to set power feed-in to grid |
 | `entity set operating mode` | string (optional) | No | `null` | HA entity to set battery operating mode |
@@ -673,7 +673,7 @@ Define power levels and corresponding COP values:
 |-------|------|----------|---------|-------------|
 | `heater present` | boolean or string | No | `false` | Whether heating system is present/enabled |
 | `entity hp enabled` | string (optional) | No | `null` | HA binary sensor for heat pump enabled status |
-| `degree days factor` | number or [FlexValue](#flexvalue) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
+| `degree days factor` | [FlexValue](#flexvalue) | No | `{'value': 1.0}` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | Yes | — | Heating power/COP stages _At least 1 stage, must be sorted by max_power_ |
 | `entity adjust heating curve` | string (optional) | No | `null` | HA entity to adjust heating curve |
@@ -800,9 +800,9 @@ The system models boiler as a thermal battery:
 | `entity boiler enabled` | string (optional) | No | `null` | HA entity for boiler enabled status |
 | `entity instant start` | string (optional) | No | `null` | HA entity for instant start |
 | `cop` | number | No | `3.0` | Coefficient of Performance (Unit: `ratio`) _Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump_ |
-| `cooling rate` | number or [FlexValue](#flexvalue) | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
+| `cooling rate` | [FlexValue](#flexvalue) | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
 | `volume` | number | No | `200.0` | Water volume in liters (Unit: `L`) _Must be > 0, typically 100-300L_ |
-| `heating allowed below` | number or [FlexValue](#flexvalue) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
+| `heating allowed below` | [FlexValue](#flexvalue) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
 | `elec. power` | number | No | `1000.0` | Electrical power in watts (Unit: `W`) _Must be > 0, typically 1000-3000W_ |
 | `activate service` | string | Yes | — | Service type to activate boiler (e.g., 'press', 'switch') |
 | `activate entity` | string | Yes | — | HA entity to activate boiler |
@@ -1877,20 +1877,21 @@ Charging efficiency ratio at this amperage level. Accounts for charger losses, c
 
 _A flexible value that can be either a literal or a Home Assistant entity ID.
 
-Supports all HA entity types: int, float, str, bool
+Accepts bare literals in config (e.g. ``95``, ``0.5``, ``"sensor.battery_soc"``)
+and wraps them automatically.  At runtime call ``resolve()`` to get the final
+value — either the stored literal or a live HA state lookup.
 
 Examples:
     FlexValue(value=95)                    # Literal integer
-    FlexValue(value="sensor.battery_soc")  # HA entity ID
+    FlexValue(value="sensor.battery_soc")  # HA entity ID — resolved at runtime
     FlexValue(value=True)                  # Literal boolean
-    FlexValue(value="binary_sensor.grid")  # HA entity ID_
+    FlexValue(value="binary_sensor.grid")  # HA entity ID — resolved at runtime_
 
 FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `value` | integer or number or string or boolean | Yes | — | Value |
-| `is_entity` | boolean | No | `false` | True if value is a HA entity ID |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1898,10 +1899,6 @@ FlexValue enables dynamic configuration using Home Assistant entities. Instead o
 **`value`**
 
 Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').
-
-**`is_entity`**
-
-Automatically set to true if value contains '.' (entity ID pattern). Used internally to determine resolution strategy.
 
 </details>
 

@@ -251,6 +251,44 @@ def get_default_from_schema(field_schema: dict[str, Any], is_required: bool, def
     return f"`{default}`"
 
 
+def _title_from_name(name: str) -> str:
+    """Derive a title from a field name/alias the same way Pydantic does for plain fields.
+
+    Replaces underscores, hyphens, and spaces with a single space, then title-cases.
+    Examples::
+
+        "upper limit"    -> "Upper Limit"
+        "api_token"      -> "Api Token"
+        "entsoe-api-key" -> "Entsoe Api Key"
+    """
+    import re as _re
+    return _re.sub(r'[-_ ]+', ' ', name).title()
+
+
+def _inject_missing_titles(schema: dict[str, Any]) -> None:
+    """Add ``title`` to every schema property that is currently missing one.
+
+    Pydantic omits ``title`` on fields whose type is a ``$ref`` (model reference)
+    because the referenced definition already carries a title.  For documentation
+    and UI purposes we want each field to have an explicit title regardless,
+    derived from the field name using the same algorithm Pydantic uses for plain
+    fields.
+
+    Mutates *schema* in place.
+    """
+    def process_properties(properties: dict[str, Any]) -> None:
+        for field_name, field_schema in properties.items():
+            if 'title' not in field_schema:
+                field_schema['title'] = _title_from_name(field_name)
+
+    if 'properties' in schema:
+        process_properties(schema['properties'])
+
+    for _def_schema in schema.get('$defs', {}).values():
+        if 'properties' in _def_schema:
+            process_properties(_def_schema['properties'])
+
+
 def main():
     """Generate both JSON schema and markdown documentation."""
     script_dir = Path(__file__).parent
@@ -265,6 +303,9 @@ def main():
         by_alias=True,
     )
     
+    # Inject titles for $ref-based fields that Pydantic leaves title-less
+    _inject_missing_titles(schema)
+
     # Add metadata
     schema['$schema'] = 'http://json-schema.org/draft-07/schema#'
     schema['title'] = 'Day Ahead Optimizer Configuration'
