@@ -1027,8 +1027,8 @@ Configure Home Assistant notifications for optimization events.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `notification entity` | string (optional) | No | `null` | HA entity for notifications |
-| `opstarten` | boolean or string | No | `"false"` | Send notification on startup |
-| `berekening` | boolean or string | No | `"false"` | Send notification on calculation completion |
+| `opstarten` | boolean | No | `false` | Send notification on startup |
+| `berekening` | boolean | No | `false` | Send notification on calculation completion |
 | `last activity entity` | string (optional) | No | `null` | HA entity to track last activity timestamp |
 
 <details>
@@ -1040,11 +1040,11 @@ Optional: Home Assistant notification service entity. Used to send notifications
 
 **`opstarten`**
 
-Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status. Can be boolean or HA entity ID.
+Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status.
 
 **`berekening`**
 
-Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.). Can be boolean or HA entity ID.
+Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.).
 
 **`last activity entity`**
 

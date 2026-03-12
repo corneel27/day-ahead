@@ -1989,36 +1989,20 @@
           "x-ui-widget-filter": "notify"
         },
         "opstarten": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "false",
+          "default": false,
           "description": "Send notification on startup",
           "title": "Opstarten",
-          "x-help": "Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status. Can be boolean or HA entity ID.",
-          "x-ui-section": "Notification Settings",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "type": "boolean",
+          "x-help": "Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status.",
+          "x-ui-section": "Notification Settings"
         },
         "berekening": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "false",
+          "default": false,
           "description": "Send notification on calculation completion",
           "title": "Berekening",
-          "x-help": "Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.). Can be boolean or HA entity ID.",
-          "x-ui-section": "Notification Settings",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "type": "boolean",
+          "x-help": "Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.).",
+          "x-ui-section": "Notification Settings"
         },
         "last activity entity": {
           "anyOf": [
@@ -3044,15 +3028,7 @@
       "x-unit": "euro"
     },
     "notifications": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/NotificationsConfig"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
+      "$ref": "#/$defs/NotificationsConfig",
       "description": "Notification settings",
       "title": "Notifications"
     },
