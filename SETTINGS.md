@@ -15,41 +15,41 @@
 
 - [Quick Reference](#quick-reference)
 
-- [Energy Storage](#energy-storage)
+- [Energy](#energy)
   - [🔋 BatteryConfig](#batteryconfig)
-- [Energy Production](#energy-production)
   - [☀️ SolarConfig](#solarconfig)
+  - [⚡ GridConfig](#gridconfig)
 - [Devices](#devices)
   - [🚗 EVConfig](#evconfig)
   - [🧺 MachineConfig](#machineconfig)
-- [Heating & Climate](#heating-and-climate)
+- [Heating](#heating)
   - [🌡️ HeatingConfig](#heatingconfig)
   - [💧 BoilerConfig](#boilerconfig)
-- [Infrastructure](#infrastructure)
-  - [💾 DatabaseConfig](#databaseconfig)
-  - [⚡ GridConfig](#gridconfig)
-  - [⏰ HistoryConfig](#historyconfig)
-- [Pricing & Markets](#pricing-and-markets)
-  - [💰 PricingConfig](#pricingconfig)
-- [Visualization](#visualization)
-  - [📈 GraphicsConfig](#graphicsconfig)
 - [Integration](#integration)
+  - [💾 DatabaseConfig](#databaseconfig)
   - [🔔 NotificationsConfig](#notificationsconfig)
   - [📊 DashboardConfig](#dashboardconfig)
   - [⚡ TibberConfig](#tibberconfig)
-  - [🏠 HomeAssistantConfig](#homeassistantconfig)
+  - [HADatabaseConfig](#hadatabaseconfig)
+- [Pricing](#pricing)
+  - [💰 PricingConfig](#pricingconfig)
+- [Visualization](#visualization)
+  - [📈 GraphicsConfig](#graphicsconfig)
 - [Reporting](#reporting)
+  - [⏰ HistoryConfig](#historyconfig)
   - [📉 ReportConfig](#reportconfig)
-- [Automation](#automation)
+- [DAO](#dao)
   - [🕐 SchedulerConfig](#schedulerconfig)
+- [HASS](#hass)
+  - [🏠 HomeAssistantConfig](#homeassistantconfig)
 - [Other](#other)
   - [BatteryStage](#batterystage)
   - [EVChargeScheduler](#evchargescheduler)
   - [EVChargeStage](#evchargestage)
   - [FlexValue](#flexvalue)
-  - [HADatabaseConfig](#hadatabaseconfig)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
+  - [ScheduleEntry](#scheduleentry)
   - [SecretStr](#secretstr)
   - [SolarString](#solarstring)
   - [XGBoostConfig](#xgboostconfig)
@@ -82,9 +82,9 @@
 
 ---
 
-## Energy Storage
+## Energy
 
-<a id="energy-storage"></a>
+<a id="energy"></a>
 
 ### 🔋 BatteryConfig
 
@@ -277,12 +277,6 @@ Optional: Configure DC-coupled solar panels directly connected to this battery i
 </details>
 
 
----
-
-## Energy Production
-
-<a id="energy-production"></a>
-
 ### ☀️ SolarConfig
 
 _Solar panel configuration._
@@ -369,6 +363,52 @@ Optional: Home Assistant sensor entity (or list of entities) measuring actual so
 **`max power`**
 
 Optional. Limit the installation output to this value in kW. Use when your inverter/MPPT maximum power is less than the total panel capacity.
+
+</details>
+
+
+### ⚡ GridConfig
+
+_Electrical grid connection configuration._
+
+# Grid Connection Configuration
+
+Define electrical grid connection limits to prevent overload.
+
+## Maximum Grid Power
+
+Based on your main fuse/circuit breaker:
+- **1-phase 32A**: 7.4 kW (32A × 230V)
+- **3-phase 25A**: 17.3 kW (25A × 230V × 3)
+- **3-phase 35A**: 24.2 kW (35A × 230V × 3)
+
+## Why This Matters
+
+Optimizer ensures combined consumption never exceeds this limit:
+- Prevents main fuse from tripping
+- Ensures legal compliance with grid connection
+- Coordinates multiple high-power devices (EV, heat pump, boiler)
+
+## Tips
+
+- Check your electrical panel for fuse/breaker rating
+- Account for baseload when calculating available power
+- System will prioritize loads within this constraint
+- Consider upgrade if frequently hitting limits
+
+
+📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Grid-Configuration)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `max_power` | number | No | `17` | Maximum grid power in kW (Unit: `kW`) _Must be > 0, typical 7-25 kW for residential_ |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`max_power`**
+
+Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.
 
 </details>
 
@@ -589,9 +629,9 @@ Optional: Home Assistant entity to force immediate start, bypassing optimization
 
 ---
 
-## Heating & Climate
+## Heating
 
-<a id="heating-and-climate"></a>
+<a id="heating"></a>
 
 ### 🌡️ HeatingConfig
 
@@ -837,9 +877,9 @@ Optional: Home Assistant switch entity to directly control boiler power. Alterna
 
 ---
 
-## Infrastructure
+## Integration
 
-<a id="infrastructure"></a>
+<a id="integration"></a>
 
 ### 💾 DatabaseConfig
 
@@ -943,307 +983,6 @@ Optional: Timezone for database timestamps. Examples: 'Europe/Amsterdam', 'UTC'.
 
 </details>
 
-
-### ⚡ GridConfig
-
-_Electrical grid connection configuration._
-
-# Grid Connection Configuration
-
-Define electrical grid connection limits to prevent overload.
-
-## Maximum Grid Power
-
-Based on your main fuse/circuit breaker:
-- **1-phase 32A**: 7.4 kW (32A × 230V)
-- **3-phase 25A**: 17.3 kW (25A × 230V × 3)
-- **3-phase 35A**: 24.2 kW (35A × 230V × 3)
-
-## Why This Matters
-
-Optimizer ensures combined consumption never exceeds this limit:
-- Prevents main fuse from tripping
-- Ensures legal compliance with grid connection
-- Coordinates multiple high-power devices (EV, heat pump, boiler)
-
-## Tips
-
-- Check your electrical panel for fuse/breaker rating
-- Account for baseload when calculating available power
-- System will prioritize loads within this constraint
-- Consider upgrade if frequently hitting limits
-
-
-📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Grid-Configuration)
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `max_power` | number | No | `17` | Maximum grid power in kW (Unit: `kW`) _Must be > 0, typical 7-25 kW for residential_ |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`max_power`**
-
-Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.
-
-</details>
-
-
-### ⏰ HistoryConfig
-
-_History and data retention settings._
-
-# History & Data Retention
-
-Control how long optimization history is retained in the database.
-
-## What Gets Stored
-
-- Optimization results (costs, schedules)
-- Price data (day-ahead, tariffs)
-- Device schedules (battery, EV, heating)
-- Solar production forecasts
-- Baseload consumption data
-
-## Retention Guidelines
-
-- **7 days**: Minimal retention, recent data only
-- **14 days**: Two weeks for comparison
-- **30 days**: Monthly trends and analysis
-- **90+ days**: Long-term analysis (larger database)
-
-## Database Growth
-
-- More retention = larger database
-- Typical: ~1-5 MB per day (depends on devices)
-- Monitor database size if using SQLite
-- Consider periodic backups
-
-## Tips
-
-- Start with 7-14 days, increase if needed
-- Check database size regularly
-- Old data cleaned up automatically
-- Increase for detailed cost analysis
-
-
-📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/History-Configuration)
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `save days` | integer | No | `7` | Number of days to retain historical data (Unit: `days`) _Must be >= 1, typical 7-30 days_ |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`save days`**
-
-Number of days to retain optimization history in database. Older data is automatically cleaned up. Longer retention enables better trend analysis but increases database size. Minimum 1 day.
-
-</details>
-
-
----
-
-## Pricing & Markets
-
-<a id="pricing-and-markets"></a>
-
-### 💰 PricingConfig
-
-_Day-ahead pricing and tariff configuration._
-
-# Pricing & Tariff Configuration
-
-Configure electricity market prices and tariff components for accurate cost optimization.
-
-## Price Components
-
-Total electricity cost consists of:
-1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)
-2. **Energy taxes**: Government energy taxes
-3. **Supplier costs**: Your supplier's markup/fees
-4. **VAT**: Value-added tax on sum of above
-
-Consumption price = (market + taxes + supplier) × (1 + VAT)
-
-## Date-Based Tariffs
-
-All tariff fields use date-indexed dictionaries:
-```json
-{
-  "2024-01-01": 0.05,
-  "2024-07-01": 0.06
-}
-```
-
-System uses tariff active on optimization date.
-
-## Data Sources
-
-- **nordpool**: Nord Pool (Nordic/Baltic markets)
-- **entsoe**: ENTSO-E Transparency Platform (all European markets)
-- **tibber**: Tibber API (if using Tibber as supplier)
-
-## Tips
-
-- All prices are EXCLUDING VAT (VAT applied separately)
-- Update tariffs when your supplier changes prices
-- Use !secret for API keys
-- Production costs often lower than consumption (or negative for feed-in credit)
-- Keep last_invoice updated for accurate cost tracking
-- Check your electricity bill for exact tariff components
-
-
-📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration)
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
-| `entsoe-api-key` | string or [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
-| `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
-| `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
-| `cost supplier consumption` | object | Yes | — | Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
-| `cost supplier production` | object | Yes | — | Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
-| `vat consumption` | object | Yes | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
-| `vat production` | object | Yes | — | VAT percentage for production by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
-| `last invoice` | string | Yes | — | Date of last invoice (YYYY-MM-DD) _Must be YYYY-MM-DD format_ |
-| `tax refund` | boolean or string | No | `true` | Whether tax refund applies |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`source day ahead`**
-
-Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.
-
-**`entsoe-api-key`**
-
-API key for ENTSO-E Transparency Platform. Required if source_day_ahead='entsoe'. Get free key at transparency.entsoe.eu. Use !secret for security.
-
-**`energy taxes consumption`**
-
-Energy taxes on consumption (excluding VAT) indexed by effective date. Format: {'2024-01-01': 0.05}. Use date when tariff changes.
-
-**`energy taxes production`**
-
-Energy taxes on feed-in/production (excluding VAT) indexed by effective date. Often zero or negative. Format: {'2024-01-01': 0.0}.
-
-**`cost supplier consumption`**
-
-Supplier markup/fees for consumption (excluding VAT) indexed by effective date. Fixed part of electricity cost. Format: {'2024-01-01': 0.02}.
-
-**`cost supplier production`**
-
-Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.
-
-**`vat consumption`**
-
-VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 21}. Applied to market price + taxes + supplier costs.
-
-**`vat production`**
-
-VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.
-
-**`last invoice`**
-
-Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.
-
-**`tax refund`**
-
-Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.
-
-</details>
-
-
----
-
-## Visualization
-
-<a id="visualization"></a>
-
-### 📈 GraphicsConfig
-
-_Graphics and visualization settings._
-
-# Graphics & Visualization
-
-Configure graphs and visualizations of optimization results.
-
-## Graph Types
-
-Graphs can show:
-- **Battery balance**: SOC and charge/discharge schedule
-- **Prices**: Consumption, production, and spot prices
-- **Average consumption**: Baseline vs optimized usage
-
-## When to Use
-
-- Enable during testing to visualize optimization
-- Useful for understanding system behavior
-- Can be displayed in Home Assistant dashboard
-- Disable in production if graphs not needed (saves resources)
-
-## Tips
-
-- Graphs saved to add-on data directory
-- Use dark_background style to match HA theme
-- Toggle individual elements to simplify graphs
-- Graphs regenerated each optimization run
-
-
-📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Graphics)
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `style` | string | No | `"dark_background"` | Matplotlib style (e.g., 'dark_background', 'default') |
-| `show` | boolean or string | No | `"false"` | Whether to show graphics |
-| `battery balance` | boolean or string | No | `"true"` | Show battery balance in graphs |
-| `prices consumption` | boolean or string | No | `"true"` | Show consumption prices in graphs |
-| `prices production` | boolean or string | No | `"false"` | Show production prices in graphs |
-| `prices spot` | boolean or string | No | `"true"` | Show spot prices in graphs |
-| `average consumption` | boolean or string | No | `"true"` | Show average consumption in graphs |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`style`**
-
-Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'.
-
-**`show`**
-
-Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.
-
-**`battery balance`**
-
-Display battery state of charge and power flows in graphs. Shows charge/discharge schedule over time.
-
-**`prices consumption`**
-
-Display consumption prices (market + taxes + VAT) in graphs. Helps visualize expensive vs cheap periods.
-
-**`prices production`**
-
-Display feed-in/production prices in graphs. Useful if you have solar feed-in to compare consumption vs production value.
-
-**`prices spot`**
-
-Display raw day-ahead spot market prices (before taxes/markup) in graphs. Shows pure market price variations.
-
-**`average consumption`**
-
-Display average/baseline consumption in graphs. Helps understand optimization impact relative to normal usage.
-
-</details>
-
-
----
-
-## Integration
-
-<a id="integration"></a>
 
 ### 🔔 NotificationsConfig
 
@@ -1440,89 +1179,247 @@ Tibber GraphQL API endpoint URL. Default is official API. Change only for testin
 </details>
 
 
-### 🏠 HomeAssistantConfig
+### Home Assistant Database
 
-_Home Assistant connection configuration._
+_Home Assistant database connection configuration._
 
-# Home Assistant Connection
-
-Configure connection to Home Assistant for API access.
-
-## Auto-Detection (Recommended)
-
-When running as Home Assistant add-on:
-- ✅ IP address auto-detected
-- ✅ Port auto-detected
-- ✅ Access token auto-provided
-- ✅ Protocol auto-detected
-
-**Leave all fields empty for automatic configuration.**
-
-## Manual Configuration
-
-Only needed if:
-- Running outside Home Assistant
-- Auto-detection fails
-- Using custom HA setup
-
-### Long-Lived Access Token
-
-1. In Home Assistant: Profile → Security
-2. Scroll to "Long-Lived Access Tokens"
-3. Click "Create Token"
-4. Name it "Day Ahead Optimizer"
-5. Copy token immediately (shown once!)
-6. Store in secrets.json:
-   ```json
-   {"ha_token": "your_token_here"}
-   ```
-7. Reference in config:
-   ```json
-   "token": "!secret ha_token"
-   ```
-
-## Troubleshooting
-
-- **Connection refused**: Check IP/port
-- **Unauthorized**: Token invalid or expired
-- **SSL errors**: Check protocol setting
-- **Timeout**: Network connectivity issues
-
-## Tips
-
-- Prefer auto-detection when possible
-- Always use !secret for tokens
-- Test connection from dashboard
-- Check HA logs if issues persist
-
-
-📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Home-Assistant-Integration)
+Home Assistant database connection for reading historical sensor data (prices, solar, baseload).
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `host` | string (optional) | No | `null` | Home Assistant IP address (auto-detected if not set) |
-| `ip port` | integer (optional) | No | `null` | Home Assistant port (default: 8123) (Unit: `port`) _Default 8123, change if custom_ |
-| `token` | string or [SecretStr](#secretstr) (optional) | No | `null` | Home Assistant long-lived access token (can use !secret) _Auto-provided as add-on, use !secret if manual_ |
-| `protocol api` | string (optional) | No | `null` | API protocol |
+| `engine` | string | No | `"mysql"` | Database engine type. Options: `mysql`, `sqlite`, `postgresql` |
+| `server` | string | No | `"core-mariadb"` | Database server hostname (required for mysql/postgresql) _Required for mysql/postgresql engines_ |
+| `port` | integer | No | `0` | Database port (Unit: `port`) _1-65535, defaults: mysql=3306, postgresql=5432_ |
+| `db_path` | string | No | `"/homeassistant"` | Database path for SQLite |
+| `database` | string | No | `"homeassistant"` | Database name |
+| `username` | string | No | `"homeassistant"` | Database username |
+| `password` | string or [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) _Use !secret for passwords_ |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
 
-**`host`**
+**`engine`**
 
-Home Assistant IP address or hostname. Usually auto-detected when running as HA add-on. Set manually only if auto-detection fails. Examples: '192.168.1.100', 'homeassistant.local'.
+Database engine where Home Assistant stores history data. Most HA installations use SQLite, but MySQL/MariaDB and PostgreSQL are also supported.
 
-**`ip port`**
+**`server`**
 
-Home Assistant web interface port. Default is 8123. Change only if using custom port. Usually auto-detected when running as add-on.
+Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.
 
-**`token`**
+**`port`**
 
-Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.
+Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.
 
-**`protocol api`**
+**`db_path`**
 
-Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. Usually auto-detected. Set manually only if needed.
+Directory path for SQLite database file.
+
+**`database`**
+
+Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation.
+
+**`username`**
+
+Username for database authentication. Default 'homeassistant' matches standard HA installation.
+
+**`password`**
+
+Database password. Use secrets.json with '!secret password_key' pattern for security. Never store passwords directly in config.
+
+</details>
+
+
+---
+
+## Pricing
+
+<a id="pricing"></a>
+
+### 💰 PricingConfig
+
+_Day-ahead pricing and tariff configuration._
+
+# Pricing & Tariff Configuration
+
+Configure electricity market prices and tariff components for accurate cost optimization.
+
+## Price Components
+
+Total electricity cost consists of:
+1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)
+2. **Energy taxes**: Government energy taxes
+3. **Supplier costs**: Your supplier's markup/fees
+4. **VAT**: Value-added tax on sum of above
+
+Consumption price = (market + taxes + supplier) × (1 + VAT)
+
+## Date-Based Tariffs
+
+All tariff fields use date-indexed dictionaries:
+```json
+{
+  "2024-01-01": 0.05,
+  "2024-07-01": 0.06
+}
+```
+
+System uses tariff active on optimization date.
+
+## Data Sources
+
+- **nordpool**: Nord Pool (Nordic/Baltic markets)
+- **entsoe**: ENTSO-E Transparency Platform (all European markets)
+- **tibber**: Tibber API (if using Tibber as supplier)
+
+## Tips
+
+- All prices are EXCLUDING VAT (VAT applied separately)
+- Update tariffs when your supplier changes prices
+- Use !secret for API keys
+- Production costs often lower than consumption (or negative for feed-in credit)
+- Keep last_invoice updated for accurate cost tracking
+- Check your electricity bill for exact tariff components
+
+
+📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
+| `entsoe-api-key` | string or [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
+| `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
+| `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
+| `cost supplier consumption` | object | Yes | — | Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
+| `cost supplier production` | object | Yes | — | Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
+| `vat consumption` | object | Yes | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
+| `vat production` | object | Yes | — | VAT percentage for production by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
+| `last invoice` | string | Yes | — | Date of last invoice (YYYY-MM-DD) _Must be YYYY-MM-DD format_ |
+| `tax refund` | boolean or string | No | `true` | Whether tax refund applies |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`source day ahead`**
+
+Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.
+
+**`entsoe-api-key`**
+
+API key for ENTSO-E Transparency Platform. Required if source_day_ahead='entsoe'. Get free key at transparency.entsoe.eu. Use !secret for security.
+
+**`energy taxes consumption`**
+
+Energy taxes on consumption (excluding VAT) indexed by effective date. Format: {'2024-01-01': 0.05}. Use date when tariff changes.
+
+**`energy taxes production`**
+
+Energy taxes on feed-in/production (excluding VAT) indexed by effective date. Often zero or negative. Format: {'2024-01-01': 0.0}.
+
+**`cost supplier consumption`**
+
+Supplier markup/fees for consumption (excluding VAT) indexed by effective date. Fixed part of electricity cost. Format: {'2024-01-01': 0.02}.
+
+**`cost supplier production`**
+
+Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.
+
+**`vat consumption`**
+
+VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 21}. Applied to market price + taxes + supplier costs.
+
+**`vat production`**
+
+VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.
+
+**`last invoice`**
+
+Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.
+
+**`tax refund`**
+
+Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.
+
+</details>
+
+
+---
+
+## Visualization
+
+<a id="visualization"></a>
+
+### 📈 GraphicsConfig
+
+_Graphics and visualization settings._
+
+# Graphics & Visualization
+
+Configure graphs and visualizations of optimization results.
+
+## Graph Types
+
+Graphs can show:
+- **Battery balance**: SOC and charge/discharge schedule
+- **Prices**: Consumption, production, and spot prices
+- **Average consumption**: Baseline vs optimized usage
+
+## When to Use
+
+- Enable during testing to visualize optimization
+- Useful for understanding system behavior
+- Can be displayed in Home Assistant dashboard
+- Disable in production if graphs not needed (saves resources)
+
+## Tips
+
+- Graphs saved to add-on data directory
+- Use dark_background style to match HA theme
+- Toggle individual elements to simplify graphs
+- Graphs regenerated each optimization run
+
+
+📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Graphics)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `style` | string | No | `"dark_background"` | Matplotlib style (e.g., 'dark_background', 'default') |
+| `show` | boolean or string | No | `"false"` | Whether to show graphics |
+| `battery balance` | boolean or string | No | `"true"` | Show battery balance in graphs |
+| `prices consumption` | boolean or string | No | `"true"` | Show consumption prices in graphs |
+| `prices production` | boolean or string | No | `"false"` | Show production prices in graphs |
+| `prices spot` | boolean or string | No | `"true"` | Show spot prices in graphs |
+| `average consumption` | boolean or string | No | `"true"` | Show average consumption in graphs |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`style`**
+
+Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'.
+
+**`show`**
+
+Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.
+
+**`battery balance`**
+
+Display battery state of charge and power flows in graphs. Shows charge/discharge schedule over time.
+
+**`prices consumption`**
+
+Display consumption prices (market + taxes + VAT) in graphs. Helps visualize expensive vs cheap periods.
+
+**`prices production`**
+
+Display feed-in/production prices in graphs. Useful if you have solar feed-in to compare consumption vs production value.
+
+**`prices spot`**
+
+Display raw day-ahead spot market prices (before taxes/markup) in graphs. Shows pure market price variations.
+
+**`average consumption`**
+
+Display average/baseline consumption in graphs. Helps understand optimization impact relative to normal usage.
 
 </details>
 
@@ -1532,6 +1429,60 @@ Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. U
 ## Reporting
 
 <a id="reporting"></a>
+
+### ⏰ HistoryConfig
+
+_History and data retention settings._
+
+# History & Data Retention
+
+Control how long optimization history is retained in the database.
+
+## What Gets Stored
+
+- Optimization results (costs, schedules)
+- Price data (day-ahead, tariffs)
+- Device schedules (battery, EV, heating)
+- Solar production forecasts
+- Baseload consumption data
+
+## Retention Guidelines
+
+- **7 days**: Minimal retention, recent data only
+- **14 days**: Two weeks for comparison
+- **30 days**: Monthly trends and analysis
+- **90+ days**: Long-term analysis (larger database)
+
+## Database Growth
+
+- More retention = larger database
+- Typical: ~1-5 MB per day (depends on devices)
+- Monitor database size if using SQLite
+- Consider periodic backups
+
+## Tips
+
+- Start with 7-14 days, increase if needed
+- Check database size regularly
+- Old data cleaned up automatically
+- Increase for detailed cost analysis
+
+
+📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/History-Configuration)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `save days` | integer | No | `7` | Number of days to retain historical data (Unit: `days`) _Must be >= 1, typical 7-30 days_ |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`save days`**
+
+Number of days to retain optimization history in database. Older data is automatically cleaned up. Longer retention enables better trend analysis but increases database size. Minimum 1 day.
+
+</details>
+
 
 ### 📉 ReportConfig
 
@@ -1659,26 +1610,13 @@ Optional: Additional custom sensor configurations. Advanced use for extending re
 
 ---
 
-## Automation
+## DAO
 
-<a id="automation"></a>
+<a id="dao"></a>
 
 ### 🕐 SchedulerConfig
 
-_Task scheduler configuration.
-
-Maps time patterns to action names.
-Time patterns can be:
-- Specific times: "0435", "1255"
-- Wildcards: "xx00" (every hour at :00), "xx15" (every hour at :15)
-
-Actions include:
-- get_meteo_data
-- get_tibber_data
-- get_day_ahead_prices
-- calc_optimum
-- clean_data
-- calc_baseloads_
+_Task scheduler configuration._
 
 # Scheduler Configuration
 
@@ -1708,11 +1646,14 @@ Define when automatic tasks run using time patterns.
 
 ```json
 {
-  "0435": "get_day_ahead_prices",
-  "0445": "get_meteo_data",
-  "0500": "calc_optimum",
-  "xx00": "calc_baseloads",
-  "0300": "clean_data"
+  "active": true,
+  "schedule": [
+    {"time": "0435", "action": "get_day_ahead_prices"},
+    {"time": "0445", "action": "get_meteo_data"},
+    {"time": "0500", "action": "calc_optimum"},
+    {"time": "xx00", "action": "calc_baseloads"},
+    {"time": "0300", "action": "clean_data"}
+  ]
 }
 ```
 
@@ -1734,7 +1675,116 @@ Define when automatic tasks run using time patterns.
 
 📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Scheduler)
 
-*No configuration fields.*
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `active` | boolean | No | `false` | Enable or disable the scheduler |
+| `schedule` | list[[ScheduleEntry](#scheduleentry)] | No | `null` | Scheduled task entries |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`active`**
+
+When enabled, scheduled tasks will run automatically at configured times. Disable to prevent all scheduled tasks from running.
+
+**`schedule`**
+
+Define when tasks should run. Add entries with time patterns (e.g., '0435', 'xx00') and actions.
+
+</details>
+
+
+---
+
+## HASS
+
+<a id="hass"></a>
+
+### 🏠 HomeAssistantConfig
+
+_Home Assistant connection configuration._
+
+# Home Assistant Connection
+
+Configure connection to Home Assistant for API access.
+
+## Auto-Detection (Recommended)
+
+When running as Home Assistant add-on:
+- ✅ IP address auto-detected
+- ✅ Port auto-detected
+- ✅ Access token auto-provided
+- ✅ Protocol auto-detected
+
+**Leave all fields empty for automatic configuration.**
+
+## Manual Configuration
+
+Only needed if:
+- Running outside Home Assistant
+- Auto-detection fails
+- Using custom HA setup
+
+### Long-Lived Access Token
+
+1. In Home Assistant: Profile → Security
+2. Scroll to "Long-Lived Access Tokens"
+3. Click "Create Token"
+4. Name it "Day Ahead Optimizer"
+5. Copy token immediately (shown once!)
+6. Store in secrets.json:
+   ```json
+   {"ha_token": "your_token_here"}
+   ```
+7. Reference in config:
+   ```json
+   "token": "!secret ha_token"
+   ```
+
+## Troubleshooting
+
+- **Connection refused**: Check IP/port
+- **Unauthorized**: Token invalid or expired
+- **SSL errors**: Check protocol setting
+- **Timeout**: Network connectivity issues
+
+## Tips
+
+- Prefer auto-detection when possible
+- Always use !secret for tokens
+- Test connection from dashboard
+- Check HA logs if issues persist
+
+
+📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Home-Assistant-Integration)
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `host` | string (optional) | No | `null` | Home Assistant IP address (auto-detected if not set) |
+| `ip port` | integer (optional) | No | `null` | Home Assistant port (default: 8123) (Unit: `port`) _Default 8123, change if custom_ |
+| `token` | string or [SecretStr](#secretstr) (optional) | No | `null` | Home Assistant long-lived access token (can use !secret) _Auto-provided as add-on, use !secret if manual_ |
+| `protocol api` | string (optional) | No | `null` | API protocol |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`host`**
+
+Home Assistant IP address or hostname. Usually auto-detected when running as HA add-on. Set manually only if auto-detection fails. Examples: '192.168.1.100', 'homeassistant.local'.
+
+**`ip port`**
+
+Home Assistant web interface port. Default is 8123. Change only if using custom port. Usually auto-detected when running as add-on.
+
+**`token`**
+
+Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.
+
+**`protocol api`**
+
+Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. Usually auto-detected. Set manually only if needed.
+
+</details>
 
 
 ---
@@ -1856,56 +1906,6 @@ Automatically set to true if value contains '.' (entity ID pattern). Used intern
 </details>
 
 
-### HADatabaseConfig
-
-_Home Assistant database connection configuration._
-
-Home Assistant database connection for reading historical sensor data (prices, solar, baseload).
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `engine` | string | No | `"mysql"` | Database engine type. Options: `mysql`, `sqlite`, `postgresql` |
-| `server` | string | No | `"core-mariadb"` | Database server hostname (required for mysql/postgresql) _Required for mysql/postgresql engines_ |
-| `port` | integer | No | `0` | Database port (Unit: `port`) _1-65535, defaults: mysql=3306, postgresql=5432_ |
-| `db_path` | string | No | `"/homeassistant"` | Database path for SQLite |
-| `database` | string | No | `"homeassistant"` | Database name |
-| `username` | string | No | `"homeassistant"` | Database username |
-| `password` | string or [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) _Use !secret for passwords_ |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`engine`**
-
-Database engine where Home Assistant stores history data. Most HA installations use SQLite, but MySQL/MariaDB and PostgreSQL are also supported.
-
-**`server`**
-
-Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.
-
-**`port`**
-
-Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.
-
-**`db_path`**
-
-Directory path for SQLite database file.
-
-**`database`**
-
-Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation.
-
-**`username`**
-
-Username for database authentication. Default 'homeassistant' matches standard HA installation.
-
-**`password`**
-
-Database password. Use secrets.json with '!secret password_key' pattern for security. Never store passwords directly in config.
-
-</details>
-
-
 ### HeatingStage
 
 _Single heating stage with power and COP._
@@ -1952,6 +1952,29 @@ Descriptive name for this program. Examples: 'eco', 'quick wash', 'intensive', '
 **`power`**
 
 Power profile as list of watts per time interval. Length defines program duration. Example: [2000, 2000, 500, 500, 100] for 5-hour wash cycle.
+
+</details>
+
+
+### ScheduleEntry
+
+_A single scheduled task entry._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
+| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `calc_optimum`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`time`**
+
+Time pattern: specific time like '0435' or wildcard like 'xx00' (every hour at :00)
+
+**`action`**
+
+Task to run: data collection, optimization, or maintenance
 
 </details>
 

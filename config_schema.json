@@ -46,7 +46,7 @@
           "title": "Upper Limit",
           "x-help": "Maximum State of Charge in percent. Battery will never charge above this level. Supports FlexValue pattern: use integer or HA entity ID.",
           "x-ui-section": "Power Configuration",
-          "x-ui-widget": "entity-picker-or-literal",
+          "x-ui-widget": "entity-picker-or-number",
           "x-ui-widget-filter": "sensor,input_number",
           "x-unit": "%",
           "x-validation-hint": "0-100%, protects battery from overcharge"
@@ -66,7 +66,7 @@
           "title": "Lower Limit",
           "x-help": "Minimum State of Charge in percent. Battery will never discharge below this level. Supports FlexValue pattern: use integer or HA entity ID.",
           "x-ui-section": "Power Configuration",
-          "x-ui-widget": "entity-picker-or-literal",
+          "x-ui-widget": "entity-picker-or-number",
           "x-ui-widget-filter": "sensor,input_number",
           "x-unit": "%",
           "x-validation-hint": "0-100%, protects battery from deep discharge"
@@ -94,7 +94,7 @@
           "title": "Optimal Lower Level",
           "x-help": "Target SOC level for cost optimization. System will prefer this level over minimum. Supports FlexValue pattern.",
           "x-ui-section": "Power Configuration",
-          "x-ui-widget": "entity-picker-or-literal",
+          "x-ui-widget": "entity-picker-or-number",
           "x-ui-widget-filter": "sensor,input_number",
           "x-unit": "%",
           "x-validation-hint": "Optional, should be >= lower_limit"
@@ -116,7 +116,7 @@
           "title": "Penalty Low Soc",
           "x-help": "Cost in euro per %·hour when SOC stays below optimal lower level. Higher values make the optimizer prioritize keeping SOC above the optimal level. Default 0.0025 euro/%·h.",
           "x-ui-section": "Power Configuration",
-          "x-ui-widget": "entity-picker-or-literal",
+          "x-ui-widget": "entity-picker-or-number",
           "x-ui-widget-filter": "sensor,input_number",
           "x-unit": "euro/%·h"
         },
@@ -471,6 +471,7 @@
           "description": "HA entity for calculated SOC",
           "title": "Entity Calculated Soc",
           "x-help": "Optional: Home Assistant sensor for calculated State of Charge. System can compute SOC from power flows if BMS sensor is unavailable.",
+          "x-order": 1,
           "x-ui-section": "Power Configuration",
           "x-ui-widget": "entity-picker",
           "x-ui-widget-filter": "sensor",
@@ -492,7 +493,8 @@
           "description": "DC-coupled solar panels attached to this battery",
           "title": "Solar",
           "x-help": "Optional: Configure DC-coupled solar panels directly connected to this battery inverter. DC coupling is more efficient than AC coupling. Leave empty for AC-coupled or grid-only batteries.",
-          "x-ui-section": "Power Configuration"
+          "x-order": 1000,
+          "x-ui-section": "Battery Connected Solar"
         }
       },
       "required": [
@@ -516,7 +518,7 @@
       "x-help": "# Battery Configuration\n\nConfigure your home battery storage system for optimal energy management and cost savings.\n\n## Key Settings\n- **Capacity**: Total storage capacity in kWh\n- **SOC Limits**: Upper and lower charge limits to protect battery health\n- **Power Stages**: Define charging/discharging efficiency curves\n- **Control Entities**: Home Assistant entities to control the battery\n\n## Tips\n- Set upper_limit to 80-90% for longer battery life\n- Configure charge/discharge stages for accurate optimization\n- Monitor battery degradation with cycle_cost setting\n",
       "x-icon": "battery-charging",
       "x-order": 1,
-      "x-ui-group": "Energy Storage"
+      "x-ui-group": "Energy"
     },
     "BatteryStage": {
       "additionalProperties": true,
@@ -760,7 +762,7 @@
       "x-help": "# Hot Water Boiler Configuration\n\nOptimize hot water heating based on electricity prices, usage patterns, and thermal characteristics.\n\n## How It Works\n\nThe system models boiler as a thermal battery:\n- Water stores heat energy based on volume and temperature\n- Heat is lost over time based on cooling_rate\n- System schedules heating during cheap electricity periods\n- Ensures hot water availability when needed\n\n## Key Parameters\n\n### Temperature Control\n- **setpoint**: Target temperature (typically 55-65°C)\n- **hysterese**: Dead band to prevent cycling (typically 3-5°C)\n- **heating_allowed_below**: Max temp to start heating\n\n### Physical Properties\n- **volume**: Tank size affects how much heat can be stored\n- **cooling_rate**: Heat loss rate (better insulation = lower rate)\n- **elec_power**: Heating power affects heating duration\n- **cop**: Efficiency (1.0 for resistive, 2.5-4.0 for heat pump)\n\n### Activation\n- **activate_entity**: Button/switch to trigger heating\n- **activate_service**: Service type ('press' or 'switch')\n\n## Tips\n- Larger volume = more thermal storage capacity\n- Better insulation = lower cooling_rate = more flexibility\n- Heat pump water heaters (COP > 1.0) much more efficient than resistive\n- Schedule heating during solar production or cheap grid periods\n- Instant start available for emergency hot water needs\n",
       "x-icon": "water-boiler",
       "x-order": 5,
-      "x-ui-group": "Heating & Climate"
+      "x-ui-group": "Heating"
     },
     "DashboardConfig": {
       "additionalProperties": true,
@@ -774,7 +776,6 @@
           "title": "Port",
           "type": "integer",
           "x-help": "Port number for Day Ahead Optimizer web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).",
-          "x-ui-section": "Connection Settings",
           "x-unit": "port",
           "x-validation-hint": "1024-65535, default 5000"
         }
@@ -785,7 +786,8 @@
       "x-help": "# Dashboard Configuration\n\nConfigure web dashboard for monitoring and controlling Day Ahead Optimizer.\n\n## Dashboard Features\n\n- View optimization results\n- Monitor device schedules\n- Check price forecasts\n- Review historical data\n- Trigger manual optimization\n- View graphs and reports\n\n## Access\n\nAccess dashboard at:\n- **Local**: http://homeassistant.local:PORT\n- **IP**: http://YOUR_HA_IP:PORT\n\n## Port Selection\n\n- Default: 5000\n- Must be unused port\n- Check no conflicts with other services\n- Must be >= 1024 (non-privileged)\n\n## Tips\n\n- Add to Home Assistant sidebar via iframe card\n- Enable Ingress for secure access\n- Use reverse proxy for external access\n- Dashboard updates after each optimization\n",
       "x-icon": "view-dashboard",
       "x-order": 16,
-      "x-ui-group": "Integration"
+      "x-ui-group": "Integration",
+      "x-ui-section": "Dashboard"
     },
     "DatabaseConfig": {
       "additionalProperties": true,
@@ -802,7 +804,7 @@
           "title": "Engine",
           "type": "string",
           "x-help": "Database engine for Day Ahead optimizer data. SQLite is simplest (no server needed), MySQL/PostgreSQL for advanced setups or shared databases.",
-          "x-ui-section": "Connection Settings"
+          "x-ui-section": "DAO Database"
         },
         "db_path": {
           "default": "../data",
@@ -810,7 +812,18 @@
           "title": "Db Path",
           "type": "string",
           "x-help": "Directory path for SQLite database file. Relative to add-on root. Example: '../data' stores in persistent data folder. Only for SQLite.",
-          "x-ui-section": "Connection Settings",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "sqlite"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "DAO Database",
           "x-validation-hint": "Required for SQLite (or use database field)"
         },
         "database": {
@@ -826,7 +839,7 @@
           "description": "Database filename for SQLite or database name for MySQL",
           "title": "Database",
           "x-help": "For SQLite: filename (e.g., 'day_ahead.db'). For MySQL/PostgreSQL: database name. At least one of db_path or database required for SQLite.",
-          "x-ui-section": "Connection Settings",
+          "x-ui-section": "DAO Database",
           "x-validation-hint": "Filename for SQLite, database name for MySQL/PostgreSQL"
         },
         "server": {
@@ -835,7 +848,19 @@
           "title": "Server",
           "type": "string",
           "x-help": "Hostname or IP of MySQL/PostgreSQL server. Required for server-based engines. Examples: 'localhost', '192.168.1.100'.",
-          "x-ui-section": "Connection Settings",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "DAO Database",
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
@@ -846,7 +871,19 @@
           "title": "Port",
           "type": "integer",
           "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
-          "x-ui-section": "Connection Settings",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "DAO Database",
           "x-unit": "port",
           "x-validation-hint": "1-65535, required for mysql/postgresql"
         },
@@ -856,7 +893,19 @@
           "title": "Username",
           "type": "string",
           "x-help": "Database username for authentication. Required for MySQL/PostgreSQL.",
-          "x-ui-section": "Connection Settings",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "DAO Database",
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "password": {
@@ -875,7 +924,19 @@
           "description": "MySQL password (can use !secret)",
           "title": "Password",
           "x-help": "Database password. Use secrets.json with '!secret password_key' for security. Never store passwords directly in config.",
-          "x-ui-section": "Connection Settings",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "DAO Database",
           "x-validation-hint": "Use !secret for passwords"
         },
         "time_zone": {
@@ -891,7 +952,7 @@
           "description": "Database timezone",
           "title": "Time Zone",
           "x-help": "Optional: Timezone for database timestamps. Examples: 'Europe/Amsterdam', 'UTC'. Usually not needed if database and system timezones match.",
-          "x-ui-section": "Connection Settings"
+          "x-ui-section": "DAO Database"
         }
       },
       "title": "DatabaseConfig",
@@ -900,7 +961,7 @@
       "x-help": "# Day Ahead Database Configuration\n\nDatabase for storing Day Ahead optimizer calculations, schedules, and results.\n\n## Engine Options\n\n### SQLite (Recommended for most users)\n- **Pros**: No server setup, simple, included with Home Assistant\n- **Cons**: Single-user, not suitable for multiple HA instances\n- **Config**: Specify db_path and/or database filename\n\n### MySQL/MariaDB\n- **Pros**: Multi-user, robust, good performance\n- **Cons**: Requires separate database server\n- **Config**: server, port, username, password, database name\n\n### PostgreSQL\n- **Pros**: Advanced features, excellent for large datasets\n- **Cons**: Requires separate database server, more complex\n- **Config**: server, port, username, password, database name\n\n## Security\n\n**Never store passwords in options.json!**\n\nUse secrets.json:\n```json\n{\n  \"db_password\": \"actual_password_here\"\n}\n```\n\nThen in options.json:\n```json\n\"password\": \"!secret db_password\"\n```\n\n## Tips\n\n- SQLite for single HA instance (simplest)\n- MySQL for shared database or multiple instances\n- Use strong passwords for server-based databases\n- Ensure database is backed up (contains optimization history)\n- Check database size periodically (can grow with history)\n",
       "x-icon": "database",
       "x-order": 10,
-      "x-ui-group": "Infrastructure"
+      "x-ui-group": "Integration"
     },
     "EVChargeScheduler": {
       "additionalProperties": true,
@@ -1322,7 +1383,6 @@
           "title": "Max Power",
           "type": "number",
           "x-help": "Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.",
-          "x-ui-section": "General",
           "x-unit": "kW",
           "x-validation-hint": "Must be > 0, typical 7-25 kW for residential"
         }
@@ -1333,11 +1393,24 @@
       "x-help": "# Grid Connection Configuration\n\nDefine electrical grid connection limits to prevent overload.\n\n## Maximum Grid Power\n\nBased on your main fuse/circuit breaker:\n- **1-phase 32A**: 7.4 kW (32A × 230V)\n- **3-phase 25A**: 17.3 kW (25A × 230V × 3)\n- **3-phase 35A**: 24.2 kW (35A × 230V × 3)\n\n## Why This Matters\n\nOptimizer ensures combined consumption never exceeds this limit:\n- Prevents main fuse from tripping\n- Ensures legal compliance with grid connection\n- Coordinates multiple high-power devices (EV, heat pump, boiler)\n\n## Tips\n\n- Check your electrical panel for fuse/breaker rating\n- Account for baseload when calculating available power\n- System will prioritize loads within this constraint\n- Consider upgrade if frequently hitting limits\n",
       "x-icon": "transmission-tower",
       "x-order": 12,
-      "x-ui-group": "Infrastructure"
+      "x-ui-group": "Energy"
     },
     "HADatabaseConfig": {
       "additionalProperties": true,
       "description": "Home Assistant database connection configuration.",
+      "if": {
+        "properties": {
+          "engine": {
+            "enum": [
+              "mysql",
+              "postgresql"
+            ]
+          }
+        },
+        "required": [
+          "engine"
+        ]
+      },
       "properties": {
         "engine": {
           "default": "mysql",
@@ -1350,7 +1423,7 @@
           "title": "Engine",
           "type": "string",
           "x-help": "Database engine where Home Assistant stores history data. Most HA installations use SQLite, but MySQL/MariaDB and PostgreSQL are also supported.",
-          "x-ui-section": "Connection Settings"
+          "x-ui-section": "Homeassistant DB"
         },
         "server": {
           "default": "core-mariadb",
@@ -1358,7 +1431,19 @@
           "title": "Server",
           "type": "string",
           "x-help": "Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.",
-          "x-ui-section": "Connection Settings",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Homeassistant DB",
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
@@ -1369,7 +1454,19 @@
           "title": "Port",
           "type": "integer",
           "x-help": "Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.",
-          "x-ui-section": "Connection Settings",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Homeassistant DB",
           "x-unit": "port",
           "x-validation-hint": "1-65535, defaults: mysql=3306, postgresql=5432"
         },
@@ -1379,7 +1476,7 @@
           "title": "Db Path",
           "type": "string",
           "x-help": "Directory path for SQLite database file.",
-          "x-ui-section": "Connection Settings"
+          "x-ui-section": "Homeassistant DB"
         },
         "database": {
           "default": "homeassistant",
@@ -1387,7 +1484,7 @@
           "title": "Database",
           "type": "string",
           "x-help": "Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation.",
-          "x-ui-section": "Connection Settings"
+          "x-ui-section": "Homeassistant DB"
         },
         "username": {
           "default": "homeassistant",
@@ -1395,7 +1492,19 @@
           "title": "Username",
           "type": "string",
           "x-help": "Username for database authentication. Default 'homeassistant' matches standard HA installation.",
-          "x-ui-section": "Connection Settings"
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Homeassistant DB"
         },
         "password": {
           "anyOf": [
@@ -1413,14 +1522,33 @@
           "description": "Database password (can use !secret)",
           "title": "Password",
           "x-help": "Database password. Use secrets.json with '!secret password_key' pattern for security. Never store passwords directly in config.",
-          "x-ui-section": "Connection Settings",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Homeassistant DB",
           "x-validation-hint": "Use !secret for passwords"
         }
       },
-      "title": "HADatabaseConfig",
+      "then": {
+        "required": [
+          "server",
+          "port",
+          "username"
+        ]
+      },
+      "title": "Home Assistant Database",
       "type": "object",
       "x-help": "Home Assistant database connection for reading historical sensor data (prices, solar, baseload).",
-      "x-ui-section": "Connection Settings"
+      "x-ui-group": "Integration"
     },
     "HeatingConfig": {
       "additionalProperties": true,
@@ -1664,7 +1792,7 @@
       "x-help": "# Heat Pump Configuration\n\nOptimize heat pump operation based on electricity prices, heat demand, and weather conditions.\n\n## Key Concepts\n\n### COP (Coefficient of Performance)\nRatio of heat output to electrical input. Higher is better:\n- COP 3.0 = 3 kW heat from 1 kW electricity (300% efficient)\n- COP 4.0 = 4 kW heat from 1 kW electricity (400% efficient)\n- Varies with outdoor temperature and power level\n\n### Adjustment Modes\n- **on/off**: Simple binary control (least flexible)\n- **power**: Variable power control (recommended for variable-speed pumps)\n- **heating curve**: Adjust water temperature based on outdoor temp (most advanced)\n\n### Stages\nDefine power levels and corresponding COP values:\n- Single stage: Fixed power heat pump\n- Multiple stages: Variable-speed compressor with better efficiency\n- Must be sorted by power (ascending)\n\n## Tips\n- Use degree_days_factor to calibrate heat demand for your building\n- Set min_run_length to prevent excessive cycling (2-4h typical)\n- Higher COP = cheaper heating, maximize runtime during high-COP conditions\n- Consider solar production when scheduling heating loads\n",
       "x-icon": "heat-pump",
       "x-order": 4,
-      "x-ui-group": "Heating & Climate"
+      "x-ui-group": "Heating"
     },
     "HeatingStage": {
       "additionalProperties": true,
@@ -1711,7 +1839,7 @@
           "title": "Save Days",
           "type": "integer",
           "x-help": "Number of days to retain optimization history in database. Older data is automatically cleaned up. Longer retention enables better trend analysis but increases database size. Minimum 1 day.",
-          "x-ui-section": "Retention Settings",
+          "x-ui-section": "History",
           "x-unit": "days",
           "x-validation-hint": "Must be >= 1, typical 7-30 days"
         }
@@ -1722,7 +1850,7 @@
       "x-help": "# History & Data Retention\n\nControl how long optimization history is retained in the database.\n\n## What Gets Stored\n\n- Optimization results (costs, schedules)\n- Price data (day-ahead, tariffs)\n- Device schedules (battery, EV, heating)\n- Solar production forecasts\n- Baseload consumption data\n\n## Retention Guidelines\n\n- **7 days**: Minimal retention, recent data only\n- **14 days**: Two weeks for comparison\n- **30 days**: Monthly trends and analysis\n- **90+ days**: Long-term analysis (larger database)\n\n## Database Growth\n\n- More retention = larger database\n- Typical: ~1-5 MB per day (depends on devices)\n- Monitor database size if using SQLite\n- Consider periodic backups\n\n## Tips\n\n- Start with 7-14 days, increase if needed\n- Check database size regularly\n- Old data cleaned up automatically\n- Increase for detailed cost analysis\n",
       "x-icon": "database-clock",
       "x-order": 15,
-      "x-ui-group": "Infrastructure"
+      "x-ui-group": "Reporting"
     },
     "HomeAssistantConfig": {
       "additionalProperties": true,
@@ -1741,7 +1869,7 @@
           "description": "Home Assistant IP address (auto-detected if not set)",
           "title": "Host",
           "x-help": "Home Assistant IP address or hostname. Usually auto-detected when running as HA add-on. Set manually only if auto-detection fails. Examples: '192.168.1.100', 'homeassistant.local'.",
-          "x-ui-section": "General"
+          "x-ui-section": "Homeassistant"
         },
         "ip port": {
           "anyOf": [
@@ -1756,7 +1884,7 @@
           "description": "Home Assistant port (default: 8123)",
           "title": "Ip Port",
           "x-help": "Home Assistant web interface port. Default is 8123. Change only if using custom port. Usually auto-detected when running as add-on.",
-          "x-ui-section": "General",
+          "x-ui-section": "Homeassistant",
           "x-unit": "port",
           "x-validation-hint": "Default 8123, change if custom"
         },
@@ -1776,7 +1904,8 @@
           "description": "Home Assistant long-lived access token (can use !secret)",
           "title": "Token",
           "x-help": "Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.",
-          "x-ui-section": "General",
+          "x-ui-section": "Homeassistant",
+          "x-ui-widget": "secret-picker",
           "x-validation-hint": "Auto-provided as add-on, use !secret if manual"
         },
         "protocol api": {
@@ -1796,7 +1925,7 @@
           "description": "API protocol",
           "title": "Protocol Api",
           "x-help": "Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. Usually auto-detected. Set manually only if needed.",
-          "x-ui-section": "General"
+          "x-ui-section": "Homeassistant"
         }
       },
       "title": "HomeAssistantConfig",
@@ -1805,7 +1934,7 @@
       "x-help": "# Home Assistant Connection\n\nConfigure connection to Home Assistant for API access.\n\n## Auto-Detection (Recommended)\n\nWhen running as Home Assistant add-on:\n- ✅ IP address auto-detected\n- ✅ Port auto-detected\n- ✅ Access token auto-provided\n- ✅ Protocol auto-detected\n\n**Leave all fields empty for automatic configuration.**\n\n## Manual Configuration\n\nOnly needed if:\n- Running outside Home Assistant\n- Auto-detection fails\n- Using custom HA setup\n\n### Long-Lived Access Token\n\n1. In Home Assistant: Profile → Security\n2. Scroll to \"Long-Lived Access Tokens\"\n3. Click \"Create Token\"\n4. Name it \"Day Ahead Optimizer\"\n5. Copy token immediately (shown once!)\n6. Store in secrets.json:\n   ```json\n   {\"ha_token\": \"your_token_here\"}\n   ```\n7. Reference in config:\n   ```json\n   \"token\": \"!secret ha_token\"\n   ```\n\n## Troubleshooting\n\n- **Connection refused**: Check IP/port\n- **Unauthorized**: Token invalid or expired\n- **SSL errors**: Check protocol setting\n- **Timeout**: Network connectivity issues\n\n## Tips\n\n- Prefer auto-detection when possible\n- Always use !secret for tokens\n- Test connection from dashboard\n- Check HA logs if issues persist\n",
       "x-icon": "home-assistant",
       "x-order": 20,
-      "x-ui-group": "Integration"
+      "x-ui-group": "HASS"
     },
     "MachineConfig": {
       "additionalProperties": true,
@@ -2037,7 +2166,7 @@
           "title": "Source Day Ahead",
           "type": "string",
           "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
-          "x-ui-section": "General"
+          "x-ui-section": "Prices"
         },
         "entsoe-api-key": {
           "anyOf": [
@@ -2056,7 +2185,16 @@
           "title": "Entsoe-Api-Key",
           "x-docs-url": "https://transparency.entsoe.eu/",
           "x-help": "API key for ENTSO-E Transparency Platform. Required if source_day_ahead='entsoe'. Get free key at transparency.entsoe.eu. Use !secret for security.",
-          "x-ui-section": "General",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "const": "entsoe"
+              },
+              "scope": "#/properties/source_day_ahead"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Prices",
           "x-validation-hint": "Required for entsoe source, use !secret"
         },
         "energy taxes consumption": {
@@ -2067,7 +2205,7 @@
           "title": "Energy Taxes Consumption",
           "type": "object",
           "x-help": "Energy taxes on consumption (excluding VAT) indexed by effective date. Format: {'2024-01-01': 0.05}. Use date when tariff changes.",
-          "x-ui-section": "General",
+          "x-ui-section": "Taxes",
           "x-unit": "€/kWh",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         },
@@ -2079,7 +2217,7 @@
           "title": "Energy Taxes Production",
           "type": "object",
           "x-help": "Energy taxes on feed-in/production (excluding VAT) indexed by effective date. Often zero or negative. Format: {'2024-01-01': 0.0}.",
-          "x-ui-section": "General",
+          "x-ui-section": "Taxes",
           "x-unit": "€/kWh",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         },
@@ -2091,7 +2229,7 @@
           "title": "Cost Supplier Consumption",
           "type": "object",
           "x-help": "Supplier markup/fees for consumption (excluding VAT) indexed by effective date. Fixed part of electricity cost. Format: {'2024-01-01': 0.02}.",
-          "x-ui-section": "General",
+          "x-ui-section": "Cost",
           "x-unit": "€/kWh",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         },
@@ -2103,7 +2241,7 @@
           "title": "Cost Supplier Production",
           "type": "object",
           "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
-          "x-ui-section": "General",
+          "x-ui-section": "Cost",
           "x-unit": "€/kWh",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         },
@@ -2115,7 +2253,7 @@
           "title": "Vat Consumption",
           "type": "object",
           "x-help": "VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 21}. Applied to market price + taxes + supplier costs.",
-          "x-ui-section": "General",
+          "x-ui-section": "Taxes",
           "x-unit": "%",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         },
@@ -2127,7 +2265,7 @@
           "title": "Vat Production",
           "type": "object",
           "x-help": "VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.",
-          "x-ui-section": "General",
+          "x-ui-section": "Taxes",
           "x-unit": "%",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         },
@@ -2137,7 +2275,7 @@
           "title": "Last Invoice",
           "type": "string",
           "x-help": "Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.",
-          "x-ui-section": "General",
+          "x-ui-section": "Prices",
           "x-validation-hint": "Must be YYYY-MM-DD format"
         },
         "tax refund": {
@@ -2153,7 +2291,7 @@
           "description": "Whether tax refund applies",
           "title": "Tax Refund",
           "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production. Can be boolean or HA entity ID.",
-          "x-ui-section": "General",
+          "x-ui-section": "Taxes",
           "x-ui-widget": "entity-picker-or-boolean"
         }
       },
@@ -2172,7 +2310,7 @@
       "x-help": "# Pricing & Tariff Configuration\n\nConfigure electricity market prices and tariff components for accurate cost optimization.\n\n## Price Components\n\nTotal electricity cost consists of:\n1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)\n2. **Energy taxes**: Government energy taxes\n3. **Supplier costs**: Your supplier's markup/fees\n4. **VAT**: Value-added tax on sum of above\n\nConsumption price = (market + taxes + supplier) × (1 + VAT)\n\n## Date-Based Tariffs\n\nAll tariff fields use date-indexed dictionaries:\n```json\n{\n  \"2024-01-01\": 0.05,\n  \"2024-07-01\": 0.06\n}\n```\n\nSystem uses tariff active on optimization date.\n\n## Data Sources\n\n- **nordpool**: Nord Pool (Nordic/Baltic markets)\n- **entsoe**: ENTSO-E Transparency Platform (all European markets)\n- **tibber**: Tibber API (if using Tibber as supplier)\n\n## Tips\n\n- All prices are EXCLUDING VAT (VAT applied separately)\n- Update tariffs when your supplier changes prices\n- Use !secret for API keys\n- Production costs often lower than consumption (or negative for feed-in credit)\n- Keep last_invoice updated for accurate cost tracking\n- Check your electricity bill for exact tariff components\n",
       "x-icon": "currency-eur",
       "x-order": 11,
-      "x-ui-group": "Pricing & Markets"
+      "x-ui-group": "Pricing"
     },
     "ReportConfig": {
       "additionalProperties": true,
@@ -2350,17 +2488,70 @@
       "x-order": 17,
       "x-ui-group": "Reporting"
     },
+    "ScheduleEntry": {
+      "description": "A single scheduled task entry.",
+      "properties": {
+        "time": {
+          "description": "Time pattern in HHMM format",
+          "title": "Time",
+          "type": "string",
+          "x-help": "Time pattern: specific time like '0435' or wildcard like 'xx00' (every hour at :00)",
+          "x-validation-hint": "Format: HHMM (24-hour, e.g., '0435', 'xx15')"
+        },
+        "action": {
+          "description": "Action to execute at this time",
+          "enum": [
+            "get_meteo_data",
+            "get_tibber_data",
+            "get_day_ahead_prices",
+            "calc_optimum",
+            "clean_data",
+            "calc_baseloads",
+            "train_ml_predictions"
+          ],
+          "title": "Action",
+          "type": "string",
+          "x-help": "Task to run: data collection, optimization, or maintenance"
+        }
+      },
+      "required": [
+        "time",
+        "action"
+      ],
+      "title": "ScheduleEntry",
+      "type": "object"
+    },
     "SchedulerConfig": {
-      "additionalProperties": true,
-      "description": "Task scheduler configuration.\n\nMaps time patterns to action names.\nTime patterns can be:\n- Specific times: \"0435\", \"1255\"\n- Wildcards: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n\nActions include:\n- get_meteo_data\n- get_tibber_data\n- get_day_ahead_prices\n- calc_optimum\n- clean_data\n- calc_baseloads",
-      "properties": {},
+      "description": "Task scheduler configuration.",
+      "properties": {
+        "active": {
+          "default": false,
+          "description": "Enable or disable the scheduler",
+          "title": "Active",
+          "type": "boolean",
+          "x-help": "When enabled, scheduled tasks will run automatically at configured times. Disable to prevent all scheduled tasks from running.",
+          "x-order": 1,
+          "x-ui-section": "Scheduler"
+        },
+        "schedule": {
+          "description": "Scheduled task entries",
+          "items": {
+            "$ref": "#/$defs/ScheduleEntry"
+          },
+          "title": "Schedule",
+          "type": "array",
+          "x-help": "Define when tasks should run. Add entries with time patterns (e.g., '0435', 'xx00') and actions.",
+          "x-order": 2,
+          "x-ui-section": "Scheduler"
+        }
+      },
       "title": "SchedulerConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Scheduler",
-      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"0435\": \"get_day_ahead_prices\",\n  \"0445\": \"get_meteo_data\",\n  \"0500\": \"calc_optimum\",\n  \"xx00\": \"calc_baseloads\",\n  \"0300\": \"clean_data\"\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)\n2. **05:00**: Run optimization with fresh data\n3. **Hourly**: Update baseload calculations\n4. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
+      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"active\": true,\n  \"schedule\": [\n    {\"time\": \"0435\", \"action\": \"get_day_ahead_prices\"},\n    {\"time\": \"0445\", \"action\": \"get_meteo_data\"},\n    {\"time\": \"0500\", \"action\": \"calc_optimum\"},\n    {\"time\": \"xx00\", \"action\": \"calc_baseloads\"},\n    {\"time\": \"0300\", \"action\": \"clean_data\"}\n  ]\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)\n2. **05:00**: Run optimization with fresh data\n3. **Hourly**: Update baseload calculations\n4. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
       "x-icon": "clock-outline",
       "x-order": 18,
-      "x-ui-group": "Automation"
+      "x-ui-group": "DAO"
     },
     "SecretStr": {
       "type": "string"
@@ -2542,7 +2733,7 @@
       "x-help": "# Solar Panel Configuration\n\nConfigure your solar panel installations for accurate production forecasting.\n\n## Configuration Options\n\n### Simple Configuration\nFor panels all facing the same direction, use the flat config:\n- **tilt**: Panel angle (0-90°)\n- **orientation**: Direction panels face (0=south)\n- **capacity**: Total capacity in kWp\n- **yield**: Efficiency factor (0.8-0.9)\n\n### Advanced Configuration (Multiple Strings)\nFor panels facing different directions, use the 'strings' configuration:\n- Each string can have different tilt and orientation\n- Allows accurate modeling of complex installations\n- Example: Panels on both south and east-facing roofs\n\n## Tips\n- Use strings configuration for multi-directional installations\n- Include all inverter and cable losses in yield factor\n- Account for shading in yield factor\n",
       "x-icon": "solar-panel",
       "x-order": 2,
-      "x-ui-group": "Energy Production"
+      "x-ui-group": "Energy"
     },
     "SolarString": {
       "additionalProperties": true,
@@ -2635,7 +2826,8 @@
           "title": "Api Token",
           "x-docs-url": "https://developer.tibber.com/",
           "x-help": "Tibber API access token. Get from Tibber app or developer portal. Use !secret for security. Required if using Tibber as price source.",
-          "x-ui-section": "General",
+          "x-ui-section": "Tibber",
+          "x-ui-widget": "secret-picker",
           "x-validation-hint": "Use !secret for API tokens"
         },
         "api url": {
@@ -2651,7 +2843,7 @@
           "description": "Tibber API URL",
           "title": "Api Url",
           "x-help": "Tibber GraphQL API endpoint URL. Default is official API. Change only for testing or custom endpoints.",
-          "x-ui-section": "General"
+          "x-ui-section": "Tibber"
         }
       },
       "required": [
@@ -2750,13 +2942,17 @@
       "default": 52.0,
       "description": "Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
       "title": "Latitude",
-      "type": "number"
+      "type": "number",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Your home"
     },
     "longitude": {
       "default": 5.1,
       "description": "Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
       "title": "Longitude",
-      "type": "number"
+      "type": "number",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Your home"
     },
     "time_zone": {
       "anyOf": [
@@ -2769,7 +2965,9 @@
       ],
       "default": null,
       "description": "Timezone (auto-fetched from HA if not set)",
-      "title": "Time Zone"
+      "title": "Time Zone",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Your home"
     },
     "country": {
       "anyOf": [
@@ -2782,7 +2980,9 @@
       ],
       "default": null,
       "description": "Country code (auto-fetched from HA if not set)",
-      "title": "Country"
+      "title": "Country",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Your home"
     },
     "meteoserver-key": {
       "anyOf": [
@@ -2794,7 +2994,12 @@
         }
       ],
       "description": "Meteoserver API key (can use !secret)",
-      "title": "Meteoserver-Key"
+      "title": "Meteoserver-Key",
+      "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. Use !secret for security. Required for weather forecasts.",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Weather",
+      "x-ui-widget": "secret-picker",
+      "x-validation-hint": "Use !secret for API keys"
     },
     "meteoserver-model": {
       "default": "harmonie",
@@ -2804,7 +3009,9 @@
         "gfs"
       ],
       "title": "Meteoserver-Model",
-      "type": "string"
+      "type": "string",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Weather"
     },
     "meteoserver-attemps": {
       "anyOf": [
@@ -2818,7 +3025,9 @@
       ],
       "default": 2,
       "description": "Number of meteoserver fetch attempts",
-      "title": "Meteoserver-Attemps"
+      "title": "Meteoserver-Attemps",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Weather"
     },
     "prices": {
       "anyOf": [
@@ -2842,7 +3051,9 @@
         "error"
       ],
       "title": "Logging Level",
-      "type": "string"
+      "type": "string",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Main"
     },
     "protocol api": {
       "anyOf": [
@@ -2859,37 +3070,48 @@
       ],
       "default": null,
       "description": "API protocol",
-      "title": "Protocol Api"
+      "title": "Protocol Api",
+      "x-ui-group": "Integration",
+      "x-ui-section": "Dashboard"
     },
     "use_calc_baseload": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "string"
-        }
-      ],
-      "default": "false",
+      "default": false,
       "description": "Whether to calculate baseload automatically",
-      "title": "Use Calc Baseload"
+      "title": "Use Calc Baseload",
+      "type": "boolean",
+      "x-order": 101,
+      "x-ui-group": "DAO",
+      "x-ui-section": "Baseload"
     },
     "baseload calc periode": {
       "default": 56,
       "description": "Period in days for baseload calculation",
       "minimum": 1,
       "title": "Baseload Calc Periode",
-      "type": "integer"
+      "type": "integer",
+      "x-order": 102,
+      "x-ui-group": "DAO",
+      "x-ui-rules": {
+        "condition": {
+          "schema": {
+            "enum": [
+              true
+            ]
+          },
+          "scope": "#/properties/use_calc_baseload"
+        },
+        "effect": "SHOW"
+      },
+      "x-ui-section": "Baseload"
     },
     "baseload": {
       "anyOf": [
         {
-          "type": "number"
-        },
-        {
           "items": {
             "type": "number"
           },
+          "maxItems": 24,
+          "minItems": 24,
           "type": "array"
         },
         {
@@ -2897,34 +3119,50 @@
         }
       ],
       "default": null,
-      "description": "Baseload power consumption (watts) - single value or 24 hourly values",
-      "title": "Baseload"
+      "description": "Baseload power consumption (kWh) - 24 hourly values",
+      "title": "Baseload",
+      "x-help": "Baseload power consumption in kWh for each hour of the day (24 values). Leave empty to use calculated baseload.",
+      "x-order": 103,
+      "x-ui-group": "DAO",
+      "x-ui-rules": {
+        "condition": {
+          "schema": {
+            "enum": [
+              true
+            ]
+          },
+          "scope": "#/properties/use_calc_baseload"
+        },
+        "effect": "HIDE"
+      },
+      "x-ui-section": "Baseload"
     },
     "graphical backend": {
       "default": "",
       "description": "Matplotlib graphical backend",
       "title": "Graphical Backend",
-      "type": "string"
+      "type": "string",
+      "x-ui-group": "Visualization",
+      "x-validation-hint": "Leave empty for auto-detect, use 'Agg' for headless"
     },
     "graphics": {
       "$ref": "#/$defs/GraphicsConfig",
       "description": "Graphics and visualization settings"
     },
     "interval": {
-      "anyOf": [
-        {
-          "type": "integer"
-        },
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
+      "default": "1hour",
       "description": "Optimization interval in minutes",
-      "title": "Interval"
+      "enum": [
+        "1hour",
+        "15min"
+      ],
+      "title": "Interval",
+      "type": "string",
+      "x-docs-url": "https://github.com/corneel72/day-ahead/wiki/Optimization",
+      "x-help": "Time interval for optimization calculations. '1hour' for hourly optimization, '15min' for quarter-hourly optimization (more detailed, higher computation).",
+      "x-order": 1,
+      "x-ui-group": "DAO",
+      "x-ui-section": "Optimization"
     },
     "strategy": {
       "default": "minimize cost",
@@ -2934,7 +3172,10 @@
         "minimize consumption"
       ],
       "title": "Strategy",
-      "type": "string"
+      "type": "string",
+      "x-order": 2,
+      "x-ui-group": "DAO",
+      "x-ui-section": "Optimization"
     },
     "max gap": {
       "default": 0.005,
@@ -2960,7 +3201,8 @@
     },
     "grid": {
       "$ref": "#/$defs/GridConfig",
-      "description": "Grid connection settings"
+      "description": "Grid connection settings",
+      "x-ui-section": "Grid"
     },
     "history": {
       "$ref": "#/$defs/HistoryConfig",
@@ -2976,7 +3218,8 @@
         "$ref": "#/$defs/BatteryConfig"
       },
       "title": "Battery",
-      "type": "array"
+      "type": "array",
+      "x-ui-section": "Batteries"
     },
     "solar": {
       "description": "Solar panel configurations",
@@ -2984,7 +3227,8 @@
         "$ref": "#/$defs/SolarConfig"
       },
       "title": "Solar",
-      "type": "array"
+      "type": "array",
+      "x-ui-section": "Solar Panels"
     },
     "electric vehicle": {
       "description": "Electric vehicle configurations",
@@ -2992,7 +3236,8 @@
         "$ref": "#/$defs/EVConfig"
       },
       "title": "Electric Vehicle",
-      "type": "array"
+      "type": "array",
+      "x-ui-section": "Vehicles"
     },
     "machines": {
       "description": "Appliance/machine configurations",
@@ -3000,7 +3245,8 @@
         "$ref": "#/$defs/MachineConfig"
       },
       "title": "Machines",
-      "type": "array"
+      "type": "array",
+      "x-ui-section": "Machines"
     },
     "boiler": {
       "anyOf": [
