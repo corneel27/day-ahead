@@ -85,7 +85,7 @@ class ConfigurationLoader:
         logger.info(f"Loaded {len(self._secrets)} secrets from {self.secrets_path}")
         return self._secrets
     
-    def load_and_migrate(self) -> dict[str, Any]:
+    def _load_and_migrate(self) -> dict[str, Any]:
         """
         Load configuration and apply migrations if needed.
         
@@ -127,7 +127,7 @@ class ConfigurationLoader:
             Validated Pydantic model (type depends on CURRENT_VERSION)
         """
         # Migrate to current version
-        migrated_data = self.load_and_migrate()
+        migrated_data = self._load_and_migrate()
         
         # Ensure secrets are loaded and available via self.secrets
         self.load_secrets()
