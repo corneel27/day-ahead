@@ -428,12 +428,12 @@ Configure your home battery storage system for optimal energy management and cos
     @field_validator('charge_stages', 'discharge_stages', mode='after')
     @classmethod
     def validate_stages_sorted(cls, v: list[BatteryStage], info) -> list[BatteryStage]:
-        """Ensure stages are sorted by power."""
-        if len(v) < 2:
-            return v
-        
+        """Ensure stages are sorted by power and always start with a zero-power sentinel."""
         powers = [stage.power for stage in v]
         if powers != sorted(powers):
             raise ValueError(f"{info.field_name} must be sorted by power (ascending)")
-        
+
+        if v[0].power != 0.0:
+            v = [BatteryStage(power=0.0, efficiency=1.0)] + v
+
         return v

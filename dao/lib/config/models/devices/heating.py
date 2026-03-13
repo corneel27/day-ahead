@@ -12,7 +12,7 @@ class HeatingStage(BaseModel):
     
     max_power: float = Field(
         alias="max_power",
-        gt=0,
+        ge=0,
         description="Maximum power in watts for this stage",
         json_schema_extra={
             "x-help": "Maximum electrical power consumption for this heating stage in watts. Heat pumps often have multiple stages (e.g., compressor speeds).",
@@ -243,12 +243,12 @@ Define power levels and corresponding COP values:
     @field_validator('stages', mode='after')
     @classmethod
     def validate_stages_sorted(cls, v: list[HeatingStage]) -> list[HeatingStage]:
-        """Ensure stages are sorted by power."""
-        if len(v) < 2:
-            return v
-        
+        """Ensure stages are sorted by power and always start with a zero-power sentinel."""
         powers = [stage.max_power for stage in v]
         if powers != sorted(powers):
             raise ValueError("Heating stages must be sorted by max_power (ascending)")
-        
+
+        if v[0].max_power != 0.0:
+            v = [HeatingStage(max_power=0.0, cop=8.0)] + v
+
         return v
