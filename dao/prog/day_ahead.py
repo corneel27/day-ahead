@@ -493,10 +493,12 @@ class DaCalc(DaBase):
                 )
 
             max_dc_from_bat_power.append(
-                self.battery_options[b].bat_to_dc_max_power.resolve(ha_getter, float) / 1000
+                max_discharge_power[b] * 2 if self.battery_options[b].bat_to_dc_max_power is None
+                else self.battery_options[b].bat_to_dc_max_power.resolve(ha_getter, float) / 1000
             )
             max_dc_to_bat_power.append(
-                self.battery_options[b].dc_to_bat_max_power.resolve(ha_getter, float) / 1000
+                max_charge_power[b] * 2 if self.battery_options[b].dc_to_bat_max_power is None
+                else self.battery_options[b].dc_to_bat_max_power.resolve(ha_getter, float) / 1000
             )
 
             # reduce power low soc
@@ -3280,7 +3282,7 @@ class DaCalc(DaBase):
 
             logging.info(
                 f"In- en uitgaande energie per {self.interval_name} batterij "
-                f"{self.battery_options[b]['name']}"
+                f"{self.battery_options[b].name}"
                 f"\n{df_accu[b].to_string(index=False)}"
             )
 
@@ -3573,7 +3575,7 @@ class DaCalc(DaBase):
                     )
                 else:
                     logging.info(
-                        f"Laden van {self.ev_options[e]['name']} is niet ingepland"
+                        f"Laden van {self.ev_options[e].name} is niet ingepland"
                     )
 
                 entity_charge_switch = self.ev_options[e].charge_switch
@@ -4506,7 +4508,7 @@ class DaCalc(DaBase):
                 )
                 axis[gr_no].xaxis.set_minor_locator(ticker.MultipleLocator(1))
                 axis[gr_no].set_title(
-                    f"Energiebalans per uur voor {self.battery_options[b]['name']}"
+                    f"Energiebalans per uur voor {self.battery_options[b].name}"
                 )
                 axis[gr_no].sharex(axis[0])
                 axis_20 = axis[gr_no].twinx()
