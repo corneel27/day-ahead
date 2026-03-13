@@ -1712,7 +1712,7 @@
       "properties": {
         "max_power": {
           "description": "Maximum power in watts for this stage",
-          "exclusiveMinimum": 0.0,
+          "minimum": 0.0,
           "title": "Max Power",
           "type": "number",
           "x-help": "Maximum electrical power consumption for this heating stage in watts. Heat pumps often have multiple stages (e.g., compressor speeds).",
