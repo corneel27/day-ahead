@@ -80,7 +80,12 @@ class DaBase(hass.Hass):
             loader = ConfigurationLoader(Path(self.file_name) if self.file_name else Path("../data/options.json"))
             self.config = loader.load_and_validate()
             self._loader = loader
-        except (ValueError, RuntimeError):
+        except FileNotFoundError as e:
+            logging.error(f"Configuratiebestand niet gevonden: {e}")
+            self.config = None
+            return
+        except (ValueError, RuntimeError) as e:
+            logging.error(f"Configuratie kon niet worden geladen: {e}")
             self.config = None
             return
         log_level_str = (self.config.logging_level or "info")
