@@ -217,7 +217,8 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    dc_to_bat_max_power: FlexValue = Field(
+    dc_to_bat_max_power: Optional[FlexValue] = Field(
+        default=None,
         alias="dc_to_bat max power",
         description="DC to battery max power in watts",
         json_schema_extra={
@@ -238,7 +239,8 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    bat_to_dc_max_power: FlexValue = Field(
+    bat_to_dc_max_power: Optional[FlexValue] = Field(
+        default=None,
         alias="bat_to_dc max power",
         description="Battery to DC max power in watts",
         json_schema_extra={

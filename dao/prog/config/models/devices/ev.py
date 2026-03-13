@@ -55,6 +55,7 @@ class EVChargeScheduler(BaseModel):
     )
     level_margin: int = Field(
         alias="level margin",
+        default=0,
         ge=0,
         description="Margin in % for charge level completion",
         json_schema_extra={
