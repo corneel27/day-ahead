@@ -205,7 +205,15 @@
           "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
         "dc_to_bat max power": {
-          "$ref": "#/$defs/FlexValue",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FlexValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "DC to battery max power in watts",
           "x-help": "Maximum power for DC-coupled solar charging in watts. Determines how much DC solar power can flow directly to battery.",
           "x-ui-section": "Power Configuration",
@@ -225,7 +233,15 @@
           "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
         "bat_to_dc max power": {
-          "$ref": "#/$defs/FlexValue",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FlexValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Battery to DC max power in watts",
           "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
           "x-ui-section": "Power Configuration",
@@ -453,9 +469,7 @@
         "discharge stages",
         "minimum power",
         "dc_to_bat efficiency",
-        "dc_to_bat max power",
         "bat_to_dc efficiency",
-        "bat_to_dc max power",
         "cycle cost"
       ],
       "title": "BatteryConfig",
@@ -906,6 +920,7 @@
           "x-unit": "%"
         },
         "level margin": {
+          "default": 0,
           "description": "Margin in % for charge level completion",
           "minimum": 0,
           "title": "Level Margin",
@@ -927,7 +942,6 @@
       },
       "required": [
         "entity set level",
-        "level margin",
         "entity ready datetime"
       ],
       "title": "EVChargeScheduler",

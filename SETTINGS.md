@@ -126,9 +126,9 @@ Configure your home battery storage system for optimal energy management and cos
 | `reduce_power_high_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
 | `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `dc_to_bat max power` | [FlexValue](#flexvalue) | Yes | — | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
+| `dc_to_bat max power` | [FlexValue](#flexvalue) (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `bat_to_dc max power` | [FlexValue](#flexvalue) | Yes | — | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
+| `bat_to_dc max power` | [FlexValue](#flexvalue) (optional) | No | `null` | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
 | `cycle cost` | number | Yes | — | Cost per battery cycle in euros (Unit: `€`) _Must be >= 0, typically €0.50-€1.50 per cycle_ |
 | `entity set power feedin` | string (optional) | No | `null` | HA entity to set power feed-in to grid |
 | `entity set operating mode` | string (optional) | No | `null` | HA entity to set battery operating mode |
@@ -1827,7 +1827,7 @@ Advanced scheduler that optimizes charging to reach target level by specific dea
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `entity set level` | string | Yes | — | HA entity to set target charge level (Unit: `%`) |
-| `level margin` | integer | Yes | — | Margin in % for charge level completion (Unit: `%`) _Must be >= 0, typically 5-10%_ |
+| `level margin` | integer | No | `0` | Margin in % for charge level completion (Unit: `%`) _Must be >= 0, typically 5-10%_ |
 | `entity ready datetime` | string | Yes | — | HA entity for ready datetime (when charging should complete) |
 
 <details>
