@@ -3,11 +3,11 @@ name: Auto-Generate Documentation
 on:
   push:
     paths:
-      - 'dao/lib/config/**/*.py'
+      - 'dao/prog/config/**/*.py'
       - 'scripts/generate_docs.py'
   pull_request:
     paths:
-      - 'dao/lib/config/**/*.py'
+      - 'dao/prog/config/**/*.py'
       - 'scripts/generate_docs.py'
 
 jobs:

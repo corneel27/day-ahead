@@ -2,8 +2,8 @@ import sys
 from pathlib import Path
 
 sys.path.append("../../")
-from dao.lib.config.loader import ConfigurationLoader
-from dao.lib.config.models.dashboard import DashboardConfig
+from dao.prog.config.loader import ConfigurationLoader
+from dao.prog.config.models.dashboard import DashboardConfig
 
 app_datapath = "app/static/data/"
 try:

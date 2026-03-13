@@ -22,9 +22,7 @@ import pandas as pd
 
 #  from da_base import DaBase
 #  sys.path.append("../")
-from pathlib import Path
-from dao.lib.config.loader import ConfigurationLoader
-from dao.lib.db_connections import make_db_da
+from dao.lib.da_config import Config
 from version import __version__
 from utils import version_number
 
@@ -32,12 +30,10 @@ from utils import version_number
 class CheckDAPDB:
     def __init__(self, file_name: str | None = None):
         self.file_name = file_name
-        loader = ConfigurationLoader(Path(self.file_name) if self.file_name else Path("../data/options.json"))
-        self.config = loader.load_and_validate()
-        self._loader = loader
+        self.config = Config(self.file_name)
         self.version = __version__
         self.last_version = None
-        self.db_da = make_db_da(self.config, self._loader.secrets, check_create=True)
+        self.db_da = self.config.get_db_da(key="database_dap", check_create=True)
         self.engine = self.db_da.engine
 
     def upsert_variabel(self, variabel_table, record):

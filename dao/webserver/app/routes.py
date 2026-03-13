@@ -11,7 +11,7 @@ from subprocess import PIPE, run
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
-from dao.lib.config.loader import ConfigurationLoader
+from dao.prog.config.loader import ConfigurationLoader
 from dao.prog.da_report import Report
 from dao.prog.version import __version__
 

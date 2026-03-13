@@ -26,8 +26,8 @@ This guide explains how to maintain and extend the Pydantic-based configuration 
 ## Overview
 
 The configuration system consists of:
-- **Pydantic Models**: Type-safe configuration models in `dao/lib/config/versions/`
-- **Migrations**: Version migration logic in `dao/lib/config/migrations/`
+- **Pydantic Models**: Type-safe configuration models in `dao/prog/config/versions/`
+- **Migrations**: Version migration logic in `dao/prog/config/migrations/`
 - **Auto-Documentation**: GitHub Actions automatically regenerate docs when models change
 - **Documentation Validation**: Build fails if any field lacks a description
 
@@ -352,7 +352,7 @@ You can add/modify extensions without creating migrations!
 When you add a field with a default value, it's **automatically optional** in Pydantic. Old configurations without this field will use the default.
 
 ```python
-# dao/lib/config/models/devices/battery.py
+# dao/prog/config/models/devices/battery.py
 from pydantic import BaseModel, Field
 
 class BatteryConfig(BaseModel):
@@ -382,7 +382,7 @@ class BatteryConfig(BaseModel):
 Only needed if you want a field to be required WITHOUT a default value:
 
 ```python
-# dao/lib/config/versions/v1.py
+# dao/prog/config/versions/v1.py
 class BatteryV1(BaseModel):
     name: str
     capacity: float
@@ -405,7 +405,7 @@ class BatteryV1(BaseModel):
 #### Step 1: Update the Model
 
 ```python
-# dao/lib/config/versions/v0.py (or new version)
+# dao/prog/config/versions/v0.py (or new version)
 from pydantic import BaseModel, Field
 
 class BatteryV0(BaseModel):
@@ -430,7 +430,7 @@ class BatteryV0(BaseModel):
 Only create a migration if you're making a field required WITHOUT a default:
 
 ```python
-# dao/lib/config/migrations/v0_to_v1.py
+# dao/prog/config/migrations/v0_to_v1.py
 def migrate_v0_to_v1(old_config: dict) -> dict:
     """Migrate from v0 to v1."""
     new_config = old_config.copy()
@@ -444,7 +444,7 @@ def migrate_v0_to_v1(old_config: dict) -> dict:
     new_config['config_version'] = 1
     return new_config
 
-# Register in dao/lib/config/migrations/migrator.py
+# Register in dao/prog/config/migrations/migrator.py
 from .v0_to_v1 import migrate_v0_to_v1
 
 MIGRATIONS: dict[tuple[int, int], callable] = {
@@ -455,7 +455,7 @@ MIGRATIONS: dict[tuple[int, int], callable] = {
 #### Step 3: Update Version Number
 
 ```python
-# dao/lib/config/versions/v1.py
+# dao/prog/config/versions/v1.py
 class ConfigurationV1(BaseModel):
     config_version: Literal[1] = 1
     # ... rest of model
@@ -464,7 +464,7 @@ class ConfigurationV1(BaseModel):
 #### Step 4: Update Loader
 
 ```python
-# dao/lib/config/loader.py
+# dao/prog/config/loader.py
 from .versions.v1 import ConfigurationV1
 
 CURRENT_VERSION = 1
@@ -495,7 +495,7 @@ def test_v0_to_v1_adds_efficiency():
 **✅ NON-BREAKING** - No migration needed!
 
 ```python
-# dao/lib/config/versions/v0.py
+# dao/prog/config/versions/v0.py
 class BatteryV0(BaseModel):
     name: str
     capacity: float
@@ -521,7 +521,7 @@ class BatteryV0(BaseModel):
 Changes that don't affect existing behavior:
 
 ```python
-# dao/lib/config/versions/v0.py
+# dao/prog/config/versions/v0.py
 class GraphicsV0(BaseModel):
     # BEFORE
     # style: str = "default"
@@ -555,7 +555,7 @@ interval: Optimization interval
 #### Option 2: Create New Version with Migration
 
 ```python
-# dao/lib/config/migrations/v0_to_v1.py
+# dao/prog/config/migrations/v0_to_v1.py
 def migrate_v0_to_v1(old_config: dict) -> dict:
     new_config = old_config.copy()
     
@@ -579,7 +579,7 @@ def migrate_v0_to_v1(old_config: dict) -> dict:
 **✅ NON-BREAKING** - Add directly to current version:
 
 ```python
-# dao/lib/config/models/devices/battery.py
+# dao/prog/config/models/devices/battery.py
 class BatteryConfig(BaseModel):
     name: str
     capacity: float
@@ -638,7 +638,7 @@ class BatteryV0(BaseModel):
 
 ## Working with Secrets (SecretStr)
 
-Use `SecretStr` (defined in `dao/lib/config/models/base.py`) for **any field that holds a credential** — API tokens, database passwords, or long-lived access tokens. Never type such fields as plain `str`.
+Use `SecretStr` (defined in `dao/prog/config/models/base.py`) for **any field that holds a credential** — API tokens, database passwords, or long-lived access tokens. Never type such fields as plain `str`.
 
 ### Why Not `str`?
 
@@ -703,7 +703,7 @@ api_key: str | None = (
 
 ## Working with Dynamic Values (FlexValue)
 
-Use `FlexValue` (defined in `dao/lib/config/models/base.py`) for **any field that can be either a static/literal value or a live Home Assistant entity ID**. This allows users to hardcode a number in their config *or* point to a HA sensor that supplies the value at runtime.
+Use `FlexValue` (defined in `dao/prog/config/models/base.py`) for **any field that can be either a static/literal value or a live Home Assistant entity ID**. This allows users to hardcode a number in their config *or* point to a HA sensor that supplies the value at runtime.
 
 ### How It Works
 
@@ -788,7 +788,7 @@ result = flex_val.resolve(no_ha_calls, float)  # safe when value is a literal
 **⚠️ IMPORTANT**: All fields MUST have descriptions or the build will fail!
 
 ```python
-# dao/lib/config/models/heat_pump.py
+# dao/prog/config/models/heat_pump.py
 from pydantic import BaseModel, Field
 
 class HeatPumpV0(BaseModel):
@@ -828,7 +828,7 @@ class HeatPumpV0(BaseModel):
 ### Step 2: Add to Root Configuration
 
 ```python
-# dao/lib/config/versions/v0.py
+# dao/prog/config/versions/v0.py
 from ..models.heat_pump import HeatPumpV0
 
 class ConfigurationV0(BaseModel):
@@ -849,7 +849,7 @@ class ConfigurationV0(BaseModel):
 ```python
 # dao/tests/config/test_heat_pump.py
 import pytest
-from dao.lib.config.models.heat_pump import HeatPumpV0
+from dao.prog.config.models.heat_pump import HeatPumpV0
 
 def test_heat_pump_basic():
     hp = HeatPumpV0(
@@ -905,12 +905,12 @@ The documentation will automatically include:
 
 1. **Copy previous version**:
 ```bash
-cp dao/lib/config/versions/v0.py dao/lib/config/versions/v1.py
+cp dao/prog/config/versions/v0.py dao/prog/config/versions/v1.py
 ```
 
 2. **Update version number**:
 ```python
-# dao/lib/config/versions/v1.py
+# dao/prog/config/versions/v1.py
 from typing import Literal
 
 class ConfigurationV1(BaseModel):
@@ -922,7 +922,7 @@ class ConfigurationV1(BaseModel):
 
 4. **Create migration function**:
 ```python
-# dao/lib/config/migrations/v0_to_v1.py
+# dao/prog/config/migrations/v0_to_v1.py
 def migrate_v0_to_v1(old_config: dict) -> dict:
     """Migrate configuration from v0 to v1.
     
@@ -949,7 +949,7 @@ def migrate_v0_to_v1(old_config: dict) -> dict:
 
 5. **Register migration**:
 ```python
-# dao/lib/config/migrations/migrator.py
+# dao/prog/config/migrations/migrator.py
 from .v0_to_v1 import migrate_v0_to_v1
 
 MIGRATIONS: dict[tuple[int, int], callable] = {
@@ -960,7 +960,7 @@ MIGRATIONS: dict[tuple[int, int], callable] = {
 
 6. **Update loader**:
 ```python
-# dao/lib/config/loader.py
+# dao/prog/config/loader.py
 from .versions.v1 import ConfigurationV1
 
 CURRENT_VERSION = 1
@@ -1004,7 +1004,7 @@ Every model should have tests:
 ```python
 # dao/tests/config/test_battery.py
 import pytest
-from dao.lib.config.models.devices.battery import BatteryConfig
+from dao.prog.config.models.devices.battery import BatteryConfig
 
 def test_battery_basic():
     """Test basic battery creation."""
@@ -1050,7 +1050,7 @@ Test with real configuration:
 def test_load_example_config():
     """Test loading the example configuration."""
     from pathlib import Path
-    from dao.lib.config.loader import ConfigurationLoader
+    from dao.prog.config.loader import ConfigurationLoader
     
     loader = ConfigurationLoader(Path("dao/data/options.json"))
     config = loader.load_and_validate()
@@ -1066,8 +1066,8 @@ Test every migration:
 # dao/tests/config/test_migrations.py
 def test_all_migrations():
     """Test migrating through all versions."""
-    from dao.lib.config.migrations.migrator import migrate_config
-    from dao.lib.config.loader import CURRENT_VERSION
+    from dao.prog.config.migrations.migrator import migrate_config
+    from dao.prog.config.loader import CURRENT_VERSION
     
     # Start with unversioned config
     old_config = {
@@ -1172,7 +1172,7 @@ class ConfigV0(BaseModel):
 **Problem**: New version not recognized.
 
 ```python
-# dao/lib/config/loader.py
+# dao/prog/config/loader.py
 
 # ❌ BAD - forgot to update
 CURRENT_VERSION = 0  # Should be 1!
@@ -1225,7 +1225,7 @@ VERSION_MODELS = {
 - [ ] Commit and push - **docs auto-generate!**
 
 ### Creating New Model
-- [ ] Create model file in `dao/lib/config/models/`
+- [ ] Create model file in `dao/prog/config/models/`
 - [ ] Add comprehensive docstring to the model class
 - [ ] Add Field descriptions for all fields
 - [ ] Set `model_config = {"extra": "allow"}` if needed
@@ -1242,7 +1242,7 @@ VERSION_MODELS = {
 The repository includes a GitHub Actions workflow (`.github/workflows/generate-docs.yml`) that automatically:
 
 1. **Detects changes** to Pydantic models:
-   - `dao/lib/config/**/*.py`
+   - `dao/prog/config/**/*.py`
    - `scripts/generate_docs.py`
 
 2. **Regenerates documentation**:

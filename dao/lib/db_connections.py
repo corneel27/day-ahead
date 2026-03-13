@@ -12,13 +12,13 @@ import logging
 from typing import TYPE_CHECKING, Optional
 
 from dao.lib.db_manager import DBmanagerObj
-from dao.lib.config.models.base import SecretStr
+from dao.prog.config.models.base import SecretStr
 
 if TYPE_CHECKING:
     # Never imported at runtime — only used for static type hints in function signatures.
     # from __future__ import annotations (above) makes annotations lazy strings,
     # so ConfigurationV0 is never resolved at runtime.
-    from dao.lib.config.versions.v0 import ConfigurationV0
+    from dao.prog.config.versions.v0 import ConfigurationV0
 
 logger = logging.getLogger(__name__)
 

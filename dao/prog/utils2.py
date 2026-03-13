@@ -1,4 +1,4 @@
-from dao.lib.config.loader import ConfigurationLoader
+from dao.prog.config.loader import ConfigurationLoader
 from dao.lib.db_connections import make_db_da
 from pathlib import Path
 import datetime

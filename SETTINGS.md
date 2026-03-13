@@ -8,7 +8,7 @@
 > This documentation is auto-generated from Pydantic models.
 > To update, modify the model docstrings and Field descriptions, then run:
 > ```bash
-> python -m dao.lib.config.generate_docs
+> python -m dao.prog.config.generate_docs
 > ```
 
 ## 📑 Table of Contents

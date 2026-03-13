@@ -21,7 +21,7 @@ from collections import defaultdict
 # Ensure the repo root is on sys.path so `dao` package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from dao.lib.config.versions.v0 import ConfigurationV0
+from dao.prog.config.versions.v0 import ConfigurationV0
 
 
 # Icon mapping for x-icon values
@@ -359,7 +359,7 @@ def main():
     lines.append("> This documentation is auto-generated from Pydantic models.")
     lines.append("> To update, modify the model docstrings and Field descriptions, then run:")
     lines.append("> ```bash")
-    lines.append("> python -m dao.lib.config.generate_docs")
+    lines.append("> python -m dao.prog.config.generate_docs")
     lines.append("> ```")
     lines.append("")
     

@@ -24,7 +24,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from scipy import stats
 from dao.prog.da_base import DaBase
-from dao.lib.config.models.devices.solar import SolarConfig
+from dao.prog.config.models.devices.solar import SolarConfig
 # import pvlib
 
 warnings.filterwarnings("ignore")
