@@ -21,7 +21,7 @@ from utils import (
     calc_adjustment_heatcurve,
 )
 import logging
-from da_base import DaBase
+from dao.prog.da_base import DaBase
 
 
 class DaCalc(DaBase):
@@ -3265,7 +3265,7 @@ class DaCalc(DaBase):
             except Exception as ex:
                 logging.info(ex)
                 logging.info(
-                    f"Totals of accu {self.battery_options[b]['name']} "
+                    f"Totals of accu {self.battery_options[b].name} "
                     f"cannot be calculated"
                 )
                 totals = False
@@ -3539,7 +3539,7 @@ class DaCalc(DaBase):
                 if ready_u[e] < U:
                     if self.log_level <= logging.INFO:
                         logging.info(
-                            f"Inzet-factor laden {self.ev_options[e]['name']} per stap"
+                            f"Inzet-factor laden {self.ev_options[e].name} per stap"
                         )
                         print("uur   ", end=" ")
                         for cs in range(ECS[e]):
@@ -3570,7 +3570,7 @@ class DaCalc(DaBase):
                             seconds=self.interval_s
                         )
                     logging.info(
-                        f"{self.ev_options[e]['name']} wordt geladen tussen "
+                        f"{self.ev_options[e].name} wordt geladen tussen "
                         f"{start_ev_laden} en {stop_ev_laden}"
                     )
                 else:
