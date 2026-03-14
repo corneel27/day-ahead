@@ -3944,18 +3944,18 @@ class DaCalc(DaBase):
                 #  power, als entity er is altijd doorzetten
                 entity_hp_power = self.heating_options.entity_hp_power
                 if entity_hp_power is not None and self.hp_adjustment != "on/off":
-                    #  elektrisch vermogen in W
-                    hp_power = 1000 * c_hp[0].x / hour_fraction[0]
+                    #  elektrisch vermogen in kW
+                    hp_power = c_hp[0].x / hour_fraction[0]
                     if self.debug:
                         logging.info(
                             f"Elektrisch vermogen warmtepomp zou zijn ingesteld "
-                            f"op {hp_power:<0.0f} W"
+                            f"op {hp_power:<0.0f} kW"
                         )
                     else:
                         self.set_value(entity_hp_power, hp_power)
                         logging.info(
                             f"Elektrisch vermogen warmtepomp ingesteld "
-                            f"op {hp_power:<0.0f} W"
+                            f"op {hp_power:<0.3f} kW"
                         )
 
                 #  curve adjustment
