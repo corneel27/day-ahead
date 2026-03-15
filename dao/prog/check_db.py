@@ -24,7 +24,9 @@ import pandas as pd
 
 #  from da_base import DaBase
 #  sys.path.append("../")
-from dao.lib.da_config import Config
+from dao.prog.config.loader import ConfigurationLoader
+from dao.lib.db_connections import make_db_da
+from pathlib import Path
 from version import __version__
 from utils import version_number
 
@@ -33,52 +35,13 @@ class CheckDB:
     def __init__(self, file_name: str | None = None):
         # super().__init__(file_name)
         self.file_name = file_name
-        self.config = Config(self.file_name)
+        loader = ConfigurationLoader(Path(self.file_name))
+        self.config = loader.load_and_validate()
+        self.secrets = loader.secrets
         self.version = __version__
         self.last_version = None
-        self.db_da = self.config.get_db_da(check_create=True)
+        self.db_da = make_db_da(self.config, self.secrets, check_create=True)
         self.engine = self.db_da.engine
-        """
-        db_da_engine = self.config.get(["database da", "engine"], None, "mysql")
-        if db_da_engine == "sqlite":
-            db_da_name = self.config.get(
-                ["database da", "database"], None, "day_ahead.db"
-            )
-        else:
-            db_da_name = self.config.get(["database da", "database"], None, "day_ahead")
-        db_da_server = self.config.get(["database da", "server"], None, "core-mariadb")
-        db_da_port = int(self.config.get(["database da", "port"], None, 0))
-        db_da_user = self.config.get(["database da", "username"], None, "day_ahead")
-        db_da_path = self.config.get(["database da", "db_path"], None, "../data")
-        db_da_password = self.config.get(["database da", "password"])
-        db_da_time_zone = self.config.get(["time_zone"])
-        self.db_url = DBmanagerObj.db_url(
-            db_dialect=db_da_engine,
-            db_name=db_da_name,
-            db_server=db_da_server,
-            db_user=db_da_user,
-            db_password=db_da_password,
-            db_port=db_da_port,
-            db_path=db_da_path,
-        )
-        if not sqlalchemy_utils.database_exists(self.db_url):
-            sqlalchemy_utils.create_database(self.db_url)
-        try:
-            self.db_da = DBmanagerObj(
-                db_dialect=db_da_engine,
-                db_name=db_da_name,
-                db_server=db_da_server,
-                db_user=db_da_user,
-                db_password=db_da_password,
-                db_port=db_da_port,
-                db_path=db_da_path,
-                db_time_zone=db_da_time_zone,
-            )
-            self.engine = self.db_da.engine
-        except Exception as ex:
-            error_handling(ex)
-            print("Check your credentials")
-        """
 
     def upsert_variabel(self, variabel_table, record):
         select_variabel = select(variabel_table.c.id).where(

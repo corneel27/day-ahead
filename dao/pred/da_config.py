@@ -22,10 +22,13 @@ class Config:
                 logging.error(f"Invalid json in {file_name}: {e}")
                 raise e
 
-    def __init__(self, file_name: str):
+    def __init__(self, file_name: str, secrets_file_name: str = None):
         self.options = self.parse(file_name)
         datapath = os.path.dirname(file_name)
-        file_secrets = datapath + "/secrets.json"
+        if secrets_file_name is None:
+            file_secrets =  datapath + "/secrets.json"
+        else:
+            file_secrets = secrets_file_name
         if file_exists(file_secrets):
             self.secrets = self.parse(file_secrets)
         else:

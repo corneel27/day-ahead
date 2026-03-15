@@ -9,23 +9,26 @@ from requests import get
 import matplotlib.pyplot as plt
 import knmi
 from dao.lib.da_graph import GraphBuilder
-from dao.lib.da_config import Config
 from dao.lib.db_manager import DBmanagerObj
 from sqlalchemy import Table, select, func, and_
 
 
 # noinspection PyUnresolvedReferences
 class Meteo:
-    def __init__(self, config: Config, db_da: DBmanagerObj):
+    def __init__(self, config, db_da: DBmanagerObj,
+                 latitude: float = None, longitude: float = None, secrets: dict = None):
         self.config = config
         self.db_da = db_da
-        self.meteoserver_key = config.get(["meteoserver-key"])
-        self.meteoserver_model = config.get(["meteoserver-model"], None, "harmonie")
-        self.meteoserver_attemps = config.get(["meteoserver-attemps"], None, 2)
-        self.latitude = config.get(["latitude"])
-        self.longitude = config.get(["longitude"])
-        self.solar = config.get(["solar"])
-        self.bat = config.get(["battery"])
+        _secrets = secrets or {}
+        mk = config.meteoserver_key
+        self.meteoserver_key = mk.resolve(_secrets) if mk is not None else None
+        self.meteoserver_model = config.meteoserver_model
+        self.meteoserver_attemps = config.meteoserver_attemps
+        self.latitude = latitude if latitude is not None else config.latitude
+        self.longitude = longitude if longitude is not None else config.longitude
+        self.solar = config.solar
+        self.bat = config.battery
+        self.graphics_style = config.graphics.style
 
     @staticmethod
     def makerefmoment(moment):
@@ -307,21 +310,21 @@ class Meteo:
         solar = None
         if len(self.solar) > 0:
             solar = self.solar[0]
-            if "strings" in solar:
-                solar = solar["strings"][0]
+            if solar.strings:
+                solar = solar.strings[0]
         else:
             for b in range(len(self.bat)):
-                if len(self.bat[b]["solar"]) > 0:
-                    solar = self.bat[b]["solar"][0]
-                    if "strings" in solar:
-                        solar = solar["strings"][0]
+                if self.bat[b].solar:
+                    solar = self.bat[b].solar[0]
+                    if solar.strings:
+                        solar = solar.strings[0]
                     break
         if solar is None:
             tilt = 45
             orientation = 0
         else:
-            tilt = solar["tilt"]
-            orientation = solar["orientation"]
+            tilt = solar.tilt
+            orientation = solar.orientation
         tilt = min(90, max(0, tilt))
         hcol = math.radians(tilt)
         acol = math.radians(orientation)
@@ -340,7 +343,7 @@ class Meteo:
         df["uur"] = df.tijd_nl.apply(lambda x: x[11:13])
         meteo_options = {
             "title": f"Opgehaalde meteodata vanaf {df.iloc[0, 2]}",
-            "style": self.config.get(["graphics", "style"]),
+            "style": self.graphics_style,
             "graphs": [
                 {
                     "vaxis": [{"title": "J/cm2"}, {"title": "°C"}],
@@ -504,7 +507,7 @@ class Meteo:
         """
         df_gr = df1
         if len(df_gr) > 0:
-            style = self.config.get(["graphics", "style"], None, "default")
+            style = self.graphics_style
             plt.style.use(style)
             self.make_graph_meteo(
                 df_gr,
@@ -690,10 +693,10 @@ class Meteo:
         """
         # tilt:
         # orientation: orientatie oost = -90, zuid = 0, west = 90 in graden
-        tilt = solar_opt["tilt"]
+        tilt = solar_opt.tilt
         tilt = min(90, max(0, tilt))
         hcol = math.radians(tilt)
-        orientation = solar_opt["orientation"]
+        orientation = solar_opt.orientation
         acol = math.radians(orientation)
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot

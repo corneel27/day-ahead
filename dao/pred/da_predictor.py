@@ -18,8 +18,9 @@ import copy
 import json
 import requests
 
-from dao.lib.da_config import Config
+from da_config import Config
 from dao.lib.da_prices import DaPrices
+from dao.lib.db_connections import make_db_da
 
 # ML imports
 from xgboost import XGBRegressor
@@ -133,8 +134,10 @@ class DAPredictor:
         self.is_trained = False
         self.training_stats = {}
         self.forecast_hours: int = 96
-        self.config = Config(self.file_name)
-        self.db_da = self.config.get_db_da(key="database_dap")
+        self.config = Config(file_name, secrets_file_name="../data/secrets.json")
+        self.config.interval = "1hour"
+        self.db_da = self.config.get_db_da("database_dap")
+
 
     def _fetch_ned_nl_data(
         self,
