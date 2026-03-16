@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any, Optional, Type
 from pydantic import BaseModel
+import fcntl
 from .migrations.migrator import migrate_config
 from .versions.v0 import ConfigurationV0
 # Uncomment when creating v1:
@@ -92,35 +93,42 @@ class ConfigurationLoader:
         Returns:
             Migrated configuration (not yet validated with Pydantic)
         """
-        # Load raw config
-        config_data = self.load_raw()
-        
-        # Store original for unknown key preservation
-        self._raw_options = config_data.copy()
-        
-        # Check if migration needed
-        config_version = config_data.get("config_version")
+        with open(self.config_path, 'r+') as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            
+            # Load raw config
+            config_data = json.load(f)
+            
+            # Store original for unknown key preservation
+            self._raw_options = config_data.copy()
+            
+            # Check if migration needed
+            config_version = config_data.get("config_version")
 
-        if config_version is None or config_version < CURRENT_VERSION:
-            from_ver = "unversioned" if config_version is None else f"v{config_version}"
-            logger.info(f"Configuration needs migration from {from_ver} to v{CURRENT_VERSION}")
+            if config_version is None or config_version < CURRENT_VERSION:
+                from_ver = "unversioned" if config_version is None else f"v{config_version}"
+                logger.info(f"Configuration needs migration from {from_ver} to v{CURRENT_VERSION}")
+                
+                # Save backup before migration
+                backup_path = self.config_path.parent / f"options_{from_ver}.json"
+                self.save(config_data, save_path=backup_path)
+                
+                migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
+                
+                # Update raw options with migrated version
+                self._raw_options = migrated_data.copy()
+                
+                # Save migrated config back to disk
+                f.seek(0)
+                f.truncate(0)
+                json.dump(migrated_data, f, indent=2, ensure_ascii=False)
+                f.flush()
+                logger.info(f"Saved migrated configuration to {self.config_path}")
+            else:
+                logger.debug("Configuration is up to date, no migration needed")
+                migrated_data = config_data
             
-            # Save backup before migration
-            backup_path = self.config_path.parent / f"options_{from_ver}.json"
-            self.save(config_data, save_path=backup_path)
-            
-            migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
-            
-            # Update raw options with migrated version
-            self._raw_options = migrated_data.copy()
-            
-            # Save migrated config back to disk
-            self.save(migrated_data)
-        else:
-            logger.debug("Configuration is up to date, no migration needed")
-            migrated_data = config_data
-        
-        return migrated_data
+            return migrated_data
     
     def load_and_validate(self) -> BaseModel:
         """
@@ -134,7 +142,7 @@ class ConfigurationLoader:
         Returns:
             Validated Pydantic model (type depends on CURRENT_VERSION)
         """
-        # Migrate to current version
+        # Migrate to current version if required
         migrated_data = self._load_and_migrate()
         
         # Ensure secrets are loaded and available via self.secrets
