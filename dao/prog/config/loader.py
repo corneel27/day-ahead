@@ -99,13 +99,21 @@ class ConfigurationLoader:
                 
                 migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
                 
-                # Update raw options with migrated version
-                self._raw_options = migrated_data.copy()
+                # Get the model class for current version
+                version = migrated_data.get("config_version", CURRENT_VERSION)
+                model_class = VERSION_MODELS[version]
+                
+                # Create model instance and dump to dict for saving
+                model = model_class(**migrated_data)
+                save_data = model.model_dump(mode='json')
+                
+                # Update raw options with dumped version
+                self._raw_options = save_data.copy()
                 
                 # Save migrated config back to disk
                 f.seek(0)
                 f.truncate(0)
-                json.dump(migrated_data, f, indent=2, ensure_ascii=False)
+                json.dump(save_data, f, indent=2, ensure_ascii=False)
                 f.flush()
                 logger.info(f"Saved migrated configuration to {self.config_path}")
             else:
