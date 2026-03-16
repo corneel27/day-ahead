@@ -104,13 +104,21 @@ class ConfigurationLoader:
         if config_version is None or config_version < CURRENT_VERSION:
             from_ver = "unversioned" if config_version is None else f"v{config_version}"
             logger.info(f"Configuration needs migration from {from_ver} to v{CURRENT_VERSION}")
+            
+            # Save backup before migration
+            backup_path = self.config_path.parent / f"options_{from_ver}.json"
+            self.save(config_data, save_path=backup_path)
+            
             migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
+            
+            # Update raw options with migrated version
+            self._raw_options = migrated_data.copy()
+            
+            # Save migrated config back to disk
+            self.save(migrated_data)
         else:
             logger.debug("Configuration is up to date, no migration needed")
             migrated_data = config_data
-        
-        # Update raw options with migrated version
-        self._raw_options = migrated_data.copy()
         
         return migrated_data
     
@@ -147,13 +155,17 @@ class ConfigurationLoader:
         # Validate and return
         return model_class(**migrated_data)
     
-    def save(self, config_data: dict[str, Any]) -> None:
+    def save(self, config_data: dict[str, Any], save_path: Optional[Path] = None) -> None:
         """
         Save configuration to disk, preserving unknown keys.
         
         Args:
             config_data: Configuration to save (can be Pydantic model dict or raw dict)
+            save_path: Path to save to (defaults to self.config_path)
         """
+        if save_path is None:
+            save_path = self.config_path
+        
         # Merge with raw options to preserve unknown keys
         if self._raw_options:
             # Start with raw options (includes unknown keys)
@@ -165,28 +177,10 @@ class ConfigurationLoader:
             save_data = config_data
         
         # Write to disk
-        self._create_backup()
-        with open(self.config_path, 'w', encoding='utf-8') as f:
+        with open(save_path, 'w', encoding='utf-8') as f:
             json.dump(save_data, f, indent=2, ensure_ascii=False)
         
-        logger.info(f"Saved configuration to {self.config_path}")
-    
-    def _create_backup(self) -> None:
-        """Create a backup of the current configuration."""
-        if not self.config_path.exists():
-            return
-        
-        backup_path = self.config_path.with_suffix('.json.backup')
-        
-        # Don't overwrite existing backup
-        if backup_path.exists():
-            logger.info(f"Backup already exists: {backup_path}")
-            return
-        
-        # Copy current config to backup
-        import shutil
-        shutil.copy2(self.config_path, backup_path)
-        logger.info(f"Created backup: {backup_path}")
+        logger.info(f"Saved configuration to {save_path}")
     
     @property
     def secrets(self) -> dict[str, str]:
