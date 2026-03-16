@@ -49,23 +49,7 @@ class ConfigurationLoader:
         self._raw_options: Optional[dict[str, Any]] = None
         self._secrets: Optional[dict[str, str]] = None
     
-    def load_raw(self) -> dict[str, Any]:
-        """
-        Load raw configuration without validation.
-        
-        Returns:
-            Raw configuration dictionary
-        """
-        if not self.config_path.exists():
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        
-        with open(self.config_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        logger.info(f"Loaded configuration from {self.config_path}")
-        return data
-    
-    def load_secrets(self) -> dict[str, str]:
+    def _load_secrets(self) -> dict[str, str]:
         """
         Load secrets from secrets.json.
         
@@ -146,7 +130,7 @@ class ConfigurationLoader:
         migrated_data = self._load_and_migrate()
         
         # Ensure secrets are loaded and available via self.secrets
-        self.load_secrets()
+        self._load_secrets()
         
         # Get the model class for current version
         version = migrated_data.get("config_version", CURRENT_VERSION)
@@ -194,5 +178,5 @@ class ConfigurationLoader:
     def secrets(self) -> dict[str, str]:
         """Get loaded secrets (lazy load)."""
         if self._secrets is None:
-            self.load_secrets()
+            self._load_secrets()
         return self._secrets
