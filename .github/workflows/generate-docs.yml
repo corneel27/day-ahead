@@ -9,6 +9,8 @@ on:
     paths:
       - 'dao/prog/config/**/*.py'
       - 'scripts/generate_docs.py'
+      - 'SETTINGS.md'
+      - 'config_schema.json'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}-${{ github.event_name }}
@@ -19,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: write
     
     steps:
       - name: Checkout repository
@@ -53,17 +56,66 @@ jobs:
         run: |
           git diff --exit-code SETTINGS.md config_schema.json || echo "changed=true" >> $GITHUB_OUTPUT
       
+      - name: Manage PR comment for outdated docs
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const MARKER = '## \u26a0\ufe0f Documentation is out of date';
+            const docsOutdated = '${{ steps.check_changes.outputs.changed }}' === 'true';
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find(c => c.body.includes(MARKER));
+
+            if (docsOutdated) {
+              const body = [
+                MARKER,
+                '',
+                'The generated files `SETTINGS.md` and `config_schema.json` are out of sync with the current Pydantic models.',
+                '',
+                'Please run the following commands locally and push the updated files:',
+                '',
+                '```bash',
+                'python scripts/generate_docs.py',
+                'git add SETTINGS.md config_schema.json',
+                'git commit -m "Update generated documentation"',
+                'git push',
+                '```',
+              ].join('\n');
+
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body,
+                });
+              }
+            } else if (existing) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+              });
+            }
+      
       - name: Fail if docs are outdated
         if: steps.check_changes.outputs.changed == 'true'
         run: |
           echo "ERROR: SETTINGS.md and/or config_schema.json are out of sync with the models."
-          echo ""
-          echo "Please run the following commands locally and push the updated files:"
-          echo ""
-          echo "  python scripts/generate_docs.py"
-          echo "  git add SETTINGS.md config_schema.json"
-          echo '  git commit -m "Update generated documentation"'
-          echo "  git push"
           exit 1
 
       
