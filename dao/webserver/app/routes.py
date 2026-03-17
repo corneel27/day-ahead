@@ -10,7 +10,8 @@ import os
 from subprocess import PIPE, run
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from dao.lib.da_config import Config
+from pathlib import Path
+from dao.prog.config.loader import ConfigurationLoader
 from dao.prog.da_report import Report
 from dao.prog.version import __version__
 
@@ -27,26 +28,15 @@ active_view = "grafiek"
 def create_config():
     global config
     try:
-        config = Config(app_datapath + "options.json")
-    except ValueError as ex:
+        loader = ConfigurationLoader(Path(app_datapath + "options.json"))
+        config = loader.load_and_validate()
+    except (ValueError, RuntimeError) as ex:
         logging.error(app_datapath)
         logging.error(ex)
         config = None
 
 
 logname = "dashboard.log"
-handler = TimedRotatingFileHandler(
-    "../data/log/" + logname,
-    when="midnight",
-    backupCount=1 if config is None else config.get(["history", "save days"]),
-)
-handler.suffix = "%Y%m%d"
-handler.setLevel(logging.INFO)
-logging.basicConfig(
-    level=logging.DEBUG,
-    handlers=[handler],
-    format=f"%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s",
-)
 
 browse = {}
 
@@ -161,19 +151,15 @@ solar_web_menu = {
 
 def generate_solar_items():
     global web_menu
-    solar_options = config.get(["solar"], None, [])
-    battery_options = config.get(["battery"], None, [])
+    solar_options = config.solar if config else []
+    battery_options = config.battery if config else []
     for battery_option in battery_options:
-        sol_options = config.get(["solar"], battery_option, [])
-        if len(sol_options) > 0:
-            solar_options += sol_options
+        for sol_opt in battery_option.solar:
+            solar_options.append(sol_opt)
     result = {}
     for solar_option in solar_options:
-        ml_prediction = (
-            config.get(["ml_prediction"], solar_option, "False").lower() == "true"
-        )
-        if ml_prediction:
-            key = config.get(["name"], solar_option, "default")
+        if solar_option.ml_prediction:
+            key = solar_option.name or "default"
             result[key] = solar_option
     if len(result) == 0:
         if "solar" in web_menu.keys():
@@ -208,8 +194,22 @@ def check_web_menu_items():
 
 check_web_menu_items()
 
+_save_days = config.history.save_days if config is not None else 7
+handler = TimedRotatingFileHandler(
+    "../data/log/" + logname,
+    when="midnight",
+    backupCount=_save_days,
+)
+handler.suffix = "%Y%m%d"
+handler.setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[handler],
+    format=f"%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s",
+)
+
 if config is not None:
-    sensor_co2_intensity = config.get(["report", "entity co2-intensity"], None, None)
+    sensor_co2_intensity = config.report.co2_intensity_sensor if config and config.report else None
 else:
     sensor_co2_intensity = None
 
@@ -338,9 +338,9 @@ def home():
     confirm_delete = False
 
     if config is not None:
-        battery_options = config.get(["battery"])
+        battery_options = config.battery
         for b in range(len(battery_options)):
-            subjects.append(battery_options[b]["name"])
+            subjects.append(battery_options[b].name)
     if request.method == "POST":
         # ImmutableMultiDict([('cur_subject', 'Accu2'), ('subject', 'Accu1')])
         lst = request.form.to_dict(flat=False)

@@ -37,8 +37,6 @@ RUN echo 'platform: "$ENV_BUILD_ARCH"' \
   && export PYTHONPATH="/root:/root/dao:/root/dao/prog" \
   && echo 'export PYTHONPATH="/root:/root/dao:/root/dao/prog"' >> ~/.bashrc
 
-RUN --mount=type=bind,target=/tmp tar -xzf /tmp/miplib_${BUILD_ARCH}.tar.gz -C /root/dao/prog
-
 ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"

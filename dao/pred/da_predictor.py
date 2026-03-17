@@ -18,7 +18,7 @@ import copy
 import json
 import requests
 
-from dao.lib.da_config import Config
+from da_config import Config
 from dao.lib.da_prices import DaPrices
 
 # ML imports
@@ -113,15 +113,15 @@ class DAPredictor:
         """
         self.file_name = file_name
         self.random_state = random_state
-        self.ned_nl_api_key = (
-            "36e4cd847cc428f204c58b19a3d626be19237414deb55be44ace33809750b223"
-            # "78fdc0ef7a33f13f410051ec9593a80968d1acff349c9df55a3a52842d9f2b7f"
-            # "307a6562a5d99ebaede09d043b7ec66cce06f0ab16a147c7b42d671baddf0f9b"
-        )
-        self.model_save_path = "../data/prediction/models/da_prediction.pkl"
+        self.model_save_path = "data/da_prediction.pkl"
         self.model = None
         self.log_level = logging.INFO
         logging.getLogger().setLevel(self.log_level)
+        logging.basicConfig(
+            level=self.log_level,
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
         self.feature_columns = [
             "day_of_week",
             "hour",
@@ -133,8 +133,10 @@ class DAPredictor:
         self.is_trained = False
         self.training_stats = {}
         self.forecast_hours: int = 96
-        self.config = Config(self.file_name)
-        self.db_da = self.config.get_db_da(key="database_dap")
+        self.config = Config(file_name, secrets_file_name="../data/secrets.json")
+        self.config.interval = "1hour"
+        self.ned_nl_api_key = self.config.get(["ned_nl", "api_token"], None, None)
+        self.db_da = self.config.get_db_da("database_dap")
 
     def _fetch_ned_nl_data(
         self,
@@ -249,7 +251,7 @@ class DAPredictor:
                 else:
                     latest_record = dt.datetime.now() - dt.timedelta(days=1)
             logging.info(
-                f"Data van {data['code']} {classification} aanwezig tot en met {latest_record}"
+                f"Data van {data['code']} {classification=} aanwezig tot en met {latest_record}"
             )
             first_date = (latest_record + dt.timedelta(days=1)).date()
             while first_date < tot:
@@ -267,7 +269,7 @@ class DAPredictor:
                 ):
                     break
                 logging.info(
-                    f"Data ned.nl opgehaald {data['code']} {classification} vanaf {first_date} "
+                    f"Data ned.nl opgehaald {data['code']} {classification=} vanaf {first_date} "
                     f"tot en met {latest_record}"
                 )
                 first_date = (latest_record + dt.timedelta(days=1)).date()
@@ -1331,7 +1333,7 @@ def main():
         end_dt = dt.datetime.strptime(arg3, "%Y-%m-%d")
     else:
         end_dt = start_dt + dt.timedelta(days=7)
-    da_predictor = DAPredictor(file_name="options_dap.json")
+    da_predictor = DAPredictor(file_name="data/options_dap.json")
     if arg.lower() == "train":
         da_predictor.run_train()
     if arg.lower() == "predict":

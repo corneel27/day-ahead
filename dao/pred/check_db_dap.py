@@ -208,7 +208,7 @@ class CheckDAPDB:
 
 
 def main():
-    checkdb = CheckDAPDB("options_dap.json")
+    checkdb = CheckDAPDB("data/options_dap.json")
     checkdb.update_db_da()
 
 

@@ -9,7 +9,6 @@ from io import BytesIO
 from dateutil.relativedelta import relativedelta
 from pandas.core.dtypes.inference import is_number
 
-from dao.lib.da_config import Config
 from dao.lib.da_graph import GraphBuilder
 from dao.prog.da_base import DaBase
 from dao.prog.utils import get_value_from_dict
@@ -38,40 +37,21 @@ class Report(DaBase):
         if self.config is None:
             return
 
-        self.report_options = self.config.get(["report"], None, None)
+        self.report_options = self.config.report
         if self.report_options is None:
             logging.error(f"Er zijn geen report-instellingen gevonden")
         self.make_periodes(_now=_now)
-        self.grid_consumption_sensors = self.config.get(
-            ["entities grid consumption"], self.report_options, []
-        )
-        self.grid_production_sensors = self.config.get(
-            ["entities grid production"], self.report_options, []
-        )
-        self.battery_production_sensors = self.config.get(
-            ["entities battery production"], self.report_options, []
-        )
-        self.battery_consumption_sensors = self.config.get(
-            ["entities battery consumption"], self.report_options, []
-        )
-        self.solar_production_ac_sensors = self.config.get(
-            ["entities solar production ac"], self.report_options, []
-        )
-        self.co2_intensity_sensor = self.config.get(
-            ["entity co2-intensity"], self.report_options, []
-        )
-        self.ev_consumption_sensors = self.config.get(
-            ["entities ev consumption"], self.report_options, []
-        )
-        self.wp_consumption_sensors = self.config.get(
-            ["entities wp consumption"], self.report_options, []
-        )
-        self.boiler_consumption_sensors = self.config.get(
-            ["entities boiler consumption"], self.report_options, []
-        )
-        self.machine_consumption_sensors = self.config.get(
-            ["entities machine consumption"], self.report_options, []
-        )
+        _r = self.report_options
+        self.grid_consumption_sensors = _r.entities_grid_consumption if _r else []
+        self.grid_production_sensors = _r.entities_grid_production if _r else []
+        self.battery_production_sensors = _r.entities_battery_production if _r else []
+        self.battery_consumption_sensors = _r.entities_battery_consumption if _r else []
+        self.solar_production_ac_sensors = _r.entities_solar_production_ac if _r else []
+        self.co2_intensity_sensor = _r.co2_intensity_sensor if _r else []
+        self.ev_consumption_sensors = _r.entities_ev_consumption if _r else []
+        self.wp_consumption_sensors = _r.entities_wp_consumption if _r else []
+        self.boiler_consumption_sensors = _r.entities_boiler_consumption if _r else []
+        self.machine_consumption_sensors = _r.entities_machine_consumption if _r else []
 
         self.saving_consumption_dict = {
             "calc_interval": "uur",
@@ -559,9 +539,7 @@ class Report(DaBase):
                 "dim": "kWh",
                 "sign": "pos",
                 "name": "PV DC",
-                "sensors": self.config.get(
-                    ["entities solar production dc"], self.report_options, []
-                ),
+                "sensors": (_r.entities_solar_production_dc if _r else []),
                 "color": "#e39ff6",
             },
         }
@@ -608,9 +586,10 @@ class Report(DaBase):
             },
         }
 
+        _graphics_style = self.config.graphics.style
         self.balance_graph_options = {
             "title": "Energiebalans",
-            "style": self.config.get(["graphics", "style"]),
+            "style": _graphics_style,
             "haxis": {"values": "#interval"},
             "graphs": [
                 {
@@ -640,7 +619,7 @@ class Report(DaBase):
 
         self.co2_graph_options = {
             "title": "CO2 Emissie",
-            "style": self.config.get(["graphics", "style"]),
+            "style": _graphics_style,
             "haxis": {"values": "#interval"},
             "graphs": [
                 {
@@ -673,7 +652,7 @@ class Report(DaBase):
 
         self.saving_cons_graph_options = {
             "title": "Besparing verbruik door batterij",
-            "style": self.config.get(["graphics", "style"]),
+            "style": _graphics_style,
             "graphs": [
                 {
                     "graph_type": "waterfall",
@@ -688,7 +667,7 @@ class Report(DaBase):
 
         self.saving_cost_graph_options = {
             "title": "Besparing kosten door batterij",
-            "style": self.config.get(["graphics", "style"]),
+            "style": _graphics_style,
             "graphs": [
                 {
                     "graph_type": "waterfall",
@@ -703,7 +682,7 @@ class Report(DaBase):
 
         self.saving_co2_graph_options = {
             "title": "Besparing CO2-emissie door batterij",
-            "style": self.config.get(["graphics", "style"]),
+            "style": _graphics_style,
             "graphs": [
                 {
                     "graph_type": "waterfall",
@@ -716,7 +695,7 @@ class Report(DaBase):
             ],
         }
 
-        style = self.config.get(["graphics", "style"])
+        style = _graphics_style
         self.solar_graph_options = {
             "title": "Solar production",
             "style": style,
@@ -838,12 +817,15 @@ class Report(DaBase):
         self.periodes.update(create_dict("vorig jaar", vanaf, tot, "maand"))
 
         # dit contractjaar
-        vanaf = datetime.datetime.strptime(
-            self.prices_options["last invoice"], "%Y-%m-%d"
+        vanaf = datetime.datetime.combine(
+            self.prices_options.last_invoice
+            if self.prices_options and not isinstance(self.prices_options, dict)
+            else datetime.date.fromisoformat(self.prices_options["last invoice"]),
+            datetime.time(),
         )
         if vanaf + datetime.timedelta(days=366) < vanaf_m:
             logging.warning(
-                f'"last invoice" ({self.prices_options["last invoice"]}) '
+                f'"last invoice" ({self.prices_options.last_invoice if hasattr(self.prices_options, "last_invoice") else self.prices_options["last invoice"]}) '
                 f"is verouderd en moet worden bijgewerkt"
             )
             vanaf = vanaf_m - datetime.timedelta(days=366)
@@ -2852,9 +2834,7 @@ class Report(DaBase):
         :param wd : weekdag 0= maandag, 6 = zondag
         :return: de berekende basislast voor die dag
         """
-        config = Config("../data/options.json")
-
-        calc_periode = config.get(["baseload calc periode"], None, 56)
+        calc_periode = self.config.baseload_calc_periode
         calc_start = datetime.datetime.combine(
             (datetime.datetime.now() - datetime.timedelta(days=calc_periode)).date(),
             datetime.time(),
@@ -3062,10 +3042,7 @@ class Report(DaBase):
         btw_t = 0
         columns = ["time", "da_ex", "da_cons", "da_prod", "datasoort"]
         df = pd.DataFrame(columns=columns)
-        salderen = (
-            self.config.get(["tax refund"], self.prices_options, "true").lower()
-            == "true"
-        )
+        salderen = self.prices_options.tax_refund if self.prices_options else True
         for row in df_da.itertuples():
             if pd.isnull(row.time):
                 continue
@@ -3092,7 +3069,7 @@ class Report(DaBase):
             ]
         return df
 
-    def calc_solar_data(self, device: dict, day: datetime.date, active_view: str):
+    def calc_solar_data(self, device, day: datetime.date, active_view: str):
         result = pd.DataFrame(columns=["uur", "tijd"])
         start = datetime.datetime(day.year, day.month, day.day)
         end = start + datetime.timedelta(days=1)
@@ -3114,9 +3091,7 @@ class Report(DaBase):
         result["gemeten_straling"] = rad_real["gr"]
 
         # gemeten productie
-        sensors = self.config.get(["entities sensors"], device, [])
-        if not isinstance(sensors, list):
-            sensors = [sensors]
+        sensors = device.entities_sensors
         count = 0
         for sensor in sensors:
             df_sensor = self.get_sensor_data(sensor, start, end, "gemeten")
@@ -3254,11 +3229,11 @@ class Report(DaBase):
                 columns={"prediction": field, "date_time": "time"}
             )
         else:  # pv_dc
-            battery_options = self.config.get(["battery"])
+            battery_options = self.config.battery
             B = len(battery_options)
             count = 0
             for b in range(B):
-                solar_options = battery_options[b]["solar"]
+                solar_options = battery_options[b].solar
                 solar_num = len(solar_options)
                 for s in range(solar_num):
                     solar_option = solar_options[s]
@@ -3351,8 +3326,7 @@ class Report(DaBase):
             return result
 
         df["time"] = pd.to_datetime(df["time"])
-        time_zone = self.config.get(["time_zone"], None, "Europe/Amsterdam")
-        df["time_ts"] = df["time"].dt.tz_localize(time_zone)
+        df["time_ts"] = df["time"].dt.tz_localize(self.time_zone)
         df["time"] = df["time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
         df.rename(columns={"datasoort": "datatype"}, inplace=True)
         cols = df.columns.tolist()
@@ -3366,9 +3340,10 @@ class Report(DaBase):
         if _options:
             options = _options
         else:
+            _gs = self.config.graphics.style
             options = {
                 "title": "Verbruik en kosten",
-                "style": self.config.get(["graphics", "style"]),
+                "style": _gs,
                 "graphs": [
                     {
                         "vaxis": [{"title": "kWh"}, {"title": "euro"}],

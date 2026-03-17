@@ -43,17 +43,17 @@ Creating a virtual environment isolates your project dependencies from your syst
 
 **On macOS/Linux:**
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 **On Windows:**
 ```bash
-python -m venv venv
-venv\Scripts\activate
+python -m venv .venv
+.venv\Scripts\activate
 ```
 
-You should see `(venv)` in your terminal prompt, indicating the virtual environment is active.
+You should see `(.venv)` in your terminal prompt, indicating the virtual environment is active.
 
 ### 3. Install Dependencies
 
@@ -146,9 +146,9 @@ From the project root (`day-ahead/`):
 cd /path/to/day-ahead
 
 # Activate your virtual environment if not already active
-source venv/bin/activate  # On macOS/Linux
+source .venv/bin/activate  # On macOS/Linux
 # or
-venv\Scripts\activate     # On Windows
+.venv\Scripts\activate     # On Windows
 
 # In case of manual mip install:
 export PMIP_CBC_LIBRARY=~/day-ahead/dao/prog/miplib/lib/libCbc.so

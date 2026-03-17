@@ -1,5 +1,24 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.3.rc1
+This release looks as a small release at the front-end, but in the back-end we are moving to gui-interface to fill in our settings.
+This release is the first step in that direction.
+The first step is that all our current settings are compared and validates with a model that is build of all possible settings.
+Until now this model is only tested by @simnet and myself.<br>
+@imnet is the great force and hard worker behind all these changes, all credits to him!
+So we ask the testers before you install this update: 
+1. make a backup of your "old" app (what in the old times was named "add-on")
+2. make a backup/copy of your settings (options.json)<br>
+
+Watch at the logging of the new app and if you find any "irregularities" tell us via tweakers or Github.
+After installation there are a few new files in the app which are possibly interesting to read:
+- DEVELOPER_GUIDE.md (in dao/prof/config) for developersand collaborators who want make new settings. 
+- config_schema.json to validate the configurations
+- SETTINGS.md a completely automatic generated summary of all possible settings 
+
+One thing what also changed in this test-release:
+The mip-library is updated to a new version; now we don't need the self-compiled binaries
+
 # 2026.03.01.rc1
 Fixed python pad
 

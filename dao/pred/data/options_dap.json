@@ -1,0 +1,23 @@
+{
+  "time_zone": "Europe/Amsterdam",
+  "database_dap": {
+    "engine": "sqlite",
+    "db_path": "data",
+    "database": "day_ahead_pred.db"
+  },
+  "tibber": {
+    "api_token": "!secret tibber_api_token"
+  },
+  "ned_nl": {
+    "api_token": "!secret ned_nl_api_token"
+  },
+  "prices": {
+    "//source day ahead": "entsoe",
+    "source day ahead": "nordpool",
+    "\\source day ahead": "tibber",
+    "entsoe-api-key": "!secret entsoe-api-key"
+  },
+  "graphics": {
+    "style": "Solarize_Light2"
+  }
+}
