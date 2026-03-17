@@ -1,4 +1,4 @@
-name: Auto-Generate Documentation
+name: Check Model Documentation
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  generate-docs:
+  check-docs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
