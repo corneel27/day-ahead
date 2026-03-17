@@ -708,7 +708,7 @@
       "properties": {
         "port": {
           "default": 5000,
-          "description": "Web UI port number",
+          "description": "Web UI port",
           "maximum": 65535,
           "minimum": 1024,
           "title": "Port",
