@@ -520,17 +520,10 @@
       "description": "Hot water boiler configuration.",
       "properties": {
         "boiler present": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
           "default": true,
           "description": "Whether boiler is present/enabled",
           "title": "Boiler Present",
+          "type": "boolean",
           "x-help": "Enable hot water boiler optimization. Set to true to include boiler in optimization, false to disable. Can also be HA entity ID for dynamic control.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"
@@ -1015,17 +1008,10 @@
           "x-ui-widget-filter": "device_tracker"
         },
         "charge three phase": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
           "default": true,
           "description": "Whether vehicle charges on three phases",
           "title": "Charge Three Phase",
+          "type": "boolean",
           "x-help": "True for three-phase charging (11kW/22kW), False for single-phase (3.7kW/7.4kW). Can also be HA entity ID for dynamic resolution.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"
@@ -1203,97 +1189,55 @@
           "x-ui-section": "General"
         },
         "show": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "false",
+          "default": false,
           "description": "Whether to show graphics",
           "title": "Show",
+          "type": "boolean",
           "x-help": "Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"
         },
         "battery balance": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "true",
+          "default": true,
           "description": "Show battery balance in graphs",
           "title": "Battery Balance",
+          "type": "boolean",
           "x-help": "Display battery state of charge and power flows in graphs. Shows charge/discharge schedule over time.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"
         },
         "prices consumption": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "true",
+          "default": true,
           "description": "Show consumption prices in graphs",
           "title": "Prices Consumption",
+          "type": "boolean",
           "x-help": "Display consumption prices (market + taxes + VAT) in graphs. Helps visualize expensive vs cheap periods.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"
         },
         "prices production": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "false",
+          "default": false,
           "description": "Show production prices in graphs",
           "title": "Prices Production",
+          "type": "boolean",
           "x-help": "Display feed-in/production prices in graphs. Useful if you have solar feed-in to compare consumption vs production value.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"
         },
         "prices spot": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "true",
+          "default": true,
           "description": "Show spot prices in graphs",
           "title": "Prices Spot",
+          "type": "boolean",
           "x-help": "Display raw day-ahead spot market prices (before taxes/markup) in graphs. Shows pure market price variations.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"
         },
         "average consumption": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
-          "default": "true",
+          "default": true,
           "description": "Show average consumption in graphs",
           "title": "Average Consumption",
+          "type": "boolean",
           "x-help": "Display average/baseline consumption in graphs. Helps understand optimization impact relative to normal usage.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"
@@ -1487,17 +1431,10 @@
       "description": "Heating system / heat pump configuration.",
       "properties": {
         "heater present": {
-          "anyOf": [
-            {
-              "type": "boolean"
-            },
-            {
-              "type": "string"
-            }
-          ],
           "default": false,
           "description": "Whether heating system is present/enabled",
           "title": "Heater Present",
+          "type": "boolean",
           "x-help": "Enable heating system optimization. Set to true to include heat pump in optimization, false to disable. Can also be HA entity ID for dynamic control.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker-or-boolean"

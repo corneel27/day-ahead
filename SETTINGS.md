@@ -461,7 +461,7 @@ Use `charge_scheduler` for time-based optimization:
 | `name` | string | Yes | — | EV name/identifier |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be > 0, typically 40-100 kWh_ |
 | `entity position` | string | Yes | — | HA device tracker for vehicle position |
-| `charge three phase` | boolean or string | No | `true` | Whether vehicle charges on three phases |
+| `charge three phase` | boolean | No | `true` | Whether vehicle charges on three phases |
 | `charge stages` | list[[EVChargeStage](#evchargestage)] | Yes | — | Charging amperage/efficiency curve _At least 1 stage required_ |
 | `entity actual level` | string | Yes | — | HA entity for current battery level % (Unit: `%`) |
 | `entity plugged in` | string | Yes | — | HA binary sensor for plugged in status |
@@ -671,7 +671,7 @@ Define power levels and corresponding COP values:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `heater present` | boolean or string | No | `false` | Whether heating system is present/enabled |
+| `heater present` | boolean | No | `false` | Whether heating system is present/enabled |
 | `entity hp enabled` | string (optional) | No | `null` | HA binary sensor for heat pump enabled status |
 | `degree days factor` | [FlexValue](#flexvalue) | No | `{'value': 1.0}` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
@@ -793,7 +793,7 @@ The system models boiler as a thermal battery:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `boiler present` | boolean or string | No | `true` | Whether boiler is present/enabled |
+| `boiler present` | boolean | No | `true` | Whether boiler is present/enabled |
 | `entity actual temp.` | string | Yes | — | HA entity for actual water temperature (Unit: `°C`) |
 | `entity setpoint` | string | Yes | — | HA entity for temperature setpoint (Unit: `°C`) |
 | `entity hysterese` | string | Yes | — | HA entity for temperature hysteresis (Unit: `°C`) |
@@ -1383,12 +1383,12 @@ Graphs can show:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `style` | string | No | `"dark_background"` | Matplotlib style (e.g., 'dark_background', 'default') |
-| `show` | boolean or string | No | `"false"` | Whether to show graphics |
-| `battery balance` | boolean or string | No | `"true"` | Show battery balance in graphs |
-| `prices consumption` | boolean or string | No | `"true"` | Show consumption prices in graphs |
-| `prices production` | boolean or string | No | `"false"` | Show production prices in graphs |
-| `prices spot` | boolean or string | No | `"true"` | Show spot prices in graphs |
-| `average consumption` | boolean or string | No | `"true"` | Show average consumption in graphs |
+| `show` | boolean | No | `false` | Whether to show graphics |
+| `battery balance` | boolean | No | `true` | Show battery balance in graphs |
+| `prices consumption` | boolean | No | `true` | Show consumption prices in graphs |
+| `prices production` | boolean | No | `false` | Show production prices in graphs |
+| `prices spot` | boolean | No | `true` | Show spot prices in graphs |
+| `average consumption` | boolean | No | `true` | Show average consumption in graphs |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
