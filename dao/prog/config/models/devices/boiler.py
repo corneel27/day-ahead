@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, ConfigDict, model_validator
 class BoilerConfig(BaseModel):
     """Hot water boiler configuration."""
     
-    boiler_present: bool | str = Field(
+    boiler_present: bool = Field(
         default=True,
         alias="boiler present",
         description="Whether boiler is present/enabled",

@@ -116,7 +116,7 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "device_tracker"
         }
     )
-    charge_three_phase: bool | str = Field(
+    charge_three_phase: bool = Field(
         default=True,
         alias="charge three phase",
         description="Whether vehicle charges on three phases",

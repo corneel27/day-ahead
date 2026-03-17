@@ -45,7 +45,7 @@ class HeatingStage(BaseModel):
 class HeatingConfig(BaseModel):
     """Heating system / heat pump configuration."""
     
-    heater_present: bool | str = Field(
+    heater_present: bool = Field(
         default=False,
         alias="heater present",
         description="Whether heating system is present/enabled",

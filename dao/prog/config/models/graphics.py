@@ -16,8 +16,8 @@ class GraphicsConfig(BaseModel):
             "x-ui-section": "General"
         }
     )
-    show: bool | str = Field(
-        default="false",
+    show: bool = Field(
+        default=False,
         description="Whether to show graphics",
         json_schema_extra={
             "x-help": "Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.",
@@ -25,9 +25,9 @@ class GraphicsConfig(BaseModel):
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
-    battery_balance: bool | str = Field(
+    battery_balance: bool = Field(
         alias="battery balance",
-        default="true",
+        default=True,
         description="Show battery balance in graphs",
         json_schema_extra={
             "x-help": "Display battery state of charge and power flows in graphs. Shows charge/discharge schedule over time.",
@@ -35,9 +35,9 @@ class GraphicsConfig(BaseModel):
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
-    prices_consumption: bool | str = Field(
+    prices_consumption: bool = Field(
         alias="prices consumption",
-        default="true",
+        default=True,
         description="Show consumption prices in graphs",
         json_schema_extra={
             "x-help": "Display consumption prices (market + taxes + VAT) in graphs. Helps visualize expensive vs cheap periods.",
@@ -45,9 +45,9 @@ class GraphicsConfig(BaseModel):
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
-    prices_production: bool | str = Field(
+    prices_production: bool = Field(
         alias="prices production",
-        default="false",
+        default=False,
         description="Show production prices in graphs",
         json_schema_extra={
             "x-help": "Display feed-in/production prices in graphs. Useful if you have solar feed-in to compare consumption vs production value.",
@@ -55,9 +55,9 @@ class GraphicsConfig(BaseModel):
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
-    prices_spot: bool | str = Field(
+    prices_spot: bool = Field(
         alias="prices spot",
-        default="true",
+        default=True,
         description="Show spot prices in graphs",
         json_schema_extra={
             "x-help": "Display raw day-ahead spot market prices (before taxes/markup) in graphs. Shows pure market price variations.",
@@ -65,9 +65,9 @@ class GraphicsConfig(BaseModel):
             "x-ui-widget": "entity-picker-or-boolean"
         }
     )
-    average_consumption: bool | str = Field(
+    average_consumption: bool = Field(
         alias="average consumption",
-        default="true",
+        default=True,
         description="Show average consumption in graphs",
         json_schema_extra={
             "x-help": "Display average/baseline consumption in graphs. Helps understand optimization impact relative to normal usage.",
