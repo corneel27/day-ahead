@@ -4,7 +4,8 @@
 This release looks as a small release at the front-end, but in the back-end we are moving to gui-interface to fill in our settings.
 This release is the first step in that direction.
 The first step is that all our current settings are compared and validates with a model that is build of all possible settings.
-Until now this model is only tested by @simnet (the great force and hard worker behind these changes) and myself.
+Until now this model is only tested by @simnet and myself.<br>
+@imnet is the great force and hard worker behind all these changes, all credits to him!
 So we ask the testers before you install this update: 
 1. make a backup of your "old" app (what in the old times was named "add-on")
 2. make a backup/copy of your settings (options.json)<br>
