@@ -1095,7 +1095,7 @@ Access dashboard at:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `port` | integer | No | `5000` | Web UI port number (Unit: `port`) _1024-65535, default 5000_ |
+| `port` | integer | No | `5000` | Web UI port (Unit: `port`) _1024-65535, default 5000_ |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
