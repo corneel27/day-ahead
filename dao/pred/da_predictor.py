@@ -251,7 +251,7 @@ class DAPredictor:
                 else:
                     latest_record = dt.datetime.now() - dt.timedelta(days=1)
             logging.info(
-                f"Data van {data['code']} {classification} aanwezig tot en met {latest_record}"
+                f"Data van {data['code']} {classification=} aanwezig tot en met {latest_record}"
             )
             first_date = (latest_record + dt.timedelta(days=1)).date()
             while first_date < tot:
@@ -269,7 +269,7 @@ class DAPredictor:
                 ):
                     break
                 logging.info(
-                    f"Data ned.nl opgehaald {data['code']} {classification} vanaf {first_date} "
+                    f"Data ned.nl opgehaald {data['code']} {classification=} vanaf {first_date} "
                     f"tot en met {latest_record}"
                 )
                 first_date = (latest_record + dt.timedelta(days=1)).date()
