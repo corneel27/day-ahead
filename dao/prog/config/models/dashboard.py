@@ -11,7 +11,7 @@ class DashboardConfig(BaseModel):
     port: int = Field(
         default=5000,
         ge=1024, le=65535,
-        description="Web UI port",
+        description="Web UI port number",
         json_schema_extra={
             "x-help": "Port number for DAO web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).",
             "x-unit": "port",
