@@ -2,6 +2,7 @@
 Configuration loader with support for versioning, migration, and unknown key preservation.
 """
 
+import shutil
 import json
 import logging
 from pathlib import Path
@@ -95,7 +96,8 @@ class ConfigurationLoader:
                 
                 # Save backup before migration
                 backup_path = self.config_path.parent / f"options_{from_ver}.json"
-                self.save(config_data, save_path=backup_path)
+                shutil.copy2(self.config_path, backup_path)
+                logger.info(f"Saved backup configuration to {backup_path}")
                 
                 migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
                 
@@ -105,7 +107,7 @@ class ConfigurationLoader:
                 
                 # Create model instance and dump to dict for saving
                 model = model_class(**migrated_data)
-                save_data = model.model_dump(mode='json')
+                save_data = model.model_dump(mode='json', exclude_none=True)
                 
                 # Update raw options with dumped version
                 self._raw_options = save_data.copy()
