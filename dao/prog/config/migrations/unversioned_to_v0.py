@@ -4,6 +4,7 @@ Migration from unversioned configuration to version 0.
 Changes:
 - Adds config_version field
 - Migrates scheduler from dict format to array format
+- Migrates vat field to vat_consumption and vat_production
 """
 
 import logging
@@ -21,6 +22,7 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
     - Converts scheduler from dict format to array format:
       Old: {"0435": "get_prices", "xx00": "calc_optimum"}
       New: {"active": false, "schedule": [{"time": "0435", "action": "get_prices"}, ...]}
+    - Migrates vat field to vat_consumption and vat_production
     
     Args:
         config: Unversioned configuration
@@ -65,5 +67,13 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
         }
         
         logger.info(f"Migrated scheduler: active={active}, {len(schedule)} schedule entries")
+    
+    # Migrate vat field to vat_consumption and vat_production
+    if "vat" in migrated:
+        vat_value = migrated["vat"]
+        migrated["vat_consumption"] = vat_value
+        migrated["vat_production"] = vat_value
+        del migrated["vat"]
+        logger.info(f"Migrated vat: set vat_consumption and vat_production to {vat_value}")
     
     return migrated
