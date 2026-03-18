@@ -124,6 +124,8 @@ class SecretStr(BaseModel):
         }
     )
     
+    is_secret: bool = Field(default=False, exclude=True)
+    
     model_config = ConfigDict(
         extra='forbid',
         json_schema_extra={
@@ -136,8 +138,11 @@ class SecretStr(BaseModel):
     def parse_from_string(cls, v: Any) -> Any:
         """Accept '!secret key_name' or a plain key name as input, coerce to dict."""
         if isinstance(v, str):
-            key = v.replace('!secret ', '', 1).strip() if v.startswith('!secret ') else v
-            return {'secret_key': key}
+            if v.startswith('!secret '):
+                key = v.replace('!secret ', '', 1).strip()
+                return {'secret_key': key, 'is_secret': True}
+            else:
+                return {'secret_key': v, 'is_secret': False}
         return v
 
     def resolve(self, secrets: dict[str, str]) -> str:
@@ -163,4 +168,7 @@ class SecretStr(BaseModel):
     @model_serializer
     def serialize_secret(self) -> str:
         """Serialize back to the original key (or literal) — never the resolved value."""
-        return self.secret_key
+        if self.is_secret:
+            return f'!secret {self.secret_key}'
+        else:
+            return self.secret_key

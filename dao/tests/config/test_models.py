@@ -107,3 +107,13 @@ class TestSecretStr:
         
         result = secret.resolve(secrets)
         assert result == "missing_key"
+    
+    def test_serialize_secret_reference(self):
+        """Test serialization of !secret reference."""
+        secret = SecretStr.model_validate("!secret db_password")
+        assert secret.model_dump() == "!secret db_password"
+    
+    def test_serialize_plain_value(self):
+        """Test serialization of plain value."""
+        secret = SecretStr.model_validate("plain_password")
+        assert secret.model_dump() == "plain_password"
