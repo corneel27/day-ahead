@@ -316,10 +316,13 @@ Then in options.json:
         if self.engine in ('mysql', 'postgresql'):
             if not self.server:
                 raise ValueError(f"'server' is required when engine is '{self.engine}'")
-            if not self.port:
-                raise ValueError(f"'port' is required when engine is '{self.engine}'")
             if not self.username:
                 raise ValueError(f"'username' is required when engine is '{self.engine}'")
+
+            # Set default port if not provided
+            if self.port == 0:
+                self.port = 3306 if self.engine == 'mysql' else 5432
+        
         elif self.engine == 'sqlite':
             if not self.db_path and not self.database:
                 raise ValueError("Either 'db_path' or 'database' is required for sqlite")
@@ -327,8 +330,5 @@ Then in options.json:
         if self.database is None:
             self.database = "day_ahead.db" if self.engine == "sqlite" else "day_ahead"
 
-        # Set default port if not provided
-        if self.port == 0:
-            self.port = 3306 if self.engine == 'mysql' else 5432
-        
+
         return self
