@@ -56,7 +56,7 @@ class SchedulerConfig(BaseModel):
     """Task scheduler configuration."""
 
     active: bool = Field(
-        default=False,
+        default=True,
         description="Enable or disable the scheduler",
         json_schema_extra={
             "x-help": "When enabled, scheduled tasks will run automatically at configured times. Disable to prevent all scheduled tasks from running.",
