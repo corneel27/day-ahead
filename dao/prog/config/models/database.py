@@ -312,7 +312,7 @@ Then in options.json:
     
     @model_validator(mode='after')
     def validate_engine_requirements(self) -> 'DatabaseConfig':
-        """Validate engine-specific requirements."""
+        """Validate engine-specific requirements and set defaults."""
         if self.engine in ('mysql', 'postgresql'):
             if not self.server:
                 raise ValueError(f"'server' is required when engine is '{self.engine}'")
@@ -326,5 +326,9 @@ Then in options.json:
         
         if self.database is None:
             self.database = "day_ahead.db" if self.engine == "sqlite" else "day_ahead"
+
+        # Set default port if not provided
+        if self.port == 0:
+            self.port = 3306 if self.engine == 'mysql' else 5432
         
         return self
