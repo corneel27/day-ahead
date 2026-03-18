@@ -7,7 +7,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Any, Optional, Type
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 import fcntl
 from .migrations.migrator import migrate_config
 from .versions.v0 import ConfigurationV0
@@ -15,6 +15,18 @@ from .versions.v0 import ConfigurationV0
 # from .versions.v1 import ConfigurationV1
 
 logger = logging.getLogger(__name__)
+
+
+class ConfigValidationError(ValueError):
+    """Raised when configuration fails Pydantic validation, with a human-readable message."""
+
+    def __init__(self, error: ValidationError) -> None:
+        lines = ["Configuration validation failed:"]
+        for err in error.errors():
+            path = " → ".join(str(p) for p in err["loc"])
+            lines.append(f"  • {path}: {err['msg']}")
+        super().__init__("\n".join(lines))
+
 
 # Version models registry: maps version number -> Pydantic model class
 VERSION_MODELS: dict[int, Type[BaseModel]] = {
@@ -154,8 +166,12 @@ class ConfigurationLoader:
         model_class = VERSION_MODELS[version]
         logger.info(f"Validating configuration with {model_class.__name__}")
         
-        # Validate and return
-        return model_class(**migrated_data)
+        # Validate and return; wrap pydantic's ValidationError to strip the noisy
+        # input_value dumps and present only field path + message to the user.
+        try:
+            return model_class(**migrated_data)
+        except ValidationError as e:
+            raise ConfigValidationError(e) from e
     
     def save(self, config_data: dict[str, Any], save_path: Optional[Path] = None) -> None:
         """
