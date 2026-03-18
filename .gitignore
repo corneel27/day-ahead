@@ -19,3 +19,5 @@ __pycache__/
 dao/data/*.csv
 /dao/data/batteries.json
 .venv
+dao/data/options_unversioned.json
+dao/pred/data/da_prediction.pkl
