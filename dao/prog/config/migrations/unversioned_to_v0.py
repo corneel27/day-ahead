@@ -70,13 +70,15 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
         
         logger.info(f"Migrated scheduler: active={active}, {len(schedule)} schedule entries")
     
-    # Migrate vat field to vat_consumption and vat_production
-    if "vat" in migrated:
-        vat_value = migrated["vat"]
-        migrated["vat_consumption"] = vat_value
-        migrated["vat_production"] = vat_value
-        del migrated["vat"]
-        logger.info(f"Migrated vat: set vat_consumption and vat_production to {vat_value}")
+    # Migrate prices.vat to prices.vat_consumption and prices.vat_production
+    if "prices" in migrated and isinstance(migrated["prices"], dict):
+        prices = migrated["prices"]
+        if "vat" in prices:
+            vat_value = prices["vat"]
+            prices.setdefault("vat consumption", vat_value)
+            prices.setdefault("vat production", vat_value)
+            del prices["vat"]
+            logger.info(f"Migrated prices.vat: set vat consumption and vat production to {vat_value}")
     
     # Set database engines to mysql (old default) if not specified
     if "database_ha" in migrated and isinstance(migrated["database_ha"], dict) and "engine" not in migrated["database_ha"]:

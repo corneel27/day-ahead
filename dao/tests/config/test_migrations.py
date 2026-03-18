@@ -27,32 +27,29 @@ def test_migrate_unversioned_to_v0():
 
 
 def test_migrate_unversioned_to_v0_with_vat():
-    """Test migration of vat field to vat_consumption and vat_production."""
+    """Test migration of prices.vat to prices.vat_consumption and prices.vat_production."""
     old_config = {
         "latitude": 52.0,
-        "vat": {"2024-01-01": 21},
-        "pricing": {
-            "source_day_ahead": "nordpool",
-            "energy_taxes_consumption": {},
-            "energy_taxes_production": {},
-            "cost_supplier_consumption": {},
-            "cost_supplier_production": {},
-            "last_invoice": "2024-01-01"
+        "prices": {
+            "source day ahead": "nordpool",
+            "energy taxes consumption": {},
+            "energy taxes production": {},
+            "cost supplier consumption": {},
+            "cost supplier production": {},
+            "last invoice": "2024-01-01",
+            "vat": {"2024-01-01": 21}
         }
     }
     
     new_config = migrate_unversioned_to_v0(old_config)
     
     assert new_config["config_version"] == 0
-    assert "vat" not in new_config
-    assert new_config["vat_consumption"] == {"2024-01-01": 21}
-    assert new_config["vat_production"] == {"2024-01-01": 21}
+    assert "vat" not in new_config["prices"]
+    assert new_config["prices"]["vat consumption"] == {"2024-01-01": 21}
+    assert new_config["prices"]["vat production"] == {"2024-01-01": 21}
     
-    # Validate that PricingConfig still works with migrated data
-    pricing_data = new_config["pricing"].copy()
-    pricing_data["vat_consumption"] = new_config["vat_consumption"]
-    pricing_data["vat_production"] = new_config["vat_production"]
-    pricing = PricingConfig(**pricing_data)
+    # Validate that PricingConfig still works with migrated prices data
+    pricing = PricingConfig(**new_config["prices"])
     assert pricing.vat_consumption == {"2024-01-01": 21}
     assert pricing.vat_production == {"2024-01-01": 21}
 
