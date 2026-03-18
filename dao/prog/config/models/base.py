@@ -31,24 +31,29 @@ class FlexValue(BaseModel):
         FlexValue(value="binary_sensor.grid")  # HA entity ID — resolved at runtime
     """
 
-    value: Union[int, float, str, bool] = Field(
-        json_schema_extra={
-            "x-help": "Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').",
-            "x-ui-section": "General"
-        }
-    )
+    value: Union[int, float, str, bool] = Field()
 
     model_config = ConfigDict(
-        extra='forbid',
-        json_schema_extra={
-            'x-help': '''FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.'''
-        }
+        extra='forbid'
     )
 
     @model_serializer
     def serialize_flex_value(self) -> Any:
         """Serialize to the bare value for flat JSON representation."""
         return self.value
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema, handler):
+        """Return the JSON schema for the union type."""
+        return {
+            'anyOf': [
+                {'type': 'number'},
+                {'type': 'string'},
+                {'type': 'boolean'}
+            ],
+            'x-help': '''FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.''',
+            'x-ui-section': 'General'
+        }
 
     @model_validator(mode='before')
     @classmethod

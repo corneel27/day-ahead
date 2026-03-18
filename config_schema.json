@@ -607,7 +607,6 @@
           "$ref": "#/$defs/FlexValue",
           "description": "Cooling rate in degrees per hour",
           "x-help": "Rate at which water temperature drops when not heating, in °C per hour. Depends on insulation quality. Typical: 0.5-2.0°C/h for well-insulated boilers.",
-          "x-ui-section": "General",
           "x-unit": "°C/h",
           "x-validation-hint": "Must be >= 0, typically 0.5-2.0°C/h",
           "title": "Cooling Rate"
@@ -627,7 +626,6 @@
           "$ref": "#/$defs/FlexValue",
           "description": "Temperature below which heating is allowed",
           "x-help": "Maximum temperature for starting heating cycle. Heating only occurs when water is below this temperature. Typically same as or slightly above setpoint.",
-          "x-ui-section": "General",
           "x-unit": "°C",
           "x-validation-hint": "Should be >= setpoint",
           "title": "Heating Allowed Below"
@@ -1145,7 +1143,21 @@
       "x-order": 3,
       "x-ui-group": "Devices"
     },
-    "FlexValue": {},
+    "FlexValue": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "x-help": "FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.",
+      "x-ui-section": "General"
+    },
     "GraphicsConfig": {
       "additionalProperties": true,
       "description": "Graphics and visualization settings.",
@@ -1431,7 +1443,6 @@
           "default": 1.0,
           "description": "Degree days factor for heat demand calculation",
           "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
-          "x-ui-section": "General",
           "x-unit": "factor",
           "x-validation-hint": "Must be > 0, typically 0.5-2.0",
           "title": "Degree Days Factor"

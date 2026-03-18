@@ -1875,6 +1875,8 @@ Charging efficiency ratio at this amperage level. Accounts for charger losses, c
 
 ### Unknown
 
+FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
+
 *No configuration fields.*
 
 
