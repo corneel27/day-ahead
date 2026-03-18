@@ -129,7 +129,10 @@ class HADatabaseConfig(BaseModel):
                 else:
                     raise ValueError(f"'server' is required when engine is '{self.engine}'")
             if self.username is None:
-                raise ValueError(f"'username' is required when engine is '{self.engine}'")
+                if self.engine == 'mysql':
+                    self.username = 'homeassistant'
+                else:
+                    raise ValueError(f"'username' is required when engine is '{self.engine}'")
             if self.password is None:
                 raise ValueError(f"'password' is required when engine is '{self.engine}'")
             if self.port is None:
@@ -330,7 +333,10 @@ Then in options.json:
                 else:
                     raise ValueError(f"'server' is required when engine is '{self.engine}'")
             if self.username is None:
-                raise ValueError(f"'username' is required when engine is '{self.engine}'")
+                if self.engine == 'mysql':
+                    self.username = 'day_ahead'
+                else:  
+                    raise ValueError(f"'username' is required when engine is '{self.engine}'")
             if self.password is None:
                 raise ValueError(f"'password' is required when engine is '{self.engine}'")
             if self.port is None:

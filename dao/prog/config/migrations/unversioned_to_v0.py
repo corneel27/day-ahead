@@ -5,6 +5,7 @@ Changes:
 - Adds config_version field
 - Migrates scheduler from dict format to array format
 - Migrates vat field to vat_consumption and vat_production
+- Sets database engines to mysql (old default) if not specified
 """
 
 import logging
@@ -23,6 +24,7 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
       Old: {"0435": "get_prices", "xx00": "calc_optimum"}
       New: {"active": false, "schedule": [{"time": "0435", "action": "get_prices"}, ...]}
     - Migrates vat field to vat_consumption and vat_production
+    - Sets database engines to mysql (old default) if not specified
     
     Args:
         config: Unversioned configuration
@@ -75,5 +77,14 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
         migrated["vat_production"] = vat_value
         del migrated["vat"]
         logger.info(f"Migrated vat: set vat_consumption and vat_production to {vat_value}")
+    
+    # Set database engines to mysql (old default) if not specified
+    if "database_ha" in migrated and isinstance(migrated["database_ha"], dict) and "engine" not in migrated["database_ha"]:
+        migrated["database_ha"]["engine"] = "mysql"
+        logger.info("Set database_ha engine to mysql (old default)")
+    
+    if "database" in migrated and isinstance(migrated["database"], dict) and "engine" not in migrated["database"]:
+        migrated["database"]["engine"] = "mysql"
+        logger.info("Set database engine to mysql (old default)")
     
     return migrated
