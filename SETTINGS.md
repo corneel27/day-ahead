@@ -673,7 +673,7 @@ Define power levels and corresponding COP values:
 |-------|------|----------|---------|-------------|
 | `heater present` | boolean | No | `false` | Whether heating system is present/enabled |
 | `entity hp enabled` | string (optional) | No | `null` | HA binary sensor for heat pump enabled status |
-| `degree days factor` | [FlexValue](#flexvalue) | No | `{'value': 1.0}` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
+| `degree days factor` | [FlexValue](#flexvalue) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | Yes | — | Heating power/COP stages _At least 1 stage, must be sorted by max_power_ |
 | `entity adjust heating curve` | string (optional) | No | `null` | HA entity to adjust heating curve |
@@ -1873,34 +1873,9 @@ Charging efficiency ratio at this amperage level. Accounts for charger losses, c
 </details>
 
 
-### FlexValue
+### Unknown
 
-_A flexible value that can be either a literal or a Home Assistant entity ID.
-
-Accepts bare literals in config (e.g. ``95``, ``0.5``, ``"sensor.battery_soc"``)
-and wraps them automatically.  At runtime call ``resolve()`` to get the final
-value — either the stored literal or a live HA state lookup.
-
-Examples:
-    FlexValue(value=95)                    # Literal integer
-    FlexValue(value="sensor.battery_soc")  # HA entity ID — resolved at runtime
-    FlexValue(value=True)                  # Literal boolean
-    FlexValue(value="binary_sensor.grid")  # HA entity ID — resolved at runtime_
-
-FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `value` | integer or number or string or boolean | Yes | — | Value |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`value`**
-
-Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').
-
-</details>
+*No configuration fields.*
 
 
 ### HeatingStage

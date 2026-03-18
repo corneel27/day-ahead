@@ -1145,37 +1145,7 @@
       "x-order": 3,
       "x-ui-group": "Devices"
     },
-    "FlexValue": {
-      "additionalProperties": false,
-      "description": "A flexible value that can be either a literal or a Home Assistant entity ID.\n\nAccepts bare literals in config (e.g. ``95``, ``0.5``, ``\"sensor.battery_soc\"``)\nand wraps them automatically.  At runtime call ``resolve()`` to get the final\nvalue — either the stored literal or a live HA state lookup.\n\nExamples:\n    FlexValue(value=95)                    # Literal integer\n    FlexValue(value=\"sensor.battery_soc\")  # HA entity ID — resolved at runtime\n    FlexValue(value=True)                  # Literal boolean\n    FlexValue(value=\"binary_sensor.grid\")  # HA entity ID — resolved at runtime",
-      "properties": {
-        "value": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "boolean"
-            }
-          ],
-          "title": "Value",
-          "x-help": "Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').",
-          "x-ui-section": "General"
-        }
-      },
-      "required": [
-        "value"
-      ],
-      "title": "FlexValue",
-      "type": "object",
-      "x-help": "FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs."
-    },
+    "FlexValue": {},
     "GraphicsConfig": {
       "additionalProperties": true,
       "description": "Graphics and visualization settings.",
@@ -1458,9 +1428,7 @@
         },
         "degree days factor": {
           "$ref": "#/$defs/FlexValue",
-          "default": {
-            "value": 1.0
-          },
+          "default": 1.0,
           "description": "Degree days factor for heat demand calculation",
           "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
           "x-ui-section": "General",
@@ -2957,9 +2925,7 @@
     },
     "strategy": {
       "$ref": "#/$defs/FlexValue",
-      "default": {
-        "value": "minimize cost"
-      },
+      "default": "minimize cost",
       "description": "Optimization strategy (or HA entity ID returning the strategy string)",
       "x-order": 2,
       "x-ui-group": "DAO",
@@ -2970,9 +2936,7 @@
     },
     "max gap": {
       "$ref": "#/$defs/FlexValue",
-      "default": {
-        "value": 0.005
-      },
+      "default": 0.005,
       "description": "Maximum MIP gap (absolute) for the optimizer",
       "gt": 0,
       "le": 1,
