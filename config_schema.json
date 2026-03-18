@@ -745,10 +745,17 @@
           "x-ui-section": "DAO Database"
         },
         "db_path": {
-          "default": "../data",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database path for SQLite (e.g., '../data')",
           "title": "Db Path",
-          "type": "string",
           "x-help": "Directory path for SQLite database file. Relative to add-on root. Example: '../data' stores in persistent data folder. Only for SQLite.",
           "x-ui-rules": {
             "condition": {
@@ -781,10 +788,17 @@
           "x-validation-hint": "Filename for SQLite, database name for MySQL/PostgreSQL"
         },
         "server": {
-          "default": "core-mariadb",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "MySQL server hostname (required for mysql)",
           "title": "Server",
-          "type": "string",
           "x-help": "Hostname or IP of MySQL/PostgreSQL server. Required for server-based engines. Examples: 'localhost', '192.168.1.100'.",
           "x-ui-rules": {
             "condition": {
@@ -802,12 +816,19 @@
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
-          "default": 0,
+          "anyOf": [
+            {
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "MySQL/PostgreSQL server port (required for mysql/postgresql)",
-          "maximum": 65535,
-          "minimum": 0,
           "title": "Port",
-          "type": "integer",
           "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
           "x-ui-rules": {
             "condition": {
@@ -826,10 +847,17 @@
           "x-validation-hint": "1-65535, required for mysql/postgresql"
         },
         "username": {
-          "default": "day_ahead",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "MySQL username (required for mysql)",
           "title": "Username",
-          "type": "string",
           "x-help": "Database username for authentication. Required for MySQL/PostgreSQL.",
           "x-ui-rules": {
             "condition": {
@@ -1275,7 +1303,7 @@
       },
       "properties": {
         "engine": {
-          "default": "mysql",
+          "default": "sqlite",
           "description": "Database engine type",
           "enum": [
             "mysql",
@@ -1288,10 +1316,17 @@
           "x-ui-section": "Homeassistant DB"
         },
         "server": {
-          "default": "core-mariadb",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database server hostname (required for mysql/postgresql)",
           "title": "Server",
-          "type": "string",
           "x-help": "Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.",
           "x-ui-rules": {
             "condition": {
@@ -1309,12 +1344,19 @@
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
-          "default": 0,
+          "anyOf": [
+            {
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database port",
-          "maximum": 65535,
-          "minimum": 0,
           "title": "Port",
-          "type": "integer",
           "x-help": "Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.",
           "x-ui-rules": {
             "condition": {
@@ -1333,26 +1375,47 @@
           "x-validation-hint": "1-65535, defaults: mysql=3306, postgresql=5432"
         },
         "db_path": {
-          "default": "/homeassistant",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database path for SQLite",
           "title": "Db Path",
-          "type": "string",
           "x-help": "Directory path for SQLite database file.",
           "x-ui-section": "Homeassistant DB"
         },
         "database": {
-          "default": "homeassistant",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database name",
           "title": "Database",
-          "type": "string",
           "x-help": "Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation.",
           "x-ui-section": "Homeassistant DB"
         },
         "username": {
-          "default": "homeassistant",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database username",
           "title": "Username",
-          "type": "string",
           "x-help": "Username for database authentication. Default 'homeassistant' matches standard HA installation.",
           "x-ui-rules": {
             "condition": {

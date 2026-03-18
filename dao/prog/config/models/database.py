@@ -11,15 +11,15 @@ class HADatabaseConfig(BaseModel):
     """Home Assistant database connection configuration."""
     
     engine: Literal["mysql", "sqlite", "postgresql"] = Field(
-        default="mysql",
+        default="sqlite",
         description="Database engine type",
         json_schema_extra={
             "x-help": "Database engine where Home Assistant stores history data. Most HA installations use SQLite, but MySQL/MariaDB and PostgreSQL are also supported.",
             "x-ui-section": "Homeassistant DB"
         }
     )
-    server: str = Field(
-        default="core-mariadb",
+    server: Optional[str] = Field(
+        default=None,
         description="Database server hostname (required for mysql/postgresql)",
         json_schema_extra={
             "x-help": "Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.",
@@ -34,9 +34,9 @@ class HADatabaseConfig(BaseModel):
             }
         }
     )
-    port: int = Field(
-        default=0,
-        ge=0, le=65535,
+    port: Optional[int] = Field(
+        default=None,
+        ge=1, le=65535,
         description="Database port",
         json_schema_extra={
             "x-help": "Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.",
@@ -52,24 +52,24 @@ class HADatabaseConfig(BaseModel):
             }
         }
     )
-    db_path: str = Field(
-        default="/homeassistant",
+    db_path: Optional[str] = Field(
+        default=None,
         description="Database path for SQLite",
         json_schema_extra={
             "x-help": "Directory path for SQLite database file.",
             "x-ui-section": "Homeassistant DB"
         }
     )
-    database: str = Field(
-        default="homeassistant",
+    database: Optional[str] = Field(
+        default=None,
         description="Database name",
         json_schema_extra={
             "x-help": "Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation.",
             "x-ui-section": "Homeassistant DB"
         }
     )
-    username: str = Field(
-        default="homeassistant",
+    username: Optional[str] = Field(
+        default=None,
         description="Database username",
         json_schema_extra={
             "x-help": "Username for database authentication. Default 'homeassistant' matches standard HA installation.",
@@ -123,14 +123,24 @@ class HADatabaseConfig(BaseModel):
     def validate_engine_requirements(self) -> 'HADatabaseConfig':
         """Validate engine-specific requirements and set defaults."""
         if self.engine in ('mysql', 'postgresql'):
-            # Validate server is provided
-            if not self.server:
-                raise ValueError(f"'server' is required when engine is '{self.engine}'")
-            
-            # Set default port if not provided
-            if self.port == 0:
+            if self.server is None:
+                if self.engine == 'mysql':
+                    self.server = 'core-mariadb'
+                else:
+                    raise ValueError(f"'server' is required when engine is '{self.engine}'")
+            if self.username is None:
+                raise ValueError(f"'username' is required when engine is '{self.engine}'")
+            if self.password is None:
+                raise ValueError(f"'password' is required when engine is '{self.engine}'")
+            if self.port is None:
                 self.port = 3306 if self.engine == 'mysql' else 5432
-        
+        elif self.engine == 'sqlite':
+            if self.db_path is None:
+                self.db_path = "/homeassistant"
+
+        if self.database is None:
+            self.database = "home-assistant_v2.db" if self.engine == "sqlite" else "homeassistant"
+
         return self
 
 
@@ -151,8 +161,8 @@ class DatabaseConfig(BaseModel):
     )
     
     # SQLite fields
-    db_path: str = Field(
-        default="../data",
+    db_path: Optional[str] = Field(
+        default=None,
         description="Database path for SQLite (e.g., '../data')",
         json_schema_extra={
             "x-help": "Directory path for SQLite database file. Relative to add-on root. Example: '../data' stores in persistent data folder. Only for SQLite.",
@@ -178,8 +188,8 @@ class DatabaseConfig(BaseModel):
     )
     
     # MySQL fields
-    server: str = Field(
-        default="core-mariadb",
+    server: Optional[str] = Field(
+        default=None,
         description="MySQL server hostname (required for mysql)",
         json_schema_extra={
             "x-help": "Hostname or IP of MySQL/PostgreSQL server. Required for server-based engines. Examples: 'localhost', '192.168.1.100'.",
@@ -194,9 +204,9 @@ class DatabaseConfig(BaseModel):
             }
         }
     )
-    port: int = Field(
-        default=0,
-        ge=0, le=65535,
+    port: Optional[int] = Field(
+        default=None,
+        ge=1, le=65535,
         description="MySQL/PostgreSQL server port (required for mysql/postgresql)",
         json_schema_extra={
             "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
@@ -212,8 +222,8 @@ class DatabaseConfig(BaseModel):
             }
         }
     )
-    username: str = Field(
-        default="day_ahead",
+    username: Optional[str] = Field(
+        default=None,
         description="MySQL username (required for mysql)",
         json_schema_extra={
             "x-help": "Database username for authentication. Required for MySQL/PostgreSQL.",
@@ -314,21 +324,23 @@ Then in options.json:
     def validate_engine_requirements(self) -> 'DatabaseConfig':
         """Validate engine-specific requirements and set defaults."""
         if self.engine in ('mysql', 'postgresql'):
-            if not self.server:
-                raise ValueError(f"'server' is required when engine is '{self.engine}'")
-            if not self.username:
+            if self.server is None:
+                if self.engine == 'mysql':
+                    self.server = 'core-mariadb'
+                else:
+                    raise ValueError(f"'server' is required when engine is '{self.engine}'")
+            if self.username is None:
                 raise ValueError(f"'username' is required when engine is '{self.engine}'")
-
-            # Set default port if not provided
-            if self.port == 0:
+            if self.password is None:
+                raise ValueError(f"'password' is required when engine is '{self.engine}'")
+            if self.port is None:
                 self.port = 3306 if self.engine == 'mysql' else 5432
-        
+
         elif self.engine == 'sqlite':
-            if not self.db_path and not self.database:
-                raise ValueError("Either 'db_path' or 'database' is required for sqlite")
-        
+            if self.db_path is None and self.database is None:
+                self.db_path = "../data"
+
         if self.database is None:
             self.database = "day_ahead.db" if self.engine == "sqlite" else "day_ahead"
-
 
         return self

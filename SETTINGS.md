@@ -938,11 +938,11 @@ Then in options.json:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `engine` | string | No | `"sqlite"` | Database engine type. Options: `sqlite`, `mysql`, `postgresql` |
-| `db_path` | string | No | `"../data"` | Database path for SQLite (e.g., '../data') _Required for SQLite (or use database field)_ |
+| `db_path` | string (optional) | No | `null` | Database path for SQLite (e.g., '../data') _Required for SQLite (or use database field)_ |
 | `database` | string (optional) | No | `null` | Database filename for SQLite or database name for MySQL _Filename for SQLite, database name for MySQL/PostgreSQL_ |
-| `server` | string | No | `"core-mariadb"` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
-| `port` | integer | No | `0` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
-| `username` | string | No | `"day_ahead"` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
+| `server` | string (optional) | No | `null` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
+| `port` | integer (optional) | No | `null` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
+| `username` | string (optional) | No | `null` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
 | `password` | [SecretStr](#secretstr) (optional) | No | `null` | MySQL password (can use !secret) _Use !secret for passwords_ |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
 
@@ -1187,12 +1187,12 @@ Home Assistant database connection for reading historical sensor data (prices, s
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `engine` | string | No | `"mysql"` | Database engine type. Options: `mysql`, `sqlite`, `postgresql` |
-| `server` | string | No | `"core-mariadb"` | Database server hostname (required for mysql/postgresql) _Required for mysql/postgresql engines_ |
-| `port` | integer | No | `0` | Database port (Unit: `port`) _1-65535, defaults: mysql=3306, postgresql=5432_ |
-| `db_path` | string | No | `"/homeassistant"` | Database path for SQLite |
-| `database` | string | No | `"homeassistant"` | Database name |
-| `username` | string | No | `"homeassistant"` | Database username |
+| `engine` | string | No | `"sqlite"` | Database engine type. Options: `mysql`, `sqlite`, `postgresql` |
+| `server` | string (optional) | No | `null` | Database server hostname (required for mysql/postgresql) _Required for mysql/postgresql engines_ |
+| `port` | integer (optional) | No | `null` | Database port (Unit: `port`) _1-65535, defaults: mysql=3306, postgresql=5432_ |
+| `db_path` | string (optional) | No | `null` | Database path for SQLite |
+| `database` | string (optional) | No | `null` | Database name |
+| `username` | string (optional) | No | `null` | Database username |
 | `password` | [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) _Use !secret for passwords_ |
 
 <details>
