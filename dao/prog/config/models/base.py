@@ -51,8 +51,7 @@ class FlexValue(BaseModel):
                 {'type': 'string'},
                 {'type': 'boolean'}
             ],
-            'x-help': '''FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.''',
-            'x-ui-section': 'General'
+            'x-help': '''FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.'''
         }
 
     @model_validator(mode='before')
