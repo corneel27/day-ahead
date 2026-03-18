@@ -2009,7 +2009,7 @@ Any additional keys are also accepted via ``extra='allow'``._
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `tune_hyperparameters` | boolean | No | `false` | Run GridSearchCV to find optimal hyper-parameters before training |
+| `tune_hyperparameters` | boolean | No | `true` | Run GridSearchCV to find optimal hyper-parameters before training |
 | `param_grid` | object (optional) | No | `null` | Grid of hyper-parameters for GridSearchCV. Keys are XGBoost parameter names, values are lists of candidates. |
 | `parameters` | object (optional) | No | `null` | Fixed hyper-parameters used when tune_hyperparameters is false. Keys are XGBoost parameter names. |
 

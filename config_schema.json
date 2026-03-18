@@ -2636,7 +2636,7 @@
       "description": "Configuration for the XGBoost solar-prediction model.\n\n``param_grid`` and ``parameters`` are free-form dicts whose internal\nstructure is dictated by XGBoost / scikit-learn, not by this project.\nThey are left unvalidated so users can pass any valid XGBoost option.\nAny additional keys are also accepted via ``extra='allow'``.",
       "properties": {
         "tune_hyperparameters": {
-          "default": false,
+          "default": true,
           "description": "Run GridSearchCV to find optimal hyper-parameters before training",
           "title": "Tune Hyperparameters",
           "type": "boolean",
