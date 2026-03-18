@@ -238,14 +238,15 @@ class ConfigurationV0(BaseModel):
             "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID"
         }
     )
-    max_gap: float = Field(
-        default=0.005,
+    max_gap: FlexValue = Field(
+        default=FlexValue(value=0.005),
         alias="max gap",
         gt=0, le=1,
         description="Maximum MIP gap (absolute) for the optimizer",
         json_schema_extra={
             "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
-            "x-unit": "euro"
+            "x-unit": "euro",
+            "x-validation-hint": "Must be > 0"
         }
     )
     
