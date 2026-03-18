@@ -2956,7 +2956,14 @@ class DaCalc(DaBase):
         #        strategy optimization
         #####################################################
         # settings
-        max_gap = max(min(abs(self.config.max_gap), 1.0), 0.00001)
+        _max_gap = self.config.max_gap
+        max_gap = float(
+            _max_gap.resolve(ha_getter, float)
+            if _max_gap is not None
+            else 0.005
+        )
+
+        # max_gap = max(min(abs(self.config.max_gap), 1.0), 0.00001)
         model.max_mip_gap_abs = max_gap
         model.max_nodes = 1500
         # model.max_seconds = 20
