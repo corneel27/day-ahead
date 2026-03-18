@@ -1677,7 +1677,7 @@ Define when automatic tasks run using time patterns.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `active` | boolean | No | `false` | Enable or disable the scheduler |
+| `active` | boolean | No | `true` | Enable or disable the scheduler |
 | `schedule` | list[[ScheduleEntry](#scheduleentry)] | No | `null` | Scheduled task entries |
 
 <details>

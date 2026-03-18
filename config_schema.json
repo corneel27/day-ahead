@@ -2344,7 +2344,7 @@
       "description": "Task scheduler configuration.",
       "properties": {
         "active": {
-          "default": false,
+          "default": true,
           "description": "Enable or disable the scheduler",
           "title": "Active",
           "type": "boolean",
@@ -2969,14 +2969,17 @@
       "title": "Strategy"
     },
     "max gap": {
-      "default": 0.005,
+      "$ref": "#/$defs/FlexValue",
+      "default": {
+        "value": 0.005
+      },
       "description": "Maximum MIP gap (absolute) for the optimizer",
-      "exclusiveMinimum": 0.0,
-      "maximum": 1.0,
-      "title": "Max Gap",
-      "type": "number",
+      "gt": 0,
+      "le": 1,
       "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
-      "x-unit": "euro"
+      "x-unit": "euro",
+      "x-validation-hint": "Must be > 0",
+      "title": "Max Gap"
     },
     "notifications": {
       "$ref": "#/$defs/NotificationsConfig",
