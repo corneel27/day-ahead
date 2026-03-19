@@ -33,6 +33,7 @@
         },
         "upper limit": {
           "$ref": "#/$defs/FlexValue",
+          "default": 100,
           "description": "Maximum SOC % (can be HA entity)",
           "x-help": "Maximum State of Charge in percent. Battery will never charge above this level. Supports FlexValue pattern: use integer or HA entity ID.",
           "x-ui-section": "Power Configuration",
@@ -44,6 +45,7 @@
         },
         "lower limit": {
           "$ref": "#/$defs/FlexValue",
+          "default": 20,
           "description": "Minimum SOC % (can be HA entity)",
           "x-help": "Minimum State of Charge in percent. Battery will never discharge below this level. Supports FlexValue pattern: use integer or HA entity ID.",
           "x-ui-section": "Power Configuration",
@@ -463,8 +465,6 @@
         "name",
         "entity actual level",
         "capacity",
-        "upper limit",
-        "lower limit",
         "charge stages",
         "discharge stages",
         "minimum power",
@@ -1145,6 +1145,7 @@
           "x-unit": "A"
         },
         "entity stop charging": {
+          "default": null,
           "description": "HA entity for stop charging datetime",
           "title": "Entity Stop Charging",
           "type": "string",
@@ -1162,8 +1163,7 @@
         "entity actual level",
         "entity plugged in",
         "charge switch",
-        "entity set charging ampere",
-        "entity stop charging"
+        "entity set charging ampere"
       ],
       "title": "EVConfig",
       "type": "object",

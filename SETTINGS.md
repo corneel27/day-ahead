@@ -113,8 +113,8 @@ Configure your home battery storage system for optimal energy management and cos
 | `name` | string | Yes | — | Battery name/identifier |
 | `entity actual level` | string | Yes | — | HA entity for current battery SOC (Unit: `%`) |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be greater than 0_ |
-| `upper limit` | [FlexValue](#flexvalue) | Yes | — | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
-| `lower limit` | [FlexValue](#flexvalue) | Yes | — | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
+| `upper limit` | [FlexValue](#flexvalue) | No | `100` | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
+| `lower limit` | [FlexValue](#flexvalue) | No | `20` | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
 | `optimal lower level` | [FlexValue](#flexvalue) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
 | `penalty low soc` | [FlexValue](#flexvalue) (optional) | No | `null` | Penalty cost per % per hour below optimal lower SOC (Unit: `euro/%·h`) |
 | `entity min soc end opt` | string (optional) | No | `null` | HA entity for minimum SOC at end of optimization period |
@@ -470,7 +470,7 @@ Use `charge_scheduler` for time-based optimization:
 | `charge scheduler` | [EVChargeScheduler](#evchargescheduler) (optional) | No | `null` | Charge scheduling configuration |
 | `charge switch` | string | Yes | — | HA switch entity to control charging |
 | `entity set charging ampere` | string | Yes | — | HA entity to set charging amperage (Unit: `A`) |
-| `entity stop charging` | string | Yes | — | HA entity for stop charging datetime |
+| `entity stop charging` | string | No | `null` | HA entity for stop charging datetime |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
