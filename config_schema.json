@@ -2762,22 +2762,6 @@
       "description": "Day Ahead optimization database connection",
       "title": "Database Da"
     },
-    "latitude": {
-      "default": 52.0,
-      "description": "Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
-      "title": "Latitude",
-      "type": "number",
-      "x-ui-group": "DAO",
-      "x-ui-section": "Your home"
-    },
-    "longitude": {
-      "default": 5.1,
-      "description": "Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
-      "title": "Longitude",
-      "type": "number",
-      "x-ui-group": "DAO",
-      "x-ui-section": "Your home"
-    },
     "time_zone": {
       "anyOf": [
         {

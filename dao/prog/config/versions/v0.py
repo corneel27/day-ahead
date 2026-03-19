@@ -58,23 +58,6 @@ class ConfigurationV0(BaseModel):
         description="Day Ahead optimization database connection"
     )
     
-    # Location (auto-fetched from HA, but can be in config)
-    latitude: float = Field(
-        default=52.0,
-        description="Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Your home"
-        }
-    )
-    longitude: float = Field(
-        default=5.1,
-        description="Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Your home"
-        }
-    )
     time_zone: Optional[str] = Field(
         default=None,
         alias="time_zone",
