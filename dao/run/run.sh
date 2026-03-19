@@ -1,4 +1,7 @@
 #!/bin/bash
+# exit immediately if a command exits with a non-zero status
+set -e
+
 dir="/config/dao_data"
 if [ ! -d "$dir" ]; then
   echo "=> directory dao_data made, files copied"
@@ -37,7 +40,7 @@ fi
 
 export PYTHONPATH="/root:/root/dao:/root/dao/lib:/root/dao/prog"
 cd /root/dao/prog
-python3 check_db.py
+python3 check_db.py || { echo "check_db.py failed, exiting"; sleep 5; exit 1; }
 
 cd /root/dao/webserver/
 gunicorn --config gunicorn_config.py app:app &

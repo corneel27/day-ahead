@@ -673,7 +673,7 @@ Define power levels and corresponding COP values:
 |-------|------|----------|---------|-------------|
 | `heater present` | boolean | No | `false` | Whether heating system is present/enabled |
 | `entity hp enabled` | string (optional) | No | `null` | HA binary sensor for heat pump enabled status |
-| `degree days factor` | [FlexValue](#flexvalue) | No | `{'value': 1.0}` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
+| `degree days factor` | [FlexValue](#flexvalue) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | Yes | — | Heating power/COP stages _At least 1 stage, must be sorted by max_power_ |
 | `entity adjust heating curve` | string (optional) | No | `null` | HA entity to adjust heating curve |
@@ -938,11 +938,11 @@ Then in options.json:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `engine` | string | No | `"sqlite"` | Database engine type. Options: `sqlite`, `mysql`, `postgresql` |
-| `db_path` | string | No | `"../data"` | Database path for SQLite (e.g., '../data') _Required for SQLite (or use database field)_ |
+| `db_path` | string (optional) | No | `null` | Database path for SQLite (e.g., '../data') _Required for SQLite (or use database field)_ |
 | `database` | string (optional) | No | `null` | Database filename for SQLite or database name for MySQL _Filename for SQLite, database name for MySQL/PostgreSQL_ |
-| `server` | string | No | `"core-mariadb"` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
-| `port` | integer | No | `0` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
-| `username` | string | No | `"day_ahead"` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
+| `server` | string (optional) | No | `null` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
+| `port` | integer (optional) | No | `null` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
+| `username` | string (optional) | No | `null` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
 | `password` | [SecretStr](#secretstr) (optional) | No | `null` | MySQL password (can use !secret) _Use !secret for passwords_ |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
 
@@ -1187,12 +1187,12 @@ Home Assistant database connection for reading historical sensor data (prices, s
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `engine` | string | No | `"mysql"` | Database engine type. Options: `mysql`, `sqlite`, `postgresql` |
-| `server` | string | No | `"core-mariadb"` | Database server hostname (required for mysql/postgresql) _Required for mysql/postgresql engines_ |
-| `port` | integer | No | `0` | Database port (Unit: `port`) _1-65535, defaults: mysql=3306, postgresql=5432_ |
-| `db_path` | string | No | `"/homeassistant"` | Database path for SQLite |
-| `database` | string | No | `"homeassistant"` | Database name |
-| `username` | string | No | `"homeassistant"` | Database username |
+| `engine` | string | No | `"sqlite"` | Database engine type. Options: `mysql`, `sqlite`, `postgresql` |
+| `server` | string (optional) | No | `null` | Database server hostname (required for mysql/postgresql) _Required for mysql/postgresql engines_ |
+| `port` | integer (optional) | No | `null` | Database port (Unit: `port`) _1-65535, defaults: mysql=3306, postgresql=5432_ |
+| `db_path` | string (optional) | No | `null` | Database path for SQLite |
+| `database` | string (optional) | No | `null` | Database name |
+| `username` | string (optional) | No | `null` | Database username |
 | `password` | [SecretStr](#secretstr) (optional) | No | `null` | Database password (can use !secret) _Use !secret for passwords_ |
 
 <details>
@@ -1677,7 +1677,7 @@ Define when automatic tasks run using time patterns.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `active` | boolean | No | `false` | Enable or disable the scheduler |
+| `active` | boolean | No | `true` | Enable or disable the scheduler |
 | `schedule` | list[[ScheduleEntry](#scheduleentry)] | No | `null` | Scheduled task entries |
 
 <details>
@@ -1873,34 +1873,11 @@ Charging efficiency ratio at this amperage level. Accounts for charger losses, c
 </details>
 
 
-### FlexValue
-
-_A flexible value that can be either a literal or a Home Assistant entity ID.
-
-Accepts bare literals in config (e.g. ``95``, ``0.5``, ``"sensor.battery_soc"``)
-and wraps them automatically.  At runtime call ``resolve()`` to get the final
-value — either the stored literal or a live HA state lookup.
-
-Examples:
-    FlexValue(value=95)                    # Literal integer
-    FlexValue(value="sensor.battery_soc")  # HA entity ID — resolved at runtime
-    FlexValue(value=True)                  # Literal boolean
-    FlexValue(value="binary_sensor.grid")  # HA entity ID — resolved at runtime_
+### Unknown
 
 FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `value` | integer or number or string or boolean | Yes | — | Value |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`value`**
-
-Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').
-
-</details>
+*No configuration fields.*
 
 
 ### HeatingStage
@@ -2032,7 +2009,7 @@ Any additional keys are also accepted via ``extra='allow'``._
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `tune_hyperparameters` | boolean | No | `false` | Run GridSearchCV to find optimal hyper-parameters before training |
+| `tune_hyperparameters` | boolean | No | `true` | Run GridSearchCV to find optimal hyper-parameters before training |
 | `param_grid` | object (optional) | No | `null` | Grid of hyper-parameters for GridSearchCV. Keys are XGBoost parameter names, values are lists of candidates. |
 | `parameters` | object (optional) | No | `null` | Fixed hyper-parameters used when tune_hyperparameters is false. Keys are XGBoost parameter names. |
 

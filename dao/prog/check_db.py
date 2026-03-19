@@ -1,4 +1,5 @@
 import datetime
+import logging
 import tzlocal
 
 from sqlalchemy import (
@@ -21,8 +22,7 @@ from sqlalchemy import (
     literal_column,
 )
 import pandas as pd
-
-#  from da_base import DaBase
+import sys
 #  sys.path.append("../")
 from dao.prog.config.loader import ConfigurationLoader
 from dao.lib.db_connections import make_db_da
@@ -35,9 +35,18 @@ class CheckDB:
     def __init__(self, file_name: str | None = None):
         # super().__init__(file_name)
         self.file_name = file_name
-        loader = ConfigurationLoader(Path(self.file_name))
-        self.config = loader.load_and_validate()
-        self.secrets = loader.secrets
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        try:
+            loader = ConfigurationLoader(Path(self.file_name))
+            self.config = loader.load_and_validate()
+            self.secrets = loader.secrets
+        except Exception as e:
+            print(f"Error loading configuration: {e}")
+            sys.exit(1)
         self.version = __version__
         self.last_version = None
         self.db_da = make_db_da(self.config, self.secrets, check_create=True)

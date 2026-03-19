@@ -4,6 +4,8 @@ Migration from unversioned configuration to version 0.
 Changes:
 - Adds config_version field
 - Migrates scheduler from dict format to array format
+- Migrates vat field to vat_consumption and vat_production
+- Sets database engines to mysql (old default) if not specified
 """
 
 import logging
@@ -21,6 +23,8 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
     - Converts scheduler from dict format to array format:
       Old: {"0435": "get_prices", "xx00": "calc_optimum"}
       New: {"active": false, "schedule": [{"time": "0435", "action": "get_prices"}, ...]}
+    - Migrates vat field to vat_consumption and vat_production
+    - Sets database engines to mysql (old default) if not specified
     
     Args:
         config: Unversioned configuration
@@ -65,5 +69,24 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
         }
         
         logger.info(f"Migrated scheduler: active={active}, {len(schedule)} schedule entries")
+    
+    # Migrate prices.vat to prices.vat_consumption and prices.vat_production
+    if "prices" in migrated and isinstance(migrated["prices"], dict):
+        prices = migrated["prices"]
+        if "vat" in prices:
+            vat_value = prices["vat"]
+            prices.setdefault("vat consumption", vat_value)
+            prices.setdefault("vat production", vat_value)
+            del prices["vat"]
+            logger.info(f"Migrated prices.vat: set vat consumption and vat production to {vat_value}")
+    
+    # Set database engines to mysql (old default) if not specified
+    if "database ha" in migrated and isinstance(migrated["database ha"], dict) and "engine" not in migrated["database ha"]:
+        migrated["database ha"]["engine"] = "mysql"
+        logger.info("Set database ha engine to mysql (old default)")
+    
+    if "database da" in migrated and isinstance(migrated["database da"], dict) and "engine" not in migrated["database da"]:
+        migrated["database da"]["engine"] = "mysql"
+        logger.info("Set database da engine to mysql (old default)")
     
     return migrated

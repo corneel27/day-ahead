@@ -9,7 +9,7 @@ This module provides:
 
 import re
 from typing import Any, Union
-from pydantic import BaseModel, Field, model_serializer, model_validator, ConfigDict
+from pydantic import BaseModel, Field, model_serializer, model_validator, field_validator, ConfigDict
 
 # Matches Home Assistant entity IDs: "domain.object_id"
 # domain must start with a letter (rules out numeric strings like "0.45")
@@ -31,19 +31,28 @@ class FlexValue(BaseModel):
         FlexValue(value="binary_sensor.grid")  # HA entity ID — resolved at runtime
     """
 
-    value: Union[int, float, str, bool] = Field(
-        json_schema_extra={
-            "x-help": "Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').",
-            "x-ui-section": "General"
-        }
-    )
+    value: Union[int, float, str, bool] = Field()
 
     model_config = ConfigDict(
-        extra='forbid',
-        json_schema_extra={
+        extra='forbid'
+    )
+
+    @model_serializer
+    def serialize_flex_value(self) -> Any:
+        """Serialize to the bare value for flat JSON representation."""
+        return self.value
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema, handler):
+        """Return the JSON schema for the union type."""
+        return {
+            'anyOf': [
+                {'type': 'number'},
+                {'type': 'string'},
+                {'type': 'boolean'}
+            ],
             'x-help': '''FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.'''
         }
-    )
 
     @model_validator(mode='before')
     @classmethod
@@ -124,6 +133,8 @@ class SecretStr(BaseModel):
         }
     )
     
+    is_secret: bool = Field(default=False, exclude=True)
+    
     model_config = ConfigDict(
         extra='forbid',
         json_schema_extra={
@@ -136,9 +147,32 @@ class SecretStr(BaseModel):
     def parse_from_string(cls, v: Any) -> Any:
         """Accept '!secret key_name' or a plain key name as input, coerce to dict."""
         if isinstance(v, str):
-            key = v.replace('!secret ', '', 1).strip() if v.startswith('!secret ') else v
-            return {'secret_key': key}
+            if v.startswith('!secret '):
+                key = v.replace('!secret ', '', 1).strip()
+                return {'secret_key': key, 'is_secret': True}
+            else:
+                return {'secret_key': v, 'is_secret': False}
         return v
+
+    @field_validator('secret_key', mode='before')
+    @classmethod
+    def parse_secret_key(cls, v: Any) -> Any:
+        """Parse secret_key if it's a string starting with !secret."""
+        if isinstance(v, str) and v.startswith('!secret '):
+            return v.replace('!secret ', '', 1).strip()
+        return v
+
+    @model_validator(mode='after')
+    def set_is_secret_from_key(self) -> 'SecretStr':
+        """Set is_secret based on whether secret_key was parsed from !secret."""
+        if isinstance(self.secret_key, str) and self.secret_key.startswith('!secret '):
+            # If somehow it wasn't parsed, but shouldn't happen
+            self.secret_key = self.secret_key.replace('!secret ', '', 1).strip()
+            self.is_secret = True
+        elif 'is_secret' not in self.__dict__ or not self.is_secret:
+            # If not set, check if it looks like !secret
+            pass  # already handled in before
+        return self
 
     def resolve(self, secrets: dict[str, str]) -> str:
         """
@@ -163,4 +197,7 @@ class SecretStr(BaseModel):
     @model_serializer
     def serialize_secret(self) -> str:
         """Serialize back to the original key (or literal) — never the resolved value."""
-        return self.secret_key
+        if self.is_secret:
+            return f'!secret {self.secret_key}'
+        else:
+            return self.secret_key

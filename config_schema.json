@@ -745,10 +745,17 @@
           "x-ui-section": "DAO Database"
         },
         "db_path": {
-          "default": "../data",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database path for SQLite (e.g., '../data')",
           "title": "Db Path",
-          "type": "string",
           "x-help": "Directory path for SQLite database file. Relative to add-on root. Example: '../data' stores in persistent data folder. Only for SQLite.",
           "x-ui-rules": {
             "condition": {
@@ -781,10 +788,17 @@
           "x-validation-hint": "Filename for SQLite, database name for MySQL/PostgreSQL"
         },
         "server": {
-          "default": "core-mariadb",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "MySQL server hostname (required for mysql)",
           "title": "Server",
-          "type": "string",
           "x-help": "Hostname or IP of MySQL/PostgreSQL server. Required for server-based engines. Examples: 'localhost', '192.168.1.100'.",
           "x-ui-rules": {
             "condition": {
@@ -802,12 +816,19 @@
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
-          "default": 0,
+          "anyOf": [
+            {
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "MySQL/PostgreSQL server port (required for mysql/postgresql)",
-          "maximum": 65535,
-          "minimum": 0,
           "title": "Port",
-          "type": "integer",
           "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
           "x-ui-rules": {
             "condition": {
@@ -826,10 +847,17 @@
           "x-validation-hint": "1-65535, required for mysql/postgresql"
         },
         "username": {
-          "default": "day_ahead",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "MySQL username (required for mysql)",
           "title": "Username",
-          "type": "string",
           "x-help": "Database username for authentication. Required for MySQL/PostgreSQL.",
           "x-ui-rules": {
             "condition": {
@@ -1146,34 +1174,17 @@
       "x-ui-group": "Devices"
     },
     "FlexValue": {
-      "additionalProperties": false,
-      "description": "A flexible value that can be either a literal or a Home Assistant entity ID.\n\nAccepts bare literals in config (e.g. ``95``, ``0.5``, ``\"sensor.battery_soc\"``)\nand wraps them automatically.  At runtime call ``resolve()`` to get the final\nvalue — either the stored literal or a live HA state lookup.\n\nExamples:\n    FlexValue(value=95)                    # Literal integer\n    FlexValue(value=\"sensor.battery_soc\")  # HA entity ID — resolved at runtime\n    FlexValue(value=True)                  # Literal boolean\n    FlexValue(value=\"binary_sensor.grid\")  # HA entity ID — resolved at runtime",
-      "properties": {
-        "value": {
-          "anyOf": [
-            {
-              "type": "integer"
-            },
-            {
-              "type": "number"
-            },
-            {
-              "type": "string"
-            },
-            {
-              "type": "boolean"
-            }
-          ],
-          "title": "Value",
-          "x-help": "Value can be a literal (number, boolean) OR a Home Assistant entity ID for dynamic runtime resolution. Entity IDs detected by presence of '.' (e.g., 'sensor.name').",
-          "x-ui-section": "General"
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
         }
-      },
-      "required": [
-        "value"
       ],
-      "title": "FlexValue",
-      "type": "object",
       "x-help": "FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs."
     },
     "GraphicsConfig": {
@@ -1292,7 +1303,7 @@
       },
       "properties": {
         "engine": {
-          "default": "mysql",
+          "default": "sqlite",
           "description": "Database engine type",
           "enum": [
             "mysql",
@@ -1305,10 +1316,17 @@
           "x-ui-section": "Homeassistant DB"
         },
         "server": {
-          "default": "core-mariadb",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database server hostname (required for mysql/postgresql)",
           "title": "Server",
-          "type": "string",
           "x-help": "Hostname or IP address of database server. Required for MySQL/PostgreSQL, not used for SQLite. Examples: 'localhost', '192.168.1.100', 'mysql.local'.",
           "x-ui-rules": {
             "condition": {
@@ -1326,12 +1344,19 @@
           "x-validation-hint": "Required for mysql/postgresql engines"
         },
         "port": {
-          "default": 0,
+          "anyOf": [
+            {
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database port",
-          "maximum": 65535,
-          "minimum": 0,
           "title": "Port",
-          "type": "integer",
           "x-help": "Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.",
           "x-ui-rules": {
             "condition": {
@@ -1350,26 +1375,47 @@
           "x-validation-hint": "1-65535, defaults: mysql=3306, postgresql=5432"
         },
         "db_path": {
-          "default": "/homeassistant",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database path for SQLite",
           "title": "Db Path",
-          "type": "string",
           "x-help": "Directory path for SQLite database file.",
           "x-ui-section": "Homeassistant DB"
         },
         "database": {
-          "default": "homeassistant",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database name",
           "title": "Database",
-          "type": "string",
           "x-help": "Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation.",
           "x-ui-section": "Homeassistant DB"
         },
         "username": {
-          "default": "homeassistant",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
           "description": "Database username",
           "title": "Username",
-          "type": "string",
           "x-help": "Username for database authentication. Default 'homeassistant' matches standard HA installation.",
           "x-ui-rules": {
             "condition": {
@@ -1458,9 +1504,7 @@
         },
         "degree days factor": {
           "$ref": "#/$defs/FlexValue",
-          "default": {
-            "value": 1.0
-          },
+          "default": 1.0,
           "description": "Degree days factor for heat demand calculation",
           "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
           "x-ui-section": "General",
@@ -2344,7 +2388,7 @@
       "description": "Task scheduler configuration.",
       "properties": {
         "active": {
-          "default": false,
+          "default": true,
           "description": "Enable or disable the scheduler",
           "title": "Active",
           "type": "boolean",
@@ -2655,7 +2699,7 @@
       "description": "Configuration for the XGBoost solar-prediction model.\n\n``param_grid`` and ``parameters`` are free-form dicts whose internal\nstructure is dictated by XGBoost / scikit-learn, not by this project.\nThey are left unvalidated so users can pass any valid XGBoost option.\nAny additional keys are also accepted via ``extra='allow'``.",
       "properties": {
         "tune_hyperparameters": {
-          "default": false,
+          "default": true,
           "description": "Run GridSearchCV to find optimal hyper-parameters before training",
           "title": "Tune Hyperparameters",
           "type": "boolean",
@@ -2709,46 +2753,14 @@
       "title": "Homeassistant"
     },
     "database ha": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/HADatabaseConfig"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
+      "$ref": "#/$defs/HADatabaseConfig",
       "description": "Home Assistant database connection",
       "title": "Database Ha"
     },
     "database da": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/DatabaseConfig"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
+      "$ref": "#/$defs/DatabaseConfig",
       "description": "Day Ahead optimization database connection",
       "title": "Database Da"
-    },
-    "latitude": {
-      "default": 52.0,
-      "description": "Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
-      "title": "Latitude",
-      "type": "number",
-      "x-ui-group": "DAO",
-      "x-ui-section": "Your home"
-    },
-    "longitude": {
-      "default": 5.1,
-      "description": "Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
-      "title": "Longitude",
-      "type": "number",
-      "x-ui-group": "DAO",
-      "x-ui-section": "Your home"
     },
     "time_zone": {
       "anyOf": [
@@ -2957,9 +2969,7 @@
     },
     "strategy": {
       "$ref": "#/$defs/FlexValue",
-      "default": {
-        "value": "minimize cost"
-      },
+      "default": "minimize cost",
       "description": "Optimization strategy (or HA entity ID returning the strategy string)",
       "x-order": 2,
       "x-ui-group": "DAO",
@@ -2969,14 +2979,13 @@
       "title": "Strategy"
     },
     "max gap": {
+      "$ref": "#/$defs/FlexValue",
       "default": 0.005,
       "description": "Maximum MIP gap (absolute) for the optimizer",
-      "exclusiveMinimum": 0.0,
-      "maximum": 1.0,
-      "title": "Max Gap",
-      "type": "number",
       "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
-      "x-unit": "euro"
+      "x-unit": "euro",
+      "x-validation-hint": "Must be > 0",
+      "title": "Max Gap"
     },
     "notifications": {
       "$ref": "#/$defs/NotificationsConfig",

@@ -15,7 +15,7 @@ class XGBoostConfig(BaseModel):
     """
 
     tune_hyperparameters: bool = Field(
-        default=False,
+        default=True,
         description="Run GridSearchCV to find optimal hyper-parameters before training",
         json_schema_extra={
             "x-help": (

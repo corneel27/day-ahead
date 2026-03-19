@@ -47,34 +47,17 @@ class ConfigurationV0(BaseModel):
     )
     
     # Databases
-    database_ha: Optional[HADatabaseConfig] = Field(
-        default=None,
+    database_ha: HADatabaseConfig = Field(
+        default_factory=HADatabaseConfig,
         alias="database ha",
         description="Home Assistant database connection"
     )
-    database_da: Optional[DatabaseConfig] = Field(
-        default=None,
+    database_da: DatabaseConfig = Field(
+        default_factory=DatabaseConfig,
         alias="database da",
         description="Day Ahead optimization database connection"
     )
     
-    # Location (auto-fetched from HA, but can be in config)
-    latitude: float = Field(
-        default=52.0,
-        description="Latitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Your home"
-        }
-    )
-    longitude: float = Field(
-        default=5.1,
-        description="Longitude (auto-fetched from HA if not set, defaults to Netherlands centre)",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Your home"
-        }
-    )
     time_zone: Optional[str] = Field(
         default=None,
         alias="time_zone",
@@ -238,14 +221,14 @@ class ConfigurationV0(BaseModel):
             "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID"
         }
     )
-    max_gap: float = Field(
-        default=0.005,
+    max_gap: FlexValue = Field(
+        default=FlexValue(value=0.005),
         alias="max gap",
-        gt=0, le=1,
         description="Maximum MIP gap (absolute) for the optimizer",
         json_schema_extra={
             "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
-            "x-unit": "euro"
+            "x-unit": "euro",
+            "x-validation-hint": "Must be > 0"
         }
     )
     

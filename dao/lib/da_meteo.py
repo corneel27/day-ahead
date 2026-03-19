@@ -16,7 +16,7 @@ from sqlalchemy import Table, select, func, and_
 # noinspection PyUnresolvedReferences
 class Meteo:
     def __init__(self, config, db_da: DBmanagerObj,
-                 latitude: float = None, longitude: float = None, secrets: dict = None):
+                 latitude: float, longitude: float, secrets: dict = None):
         self.config = config
         self.db_da = db_da
         _secrets = secrets or {}
@@ -24,8 +24,8 @@ class Meteo:
         self.meteoserver_key = mk.resolve(_secrets) if mk is not None else None
         self.meteoserver_model = config.meteoserver_model
         self.meteoserver_attemps = config.meteoserver_attemps
-        self.latitude = latitude if latitude is not None else config.latitude
-        self.longitude = longitude if longitude is not None else config.longitude
+        self.latitude = latitude
+        self.longitude = longitude
         self.solar = config.solar
         self.bat = config.battery
         self.graphics_style = config.graphics.style

@@ -47,10 +47,6 @@ def make_db_da(
         DBmanagerObj instance, or None on error.
     """
     db = config.database_da
-    if db is None:
-        logger.error("No 'database da' config section found")
-        return None
-
     engine = db.engine  # model default: "sqlite"
     server = db.server
     port = db.port
@@ -86,8 +82,14 @@ def make_db_da(
             db_path=db_path,
             db_time_zone=time_zone,
         )
+    except ConnectionAbortedError:
+        if db.engine == "sqlite":
+            logger.error(f"day_ahead database not found: {db.db_path}/{db.database}")
+        else:
+            logger.error(f"day_ahead database not found on {db.engine} server {db.server}")
+        return None
     except Exception as ex:
-        logger.error(f"Check your settings for day_ahead database: {ex}")
+        logger.error(f"Cannot connect to day_ahead database ({db.engine}): {ex}")
         return None
 
 
@@ -106,10 +108,6 @@ def make_db_ha(
         DBmanagerObj instance, or None on error.
     """
     db = config.database_ha
-    if db is None:
-        logger.error("No 'database ha' config section found")
-        return None
-
     engine = db.engine  # model default: "mysql"
     server = db.server
     port = db.port
@@ -130,6 +128,12 @@ def make_db_ha(
             db_path=db_path,
             db_time_zone=time_zone,
         )
+    except ConnectionAbortedError:
+        if db.engine == "sqlite":
+            logger.error(f"Home Assistant database not found: {db.db_path}/{db.database}")
+        else:
+            logger.error(f"Home Assistant database not found on {db.engine} server {db.server}")
+        return None
     except Exception as ex:
-        logger.error(f"Check your settings for Home Assistant database: {ex}")
+        logger.error(f"Cannot connect to Home Assistant database ({db.engine}): {ex}")
         return None
