@@ -21,3 +21,4 @@ dao/data/*.csv
 .venv
 dao/data/options_unversioned.json
 dao/pred/data/da_prediction.pkl
+dao/data/options_new.json
