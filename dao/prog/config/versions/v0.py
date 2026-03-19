@@ -47,13 +47,13 @@ class ConfigurationV0(BaseModel):
     )
     
     # Databases
-    database_ha: Optional[HADatabaseConfig] = Field(
-        default=None,
+    database_ha: HADatabaseConfig = Field(
+        default_factory=HADatabaseConfig,
         alias="database ha",
         description="Home Assistant database connection"
     )
-    database_da: Optional[DatabaseConfig] = Field(
-        default=None,
+    database_da: DatabaseConfig = Field(
+        default_factory=DatabaseConfig,
         alias="database da",
         description="Day Ahead optimization database connection"
     )

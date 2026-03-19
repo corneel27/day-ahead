@@ -2753,28 +2753,12 @@
       "title": "Homeassistant"
     },
     "database ha": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/HADatabaseConfig"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
+      "$ref": "#/$defs/HADatabaseConfig",
       "description": "Home Assistant database connection",
       "title": "Database Ha"
     },
     "database da": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/DatabaseConfig"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
+      "$ref": "#/$defs/DatabaseConfig",
       "description": "Day Ahead optimization database connection",
       "title": "Database Da"
     },
