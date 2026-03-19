@@ -1,4 +1,5 @@
 import datetime
+import logging
 import tzlocal
 
 from sqlalchemy import (
@@ -34,6 +35,11 @@ class CheckDB:
     def __init__(self, file_name: str | None = None):
         # super().__init__(file_name)
         self.file_name = file_name
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
         try:
             loader = ConfigurationLoader(Path(self.file_name))
             self.config = loader.load_and_validate()
