@@ -211,6 +211,7 @@ class EVConfig(BaseModel):
         }
     )
     entity_stop_charging: str = Field(
+        default=None,
         alias="entity stop charging",
         description="HA entity for stop charging datetime",
         json_schema_extra={
