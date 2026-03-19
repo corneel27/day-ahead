@@ -81,12 +81,12 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
             logger.info(f"Migrated prices.vat: set vat consumption and vat production to {vat_value}")
     
     # Set database engines to mysql (old default) if not specified
-    if "database_ha" in migrated and isinstance(migrated["database_ha"], dict) and "engine" not in migrated["database_ha"]:
-        migrated["database_ha"]["engine"] = "mysql"
-        logger.info("Set database_ha engine to mysql (old default)")
+    if "database ha" in migrated and isinstance(migrated["database ha"], dict) and "engine" not in migrated["database ha"]:
+        migrated["database ha"]["engine"] = "mysql"
+        logger.info("Set database ha engine to mysql (old default)")
     
-    if "database" in migrated and isinstance(migrated["database"], dict) and "engine" not in migrated["database"]:
-        migrated["database"]["engine"] = "mysql"
-        logger.info("Set database engine to mysql (old default)")
+    if "database da" in migrated and isinstance(migrated["database da"], dict) and "engine" not in migrated["database da"]:
+        migrated["database da"]["engine"] = "mysql"
+        logger.info("Set database da engine to mysql (old default)")
     
     return migrated

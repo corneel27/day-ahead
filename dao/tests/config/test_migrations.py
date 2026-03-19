@@ -58,21 +58,21 @@ def test_migrate_unversioned_to_v0_database_engines():
     """Test migration sets database engines to mysql if not specified."""
     old_config = {
         "latitude": 52.0,
-        "database_ha": {"password": "secret"},
-        "database": {"password": "secret"}
+        "database ha": {"password": "secret"},
+        "database da": {"password": "secret"}
     }
     
     new_config = migrate_unversioned_to_v0(old_config)
     
     assert new_config["config_version"] == 0
-    assert new_config["database_ha"]["engine"] == "mysql"
-    assert new_config["database"]["engine"] == "mysql"
+    assert new_config["database ha"]["engine"] == "mysql"
+    assert new_config["database da"]["engine"] == "mysql"
 
     # Validate that database models still work with migrated data
-    ha_db = HADatabaseConfig(**new_config["database_ha"])
+    ha_db = HADatabaseConfig(**new_config["database ha"])
     assert ha_db.engine == "mysql"
     assert ha_db.username == "homeassistant"
-    da_db = DatabaseConfig(**new_config["database"])
+    da_db = DatabaseConfig(**new_config["database da"])
     assert da_db.engine == "mysql"
     assert da_db.username == "day_ahead"
 
