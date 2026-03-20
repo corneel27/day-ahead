@@ -172,9 +172,10 @@ class BoilerConfig(BaseModel):
     
     @model_validator(mode='after')
     def validate_activate_config(self) -> 'BoilerConfig':
-        """Ensure if activate_entity is provided, activate_service must also be provided."""
-        # Note: Both fields are required, so this validator is mainly for documentation
-        # The actual validation logic in code checks for None on activate_entity
+        """
+        Ensure that if activate_entity is provided, activate_service must also be provided.
+        Ensure that activate_entity or switch_entity is provided
+        """
         if self.activate_entity is not None and self.activate_service is None:
             raise ValueError(
                 'Boiler must have "activate service" when "activate entity" is configured'
