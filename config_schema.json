@@ -644,6 +644,7 @@
           "x-validation-hint": "Must be > 0, typically 1000-3000W"
         },
         "activate service": {
+          "default": null,
           "description": "Service type to activate boiler (e.g., 'press', 'switch')",
           "title": "Activate Service",
           "type": "string",
@@ -651,6 +652,7 @@
           "x-ui-section": "General"
         },
         "activate entity": {
+          "default": null,
           "description": "HA entity to activate boiler",
           "title": "Activate Entity",
           "type": "string",
@@ -690,9 +692,7 @@
         "entity setpoint",
         "entity hysterese",
         "cooling rate",
-        "heating allowed below",
-        "activate service",
-        "activate entity"
+        "heating allowed below"
       ],
       "title": "BoilerConfig",
       "type": "object",

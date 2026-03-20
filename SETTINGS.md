@@ -804,8 +804,8 @@ The system models boiler as a thermal battery:
 | `volume` | number | No | `200.0` | Water volume in liters (Unit: `L`) _Must be > 0, typically 100-300L_ |
 | `heating allowed below` | [FlexValue](#flexvalue) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
 | `elec. power` | number | No | `1000.0` | Electrical power in watts (Unit: `W`) _Must be > 0, typically 1000-3000W_ |
-| `activate service` | string | Yes | — | Service type to activate boiler (e.g., 'press', 'switch') |
-| `activate entity` | string | Yes | — | HA entity to activate boiler |
+| `activate service` | string | No | `null` | Service type to activate boiler (e.g., 'press', 'switch') |
+| `activate entity` | string | No | `null` | HA entity to activate boiler |
 | `boiler heated by heatpump` | boolean | No | `true` | Whether the boiler is heated by a heat pump |
 | `switch entity` | string (optional) | No | `null` | HA entity to switch boiler on/off |
 
