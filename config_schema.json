@@ -23,7 +23,7 @@
         },
         "capacity": {
           "description": "Battery capacity in kWh",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Capacity",
           "type": "number",
           "x-help": "Total usable energy storage capacity of your battery. Check your battery specifications. For multiple batteries, sum their capacities.",
@@ -197,8 +197,8 @@
         },
         "dc_to_bat efficiency": {
           "description": "DC to battery efficiency",
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "Dc To Bat Efficiency",
           "type": "number",
           "x-help": "Efficiency of DC-coupled solar to battery conversion. Typically 0.95-0.98 for modern DC-coupled systems. Only relevant if DC-coupled solar is configured.",
@@ -225,8 +225,8 @@
         },
         "bat_to_dc efficiency": {
           "description": "Battery to DC efficiency",
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "Bat To Dc Efficiency",
           "type": "number",
           "x-help": "Efficiency of battery to DC bus conversion. Typically 0.95-0.98. Only relevant for DC-coupled loads or reverse DC flow scenarios.",
@@ -253,7 +253,7 @@
         },
         "cycle cost": {
           "description": "Cost per battery cycle in euros",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Cycle Cost",
           "type": "number",
           "x-help": "Degradation cost per full charge-discharge cycle in euros. Used to factor battery wear into optimization. Calculate as: (battery_cost / warranted_cycles). Example: €5000 battery with 6000 cycles = €0.83/cycle.",
@@ -486,7 +486,7 @@
       "properties": {
         "power": {
           "description": "Power level in Watts",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Power",
           "type": "number",
           "x-help": "Power level for this charge/discharge stage. Stages define how battery efficiency changes at different power levels.",
@@ -496,8 +496,8 @@
         },
         "efficiency": {
           "description": "Efficiency at this power level (0-1)",
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "Efficiency",
           "type": "number",
           "x-help": "Energy conversion efficiency at this power level. Value between 0 and 1, where 1 = 100% efficient.",
@@ -615,7 +615,7 @@
         "cop": {
           "default": 3.0,
           "description": "Coefficient of Performance",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Cop",
           "type": "number",
           "x-help": "Coefficient of Performance if using heat pump water heater. For resistive heating element, use 1.0. For heat pump water heater, typically 2.5-4.0.",
@@ -635,7 +635,7 @@
         "volume": {
           "default": 200.0,
           "description": "Water volume in liters",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Volume",
           "type": "number",
           "x-help": "Hot water tank volume in liters. Affects thermal inertia and heating time. Typical residential: 100-300 liters.",
@@ -655,7 +655,7 @@
         "elec. power": {
           "default": 1000.0,
           "description": "Electrical power in watts",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Elec. Power",
           "type": "number",
           "x-help": "Electrical power consumption of heating element or heat pump compressor in watts. Typical: 1000-3000W for resistive, 400-800W for heat pump water heater.",
@@ -1020,8 +1020,8 @@
         },
         "efficiency": {
           "description": "Charging efficiency at this amperage (0-1)",
-          "maximum": 1.0,
-          "minimum": 0.0,
+          "maximum": 1,
+          "minimum": 0,
           "title": "Efficiency",
           "type": "number",
           "x-help": "Charging efficiency ratio at this amperage level. Accounts for charger losses, cable losses, and battery acceptance. Typically 0.85-0.95.",
@@ -1052,7 +1052,7 @@
         },
         "capacity": {
           "description": "Battery capacity in kWh",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Capacity",
           "type": "number",
           "x-help": "Usable battery capacity in kilowatt-hours. Check vehicle specifications (often less than advertised total capacity).",
@@ -1310,7 +1310,7 @@
         "max_power": {
           "default": 17,
           "description": "Maximum grid power in kW",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Max Power",
           "type": "number",
           "x-help": "Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.",
@@ -1768,7 +1768,7 @@
       "properties": {
         "max_power": {
           "description": "Maximum power in watts for this stage",
-          "minimum": 0.0,
+          "minimum": 0,
           "title": "Max Power",
           "type": "number",
           "x-help": "Maximum electrical power consumption for this heating stage in watts. Heat pumps often have multiple stages (e.g., compressor speeds).",
@@ -1778,7 +1778,7 @@
         },
         "cop": {
           "description": "Coefficient of Performance at this power level",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Cop",
           "type": "number",
           "x-help": "Coefficient of Performance (COP) at this power level. COP = heat_output / electrical_input. Typical values: 3.0-5.0 (3-5x more heat than electricity used).",
@@ -2391,6 +2391,7 @@
         "sensors": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -2511,8 +2512,8 @@
         "tilt": {
           "anyOf": [
             {
-              "maximum": 90.0,
-              "minimum": 0.0,
+              "maximum": 90,
+              "minimum": 0,
               "type": "number"
             },
             {
@@ -2530,8 +2531,8 @@
         "orientation": {
           "anyOf": [
             {
-              "maximum": 180.0,
-              "minimum": -180.0,
+              "maximum": 180,
+              "minimum": -180,
               "type": "number"
             },
             {
@@ -2549,7 +2550,7 @@
         "capacity": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0.0,
+              "exclusiveMinimum": 0,
               "type": "number"
             },
             {
@@ -2567,7 +2568,7 @@
         "yield": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0.0,
+              "exclusiveMinimum": 0,
               "type": "number"
             },
             {
@@ -2646,8 +2647,8 @@
       "properties": {
         "tilt": {
           "description": "Panel tilt angle in degrees (0=horizontal, 90=vertical)",
-          "maximum": 90.0,
-          "minimum": 0.0,
+          "maximum": 90,
+          "minimum": 0,
           "title": "Tilt",
           "type": "number",
           "x-help": "Angle of the solar panels relative to horizontal. 0° = flat/horizontal, 30-35° = optimal for Netherlands, 90° = vertical mounting.",
@@ -2657,8 +2658,8 @@
         },
         "orientation": {
           "description": "Panel orientation in degrees (0=south, 90=west, -90=east)",
-          "maximum": 180.0,
-          "minimum": -180.0,
+          "maximum": 180,
+          "minimum": -180,
           "title": "Orientation",
           "type": "number",
           "x-help": "Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° or 270° = east, 180° = north. South-facing panels produce most energy.",
@@ -2668,7 +2669,7 @@
         },
         "capacity": {
           "description": "Installed capacity in kWp",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Capacity",
           "type": "number",
           "x-help": "Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.",
@@ -2694,7 +2695,7 @@
         },
         "yield": {
           "description": "Yield factor for production calculation",
-          "exclusiveMinimum": 0.0,
+          "exclusiveMinimum": 0,
           "title": "Yield",
           "type": "number",
           "x-help": "Efficiency factor for this string. Typically 0.8-0.9. Accounts for inverter losses, cable losses, shading, and dirt on panels.",
@@ -2769,6 +2770,7 @@
         "param_grid": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -2783,6 +2785,7 @@
         "parameters": {
           "anyOf": [
             {
+              "additionalProperties": true,
               "type": "object"
             },
             {

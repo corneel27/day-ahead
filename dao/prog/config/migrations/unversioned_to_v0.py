@@ -110,6 +110,7 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
                     migrated[section][field] = _bool_adapter.validate_python(val)
                     logger.info(f"Coerced {section}.{field} from {val!r} to boolean")
                 except Exception:
-                    logger.warning(f"Could not coerce {section}.{field} value {val!r} to boolean, leaving as-is")
+                    logger.warning(f"Could not coerce {section}.{field} value {val!r} to boolean, defaulting to False")
+                    migrated[section][field] = False
 
     return migrated
