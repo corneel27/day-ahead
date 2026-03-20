@@ -43,8 +43,8 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
     if "scheduler" in migrated and isinstance(migrated["scheduler"], dict):
         old_scheduler = migrated["scheduler"]
         
-        # Extract 'active' field if present, otherwise default to False
-        active = old_scheduler.get("active", False)
+        # Extract 'active' field if present, otherwise default to True
+        active = old_scheduler.get("active", True)
         
         # Convert string "False"/"True" to boolean if needed
         if isinstance(active, str):
