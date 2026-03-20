@@ -130,6 +130,7 @@ class BoilerConfig(BaseModel):
         }
     )
     activate_service: str = Field(
+        default=None,
         alias="activate service",
         description="Service type to activate boiler (e.g., 'press', 'switch')",
         json_schema_extra={
@@ -138,6 +139,7 @@ class BoilerConfig(BaseModel):
         }
     )
     activate_entity: str = Field(
+        default=None,
         alias="activate entity",
         description="HA entity to activate boiler",
         json_schema_extra={
@@ -173,6 +175,14 @@ class BoilerConfig(BaseModel):
         """Ensure if activate_entity is provided, activate_service must also be provided."""
         # Note: Both fields are required, so this validator is mainly for documentation
         # The actual validation logic in code checks for None on activate_entity
+        if self.activate_entity is not None and self.activate_service is None:
+            raise ValueError(
+                'Boiler must have "activate service" when "activate entity" is configured'
+            )
+        if self.activate_entity is None and self.switch_entity is None:
+            raise ValueError(
+                'Boiler must have "activate entity" or "switch entity" to be configured'
+            )
         return self
     
     model_config = ConfigDict(
