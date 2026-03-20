@@ -644,18 +644,32 @@
           "x-validation-hint": "Must be > 0, typically 1000-3000W"
         },
         "activate service": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "Service type to activate boiler (e.g., 'press', 'switch')",
           "title": "Activate Service",
-          "type": "string",
           "x-help": "Home Assistant service type to trigger boiler heating. Use 'press' for button entities, 'switch' for switch entities, or custom service names.",
           "x-ui-section": "General"
         },
         "activate entity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "HA entity to activate boiler",
           "title": "Activate Entity",
-          "type": "string",
           "x-help": "Home Assistant entity used to activate boiler heating. System will trigger this entity using activate_service when heating is needed.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker",
@@ -1145,10 +1159,17 @@
           "x-unit": "A"
         },
         "entity stop charging": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
           "description": "HA entity for stop charging datetime",
           "title": "Entity Stop Charging",
-          "type": "string",
           "x-help": "Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.",
           "x-ui-section": "General",
           "x-ui-widget": "entity-picker",

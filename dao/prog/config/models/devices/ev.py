@@ -210,7 +210,7 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "number,input_number"
         }
     )
-    entity_stop_charging: str = Field(
+    entity_stop_charging: Optional[str] = Field(
         default=None,
         alias="entity stop charging",
         description="HA entity for stop charging datetime",

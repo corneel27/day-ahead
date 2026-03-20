@@ -129,7 +129,7 @@ class BoilerConfig(BaseModel):
             "x-validation-hint": "Must be > 0, typically 1000-3000W"
         }
     )
-    activate_service: str = Field(
+    activate_service: Optional[str] = Field(
         default=None,
         alias="activate service",
         description="Service type to activate boiler (e.g., 'press', 'switch')",
@@ -138,7 +138,7 @@ class BoilerConfig(BaseModel):
             "x-ui-section": "General"
         }
     )
-    activate_entity: str = Field(
+    activate_entity: Optional[str] = Field(
         default=None,
         alias="activate entity",
         description="HA entity to activate boiler",
