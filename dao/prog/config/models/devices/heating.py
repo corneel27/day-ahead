@@ -2,7 +2,7 @@
 Heating system / heat pump configuration models.
 """
 
-from typing import Optional, Literal
+from typing import Annotated, Literal, Optional, Union
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from ..base import FlexValue
 
@@ -42,17 +42,40 @@ class HeatingStage(BaseModel):
     )
 
 
-class HeatingConfig(BaseModel):
-    """Heating system / heat pump configuration."""
-    
-    heater_present: bool = Field(
+class HeatingDisabled(BaseModel):
+    """Heating system disabled — only heater_present is required."""
+
+    heater_present: Literal[False] = Field(
         default=False,
+        alias="heater present",
+        description="Whether heating system is present/enabled",
+        json_schema_extra={
+            "x-help": "Set to false to disable heating system optimization entirely. No other fields are required.",
+            "x-ui-section": "General",
+        }
+    )
+
+    model_config = ConfigDict(
+        extra='allow',
+        populate_by_name=True,
+        json_schema_extra={
+            'x-ui-group': 'Heating',
+            'x-icon': 'heat-pump',
+            'x-order': 4
+        }
+    )
+
+
+class HeatingEnabled(BaseModel):
+    """Heating system enabled — all operational fields required."""
+
+    heater_present: Literal[True] = Field(
+        default=True,
         alias="heater present",
         description="Whether heating system is present/enabled",
         json_schema_extra={
             "x-help": "Enable heating system optimization. Set to true to include heat pump in optimization, false to disable. Can also be HA entity ID for dynamic control.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker-or-boolean"
         }
     )
     entity_hp_enabled: Optional[str] = Field(
@@ -204,6 +227,7 @@ class HeatingConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
+            'title': 'HeatingConfig',
             'x-ui-group': 'Heating',
             'x-icon': 'heat-pump',
             'x-order': 4,
@@ -239,7 +263,7 @@ Define power levels and corresponding COP values:
             'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Heating-Configuration'
         }
     )
-    
+
     @field_validator('stages', mode='after')
     @classmethod
     def validate_stages_sorted(cls, v: list[HeatingStage]) -> list[HeatingStage]:
@@ -252,3 +276,11 @@ Define power levels and corresponding COP values:
             v = [HeatingStage(max_power=0.0, cop=8.0)] + v
 
         return v
+
+
+# Discriminated union: routes on heater_present (Literal[True] → HeatingEnabled,
+# Literal[False] → HeatingDisabled). Pydantic generates oneOf + const in JSON Schema.
+HeatingConfig = Annotated[
+    Union[HeatingEnabled, HeatingDisabled],
+    Field(discriminator='heater_present'),
+]

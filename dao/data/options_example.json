@@ -113,7 +113,7 @@
     "port": 5000
   },
   "boiler": {
-    "boiler present": "True",
+    "boiler present": true,
     "entity actual temp.": "sensor.boiler_gemeten",
     "entity setpoint": "sensor.boiler_ingesteld",
     "entity hysterese": "sensor.hysterese_hot_water",
@@ -126,7 +126,7 @@
     "activate entity": "input_button.hw_trigger"
   },
   "heating": {
-    "heater present": "True",
+    "heater present": true,
     "entity hp enabled": "binary_sensor.heatpump_heating",
     "degree days factor": 3.6,
     "adjustment": "power",

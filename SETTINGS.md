@@ -23,8 +23,8 @@
   - [🚗 EVConfig](#evconfig)
   - [🧺 MachineConfig](#machineconfig)
 - [Heating](#heating)
-  - [🌡️ HeatingConfig](#heatingconfig)
-  - [💧 BoilerConfig](#boilerconfig)
+  - [🌡️ HeatingEnabled](#heatingenabled)
+  - [💧 BoilerEnabled](#boilerenabled)
 - [Integration](#integration)
   - [💾 DatabaseConfig](#databaseconfig)
   - [🔔 NotificationsConfig](#notificationsconfig)
@@ -635,7 +635,7 @@ Optional: Home Assistant entity to force immediate start, bypassing optimization
 
 ### 🌡️ HeatingConfig
 
-_Heating system / heat pump configuration._
+_Heating system enabled — all operational fields required._
 
 # Heat Pump Configuration
 
@@ -669,9 +669,14 @@ Define power levels and corresponding COP values:
 
 📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Heating-Configuration)
 
+> **Conditional configuration** — the `heater present` field acts as a discriminator that selects which variant is active:
+>
+> - `heater present: false` — Heating system disabled — only heater_present is required.
+> - `heater present: true` — Heating system enabled — all operational fields required.
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `heater present` | boolean | No | `false` | Whether heating system is present/enabled |
+| `heater present` | boolean | Discriminator | `true` | Whether heating system is present/enabled |
 | `entity hp enabled` | string (optional) | No | `null` | HA binary sensor for heat pump enabled status |
 | `degree days factor` | [FlexValue](#flexvalue) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
@@ -750,7 +755,7 @@ Optional: Home Assistant switch to control heat pump on/off. Used by scheduler t
 
 ### 💧 BoilerConfig
 
-_Hot water boiler configuration._
+_Hot water boiler enabled — all operational fields required._
 
 # Hot Water Boiler Configuration
 
@@ -791,9 +796,14 @@ The system models boiler as a thermal battery:
 
 📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Boiler-Configuration)
 
+> **Conditional configuration** — the `boiler present` field acts as a discriminator that selects which variant is active:
+>
+> - `boiler present: false` — Hot water boiler disabled — only boiler_present is required.
+> - `boiler present: true` — Hot water boiler enabled — all operational fields required.
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `boiler present` | boolean | No | `true` | Whether boiler is present/enabled |
+| `boiler present` | boolean | Discriminator | `true` | Whether boiler is present/enabled |
 | `entity actual temp.` | string | Yes | — | HA entity for actual water temperature (Unit: `°C`) |
 | `entity setpoint` | string | Yes | — | HA entity for temperature setpoint (Unit: `°C`) |
 | `entity hysterese` | string | Yes | — | HA entity for temperature hysteresis (Unit: `°C`) |

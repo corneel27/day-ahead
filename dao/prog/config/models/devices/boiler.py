@@ -2,22 +2,45 @@
 Hot water boiler configuration models.
 """
 
-from typing import Optional
+from typing import Annotated, Literal, Optional, Union
 from ..base import FlexValue
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
-class BoilerConfig(BaseModel):
-    """Hot water boiler configuration."""
-    
-    boiler_present: bool = Field(
+class BoilerDisabled(BaseModel):
+    """Hot water boiler disabled — only boiler_present is required."""
+
+    boiler_present: Literal[False] = Field(
+        default=False,
+        alias="boiler present",
+        description="Whether boiler is present/enabled",
+        json_schema_extra={
+            "x-help": "Set to false to disable boiler optimization entirely. No other fields are required.",
+            "x-ui-section": "General",
+        }
+    )
+
+    model_config = ConfigDict(
+        extra='allow',
+        populate_by_name=True,
+        json_schema_extra={
+            'x-ui-group': 'Heating',
+            'x-icon': 'water-boiler',
+            'x-order': 5
+        }
+    )
+
+
+class BoilerEnabled(BaseModel):
+    """Hot water boiler enabled — all operational fields required."""
+
+    boiler_present: Literal[True] = Field(
         default=True,
         alias="boiler present",
         description="Whether boiler is present/enabled",
         json_schema_extra={
             "x-help": "Enable hot water boiler optimization. Set to true to include boiler in optimization, false to disable. Can also be HA entity ID for dynamic control.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker-or-boolean"
         }
     )
     entity_actual_temp: str = Field(
@@ -171,7 +194,7 @@ class BoilerConfig(BaseModel):
     )
     
     @model_validator(mode='after')
-    def validate_activate_config(self) -> 'BoilerConfig':
+    def validate_activate_config(self) -> 'BoilerEnabled':
         """
         Ensure that if activate_entity is provided, activate_service must also be provided.
         Ensure that activate_entity or switch_entity is provided
@@ -190,6 +213,7 @@ class BoilerConfig(BaseModel):
         extra='allow',
         populate_by_name=True,
         json_schema_extra={
+            'title': 'BoilerConfig',
             'x-ui-group': 'Heating',
             'x-icon': 'water-boiler',
             'x-order': 5,
@@ -232,3 +256,11 @@ The system models boiler as a thermal battery:
             'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Boiler-Configuration'
         }
     )
+
+
+# Discriminated union: routes on boiler_present (Literal[True] → BoilerEnabled,
+# Literal[False] → BoilerDisabled). Pydantic generates oneOf + const in JSON Schema.
+BoilerConfig = Annotated[
+    Union[BoilerEnabled, BoilerDisabled],
+    Field(discriminator='boiler_present'),
+]

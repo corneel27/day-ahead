@@ -46,13 +46,75 @@ ICON_MAP = {
 }
 
 
-def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = "", defs: dict[str, Any] = None) -> tuple[str, list[str]]:
+def find_discriminated_unions(schema: dict[str, Any]) -> dict[str, dict]:
+    """Scan a JSON schema for discriminated unions.
+
+    Returns a mapping from every branch def-name to its union context::
+
+        {
+            "BoilerEnabled": {
+                "discriminator_property": "boiler present",
+                "branches": [
+                    {"value": "True",  "def_name": "BoilerEnabled",  "is_primary": True},
+                    {"value": "False", "def_name": "BoilerDisabled", "is_primary": False},
+                ],
+                "is_primary": True,
+            },
+            "BoilerDisabled": { ... same branches list ..., "is_primary": False },
+        }
+
+    A branch is considered *primary* when it contains more than just the
+    discriminator field (i.e. it is the "enabled" / full-config variant).
+    """
+    defs = schema.get("$defs", {})
+    result: dict[str, dict] = {}
+
+    def _scan_field(field_schema: dict) -> None:
+        for sub in field_schema.get("anyOf", []):
+            if "discriminator" not in sub or "oneOf" not in sub:
+                continue
+            disc_prop = sub["discriminator"]["propertyName"]
+            mapping = sub["discriminator"].get("mapping", {})
+
+            branches = []
+            for disc_value, ref_path in mapping.items():
+                def_name = ref_path.split("/")[-1]
+                n_props = len(defs.get(def_name, {}).get("properties", {}))
+                branches.append(
+                    {"value": disc_value, "def_name": def_name, "is_primary": n_props > 1}
+                )
+
+            for branch in branches:
+                result[branch["def_name"]] = {
+                    "discriminator_property": disc_prop,
+                    "branches": branches,
+                    "is_primary": branch["is_primary"],
+                }
+
+    for field_schema in schema.get("properties", {}).values():
+        _scan_field(field_schema)
+    for def_schema in defs.values():
+        for field_schema in def_schema.get("properties", {}).values():
+            _scan_field(field_schema)
+
+    return result
+
+
+def generate_markdown_from_schema(
+    schema: dict[str, Any],
+    title_prefix: str = "",
+    defs: dict[str, Any] = None,
+    union_context: dict | None = None,
+) -> tuple[str, list[str]]:
     """Generate markdown documentation from a JSON schema.
     
     Args:
         schema: The JSON schema dictionary
         title_prefix: Prefix for markdown headers (e.g., "##" or "###")
         defs: The $defs dictionary for resolving references
+        union_context: Optional discriminator-union metadata from
+            find_discriminated_unions(), used to render a conditional note and
+            annotate the discriminator field in the table.
         
     Returns:
         Tuple of (markdown_string, validation_errors)
@@ -91,7 +153,25 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
         if x_docs_url:
             lines.append(f"📚 [**View detailed documentation →**]({x_docs_url})")
             lines.append("")
-    
+
+    # Render discriminated-union context note
+    if union_context:
+        disc_prop = union_context["discriminator_property"]
+        branches = union_context["branches"]
+        lines.append(
+            f"> **Conditional configuration** — the `{disc_prop}` field acts as a "
+            f"discriminator that selects which variant is active:"
+        )
+        lines.append(">")
+        for branch in branches:
+            def_name = branch["def_name"]
+            variant_schema = (defs or {}).get(def_name, {})
+            variant_desc = variant_schema.get("description", def_name)
+            lines.append(
+                f"> - `{disc_prop}: {branch['value'].lower()}` — {variant_desc}"
+            )
+        lines.append("")
+
     # Get properties
     properties = schema.get('properties', {})
     required = set(schema.get('required', []))
@@ -141,10 +221,21 @@ def generate_markdown_from_schema(schema: dict[str, Any], title_prefix: str = ""
         
         # Format required column
         required_mark = "Yes" if is_required else "No"
-        
-        # Get default value for all field types
-        default = get_default_from_schema(field_schema, is_required, defs)
+
+        # Discriminator field: show the const value it must hold instead of a
+        # misleading default, and mark its role clearly.
+        disc_prop = union_context["discriminator_property"] if union_context else None
+        if union_context and field_name == disc_prop:
+            # Find the const value this branch locks the field to
+            const_val = field_schema.get("const")
+            const_str = str(const_val).lower() if const_val is not None else "?"
+            required_mark = "Discriminator"
+            default = f"`{const_str}`"
+        else:
+            # Get default value for all field types
+            default = get_default_from_schema(field_schema, is_required, defs)
         lines.append(f"| `{field_name}` | {field_type} | {required_mark} | {default} | {description} |")
+
     
     lines.append("")
     
@@ -332,11 +423,18 @@ def main():
     
     # Get all definitions
     defs = schema.get('$defs', {})
-    
-    # Organize models by x-ui-group
+
+    # Detect discriminated unions — used to suppress trivial branches and enrich docs
+    discriminated_unions = find_discriminated_unions(schema)
+
+    # Organize models by x-ui-group, skipping trivial (non-primary) union branches.
+    # Trivial branches (e.g. BoilerDisabled) are documented inline in the primary branch.
     # Structure: {x-ui-group: [(x_order, model_name, model_schema)]}
     grouped_models = defaultdict(list)
     for model_name, model_schema in defs.items():
+        union_info = discriminated_unions.get(model_name)
+        if union_info and not union_info["is_primary"]:
+            continue  # skip — will be mentioned in the primary branch's note
         x_ui_group = model_schema.get('x-ui-group', 'Other')
         x_order = model_schema.get('x-order', 999)
         grouped_models[x_ui_group].append((x_order, model_name, model_schema))
@@ -434,7 +532,12 @@ def main():
         
         # Generate docs for each model in this group
         for order, model_name, model_schema in models:
-            doc, errors = generate_markdown_from_schema(model_schema, title_prefix="### ", defs=defs)
+            doc, errors = generate_markdown_from_schema(
+                model_schema,
+                title_prefix="### ",
+                defs=defs,
+                union_context=discriminated_unions.get(model_name),
+            )
             lines.append(doc)
             all_errors.extend(errors)
             lines.append("")
