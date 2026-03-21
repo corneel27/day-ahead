@@ -1,62 +1,70 @@
 import pytest
-from dao.prog.config.models.base import FlexValue, SecretStr
+from dao.prog.config.models.base import FlexValue, FlexFloat, FlexInt, FlexBool, FlexStr, SecretStr
 
 
 class TestFlexValue:
     def test_serialization_literal(self):
-        """Test that FlexValue serializes literals correctly."""
-        fv = FlexValue(value=95)
-        serialized = fv.model_dump()
-        assert serialized == 95
-
-        # Test round-trip
-        deserialized = FlexValue(value=serialized)
-        assert deserialized.value == 95
+        fv = FlexFloat(value=95)
+        assert fv.model_dump() == 95
 
     def test_serialization_entity_id(self):
-        """Test that FlexValue serializes entity IDs correctly."""
-        fv = FlexValue(value="sensor.battery_soc")
-        serialized = fv.model_dump()
-        assert serialized == "sensor.battery_soc"
-
-        # Test round-trip
-        deserialized = FlexValue(value=serialized)
-        assert deserialized.value == "sensor.battery_soc"
+        fv = FlexFloat(value="sensor.battery_soc")
+        assert fv.model_dump() == "sensor.battery_soc"
 
     def test_deserialization_from_literal(self):
-        """Test that FlexValue can be deserialized from bare literals."""
-        fv = FlexValue(value=95)
-        assert fv.value == 95
+        assert FlexFloat(value=95).value == 95
+        assert FlexFloat(value="sensor.test").value == "sensor.test"
+        assert FlexBool(value=True).value is True
 
-        fv_str = FlexValue(value="sensor.test")
-        assert fv_str.value == "sensor.test"
+    def test_roundtrip(self):
+        fv = FlexFloat(value=95)
+        assert FlexFloat(value=fv.model_dump()).value == 95
 
-        fv_bool = FlexValue(value=True)
-        assert fv_bool.value is True
+    def test_resolve_literal_float(self):
+        assert FlexFloat(value=95).resolve(lambda x: "dummy") == 95.0
 
-    def test_serialization_vs_deserialization_format(self):
-        """Test that serialized format is flat, different from internal dict."""
-        # Input: value
-        fv = FlexValue(value=95)
-        # Serialized: flat value
-        serialized = fv.model_dump()
-        assert serialized == 95
+    def test_resolve_entity_id_float(self):
+        assert FlexFloat(value="sensor.test").resolve(lambda x: "42.5") == 42.5
 
-        # Deserialization accepts the flat value
-        fv_from_flat = FlexValue(value=serialized)
-        assert fv_from_flat.value == 95
 
+class TestFlexInt:
     def test_resolve_literal(self):
-        """Test resolving literal values."""
-        fv = FlexValue(value=95)
-        result = fv.resolve(lambda x: "dummy", target_type=int)
-        assert result == 95
+        assert FlexInt(value=95).resolve(lambda x: "dummy") == 95
+
+    def test_resolve_float_literal_coerces(self):
+        assert FlexInt(value=1.9).resolve(lambda x: "dummy") == 1
 
     def test_resolve_entity_id(self):
-        """Test resolving entity IDs."""
-        fv = FlexValue(value="sensor.test")
-        result = fv.resolve(lambda x: "42.5", target_type=float)
-        assert result == 42.5
+        # HA states often come as "95.0"
+        assert FlexInt(value="sensor.soc").resolve(lambda x: "95.0") == 95
+
+
+class TestFlexBool:
+    def test_resolve_literal_true(self):
+        assert FlexBool(value=True).resolve(lambda x: "dummy") is True
+
+    def test_resolve_literal_false(self):
+        assert FlexBool(value=False).resolve(lambda x: "dummy") is False
+
+    def test_resolve_entity_id_on(self):
+        assert FlexBool(value="binary_sensor.x").resolve(lambda x: "on") is True
+
+    def test_resolve_entity_id_off(self):
+        assert FlexBool(value="binary_sensor.x").resolve(lambda x: "off") is False
+
+    def test_resolve_entity_id_true_string(self):
+        assert FlexBool(value="binary_sensor.x").resolve(lambda x: "true") is True
+
+
+class TestFlexStr:
+    def test_resolve_literal(self):
+        assert FlexStr(value="minimize cost").resolve(lambda x: "dummy") == "minimize cost"
+
+    def test_resolve_entity_id(self):
+        assert FlexStr(value="input_select.mode").resolve(lambda x: "minimize consumption") == "minimize consumption"
+
+    def test_resolve_numeric_literal_coerces(self):
+        assert FlexStr(value=42).resolve(lambda x: "dummy") == "42"
 
 
 class TestSecretStr:

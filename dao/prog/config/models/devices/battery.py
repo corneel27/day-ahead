@@ -4,7 +4,7 @@ Battery configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from ..base import FlexValue
+from ..base import FlexFloat, FlexInt
 from .solar import SolarConfig
 
 
@@ -72,7 +72,7 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "Must be greater than 0"
         }
     )
-    upper_limit: FlexValue = Field(
+    upper_limit: FlexInt = Field(
         default=100,
         alias="upper limit",
         description="Maximum SOC % (can be HA entity)",
@@ -80,12 +80,10 @@ class BatteryConfig(BaseModel):
             "x-help": "Maximum State of Charge in percent. Battery will never charge above this level. Supports FlexValue pattern: use integer or HA entity ID.",
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
-            "x-validation-hint": "0-100%, protects battery from overcharge",
-            "x-ui-widget": "entity-picker-or-number",
-            "x-ui-widget-filter": "sensor,input_number"
+            "x-validation-hint": "0-100%, protects battery from overcharge"
         }
     )
-    lower_limit: FlexValue = Field(
+    lower_limit: FlexInt = Field(
         default=20,
         alias="lower limit",
         description="Minimum SOC % (can be HA entity)",
@@ -93,12 +91,10 @@ class BatteryConfig(BaseModel):
             "x-help": "Minimum State of Charge in percent. Battery will never discharge below this level. Supports FlexValue pattern: use integer or HA entity ID.",
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
-            "x-validation-hint": "0-100%, protects battery from deep discharge",
-            "x-ui-widget": "entity-picker-or-number",
-            "x-ui-widget-filter": "sensor,input_number"
+            "x-validation-hint": "0-100%, protects battery from deep discharge"
         }
     )
-    optimal_lower_level: Optional[FlexValue] = Field(
+    optimal_lower_level: Optional[FlexInt] = Field(
         default=None,
         alias="optimal lower level",
         description="Optimal lower SOC % for cost optimization",
@@ -106,21 +102,17 @@ class BatteryConfig(BaseModel):
             "x-help": "Target SOC level for cost optimization. System will prefer this level over minimum. Supports FlexValue pattern.",
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
-            "x-validation-hint": "Optional, should be >= lower_limit",
-            "x-ui-widget": "entity-picker-or-number",
-            "x-ui-widget-filter": "sensor,input_number"
+            "x-validation-hint": "Optional, should be >= lower_limit"
         }
     )
-    penalty_low_soc: Optional[FlexValue] = Field(
+    penalty_low_soc: Optional[FlexFloat] = Field(
         default=None,
         alias="penalty low soc",
         description="Penalty cost per % per hour below optimal lower SOC",
         json_schema_extra={
             "x-help": "Cost in euro per %·hour when SOC stays below optimal lower level. Higher values make the optimizer prioritize keeping SOC above the optimal level. Default 0.0025 euro/%·h.",
             "x-unit": "euro/%·h",
-            "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker-or-number",
-            "x-ui-widget-filter": "sensor,input_number"
+            "x-ui-section": "Power Configuration"
         }
     )
     entity_min_soc_end_opt: Optional[str] = Field(
@@ -219,7 +211,7 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    dc_to_bat_max_power: Optional[FlexValue] = Field(
+    dc_to_bat_max_power: Optional[FlexFloat] = Field(
         default=None,
         alias="dc_to_bat max power",
         description="DC to battery max power in watts",

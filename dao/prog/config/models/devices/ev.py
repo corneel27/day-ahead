@@ -4,7 +4,7 @@ Electric Vehicle configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from ..base import FlexValue
+from ..base import FlexBool
 
 
 class EVChargeStage(BaseModel):
@@ -117,15 +117,13 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "device_tracker"
         }
     )
-    charge_three_phase: FlexValue = Field(
-        default=FlexValue(value=True),
+    charge_three_phase: FlexBool = Field(
+        default=FlexBool(value=True),
         alias="charge three phase",
         description="Whether vehicle charges on three phases",
         json_schema_extra={
             "x-help": "True for three-phase charging (11kW/22kW), False for single-phase (3.7kW/7.4kW). Can also be HA entity ID for dynamic resolution.",
-            "x-ui-section": "General",
-            "x-ui-widget": "entity-picker-or-boolean",
-            "x-ui-widget-filter": "binary_sensor,input_boolean"
+            "x-ui-section": "General"
         }
     )
     charge_stages: list[EVChargeStage] = Field(

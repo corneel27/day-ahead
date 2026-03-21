@@ -177,7 +177,7 @@ class DaBase(hass.Hass):
 
         self.history_options = self.config.history
         self.strategy = self.config.strategy.resolve(
-            lambda eid: self.get_state(eid).state, target_type=str
+            lambda eid: self.get_state(eid).state
         )
         self.tibber_options = self.config.tibber
         notif = self.config.notifications

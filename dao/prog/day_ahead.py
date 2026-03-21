@@ -498,7 +498,7 @@ class DaCalc(DaBase):
             )
             max_dc_to_bat_power.append(
                 max_charge_power[b] * 2 if self.battery_options[b].dc_to_bat_max_power is None
-                else self.battery_options[b].dc_to_bat_max_power.resolve(ha_getter, float) / 1000
+                else self.battery_options[b].dc_to_bat_max_power.resolve(ha_getter) / 1000
             )
 
             # reduce power low soc
@@ -572,11 +572,11 @@ class DaCalc(DaBase):
             eff_bat_to_dc.append(float(self.battery_options[b].bat_to_dc_efficiency))
             # fractie van 1
 
-            lower_limit.append(self.battery_options[b].lower_limit.resolve(ha_getter, int))
-            upper_limit.append(self.battery_options[b].upper_limit.resolve(ha_getter, int))
+            lower_limit.append(self.battery_options[b].lower_limit.resolve(ha_getter))
+            upper_limit.append(self.battery_options[b].upper_limit.resolve(ha_getter))
             _opt_lvl_field = self.battery_options[b].optimal_lower_level
             opt_low_lvl = float(
-                _opt_lvl_field.resolve(ha_getter, int)
+                _opt_lvl_field.resolve(ha_getter)
                 if _opt_lvl_field is not None
                 else lower_limit[b]
             )
@@ -592,7 +592,7 @@ class DaCalc(DaBase):
 
             # penalty in euro/%.hour
             _penalty_field = self.battery_options[b].penalty_low_soc
-            penalty = _penalty_field.resolve(ha_getter, float) if _penalty_field is not None else 0.0025
+            penalty = _penalty_field.resolve(ha_getter) if _penalty_field is not None else 0.0025
             penalty_low_soc.append(penalty)
 
             if _start_soc is None:
@@ -1573,7 +1573,7 @@ class DaCalc(DaBase):
                 max_ampere = float(max_ampere)
             except ValueError:
                 max_ampere = 10
-            charge_three_phase = self.ev_options[e].charge_three_phase.resolve(ha_getter, bool)
+            charge_three_phase = self.ev_options[e].charge_three_phase.resolve(ha_getter)
             if charge_three_phase:
                 ampere_f = 3
             else:
@@ -1910,7 +1910,7 @@ class DaCalc(DaBase):
             logging.info(f"Gewogen graaddagen totaal: {degree_days:.1f} K.day")
 
             # degree days factor kWh th / K.day
-            degree_days_factor = self.heating_options.degree_days_factor.resolve(ha_getter, float)
+            degree_days_factor = self.heating_options.degree_days_factor.resolve(ha_getter)
             if degree_days_factor < 0.1:
                 logging.warning(
                     f"Je graaddag factor ({degree_days_factor:.4f} kWh/K.day) "
@@ -2956,7 +2956,7 @@ class DaCalc(DaBase):
         #        strategy optimization
         #####################################################
         # settings
-        max_gap = abs(self.config.max_gap.resolve(ha_getter, float))
+        max_gap = abs(self.config.max_gap.resolve(ha_getter))
         max_gap = max(0.00001, min(max_gap, 1.0))  # clamp to [0.00001, 1.0]
 
         model.max_mip_gap_abs = max_gap
