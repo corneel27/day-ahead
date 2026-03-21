@@ -33,9 +33,8 @@
   - [HADatabaseConfig](#hadatabaseconfig)
 - [Pricing](#pricing)
   - [💰 PricingConfig](#pricingconfig)
-- [Visualization](#visualization)
-  - [📈 GraphicsConfig](#graphicsconfig)
 - [Reporting](#reporting)
+  - [📈 GraphicsConfig](#graphicsconfig)
   - [⏰ HistoryConfig](#historyconfig)
   - [📉 ReportConfig](#reportconfig)
 - [DAO](#dao)
@@ -55,6 +54,7 @@
   - [MachineProgram](#machineprogram)
   - [ScheduleEntry](#scheduleentry)
   - [SecretStr](#secretstr)
+  - [SocPowerLimit](#socpowerlimit)
   - [SolarString](#solarstring)
   - [XGBoostConfig](#xgboostconfig)
 
@@ -126,8 +126,8 @@ Configure your home battery storage system for optimal energy management and cos
 | `charge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Charge power/efficiency curve _At least 1 stage required, ordered by power_ |
 | `discharge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Discharge power/efficiency curve _At least 1 stage required, ordered by power_ |
 | `reduced hours` | object (optional) | No | `null` | Hour -> max power mapping for reduced power hours _Keys are hour strings (0-23), values are watts_ |
-| `reduce_power_low_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for low SOC power reduction |
-| `reduce_power_high_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
+| `reduce_power_low_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for low SOC power reduction |
+| `reduce_power_high_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
 | `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
 | `dc_to_bat max power` | number (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
@@ -828,7 +828,7 @@ The system models boiler as a thermal battery:
 
 **`boiler present`**
 
-Enable hot water boiler optimization. Set to true to include boiler in optimization, false to disable. Can also be HA entity ID for dynamic control.
+Enable hot water boiler optimization. Set to true to include boiler in optimization, false to disable.
 
 **`entity actual temp.`**
 
@@ -1358,9 +1358,9 @@ Enable tax refund calculation if eligible. Some regions/users get energy tax ref
 
 ---
 
-## Visualization
+## Reporting
 
-<a id="visualization"></a>
+<a id="reporting"></a>
 
 ### 📈 GraphicsConfig
 
@@ -1437,12 +1437,6 @@ Display average/baseline consumption in graphs. Helps understand optimization im
 
 </details>
 
-
----
-
-## Reporting
-
-<a id="reporting"></a>
 
 ### ⏰ HistoryConfig
 
@@ -2000,6 +1994,33 @@ Task to run: data collection, optimization, or maintenance
 Secret reference or plain string. Use "!secret key_name" format to reference secrets from secrets.json. Plain strings are also accepted.
 
 *No configuration fields.*
+
+
+### SocPowerLimit
+
+_A SOC threshold with a corresponding maximum power limit.
+
+Used in ``reduce_power_low_soc`` / ``reduce_power_high_soc`` to protect the
+battery by reducing charge/discharge power as SOC approaches its limits.
+Multiple stages define a piecewise-linear power derating curve._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `soc` | integer | Yes | — | SOC threshold in % (Unit: `%`) _0–100 %, stages should be sorted by soc_ |
+| `power` | integer | Yes | — | Maximum power at this SOC threshold in watts (Unit: `W`) _Must be >= 0_ |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`soc`**
+
+State of Charge threshold at which this power limit applies.
+
+**`power`**
+
+Maximum charge or discharge power allowed when SOC is at this threshold.
+
+</details>
 
 
 ### SolarString

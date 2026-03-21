@@ -293,7 +293,8 @@ class DAOConfigBaseModel(BaseModel):
     """Base model for Day Ahead Optimizer configuration classes.
     
     Provides common validation and preprocessing logic for all DAO configuration models:
-    - Automatic enum_values injection for FlexEnum fields from json_schema_extra
+    - Automatic enum_values injection for FlexEnum fields from field defaults
+    - Automatic x-enum-values addition to JSON schema for UISchema generation
     - Future: additional DAO-specific validation and processing logic
     
     All DAO configuration models should inherit from this instead of BaseModel directly.
@@ -301,15 +302,18 @@ class DAOConfigBaseModel(BaseModel):
     Example:
         class MyConfig(DAOConfigBaseModel):
             strategy: FlexEnum = Field(
-                default=FlexEnum(value="minimize cost"),
-                json_schema_extra={"x-enum-values": ["minimize cost", "minimize consumption"]}
+                default=FlexEnum(
+                    value="minimize cost",
+                    enum_values=["minimize cost", "minimize consumption"]
+                )
             )
+            # No need to duplicate enum_values in json_schema_extra!
     """
     
     @model_validator(mode='before')
     @classmethod
     def inject_flex_enum_values(cls, data):
-        """Automatically inject enum_values for all FlexEnum fields from their metadata."""
+        """Automatically inject enum_values for all FlexEnum fields from their metadata or defaults."""
         if not isinstance(data, dict):
             return data
         
@@ -317,18 +321,50 @@ class DAOConfigBaseModel(BaseModel):
         for field_name, field_info in cls.model_fields.items():
             # Check if this field is annotated as FlexEnum
             if field_info.annotation == FlexEnum and field_name in data:
-                # Extract enum values from field metadata
+                value = data[field_name]
+                
+                # Try to get enum_values from field metadata first (legacy)
+                enum_values = None
                 if field_info.json_schema_extra:
                     enum_values = field_info.json_schema_extra.get('x-enum-values')
-                    if enum_values:
-                        value = data[field_name]
-                        # Inject enum_values into the data
-                        if isinstance(value, str):
-                            data[field_name] = {'value': value, 'enum_values': enum_values}
-                        elif isinstance(value, dict) and 'enum_values' not in value:
-                            value['enum_values'] = enum_values
+                
+                # If not in metadata, try to extract from field default
+                if not enum_values and hasattr(field_info, 'default'):
+                    default = field_info.default
+                    if isinstance(default, FlexEnum) and default.enum_values:
+                        enum_values = default.enum_values
+                
+                if enum_values:
+                    # Inject enum_values into the data
+                    if isinstance(value, str):
+                        data[field_name] = {'value': value, 'enum_values': enum_values}
+                    elif isinstance(value, dict) and 'enum_values' not in value:
+                        value['enum_values'] = enum_values
         
         return data
+    
+    @classmethod
+    def model_json_schema(cls, **kwargs):
+        """Customize JSON schema generation to add x-enum-values from FlexEnum defaults."""
+        schema = super().model_json_schema(**kwargs)
+        
+        # Process properties to add x-enum-values for FlexEnum fields
+        if 'properties' in schema:
+            for field_name, field_info in cls.model_fields.items():
+                if field_info.annotation == FlexEnum and field_name in schema['properties']:
+                    prop_schema = schema['properties'][field_name]
+                    
+                    # Check if x-enum-values already set in json_schema_extra
+                    has_x_enum = field_info.json_schema_extra and 'x-enum-values' in field_info.json_schema_extra
+                    
+                    # If not, extract from field default
+                    if not has_x_enum and hasattr(field_info, 'default'):
+                        default = field_info.default
+                        if isinstance(default, FlexEnum) and default.enum_values:
+                            # Add x-enum-values to the property schema
+                            prop_schema['x-enum-values'] = default.enum_values
+        
+        return schema
 
 
 class SecretStr(str):

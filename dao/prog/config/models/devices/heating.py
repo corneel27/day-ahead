@@ -84,7 +84,7 @@ class HeatingEnabled(BaseModel):
         description="HA binary sensor for heat pump enabled status",
         json_schema_extra={
             "x-help": "Optional: Home Assistant binary sensor indicating if heat pump is enabled and operational. System will only optimize when enabled.",
-            "x-ui-section": "General",
+            "x-ui-section": "Sensors",
             "x-ui-widget-filter": "binary_sensor"
         }
     )
@@ -95,7 +95,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
             "x-unit": "factor",
-            "x-ui-section": "General",
+            "x-ui-section": "Configuration",
             "x-validation-hint": "Must be > 0, typically 0.5-2.0"
         }
     )
@@ -104,7 +104,7 @@ class HeatingEnabled(BaseModel):
         description="Adjustment mode",
         json_schema_extra={
             "x-help": "Heat pump control mode: 'on/off' = simple binary control, 'power' = variable power control, 'heating curve' = adjust heating curve based on weather.",
-            "x-ui-section": "General"
+            "x-ui-section": "Configuration"
         }
     )
     stages: list[HeatingStage] = Field(
@@ -112,7 +112,7 @@ class HeatingEnabled(BaseModel):
         description="Heating power/COP stages",
         json_schema_extra={
             "x-help": "Power and efficiency stages for heat pump. At least one stage required. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
-            "x-ui-section": "General",
+            "x-ui-section": "Power Stages",
             "x-validation-hint": "At least 1 stage, must be sorted by max_power"
         }
     )
@@ -122,7 +122,7 @@ class HeatingEnabled(BaseModel):
         description="HA entity to adjust heating curve",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to adjust heating curve. Used when adjustment mode is 'heating curve'. Controls water temperature based on outdoor temperature.",
-            "x-ui-section": "General",
+            "x-ui-section": "Controls",
             "x-ui-widget-filter": "number,input_number"
         }
     )
@@ -133,7 +133,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Multiplier for heating curve adjustments. Higher values = more aggressive adjustments. Typical: 0.5-2.0.",
             "x-unit": "factor",
-            "x-ui-section": "General",
+            "x-ui-section": "Configuration",
             "x-validation-hint": "Typically 0.5-2.0 if specified"
         }
     )
@@ -145,7 +145,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Minimum number of consecutive time intervals heat pump must run once started. Prevents excessive on/off cycling which reduces efficiency and equipment life. Typical: 2-4 intervals (2-4 hours).",
             "x-unit": "intervals",
-            "x-ui-section": "General",
+            "x-ui-section": "Configuration",
             "x-validation-hint": "Must be >= 1, typically 2-4 for 1h intervals"
         }
     )
@@ -156,7 +156,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor showing total heat energy produced. Used for monitoring and validation.",
             "x-unit": "kWh",
-            "x-ui-section": "General",
+            "x-ui-section": "Sensors",
             "x-ui-widget-filter": "sensor"
         }
     )
@@ -167,7 +167,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor showing current heat demand. Can be used instead of degree-day calculation for more accurate demand forecasting.",
             "x-unit": "W",
-            "x-ui-section": "General",
+            "x-ui-section": "Sensors",
             "x-ui-widget-filter": "sensor"
         }
     )
@@ -178,7 +178,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor for outdoor average temperature. Used for degree-day calculations and COP adjustments.",
             "x-unit": "°C",
-            "x-ui-section": "General",
+            "x-ui-section": "Sensors",
             "x-ui-widget-filter": "sensor"
         }
     )
@@ -189,7 +189,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor showing current COP. Can be used for monitoring or to override stage-based COP calculations.",
             "x-unit": "ratio",
-            "x-ui-section": "General",
+            "x-ui-section": "Sensors",
             "x-ui-widget-filter": "sensor"
         }
     )
@@ -200,7 +200,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor showing current electrical power consumption. Used for monitoring and validation.",
             "x-unit": "W",
-            "x-ui-section": "General",
+            "x-ui-section": "Sensors",
             "x-ui-widget-filter": "sensor"
         }
     )
@@ -210,7 +210,7 @@ class HeatingEnabled(BaseModel):
         description="HA entity to control heat pump on/off",
         json_schema_extra={
             "x-help": "Optional: Home Assistant switch to control heat pump on/off. Used by scheduler to execute optimized heating schedule.",
-            "x-ui-section": "General",
+            "x-ui-section": "Controls",
             "x-ui-widget-filter": "switch"
         }
     )
@@ -221,6 +221,7 @@ class HeatingEnabled(BaseModel):
         json_schema_extra={
             'title': 'HeatingConfig',
             'x-ui-group': 'Heating',
+            'x-ui-section': 'Heating',
             'x-icon': 'heat-pump',
             'x-order': 4,
             'x-help': '''# Heat Pump Configuration

@@ -41,6 +41,38 @@ class BatteryStage(BaseModel):
     )
 
 
+class SocPowerLimit(BaseModel):
+    """A SOC threshold with a corresponding maximum power limit.
+
+    Used in ``reduce_power_low_soc`` / ``reduce_power_high_soc`` to protect the
+    battery by reducing charge/discharge power as SOC approaches its limits.
+    Multiple stages define a piecewise-linear power derating curve.
+    """
+
+    soc: int = Field(
+        ge=0, le=100,
+        description="SOC threshold in %",
+        json_schema_extra={
+            "x-help": "State of Charge threshold at which this power limit applies.",
+            "x-unit": "%",
+            "x-ui-section": "Power Configuration",
+            "x-validation-hint": "0–100 %, stages should be sorted by soc"
+        }
+    )
+    power: int = Field(
+        ge=0,
+        description="Maximum power at this SOC threshold in watts",
+        json_schema_extra={
+            "x-help": "Maximum charge or discharge power allowed when SOC is at this threshold.",
+            "x-unit": "W",
+            "x-ui-section": "Power Configuration",
+            "x-validation-hint": "Must be >= 0"
+        }
+    )
+
+    model_config = ConfigDict(extra='forbid')
+
+
 class BatteryConfig(BaseModel):
     """Battery configuration for optimization."""
     
@@ -166,7 +198,7 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "Keys are hour strings (0-23), values are watts"
         }
     )
-    reduce_power_low_soc: list = Field(
+    reduce_power_low_soc: list[SocPowerLimit] = Field(
         default_factory=list,
         alias="reduce_power_low_soc",
         description="SOC thresholds and power limits for low SOC power reduction",
@@ -175,7 +207,7 @@ class BatteryConfig(BaseModel):
             "x-ui-section": "Power Configuration"
         }
     )
-    reduce_power_high_soc: list = Field(
+    reduce_power_high_soc: list[SocPowerLimit] = Field(
         default_factory=list,
         alias="reduce_power_high_soc",
         description="SOC thresholds and power limits for high SOC power reduction",
