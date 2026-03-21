@@ -241,9 +241,9 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    bat_to_dc_max_power: Optional[FlexValue] = Field(
+    bat_to_dc_max_power:  Optional[float] = Field(
         default=None,
-        alias="bat_to_dc max power",
+        gt=0,
         description="Battery to DC max power in watts",
         json_schema_extra={
             "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
@@ -329,6 +329,7 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "switch,button"
         }
     )
+
     entity_balance_switch: Optional[str] = Field(
         default=None,
         alias="entity balance switch",

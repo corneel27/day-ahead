@@ -57,7 +57,14 @@ class HADatabaseConfig(BaseModel):
         description="Database path for SQLite",
         json_schema_extra={
             "x-help": "Directory path for SQLite database file.",
-            "x-ui-section": "Homeassistant DB"
+            "x-ui-section": "Homeassistant DB",
+            "x-ui-rules": {
+                "effect": "HIDE",
+                "condition": {
+                    "scope": "#/properties/engine",
+                    "schema": {"enum": ["mysql", "postgresql"]}
+                }
+            }
         }
     )
     database: Optional[str] = Field(
@@ -213,7 +220,6 @@ class DatabaseConfig(BaseModel):
         description="MySQL/PostgreSQL server port (required for mysql/postgresql)",
         json_schema_extra={
             "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
-            "x-unit": "port",
             "x-ui-section": "DAO Database",
             "x-validation-hint": "1-65535, required for mysql/postgresql",
             "x-ui-rules": {

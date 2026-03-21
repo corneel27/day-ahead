@@ -39,6 +39,25 @@ class SolarString(BaseModel):
             "x-validation-hint": "Must be greater than 0"
         }
     )
+    ml_prediction: bool = Field(
+        default=False,
+        description="Use ML model to predict solar production for this installation",
+        json_schema_extra={
+            "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
+            "x-ui-section": "ML Prediction"
+        }
+    )
+    entities_sensors: list[str] = Field(
+        default_factory=list,
+        alias="entities sensors",
+        description="HA sensor entities for measuring actual solar production",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.",
+            "x-ui-section": "ML Prediction",
+            "x-ui-widget": "entity-picker",
+            "x-ui-widget-filter": "sensor"
+        }
+    )
     max_power: Optional[float] = Field(
         default=None,
         alias="max power",

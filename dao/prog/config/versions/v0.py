@@ -228,7 +228,8 @@ class ConfigurationV0(BaseModel):
         json_schema_extra={
             "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
             "x-unit": "euro",
-            "x-validation-hint": "Must be > 0"
+            "x-validation-hint": "Must be > 0",
+            "x-ui-widget": "entity-picker-or-float",
         }
     )
     

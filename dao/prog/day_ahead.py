@@ -494,7 +494,7 @@ class DaCalc(DaBase):
 
             max_dc_from_bat_power.append(
                 max_discharge_power[b] * 2 if self.battery_options[b].bat_to_dc_max_power is None
-                else self.battery_options[b].bat_to_dc_max_power.resolve(ha_getter, float) / 1000
+                else self.battery_options[b].bat_to_dc_max_power / 1000
             )
             max_dc_to_bat_power.append(
                 max_charge_power[b] * 2 if self.battery_options[b].dc_to_bat_max_power is None
@@ -1124,10 +1124,10 @@ class DaCalc(DaBase):
             )
             # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
             logging.info(f"Boiler hysterese {boiler_hysterese} K")
-            cooling_rate = self.boiler_options.cooling_rate.resolve(ha_getter, float)
+            cooling_rate = self.boiler_options.cooling_rate
             boiler_cooling = cooling_rate * self.interval_s / 3600
             # 45 oC grens daaronder kan worden verwarmd
-            boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(ha_getter, float)
+            boiler_bovengrens = self.boiler_options.heating_allowed_below
 
             # maximeren op setpoint
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
@@ -1573,7 +1573,7 @@ class DaCalc(DaBase):
                 max_ampere = float(max_ampere)
             except ValueError:
                 max_ampere = 10
-            charge_three_phase = self.ev_options[e].charge_three_phase
+            charge_three_phase = self.ev_options[e].charge_three_phase.resolve(ha_getter, bool)
             if charge_three_phase:
                 ampere_f = 3
             else:

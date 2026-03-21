@@ -97,6 +97,8 @@ class HeatingEnabled(BaseModel):
             "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
             "x-unit": "factor",
             "x-ui-section": "General",
+            "x-ui-widget": "entity-picker-or-float",
+            "x-ui-widget-filter": "number,input_number",
             "x-validation-hint": "Must be > 0, typically 0.5-2.0"
         }
     )
