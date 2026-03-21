@@ -9,7 +9,7 @@ get migrated to this version with no format changes.
 from typing import Optional, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
-from ..models.base import FlexFloat, FlexStr, SecretStr
+from ..models.base import FlexFloat, FlexEnum, SecretStr, DAOConfigBaseModel
 from ..models.database import HADatabaseConfig, DatabaseConfig
 from ..models.pricing import PricingConfig
 from ..models.graphics import GraphicsConfig
@@ -30,7 +30,7 @@ from ..models.devices.machines import MachineConfig
 from ..models.xgboost import XGBoostConfig
 
 
-class ConfigurationV0(BaseModel):
+class ConfigurationV0(DAOConfigBaseModel):
     """
     Day Ahead Optimizer Configuration - Version 0.
     
@@ -209,14 +209,18 @@ class ConfigurationV0(BaseModel):
             "x-order": 1
         }
     )
-    strategy: FlexStr = Field(
-        default=FlexStr(value="minimize cost"),
+    strategy: FlexEnum = Field(
+        default=FlexEnum(
+            value="minimize cost",
+            enum_values=["minimize cost", "minimize consumption"]
+        ),
         description="Optimization strategy (or HA entity ID returning the strategy string)",
         json_schema_extra={
             "x-ui-group": "DAO",
             "x-ui-section": "Optimization",
             "x-order": 2,
-            "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID"
+            "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID",
+            "x-enum-values": ["minimize cost", "minimize consumption"]
         }
     )
     max_gap: FlexFloat = Field(

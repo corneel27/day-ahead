@@ -9,7 +9,7 @@ This module provides:
 """
 
 import re
-from typing import Any, ClassVar, Union
+from typing import Any, ClassVar, Optional, Union
 from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_serializer, model_validator, ConfigDict
 from pydantic_core import core_schema as _core_schema
 
@@ -235,9 +235,109 @@ class FlexStr(FlexValue):
     _resolve_type: ClassVar[type] = str
 
 
-class SecretStr(BaseModel):
+class FlexEnum(FlexValue):
+    """FlexValue that resolves to ``str`` with enum constraints.
+    
+    Like FlexStr, but validates that non-entity values match allowed enum options.
+    Use for fields with predefined choices OR entity IDs.
+    
+    Usage:
+        strategy: FlexEnum = Field(
+            default=FlexEnum(
+                value="minimize cost",
+                enum_values=["minimize cost", "minimize consumption"]
+            ),
+            json_schema_extra={"x-enum-values": ["minimize cost", "minimize consumption"]}
+        )
+    
+    For automatic injection of enum_values from field metadata, inherit from
+    DAOConfigBaseModel in your configuration model (see below).
+    
+    Examples:
+        FlexEnum(value="minimize cost", enum_values=[...])      # Valid if in list
+        FlexEnum(value="sensor.strategy_mode", enum_values=[...])  # Valid entity ID
+    """
+    
+    _resolve_type: ClassVar[type] = str
+    enum_values: Optional[list[str]] = Field(default=None, exclude=True)
+    
+    @model_validator(mode='after')
+    def validate_enum_value(self):
+        """Validate that value is either an entity ID or in the allowed enum values."""
+        # Always allow entity IDs
+        if self.is_entity_id(self.value):
+            return self
+        
+        # If enum_values specified, validate against them
+        if self.enum_values is not None and self.value not in self.enum_values:
+            allowed = ', '.join(f"'{val}'" for val in self.enum_values)
+            raise ValueError(
+                f"Value '{self.value}' is not valid. Must be one of: {allowed}, "
+                f"or a Home Assistant entity ID (e.g., 'input_select.strategy')"
+            )
+        
+        return self
+    
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema, handler):
+        # Note: This generates the base schema. Enum values are added via
+        # json_schema_extra at the Field level, not here at class level.
+        return {
+            'anyOf': [{'type': 'string'}],  # Accept any string (enum values added by Field)
+            'x-help': 'Select from predefined values or use Home Assistant entity ID. '
+                      'Entity IDs are always valid.',
+        }
+
+
+class DAOConfigBaseModel(BaseModel):
+    """Base model for Day Ahead Optimizer configuration classes.
+    
+    Provides common validation and preprocessing logic for all DAO configuration models:
+    - Automatic enum_values injection for FlexEnum fields from json_schema_extra
+    - Future: additional DAO-specific validation and processing logic
+    
+    All DAO configuration models should inherit from this instead of BaseModel directly.
+    
+    Example:
+        class MyConfig(DAOConfigBaseModel):
+            strategy: FlexEnum = Field(
+                default=FlexEnum(value="minimize cost"),
+                json_schema_extra={"x-enum-values": ["minimize cost", "minimize consumption"]}
+            )
+    """
+    
+    @model_validator(mode='before')
+    @classmethod
+    def inject_flex_enum_values(cls, data):
+        """Automatically inject enum_values for all FlexEnum fields from their metadata."""
+        if not isinstance(data, dict):
+            return data
+        
+        # Iterate through all fields in the model
+        for field_name, field_info in cls.model_fields.items():
+            # Check if this field is annotated as FlexEnum
+            if field_info.annotation == FlexEnum and field_name in data:
+                # Extract enum values from field metadata
+                if field_info.json_schema_extra:
+                    enum_values = field_info.json_schema_extra.get('x-enum-values')
+                    if enum_values:
+                        value = data[field_name]
+                        # Inject enum_values into the data
+                        if isinstance(value, str):
+                            data[field_name] = {'value': value, 'enum_values': enum_values}
+                        elif isinstance(value, dict) and 'enum_values' not in value:
+                            value['enum_values'] = enum_values
+        
+        return data
+
+
+class SecretStr(str):
     """
     A secret string reference that gets resolved from secrets.json.
+    
+    Subclasses ``str`` so it is usable everywhere a plain string is expected.
+    Stores the value as-is: either "!secret key_name" for secret references,
+    or a plain string value for non-secrets.
     
     Example in options.json:
         {"db_password": "!secret db_password"}
@@ -245,80 +345,62 @@ class SecretStr(BaseModel):
     Gets resolved to actual value from secrets.json:
         {"db_password": "my_actual_password_123"}
     """
-    
-    secret_key: str = Field(
-        json_schema_extra={
-            "x-help": "Secret key name to resolve from secrets.json. Use '!secret key_name' in config. Never store actual secrets in options.json!",
-            "x-ui-section": "General",
-            "x-validation-hint": "Use format: !secret key_name"
-        }
-    )
-    
-    is_secret: bool = Field(default=False, exclude=True)
-    
-    model_config = ConfigDict(
-        extra='forbid',
-        json_schema_extra={
-            'x-help': '''SecretStr provides secure secret management. Secrets stored in separate secrets.json file, never in main config. Reference format: "!secret key_name". Essential for passwords, API tokens, and sensitive data.'''
-        }
-    )
 
-    @model_validator(mode='before')
     @classmethod
-    def parse_from_string(cls, v: Any) -> Any:
-        """Accept '!secret key_name' or a plain key name as input, coerce to dict."""
-        if isinstance(v, str):
-            if v.startswith('!secret '):
-                key = v.replace('!secret ', '', 1).strip()
-                return {'secret_key': key, 'is_secret': True}
-            else:
-                return {'secret_key': v, 'is_secret': False}
-        return v
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        return _core_schema.no_info_after_validator_function(
+            cls._validate,
+            _core_schema.str_schema(),
+            ref='SecretStr',
+        )
 
-    @field_validator('secret_key', mode='before')
     @classmethod
-    def parse_secret_key(cls, v: Any) -> Any:
-        """Parse secret_key if it's a string starting with !secret."""
-        if isinstance(v, str) and v.startswith('!secret '):
-            return v.replace('!secret ', '', 1).strip()
-        return v
+    def _validate(cls, v: str) -> 'SecretStr':
+        """Accept any string value."""
+        if not isinstance(v, str):
+            raise ValueError(f"SecretStr must be a string, got {type(v)}")
+        return cls(v)
 
-    @model_validator(mode='after')
-    def set_is_secret_from_key(self) -> 'SecretStr':
-        """Set is_secret based on whether secret_key was parsed from !secret."""
-        if isinstance(self.secret_key, str) and self.secret_key.startswith('!secret '):
-            # If somehow it wasn't parsed, but shouldn't happen
-            self.secret_key = self.secret_key.replace('!secret ', '', 1).strip()
-            self.is_secret = True
-        elif 'is_secret' not in self.__dict__ or not self.is_secret:
-            # If not set, check if it looks like !secret
-            pass  # already handled in before
-        return self
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema, handler):
+        return {
+            'type': 'string',
+            'x-help': 'Secret reference or plain string. Use "!secret key_name" format to '
+                      'reference secrets from secrets.json. Plain strings are also accepted.',
+        }
+
+    def is_secret_reference(self) -> bool:
+        """Return True if this is a secret reference (starts with !secret)."""
+        return self.startswith('!secret ')
+
+    def get_secret_key(self) -> str:
+        """Extract the secret key name if this is a secret reference, otherwise return self."""
+        if self.is_secret_reference():
+            return self.replace('!secret ', '', 1).strip()
+        return str(self)
 
     def resolve(self, secrets: dict[str, str]) -> str:
         """
         Resolve the secret to its actual value.
 
-        If ``secret_key`` exists in *secrets*, returns the corresponding value.
-        Otherwise the key is treated as a literal plain-text value and returned
-        as-is, so fields typed as ``SecretStr`` work for both ``!secret`` references
-        and plain-text credentials without needing a ``SecretStr | str`` union.
+        If the value starts with ``!secret``, extracts the key and looks it up
+        in *secrets*. If the key exists, returns the corresponding value.
+        Otherwise treats the key as a literal plain-text value and returns it.
+        
+        For non-secret values (plain strings), returns the value as-is.
         
         Args:
             secrets: Dictionary of secrets loaded from secrets.json
             
         Returns:
-            The resolved secret value, or the raw key if not found in secrets.
+            The resolved secret value, or the raw value if not a secret reference.
         """
-        if self.secret_key not in secrets:
-            # Not a secrets.json reference — treat as a literal plain-text value
-            return self.secret_key
-        return secrets[self.secret_key]
-
-    @model_serializer
-    def serialize_secret(self) -> str:
-        """Serialize back to the original key (or literal) — never the resolved value."""
-        if self.is_secret:
-            return f'!secret {self.secret_key}'
-        else:
-            return self.secret_key
+        if not self.is_secret_reference():
+            # Plain string value - return as-is
+            return str(self)
+        
+        # Extract the key from "!secret key_name"
+        key = self.get_secret_key()
+        
+        # Look up in secrets dict, fallback to the key itself if not found
+        return secrets.get(key, key)

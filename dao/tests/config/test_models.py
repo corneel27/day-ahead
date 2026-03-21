@@ -146,29 +146,43 @@ class TestFlexStr:
 
 class TestSecretStr:
     def test_serialization_secret(self):
-        """Test SecretStr serialization."""
-        ss = SecretStr(secret_key="db_password", is_secret=True)
-        serialized = ss.model_dump()
-        assert serialized == "!secret db_password"
+        """Round-trip MUST store the raw !secret reference, not the resolved value."""
+        ss = SecretStr("!secret db_password")
+        # As a str subclass it serializes as the raw string — the secret is NOT revealed
+        assert str(ss) == "!secret db_password"
 
     def test_serialization_secret_json(self):
-        ss = SecretStr(secret_key="db_password", is_secret=True)
-        json_str = ss.model_dump_json()
-        assert json_str == '"!secret db_password"'
+        """Pydantic model round-trip serializes as the raw !secret reference."""
+        from pydantic import BaseModel as _BM
+        class _M(_BM):
+            password: SecretStr
+        m = _M(password="!secret db_password")
+        assert m.model_dump() == {"password": "!secret db_password"}
+        assert m.model_dump_json() == '{"password":"!secret db_password"}'
 
     def test_deserialization_secret(self):
-        ss = SecretStr.model_validate("!secret db_password")
-        assert ss.secret_key == "db_password"
-        assert ss.is_secret is True
+        ss = SecretStr("!secret db_password")
+        assert ss.is_secret_reference() is True
+        assert ss.get_secret_key() == "db_password"
 
     def test_resolve_secret(self):
-        ss = SecretStr.model_validate("!secret db_password")
+        ss = SecretStr("!secret db_password")
         secrets = {"db_password": "secret123"}
         result = ss.resolve(secrets)
         assert result == "secret123"
 
     def test_resolve_literal(self):
-        ss = SecretStr(secret_key="plain_password")
+        ss = SecretStr("plain_password")
         secrets = {}
         result = ss.resolve(secrets)
         assert result == "plain_password"
+
+    def test_literal_is_not_secret_reference(self):
+        ss = SecretStr("plain_password")
+        assert ss.is_secret_reference() is False
+
+    def test_resolve_missing_key_falls_back_to_key_name(self):
+        """Missing key in secrets dict falls back to the key name itself."""
+        ss = SecretStr("!secret missing_key")
+        result = ss.resolve({})
+        assert result == "missing_key"
