@@ -65,14 +65,18 @@ class TestEntityId:
             _Model(entity="sensor.some value")
 
     # --- JSON schema ---
-    def test_schema_has_entity_picker_widget(self):
+    def test_schema_uses_ref(self):
         schema = _Model.model_json_schema()
-        entity_schema = schema["properties"]["entity"]
-        assert entity_schema.get("x-ui-widget") == "entity-picker"
+        entity_prop = schema["properties"]["entity"]
+        assert entity_prop == {"$ref": "#/$defs/EntityId"}
 
-    def test_schema_type_is_string(self):
+    def test_schema_defs_has_entity_id(self):
         schema = _Model.model_json_schema()
-        assert schema["properties"]["entity"]["type"] == "string"
+        entity_def = schema["$defs"]["EntityId"]
+        assert entity_def["type"] == "string"
+        assert "x-help" in entity_def
+        # x-ui-widget is intentionally absent — renderer detects type via $ref
+        assert "x-ui-widget" not in entity_def
 
 
 class TestFlexValue:

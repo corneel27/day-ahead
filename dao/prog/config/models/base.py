@@ -9,9 +9,9 @@ This module provides:
 """
 
 import re
-from typing import Annotated, Any, ClassVar, Union
-from pydantic import AfterValidator, BaseModel, Field, TypeAdapter, model_serializer, model_validator, field_validator, ConfigDict
-from pydantic.json_schema import WithJsonSchema
+from typing import Any, ClassVar, Union
+from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_serializer, model_validator, ConfigDict
+from pydantic_core import core_schema as _core_schema
 
 # Matches Home Assistant entity IDs: "domain.object_id"
 # domain must start with a letter (rules out numeric strings like "0.45")
@@ -32,19 +32,40 @@ def _validate_entity_id(v: str) -> str:
     return v
 
 
-#: Annotated ``str`` type for Home Assistant entity IDs.
-#: Validates the ``domain.object_id`` format at parse time.
-EntityId = Annotated[
-    str,
-    AfterValidator(_validate_entity_id),
-    WithJsonSchema({
-        'type': 'string',
-        'x-ui-widget': 'entity-picker',
-        'x-help': 'Home Assistant entity ID in the format "domain.object_id" '
-                  '(e.g. "sensor.battery_soc"). '
-                  'The UI will show an entity picker for easy selection.',
-    }),
-]
+class EntityId(str):
+    """Home Assistant entity ID.
+
+    Subclasses ``str`` so it is usable everywhere a plain string is expected
+    (f-strings, ``split()``, hassapi, SQLAlchemy) with no callsite changes.
+    Adding ``ref='EntityId'`` to the core schema causes Pydantic to emit a
+    named ``$defs/EntityId`` entry and ``$ref`` pointers in the JSON schema,
+    enabling type-based UI rendering without any ``x-ui-widget`` hints.
+    """
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        return _core_schema.no_info_after_validator_function(
+            cls._validate,
+            _core_schema.str_schema(),
+            ref='EntityId',
+        )
+
+    @classmethod
+    def _validate(cls, v: str) -> 'EntityId':
+        if not _HA_ENTITY_ID_RE.match(v):
+            raise ValueError(
+                f"Invalid Home Assistant entity ID: {v!r}. "
+                "Expected format: 'domain.object_id' (e.g. 'sensor.battery_soc')."
+            )
+        return cls(v)
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema, handler):
+        return {
+            'type': 'string',
+            'x-help': 'Home Assistant entity ID in the format "domain.object_id" '
+                      '(e.g. "sensor.battery_soc").',
+        }
 
 
 class FlexValue(BaseModel):
@@ -180,14 +201,6 @@ class FlexFloat(FlexValue):
 
     _resolve_type: ClassVar[type] = float
 
-    @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
-        return {
-            'anyOf': [{'type': 'number'}, {'type': 'string'}],
-            'x-help': 'Numeric value or Home Assistant entity ID. '
-                      'Entity state is resolved to a float at runtime.',
-        }
-
 
 class FlexInt(FlexValue):
     """FlexValue that resolves to ``int``.
@@ -197,14 +210,6 @@ class FlexInt(FlexValue):
     """
 
     _resolve_type: ClassVar[type] = int
-
-    @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
-        return {
-            'anyOf': [{'type': 'integer'}, {'type': 'string'}],
-            'x-help': 'Integer value or Home Assistant entity ID. '
-                      'Entity state is resolved to an integer at runtime.',
-        }
 
 
 class FlexBool(FlexValue):
@@ -217,15 +222,6 @@ class FlexBool(FlexValue):
 
     _resolve_type: ClassVar[type] = bool
 
-    @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
-        return {
-            'anyOf': [{'type': 'boolean'}, {'type': 'string'}],
-            'x-help': 'Boolean value or Home Assistant entity ID. '
-                      'Entity state is resolved using Pydantic lax bool coercion '
-                      '("on", "true", "1" → True; "off", "false", "0" → False).',
-        }
-
 
 class FlexStr(FlexValue):
     """FlexValue that resolves to ``str``.
@@ -237,14 +233,6 @@ class FlexStr(FlexValue):
     """
 
     _resolve_type: ClassVar[type] = str
-
-    @classmethod
-    def __get_pydantic_json_schema__(cls, core_schema, handler):
-        return {
-            'type': 'string',
-            'x-help': 'String value or Home Assistant entity ID. '
-                      'Entity state is returned as a plain string at runtime.',
-        }
 
 
 class SecretStr(BaseModel):

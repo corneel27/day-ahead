@@ -37,7 +37,6 @@ class HomeAssistantConfig(BaseModel):
         json_schema_extra={
             "x-help": "Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.",
             "x-ui-section": "Homeassistant",
-            "x-ui-widget": "secret-picker",
             "x-validation-hint": "Auto-provided as add-on, use !secret if manual"
         }
     )

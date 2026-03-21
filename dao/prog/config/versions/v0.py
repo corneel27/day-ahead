@@ -84,8 +84,7 @@ class ConfigurationV0(BaseModel):
             "x-ui-group": "DAO",
             "x-ui-section": "Weather",
             "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. Use !secret for security. Required for weather forecasts.",
-            "x-validation-hint": "Use !secret for API keys",
-            "x-ui-widget": "secret-picker"
+            "x-validation-hint": "Use !secret for API keys"
         }
     )
     meteoserver_model: Literal['harmonie', 'gfs'] = Field(
@@ -217,7 +216,6 @@ class ConfigurationV0(BaseModel):
             "x-ui-group": "DAO",
             "x-ui-section": "Optimization",
             "x-order": 2,
-            "x-ui-widget": "entity-picker-or-string",
             "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID"
         }
     )
@@ -229,7 +227,6 @@ class ConfigurationV0(BaseModel):
             "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
             "x-unit": "euro",
             "x-validation-hint": "Must be > 0",
-            "x-ui-widget": "entity-picker-or-float",
         }
     )
     
