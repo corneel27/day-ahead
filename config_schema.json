@@ -234,10 +234,11 @@
           "x-unit": "ratio",
           "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
-        "bat_to_dc max power": {
+        "bat_to_dc_max_power": {
           "anyOf": [
             {
-              "$ref": "#/$defs/FlexValue"
+              "exclusiveMinimum": 0,
+              "type": "number"
             },
             {
               "type": "null"
@@ -245,11 +246,11 @@
           ],
           "default": null,
           "description": "Battery to DC max power in watts",
+          "title": "Bat To Dc Max Power",
           "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
           "x-ui-section": "Power Configuration",
           "x-unit": "W",
-          "x-validation-hint": "Must be > 0",
-          "title": "Bat To Dc Max Power"
+          "x-validation-hint": "Must be > 0"
         },
         "cycle cost": {
           "description": "Cost per battery cycle in euros",
@@ -624,13 +625,14 @@
           "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
         },
         "cooling rate": {
-          "$ref": "#/$defs/FlexValue",
           "description": "Cooling rate in degrees per hour",
+          "minimum": 0,
+          "title": "Cooling Rate",
+          "type": "number",
           "x-help": "Rate at which water temperature drops when not heating, in °C per hour. Depends on insulation quality. Typical: 0.5-2.0°C/h for well-insulated boilers.",
           "x-ui-section": "General",
           "x-unit": "°C/h",
-          "x-validation-hint": "Must be >= 0, typically 0.5-2.0°C/h",
-          "title": "Cooling Rate"
+          "x-validation-hint": "Must be >= 0, typically 0.5-2.0°C/h"
         },
         "volume": {
           "default": 200.0,
@@ -644,13 +646,13 @@
           "x-validation-hint": "Must be > 0, typically 100-300L"
         },
         "heating allowed below": {
-          "$ref": "#/$defs/FlexValue",
           "description": "Temperature below which heating is allowed",
+          "title": "Heating Allowed Below",
+          "type": "number",
           "x-help": "Maximum temperature for starting heating cycle. Heating only occurs when water is below this temperature. Typically same as or slightly above setpoint.",
           "x-ui-section": "General",
           "x-unit": "°C",
-          "x-validation-hint": "Should be >= setpoint",
-          "title": "Heating Allowed Below"
+          "x-validation-hint": "Should be >= setpoint"
         },
         "elec. power": {
           "default": 1000.0,
@@ -877,7 +879,6 @@
             "effect": "SHOW"
           },
           "x-ui-section": "DAO Database",
-          "x-unit": "port",
           "x-validation-hint": "1-65535, required for mysql/postgresql"
         },
         "username": {
@@ -1070,13 +1071,14 @@
           "x-ui-widget-filter": "device_tracker"
         },
         "charge three phase": {
+          "$ref": "#/$defs/FlexValue",
           "default": true,
           "description": "Whether vehicle charges on three phases",
-          "title": "Charge Three Phase",
-          "type": "boolean",
           "x-help": "True for three-phase charging (11kW/22kW), False for single-phase (3.7kW/7.4kW). Can also be HA entity ID for dynamic resolution.",
           "x-ui-section": "General",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "x-ui-widget": "entity-picker-or-boolean",
+          "x-ui-widget-filter": "binary_sensor,input_boolean",
+          "title": "Charge Three Phase"
         },
         "charge stages": {
           "description": "Charging amperage/efficiency curve",
@@ -1246,8 +1248,7 @@
           "title": "Show",
           "type": "boolean",
           "x-help": "Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.",
-          "x-ui-section": "General",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "x-ui-section": "General"
         },
         "battery balance": {
           "default": true,
@@ -1255,8 +1256,7 @@
           "title": "Battery Balance",
           "type": "boolean",
           "x-help": "Display battery state of charge and power flows in graphs. Shows charge/discharge schedule over time.",
-          "x-ui-section": "General",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "x-ui-section": "General"
         },
         "prices consumption": {
           "default": true,
@@ -1264,8 +1264,7 @@
           "title": "Prices Consumption",
           "type": "boolean",
           "x-help": "Display consumption prices (market + taxes + VAT) in graphs. Helps visualize expensive vs cheap periods.",
-          "x-ui-section": "General",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "x-ui-section": "General"
         },
         "prices production": {
           "default": false,
@@ -1273,8 +1272,7 @@
           "title": "Prices Production",
           "type": "boolean",
           "x-help": "Display feed-in/production prices in graphs. Useful if you have solar feed-in to compare consumption vs production value.",
-          "x-ui-section": "General",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "x-ui-section": "General"
         },
         "prices spot": {
           "default": true,
@@ -1282,8 +1280,7 @@
           "title": "Prices Spot",
           "type": "boolean",
           "x-help": "Display raw day-ahead spot market prices (before taxes/markup) in graphs. Shows pure market price variations.",
-          "x-ui-section": "General",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "x-ui-section": "General"
         },
         "average consumption": {
           "default": true,
@@ -1291,8 +1288,7 @@
           "title": "Average Consumption",
           "type": "boolean",
           "x-help": "Display average/baseline consumption in graphs. Helps understand optimization impact relative to normal usage.",
-          "x-ui-section": "General",
-          "x-ui-widget": "entity-picker-or-boolean"
+          "x-ui-section": "General"
         }
       },
       "title": "GraphicsConfig",
@@ -1428,6 +1424,18 @@
           "description": "Database path for SQLite",
           "title": "Db Path",
           "x-help": "Directory path for SQLite database file.",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "enum": [
+                  "mysql",
+                  "postgresql"
+                ]
+              },
+              "scope": "#/properties/engine"
+            },
+            "effect": "HIDE"
+          },
           "x-ui-section": "Homeassistant DB"
         },
         "database": {
@@ -1569,6 +1577,8 @@
           "description": "Degree days factor for heat demand calculation",
           "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
           "x-ui-section": "General",
+          "x-ui-widget": "entity-picker-or-float",
+          "x-ui-widget-filter": "number,input_number",
           "x-unit": "factor",
           "x-validation-hint": "Must be > 0, typically 0.5-2.0",
           "title": "Degree Days Factor"
@@ -2677,6 +2687,26 @@
           "x-unit": "kWp",
           "x-validation-hint": "Must be greater than 0"
         },
+        "ml_prediction": {
+          "default": false,
+          "description": "Use ML model to predict solar production for this installation",
+          "title": "Ml Prediction",
+          "type": "boolean",
+          "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
+          "x-ui-section": "ML Prediction"
+        },
+        "entities sensors": {
+          "description": "HA sensor entities for measuring actual solar production",
+          "items": {
+            "type": "string"
+          },
+          "title": "Entities Sensors",
+          "type": "array",
+          "x-help": "Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.",
+          "x-ui-section": "ML Prediction",
+          "x-ui-widget": "entity-picker",
+          "x-ui-widget-filter": "sensor"
+        },
         "max power": {
           "anyOf": [
             {
@@ -3047,6 +3077,7 @@
       "default": 0.005,
       "description": "Maximum MIP gap (absolute) for the optimizer",
       "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
+      "x-ui-widget": "entity-picker-or-float",
       "x-unit": "euro",
       "x-validation-hint": "Must be > 0",
       "title": "Max Gap"

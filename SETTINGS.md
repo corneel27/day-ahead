@@ -128,7 +128,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
 | `dc_to_bat max power` | [FlexValue](#flexvalue) (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `bat_to_dc max power` | [FlexValue](#flexvalue) (optional) | No | `null` | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
+| `bat_to_dc_max_power` | number (optional) | No | `null` | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
 | `cycle cost` | number | Yes | — | Cost per battery cycle in euros (Unit: `€`) _Must be >= 0, typically €0.50-€1.50 per cycle_ |
 | `entity set power feedin` | string (optional) | No | `null` | HA entity to set power feed-in to grid |
 | `entity set operating mode` | string (optional) | No | `null` | HA entity to set battery operating mode |
@@ -218,7 +218,7 @@ Maximum power for DC-coupled solar charging in watts. Determines how much DC sol
 
 Efficiency of battery to DC bus conversion. Typically 0.95-0.98. Only relevant for DC-coupled loads or reverse DC flow scenarios.
 
-**`bat_to_dc max power`**
+**`bat_to_dc_max_power`**
 
 Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.
 
@@ -461,7 +461,7 @@ Use `charge_scheduler` for time-based optimization:
 | `name` | string | Yes | — | EV name/identifier |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be > 0, typically 40-100 kWh_ |
 | `entity position` | string | Yes | — | HA device tracker for vehicle position |
-| `charge three phase` | boolean | No | `true` | Whether vehicle charges on three phases |
+| `charge three phase` | [FlexValue](#flexvalue) | No | `true` | Whether vehicle charges on three phases |
 | `charge stages` | list[[EVChargeStage](#evchargestage)] | Yes | — | Charging amperage/efficiency curve _At least 1 stage required_ |
 | `entity actual level` | string | Yes | — | HA entity for current battery level % (Unit: `%`) |
 | `entity plugged in` | string | Yes | — | HA binary sensor for plugged in status |
@@ -810,9 +810,9 @@ The system models boiler as a thermal battery:
 | `entity boiler enabled` | string (optional) | No | `null` | HA entity for boiler enabled status |
 | `entity instant start` | string (optional) | No | `null` | HA entity for instant start |
 | `cop` | number | No | `3.0` | Coefficient of Performance (Unit: `ratio`) _Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump_ |
-| `cooling rate` | [FlexValue](#flexvalue) | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
+| `cooling rate` | number | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
 | `volume` | number | No | `200.0` | Water volume in liters (Unit: `L`) _Must be > 0, typically 100-300L_ |
-| `heating allowed below` | [FlexValue](#flexvalue) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
+| `heating allowed below` | number | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
 | `elec. power` | number | No | `1000.0` | Electrical power in watts (Unit: `W`) _Must be > 0, typically 1000-3000W_ |
 | `activate service` | string (optional) | No | `null` | Service type to activate boiler (e.g., 'press', 'switch') |
 | `activate entity` | string (optional) | No | `null` | HA entity to activate boiler |
@@ -951,7 +951,7 @@ Then in options.json:
 | `db_path` | string (optional) | No | `null` | Database path for SQLite (e.g., '../data') _Required for SQLite (or use database field)_ |
 | `database` | string (optional) | No | `null` | Database filename for SQLite or database name for MySQL _Filename for SQLite, database name for MySQL/PostgreSQL_ |
 | `server` | string (optional) | No | `null` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
-| `port` | integer (optional) | No | `null` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
+| `port` | integer (optional) | No | `null` | MySQL/PostgreSQL server port (required for mysql/postgresql) _1-65535, required for mysql/postgresql_ |
 | `username` | string (optional) | No | `null` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
 | `password` | [SecretStr](#secretstr) (optional) | No | `null` | MySQL password (can use !secret) _Use !secret for passwords_ |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
@@ -1979,6 +1979,8 @@ Configuration for a single string of solar panels with the same tilt and orienta
 | `tilt` | number | Yes | — | Panel tilt angle in degrees (0=horizontal, 90=vertical) (Unit: `degrees`) _Must be between 0 and 90 degrees_ |
 | `orientation` | number | Yes | — | Panel orientation in degrees (0=south, 90=west, -90=east) (Unit: `degrees`) _Must be between -180 and 180 degrees_ |
 | `capacity` | number | Yes | — | Installed capacity in kWp (Unit: `kWp`) _Must be greater than 0_ |
+| `ml_prediction` | boolean | No | `false` | Use ML model to predict solar production for this installation |
+| `entities sensors` | list[string] | No | `null` | HA sensor entities for measuring actual solar production |
 | `max power` | number (optional) | No | `null` | Maximum output power cap in kW (MPPT limit) (Unit: `kW`) |
 | `yield` | number | Yes | — | Yield factor for production calculation (Unit: `ratio`) _Must be greater than 0, typically 0.8-0.9_ |
 
@@ -1996,6 +1998,14 @@ Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° o
 **`capacity`**
 
 Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.
+
+**`ml_prediction`**
+
+Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.
+
+**`entities sensors`**
+
+Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.
 
 **`max power`**
 
