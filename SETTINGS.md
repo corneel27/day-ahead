@@ -46,7 +46,10 @@
   - [BatteryStage](#batterystage)
   - [EVChargeScheduler](#evchargescheduler)
   - [EVChargeStage](#evchargestage)
-  - [FlexValue](#flexvalue)
+  - [FlexBool](#flexbool)
+  - [FlexFloat](#flexfloat)
+  - [FlexInt](#flexint)
+  - [FlexStr](#flexstr)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
   - [ScheduleEntry](#scheduleentry)
@@ -113,10 +116,10 @@ Configure your home battery storage system for optimal energy management and cos
 | `name` | string | Yes | — | Battery name/identifier |
 | `entity actual level` | string | Yes | — | HA entity for current battery SOC (Unit: `%`) |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be greater than 0_ |
-| `upper limit` | [FlexValue](#flexvalue) | No | `100` | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
-| `lower limit` | [FlexValue](#flexvalue) | No | `20` | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
-| `optimal lower level` | [FlexValue](#flexvalue) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
-| `penalty low soc` | [FlexValue](#flexvalue) (optional) | No | `null` | Penalty cost per % per hour below optimal lower SOC (Unit: `euro/%·h`) |
+| `upper limit` | [FlexInt](#flexint) | No | `100` | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
+| `lower limit` | [FlexInt](#flexint) | No | `20` | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
+| `optimal lower level` | [FlexInt](#flexint) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
+| `penalty low soc` | number | No | `0.0025` | Penalty cost per % per hour below optimal lower SOC (Unit: `euro/%·h`) |
 | `entity min soc end opt` | string (optional) | No | `null` | HA entity for minimum SOC at end of optimization period |
 | `entity max soc end opt` | string (optional) | No | `null` | HA entity for maximum SOC at end of optimization period |
 | `charge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Charge power/efficiency curve _At least 1 stage required, ordered by power_ |
@@ -126,7 +129,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `reduce_power_high_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
 | `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `dc_to_bat max power` | [FlexValue](#flexvalue) (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
+| `dc_to_bat max power` | number (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
 | `bat_to_dc_max_power` | number (optional) | No | `null` | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
 | `cycle cost` | number | Yes | — | Cost per battery cycle in euros (Unit: `€`) _Must be >= 0, typically €0.50-€1.50 per cycle_ |
@@ -461,7 +464,7 @@ Use `charge_scheduler` for time-based optimization:
 | `name` | string | Yes | — | EV name/identifier |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be > 0, typically 40-100 kWh_ |
 | `entity position` | string | Yes | — | HA device tracker for vehicle position |
-| `charge three phase` | [FlexValue](#flexvalue) | No | `true` | Whether vehicle charges on three phases |
+| `charge three phase` | [FlexBool](#flexbool) | No | `true` | Whether vehicle charges on three phases |
 | `charge stages` | list[[EVChargeStage](#evchargestage)] | Yes | — | Charging amperage/efficiency curve _At least 1 stage required_ |
 | `entity actual level` | string | Yes | — | HA entity for current battery level % (Unit: `%`) |
 | `entity plugged in` | string | Yes | — | HA binary sensor for plugged in status |
@@ -678,7 +681,7 @@ Define power levels and corresponding COP values:
 |-------|------|----------|---------|-------------|
 | `heater present` | boolean | Discriminator | `true` | Whether heating system is present/enabled |
 | `entity hp enabled` | string (optional) | No | `null` | HA binary sensor for heat pump enabled status |
-| `degree days factor` | [FlexValue](#flexvalue) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
+| `degree days factor` | [FlexFloat](#flexfloat) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | Yes | — | Heating power/COP stages _At least 1 stage, must be sorted by max_power_ |
 | `entity adjust heating curve` | string (optional) | No | `null` | HA entity to adjust heating curve |
@@ -1885,7 +1888,28 @@ Charging efficiency ratio at this amperage level. Accounts for charger losses, c
 
 ### Unknown
 
-FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
+Boolean value or Home Assistant entity ID. Entity state is resolved using Pydantic lax bool coercion ("on", "true", "1" → True; "off", "false", "0" → False).
+
+*No configuration fields.*
+
+
+### Unknown
+
+Numeric value or Home Assistant entity ID. Entity state is resolved to a float at runtime.
+
+*No configuration fields.*
+
+
+### Unknown
+
+Integer value or Home Assistant entity ID. Entity state is resolved to an integer at runtime.
+
+*No configuration fields.*
+
+
+### Unknown
+
+String value or Home Assistant entity ID. Entity state is returned as a plain string at runtime.
 
 *No configuration fields.*
 

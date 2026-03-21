@@ -498,7 +498,7 @@ class DaCalc(DaBase):
             )
             max_dc_to_bat_power.append(
                 max_charge_power[b] * 2 if self.battery_options[b].dc_to_bat_max_power is None
-                else self.battery_options[b].dc_to_bat_max_power.resolve(ha_getter) / 1000
+                else self.battery_options[b].dc_to_bat_max_power / 1000
             )
 
             # reduce power low soc
@@ -591,9 +591,7 @@ class DaCalc(DaBase):
             opt_low_level.append(opt_low_lvl)
 
             # penalty in euro/%.hour
-            _penalty_field = self.battery_options[b].penalty_low_soc
-            penalty = _penalty_field.resolve(ha_getter) if _penalty_field is not None else 0.0025
-            penalty_low_soc.append(penalty)
+            penalty_low_soc.append(self.battery_options[b].penalty_low_soc)
 
             if _start_soc is None:
                 try:

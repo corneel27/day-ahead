@@ -4,7 +4,7 @@ Battery configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from ..base import EntityId, FlexFloat, FlexInt
+from ..base import EntityId, FlexInt
 from .solar import SolarConfig
 
 
@@ -104,8 +104,8 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "Optional, should be >= lower_limit"
         }
     )
-    penalty_low_soc: Optional[FlexFloat] = Field(
-        default=None,
+    penalty_low_soc: float = Field(
+        default=0.0025,
         alias="penalty low soc",
         description="Penalty cost per % per hour below optimal lower SOC",
         json_schema_extra={
@@ -208,8 +208,9 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    dc_to_bat_max_power: Optional[FlexFloat] = Field(
+    dc_to_bat_max_power: Optional[float] = Field(
         default=None,
+        gt=0,
         alias="dc_to_bat max power",
         description="DC to battery max power in watts",
         json_schema_extra={
