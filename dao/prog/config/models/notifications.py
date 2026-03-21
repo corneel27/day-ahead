@@ -4,19 +4,19 @@ Notification configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
+from .base import EntityId
 
 
 class NotificationsConfig(BaseModel):
     """Notification settings for Home Assistant."""
     
-    notification_entity: Optional[str] = Field(
+    notification_entity: Optional[EntityId] = Field(
         default=None,
         alias="notification entity",
         description="HA entity for notifications",
         json_schema_extra={
             "x-help": "Optional: Home Assistant notification service entity. Used to send notifications about optimization events. Example: 'notify.mobile_app' or 'notify.persistent_notification'.",
             "x-ui-section": "Notification Settings",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "notify"
         }
     )
@@ -36,14 +36,13 @@ class NotificationsConfig(BaseModel):
             "x-ui-section": "Notification Settings"
         }
     )
-    last_activity_entity: Optional[str] = Field(
+    last_activity_entity: Optional[EntityId] = Field(
         default=None,
         alias="last activity entity",
         description="HA entity to track last activity timestamp",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to update with last activity timestamp. Useful for monitoring and automations. Example: 'input_datetime.dao_last_run'.",
             "x-ui-section": "Notification Settings",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_datetime,datetime,sensor"
         }
     )

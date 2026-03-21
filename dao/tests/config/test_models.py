@@ -1,5 +1,78 @@
 import pytest
-from dao.prog.config.models.base import FlexValue, FlexFloat, FlexInt, FlexBool, FlexStr, SecretStr
+from pydantic import BaseModel, ValidationError
+from dao.prog.config.models.base import EntityId, FlexValue, FlexFloat, FlexInt, FlexBool, FlexStr, SecretStr
+
+
+class _Model(BaseModel):
+    entity: EntityId
+
+
+class _OptModel(BaseModel):
+    entity: EntityId | None = None
+
+
+class TestEntityId:
+    # --- Valid formats ---
+    def test_simple_domain_object(self):
+        m = _Model(entity="sensor.battery_soc")
+        assert m.entity == "sensor.battery_soc"
+
+    def test_underscores_in_object_id(self):
+        assert _Model(entity="binary_sensor.grid_connected").entity == "binary_sensor.grid_connected"
+
+    def test_domain_starts_with_underscore(self):
+        # leading underscore is valid per HA convention
+        assert _Model(entity="_custom.entity").entity == "_custom.entity"
+
+    def test_digits_in_object_id(self):
+        assert _Model(entity="sensor.battery_soc_1").entity == "sensor.battery_soc_1"
+
+    def test_optional_none(self):
+        assert _OptModel(entity=None).entity is None
+
+    # --- Invalid formats ---
+    def test_plain_string_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="not_an_entity_id")
+
+    def test_domain_starts_with_digit_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="1sensor.value")
+
+    def test_dot_only_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity=".")
+
+    def test_missing_object_id_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="sensor.")
+
+    def test_missing_domain_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity=".object_id")
+
+    def test_numeric_string_raises(self):
+        # "0.45" must not be misidentified as an entity ID
+        with pytest.raises(ValidationError):
+            _Model(entity="0.45")
+
+    def test_empty_string_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="")
+
+    def test_spaces_raise(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="sensor.some value")
+
+    # --- JSON schema ---
+    def test_schema_has_entity_picker_widget(self):
+        schema = _Model.model_json_schema()
+        entity_schema = schema["properties"]["entity"]
+        assert entity_schema.get("x-ui-widget") == "entity-picker"
+
+    def test_schema_type_is_string(self):
+        schema = _Model.model_json_schema()
+        assert schema["properties"]["entity"]["type"] == "string"
 
 
 class TestFlexValue:

@@ -9,8 +9,9 @@ This module provides:
 """
 
 import re
-from typing import Any, ClassVar, Union
-from pydantic import BaseModel, Field, TypeAdapter, model_serializer, model_validator, field_validator, ConfigDict
+from typing import Annotated, Any, ClassVar, Union
+from pydantic import AfterValidator, BaseModel, Field, TypeAdapter, model_serializer, model_validator, field_validator, ConfigDict
+from pydantic.json_schema import WithJsonSchema
 
 # Matches Home Assistant entity IDs: "domain.object_id"
 # domain must start with a letter (rules out numeric strings like "0.45")
@@ -19,6 +20,31 @@ _HA_ENTITY_ID_RE = re.compile(r'^[a-z_][a-z0-9_]*\.[a-z0-9_]+$')
 # Re-use a single TypeAdapter for bool coercion — Pydantic's lax bool validator
 # accepts "true"/"false", "1"/"0", "on"/"off", "yes"/"no", integers, etc.
 _bool_adapter = TypeAdapter(bool)
+
+
+def _validate_entity_id(v: str) -> str:
+    """Raise ValueError if *v* is not a valid Home Assistant entity ID."""
+    if not _HA_ENTITY_ID_RE.match(v):
+        raise ValueError(
+            f"Invalid Home Assistant entity ID: {v!r}. "
+            "Expected format: 'domain.object_id' (e.g. 'sensor.battery_soc')."
+        )
+    return v
+
+
+#: Annotated ``str`` type for Home Assistant entity IDs.
+#: Validates the ``domain.object_id`` format at parse time.
+EntityId = Annotated[
+    str,
+    AfterValidator(_validate_entity_id),
+    WithJsonSchema({
+        'type': 'string',
+        'x-ui-widget': 'entity-picker',
+        'x-help': 'Home Assistant entity ID in the format "domain.object_id" '
+                  '(e.g. "sensor.battery_soc"). '
+                  'The UI will show an entity picker for easy selection.',
+    }),
+]
 
 
 class FlexValue(BaseModel):

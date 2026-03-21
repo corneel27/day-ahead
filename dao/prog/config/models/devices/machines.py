@@ -4,6 +4,7 @@ Appliance/machine configuration models (washing machine, dishwasher, etc.).
 
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
+from ..base import EntityId
 
 
 class MachineProgram(BaseModel):
@@ -54,64 +55,58 @@ class MachineConfig(BaseModel):
             "x-validation-hint": "At least 1 program required, include 'off' program"
         }
     )
-    entity_start_window: str = Field(
+    entity_start_window: EntityId = Field(
         alias="entity start window",
         description="HA entity for start window datetime",
         json_schema_extra={
             "x-help": "Home Assistant datetime entity for earliest allowed start time. Machine can start any time after this. Example: 'Now' or '18:00 today'.",
             "x-ui-section": "Battery Specifications",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
-    entity_end_window: str = Field(
+    entity_end_window: EntityId = Field(
         alias="entity end window",
         description="HA entity for end window datetime",
         json_schema_extra={
             "x-help": "Home Assistant datetime entity for latest allowed completion time. Machine must finish before this deadline. Example: '08:00 tomorrow'.",
             "x-ui-section": "Battery Specifications",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
-    entity_selected_program: str = Field(
+    entity_selected_program: EntityId = Field(
         alias="entity selected program",
         description="HA entity for selected program",
         json_schema_extra={
             "x-help": "Home Assistant entity to select which program to run. Must match program names defined in 'programs' list.",
             "x-ui-section": "Battery Specifications",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_select,select"
         }
     )
-    entity_calculated_start: str = Field(
+    entity_calculated_start: EntityId = Field(
         alias="entity calculated start",
         description="HA entity for calculated optimal start time",
         json_schema_extra={
             "x-help": "Home Assistant entity where system writes the calculated optimal start time. User/automation can use this to trigger machine.",
             "x-ui-section": "Battery Specifications",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
-    entity_calculated_end: str = Field(
+    entity_calculated_end: EntityId = Field(
         alias="entity calculated end",
         description="HA entity for calculated end time",
         json_schema_extra={
             "x-help": "Home Assistant entity where system writes the calculated program end time. Useful for notifications and planning.",
             "x-ui-section": "Battery Specifications",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
-    entity_instant_start: Optional[str] = Field(
+    entity_instant_start: Optional[EntityId] = Field(
         default=None,
         alias="entity instant start",
         description="HA entity for instant start",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to force immediate start, bypassing optimization. Useful for urgent wash cycles.",
             "x-ui-section": "Battery Specifications",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_boolean,switch,button"
         }
     )

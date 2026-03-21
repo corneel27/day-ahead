@@ -3,7 +3,7 @@ Hot water boiler configuration models.
 """
 
 from typing import Annotated, Literal, Optional, Union
-from ..base import FlexValue
+from ..base import EntityId, FlexValue
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
@@ -43,58 +43,53 @@ class BoilerEnabled(BaseModel):
             "x-ui-section": "General",
         }
     )
-    entity_actual_temp: str = Field(
+    entity_actual_temp: EntityId = Field(
         alias="entity actual temp.",
         description="HA entity for actual water temperature",
         json_schema_extra={
             "x-help": "Home Assistant sensor showing current hot water temperature in °C. Required for thermal state tracking and heating decisions.",
             "x-unit": "°C",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_setpoint: str = Field(
+    entity_setpoint: EntityId = Field(
         alias="entity setpoint",
         description="HA entity for temperature setpoint",
         json_schema_extra={
             "x-help": "Home Assistant entity for target water temperature. System will heat water to this temperature. Typical: 55-65°C for domestic hot water.",
             "x-unit": "°C",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_number,number,sensor"
         }
     )
-    entity_hysterese: str = Field(
+    entity_hysterese: EntityId = Field(
         alias="entity hysterese",
         description="HA entity for temperature hysteresis",
         json_schema_extra={
             "x-help": "Home Assistant entity for temperature hysteresis in °C. Prevents excessive cycling. If setpoint=60°C and hysteresis=5°C, heating starts at 55°C.",
             "x-unit": "°C",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_number,number,sensor"
         }
     )
-    entity_enabled: Optional[str] = Field(
+    entity_enabled: Optional[EntityId] = Field(
         default=None,
         alias="entity boiler enabled",
         description="HA entity for boiler enabled status",
         json_schema_extra={
             "x-help": "Optional: Home Assistant binary sensor indicating if boiler is enabled. System will only optimize when boiler is enabled.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "binary_sensor"
         }
     )
-    entity_instant_start: Optional[str] = Field(
+    entity_instant_start: Optional[EntityId] = Field(
         default=None,
         alias="entity instant start",
         description="HA entity for instant start",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to trigger immediate boiler heating. Overrides optimized schedule for on-demand hot water.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch,input_boolean,button"
         }
     )
@@ -162,14 +157,13 @@ class BoilerEnabled(BaseModel):
             "x-ui-section": "General"
         }
     )
-    activate_entity: Optional[str] = Field(
+    activate_entity: Optional[EntityId] = Field(
         default=None,
         alias="activate entity",
         description="HA entity to activate boiler",
         json_schema_extra={
             "x-help": "Home Assistant entity used to activate boiler heating. System will trigger this entity using activate_service when heating is needed.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "button,switch"
         }
     )
@@ -182,14 +176,13 @@ class BoilerEnabled(BaseModel):
             "x-ui-section": "General"
         }
     )
-    switch_entity: Optional[str] = Field(
+    switch_entity: Optional[EntityId] = Field(
         default=None,
         alias="switch entity",
         description="HA entity to switch boiler on/off",
         json_schema_extra={
             "x-help": "Optional: Home Assistant switch entity to directly control boiler power. Alternative to activate_entity for simple on/off control.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch"
         }
     )

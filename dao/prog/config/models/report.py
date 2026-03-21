@@ -4,6 +4,7 @@ Reporting configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
+from .base import EntityId
 
 
 class ReportConfig(BaseModel):
@@ -129,7 +130,7 @@ class ReportConfig(BaseModel):
             "x-ui-widget-filter": "sensor"
         }
     )
-    co2_intensity_sensor: Optional[str] = Field(
+    co2_intensity_sensor: Optional[EntityId] = Field(
         default=None,
         alias="co2 intensity sensor",
         description="HA entity for CO2 intensity",
@@ -137,7 +138,6 @@ class ReportConfig(BaseModel):
             "x-help": "Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.",
             "x-unit": "gCO2/kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )

@@ -4,7 +4,7 @@ Battery configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from ..base import FlexFloat, FlexInt
+from ..base import EntityId, FlexFloat, FlexInt
 from .solar import SolarConfig
 
 
@@ -51,14 +51,13 @@ class BatteryConfig(BaseModel):
             "x-ui-section": "Power Configuration"
         }
     )
-    entity_actual_level: str = Field(
+    entity_actual_level: EntityId = Field(
         alias="entity actual level",
         description="HA entity for current battery SOC",
         json_schema_extra={
             "x-help": "Home Assistant entity that reports the current State of Charge (SOC) percentage. Usually a sensor from your battery inverter.",
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
@@ -115,25 +114,23 @@ class BatteryConfig(BaseModel):
             "x-ui-section": "Power Configuration"
         }
     )
-    entity_min_soc_end_opt: Optional[str] = Field(
+    entity_min_soc_end_opt: Optional[EntityId] = Field(
         default=None,
         alias="entity min soc end opt",
         description="HA entity for minimum SOC at end of optimization period",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity specifying minimum battery level required at end of optimization window. Useful for ensuring battery charge overnight.",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
-    entity_max_soc_end_opt: Optional[str] = Field(
+    entity_max_soc_end_opt: Optional[EntityId] = Field(
         default=None,
         alias="entity max soc end opt",
         description="HA entity for maximum SOC at end of optimization period",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity specifying maximum battery level at end of optimization window. Rarely needed but available for advanced scenarios.",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor,input_number"
         }
     )
@@ -259,25 +256,23 @@ class BatteryConfig(BaseModel):
     )
     
     # Control entities
-    entity_set_power_feedin: Optional[str] = Field(
+    entity_set_power_feedin: Optional[EntityId] = Field(
         default=None,
         alias="entity set power feedin",
         description="HA entity to set power feed-in to grid",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to control grid feed-in power. Used by scheduler to execute optimized battery operations.",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "number,input_number"
         }
     )
-    entity_set_operating_mode: Optional[str] = Field(
+    entity_set_operating_mode: Optional[EntityId] = Field(
         default=None,
         alias="entity set operating mode",
         description="HA entity to set battery operating mode",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to control battery operating mode (e.g., auto/manual/off). System will switch modes as needed for optimization.",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "select,input_select,switch"
         }
     )
@@ -299,43 +294,40 @@ class BatteryConfig(BaseModel):
             "x-ui-section": "Power Configuration"
         }
     )
-    entity_stop_inverter: Optional[str] = Field(
+    entity_stop_inverter: Optional[EntityId] = Field(
         default=None,
         alias="entity stop inverter",
         description="HA entity to stop inverter",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch,button"
         }
     )
-    entity_stop_victron: Optional[str] = Field(
+    entity_stop_victron: Optional[EntityId] = Field(
         default=None,
         alias="entity stop victron",
         description="HA entity to stop Victron inverter",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to stop a Victron battery inverter. Use this for Victron-specific stop control.",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch,button"
         }
     )
 
-    entity_balance_switch: Optional[str] = Field(
+    entity_balance_switch: Optional[EntityId] = Field(
         default=None,
         alias="entity balance switch",
         description="HA entity for grid balancing switch",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch"
         }
     )
     
     # Monitoring entities
-    entity_from_battery: Optional[str] = Field(
+    entity_from_battery: Optional[EntityId] = Field(
         default=None,
         alias="entity from battery",
         description="HA entity for power from battery",
@@ -343,11 +335,10 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant sensor showing current power flow from battery in watts. Used for monitoring and validation.",
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_from_pv: Optional[str] = Field(
+    entity_from_pv: Optional[EntityId] = Field(
         default=None,
         alias="entity from pv",
         description="HA entity for power from PV",
@@ -355,11 +346,10 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant sensor showing current DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.",
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_from_ac: Optional[str] = Field(
+    entity_from_ac: Optional[EntityId] = Field(
         default=None,
         alias="entity from ac",
         description="HA entity for power from AC",
@@ -367,11 +357,10 @@ class BatteryConfig(BaseModel):
             "x-help": "Optional: Home Assistant sensor showing current AC grid power flow in watts. Used for monitoring overall system balance.",
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_calculated_soc: Optional[str] = Field(
+    entity_calculated_soc: Optional[EntityId] = Field(
         default=None,
         alias="entity calculated soc",
         description="HA entity for calculated SOC",
@@ -380,7 +369,6 @@ class BatteryConfig(BaseModel):
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-order": 1,
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )

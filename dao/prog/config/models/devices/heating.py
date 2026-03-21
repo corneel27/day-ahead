@@ -4,7 +4,7 @@ Heating system / heat pump configuration models.
 
 from typing import Annotated, Literal, Optional, Union
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from ..base import FlexFloat
+from ..base import EntityId, FlexFloat
 
 
 class HeatingStage(BaseModel):
@@ -78,14 +78,13 @@ class HeatingEnabled(BaseModel):
             "x-ui-section": "General",
         }
     )
-    entity_hp_enabled: Optional[str] = Field(
+    entity_hp_enabled: Optional[EntityId] = Field(
         default=None,
         alias="entity hp enabled",
         description="HA binary sensor for heat pump enabled status",
         json_schema_extra={
             "x-help": "Optional: Home Assistant binary sensor indicating if heat pump is enabled and operational. System will only optimize when enabled.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "binary_sensor"
         }
     )
@@ -117,14 +116,13 @@ class HeatingEnabled(BaseModel):
             "x-validation-hint": "At least 1 stage, must be sorted by max_power"
         }
     )
-    entity_adjust_heating_curve: Optional[str] = Field(
+    entity_adjust_heating_curve: Optional[EntityId] = Field(
         default=None,
         alias="entity adjust heating curve",
         description="HA entity to adjust heating curve",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to adjust heating curve. Used when adjustment mode is 'heating curve'. Controls water temperature based on outdoor temperature.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "number,input_number"
         }
     )
@@ -151,7 +149,7 @@ class HeatingEnabled(BaseModel):
             "x-validation-hint": "Must be >= 1, typically 2-4 for 1h intervals"
         }
     )
-    entity_heat_produced: Optional[str] = Field(
+    entity_heat_produced: Optional[EntityId] = Field(
         default=None,
         alias="entity hp heat produced",
         description="HA entity for heat produced",
@@ -159,11 +157,10 @@ class HeatingEnabled(BaseModel):
             "x-help": "Optional: Home Assistant sensor showing total heat energy produced. Used for monitoring and validation.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_hp_heat_demand: Optional[str] = Field(
+    entity_hp_heat_demand: Optional[EntityId] = Field(
         default=None,
         alias="entity hp heat demand",
         description="HA entity for heat demand",
@@ -171,11 +168,10 @@ class HeatingEnabled(BaseModel):
             "x-help": "Optional: Home Assistant sensor showing current heat demand. Can be used instead of degree-day calculation for more accurate demand forecasting.",
             "x-unit": "W",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_avg_temp: Optional[str] = Field(
+    entity_avg_temp: Optional[EntityId] = Field(
         default=None,
         alias="entity avg temp",
         description="HA entity for average temperature",
@@ -183,11 +179,10 @@ class HeatingEnabled(BaseModel):
             "x-help": "Optional: Home Assistant sensor for outdoor average temperature. Used for degree-day calculations and COP adjustments.",
             "x-unit": "°C",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_hp_cop: Optional[str] = Field(
+    entity_hp_cop: Optional[EntityId] = Field(
         default=None,
         alias="entity hp cop",
         description="HA entity for heat pump COP",
@@ -195,11 +190,10 @@ class HeatingEnabled(BaseModel):
             "x-help": "Optional: Home Assistant sensor showing current COP. Can be used for monitoring or to override stage-based COP calculations.",
             "x-unit": "ratio",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_hp_power: Optional[str] = Field(
+    entity_hp_power: Optional[EntityId] = Field(
         default=None,
         alias="entity hp power",
         description="HA entity for heat pump power",
@@ -207,18 +201,16 @@ class HeatingEnabled(BaseModel):
             "x-help": "Optional: Home Assistant sensor showing current electrical power consumption. Used for monitoring and validation.",
             "x-unit": "W",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_hp_switch: Optional[str] = Field(
+    entity_hp_switch: Optional[EntityId] = Field(
         default=None,
         alias="entity hp switch",
         description="HA entity to control heat pump on/off",
         json_schema_extra={
             "x-help": "Optional: Home Assistant switch to control heat pump on/off. Used by scheduler to execute optimized heating schedule.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch"
         }
     )
