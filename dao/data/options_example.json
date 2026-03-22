@@ -501,19 +501,19 @@
     "active": true,
     "schedule": [
       {
-        "time": "0435",
+        "time": "0544",
         "action": "get_meteo_data"
       },
       {
-        "time": "1035",
+        "time": "1144",
         "action": "get_meteo_data"
       },
       {
-        "time": "1635",
+        "time": "1744",
         "action": "get_meteo_data"
       },
       {
-        "time": "2235",
+        "time": "2344",
         "action": "get_meteo_data"
       },
       {
