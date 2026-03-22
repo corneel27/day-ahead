@@ -322,26 +322,10 @@
           ],
           "default": null,
           "description": "HA entity to stop inverter",
-          "x-help": "Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.",
+          "x-help": "Optional: Home Assistant entity to stop the battery inverter. Usefull in situations when the battery is idle and you don't want idle-conusmptions of the battery.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget-filter": "switch,button",
           "title": "Entity Stop Inverter"
-        },
-        "entity stop victron": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/EntityId"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "HA entity to stop Victron inverter",
-          "x-help": "Optional: Home Assistant entity to stop a Victron battery inverter. Use this for Victron-specific stop control.",
-          "x-ui-section": "Power Configuration",
-          "x-ui-widget-filter": "switch,button",
-          "title": "Entity Stop Victron"
         },
         "entity balance switch": {
           "anyOf": [
@@ -370,7 +354,7 @@
           ],
           "default": null,
           "description": "HA entity for power from battery",
-          "x-help": "Optional: Home Assistant sensor showing current power flow from battery in watts. Used for monitoring and validation.",
+          "x-help": "Optional: Home Assistant entity to save the average power flow from/to battery in watts. Used for battery systems who wants to stear this power in/out.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget-filter": "sensor",
           "x-unit": "W",
@@ -387,7 +371,7 @@
           ],
           "default": null,
           "description": "HA entity for power from PV",
-          "x-help": "Optional: Home Assistant sensor showing current DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.",
+          "x-help": "Optional: Home Assistant entity to save the average calculated DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget-filter": "sensor",
           "x-unit": "W",
@@ -404,7 +388,7 @@
           ],
           "default": null,
           "description": "HA entity for power from AC",
-          "x-help": "Optional: Home Assistant sensor showing current AC grid power flow in watts. Used for monitoring overall system balance.",
+          "x-help": "Optional: Home Assistant entity to save the calculated average grid power in watts. For battery systems that want to stear the power in/out.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget-filter": "sensor",
           "x-unit": "W",
@@ -420,8 +404,8 @@
             }
           ],
           "default": null,
-          "description": "HA entity for calculated SOC",
-          "x-help": "Optional: Home Assistant sensor for calculated State of Charge. System can compute SOC from power flows if BMS sensor is unavailable.",
+          "description": "HA entity for saving calculated SOC",
+          "x-help": "Optional: Home Assistant entity to save the calculated State of Charge at the end of the first interval. For battery systems that will stear at SoC-values",
           "x-order": 1,
           "x-ui-section": "Power Configuration",
           "x-ui-widget-filter": "sensor",

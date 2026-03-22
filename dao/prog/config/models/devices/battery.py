@@ -337,6 +337,7 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "switch,button"
         }
     )
+    """
     entity_stop_victron: Optional[EntityId] = Field(
         default=None,
         alias="entity stop victron",
@@ -347,6 +348,7 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "switch,button"
         }
     )
+    """
     entity_balance_switch: Optional[EntityId] = Field(
         default=None,
         alias="entity balance switch",

@@ -139,12 +139,11 @@ Configure your home battery storage system for optimal energy management and cos
 | `entity set operating mode on` | string (optional) | No | `"Aan"` | Value for operating mode ON |
 | `entity set operating mode off` | string (optional) | No | `"Uit"` | Value for operating mode OFF |
 | `entity stop inverter` | [EntityId](#entityid) (optional) | No | `null` | HA entity to stop inverter |
-| `entity stop victron` | [EntityId](#entityid) (optional) | No | `null` | HA entity to stop Victron inverter |
 | `entity balance switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity for grid balancing switch |
 | `entity from battery` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from battery (Unit: `W`) |
 | `entity from pv` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
 | `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
-| `entity calculated soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for calculated SOC (Unit: `%`) |
+| `entity calculated soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for saving calculated SOC (Unit: `%`) |
 | `solar` | list[[SolarConfig](#solarconfig)] | No | `null` | DC-coupled solar panels attached to this battery |
 
 <details>
@@ -248,11 +247,7 @@ Value to send to operating mode entity for 'OFF' state. Example: 'manual', 'disa
 
 **`entity stop inverter`**
 
-Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.
-
-**`entity stop victron`**
-
-Optional: Home Assistant entity to stop a Victron battery inverter. Use this for Victron-specific stop control.
+Optional: Home Assistant entity to stop the battery inverter. Usefull in situations when the battery is idle and you don't want idle-conusmptions of the battery.
 
 **`entity balance switch`**
 
@@ -260,19 +255,19 @@ Optional: Home Assistant entity to enable/disable grid balancing mode. Used for 
 
 **`entity from battery`**
 
-Optional: Home Assistant sensor showing current power flow from battery in watts. Used for monitoring and validation.
+Optional: Home Assistant entity to save the average power flow from/to battery in watts. Used for battery systems who wants to stear this power in/out.
 
 **`entity from pv`**
 
-Optional: Home Assistant sensor showing current DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.
+Optional: Home Assistant entity to save the average calculated DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.
 
 **`entity from ac`**
 
-Optional: Home Assistant sensor showing current AC grid power flow in watts. Used for monitoring overall system balance.
+Optional: Home Assistant entity to save the calculated average grid power in watts. For battery systems that want to stear the power in/out.
 
 **`entity calculated soc`**
 
-Optional: Home Assistant sensor for calculated State of Charge. System can compute SOC from power flows if BMS sensor is unavailable.
+Optional: Home Assistant entity to save the calculated State of Charge at the end of the first interval. For battery systems that will stear at SoC-values
 
 **`solar`**
 
