@@ -332,7 +332,7 @@ class BatteryConfig(BaseModel):
         alias="entity stop inverter",
         description="HA entity to stop inverter",
         json_schema_extra={
-            "x-help": "Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.",
+            "x-help": "Optional: Home Assistant entity to stop the battery inverter. Usefull in situations when the battery is idle and you don't want idle-conusmptions of the battery.",
             "x-ui-section": "Power Configuration",
             "x-ui-widget-filter": "switch,button"
         }
@@ -347,7 +347,6 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "switch,button"
         }
     )
-
     entity_balance_switch: Optional[EntityId] = Field(
         default=None,
         alias="entity balance switch",
@@ -365,7 +364,7 @@ class BatteryConfig(BaseModel):
         alias="entity from battery",
         description="HA entity for power from battery",
         json_schema_extra={
-            "x-help": "Optional: Home Assistant sensor showing current power flow from battery in watts. Used for monitoring and validation.",
+            "x-help": "Optional: Home Assistant entity to save the average power flow from/to battery in watts. Used for battery systems who wants to stear this power in/out.",
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
             "x-ui-widget-filter": "sensor"
@@ -376,7 +375,7 @@ class BatteryConfig(BaseModel):
         alias="entity from pv",
         description="HA entity for power from PV",
         json_schema_extra={
-            "x-help": "Optional: Home Assistant sensor showing current DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.",
+            "x-help": "Optional: Home Assistant entity to save the average calculated DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.",
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
             "x-ui-widget-filter": "sensor"
@@ -387,7 +386,7 @@ class BatteryConfig(BaseModel):
         alias="entity from ac",
         description="HA entity for power from AC",
         json_schema_extra={
-            "x-help": "Optional: Home Assistant sensor showing current AC grid power flow in watts. Used for monitoring overall system balance.",
+            "x-help": "Optional: Home Assistant entity to save the calculated average grid power in watts. For battery systems that want to stear the power in/out.",
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
             "x-ui-widget-filter": "sensor"
@@ -396,9 +395,9 @@ class BatteryConfig(BaseModel):
     entity_calculated_soc: Optional[EntityId] = Field(
         default=None,
         alias="entity calculated soc",
-        description="HA entity for calculated SOC",
+        description="HA entity for saving calculated SOC",
         json_schema_extra={
-            "x-help": "Optional: Home Assistant sensor for calculated State of Charge. System can compute SOC from power flows if BMS sensor is unavailable.",
+            "x-help": "Optional: Home Assistant entity to save the calculated State of Charge at the end of the first interval. For battery systems that will stear at SoC-values",
             "x-unit": "%",
             "x-ui-section": "Power Configuration",
             "x-order": 1,
