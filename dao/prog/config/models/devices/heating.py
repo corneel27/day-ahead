@@ -171,12 +171,12 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_avg_temp: Optional[EntityId] = Field(
+    entity_avg_outside_temp: Optional[EntityId] = Field(
         default=None,
-        alias="entity avg temp",
+        alias="entity avg outside temp",
         description="HA entity for average temperature",
         json_schema_extra={
-            "x-help": "Optional: Home Assistant sensor for outdoor average temperature. Used for degree-day calculations and COP adjustments.",
+            "x-help": "Optional: Home Assistant sensor for outdoor average temperature. Used when working with adjustment = on/off.",
             "x-unit": "°C",
             "x-ui-section": "Sensors",
             "x-ui-widget-filter": "sensor"

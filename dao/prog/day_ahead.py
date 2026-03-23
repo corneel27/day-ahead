@@ -2004,7 +2004,7 @@ class DaCalc(DaBase):
                         avg_temp = (avg_temp_today + avg_temp_tomorrow) / 2
                     else:
                         avg_temp = avg_temp_today
-                    entity_avg_temp = self.heating_options.entity_avg_temp
+                    entity_avg_temp = self.heating_options.entity_avg_outside_temp
                     if entity_avg_temp is None:
                         logging.warning(
                             f"Geen entity om gem. temperatuur te exporteren"
