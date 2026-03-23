@@ -74,7 +74,7 @@ class HeatingEnabled(BaseModel):
         alias="heater present",
         description="Whether heating system is present/enabled",
         json_schema_extra={
-            "x-help": "Enable heating system optimization. Set to true to include heat pump in optimization, false to disable. Can also be HA entity ID for dynamic control.",
+            "x-help": "Enable heating system optimization. Set to true to include heat pump in optimization, false to disable.",
             "x-ui-section": "General",
         }
     )
@@ -96,7 +96,7 @@ class HeatingEnabled(BaseModel):
             "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
             "x-unit": "factor",
             "x-ui-section": "Configuration",
-            "x-validation-hint": "Must be > 0, typically 0.5-2.0"
+            "x-validation-hint": "Must be > 0, typically 0.5-10.0"
         }
     )
     adjustment: Literal['on/off', 'power', 'heating curve'] = Field(
@@ -108,7 +108,7 @@ class HeatingEnabled(BaseModel):
         }
     )
     stages: list[HeatingStage] = Field(
-        min_length=1,
+        min_length=0,
         description="Heating power/COP stages",
         json_schema_extra={
             "x-help": "Power and efficiency stages for heat pump. At least one stage required. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
@@ -261,10 +261,12 @@ Define power levels and corresponding COP values:
     @classmethod
     def validate_stages_sorted(cls, v: list[HeatingStage]) -> list[HeatingStage]:
         """Ensure stages are sorted by power and always start with a zero-power sentinel."""
+        # no validation when no stages on/off-adjustment
+        if len(v) == 0:
+            return v
         powers = [stage.max_power for stage in v]
         if powers != sorted(powers):
             raise ValueError("Heating stages must be sorted by max_power (ascending)")
-
         if v[0].max_power != 0.0:
             v = [HeatingStage(max_power=0.0, cop=8.0)] + v
 
