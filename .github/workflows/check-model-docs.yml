@@ -58,7 +58,7 @@ jobs:
       
       - name: Manage PR comment for outdated docs
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const MARKER = '## \u26a0\ufe0f Documentation is out of date';
