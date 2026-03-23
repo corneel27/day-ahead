@@ -3589,10 +3589,7 @@ class DaCalc(DaBase):
                 new_ampere_state = 0
                 new_switch_state = "off"
                 new_state_stop_laden = None  # "2000-01-01 00:00:00"
-                # stop_str = stop_victron.strftime('%Y-%m-%d %H:%M')
-                # print()
 
-                # print(uur[0], end="  ")
                 for cs in range(ECS[e])[1:]:
                     # print(f"{stage_factor[e][cs][0].x:.2f}", end="  ")
                     if stage_factor[e][cs][0].x > 0:
@@ -3825,6 +3822,7 @@ class DaCalc(DaBase):
                 )
                 logging.info(f"Grid set point: {grid_set_point} W")
                 logging.info(f"Cycle cost {bat_name}: {cycle_cost[b].x:<0.2f} euro")
+                balance_state = "on" if balance else "off"
                 if self.debug:
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) batterij {bat_name} "
@@ -3832,7 +3830,7 @@ class DaCalc(DaBase):
                     )
                     if stop_omvormer:
                         logging.info(f"tot: {stop_str}")
-                    logging.info(f"Balanceren zou zijn: {balance}")
+                    logging.info(f"Balanceren zou zijn: {balance_state}")
                 else:
                     # export the ess grid setpoint in W
                     self.set_entity_value(
@@ -3848,19 +3846,15 @@ class DaCalc(DaBase):
                     self.set_entity_option(
                         "entity set operating mode", self.battery_options[b], new_state
                     )
-                    balance_state = "on" if balance else "off"
                     self.set_entity_state(
                         "entity balance switch", self.battery_options[b], balance_state
                     )
+                    tot_str = f" tot: {stop_str}" if stop_omvormer else ""
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: "
-                        f"{netto_vermogen_bat} W"
-                        f"{' tot: ' + stop_str if stop_omvormer else ''}"
+                        f"{netto_vermogen_bat} W {tot_str}"
                     )
-                    logging.info(
-                        f"Balanceren: {balance}"
-                        f"{' tot: ' + stop_str if stop_omvormer else ''}"
-                    )
+                    logging.info(f"Balanceren: {balance_state}")
                     helper_id = self.battery_options[b].entity_stop_inverter
                     if helper_id is not None:
                         self.call_service(
