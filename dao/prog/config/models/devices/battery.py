@@ -337,18 +337,6 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "switch,button"
         }
     )
-    """
-    entity_stop_victron: Optional[EntityId] = Field(
-        default=None,
-        alias="entity stop victron",
-        description="HA entity to stop Victron inverter",
-        json_schema_extra={
-            "x-help": "Optional: Home Assistant entity to stop a Victron battery inverter. Use this for Victron-specific stop control.",
-            "x-ui-section": "Power Configuration",
-            "x-ui-widget-filter": "switch,button"
-        }
-    )
-    """
     entity_balance_switch: Optional[EntityId] = Field(
         default=None,
         alias="entity balance switch",

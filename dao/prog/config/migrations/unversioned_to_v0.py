@@ -7,6 +7,7 @@ Changes:
 - Migrates vat field to vat_consumption and vat_production
 - Sets database engines to mysql (old default) if not specified
 - Coerces boiler_present / heater_present from string to boolean
+- Migrates 'entity stop victron' to 'entity stop inverter' in battery configs
 """
 
 import logging
@@ -96,6 +97,25 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
     if "database da" in migrated and isinstance(migrated["database da"], dict) and "engine" not in migrated["database da"]:
         migrated["database da"]["engine"] = "mysql"
         logger.info("Set database da engine to mysql (old default)")
+
+    # Migrate 'entity stop victron' → 'entity stop inverter' in battery configs.
+    # If both are set, 'entity stop inverter' wins and 'entity stop victron' is dropped.
+    if "battery" in migrated and isinstance(migrated["battery"], list):
+        for battery in migrated["battery"]:
+            if isinstance(battery, dict) and "entity stop victron" in battery:
+                name = battery.get("name", "unknown")
+                if not battery.get("entity stop inverter"):
+                    battery["entity stop inverter"] = battery["entity stop victron"]
+                    logger.info(
+                        f"Migrated 'entity stop victron' to 'entity stop inverter' "
+                        f"for battery '{name}'"
+                    )
+                else:
+                    logger.info(
+                        f"Removed deprecated 'entity stop victron' for battery '{name}' "
+                        f"(already has 'entity stop inverter')"
+                    )
+                del battery["entity stop victron"]
 
     # Coerce boiler_present and heater_present to boolean.
     # Old configs may have stored these as strings ("True"/"False", "yes"/"no", etc.).

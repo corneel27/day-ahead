@@ -3861,14 +3861,7 @@ class DaCalc(DaBase):
                         f"Balanceren: {balance}"
                         f"{' tot: ' + stop_str if stop_omvormer else ''}"
                     )
-                    helper_id = self.battery_options[b].entity_stop_victron
-                    if helper_id is not None:
-                        logging.warning(
-                            f"The name 'entity stop victron' is deprecated, "
-                            f"please change to 'entity stop inverter'."
-                        )
-                    if helper_id is None:
-                        helper_id = self.battery_options[b].entity_stop_inverter
+                    helper_id = self.battery_options[b].entity_stop_inverter
                     if helper_id is not None:
                         self.call_service(
                             "set_datetime", entity_id=helper_id, datetime=stop_str
