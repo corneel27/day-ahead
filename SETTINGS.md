@@ -685,7 +685,7 @@ Define power levels and corresponding COP values:
 | `min run length` | integer | No | `1` | Minimum run length in time intervals (Unit: `intervals`) _Must be >= 1, typically 2-4 for 1h intervals_ |
 | `entity hp heat produced` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat produced (Unit: `kWh`) |
 | `entity hp heat demand` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat demand (Unit: `W`) |
-| `entity avg temp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for average temperature (Unit: `°C`) |
+| `entity avg outside temp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for average temperature (Unit: `°C`) |
 | `entity hp cop` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat pump COP (Unit: `ratio`) |
 | `entity hp power` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat pump power (Unit: `W`) |
 | `entity hp switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity to control heat pump on/off |
@@ -733,9 +733,9 @@ Optional: Home Assistant sensor showing total heat energy produced. Used for mon
 
 Optional: Home Assistant sensor showing current heat demand. Can be used instead of degree-day calculation for more accurate demand forecasting.
 
-**`entity avg temp`**
+**`entity avg outside temp`**
 
-Optional: Home Assistant sensor for outdoor average temperature. Used for degree-day calculations and COP adjustments.
+Optional: Home Assistant sensor for outdoor average temperature. Used when working with adjustment = on/off.
 
 **`entity hp cop`**
 

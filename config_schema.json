@@ -1659,7 +1659,7 @@
           "x-unit": "W",
           "title": "Entity Hp Heat Demand"
         },
-        "entity avg temp": {
+        "entity avg outside temp": {
           "anyOf": [
             {
               "$ref": "#/$defs/EntityId"
@@ -1670,11 +1670,11 @@
           ],
           "default": null,
           "description": "HA entity for average temperature",
-          "x-help": "Optional: Home Assistant sensor for outdoor average temperature. Used for degree-day calculations and COP adjustments.",
+          "x-help": "Optional: Home Assistant sensor for outdoor average temperature. Used when working with adjustment = on/off.",
           "x-ui-section": "Sensors",
           "x-ui-widget-filter": "sensor",
           "x-unit": "°C",
-          "title": "Entity Avg Temp"
+          "title": "Entity Avg Outside Temp"
         },
         "entity hp cop": {
           "anyOf": [
