@@ -1535,7 +1535,7 @@
           "description": "Whether heating system is present/enabled",
           "title": "Heater Present",
           "type": "boolean",
-          "x-help": "Enable heating system optimization. Set to true to include heat pump in optimization, false to disable. Can also be HA entity ID for dynamic control.",
+          "x-help": "Enable heating system optimization. Set to true to include heat pump in optimization, false to disable.",
           "x-ui-section": "General"
         },
         "entity hp enabled": {
@@ -1561,7 +1561,7 @@
           "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
           "x-ui-section": "Configuration",
           "x-unit": "factor",
-          "x-validation-hint": "Must be > 0, typically 0.5-2.0",
+          "x-validation-hint": "Must be > 0, typically 0.5-10.0",
           "title": "Degree Days Factor"
         },
         "adjustment": {
@@ -1582,7 +1582,7 @@
           "items": {
             "$ref": "#/$defs/HeatingStage"
           },
-          "minItems": 1,
+          "minItems": 0,
           "title": "Stages",
           "type": "array",
           "x-help": "Power and efficiency stages for heat pump. At least one stage required. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",

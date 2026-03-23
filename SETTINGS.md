@@ -677,7 +677,7 @@ Define power levels and corresponding COP values:
 |-------|------|----------|---------|-------------|
 | `heater present` | boolean | Discriminator | `true` | Whether heating system is present/enabled |
 | `entity hp enabled` | [EntityId](#entityid) (optional) | No | `null` | HA binary sensor for heat pump enabled status |
-| `degree days factor` | [FlexFloat](#flexfloat) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
+| `degree days factor` | [FlexFloat](#flexfloat) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-10.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | Yes | — | Heating power/COP stages _At least 1 stage, must be sorted by max_power_ |
 | `entity adjust heating curve` | [EntityId](#entityid) (optional) | No | `null` | HA entity to adjust heating curve |
@@ -695,7 +695,7 @@ Define power levels and corresponding COP values:
 
 **`heater present`**
 
-Enable heating system optimization. Set to true to include heat pump in optimization, false to disable. Can also be HA entity ID for dynamic control.
+Enable heating system optimization. Set to true to include heat pump in optimization, false to disable.
 
 **`entity hp enabled`**
 
