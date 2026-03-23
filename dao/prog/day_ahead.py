@@ -4177,11 +4177,6 @@ class DaCalc(DaBase):
 
         backend = self.config.graphical_backend or ""
         gb = GraphBuilder(backend)
-        show_graph = (
-            str(self.config.graphics.show).lower() == "true"
-        )
-        # if show_graph:
-        #     gb.build(gr1_df, gr1_options)
 
         grid0_df = pd.DataFrame()
         grid0_df["index"] = np.arange(U)
@@ -4642,8 +4637,6 @@ class DaCalc(DaBase):
         plt.savefig(
             "../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png"
         )
-        if show_graph:
-            plt.show()
         plt.close("all")
         self.notify("DAO calc afgerond", self.notification_berekening)
         return None
