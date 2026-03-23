@@ -67,8 +67,6 @@ class NotificationHandler(Handler):
 class DaBase(hass.Hass):
     _config = None
     _loader = None
-    _db_da = None
-    _db_ha = None
     _init_lock = threading.Lock()
     def __init__(self, file_name: str = None):
         self.file_name = file_name
@@ -88,10 +86,9 @@ class DaBase(hass.Hass):
             datefmt="%Y-%m-%d %H:%M:%S",
         )
         logging.getLogger().setLevel(self.log_level)
-        # Populate class-level singletons exactly once, even when multiple
-        # threads construct a DaBase subclass concurrently (e.g. gunicorn workers
-        # sharing a process).  Only fast, local operations are performed while
-        # the lock is held; network I/O happens after it is released.
+        # Load config exactly once, even when multiple threads construct a
+        # DaBase subclass concurrently (e.g. gunicorn workers sharing a process).
+        # DB singletons are managed separately in db_connections.py.
         with DaBase._init_lock:
             if DaBase._config is None:
                 try:
@@ -103,19 +100,16 @@ class DaBase(hass.Hass):
                 except (ValueError, RuntimeError) as e:
                     logging.error(f"Configuratie kon niet worden geladen: {e}")
                     return
-            if DaBase._db_da is None:
-                DaBase._db_da = make_db_da(DaBase._config, DaBase._loader.secrets)
-                if DaBase._db_da is None:
-                    return
-            if DaBase._db_ha is None:
-                DaBase._db_ha = make_db_ha(DaBase._config, DaBase._loader.secrets)
-                if DaBase._db_ha is None:
-                    return
 
         self.config = DaBase._config
         self.loader = DaBase._loader
-        self.db_da = DaBase._db_da
-        self.db_ha = DaBase._db_ha
+
+        self.db_da = make_db_da(self.config, self.loader.secrets)
+        if self.db_da is None:
+            return
+        self.db_ha = make_db_ha(self.config, self.loader.secrets)
+        if self.db_ha is None:
+            return
 
         log_level_str = (self.config.logging_level or "info")
         _log_level = getattr(logging, log_level_str.upper(), None)
