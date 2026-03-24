@@ -1031,6 +1031,7 @@ class SolarPredictor(DaBase):
         )
         prediction.drop("irradiance", axis=1, inplace=True)
         """
+        prediction['prediction'][prediction['prediction'] < 0] = 0
         prediction["prediction"].round(3)
         logging.info(f"ML prediction {self.solar_name}\n{prediction}")
         return prediction
