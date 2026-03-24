@@ -4,6 +4,8 @@
 In this release all the errors you found during testing are fixed.
 Many thanks to all the testers: great job.
 
+The ML model was extended to allow for windspeed in predictions. this means you have to retrain the ML models before running a calculation!
+
 Before we go with this release to production/stable we will ask all the testers to run a new test.  
 We hope we have tackled all the errors.
 How to test: before installing this release: copy your old options.json (saved in `options_unversioned.json`) to options.json
