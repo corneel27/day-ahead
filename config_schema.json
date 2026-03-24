@@ -1578,16 +1578,16 @@
           "x-ui-section": "Configuration"
         },
         "stages": {
+          "default": [],
           "description": "Heating power/COP stages",
           "items": {
             "$ref": "#/$defs/HeatingStage"
           },
-          "minItems": 0,
           "title": "Stages",
           "type": "array",
-          "x-help": "Power and efficiency stages for heat pump. At least one stage required. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
+          "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
           "x-ui-section": "Power Stages",
-          "x-validation-hint": "At least 1 stage, must be sorted by max_power"
+          "x-validation-hint": "Required for 'power' adjustment; must be sorted by max_power"
         },
         "entity adjust heating curve": {
           "anyOf": [
@@ -1735,9 +1735,6 @@
           "title": "Entity Hp Switch"
         }
       },
-      "required": [
-        "stages"
-      ],
       "title": "HeatingConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Heating-Configuration",
