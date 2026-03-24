@@ -1226,14 +1226,6 @@
           "x-help": "Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'.",
           "x-ui-section": "Graphics"
         },
-        "show": {
-          "default": false,
-          "description": "Whether to show graphics",
-          "title": "Show",
-          "type": "boolean",
-          "x-help": "Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.",
-          "x-ui-section": "Graphics"
-        },
         "battery balance": {
           "default": true,
           "description": "Show battery balance in graphs",

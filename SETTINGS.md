@@ -1392,7 +1392,6 @@ Graphs can show:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `style` | string | No | `"dark_background"` | Matplotlib style (e.g., 'dark_background', 'default') |
-| `show` | boolean | No | `false` | Whether to show graphics |
 | `battery balance` | boolean | No | `true` | Show battery balance in graphs |
 | `prices consumption` | boolean | No | `true` | Show consumption prices in graphs |
 | `prices production` | boolean | No | `false` | Show production prices in graphs |
@@ -1405,10 +1404,6 @@ Graphs can show:
 **`style`**
 
 Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'.
-
-**`show`**
-
-Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.
 
 **`battery balance`**
 

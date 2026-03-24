@@ -16,14 +16,6 @@ class GraphicsConfig(BaseModel):
             "x-ui-section": "Graphics"
         }
     )
-    show: bool = Field(
-        default=False,
-        description="Whether to show graphics",
-        json_schema_extra={
-            "x-help": "Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.",
-            "x-ui-section": "Graphics"
-        }
-    )
     battery_balance: bool = Field(
         alias="battery balance",
         default=True,
