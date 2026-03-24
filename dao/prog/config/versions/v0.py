@@ -9,7 +9,7 @@ get migrated to this version with no format changes.
 from typing import Optional, Literal
 from pydantic import BaseModel, Field, ConfigDict
 
-from ..models.base import FlexValue, SecretStr
+from ..models.base import FlexFloat, FlexEnum, SecretStr, DAOConfigBaseModel
 from ..models.database import HADatabaseConfig, DatabaseConfig
 from ..models.pricing import PricingConfig
 from ..models.graphics import GraphicsConfig
@@ -30,7 +30,7 @@ from ..models.devices.machines import MachineConfig
 from ..models.xgboost import XGBoostConfig
 
 
-class ConfigurationV0(BaseModel):
+class ConfigurationV0(DAOConfigBaseModel):
     """
     Day Ahead Optimizer Configuration - Version 0.
     
@@ -84,8 +84,7 @@ class ConfigurationV0(BaseModel):
             "x-ui-group": "DAO",
             "x-ui-section": "Weather",
             "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. Use !secret for security. Required for weather forecasts.",
-            "x-validation-hint": "Use !secret for API keys",
-            "x-ui-widget": "secret-picker"
+            "x-validation-hint": "Use !secret for API keys"
         }
     )
     meteoserver_model: Literal['harmonie', 'gfs'] = Field(
@@ -189,7 +188,8 @@ class ConfigurationV0(BaseModel):
         alias="graphical backend",
         description="Matplotlib graphical backend",
         json_schema_extra={
-            "x-ui-group": "Visualization",
+            "x-ui-group": "Reporting",
+            "x-ui-section": "Graphics",
             "x-validation-hint": "Leave empty for auto-detect, use 'Agg' for headless"
         }
     )
@@ -210,25 +210,31 @@ class ConfigurationV0(BaseModel):
             "x-order": 1
         }
     )
-    strategy: FlexValue = Field(
-        default=FlexValue(value="minimize cost"),
+    strategy: FlexEnum = Field(
+        default=FlexEnum(
+            value="minimize cost",
+            enum_values=["minimize cost", "minimize consumption"]
+        ),
         description="Optimization strategy (or HA entity ID returning the strategy string)",
         json_schema_extra={
             "x-ui-group": "DAO",
             "x-ui-section": "Optimization",
             "x-order": 2,
-            "x-ui-widget": "entity-picker-or-string",
-            "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID"
+            "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID",
+            "x-ui-widget-filter": "input_select,select,sensor"
         }
     )
-    max_gap: FlexValue = Field(
-        default=FlexValue(value=0.005),
+    max_gap: FlexFloat = Field(
+        default=FlexFloat(value=0.005),
         alias="max gap",
         description="Maximum MIP gap (absolute) for the optimizer",
         json_schema_extra={
             "x-help": "Maximum acceptable absolute gap for the MIP solver. Smaller values give more accurate results but take longer. Valid range: 0.00001–1.0. Default 0.005 euro.",
             "x-unit": "euro",
-            "x-validation-hint": "Must be > 0"
+            "x-validation-hint": "Must be > 0",
+            "x-ui-group": "DAO",
+            "x-ui-section": "Optimization",
+            "x-order": 3
         }
     )
     

@@ -4,6 +4,7 @@ Electric Vehicle configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict, model_validator
+from ..base import EntityId, FlexBool
 
 
 class EVChargeStage(BaseModel):
@@ -42,14 +43,13 @@ class EVChargeStage(BaseModel):
 class EVChargeScheduler(BaseModel):
     """EV charge scheduling configuration."""
     
-    entity_set_level: str = Field(
+    entity_set_level: EntityId = Field(
         alias="entity set level",
         description="HA entity to set target charge level",
         json_schema_extra={
             "x-help": "Home Assistant entity to set the target battery level for scheduled charging. System will optimize when to charge to reach this level.",
             "x-unit": "%",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_number,number"
         }
     )
@@ -65,13 +65,12 @@ class EVChargeScheduler(BaseModel):
             "x-validation-hint": "Must be >= 0, typically 5-10%"
         }
     )
-    entity_ready_datetime: str = Field(
+    entity_ready_datetime: EntityId = Field(
         alias="entity ready datetime",
         description="HA entity for ready datetime (when charging should complete)",
         json_schema_extra={
             "x-help": "Home Assistant datetime entity specifying when vehicle must be charged. System will optimize charging schedule to minimize cost while meeting deadline.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
@@ -106,24 +105,22 @@ class EVConfig(BaseModel):
             "x-validation-hint": "Must be > 0, typically 40-100 kWh"
         }
     )
-    entity_position: str = Field(
+    entity_position: EntityId = Field(
         alias="entity position",
         description="HA device tracker for vehicle position",
         json_schema_extra={
             "x-help": "Home Assistant device tracker entity to detect if vehicle is home. Charging is only scheduled when vehicle is at home location.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "device_tracker"
         }
     )
-    charge_three_phase: bool = Field(
-        default=True,
+    charge_three_phase: FlexBool = Field(
+        default=FlexBool(value=True),
         alias="charge three phase",
         description="Whether vehicle charges on three phases",
         json_schema_extra={
             "x-help": "True for three-phase charging (11kW/22kW), False for single-phase (3.7kW/7.4kW). Can also be HA entity ID for dynamic resolution.",
-            "x-ui-section": "General",
-            "x-ui-widget": "entity-picker-or-boolean"
+            "x-ui-section": "General"
         }
     )
     charge_stages: list[EVChargeStage] = Field(
@@ -136,39 +133,36 @@ class EVConfig(BaseModel):
             "x-validation-hint": "At least 1 stage required"
         }
     )
-    entity_actual_level: str = Field(
+    entity_actual_level: EntityId = Field(
         alias="entity actual level",
         description="HA entity for current battery level %",
         json_schema_extra={
             "x-help": "Home Assistant sensor showing current battery State of Charge in percent. Required for charge optimization.",
             "x-unit": "%",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entity_plugged_in: str = Field(
+    entity_plugged_in: EntityId = Field(
         alias="entity plugged in",
         description="HA binary sensor for plugged in status",
         json_schema_extra={
             "x-help": "Home Assistant binary sensor indicating if vehicle is plugged into charger. Charging is only possible when plugged in.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "binary_sensor"
         }
     )
-    entity_instant_start: Optional[str] = Field(
+    entity_instant_start: Optional[EntityId] = Field(
         default=None,
         alias="entity instant start",
         description="HA entity for instant start charging",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to trigger immediate charging. Use with entity_instant_level for instant charging mode. Alternative to charge_scheduler.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch,input_boolean"
         }
     )
-    entity_instant_level: Optional[str] = Field(
+    entity_instant_level: Optional[EntityId] = Field(
         default=None,
         alias="entity instant level",
         description="HA entity for instant charge level target",
@@ -176,7 +170,6 @@ class EVConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity for instant charge target level. When instant_start triggers, system charges to this level immediately. Alternative to charge_scheduler.",
             "x-unit": "%",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_number,number,sensor"
         }
     )
@@ -189,34 +182,32 @@ class EVConfig(BaseModel):
             "x-ui-section": "General"
         }
     )
-    charge_switch: str = Field(
+    charge_switch: EntityId = Field(
         alias="charge switch",
         description="HA switch entity to control charging",
         json_schema_extra={
             "x-help": "Home Assistant switch entity to start/stop charging. System will control this to execute optimized charging schedule.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "switch"
         }
     )
-    entity_set_charging_ampere: str = Field(
+    entity_set_charging_ampere: EntityId = Field(
         alias="entity set charging ampere",
         description="HA entity to set charging amperage",
         json_schema_extra={
             "x-help": "Home Assistant entity to control charging current in amperes. System will adjust this to optimize charging speed and cost.",
             "x-unit": "A",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "number,input_number"
         }
     )
-    entity_stop_charging: str = Field(
+    entity_stop_charging: Optional[EntityId] = Field(
+        default=None,
         alias="entity stop charging",
         description="HA entity for stop charging datetime",
         json_schema_extra={
             "x-help": "Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )

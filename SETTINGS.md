@@ -23,8 +23,8 @@
   - [🚗 EVConfig](#evconfig)
   - [🧺 MachineConfig](#machineconfig)
 - [Heating](#heating)
-  - [🌡️ HeatingConfig](#heatingconfig)
-  - [💧 BoilerConfig](#boilerconfig)
+  - [🌡️ HeatingEnabled](#heatingenabled)
+  - [💧 BoilerEnabled](#boilerenabled)
 - [Integration](#integration)
   - [💾 DatabaseConfig](#databaseconfig)
   - [🔔 NotificationsConfig](#notificationsconfig)
@@ -33,9 +33,8 @@
   - [HADatabaseConfig](#hadatabaseconfig)
 - [Pricing](#pricing)
   - [💰 PricingConfig](#pricingconfig)
-- [Visualization](#visualization)
-  - [📈 GraphicsConfig](#graphicsconfig)
 - [Reporting](#reporting)
+  - [📈 GraphicsConfig](#graphicsconfig)
   - [⏰ HistoryConfig](#historyconfig)
   - [📉 ReportConfig](#reportconfig)
 - [DAO](#dao)
@@ -46,11 +45,16 @@
   - [BatteryStage](#batterystage)
   - [EVChargeScheduler](#evchargescheduler)
   - [EVChargeStage](#evchargestage)
-  - [FlexValue](#flexvalue)
+  - [EntityId](#entityid)
+  - [FlexBool](#flexbool)
+  - [FlexEnum](#flexenum)
+  - [FlexFloat](#flexfloat)
+  - [FlexInt](#flexint)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
   - [ScheduleEntry](#scheduleentry)
   - [SecretStr](#secretstr)
+  - [SocPowerLimit](#socpowerlimit)
   - [SolarString](#solarstring)
   - [XGBoostConfig](#xgboostconfig)
 
@@ -111,36 +115,35 @@ Configure your home battery storage system for optimal energy management and cos
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `name` | string | Yes | — | Battery name/identifier |
-| `entity actual level` | string | Yes | — | HA entity for current battery SOC (Unit: `%`) |
+| `entity actual level` | [EntityId](#entityid) | Yes | — | HA entity for current battery SOC (Unit: `%`) |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be greater than 0_ |
-| `upper limit` | [FlexValue](#flexvalue) | Yes | — | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
-| `lower limit` | [FlexValue](#flexvalue) | Yes | — | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
-| `optimal lower level` | [FlexValue](#flexvalue) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
-| `penalty low soc` | [FlexValue](#flexvalue) (optional) | No | `null` | Penalty cost per % per hour below optimal lower SOC (Unit: `euro/%·h`) |
-| `entity min soc end opt` | string (optional) | No | `null` | HA entity for minimum SOC at end of optimization period |
-| `entity max soc end opt` | string (optional) | No | `null` | HA entity for maximum SOC at end of optimization period |
+| `upper limit` | [FlexInt](#flexint) | No | `100` | Maximum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from overcharge_ |
+| `lower limit` | [FlexInt](#flexint) | No | `20` | Minimum SOC % (can be HA entity) (Unit: `%`) _0-100%, protects battery from deep discharge_ |
+| `optimal lower level` | [FlexInt](#flexint) (optional) | No | `null` | Optimal lower SOC % for cost optimization (Unit: `%`) _Optional, should be >= lower_limit_ |
+| `penalty low soc` | number | No | `0.0025` | Penalty cost per % per hour below optimal lower SOC (Unit: `euro/%·h`) |
+| `entity min soc end opt` | [EntityId](#entityid) (optional) | No | `null` | HA entity for minimum SOC at end of optimization period |
+| `entity max soc end opt` | [EntityId](#entityid) (optional) | No | `null` | HA entity for maximum SOC at end of optimization period |
 | `charge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Charge power/efficiency curve _At least 1 stage required, ordered by power_ |
 | `discharge stages` | list[[BatteryStage](#batterystage)] | Yes | — | Discharge power/efficiency curve _At least 1 stage required, ordered by power_ |
 | `reduced hours` | object (optional) | No | `null` | Hour -> max power mapping for reduced power hours _Keys are hour strings (0-23), values are watts_ |
-| `reduce_power_low_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for low SOC power reduction |
-| `reduce_power_high_soc` | list[unknown] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
+| `reduce_power_low_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for low SOC power reduction |
+| `reduce_power_high_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
 | `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `dc_to_bat max power` | [FlexValue](#flexvalue) (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
+| `dc_to_bat max power` | number (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `bat_to_dc max power` | [FlexValue](#flexvalue) (optional) | No | `null` | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
+| `bat_to_dc_max_power` | number (optional) | No | `null` | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
 | `cycle cost` | number | Yes | — | Cost per battery cycle in euros (Unit: `€`) _Must be >= 0, typically €0.50-€1.50 per cycle_ |
-| `entity set power feedin` | string (optional) | No | `null` | HA entity to set power feed-in to grid |
-| `entity set operating mode` | string (optional) | No | `null` | HA entity to set battery operating mode |
+| `entity set power feedin` | [EntityId](#entityid) (optional) | No | `null` | HA entity to set power feed-in to grid |
+| `entity set operating mode` | [EntityId](#entityid) (optional) | No | `null` | HA entity to set battery operating mode |
 | `entity set operating mode on` | string (optional) | No | `"Aan"` | Value for operating mode ON |
 | `entity set operating mode off` | string (optional) | No | `"Uit"` | Value for operating mode OFF |
-| `entity stop inverter` | string (optional) | No | `null` | HA entity to stop inverter |
-| `entity stop victron` | string (optional) | No | `null` | HA entity to stop Victron inverter |
-| `entity balance switch` | string (optional) | No | `null` | HA entity for grid balancing switch |
-| `entity from battery` | string (optional) | No | `null` | HA entity for power from battery (Unit: `W`) |
-| `entity from pv` | string (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
-| `entity from ac` | string (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
-| `entity calculated soc` | string (optional) | No | `null` | HA entity for calculated SOC (Unit: `%`) |
+| `entity stop inverter` | [EntityId](#entityid) (optional) | No | `null` | HA entity to stop inverter |
+| `entity balance switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity for grid balancing switch |
+| `entity from battery` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from battery (Unit: `W`) |
+| `entity from pv` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
+| `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
+| `entity calculated soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for saving calculated SOC (Unit: `%`) |
 | `solar` | list[[SolarConfig](#solarconfig)] | No | `null` | DC-coupled solar panels attached to this battery |
 
 <details>
@@ -218,7 +221,7 @@ Maximum power for DC-coupled solar charging in watts. Determines how much DC sol
 
 Efficiency of battery to DC bus conversion. Typically 0.95-0.98. Only relevant for DC-coupled loads or reverse DC flow scenarios.
 
-**`bat_to_dc max power`**
+**`bat_to_dc_max_power`**
 
 Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.
 
@@ -244,11 +247,7 @@ Value to send to operating mode entity for 'OFF' state. Example: 'manual', 'disa
 
 **`entity stop inverter`**
 
-Optional: Home Assistant entity to emergency stop the battery inverter. Rarely needed but available for safety scenarios.
-
-**`entity stop victron`**
-
-Optional: Home Assistant entity to stop a Victron battery inverter. Use this for Victron-specific stop control.
+Optional: Home Assistant entity to stop the battery inverter. Usefull in situations when the battery is idle and you don't want idle-conusmptions of the battery.
 
 **`entity balance switch`**
 
@@ -256,19 +255,19 @@ Optional: Home Assistant entity to enable/disable grid balancing mode. Used for 
 
 **`entity from battery`**
 
-Optional: Home Assistant sensor showing current power flow from battery in watts. Used for monitoring and validation.
+Optional: Home Assistant entity to save the average power flow from/to battery in watts. Used for battery systems who wants to stear this power in/out.
 
 **`entity from pv`**
 
-Optional: Home Assistant sensor showing current DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.
+Optional: Home Assistant entity to save the average calculated DC-coupled solar power in watts. Only relevant for DC-coupled solar installations.
 
 **`entity from ac`**
 
-Optional: Home Assistant sensor showing current AC grid power flow in watts. Used for monitoring overall system balance.
+Optional: Home Assistant entity to save the calculated average grid power in watts. For battery systems that want to stear the power in/out.
 
 **`entity calculated soc`**
 
-Optional: Home Assistant sensor for calculated State of Charge. System can compute SOC from power flows if BMS sensor is unavailable.
+Optional: Home Assistant entity to save the calculated State of Charge at the end of the first interval. For battery systems that will stear at SoC-values
 
 **`solar`**
 
@@ -311,14 +310,14 @@ For panels facing different directions, use the 'strings' configuration:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `name` | string | Yes | — | Solar installation name/identifier |
-| `entity pv switch` | string (optional) | No | `null` | HA entity to enable/disable this solar installation |
+| `entity pv switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity to enable/disable this solar installation |
 | `tilt` | number (optional) | No | `null` | Panel tilt (for single installation) (Unit: `degrees`) _0-90 degrees, leave empty when using strings_ |
 | `orientation` | number (optional) | No | `null` | Panel orientation (for single installation) (Unit: `degrees`) _-180 to 180 degrees, leave empty when using strings_ |
 | `capacity` | number (optional) | No | `null` | Installed capacity (for single installation) (Unit: `kWp`) _Greater than 0, leave empty when using strings_ |
 | `yield` | number (optional) | No | `null` | Yield factor (for single installation) (Unit: `ratio`) _Greater than 0, typically 0.8-0.9, leave empty when using strings_ |
 | `strings` | list[[SolarString](#solarstring)] | No | `null` | Multiple panel strings with different configurations |
 | `ml_prediction` | boolean | No | `false` | Use ML model to predict solar production for this installation |
-| `entities sensors` | list[string] | No | `null` | HA sensor entities for measuring actual solar production |
+| `entities sensors` | list[[EntityId](#entityid)] | No | `null` | HA sensor entities for measuring actual solar production |
 | `max power` | number (optional) | No | `null` | Maximum output power cap in kW (MPPT limit) (Unit: `kW`) |
 
 <details>
@@ -460,17 +459,17 @@ Use `charge_scheduler` for time-based optimization:
 |-------|------|----------|---------|-------------|
 | `name` | string | Yes | — | EV name/identifier |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be > 0, typically 40-100 kWh_ |
-| `entity position` | string | Yes | — | HA device tracker for vehicle position |
-| `charge three phase` | boolean | No | `true` | Whether vehicle charges on three phases |
+| `entity position` | [EntityId](#entityid) | Yes | — | HA device tracker for vehicle position |
+| `charge three phase` | [FlexBool](#flexbool) | No | `true` | Whether vehicle charges on three phases |
 | `charge stages` | list[[EVChargeStage](#evchargestage)] | Yes | — | Charging amperage/efficiency curve _At least 1 stage required_ |
-| `entity actual level` | string | Yes | — | HA entity for current battery level % (Unit: `%`) |
-| `entity plugged in` | string | Yes | — | HA binary sensor for plugged in status |
-| `entity instant start` | string (optional) | No | `null` | HA entity for instant start charging |
-| `entity instant level` | string (optional) | No | `null` | HA entity for instant charge level target (Unit: `%`) |
+| `entity actual level` | [EntityId](#entityid) | Yes | — | HA entity for current battery level % (Unit: `%`) |
+| `entity plugged in` | [EntityId](#entityid) | Yes | — | HA binary sensor for plugged in status |
+| `entity instant start` | [EntityId](#entityid) (optional) | No | `null` | HA entity for instant start charging |
+| `entity instant level` | [EntityId](#entityid) (optional) | No | `null` | HA entity for instant charge level target (Unit: `%`) |
 | `charge scheduler` | [EVChargeScheduler](#evchargescheduler) (optional) | No | `null` | Charge scheduling configuration |
-| `charge switch` | string | Yes | — | HA switch entity to control charging |
-| `entity set charging ampere` | string | Yes | — | HA entity to set charging amperage (Unit: `A`) |
-| `entity stop charging` | string | Yes | — | HA entity for stop charging datetime |
+| `charge switch` | [EntityId](#entityid) | Yes | — | HA switch entity to control charging |
+| `entity set charging ampere` | [EntityId](#entityid) | Yes | — | HA entity to set charging amperage (Unit: `A`) |
+| `entity stop charging` | [EntityId](#entityid) (optional) | No | `null` | HA entity for stop charging datetime |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -582,12 +581,12 @@ Examples:
 |-------|------|----------|---------|-------------|
 | `name` | string | Yes | — | Machine name/identifier |
 | `programs` | list[[MachineProgram](#machineprogram)] | Yes | — | Available programs with power profiles _At least 1 program required, include 'off' program_ |
-| `entity start window` | string | Yes | — | HA entity for start window datetime |
-| `entity end window` | string | Yes | — | HA entity for end window datetime |
-| `entity selected program` | string | Yes | — | HA entity for selected program |
-| `entity calculated start` | string | Yes | — | HA entity for calculated optimal start time |
-| `entity calculated end` | string | Yes | — | HA entity for calculated end time |
-| `entity instant start` | string (optional) | No | `null` | HA entity for instant start |
+| `entity start window` | [EntityId](#entityid) | Yes | — | HA entity for start window datetime |
+| `entity end window` | [EntityId](#entityid) | Yes | — | HA entity for end window datetime |
+| `entity selected program` | [EntityId](#entityid) | Yes | — | HA entity for selected program |
+| `entity calculated start` | [EntityId](#entityid) | Yes | — | HA entity for calculated optimal start time |
+| `entity calculated end` | [EntityId](#entityid) | Yes | — | HA entity for calculated end time |
+| `entity instant start` | [EntityId](#entityid) (optional) | No | `null` | HA entity for instant start |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -635,7 +634,7 @@ Optional: Home Assistant entity to force immediate start, bypassing optimization
 
 ### 🌡️ HeatingConfig
 
-_Heating system / heat pump configuration._
+_Heating system enabled — all operational fields required._
 
 # Heat Pump Configuration
 
@@ -669,29 +668,34 @@ Define power levels and corresponding COP values:
 
 📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Heating-Configuration)
 
+> **Conditional configuration** — the `heater present` field acts as a discriminator that selects which variant is active:
+>
+> - `heater present: false` — Heating system disabled — only heater_present is required.
+> - `heater present: true` — Heating system enabled — all operational fields required.
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `heater present` | boolean | No | `false` | Whether heating system is present/enabled |
-| `entity hp enabled` | string (optional) | No | `null` | HA binary sensor for heat pump enabled status |
-| `degree days factor` | [FlexValue](#flexvalue) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-2.0_ |
+| `heater present` | boolean | Discriminator | `true` | Whether heating system is present/enabled |
+| `entity hp enabled` | [EntityId](#entityid) (optional) | No | `null` | HA binary sensor for heat pump enabled status |
+| `degree days factor` | [FlexFloat](#flexfloat) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-10.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
-| `stages` | list[[HeatingStage](#heatingstage)] | Yes | — | Heating power/COP stages _At least 1 stage, must be sorted by max_power_ |
-| `entity adjust heating curve` | string (optional) | No | `null` | HA entity to adjust heating curve |
+| `stages` | list[[HeatingStage](#heatingstage)] | No | `[]` | Heating power/COP stages _Required for 'power' and 'heating curve' adjustment; must be sorted by max_power_ |
+| `entity adjust heating curve` | [EntityId](#entityid) (optional) | No | `null` | HA entity to adjust heating curve |
 | `adjustment factor` | number (optional) | No | `null` | Factor for heating curve adjustment (Unit: `factor`) _Typically 0.5-2.0 if specified_ |
 | `min run length` | integer | No | `1` | Minimum run length in time intervals (Unit: `intervals`) _Must be >= 1, typically 2-4 for 1h intervals_ |
-| `entity hp heat produced` | string (optional) | No | `null` | HA entity for heat produced (Unit: `kWh`) |
-| `entity hp heat demand` | string (optional) | No | `null` | HA entity for heat demand (Unit: `W`) |
-| `entity avg temp` | string (optional) | No | `null` | HA entity for average temperature (Unit: `°C`) |
-| `entity hp cop` | string (optional) | No | `null` | HA entity for heat pump COP (Unit: `ratio`) |
-| `entity hp power` | string (optional) | No | `null` | HA entity for heat pump power (Unit: `W`) |
-| `entity hp switch` | string (optional) | No | `null` | HA entity to control heat pump on/off |
+| `entity hp heat produced` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat produced (Unit: `kWh`) |
+| `entity hp heat demand` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat demand (Unit: `W`) |
+| `entity avg outside temp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for average temperature (Unit: `°C`) |
+| `entity hp cop` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat pump COP (Unit: `ratio`) |
+| `entity hp power` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat pump power (Unit: `W`) |
+| `entity hp switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity to control heat pump on/off |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
 
 **`heater present`**
 
-Enable heating system optimization. Set to true to include heat pump in optimization, false to disable. Can also be HA entity ID for dynamic control.
+Enable heating system optimization. Set to true to include heat pump in optimization, false to disable.
 
 **`entity hp enabled`**
 
@@ -707,7 +711,7 @@ Heat pump control mode: 'on/off' = simple binary control, 'power' = variable pow
 
 **`stages`**
 
-Power and efficiency stages for heat pump. At least one stage required. Multiple stages model variable-speed compressors. Must be sorted by power ascending.
+Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.
 
 **`entity adjust heating curve`**
 
@@ -729,9 +733,9 @@ Optional: Home Assistant sensor showing total heat energy produced. Used for mon
 
 Optional: Home Assistant sensor showing current heat demand. Can be used instead of degree-day calculation for more accurate demand forecasting.
 
-**`entity avg temp`**
+**`entity avg outside temp`**
 
-Optional: Home Assistant sensor for outdoor average temperature. Used for degree-day calculations and COP adjustments.
+Optional: Home Assistant sensor for outdoor average temperature. Used when working with adjustment = on/off.
 
 **`entity hp cop`**
 
@@ -750,7 +754,7 @@ Optional: Home Assistant switch to control heat pump on/off. Used by scheduler t
 
 ### 💧 BoilerConfig
 
-_Hot water boiler configuration._
+_Hot water boiler enabled — all operational fields required._
 
 # Hot Water Boiler Configuration
 
@@ -791,30 +795,35 @@ The system models boiler as a thermal battery:
 
 📚 [**View detailed documentation →**](https://github.com/corneel27/day-ahead/wiki/Boiler-Configuration)
 
+> **Conditional configuration** — the `boiler present` field acts as a discriminator that selects which variant is active:
+>
+> - `boiler present: false` — Hot water boiler disabled — only boiler_present is required.
+> - `boiler present: true` — Hot water boiler enabled — all operational fields required.
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `boiler present` | boolean | No | `true` | Whether boiler is present/enabled |
-| `entity actual temp.` | string | Yes | — | HA entity for actual water temperature (Unit: `°C`) |
-| `entity setpoint` | string | Yes | — | HA entity for temperature setpoint (Unit: `°C`) |
-| `entity hysterese` | string | Yes | — | HA entity for temperature hysteresis (Unit: `°C`) |
-| `entity boiler enabled` | string (optional) | No | `null` | HA entity for boiler enabled status |
-| `entity instant start` | string (optional) | No | `null` | HA entity for instant start |
+| `boiler present` | boolean | Discriminator | `true` | Whether boiler is present/enabled |
+| `entity actual temp.` | [EntityId](#entityid) | Yes | — | HA entity for actual water temperature (Unit: `°C`) |
+| `entity setpoint` | [EntityId](#entityid) | Yes | — | HA entity for temperature setpoint (Unit: `°C`) |
+| `entity hysterese` | [EntityId](#entityid) | Yes | — | HA entity for temperature hysteresis (Unit: `°C`) |
+| `entity boiler enabled` | [EntityId](#entityid) (optional) | No | `null` | HA entity for boiler enabled status |
+| `entity instant start` | [EntityId](#entityid) (optional) | No | `null` | HA entity for instant start |
 | `cop` | number | No | `3.0` | Coefficient of Performance (Unit: `ratio`) _Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump_ |
-| `cooling rate` | [FlexValue](#flexvalue) | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
+| `cooling rate` | number | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
 | `volume` | number | No | `200.0` | Water volume in liters (Unit: `L`) _Must be > 0, typically 100-300L_ |
-| `heating allowed below` | [FlexValue](#flexvalue) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
+| `heating allowed below` | number | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
 | `elec. power` | number | No | `1000.0` | Electrical power in watts (Unit: `W`) _Must be > 0, typically 1000-3000W_ |
-| `activate service` | string | Yes | — | Service type to activate boiler (e.g., 'press', 'switch') |
-| `activate entity` | string | Yes | — | HA entity to activate boiler |
+| `activate service` | string (optional) | No | `null` | Service type to activate boiler (e.g., 'press', 'switch') |
+| `activate entity` | [EntityId](#entityid) (optional) | No | `null` | HA entity to activate boiler |
 | `boiler heated by heatpump` | boolean | No | `true` | Whether the boiler is heated by a heat pump |
-| `switch entity` | string (optional) | No | `null` | HA entity to switch boiler on/off |
+| `switch entity` | [EntityId](#entityid) (optional) | No | `null` | HA entity to switch boiler on/off |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
 
 **`boiler present`**
 
-Enable hot water boiler optimization. Set to true to include boiler in optimization, false to disable. Can also be HA entity ID for dynamic control.
+Enable hot water boiler optimization. Set to true to include boiler in optimization, false to disable.
 
 **`entity actual temp.`**
 
@@ -941,7 +950,7 @@ Then in options.json:
 | `db_path` | string (optional) | No | `null` | Database path for SQLite (e.g., '../data') _Required for SQLite (or use database field)_ |
 | `database` | string (optional) | No | `null` | Database filename for SQLite or database name for MySQL _Filename for SQLite, database name for MySQL/PostgreSQL_ |
 | `server` | string (optional) | No | `null` | MySQL server hostname (required for mysql) _Required for mysql/postgresql engines_ |
-| `port` | integer (optional) | No | `null` | MySQL/PostgreSQL server port (required for mysql/postgresql) (Unit: `port`) _1-65535, required for mysql/postgresql_ |
+| `port` | integer (optional) | No | `null` | MySQL/PostgreSQL server port (required for mysql/postgresql) _1-65535, required for mysql/postgresql_ |
 | `username` | string (optional) | No | `null` | MySQL username (required for mysql) _Required for mysql/postgresql engines_ |
 | `password` | [SecretStr](#secretstr) (optional) | No | `null` | MySQL password (can use !secret) _Use !secret for passwords_ |
 | `time_zone` | string (optional) | No | `null` | Database timezone |
@@ -1026,10 +1035,10 @@ Configure Home Assistant notifications for optimization events.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `notification entity` | string (optional) | No | `null` | HA entity for notifications |
+| `notification entity` | [EntityId](#entityid) (optional) | No | `null` | HA entity for notifications |
 | `opstarten` | boolean | No | `false` | Send notification on startup |
 | `berekening` | boolean | No | `false` | Send notification on calculation completion |
-| `last activity entity` | string (optional) | No | `null` | HA entity to track last activity timestamp |
+| `last activity entity` | [EntityId](#entityid) (optional) | No | `null` | HA entity to track last activity timestamp |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1344,9 +1353,9 @@ Enable tax refund calculation if eligible. Some regions/users get energy tax ref
 
 ---
 
-## Visualization
+## Reporting
 
-<a id="visualization"></a>
+<a id="reporting"></a>
 
 ### 📈 GraphicsConfig
 
@@ -1383,7 +1392,6 @@ Graphs can show:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `style` | string | No | `"dark_background"` | Matplotlib style (e.g., 'dark_background', 'default') |
-| `show` | boolean | No | `false` | Whether to show graphics |
 | `battery balance` | boolean | No | `true` | Show battery balance in graphs |
 | `prices consumption` | boolean | No | `true` | Show consumption prices in graphs |
 | `prices production` | boolean | No | `false` | Show production prices in graphs |
@@ -1396,10 +1404,6 @@ Graphs can show:
 **`style`**
 
 Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'.
-
-**`show`**
-
-Enable graph generation and display. Graphs show optimization results, prices, battery schedules. Set to true to enable, false to disable. Can be HA entity ID.
 
 **`battery balance`**
 
@@ -1423,12 +1427,6 @@ Display average/baseline consumption in graphs. Helps understand optimization im
 
 </details>
 
-
----
-
-## Reporting
-
-<a id="reporting"></a>
 
 ### ⏰ HistoryConfig
 
@@ -1541,17 +1539,17 @@ All entity fields accept lists of HA sensors:
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `entities grid consumption` | list[string] | No | `null` | HA entities for grid consumption (Unit: `kWh`) |
-| `entities grid production` | list[string] | No | `null` | HA entities for grid production (Unit: `kWh`) |
-| `entities solar production ac` | list[string] | No | `null` | HA entities for AC solar production (Unit: `kWh`) |
-| `entities solar production dc` | list[string] | No | `null` | HA entities for DC solar production (Unit: `kWh`) |
-| `entities ev consumption` | list[string] | No | `null` | HA entities for EV consumption (Unit: `kWh`) |
-| `entities wp consumption` | list[string] | No | `null` | HA entities for heat pump (warmtepomp) consumption (Unit: `kWh`) |
-| `entities boiler consumption` | list[string] | No | `null` | HA entities for boiler consumption (Unit: `kWh`) |
-| `entities battery consumption` | list[string] | No | `null` | HA entities for battery consumption (Unit: `kWh`) |
-| `entities battery production` | list[string] | No | `null` | HA entities for battery production (Unit: `kWh`) |
-| `entities machine consumption` | list[string] | No | `null` | HA entities for machine consumption (Unit: `kWh`) |
-| `co2 intensity sensor` | string (optional) | No | `null` | HA entity for CO2 intensity (Unit: `gCO2/kWh`) |
+| `entities grid consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for grid consumption (Unit: `kWh`) |
+| `entities grid production` | list[[EntityId](#entityid)] | No | `null` | HA entities for grid production (Unit: `kWh`) |
+| `entities solar production ac` | list[[EntityId](#entityid)] | No | `null` | HA entities for AC solar production (Unit: `kWh`) |
+| `entities solar production dc` | list[[EntityId](#entityid)] | No | `null` | HA entities for DC solar production (Unit: `kWh`) |
+| `entities ev consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for EV consumption (Unit: `kWh`) |
+| `entities wp consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for heat pump (warmtepomp) consumption (Unit: `kWh`) |
+| `entities boiler consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for boiler consumption (Unit: `kWh`) |
+| `entities battery consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for battery consumption (Unit: `kWh`) |
+| `entities battery production` | list[[EntityId](#entityid)] | No | `null` | HA entities for battery production (Unit: `kWh`) |
+| `entities machine consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for machine consumption (Unit: `kWh`) |
+| `co2 intensity sensor` | [EntityId](#entityid) (optional) | No | `null` | HA entity for CO2 intensity (Unit: `gCO2/kWh`) |
 | `sensors` | object (optional) | No | `null` | Additional sensors configuration |
 
 <details>
@@ -1826,9 +1824,9 @@ Advanced scheduler that optimizes charging to reach target level by specific dea
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `entity set level` | string | Yes | — | HA entity to set target charge level (Unit: `%`) |
+| `entity set level` | [EntityId](#entityid) | Yes | — | HA entity to set target charge level (Unit: `%`) |
 | `level margin` | integer | No | `0` | Margin in % for charge level completion (Unit: `%`) _Must be >= 0, typically 5-10%_ |
-| `entity ready datetime` | string | Yes | — | HA entity for ready datetime (when charging should complete) |
+| `entity ready datetime` | [EntityId](#entityid) | Yes | — | HA entity for ready datetime (when charging should complete) |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1871,6 +1869,34 @@ Charging current in amperes for this stage. Typical values: 6A (1.4kW), 10A (2.3
 Charging efficiency ratio at this amperage level. Accounts for charger losses, cable losses, and battery acceptance. Typically 0.85-0.95.
 
 </details>
+
+
+### Unknown
+
+Home Assistant entity ID in the format "domain.object_id" (e.g. "sensor.battery_soc").
+
+*No configuration fields.*
+
+
+### Unknown
+
+FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
+
+*No configuration fields.*
+
+
+### Unknown
+
+Select from predefined values or use Home Assistant entity ID. Entity IDs are always valid.
+
+*No configuration fields.*
+
+
+### Unknown
+
+FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
+
+*No configuration fields.*
 
 
 ### Unknown
@@ -1955,7 +1981,36 @@ Task to run: data collection, optimization, or maintenance
 
 ### Unknown
 
+Secret reference or plain string. Use "!secret key_name" format to reference secrets from secrets.json. Plain strings are also accepted.
+
 *No configuration fields.*
+
+
+### SocPowerLimit
+
+_A SOC threshold with a corresponding maximum power limit.
+
+Used in ``reduce_power_low_soc`` / ``reduce_power_high_soc`` to protect the
+battery by reducing charge/discharge power as SOC approaches its limits.
+Multiple stages define a piecewise-linear power derating curve._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `soc` | integer | Yes | — | SOC threshold in % (Unit: `%`) _0–100 %, stages should be sorted by soc_ |
+| `power` | integer | Yes | — | Maximum power at this SOC threshold in watts (Unit: `W`) _Must be >= 0_ |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`soc`**
+
+State of Charge threshold at which this power limit applies.
+
+**`power`**
+
+Maximum charge or discharge power allowed when SOC is at this threshold.
+
+</details>
 
 
 ### SolarString
@@ -1969,6 +2024,8 @@ Configuration for a single string of solar panels with the same tilt and orienta
 | `tilt` | number | Yes | — | Panel tilt angle in degrees (0=horizontal, 90=vertical) (Unit: `degrees`) _Must be between 0 and 90 degrees_ |
 | `orientation` | number | Yes | — | Panel orientation in degrees (0=south, 90=west, -90=east) (Unit: `degrees`) _Must be between -180 and 180 degrees_ |
 | `capacity` | number | Yes | — | Installed capacity in kWp (Unit: `kWp`) _Must be greater than 0_ |
+| `ml_prediction` | boolean | No | `false` | Use ML model to predict solar production for this installation |
+| `entities sensors` | list[[EntityId](#entityid)] | No | `null` | HA sensor entities for measuring actual solar production |
 | `max power` | number (optional) | No | `null` | Maximum output power cap in kW (MPPT limit) (Unit: `kW`) |
 | `yield` | number | Yes | — | Yield factor for production calculation (Unit: `ratio`) _Must be greater than 0, typically 0.8-0.9_ |
 
@@ -1986,6 +2043,14 @@ Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° o
 **`capacity`**
 
 Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.
+
+**`ml_prediction`**
+
+Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.
+
+**`entities sensors`**
+
+Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.
 
 **`max power`**
 

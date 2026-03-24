@@ -89,17 +89,11 @@ class DBmanagerObj(object):
             logging.debug(
                 f"Dialect: {self.db_dialect}, database: {self.db_name}, server: {self.server}"
             )
-        db_url = self.db_url(
-            db_dialect=self.db_dialect,
-            db_name=self.db_name,
-            db_server=self.server,
-            db_user=self.user,
-            db_password=self.password,
-            db_port=self.port,
-            db_path=self.db_path,
-        )
-        if not sqlalchemy_utils.database_exists(db_url):
-            raise ConnectionAbortedError
+        # Probe the connection once at construction to fail fast with a clear
+        # error message.  Using a context manager returns the connection to the
+        # pool on exit regardless of success or failure — the engine stays valid.
+        with self.engine.connect():
+            pass
         self.metadata = MetaData()
 
     @staticmethod

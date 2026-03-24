@@ -14,12 +14,14 @@ This guide explains how to maintain and extend the Pydantic-based configuration 
 3. [Making a Key Required/Optional](#making-a-key-requiredoptional)
 4. [Modifying Default Values](#modifying-default-values)
 5. [Extending an Existing Model](#extending-an-existing-model)
-6. [Working with Secrets (SecretStr)](#working-with-secrets-secretstr)
-7. [Working with Dynamic Values (FlexValue)](#working-with-dynamic-values-flexvalue)
-8. [Creating a New Model](#creating-a-new-model)
-9. [Migration Workflows](#migration-workflows)
-10. [Testing Requirements](#testing-requirements)
-11. [Common Pitfalls](#common-pitfalls)
+6. [Validators](#validators)
+7. [Working with EntityId](#working-with-entityid)
+8. [Working with Secrets (SecretStr)](#working-with-secrets-secretstr)
+9. [Working with Dynamic Values (FlexValue)](#working-with-dynamic-values-flexvalue)
+10. [Creating a New Model](#creating-a-new-model)
+10. [Migration Workflows](#migration-workflows)
+11. [Testing Requirements](#testing-requirements)
+12. [Common Pitfalls](#common-pitfalls)
 
 ---
 
@@ -28,15 +30,14 @@ This guide explains how to maintain and extend the Pydantic-based configuration 
 The configuration system consists of:
 - **Pydantic Models**: Type-safe configuration models in `dao/prog/config/versions/`
 - **Migrations**: Version migration logic in `dao/prog/config/migrations/`
-- **Auto-Documentation**: GitHub Actions automatically regenerate docs when models change
-- **Documentation Validation**: Build fails if any field lacks a description
+- **Documentation**: `SETTINGS.md` and `config_schema.json` generated from code; run `python scripts/generate_docs.py` before committing, CI validates they are up to date
 
-**Documentation Auto-Generation**:
+**Documentation:**
 - ✅ `config_schema.json` auto-generated from Pydantic schema
 - ✅ `SETTINGS.md` auto-generated from json schema
-- ✅ GitHub Actions automatically regenerates when models change
-- ✅ **All fields MUST have descriptions** - build fails otherwise
-- ⚠️ Never edit generated docs manually - they regenerate from code!
+- ✅ **All fields MUST have descriptions** — CI build fails otherwise
+- ⚠️ Never edit generated docs manually — they are regenerated from code!
+- ⚠️ Run `python scripts/generate_docs.py` before committing model changes
 
 ---
 
@@ -345,59 +346,6 @@ You can add/modify extensions without creating migrations!
 | Change has default → required | `Field(default="x")` → `field: str` | ✅ Yes | Removing default breaks old configs |
 | Change default value | `default="old"` → `default="new"` | ❌ No* | *Unless behavior changes significantly |
 
-### Adding a Field with Default Value
-
-**✅ NON-BREAKING** - No migration needed!
-
-When you add a field with a default value, it's **automatically optional** in Pydantic. Old configurations without this field will use the default.
-
-```python
-# dao/prog/config/models/devices/battery.py
-from pydantic import BaseModel, Field
-
-class BatteryConfig(BaseModel):
-    name: str
-    capacity: float
-    max_charge_power: float
-    
-    # NEW: Adding field with default - NO MIGRATION NEEDED!
-    efficiency: float = Field(
-        default=0.95, 
-        ge=0.0, 
-        le=1.0,
-        description="Battery round-trip efficiency (0-1)"
-    )
-```
-
-**Why no migration is needed**:
-- Pydantic treats `Field(default=X)` as optional
-- Old configs without `efficiency` automatically get `0.95`
-- `is_required() == False` for fields with defaults
-- Completely backward compatible!
-
-### Making a Field Truly Required
-
-**⚠️ BREAKING CHANGE** - Requires version migration!
-
-Only needed if you want a field to be required WITHOUT a default value:
-
-```python
-# dao/prog/config/versions/v1.py
-class BatteryV1(BaseModel):
-    name: str
-    capacity: float
-    max_charge_power: float
-    
-    # Truly required - no default, will fail validation if missing
-    efficiency: float = Field(
-        ge=0.0, 
-        le=1.0,
-        description="Battery round-trip efficiency (0-1)"
-    )
-```
-
-**This DOES need migration** because old configs missing `efficiency` will fail validation.
-
 ### Switching from Optional to Required
 
 **⚠️ BREAKING CHANGE** - Requires version migration!
@@ -604,19 +552,7 @@ class BatteryConfig(BaseModel):
 
 ### Adding Validation
 
-```python
-from pydantic import BaseModel, Field, field_validator
-
-class BatteryV0(BaseModel):
-    capacity: float = Field(gt=0, description="Battery capacity in kWh")
-    
-    @field_validator('capacity')
-    @classmethod
-    def validate_capacity(cls, v: float) -> float:
-        if v > 1000:
-            raise ValueError('Battery capacity unreasonably large (>1000 kWh)')
-        return v
-```
+See the [Validators](#validators) section for `field_validator` (single field) and `model_validator` (cross-field) patterns.
 
 ### Adding Computed Fields
 
@@ -632,6 +568,137 @@ class BatteryV0(BaseModel):
     def capacity_wh(self) -> float:
         """Capacity in Watt-hours."""
         return self.capacity * 1000
+```
+
+---
+
+## Validators
+
+### Built-in Field constraints
+
+**Prefer built-in constraints over custom validators whenever possible.** Built-in constraints are translated directly into `config_schema.json` (e.g. `"minimum"`, `"maxLength"`), which means the UI and documentation automatically reflect them. Custom validators run only in Python and are invisible to the schema.
+
+Before writing a custom validator, check whether a built-in `Field` constraint is enough:
+
+| Constraint | Types | Meaning |
+|---|---|---|
+| `gt=x` / `ge=x` | numeric | greater than / greater than or equal to |
+| `lt=x` / `le=x` | numeric | less than / less than or equal to |
+| `multiple_of=x` | numeric | value must be a multiple of `x` |
+| `min_length=n` / `max_length=n` | `str`, `list` | length bounds |
+| `pattern="regex"` | `str` | value must match regex |
+
+```python
+capacity: float = Field(gt=0, le=1000, description="Capacity in kWh")
+name: str = Field(min_length=1, max_length=50, description="Battery name")
+```
+
+Full reference: [Pydantic field constraints docs](https://docs.pydantic.dev/latest/concepts/fields/#field-constraints)
+
+---
+
+### `field_validator` — Single-field validation
+
+Use `@field_validator` when a constraint applies to a **single field** and cannot be expressed with `Field(gt=, le=, ...)` alone.
+
+- Must be a `@classmethod`
+- Receives the (already type-coerced) field value; return the (possibly transformed) value or raise `ValueError`
+- `mode='before'` runs before type coercion; `mode='after'` (default) runs after
+
+```python
+from pydantic import BaseModel, Field, field_validator
+
+class BatteryConfig(BaseModel):
+    capacity: float = Field(gt=0, description="Capacity in kWh")
+
+    @field_validator('capacity')
+    @classmethod
+    def validate_capacity(cls, v: float) -> float:
+        if v > 1000:
+            raise ValueError("Capacity > 1000 kWh is unreasonably large")
+        return v  # return the (possibly transformed) value
+```
+
+### `model_validator` — Cross-field validation
+
+Use `@model_validator` when a constraint involves **two or more fields**, or when you need to mutate the constructed model (e.g. prepend a sentinel entry to a list).
+
+- `mode='after'` receives `self` (the fully constructed model); can read and write fields; always `return self`
+- `mode='before'` receives the raw input `dict`; useful for pre-processing before field parsing
+
+```python
+from pydantic import BaseModel, Field, model_validator
+from typing import Literal
+
+class HeatingEnabled(BaseModel):
+    adjustment: Literal['on/off', 'power', 'heating curve'] = 'power'
+    stages: list = Field(default=[])
+
+    @model_validator(mode='after')
+    def validate_stages(self) -> 'HeatingEnabled':
+        if len(self.stages) == 0 and self.adjustment in ('power', 'heating curve'):
+            raise ValueError(f"At least one stage required when adjustment is '{self.adjustment}'")
+        return self
+```
+
+### When to use which
+
+| Situation | Use |
+|-----------|-----|
+| Validate or transform one field | `field_validator` |
+| Constraint across two or more fields | `model_validator(mode='after')` |
+| Pre-process raw input before field parsing | `model_validator(mode='before')` |
+| Mutate a field (e.g. prepend a sentinel to a list) | `model_validator(mode='after')` |
+
+> **Note on imports**: only import what you use — if only `model_validator` is needed, don't import `field_validator`.
+
+---
+
+## Working with EntityId
+
+Use `EntityId` (defined in `dao/prog/config/models/base.py`) for **any field that holds a Home Assistant entity ID** — sensors, switches, input numbers, etc. Never type such fields as plain `str`.
+
+`EntityId` subclasses `str` so it works everywhere a plain string is expected (f-strings, HA API calls) without any callsite changes.
+
+### Why Not `str`?
+
+A plain `str` field accepts any string, including typos like `"sensor_battery_soc"` (missing the dot). `EntityId` validates the `domain.object_id` format at parse time — bad configs fail loudly rather than silently producing wrong results at runtime.
+
+Additionally, because `EntityId` is registered as a named `$ref` in the JSON schema, UI builders can automatically render an entity picker widget without needing any `x-ui-widget` hint.
+
+### Field Declaration
+
+```python
+from .base import EntityId
+
+class BatteryConfig(BaseModel):
+    entity_actual_level: Optional[EntityId] = Field(
+        default=None,
+        alias="entity actual level",
+        description="HA sensor for current battery SOC (%)",
+        json_schema_extra={
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    entity_switch: Optional[EntityId] = Field(
+        default=None,
+        alias="entity switch",
+        description="HA switch to control battery charge/discharge",
+        json_schema_extra={
+            "x-ui-widget-filter": "switch",
+        },
+    )
+```
+
+### Validation
+
+`EntityId` accepts strings matching `domain.object_id` where the domain starts with a letter. Invalid values raise `ValueError` at parse time:
+
+```python
+EntityId("sensor.battery_soc")   # ✅ valid
+EntityId("input_number.target")  # ✅ valid
+EntityId("battery_soc")          # ❌ raises ValueError — missing domain
+EntityId("0.45")                 # ❌ raises ValueError — domain starts with digit
 ```
 
 ---
@@ -697,17 +764,29 @@ api_key: str | None = (
 
 ### Serialization
 
-`SecretStr` serializes to `secret_key` — the bare key name (without the `!secret` prefix) for references, or the literal value for plain-text passwords. The resolved value is never stored inside `SecretStr`, so serialization can never leak it. Round-tripping through `model_dump()` / `model_validate()` is safe.
+`SecretStr` is a plain `str` subclass with no custom serializer. `model_dump()` returns the raw stored string — `"!secret key_name"` for references, or the literal value for plain-text passwords — exactly as it appears in `options.json`. This means round-tripping through `model_dump()` / `model_validate()` preserves the original config representation. The resolved (plain-text) value is never stored inside `SecretStr`, so serialization can never leak it.
 
 ---
 
 ## Working with Dynamic Values (FlexValue)
 
-Use `FlexValue` (defined in `dao/prog/config/models/base.py`) for **any field that can be either a static/literal value or a live Home Assistant entity ID**. This allows users to hardcode a number in their config *or* point to a HA sensor that supplies the value at runtime.
+Use a `FlexValue` typed subclass for **any field that can be either a static/literal value or a live Home Assistant entity ID**. This allows users to hardcode a number in their config *or* point to a HA sensor that supplies the value at runtime.
 
-### How It Works
+### Typed subclasses
 
-`FlexValue` detects whether `value` looks like an entity ID (`domain.anything` pattern). If so, `.resolve()` calls the provided HA state getter to fetch the current state. Otherwise the stored literal is returned.
+Always use a typed subclass rather than `FlexValue` directly. The subclass determines the type returned by `resolve()` without requiring a type argument at the call site:
+
+| Class | Resolves to | Notes |
+|---|---|---|
+| `FlexFloat` | `float` | Numeric fields — SOC, power, temperature |
+| `FlexInt` | `int` | Integer fields — percentages, counts. Float literals are truncated |
+| `FlexBool` | `bool` | Boolean fields. HA states `"on"`, `"true"`, `"1"` all resolve to `True` |
+| `FlexStr` | `str` | String fields — mode selectors, text sensors |
+| `FlexEnum` | `str` | Like `FlexStr`, but validates literal values against an allowed set |
+
+### How it works
+
+`FlexValue` detects whether `value` looks like an entity ID (`domain.anything` pattern, domain starting with a letter). If so, `.resolve()` calls the provided HA state getter. Otherwise the stored literal is returned.
 
 | Config value | Treated as | `resolve()` returns |
 |---|---|---|
@@ -716,36 +795,37 @@ Use `FlexValue` (defined in `dao/prog/config/models/base.py`) for **any field th
 | `"sensor.battery_soc"` | HA entity ID | Live HA state, cast to target type |
 | `"input_number.cooling_rate"` | HA entity ID | Live HA state, cast to target type |
 
+**Note:** Numeric strings like `"0.45"` are *not* treated as entity IDs — the domain must start with a letter.
+
 ### Field Declaration
 
-Do **not** use `float | FlexValue` or `int | FlexValue` union types. Use just `FlexValue` — bare literals in config are wrapped automatically via `parse_from_literal`.
+Do **not** use `float | FlexFloat` or bare `FlexValue`. Use just the typed subclass — bare literals are wrapped automatically via `parse_from_literal`.
 
 ```python
-from .base import FlexValue
+from .base import FlexFloat, FlexInt, FlexBool, FlexStr, FlexEnum
 
 class MyDeviceV0(BaseModel):
     model_config = {"extra": "allow"}
 
-    max_power: FlexValue = Field(
+    max_power: FlexFloat = Field(
         description="Max power in watts (can be HA entity)",
         json_schema_extra={
             "x-help": "Integer watts, or HA entity ID (e.g. sensor.inverter_max_power).",
             "x-unit": "W",
-            "x-ui-widget": "entity-picker-or-number",
             "x-ui-widget-filter": "sensor,input_number",
         },
     )
-    penalty: Optional[FlexValue] = Field(
+    penalty: Optional[FlexFloat] = Field(
         default=None,
         description="Penalty cost per unit (can be HA entity)",
     )
 ```
 
-For fields with a sensible default, wrap the default in `FlexValue`:
+For fields with a sensible default, wrap the default in the typed subclass:
 
 ```python
-    degree_days_factor: FlexValue = Field(
-        default=FlexValue(value=1.0),
+    degree_days_factor: FlexFloat = Field(
+        default=FlexFloat(value=1.0),
         alias="degree days factor",
         description="Degree days factor (can be HA entity)",
     )
@@ -753,20 +833,40 @@ For fields with a sensible default, wrap the default in `FlexValue`:
 
 ### Resolving at the Call Site
 
-Pass a callable `(entity_id: str) -> str` as the first argument. In `DaBase`/`DaCalc` this is always `lambda eid: self.get_state(eid).state`. Define it once per method and reuse:
+Pass a callable `(entity_id: str) -> str` as the only argument. In `DaBase`/`DaCalc` this is always `lambda eid: self.get_state(eid).state`. Define it once per method and reuse.
+
+Note: Unlike the old API, **no type argument** is passed — the type is encoded in the subclass:
 
 ```python
 ha_getter = lambda eid: self.get_state(eid).state
 
-# Required field
-max_power = config.my_device.max_power.resolve(ha_getter, float)
+# Required field — type inferred from FlexFloat subclass
+max_power: float = config.my_device.max_power.resolve(ha_getter)
 
 # Optional field — guard for None first
 penalty_field = config.my_device.penalty
-penalty = penalty_field.resolve(ha_getter, float) if penalty_field is not None else 0.0
+penalty: float = penalty_field.resolve(ha_getter) if penalty_field is not None else 0.0
 ```
 
-Always pass the desired Python type as the second argument (`int`, `float`, `str`, or `bool`). This ensures correct conversion whether the value came from a literal or a HA state string.
+### FlexEnum — validated string choices
+
+Use `FlexEnum` when a field has a fixed set of allowed values *or* a HA entity ID.
+Declare the allowed values once in the field default. The default value is required to provide the allowed set for validation and documentation.
+
+```python
+from .base import FlexEnum
+
+class SchedulerConfig(DAOConfigBaseModel):
+    strategy: FlexEnum = Field(
+        default=FlexEnum(
+            value="minimize cost",
+            enum_values=["minimize cost", "minimize consumption"],
+        ),
+        description="Optimization strategy",
+    )
+```
+
+All DAO config models inherit from `DAOConfigBaseModel`, so no further setup is needed.
 
 ### Testing
 
@@ -776,7 +876,7 @@ In tests where you know the value is literal, pass a no-op getter that asserts i
 def no_ha_calls(entity_id: str) -> str:
     raise AssertionError(f"Unexpected HA lookup: {entity_id}")
 
-result = flex_val.resolve(no_ha_calls, float)  # safe when value is a literal
+result = flex_val.resolve(no_ha_calls)  # safe when value is a literal
 ```
 
 ---
@@ -1193,18 +1293,11 @@ VERSION_MODELS = {
 
 ## Summary Checklist
 
-### Adding Optional Field (with default or None)
-- [ ] Add field to model with `Field(default=X)` or `field: Type | None = None`
-- [ ] Add Field description for auto-documentation
+### Adding Optional or Defaulted Field
+- [ ] Add field with `Field(default=X, description="...")` or `field: Type | None = None`
 - [ ] Add tests for new field
-- [ ] Commit and push - **docs auto-generate!**
+- [ ] Regenerate docs: `python scripts/generate_docs.py`
 - [ ] **✅ No migration needed!**
-
-### Adding Field with Default Value
-- [ ] Add field with `Field(default=X, description="...")`
-- [ ] Add tests for new field
-- [ ] Commit and push - **docs auto-generate!**
-- [ ] **✅ No migration needed!** (Pydantic treats it as optional)
 
 ### Adding Truly Required Field (no default)
 - [ ] Create new version (vN+1)
@@ -1213,7 +1306,7 @@ VERSION_MODELS = {
 - [ ] Update `CURRENT_VERSION` in loader
 - [ ] Register migration in `migrations/migrator.py`
 - [ ] Add migration tests
-- [ ] Commit and push - **docs auto-generate!**
+- [ ] Regenerate docs: `python scripts/generate_docs.py`
 - [ ] **⚠️ Migration required!**
 
 ### Changing Defaults
@@ -1222,7 +1315,7 @@ VERSION_MODELS = {
 - [ ] If non-breaking: update in current version
 - [ ] Update Field description if needed
 - [ ] Test both old and new configs
-- [ ] Commit and push - **docs auto-generate!**
+- [ ] Regenerate docs: `python scripts/generate_docs.py`
 
 ### Creating New Model
 - [ ] Create model file in `dao/prog/config/models/`
@@ -1231,89 +1324,20 @@ VERSION_MODELS = {
 - [ ] Set `model_config = {"extra": "allow"}` if needed
 - [ ] Add to root `ConfigurationVN`
 - [ ] Write comprehensive tests
-- [ ] Commit and push - **docs auto-generate!**
+- [ ] Regenerate docs: `python scripts/generate_docs.py`
 
 ---
 
 ## Automated Documentation
 
-### GitHub Actions Workflow
-
-The repository includes a GitHub Actions workflow (`.github/workflows/generate-docs.yml`) that automatically:
-
-1. **Detects changes** to Pydantic models:
-   - `dao/prog/config/**/*.py`
-   - `scripts/generate_docs.py`
-
-2. **Regenerates documentation**:
-   - `SETTINGS.md` from model metadata
-   - `config_schema.json` from Pydantic schema
-
-3. **Commits changes** back to your branch automatically
-
-4. **Comments on PRs** to notify you
-
-### Workflow Benefits
-
-- ✅ **Code is the source of truth**: Documentation always matches models
-- ✅ **Zero maintenance**: No manual doc updates needed
-- ✅ **Automatic validation**: Schema and docs stay in sync
-- ✅ **Developer friendly**: Just write good Field descriptions
-
-### Local Testing
-
-Test documentation generation locally before pushing:
+Developers generate `SETTINGS.md` and `config_schema.json` locally by running:
 
 ```bash
-# Generate SETTINGS.md and config_schema.json
 python scripts/generate_docs.py
-
-# Check the output
 git diff SETTINGS.md config_schema.json
 ```
 
-### Best Practices for Auto-Documentation
-
-**Write good Field descriptions**:
-```python
-# ❌ BAD - no description
-capacity: float
-
-# ✅ GOOD - clear description
-capacity: float = Field(
-    description="Battery capacity in kWh"
-)
-
-# 🌟 EXCELLENT - description + constraints
-capacity: float = Field(
-    gt=0,
-    description="Battery capacity in kWh (must be positive)"
-)
-```
-
-**Write model docstrings**:
-```python
-# ✅ GOOD - helps users understand the model
-class BatteryConfig(BaseModel):
-    """Battery configuration for optimization.
-    
-    Defines battery capacity, charge/discharge curves,
-    and SOC limits for the optimization algorithm.
-    """
-    name: str = Field(description="Battery identifier")
-    # ...
-```
-
-**Use descriptive names**:
-```python
-# ❌ BAD
-entity_al: str
-
-# ✅ GOOD
-entity_actual_level: str = Field(
-    description="Home Assistant entity for current battery SOC percentage"
-)
-```
+CI validates that the generated files are up to date — the build fails if models were changed without regenerating the docs. Never edit those files manually.
 
 ---
 

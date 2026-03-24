@@ -4,12 +4,13 @@ Reporting configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
+from .base import EntityId
 
 
 class ReportConfig(BaseModel):
     """Reporting and sensor entity configuration."""
     
-    entities_grid_consumption: list[str] = Field(
+    entities_grid_consumption: list[EntityId] = Field(
         default_factory=list,
         alias="entities grid consumption",
         description="HA entities for grid consumption",
@@ -17,11 +18,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities measuring grid consumption (import). Used for actual vs optimized comparison and reporting.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_grid_production: list[str] = Field(
+    entities_grid_production: list[EntityId] = Field(
         default_factory=list,
         alias="entities grid production",
         description="HA entities for grid production",
@@ -29,11 +29,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities measuring grid production (export/feed-in). Used for production reporting and solar surplus calculation.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_solar_production_ac: list[str] = Field(
+    entities_solar_production_ac: list[EntityId] = Field(
         default_factory=list,
         alias="entities solar production ac",
         description="HA entities for AC solar production",
@@ -41,11 +40,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities for AC-coupled solar production. After inverter, directly to AC side. Separate from DC-coupled solar.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_solar_production_dc: list[str] = Field(
+    entities_solar_production_dc: list[EntityId] = Field(
         default_factory=list,
         alias="entities solar production dc",
         description="HA entities for DC solar production",
@@ -53,11 +51,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities for DC-coupled solar production. Before inverter, directly to battery DC bus. Separate from AC-coupled solar.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_ev_consumption: list[str] = Field(
+    entities_ev_consumption: list[EntityId] = Field(
         default_factory=list,
         alias="entities ev consumption",
         description="HA entities for EV consumption",
@@ -65,11 +62,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities measuring EV charging consumption. Used for EV-specific energy reporting and cost allocation.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_wp_consumption: list[str] = Field(
+    entities_wp_consumption: list[EntityId] = Field(
         default_factory=list,
         alias="entities wp consumption",
         description="HA entities for heat pump (warmtepomp) consumption",
@@ -77,11 +73,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities measuring heat pump consumption. Used for heating-specific energy reporting and COP calculation.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_boiler_consumption: list[str] = Field(
+    entities_boiler_consumption: list[EntityId] = Field(
         default_factory=list,
         alias="entities boiler consumption",
         description="HA entities for boiler consumption",
@@ -89,11 +84,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities measuring hot water boiler consumption. Used for boiler-specific energy reporting.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_battery_consumption: list[str] = Field(
+    entities_battery_consumption: list[EntityId] = Field(
         default_factory=list,
         alias="entities battery consumption",
         description="HA entities for battery consumption",
@@ -101,11 +95,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities measuring battery charging (consumption). Used for battery efficiency and cycling cost calculation.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_battery_production: list[str] = Field(
+    entities_battery_production: list[EntityId] = Field(
         default_factory=list,
         alias="entities battery production",
         description="HA entities for battery production",
@@ -113,11 +106,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities measuring battery discharging (production). Used for battery efficiency and round-trip calculation.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    entities_machine_consumption: list[str] = Field(
+    entities_machine_consumption: list[EntityId] = Field(
         default_factory=list,
         alias="entities machine consumption",
         description="HA entities for machine consumption",
@@ -125,11 +117,10 @@ class ReportConfig(BaseModel):
             "x-help": "List of Home Assistant sensor entities measuring appliance/machine consumption (washing machine, dishwasher, etc.). Used for machine-specific reporting.",
             "x-unit": "kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-list-picker",
             "x-ui-widget-filter": "sensor"
         }
     )
-    co2_intensity_sensor: Optional[str] = Field(
+    co2_intensity_sensor: Optional[EntityId] = Field(
         default=None,
         alias="co2 intensity sensor",
         description="HA entity for CO2 intensity",
@@ -137,7 +128,6 @@ class ReportConfig(BaseModel):
             "x-help": "Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.",
             "x-unit": "gCO2/kWh",
             "x-ui-section": "General",
-            "x-ui-widget": "entity-picker",
             "x-ui-widget-filter": "sensor"
         }
     )

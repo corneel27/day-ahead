@@ -3,6 +3,7 @@ import sys
 import os
 import fnmatch
 import time
+import threading
 import pytz
 import warnings
 from dataclasses import dataclass
@@ -66,6 +67,7 @@ class NotificationHandler(Handler):
 class DaBase(hass.Hass):
     _config = None
     _loader = None
+    _init_lock = threading.Lock()
     def __init__(self, file_name: str = None):
         self.file_name = file_name
         path = os.getcwd()
@@ -84,23 +86,31 @@ class DaBase(hass.Hass):
             datefmt="%Y-%m-%d %H:%M:%S",
         )
         logging.getLogger().setLevel(self.log_level)
-        if DaBase._config is None:
-            try:
-                self.loader = ConfigurationLoader(Path(self.file_name) if self.file_name else Path("../data/options.json"))
-                self.config = self.loader.load_and_validate()
-                DaBase._config = self.config
-                DaBase._loader = self.loader
-            except FileNotFoundError as e:
-                logging.error(f"Configuratiebestand niet gevonden: {e}")
-                self.config = None
-                return
-            except (ValueError, RuntimeError) as e:
-                logging.error(f"Configuratie kon niet worden geladen: {e}")
-                self.config = None
-                return
-        else:
-            self.config = DaBase._config
-            self.loader = DaBase._loader
+        # Load config exactly once, even when multiple threads construct a
+        # DaBase subclass concurrently (e.g. gunicorn workers sharing a process).
+        # DB singletons are managed separately in db_connections.py.
+        with DaBase._init_lock:
+            if DaBase._config is None:
+                try:
+                    DaBase._loader = ConfigurationLoader(Path(self.file_name) if self.file_name else Path("../data/options.json"))
+                    DaBase._config = DaBase._loader.load_and_validate()
+                except FileNotFoundError as e:
+                    logging.error(f"Configuratiebestand niet gevonden: {e}")
+                    return
+                except (ValueError, RuntimeError) as e:
+                    logging.error(f"Configuratie kon niet worden geladen: {e}")
+                    return
+
+        self.config = DaBase._config
+        self.loader = DaBase._loader
+
+        self.db_da = make_db_da(self.config, self.loader.secrets)
+        if self.db_da is None:
+            return
+        self.db_ha = make_db_ha(self.config, self.loader.secrets)
+        if self.db_ha is None:
+            return
+
         log_level_str = (self.config.logging_level or "info")
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
@@ -115,7 +125,6 @@ class DaBase(hass.Hass):
         ha = self.config.homeassistant
         self.protocol_api = ha.protocol_api
         self.ip_address = ha.ip_address
-
         self.ip_port = ha.ip_port
         if self.ip_port is None:
             self.hassurl = self.protocol_api + "://" + self.ip_address + "/core/"
@@ -133,6 +142,7 @@ class DaBase(hass.Hass):
             self.hasstoken = os.environ.get("SUPERVISOR_TOKEN")
         else:
             self.hasstoken = _tok.resolve(self.loader.secrets)
+
         super().__init__(hassurl=self.hassurl, token=self.hasstoken)
         headers = {
             "Authorization": "Bearer " + self.hasstoken,
@@ -148,8 +158,6 @@ class DaBase(hass.Hass):
             country=resp_dict["country"] or "NL",
         )
         self.time_zone = self.ha_context.time_zone
-        self.db_da = make_db_da(self.config, self.loader.secrets)
-        self.db_ha = make_db_ha(self.config, self.loader.secrets)
         self.meteo = Meteo(
             self.config, self.db_da,
             latitude=self.ha_context.latitude,
@@ -177,7 +185,7 @@ class DaBase(hass.Hass):
 
         self.history_options = self.config.history
         self.strategy = self.config.strategy.resolve(
-            lambda eid: self.get_state(eid).state, target_type=str
+            lambda eid: self.get_state(eid).state
         )
         self.tibber_options = self.config.tibber
         notif = self.config.notifications

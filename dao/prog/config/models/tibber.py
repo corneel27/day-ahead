@@ -16,7 +16,6 @@ class TibberConfig(BaseModel):
         json_schema_extra={
             "x-help": "Tibber API access token. Get from Tibber app or developer portal. Use !secret for security. Required if using Tibber as price source.",
             "x-ui-section": "Tibber",
-            "x-ui-widget": "secret-picker",
             "x-validation-hint": "Use !secret for API tokens",
             "x-docs-url": "https://developer.tibber.com/"
         }

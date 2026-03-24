@@ -70,6 +70,7 @@ class SolarPredictor(DaBase):
         self.feature_columns = [
             "temperature",
             "irradiance",
+            "windvelocity",
             "day_of_week",
             "hour",
             "quarter",
@@ -133,6 +134,7 @@ class SolarPredictor(DaBase):
             Input DataFrame with at least the following columns:
             - 'temperature' : float, ambient temperature in °C
             - 'irradiance' : float, solar irradiance in J/cm²/h
+            - 'windvelocity': float in m/s
             The DataFrame index must be a pandas.DatetimeIndex.
 
         Returns
@@ -292,7 +294,7 @@ class SolarPredictor(DaBase):
             )
 
         # Validate required columns
-        # required_cols = ['temperature', 'irradiance']
+        # required_cols = ['temperature', 'irradiance', 'windvelocity']
         # missing_cols = [col for col in required_cols if col not in weather_df.columns]
         # if missing_cols:
         #     raise ValueError(f"Weather data missing required columns: {missing_cols}")
@@ -476,7 +478,7 @@ class SolarPredictor(DaBase):
 
         Args:
             weather_data: Path to weather CSV or DataFrame with columns:
-                         ['datetime', 'temperature', 'irradiance']
+                         ['datetime', 'temperature', 'irradiance','windvelocity']
             solar_data: Path to solar CSV or DataFrame with columns:
                        ['datetime', 'solar_kwh']
             model_save_path: Path where to save the trained model
@@ -655,8 +657,8 @@ class SolarPredictor(DaBase):
 
         Args:
             weather_data: Either a dictionary with single prediction data or DataFrame with multiple predictions
-                        For single prediction (dict), required keys: temperature, irradiance, datetime
-                        For batch prediction (DataFrame), required columns: temperature, irradiance, datetime
+                        For single prediction (dict), required keys: temperature, irradiance, windvelocity, datetime
+                        For batch prediction (DataFrame), required columns: temperature, irradiance, windvelocity, datetime
 
         Returns:
             Predicted solar production in kWh
@@ -762,7 +764,7 @@ class SolarPredictor(DaBase):
         T         : Temperatuur (in 0.1 graden Celsius) -> temp /10
         Q         : Globale straling (in J/cm2) -> gr -
         """
-        df = df.rename(columns={"    T": "temp", "    Q": "gr"})
+        df = df.rename(columns={"    T": "temp", "    Q": "gr", "   FH": "winds"})
         save_df = pd.DataFrame(columns=["time", "code", "value"])
         for row in df.itertuples():
             year = int(str(row.YYYYMMDD)[0:4])
@@ -773,11 +775,12 @@ class SolarPredictor(DaBase):
             utc = int(dati.timestamp())
             save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
             save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
+            save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds/10]
         self.db_da.savedata(save_df, tablename="values")
         os.remove(filename)
         return
 
-    def get_and_save_knmi_data(self, start: dt.datetime, end: dt.datetime):
+    def get_and_save_knmi_data(self, start: dt.datetime, end: dt.datetime, variables:list=["FH", "T", "Q"]):
         """
         haalt data op en bewaart ze in dao-db
         :param start: datetime
@@ -788,7 +791,7 @@ class SolarPredictor(DaBase):
             [self.knmi_station],
             start=start - dt.timedelta(days=1),
             end=end,
-            variables=["T", "Q"],
+            variables=variables,
         )
         if len(knmi_df) == 0:
             logging.info(
@@ -805,15 +808,19 @@ class SolarPredictor(DaBase):
             f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
             f"{knmi_laatste}"
         )
-        knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr"})
+        knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr", "FH": "winds"})
         knmi_df["utc"] = pd.to_datetime(
             knmi_df["utc"], utc=True
         )  # , format='%Y-%m-%d %H:%M:%S')
         save_df = pd.DataFrame(columns=["time", "code", "value"])
         for row in knmi_df.itertuples():
             utc = int(row.utc.timestamp())
-            save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
-            save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
+            if "temp" in knmi_df.columns:
+                save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
+            if "gr" in knmi_df.columns:
+                save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
+            if "winds" in knmi_df.columns:
+                save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds/10]
         self.db_da.savedata(save_df, tablename="values")
         return None
 
@@ -821,7 +828,7 @@ class SolarPredictor(DaBase):
         """
         haalt data op bij knmi en slaat deze op in dao-database
         :param start: begin-datum waarvan data aanwezig moeten zijn
-        :parame end: datum tot data aanwezig meten zijn
+        :param end: datum tot data aanwezig meten zijn
         :return:
         """
         """
@@ -839,6 +846,16 @@ class SolarPredictor(DaBase):
         logging.info(
             f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}"
         )
+
+        latest_wind_dt = self.db_da.get_time_border_record("winds", latest=True)
+        latest_dt = self.db_da.get_time_border_record("gr", latest=True)
+        if latest_wind_dt is None and latest_dt is not None:
+            logging.info("Er zijn nog geen winddata van knmi aanwezig")
+            self.get_and_save_knmi_data(start, latest_dt, ["FH"])
+        else:
+            if latest_dt is not None and latest_wind_dt is not None and latest_wind_dt < latest_dt:
+                self.get_and_save_knmi_data(latest_wind_dt, latest_dt, ["FH"])
+
         first_dt = self.db_da.get_time_border_record("gr", latest=False)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         if latest_dt is None:  # er zijn nog geen data
@@ -883,7 +900,7 @@ class SolarPredictor(DaBase):
             table_name = "values"
         start = dt.datetime(start.year, start.month, start.day, start.hour)
         # get weather-dataframe from database
-        weather_data = pd.DataFrame(columns=["utc", "gr", "temp"])
+        weather_data = pd.DataFrame(columns=["utc", "gr", "temp", "winds"])
         for weather_item in weather_data.columns[1:]:
             df_item = self.db_da.get_column_data(
                 table_name, weather_item, start=start, end=end
@@ -894,7 +911,7 @@ class SolarPredictor(DaBase):
         weather_data["utc"] = pd.to_datetime(weather_data["utc"], unit="s", utc=True)
         weather_data = weather_data.set_index(weather_data["utc"])
         weather_data = weather_data.rename(
-            columns={"utc": "datetime", "gr": "irradiance", "temp": "temperature"}
+            columns={"utc": "datetime", "gr": "irradiance", "temp": "temperature", "winds": "windvelocity"}
         )
         return weather_data
 
@@ -1006,12 +1023,16 @@ class SolarPredictor(DaBase):
         weather_data = self.get_weatherdata(start, end, prognose=prognose)
         prediction = self.predict(weather_data)
         weather_data.reset_index(inplace=True)
+        """
+        this check is excluded for using this method for windmils
         prediction["irradiance"] = weather_data["irradiance"]
         prediction["prediction"] = prediction.apply(
             lambda x: check_prediction(x["prediction"], x["irradiance"]), axis=1
         )
-        prediction["prediction"].round(3)
         prediction.drop("irradiance", axis=1, inplace=True)
+        """
+        prediction['prediction'][prediction['prediction'] < 0] = 0
+        prediction["prediction"].round(3)
         logging.info(f"ML prediction {self.solar_name}\n{prediction}")
         return prediction
 

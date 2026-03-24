@@ -1,89 +1,188 @@
 import pytest
-from dao.prog.config.models.base import FlexValue, SecretStr
+from pydantic import BaseModel, ValidationError
+from dao.prog.config.models.base import EntityId, FlexValue, FlexFloat, FlexInt, FlexBool, FlexStr, SecretStr
+
+
+class _Model(BaseModel):
+    entity: EntityId
+
+
+class _OptModel(BaseModel):
+    entity: EntityId | None = None
+
+
+class TestEntityId:
+    # --- Valid formats ---
+    def test_simple_domain_object(self):
+        m = _Model(entity="sensor.battery_soc")
+        assert m.entity == "sensor.battery_soc"
+
+    def test_underscores_in_object_id(self):
+        assert _Model(entity="binary_sensor.grid_connected").entity == "binary_sensor.grid_connected"
+
+    def test_domain_starts_with_underscore(self):
+        # leading underscore is valid per HA convention
+        assert _Model(entity="_custom.entity").entity == "_custom.entity"
+
+    def test_digits_in_object_id(self):
+        assert _Model(entity="sensor.battery_soc_1").entity == "sensor.battery_soc_1"
+
+    def test_optional_none(self):
+        assert _OptModel(entity=None).entity is None
+
+    # --- Invalid formats ---
+    def test_plain_string_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="not_an_entity_id")
+
+    def test_domain_starts_with_digit_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="1sensor.value")
+
+    def test_dot_only_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity=".")
+
+    def test_missing_object_id_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="sensor.")
+
+    def test_missing_domain_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity=".object_id")
+
+    def test_numeric_string_raises(self):
+        # "0.45" must not be misidentified as an entity ID
+        with pytest.raises(ValidationError):
+            _Model(entity="0.45")
+
+    def test_empty_string_raises(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="")
+
+    def test_spaces_raise(self):
+        with pytest.raises(ValidationError):
+            _Model(entity="sensor.some value")
+
+    # --- JSON schema ---
+    def test_schema_uses_ref(self):
+        schema = _Model.model_json_schema()
+        entity_prop = schema["properties"]["entity"]
+        assert entity_prop == {"$ref": "#/$defs/EntityId"}
+
+    def test_schema_defs_has_entity_id(self):
+        schema = _Model.model_json_schema()
+        entity_def = schema["$defs"]["EntityId"]
+        assert entity_def["type"] == "string"
+        assert "x-help" in entity_def
+        # x-ui-widget is intentionally absent — renderer detects type via $ref
+        assert "x-ui-widget" not in entity_def
 
 
 class TestFlexValue:
     def test_serialization_literal(self):
-        """Test that FlexValue serializes literals correctly."""
-        fv = FlexValue(value=95)
-        serialized = fv.model_dump()
-        assert serialized == 95
-
-        # Test round-trip
-        deserialized = FlexValue(value=serialized)
-        assert deserialized.value == 95
+        fv = FlexFloat(value=95)
+        assert fv.model_dump() == 95
 
     def test_serialization_entity_id(self):
-        """Test that FlexValue serializes entity IDs correctly."""
-        fv = FlexValue(value="sensor.battery_soc")
-        serialized = fv.model_dump()
-        assert serialized == "sensor.battery_soc"
-
-        # Test round-trip
-        deserialized = FlexValue(value=serialized)
-        assert deserialized.value == "sensor.battery_soc"
+        fv = FlexFloat(value="sensor.battery_soc")
+        assert fv.model_dump() == "sensor.battery_soc"
 
     def test_deserialization_from_literal(self):
-        """Test that FlexValue can be deserialized from bare literals."""
-        fv = FlexValue(value=95)
-        assert fv.value == 95
+        assert FlexFloat(value=95).value == 95
+        assert FlexFloat(value="sensor.test").value == "sensor.test"
+        assert FlexBool(value=True).value is True
 
-        fv_str = FlexValue(value="sensor.test")
-        assert fv_str.value == "sensor.test"
+    def test_roundtrip(self):
+        fv = FlexFloat(value=95)
+        assert FlexFloat(value=fv.model_dump()).value == 95
 
-        fv_bool = FlexValue(value=True)
-        assert fv_bool.value is True
+    def test_resolve_literal_float(self):
+        assert FlexFloat(value=95).resolve(lambda x: "dummy") == 95.0
 
-    def test_serialization_vs_deserialization_format(self):
-        """Test that serialized format is flat, different from internal dict."""
-        # Input: value
-        fv = FlexValue(value=95)
-        # Serialized: flat value
-        serialized = fv.model_dump()
-        assert serialized == 95
+    def test_resolve_entity_id_float(self):
+        assert FlexFloat(value="sensor.test").resolve(lambda x: "42.5") == 42.5
 
-        # Deserialization accepts the flat value
-        fv_from_flat = FlexValue(value=serialized)
-        assert fv_from_flat.value == 95
 
+class TestFlexInt:
     def test_resolve_literal(self):
-        """Test resolving literal values."""
-        fv = FlexValue(value=95)
-        result = fv.resolve(lambda x: "dummy", target_type=int)
-        assert result == 95
+        assert FlexInt(value=95).resolve(lambda x: "dummy") == 95
+
+    def test_resolve_float_literal_coerces(self):
+        assert FlexInt(value=1.9).resolve(lambda x: "dummy") == 1
 
     def test_resolve_entity_id(self):
-        """Test resolving entity IDs."""
-        fv = FlexValue(value="sensor.test")
-        result = fv.resolve(lambda x: "42.5", target_type=float)
-        assert result == 42.5
+        # HA states often come as "95.0"
+        assert FlexInt(value="sensor.soc").resolve(lambda x: "95.0") == 95
+
+
+class TestFlexBool:
+    def test_resolve_literal_true(self):
+        assert FlexBool(value=True).resolve(lambda x: "dummy") is True
+
+    def test_resolve_literal_false(self):
+        assert FlexBool(value=False).resolve(lambda x: "dummy") is False
+
+    def test_resolve_entity_id_on(self):
+        assert FlexBool(value="binary_sensor.x").resolve(lambda x: "on") is True
+
+    def test_resolve_entity_id_off(self):
+        assert FlexBool(value="binary_sensor.x").resolve(lambda x: "off") is False
+
+    def test_resolve_entity_id_true_string(self):
+        assert FlexBool(value="binary_sensor.x").resolve(lambda x: "true") is True
+
+
+class TestFlexStr:
+    def test_resolve_literal(self):
+        assert FlexStr(value="minimize cost").resolve(lambda x: "dummy") == "minimize cost"
+
+    def test_resolve_entity_id(self):
+        assert FlexStr(value="input_select.mode").resolve(lambda x: "minimize consumption") == "minimize consumption"
+
+    def test_resolve_numeric_literal_coerces(self):
+        assert FlexStr(value=42).resolve(lambda x: "dummy") == "42"
 
 
 class TestSecretStr:
     def test_serialization_secret(self):
-        """Test SecretStr serialization."""
-        ss = SecretStr(secret_key="db_password", is_secret=True)
-        serialized = ss.model_dump()
-        assert serialized == "!secret db_password"
+        """Round-trip MUST store the raw !secret reference, not the resolved value."""
+        ss = SecretStr("!secret db_password")
+        # As a str subclass it serializes as the raw string — the secret is NOT revealed
+        assert str(ss) == "!secret db_password"
 
     def test_serialization_secret_json(self):
-        ss = SecretStr(secret_key="db_password", is_secret=True)
-        json_str = ss.model_dump_json()
-        assert json_str == '"!secret db_password"'
+        """Pydantic model round-trip serializes as the raw !secret reference."""
+        from pydantic import BaseModel as _BM
+        class _M(_BM):
+            password: SecretStr
+        m = _M(password="!secret db_password")
+        assert m.model_dump() == {"password": "!secret db_password"}
+        assert m.model_dump_json() == '{"password":"!secret db_password"}'
 
     def test_deserialization_secret(self):
-        ss = SecretStr.model_validate("!secret db_password")
-        assert ss.secret_key == "db_password"
-        assert ss.is_secret is True
+        ss = SecretStr("!secret db_password")
+        assert ss.is_secret_reference() is True
+        assert ss.get_secret_key() == "db_password"
 
     def test_resolve_secret(self):
-        ss = SecretStr.model_validate("!secret db_password")
+        ss = SecretStr("!secret db_password")
         secrets = {"db_password": "secret123"}
         result = ss.resolve(secrets)
         assert result == "secret123"
 
     def test_resolve_literal(self):
-        ss = SecretStr(secret_key="plain_password")
+        ss = SecretStr("plain_password")
         secrets = {}
         result = ss.resolve(secrets)
         assert result == "plain_password"
+
+    def test_literal_is_not_secret_reference(self):
+        ss = SecretStr("plain_password")
+        assert ss.is_secret_reference() is False
+
+    def test_resolve_missing_key_falls_back_to_key_name(self):
+        """Missing key in secrets dict falls back to the key name itself."""
+        ss = SecretStr("!secret missing_key")
+        result = ss.resolve({})
+        assert result == "missing_key"

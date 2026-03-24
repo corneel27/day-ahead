@@ -494,62 +494,62 @@ class DaCalc(DaBase):
 
             max_dc_from_bat_power.append(
                 max_discharge_power[b] * 2 if self.battery_options[b].bat_to_dc_max_power is None
-                else self.battery_options[b].bat_to_dc_max_power.resolve(ha_getter, float) / 1000
+                else self.battery_options[b].bat_to_dc_max_power / 1000
             )
             max_dc_to_bat_power.append(
                 max_charge_power[b] * 2 if self.battery_options[b].dc_to_bat_max_power is None
-                else self.battery_options[b].dc_to_bat_max_power.resolve(ha_getter, float) / 1000
+                else self.battery_options[b].dc_to_bat_max_power / 1000
             )
 
             # reduce power low soc
-            red_power_low_soc = self.battery_options[b].reduce_power_low_soc or []
+            red_power_low_soc = sorted(
+                self.battery_options[b].reduce_power_low_soc or [],
+                key=lambda x: x.soc,
+            )
             if len(red_power_low_soc) == 1:
                 logging.warning(
                     f"For reduced power at low soc there must be two entries, "
                     f"one found."
                 )
                 red_power_low_soc = []
-            red_power_low_soc = sorted(red_power_low_soc, key=lambda x: x["soc"])
             for rpl in range(len(red_power_low_soc) - 1):
                 helling = (
-                    red_power_low_soc[rpl + 1]["power"]
-                    - red_power_low_soc[rpl]["power"]
-                ) / (red_power_low_soc[rpl + 1]["soc"] - red_power_low_soc[rpl]["soc"])
-                red_power_low_soc[rpl]["helling"] = helling
+                    red_power_low_soc[rpl + 1].power - red_power_low_soc[rpl].power
+                ) / (red_power_low_soc[rpl + 1].soc - red_power_low_soc[rpl].soc)
+                red_power_low_soc[rpl].helling = helling
                 logging.info(
                     f"Reduced power applied during discharging at low soc, between "
-                    f"{red_power_low_soc[rpl]['soc']}% and "
-                    f"{red_power_low_soc[rpl + 1]['soc']}% power is reduced from "
-                    f"{red_power_low_soc[rpl]['power']}W until "
-                    f"{red_power_low_soc[rpl + 1]['power']}W"
+                    f"{red_power_low_soc[rpl].soc}% and "
+                    f"{red_power_low_soc[rpl + 1].soc}% power is reduced from "
+                    f"{red_power_low_soc[rpl].power}W until "
+                    f"{red_power_low_soc[rpl + 1].power}W"
                 )
             if not red_power_low_soc:
                 logging.info(f"No reduced power applied during discharging at low soc")
             reduce_power_low_soc.append(red_power_low_soc)
 
             # reduce power high soc
-            red_power_high_soc = self.battery_options[b].reduce_power_high_soc or []
+            red_power_high_soc = sorted(
+                self.battery_options[b].reduce_power_high_soc or [],
+                key=lambda x: x.soc,
+            )
             if len(red_power_high_soc) == 1:
                 logging.warning(
                     f"For reduced power at high soc there must be two entries, "
                     f"one found"
                 )
                 red_power_high_soc = []
-            red_power_high_soc = sorted(red_power_high_soc, key=lambda x: x["soc"])
             for rph in range(len(red_power_high_soc) - 1):
                 helling = (
-                    red_power_high_soc[rph + 1]["power"]
-                    - red_power_high_soc[rph]["power"]
-                ) / (
-                    red_power_high_soc[rph + 1]["soc"] - red_power_high_soc[rph]["soc"]
-                )
-                red_power_high_soc[rph]["helling"] = helling
+                    red_power_high_soc[rph + 1].power - red_power_high_soc[rph].power
+                ) / (red_power_high_soc[rph + 1].soc - red_power_high_soc[rph].soc)
+                red_power_high_soc[rph].helling = helling
                 logging.info(
                     f"Reduced power applied during charging at high soc, between "
-                    f"{red_power_high_soc[rph]['soc']}% and "
-                    f"{red_power_high_soc[rph + 1]['soc']}% power is reduced from "
-                    f"{red_power_high_soc[rph]['power']}W until "
-                    f"{red_power_high_soc[rph + 1]['power']}W"
+                    f"{red_power_high_soc[rph].soc}% and "
+                    f"{red_power_high_soc[rph + 1].soc}% power is reduced from "
+                    f"{red_power_high_soc[rph].power}W until "
+                    f"{red_power_high_soc[rph + 1].power}W"
                 )
             if not red_power_low_soc:
                 logging.info(f"No reduced power applied during charging at high soc")
@@ -572,11 +572,11 @@ class DaCalc(DaBase):
             eff_bat_to_dc.append(float(self.battery_options[b].bat_to_dc_efficiency))
             # fractie van 1
 
-            lower_limit.append(self.battery_options[b].lower_limit.resolve(ha_getter, int))
-            upper_limit.append(self.battery_options[b].upper_limit.resolve(ha_getter, int))
+            lower_limit.append(self.battery_options[b].lower_limit.resolve(ha_getter))
+            upper_limit.append(self.battery_options[b].upper_limit.resolve(ha_getter))
             _opt_lvl_field = self.battery_options[b].optimal_lower_level
             opt_low_lvl = float(
-                _opt_lvl_field.resolve(ha_getter, int)
+                _opt_lvl_field.resolve(ha_getter)
                 if _opt_lvl_field is not None
                 else lower_limit[b]
             )
@@ -591,9 +591,7 @@ class DaCalc(DaBase):
             opt_low_level.append(opt_low_lvl)
 
             # penalty in euro/%.hour
-            _penalty_field = self.battery_options[b].penalty_low_soc
-            penalty = _penalty_field.resolve(ha_getter, float) if _penalty_field is not None else 0.0025
-            penalty_low_soc.append(penalty)
+            penalty_low_soc.append(self.battery_options[b].penalty_low_soc)
 
             if _start_soc is None:
                 try:
@@ -970,25 +968,25 @@ class DaCalc(DaBase):
         for b in range(B):
             red_power = reduce_power_low_soc[b]
             for rpl in range(len(red_power) - 1):
-                helling = int(red_power[rpl]["helling"] / 2)
+                helling = int(red_power[rpl].helling / 2)
                 for u in range(U):
                     model += (
                         dc_from_bat[b][u] * 1000
                         - helling * soc[b][u]
                         - helling * soc[b][u + 1]
-                        <= red_power[rpl]["power"] - 2 * helling * red_power[rpl]["soc"]
+                        <= red_power[rpl].power - 2 * helling * red_power[rpl].soc
                     )
         # high soc
         for b in range(B):
             red_power = reduce_power_high_soc[b]
             for rph in range(len(red_power) - 1):
-                helling = int(red_power[rph]["helling"] / 2)
+                helling = int(red_power[rph].helling / 2)
                 for u in range(U):
                     model += (
                         dc_to_bat[b][u] * 1000
                         - helling * soc[b][u]
                         - helling * soc[b][u + 1]
-                        <= red_power[rph]["power"] - 2 * helling * red_power[rph]["soc"]
+                        <= red_power[rph].power - 2 * helling * red_power[rph].soc
                     )
 
         for b in range(B):
@@ -1124,10 +1122,10 @@ class DaCalc(DaBase):
             )
             # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
             logging.info(f"Boiler hysterese {boiler_hysterese} K")
-            cooling_rate = self.boiler_options.cooling_rate.resolve(ha_getter, float)
+            cooling_rate = self.boiler_options.cooling_rate
             boiler_cooling = cooling_rate * self.interval_s / 3600
             # 45 oC grens daaronder kan worden verwarmd
-            boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(ha_getter, float)
+            boiler_bovengrens = self.boiler_options.heating_allowed_below
 
             # maximeren op setpoint
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
@@ -1573,7 +1571,7 @@ class DaCalc(DaBase):
                 max_ampere = float(max_ampere)
             except ValueError:
                 max_ampere = 10
-            charge_three_phase = self.ev_options[e].charge_three_phase
+            charge_three_phase = self.ev_options[e].charge_three_phase.resolve(ha_getter)
             if charge_three_phase:
                 ampere_f = 3
             else:
@@ -1910,7 +1908,7 @@ class DaCalc(DaBase):
             logging.info(f"Gewogen graaddagen totaal: {degree_days:.1f} K.day")
 
             # degree days factor kWh th / K.day
-            degree_days_factor = self.heating_options.degree_days_factor.resolve(ha_getter, float)
+            degree_days_factor = self.heating_options.degree_days_factor.resolve(ha_getter)
             if degree_days_factor < 0.1:
                 logging.warning(
                     f"Je graaddag factor ({degree_days_factor:.4f} kWh/K.day) "
@@ -2006,7 +2004,7 @@ class DaCalc(DaBase):
                         avg_temp = (avg_temp_today + avg_temp_tomorrow) / 2
                     else:
                         avg_temp = avg_temp_today
-                    entity_avg_temp = self.heating_options.entity_avg_temp
+                    entity_avg_temp = self.heating_options.entity_avg_outside_temp
                     if entity_avg_temp is None:
                         logging.warning(
                             f"Geen entity om gem. temperatuur te exporteren"
@@ -2956,7 +2954,7 @@ class DaCalc(DaBase):
         #        strategy optimization
         #####################################################
         # settings
-        max_gap = abs(self.config.max_gap.resolve(ha_getter, float))
+        max_gap = abs(self.config.max_gap.resolve(ha_getter))
         max_gap = max(0.00001, min(max_gap, 1.0))  # clamp to [0.00001, 1.0]
 
         model.max_mip_gap_abs = max_gap
@@ -3591,10 +3589,7 @@ class DaCalc(DaBase):
                 new_ampere_state = 0
                 new_switch_state = "off"
                 new_state_stop_laden = None  # "2000-01-01 00:00:00"
-                # stop_str = stop_victron.strftime('%Y-%m-%d %H:%M')
-                # print()
 
-                # print(uur[0], end="  ")
                 for cs in range(ECS[e])[1:]:
                     # print(f"{stage_factor[e][cs][0].x:.2f}", end="  ")
                     if stage_factor[e][cs][0].x > 0:
@@ -3827,6 +3822,7 @@ class DaCalc(DaBase):
                 )
                 logging.info(f"Grid set point: {grid_set_point} W")
                 logging.info(f"Cycle cost {bat_name}: {cycle_cost[b].x:<0.2f} euro")
+                balance_state = "on" if balance else "off"
                 if self.debug:
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) batterij {bat_name} "
@@ -3834,7 +3830,7 @@ class DaCalc(DaBase):
                     )
                     if stop_omvormer:
                         logging.info(f"tot: {stop_str}")
-                    logging.info(f"Balanceren zou zijn: {balance}")
+                    logging.info(f"Balanceren zou zijn: {balance_state}")
                 else:
                     # export the ess grid setpoint in W
                     self.set_entity_value(
@@ -3850,27 +3846,16 @@ class DaCalc(DaBase):
                     self.set_entity_option(
                         "entity set operating mode", self.battery_options[b], new_state
                     )
-                    balance_state = "on" if balance else "off"
                     self.set_entity_state(
                         "entity balance switch", self.battery_options[b], balance_state
                     )
+                    tot_str = f" tot: {stop_str}" if stop_omvormer else ""
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: "
-                        f"{netto_vermogen_bat} W"
-                        f"{' tot: ' + stop_str if stop_omvormer else ''}"
+                        f"{netto_vermogen_bat} W {tot_str}"
                     )
-                    logging.info(
-                        f"Balanceren: {balance}"
-                        f"{' tot: ' + stop_str if stop_omvormer else ''}"
-                    )
-                    helper_id = self.battery_options[b].entity_stop_victron
-                    if helper_id is not None:
-                        logging.warning(
-                            f"The name 'entity stop victron' is deprecated, "
-                            f"please change to 'entity stop inverter'."
-                        )
-                    if helper_id is None:
-                        helper_id = self.battery_options[b].entity_stop_inverter
+                    logging.info(f"Balanceren: {balance_state}")
+                    helper_id = self.battery_options[b].entity_stop_inverter
                     if helper_id is not None:
                         self.call_service(
                             "set_datetime", entity_id=helper_id, datetime=stop_str
@@ -4192,11 +4177,6 @@ class DaCalc(DaBase):
 
         backend = self.config.graphical_backend or ""
         gb = GraphBuilder(backend)
-        show_graph = (
-            str(self.config.graphics.show).lower() == "true"
-        )
-        # if show_graph:
-        #     gb.build(gr1_df, gr1_options)
 
         grid0_df = pd.DataFrame()
         grid0_df["index"] = np.arange(U)
@@ -4657,8 +4637,6 @@ class DaCalc(DaBase):
         plt.savefig(
             "../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png"
         )
-        if show_graph:
-            plt.show()
         plt.close("all")
         self.notify("DAO calc afgerond", self.notification_berekening)
         return None

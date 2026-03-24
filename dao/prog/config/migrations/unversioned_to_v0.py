@@ -6,10 +6,15 @@ Changes:
 - Migrates scheduler from dict format to array format
 - Migrates vat field to vat_consumption and vat_production
 - Sets database engines to mysql (old default) if not specified
+- Coerces boiler_present / heater_present from string to boolean
+- Migrates 'entity stop victron' to 'entity stop inverter' in battery configs
 """
 
 import logging
 from typing import Any
+from pydantic import TypeAdapter
+
+_bool_adapter = TypeAdapter(bool)
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +48,16 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
     if "scheduler" in migrated and isinstance(migrated["scheduler"], dict):
         old_scheduler = migrated["scheduler"]
         
-        # Extract 'active' field if present, otherwise default to False
-        active = old_scheduler.get("active", False)
+        # Extract 'active' field if present, otherwise default to True
+        active = old_scheduler.get("active", True)
         
-        # Convert string "False"/"True" to boolean if needed
-        if isinstance(active, str):
-            active = active.lower() == "true"
+        # Convert to boolean using Pydantic's lax coercion if needed
+        if not isinstance(active, bool):
+            try:
+                active = _bool_adapter.validate_python(active)
+            except Exception:
+                logger.warning(f"Could not coerce scheduler.active value {active!r} to boolean, defaulting to True")
+                active = True
         
         # Build schedule array from time->action entries
         schedule = []
@@ -88,5 +97,40 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
     if "database da" in migrated and isinstance(migrated["database da"], dict) and "engine" not in migrated["database da"]:
         migrated["database da"]["engine"] = "mysql"
         logger.info("Set database da engine to mysql (old default)")
-    
+
+    # Migrate 'entity stop victron' → 'entity stop inverter' in battery configs.
+    # If both are set, 'entity stop inverter' wins and 'entity stop victron' is dropped.
+    if "battery" in migrated and isinstance(migrated["battery"], list):
+        for battery in migrated["battery"]:
+            if isinstance(battery, dict) and "entity stop victron" in battery:
+                name = battery.get("name", "unknown")
+                if not battery.get("entity stop inverter"):
+                    battery["entity stop inverter"] = battery["entity stop victron"]
+                    logger.info(
+                        f"Migrated 'entity stop victron' to 'entity stop inverter' "
+                        f"for battery '{name}'"
+                    )
+                else:
+                    logger.info(
+                        f"Removed deprecated 'entity stop victron' for battery '{name}' "
+                        f"(already has 'entity stop inverter')"
+                    )
+                del battery["entity stop victron"]
+
+    # Coerce boiler_present and heater_present to boolean.
+    # Old configs may have stored these as strings ("True"/"False", "yes"/"no", etc.).
+    # The discriminated union requires actual booleans for routing, so we normalise here
+    # using Pydantic's own lax coercion to catch all supported input formats.
+    for section, field in [("boiler", "boiler_present"), ("boiler", "boiler present"),
+                            ("heating", "heater_present"), ("heating", "heater present")]:
+        if section in migrated and isinstance(migrated[section], dict):
+            val = migrated[section].get(field)
+            if not isinstance(val, bool) and val is not None:
+                try:
+                    migrated[section][field] = _bool_adapter.validate_python(val)
+                    logger.info(f"Coerced {section}.{field} from {val!r} to boolean")
+                except Exception:
+                    logger.warning(f"Could not coerce {section}.{field} value {val!r} to boolean, defaulting to False")
+                    migrated[section][field] = False
+
     return migrated
