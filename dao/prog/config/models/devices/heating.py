@@ -3,7 +3,7 @@ Heating system / heat pump configuration models.
 """
 
 from typing import Annotated, Literal, Optional, Union
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 from ..base import EntityId, FlexFloat
 
 
@@ -108,12 +108,12 @@ class HeatingEnabled(BaseModel):
         }
     )
     stages: list[HeatingStage] = Field(
-        min_length=0,
+        default=[],
         description="Heating power/COP stages",
         json_schema_extra={
-            "x-help": "Power and efficiency stages for heat pump. At least one stage required. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
+            "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
             "x-ui-section": "Power Stages",
-            "x-validation-hint": "At least 1 stage, must be sorted by max_power"
+            "x-validation-hint": "Required for 'power' adjustment; must be sorted by max_power"
         }
     )
     entity_adjust_heating_curve: Optional[EntityId] = Field(
@@ -257,20 +257,21 @@ Define power levels and corresponding COP values:
         }
     )
 
-    @field_validator('stages', mode='after')
-    @classmethod
-    def validate_stages_sorted(cls, v: list[HeatingStage]) -> list[HeatingStage]:
-        """Ensure stages are sorted by power and always start with a zero-power sentinel."""
-        # no validation when no stages on/off-adjustment
-        if len(v) == 0:
-            return v
-        powers = [stage.max_power for stage in v]
+    @model_validator(mode='after')
+    def validate_stages(self) -> 'HeatingEnabled':
+        """Validate stages: required for 'power' adjustment, must be sorted, and get a zero-power sentinel."""
+        if len(self.stages) == 0:
+            if self.adjustment == 'power':
+                raise ValueError("At least one stage is required when adjustment is 'power'")
+            return self
+        powers = [stage.max_power for stage in self.stages]
         if powers != sorted(powers):
             raise ValueError("Heating stages must be sorted by max_power (ascending)")
-        if v[0].max_power != 0.0:
-            v = [HeatingStage(max_power=0.0, cop=8.0)] + v
-
-        return v
+        if self.stages[0].max_power != 0.0:
+            # Prepend a zero-power sentinel so interpolation always has a lower
+            # bound of 0 W — the heat pump is fully off at power=0, cop=8 (unused).
+            self.stages = [HeatingStage(max_power=0.0, cop=8.0)] + self.stages
+        return self
 
 
 # Discriminated union: routes on heater_present (Literal[True] → HeatingEnabled,
