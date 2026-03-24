@@ -246,12 +246,8 @@ class FlexEnum(FlexValue):
             default=FlexEnum(
                 value="minimize cost",
                 enum_values=["minimize cost", "minimize consumption"]
-            ),
-            json_schema_extra={"x-enum-values": ["minimize cost", "minimize consumption"]}
+            )
         )
-    
-    For automatic injection of enum_values from field metadata, inherit from
-    DAOConfigBaseModel in your configuration model (see below).
     
     Examples:
         FlexEnum(value="minimize cost", enum_values=[...])      # Valid if in list
