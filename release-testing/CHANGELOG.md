@@ -1,5 +1,32 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.3.rc4
+In this release all the errors you found during testing are fixed.
+Many thanks to all the testers: great job.
+
+Before we go with this release to production/stable we will ask all the testers to run a new test.  
+We hope we have tackled all the errors.
+How to test: before installing this release: copy your old options.json (saved in `options_unversioned.json`) to options.json
+Then install the new release (or when you allready have installed restart the addon/app)
+Look in the logging off the app/addon if you see errors during the conversion.
+
+Most important **changes** in the config/options.json:<br>
+
+- all booleans are now noted as true or false: no "True" or "False" anymore.
+- changed entity_avg_temp to entity_avg_outside_temp (reported by @f.welvering)
+- removed "show_graph" from settings
+- implemented windvelocity as feature variable for solar prediction
+- (re)moved deprecated "entity stop victron" in favor of "entity stop inverter"
+
+These errors are **fix**ed:
+- defaults for battery low- (20%) and upper-limit (100%)
+- default for ev "entity stop charging" (none) 
+- boiler activate service mst have a value if boiler activate entity is set
+- removed the requirement off stages from heating when adjustement is on/off
+- when boiler_present = false or heating_present= false all the other settings are optional
+- if scheduler active = true is not present it will be set to true
+
+## Changes
 # 2026.03.3.rc3
 This release looks as a small release at the front-end, but in the back-end we are moving to gui-interface to fill in our settings.
 This release is the first step in that direction.
