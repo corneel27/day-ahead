@@ -1577,9 +1577,9 @@
           },
           "title": "Stages",
           "type": "array",
-          "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
+          "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
           "x-ui-section": "Power Stages",
-          "x-validation-hint": "Required for 'power' adjustment; must be sorted by max_power"
+          "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power"
         },
         "entity adjust heating curve": {
           "anyOf": [

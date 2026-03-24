@@ -111,9 +111,9 @@ class HeatingEnabled(BaseModel):
         default=[],
         description="Heating power/COP stages",
         json_schema_extra={
-            "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
+            "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
             "x-ui-section": "Power Stages",
-            "x-validation-hint": "Required for 'power' adjustment; must be sorted by max_power"
+            "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power"
         }
     )
     entity_adjust_heating_curve: Optional[EntityId] = Field(
@@ -261,8 +261,8 @@ Define power levels and corresponding COP values:
     def validate_stages(self) -> 'HeatingEnabled':
         """Validate stages: required for 'power' adjustment, must be sorted, and get a zero-power sentinel."""
         if len(self.stages) == 0:
-            if self.adjustment == 'power':
-                raise ValueError("At least one stage is required when adjustment is 'power'")
+            if self.adjustment in ('power', 'heating curve'):
+                raise ValueError(f"At least one stage is required when adjustment is '{self.adjustment}'")
             return self
         powers = [stage.max_power for stage in self.stages]
         if powers != sorted(powers):

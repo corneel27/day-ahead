@@ -679,7 +679,7 @@ Define power levels and corresponding COP values:
 | `entity hp enabled` | [EntityId](#entityid) (optional) | No | `null` | HA binary sensor for heat pump enabled status |
 | `degree days factor` | [FlexFloat](#flexfloat) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-10.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
-| `stages` | list[[HeatingStage](#heatingstage)] | No | `[]` | Heating power/COP stages _Required for 'power' adjustment; must be sorted by max_power_ |
+| `stages` | list[[HeatingStage](#heatingstage)] | No | `[]` | Heating power/COP stages _Required for 'power' and 'heating curve' adjustment; must be sorted by max_power_ |
 | `entity adjust heating curve` | [EntityId](#entityid) (optional) | No | `null` | HA entity to adjust heating curve |
 | `adjustment factor` | number (optional) | No | `null` | Factor for heating curve adjustment (Unit: `factor`) _Typically 0.5-2.0 if specified_ |
 | `min run length` | integer | No | `1` | Minimum run length in time intervals (Unit: `intervals`) _Must be >= 1, typically 2-4 for 1h intervals_ |
@@ -711,7 +711,7 @@ Heat pump control mode: 'on/off' = simple binary control, 'power' = variable pow
 
 **`stages`**
 
-Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.
+Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.
 
 **`entity adjust heating curve`**
 
