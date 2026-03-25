@@ -516,7 +516,7 @@ class DaCalc(DaBase):
                 helling = (
                     red_power_low_soc[rpl + 1].power - red_power_low_soc[rpl].power
                 ) / (red_power_low_soc[rpl + 1].soc - red_power_low_soc[rpl].soc)
-                red_power_low_soc[rpl].helling = helling
+                red_power_low_soc[rpl]._helling = helling
                 logging.info(
                     f"Reduced power applied during discharging at low soc, between "
                     f"{red_power_low_soc[rpl].soc}% and "
@@ -543,7 +543,7 @@ class DaCalc(DaBase):
                 helling = (
                     red_power_high_soc[rph + 1].power - red_power_high_soc[rph].power
                 ) / (red_power_high_soc[rph + 1].soc - red_power_high_soc[rph].soc)
-                red_power_high_soc[rph].helling = helling
+                red_power_high_soc[rph]._helling = helling
                 logging.info(
                     f"Reduced power applied during charging at high soc, between "
                     f"{red_power_high_soc[rph].soc}% and "
@@ -968,7 +968,7 @@ class DaCalc(DaBase):
         for b in range(B):
             red_power = reduce_power_low_soc[b]
             for rpl in range(len(red_power) - 1):
-                helling = int(red_power[rpl].helling / 2)
+                helling = int(red_power[rpl]._helling / 2)
                 for u in range(U):
                     model += (
                         dc_from_bat[b][u] * 1000
@@ -980,7 +980,7 @@ class DaCalc(DaBase):
         for b in range(B):
             red_power = reduce_power_high_soc[b]
             for rph in range(len(red_power) - 1):
-                helling = int(red_power[rph].helling / 2)
+                helling = int(red_power[rph]._helling / 2)
                 for u in range(U):
                     model += (
                         dc_to_bat[b][u] * 1000

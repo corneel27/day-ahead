@@ -2,8 +2,8 @@
 Battery configuration models.
 """
 
-from typing import Any, Optional
-from pydantic import BaseModel, Field, field_validator, model_serializer, ConfigDict
+from typing import Optional
+from pydantic import BaseModel, Field, field_validator, ConfigDict, PrivateAttr
 from ..base import EntityId, FlexInt
 from .solar import SolarConfig
 
@@ -70,12 +70,10 @@ class SocPowerLimit(BaseModel):
         }
     )
 
-    model_config = ConfigDict(extra='allow')
+    # Runtime-only computed attribute (slope between adjacent stages); not persisted.
+    _helling: float = PrivateAttr(default=0.0)
 
-    @model_serializer
-    def _serialize(self) -> dict[str, Any]:
-        """Exclude runtime-only attributes (e.g. helling) from serialization."""
-        return {"soc": self.soc, "power": self.power}
+    model_config = ConfigDict(extra='forbid')
 
 
 class BatteryConfig(BaseModel):

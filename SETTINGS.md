@@ -1986,9 +1986,31 @@ Secret reference or plain string. Use "!secret key_name" format to reference sec
 *No configuration fields.*
 
 
-### Unknown
+### SocPowerLimit
 
-*No configuration fields.*
+_A SOC threshold with a corresponding maximum power limit.
+
+Used in ``reduce_power_low_soc`` / ``reduce_power_high_soc`` to protect the
+battery by reducing charge/discharge power as SOC approaches its limits.
+Multiple stages define a piecewise-linear power derating curve._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `soc` | integer | Yes | — | SOC threshold in % (Unit: `%`) _0–100 %, stages should be sorted by soc_ |
+| `power` | integer | Yes | — | Maximum power at this SOC threshold in watts (Unit: `W`) _Must be >= 0_ |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`soc`**
+
+State of Charge threshold at which this power limit applies.
+
+**`power`**
+
+Maximum charge or discharge power allowed when SOC is at this threshold.
+
+</details>
 
 
 ### SolarString

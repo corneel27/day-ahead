@@ -192,18 +192,18 @@ class TestSocPowerLimit:
     """Tests for SocPowerLimit — the model used in reduce_power_low/high_soc."""
 
     def test_helling_assignment_allowed(self):
-        """day_ahead.py computes a slope and writes it back as .helling.
-        This requires extra='allow' on the model; extra='forbid' raises ValueError."""
+        """day_ahead.py computes a slope and writes it back as ._helling.
+        Stored as a Pydantic PrivateAttr so it is invisible to schema/serialization."""
         from dao.prog.config.models.devices.battery import SocPowerLimit
         s = SocPowerLimit(soc=95, power=2500)
-        s.helling = -125.0  # slope computed by day_ahead.py
-        assert s.helling == -125.0
+        s._helling = -125.0  # slope computed by day_ahead.py
+        assert s._helling == -125.0
 
     def test_helling_excluded_from_serialization(self):
         """helling is a runtime-only scratch value; it must never be persisted to config."""
         from dao.prog.config.models.devices.battery import SocPowerLimit
         s = SocPowerLimit(soc=95, power=2500)
-        s.helling = -125.0
+        s._helling = -125.0
         dumped = s.model_dump()
         assert dumped == {"soc": 95, "power": 2500}
         assert "helling" not in dumped
