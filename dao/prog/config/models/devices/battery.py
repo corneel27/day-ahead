@@ -2,8 +2,8 @@
 Battery configuration models.
 """
 
-from typing import Optional
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from typing import Any, Optional
+from pydantic import BaseModel, Field, field_validator, model_serializer, ConfigDict
 from ..base import EntityId, FlexInt
 from .solar import SolarConfig
 
@@ -70,7 +70,12 @@ class SocPowerLimit(BaseModel):
         }
     )
 
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra='allow')
+
+    @model_serializer
+    def _serialize(self) -> dict[str, Any]:
+        """Exclude runtime-only attributes (e.g. helling) from serialization."""
+        return {"soc": self.soc, "power": self.power}
 
 
 class BatteryConfig(BaseModel):
@@ -200,7 +205,6 @@ class BatteryConfig(BaseModel):
     )
     reduce_power_low_soc: list[SocPowerLimit] = Field(
         default_factory=list,
-        alias="reduce_power_low_soc",
         description="SOC thresholds and power limits for low SOC power reduction",
         json_schema_extra={
             "x-help": "Optional: List of SOC/power pairs to reduce battery power at low state of charge. Protects battery by limiting power when nearly empty.",
@@ -209,7 +213,6 @@ class BatteryConfig(BaseModel):
     )
     reduce_power_high_soc: list[SocPowerLimit] = Field(
         default_factory=list,
-        alias="reduce_power_high_soc",
         description="SOC thresholds and power limits for high SOC power reduction",
         json_schema_extra={
             "x-help": "Optional: List of SOC/power pairs to reduce battery power at high state of charge. Protects battery by limiting power when nearly full.",
