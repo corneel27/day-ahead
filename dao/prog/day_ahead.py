@@ -551,7 +551,7 @@ class DaCalc(DaBase):
                     f"{red_power_high_soc[rph].power}W until "
                     f"{red_power_high_soc[rph + 1].power}W"
                 )
-            if not red_power_low_soc:
+            if not red_power_high_soc:
                 logging.info(f"No reduced power applied during charging at high soc")
             reduce_power_high_soc.append(red_power_high_soc)
 
