@@ -2437,36 +2437,7 @@
       "x-help": "Secret reference or plain string. Use \"!secret key_name\" format to reference secrets from secrets.json. Plain strings are also accepted."
     },
     "SocPowerLimit": {
-      "additionalProperties": false,
-      "description": "A SOC threshold with a corresponding maximum power limit.\n\nUsed in ``reduce_power_low_soc`` / ``reduce_power_high_soc`` to protect the\nbattery by reducing charge/discharge power as SOC approaches its limits.\nMultiple stages define a piecewise-linear power derating curve.",
-      "properties": {
-        "soc": {
-          "description": "SOC threshold in %",
-          "maximum": 100,
-          "minimum": 0,
-          "title": "Soc",
-          "type": "integer",
-          "x-help": "State of Charge threshold at which this power limit applies.",
-          "x-ui-section": "Power Configuration",
-          "x-unit": "%",
-          "x-validation-hint": "0–100 %, stages should be sorted by soc"
-        },
-        "power": {
-          "description": "Maximum power at this SOC threshold in watts",
-          "minimum": 0,
-          "title": "Power",
-          "type": "integer",
-          "x-help": "Maximum charge or discharge power allowed when SOC is at this threshold.",
-          "x-ui-section": "Power Configuration",
-          "x-unit": "W",
-          "x-validation-hint": "Must be >= 0"
-        }
-      },
-      "required": [
-        "soc",
-        "power"
-      ],
-      "title": "SocPowerLimit",
+      "additionalProperties": true,
       "type": "object"
     },
     "SolarConfig": {
