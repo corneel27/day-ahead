@@ -3,7 +3,7 @@ Battery configuration models.
 """
 
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, PrivateAttr
 from ..base import EntityId, FlexInt
 from .solar import SolarConfig
 
@@ -69,6 +69,9 @@ class SocPowerLimit(BaseModel):
             "x-validation-hint": "Must be >= 0"
         }
     )
+
+    # Runtime-only computed attribute (slope between adjacent stages); not persisted.
+    _helling: float = PrivateAttr(default=0.0)
 
     model_config = ConfigDict(extra='forbid')
 
@@ -200,7 +203,6 @@ class BatteryConfig(BaseModel):
     )
     reduce_power_low_soc: list[SocPowerLimit] = Field(
         default_factory=list,
-        alias="reduce_power_low_soc",
         description="SOC thresholds and power limits for low SOC power reduction",
         json_schema_extra={
             "x-help": "Optional: List of SOC/power pairs to reduce battery power at low state of charge. Protects battery by limiting power when nearly empty.",
@@ -209,7 +211,6 @@ class BatteryConfig(BaseModel):
     )
     reduce_power_high_soc: list[SocPowerLimit] = Field(
         default_factory=list,
-        alias="reduce_power_high_soc",
         description="SOC thresholds and power limits for high SOC power reduction",
         json_schema_extra={
             "x-help": "Optional: List of SOC/power pairs to reduce battery power at high state of charge. Protects battery by limiting power when nearly full.",

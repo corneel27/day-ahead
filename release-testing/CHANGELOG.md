@@ -1,9 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# 2026.03.3.rc4
-In this release all the errors you found during testing are fixed.
-Many thanks to all the testers: great job.
+# 2026.03.3.rc5
+In this release all the errors the testers found during testing are fixed.
+Many thanks to all of them: great job.
 
+### Breaking change
 The ML model was extended to allow for windspeed in predictions. this means you have to retrain the ML models before running a calculation!
 
 Before we go with this release to production/stable we will ask all the testers to run a new test.  
