@@ -24,3 +24,8 @@ dao/pred/data/da_prediction.pkl
 dao/data/options_new.json
 
 /dao/data/task_state.json
+
+# Frontend build artifacts
+dao/frontend/dist/
+dao/frontend/node_modules/
+dao/frontend/.vite/
