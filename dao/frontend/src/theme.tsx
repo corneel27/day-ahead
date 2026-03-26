@@ -70,6 +70,10 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
                   default: '#121212',
                   paper: '#1e1e1e',
                 },
+                text: {
+                  primary: '#ffffff',
+                  secondary: 'rgba(255, 255, 255, 0.5)', // Less bright help text in dark mode
+                },
               }
             : {
                 // Light mode colors
