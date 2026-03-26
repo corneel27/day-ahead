@@ -43,7 +43,6 @@
 {% if current_bewerking != "" %}
   <h2> Logging van bewerking "{{ bewerkingen[current_bewerking]["name"] }}":</h2>
     <pre class="log_content">{{ log_content }}</pre>
-{% endif %}
 
     <pre id="status"></pre>
     <pre id="log"></pre>
@@ -57,7 +56,7 @@
         document.getElementById('log').innerHTML = l;
     }, 2000);
     </script>
-    """)
+{% endif %}
 </div>
 <hr>
 

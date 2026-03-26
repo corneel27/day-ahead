@@ -508,48 +508,48 @@ def run_process():
         with lock:
             if task_state["status"] == "running":
                 log_content =  "Er draait al een opdracht"
-    else:
-        dct = request.form.to_dict(flat=False)
-        if "current_bewerking" in dct:
-            current_bewerking = dct["current_bewerking"][0]
-            run_bewerking = bewerkingen[current_bewerking]
-            extra_parameters = []
-            if "parameters" in run_bewerking:
-                for j in range(len(run_bewerking["parameters"])):
-                    if run_bewerking["parameters"][j] in dct:
-                        param_value = dct[run_bewerking["parameters"][j]][0]
-                        if len(param_value) > 0:
-                            extra_parameters.append(param_value)
-            logfile = (
-                "../data/log/"
-                + run_bewerking["file_name"]
-                + "_"
-                + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
-                + ".log"
-            )
+            else:
+                dct = request.form.to_dict(flat=False)
+                if "current_bewerking" in dct:
+                    current_bewerking = dct["current_bewerking"][0]
+                    run_bewerking = bewerkingen[current_bewerking]
+                    extra_parameters = []
+                    if "parameters" in run_bewerking:
+                        for j in range(len(run_bewerking["parameters"])):
+                            if run_bewerking["parameters"][j] in dct:
+                                param_value = dct[run_bewerking["parameters"][j]][0]
+                                if len(param_value) > 0:
+                                    extra_parameters.append(param_value)
+                    logfile = (
+                        "../data/log/"
+                        + run_bewerking["file_name"]
+                        + "_"
+                        + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
+                        + ".log"
+                    )
 
-            cmd = run_bewerking["cmd"] + extra_parameters
-            bewerking = ""
-            threading.Thread(
-                target=run_and_log,
-                args=(cmd,),
-                daemon=True
-            ).start()
-            log_content = "Opdracht is gestart"
-        else:
-            for i in range(len(dct.keys())):
-                bew = list(dct.keys())[i]
-                if bew in bewerkingen:
-                    bewerking = bew
-                    if "parameters" in bewerkingen[bewerking]:
-                        for j in range(len(bewerkingen[bewerking]["parameters"])):
-                            if bewerkingen[bewerking]["parameters"][j] in dct:
-                                param_str = bewerkingen[bewerking]["parameters"][j]
-                                param_value = dct[
-                                    bewerkingen[bewerking]["parameters"][j]
-                                ][0]
-                                parameters[param_str] = param_value
-                    break
+                    cmd = run_bewerking["cmd"] + extra_parameters
+                    bewerking = ""
+                    threading.Thread(
+                        target=run_and_log,
+                        args=(cmd,),
+                        daemon=True
+                    ).start()
+                    log_content = "Opdracht is gestart"
+                else:
+                    for i in range(len(dct.keys())):
+                        bew = list(dct.keys())[i]
+                        if bew in bewerkingen:
+                            bewerking = bew
+                            if "parameters" in bewerkingen[bewerking]:
+                                for j in range(len(bewerkingen[bewerking]["parameters"])):
+                                    if bewerkingen[bewerking]["parameters"][j] in dct:
+                                        param_str = bewerkingen[bewerking]["parameters"][j]
+                                        param_value = dct[
+                                            bewerkingen[bewerking]["parameters"][j]
+                                        ][0]
+                                        parameters[param_str] = param_value
+                            break
 
     return render_template(
         "run.html",
