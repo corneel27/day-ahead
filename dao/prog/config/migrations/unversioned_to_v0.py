@@ -117,6 +117,22 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
                     )
                 del battery["entity stop victron"]
 
+    # Migrate deprecated graphics key names.
+    # Old names: 'prices delivery', 'prices redelivery', 'average delivery'
+    # New names: 'prices consumption', 'prices production', 'average consumption'
+    _graphics_renames = {
+        "prices delivery": "prices consumption",
+        "prices redelivery": "prices production",
+        "average delivery": "average consumption",
+    }
+    if "graphics" in migrated and isinstance(migrated["graphics"], dict):
+        graphics = migrated["graphics"]
+        for old_key, new_key in _graphics_renames.items():
+            if old_key in graphics:
+                graphics.setdefault(new_key, graphics[old_key])
+                del graphics[old_key]
+                logger.info(f"Migrated graphics.'{old_key}' to graphics.'{new_key}'")
+
     # Coerce boiler_present and heater_present to boolean.
     # Old configs may have stored these as strings ("True"/"False", "yes"/"no", etc.).
     # The discriminated union requires actual booleans for routing, so we normalise here
