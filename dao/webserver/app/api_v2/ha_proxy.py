@@ -64,19 +64,21 @@ def ha_proxy(path):
         if request.query_string:
             target_url += f"?{request.query_string.decode('utf-8')}"
         
-        # Prepare headers (copy all except X-HA-* headers)
-        forward_headers = {}
-        for key, value in request.headers.items():
-            if not key.startswith('X-HA-'):
-                forward_headers[key] = value
+        # Prepare headers - only send essential headers to HA
+        forward_headers = {
+            'Authorization': f"Bearer {ha_token}",
+        }
         
-        # Add HA authorization header
-        forward_headers['Authorization'] = f"Bearer {ha_token}"
+        # Forward client headers that affect content negotiation
+        for header in ['Content-Type', 'Accept', 'Accept-Encoding']:
+            if header in request.headers:
+                forward_headers[header] = request.headers[header]
         
         # Log request (never log token)
         logger.info(f"Proxying {request.method} request to HA: {ha_protocol}://{ha_host}{port_part}/api/{path}")
         
         # Forward request to Home Assistant
+        # Use stream=True to get raw response without automatic decompression
         try:
             response = requests.request(
                 method=request.method,
@@ -85,7 +87,8 @@ def ha_proxy(path):
                 data=request.get_data(),
                 timeout=HA_REQUEST_TIMEOUT,
                 allow_redirects=False,
-                verify=True  # Verify SSL certificates
+                verify=True,  # Verify SSL certificates
+                stream=True   # Don't decompress, get raw response
             )
         except requests.exceptions.Timeout:
             logger.error(f"Timeout connecting to Home Assistant at {ha_host}")
@@ -116,7 +119,7 @@ def ha_proxy(path):
                 "status": 502
             }, 502
         
-        # Return HA response exactly as-is
+        # Return HA response exactly as-is (raw, with original encoding)
         # Copy all response headers
         response_headers = dict(response.headers)
         
@@ -126,9 +129,23 @@ def ha_proxy(path):
         
         logger.info(f"HA proxy response: {response.status_code}")
         
+        # Check if client accepts compression
+        client_accepts_encoding = 'Accept-Encoding' in request.headers
+        
+        if client_accepts_encoding:
+            # Client supports compression - forward raw compressed response
+            response.raw.decode_content = False
+            raw_content = response.raw.read()
+        else:
+            # Client doesn't support compression - return decompressed content
+            # Remove Content-Encoding since we're decompressing
+            response_headers.pop('Content-Encoding', None)
+            response_headers.pop('Content-Length', None)
+            raw_content = response.content  # requests auto-decompresses
+        
         # Create Flask response with same status code, headers, and body
         return Response(
-            response.content,
+            raw_content,
             status=response.status_code,
             headers=response_headers
         )

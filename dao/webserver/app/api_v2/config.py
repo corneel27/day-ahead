@@ -86,7 +86,7 @@ def save_config():
     loader = ConfigurationLoader(CONFIG_PATH)
     
     # Validate new config (ValidationError/ConfigValidationError will be caught by handlers)
-    from dao.prog.config.versions import VERSION_MODELS, CURRENT_VERSION
+    from dao.prog.config.loader import VERSION_MODELS, CURRENT_VERSION
     version = config_data.get('config_version', CURRENT_VERSION)
     model_class = VERSION_MODELS.get(version, VERSION_MODELS[CURRENT_VERSION])
     

@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/config/',  // Set base path for production assets
   build: {
     // Output directory for production build
     outDir: 'dist',
@@ -12,16 +13,13 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        // Manual chunk splitting for better caching
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'mui-vendor': ['@mui/material', '@mui/icons-material'],
-          'jsonforms-vendor': ['@jsonforms/core', '@jsonforms/react', '@jsonforms/material-renderers'],
-        },
+        // Disable code splitting to avoid chunk loading order issues
+        // All code will be in a single bundle
+        manualChunks: undefined,
       },
     },
     // Compression settings
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000, // Increased since we're bundling everything
   },
   server: {
     // Enable source maps for development
