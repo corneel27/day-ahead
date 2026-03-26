@@ -107,7 +107,7 @@ class BatteryConfig(BaseModel):
         }
     )
     upper_limit: FlexInt = Field(
-        default=100,
+        default=FlexInt(value=100),
         alias="upper limit",
         description="Maximum SOC % (can be HA entity)",
         json_schema_extra={
@@ -118,7 +118,7 @@ class BatteryConfig(BaseModel):
         }
     )
     lower_limit: FlexInt = Field(
-        default=20,
+        default=FlexInt(value=20),
         alias="lower limit",
         description="Minimum SOC % (can be HA entity)",
         json_schema_extra={
