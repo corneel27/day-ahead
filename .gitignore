@@ -27,3 +27,4 @@ dao/data/options_new.json
 dao/frontend/dist/
 dao/frontend/node_modules/
 dao/frontend/.vite/
+dao/webserver/app/static/config-ui/

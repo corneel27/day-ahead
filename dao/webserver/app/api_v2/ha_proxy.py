@@ -39,6 +39,15 @@ def ha_proxy(path):
         ha_protocol = request.headers.get('X-HA-Protocol', 'http')
         ha_token = request.headers.get('X-HA-Token')
         
+        # Validate protocol (prevent javascript:, data:, etc.)
+        if ha_protocol not in ['http', 'https']:
+            logger.error(f"Invalid protocol: {ha_protocol}")
+            return {
+                "error": "Invalid protocol",
+                "details": ["Protocol must be 'http' or 'https'"],
+                "status": 400
+            }, 400, {'Content-Type': 'application/json'}
+        
         # Validate required headers
         if not ha_host:
             logger.error("Missing X-HA-Host header")
@@ -46,7 +55,7 @@ def ha_proxy(path):
                 "error": "Missing Home Assistant host",
                 "details": ["X-HA-Host header is required"],
                 "status": 400
-            }, 400
+            }, 400, {'Content-Type': 'application/json'}
         
         if not ha_token:
             logger.error("Missing X-HA-Token header")
@@ -54,7 +63,7 @@ def ha_proxy(path):
                 "error": "Missing Home Assistant token",
                 "details": ["X-HA-Token header is required"],
                 "status": 400
-            }, 400
+            }, 400, {'Content-Type': 'application/json'}
         
         # Build target URL (prepend /api/ to path)
         port_part = f":{ha_port}" if ha_port else ""
@@ -74,9 +83,6 @@ def ha_proxy(path):
             if header in request.headers:
                 forward_headers[header] = request.headers[header]
         
-        # Log request (never log token)
-        logger.info(f"Proxying {request.method} request to HA: {ha_protocol}://{ha_host}{port_part}/api/{path}")
-        
         # Forward request to Home Assistant
         # Use stream=True to get raw response without automatic decompression
         try:
@@ -91,33 +97,33 @@ def ha_proxy(path):
                 stream=True   # Don't decompress, get raw response
             )
         except requests.exceptions.Timeout:
-            logger.error(f"Timeout connecting to Home Assistant at {ha_host}")
+            logger.error("Timeout connecting to Home Assistant")
             return {
                 "error": "Home Assistant request timeout",
-                "details": [f"Request to {ha_host} timed out after {HA_REQUEST_TIMEOUT} seconds"],
+                "details": [f"Request timed out after {HA_REQUEST_TIMEOUT} seconds"],
                 "status": 504
-            }, 504
+            }, 504, {'Content-Type': 'application/json'}
         except requests.exceptions.ConnectionError as e:
-            logger.error(f"Connection error to Home Assistant at {ha_host}: {e}")
+            logger.error(f"Connection error to Home Assistant: {e}")
             return {
                 "error": "Cannot connect to Home Assistant",
-                "details": [f"Connection to {ha_host}{port_part} failed. Check host, port, and network."],
+                "details": ["Connection failed. Check host, port, and network."],
                 "status": 502
-            }, 502
+            }, 502, {'Content-Type': 'application/json'}
         except requests.exceptions.SSLError as e:
             logger.error(f"SSL error connecting to Home Assistant: {e}")
             return {
                 "error": "SSL certificate verification failed",
-                "details": [str(e)],
+                "details": ["SSL/TLS certificate error"],
                 "status": 502
-            }, 502
+            }, 502, {'Content-Type': 'application/json'}
         except requests.exceptions.RequestException as e:
             logger.error(f"Request error proxying to Home Assistant: {e}")
             return {
                 "error": "Failed to proxy request to Home Assistant",
-                "details": [str(e)],
+                "details": ["Request failed"],
                 "status": 502
-            }, 502
+            }, 502, {'Content-Type': 'application/json'}
         
         # Return HA response exactly as-is (raw, with original encoding)
         # Copy all response headers
@@ -127,7 +133,9 @@ def ha_proxy(path):
         for header in ['Transfer-Encoding', 'Connection', 'Keep-Alive']:
             response_headers.pop(header, None)
         
-        logger.info(f"HA proxy response: {response.status_code}")
+        # Add security header to prevent MIME-type sniffing
+        # This prevents browser from interpreting JSON as HTML/JS
+        response_headers['X-Content-Type-Options'] = 'nosniff'
         
         # Check if client accepts compression
         client_accepts_encoding = 'Accept-Encoding' in request.headers
@@ -154,6 +162,6 @@ def ha_proxy(path):
         logger.error(f"Unexpected error in HA proxy: {e}", exc_info=True)
         return {
             "error": "Internal server error",
-            "details": [str(e)],
+            "details": ["An unexpected error occurred"],
             "status": 500
-        }, 500
+        }, 500, {'Content-Type': 'application/json'}
