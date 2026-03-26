@@ -687,7 +687,7 @@ Define power levels and corresponding COP values:
 | `entity hp heat demand` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat demand (Unit: `W`) |
 | `entity avg outside temp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for average temperature (Unit: `°C`) |
 | `entity hp cop` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat pump COP (Unit: `ratio`) |
-| `entity hp power` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat pump power (Unit: `W`) |
+| `entity hp power` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat pump power (Unit: `kW`) |
 | `entity hp switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity to control heat pump on/off |
 
 <details>

@@ -1705,7 +1705,7 @@
           "x-help": "Optional: Home Assistant sensor showing current electrical power consumption. Used for monitoring and validation.",
           "x-ui-section": "Sensors",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "W",
+          "x-unit": "kW",
           "title": "Entity Hp Power"
         },
         "entity hp switch": {
