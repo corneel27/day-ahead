@@ -33,6 +33,7 @@ import SaveIcon from '@mui/icons-material/Save'
 import LockIcon from '@mui/icons-material/Lock'
 import UndoIcon from '@mui/icons-material/Undo'
 import CloseIcon from '@mui/icons-material/Close'
+import CodeIcon from '@mui/icons-material/Code'
 import Brightness4Icon from '@mui/icons-material/Brightness4'
 import Brightness7Icon from '@mui/icons-material/Brightness7'
 import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto'
@@ -118,8 +119,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showSaveDialog, setShowSaveDialog] = useState(false)
-  const [saveDialogType, setSaveDialogType] = useState<'config' | 'secrets'>('config')
+  const [showConfigDialog, setShowConfigDialog] = useState(false)
   
   // Snackbar state for notifications
   const [snackbar, setSnackbar] = useState<{
@@ -326,8 +326,6 @@ function App() {
       // Update original data after successful save
       setOriginalData(data)
       showNotification('Configuration saved successfully', 'success')
-      setSaveDialogType('config')
-      setShowSaveDialog(true)
     } catch (err) {
       console.error('Failed to save config:', err)
       showNotification(
@@ -371,30 +369,23 @@ function App() {
       }
       
       showNotification('Secrets saved successfully', 'success')
-      setSaveDialogType('secrets')
-      setShowSaveDialog(true)
     } catch (err) {
       console.error('Failed to save/reload secrets:', err)
       showNotification(
         'Failed to save secrets: ' + (err instanceof Error ? err.message : 'Unknown error'),
         'error'
       )
+    } finally {
+      setSaving(false)
     }
   }
 
-  const handleCloseSaveDialog = () => {
-    setShowSaveDialog(false)
+  const handleCloseConfigDialog = () => {
+    setShowConfigDialog(false)
   }
 
-  const handleCopyToClipboard = (type: 'config' | 'secrets' | 'both') => {
-    let jsonString = ''
-    if (type === 'config') {
-      jsonString = JSON.stringify(data, null, 2)
-    } else if (type === 'secrets') {
-      jsonString = JSON.stringify(secrets, null, 2)
-    } else {
-      jsonString = `// options.json\n${JSON.stringify(data, null, 2)}\n\n// secrets.json\n${JSON.stringify(secrets, null, 2)}`
-    }
+  const handleCopyConfig = () => {
+    const jsonString = JSON.stringify(data, null, 2)
     
     navigator.clipboard.writeText(jsonString)
       .then(() => {
@@ -451,6 +442,14 @@ function App() {
               disabled={saving}
             >
               Revert
+            </Button>
+            <Button
+              startIcon={<CodeIcon />}
+              onClick={() => setShowConfigDialog(true)}
+              variant="outlined"
+              size="small"
+            >
+              Show Configuration
             </Button>
             {currentCategory === 'Secrets' && secretsChanged ? (
               <Button
@@ -587,18 +586,18 @@ function App() {
         </DialogActions>
       </Dialog>
 
-      {/* Save dialog with tabs for both JSONs */}
+      {/* Show Configuration dialog */}
       <Dialog 
-        open={showSaveDialog} 
-        onClose={handleCloseSaveDialog}
+        open={showConfigDialog} 
+        onClose={handleCloseConfigDialog}
         maxWidth="md"
         fullWidth
       >
         <DialogTitle>
-          Save Configuration
+          Configuration JSON
           <IconButton
             aria-label="close"
-            onClick={handleCloseSaveDialog}
+            onClick={handleCloseConfigDialog}
             sx={{
               position: 'absolute',
               right: 8,
@@ -609,32 +608,24 @@ function App() {
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          <Tabs value={saveDialogType} onChange={(_, newValue) => setSaveDialogType(newValue)}>
-            <Tab label="Configuration (options.json)" value="config" />
-            <Tab label="Secrets (secrets.json)" value="secrets" icon={<LockIcon />} iconPosition="end" />
-          </Tabs>
           <Paper 
             sx={{ 
-              mt: 2,
               p: 2, 
               bgcolor: mode === 'dark' ? 'background.default' : 'grey.100',
-              maxHeight: '50vh',
+              maxHeight: '60vh',
               overflow: 'auto'
             }}
           >
             <pre style={{ margin: 0, fontSize: '0.875rem', fontFamily: 'monospace' }}>
-              {JSON.stringify(saveDialogType === 'config' ? data : secrets, null, 2)}
+              {JSON.stringify(data, null, 2)}
             </pre>
           </Paper>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => handleCopyToClipboard(saveDialogType)} variant="outlined">
+          <Button onClick={handleCopyConfig} variant="outlined">
             Copy to Clipboard
           </Button>
-          <Button onClick={() => handleCopyToClipboard('both')} variant="outlined">
-            Copy Both
-          </Button>
-          <Button onClick={handleCloseSaveDialog} variant="contained">
+          <Button onClick={handleCloseConfigDialog} variant="contained">
             Close
           </Button>
         </DialogActions>

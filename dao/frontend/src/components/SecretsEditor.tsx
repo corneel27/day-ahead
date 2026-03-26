@@ -130,7 +130,7 @@ export const SecretsEditor: React.FC<SecretsEditorProps> = ({ secrets, onChange 
         </TableContainer>
       )}
 
-      <Paper variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+      <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.default' }}>
         <Typography variant="subtitle2" gutterBottom>
           Add New Secret
         </Typography>
