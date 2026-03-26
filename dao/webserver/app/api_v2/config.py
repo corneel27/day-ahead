@@ -31,23 +31,6 @@ SCHEMA_PATH = SCHEMA_DIR / "schema.json"
 UISCHEMA_PATH = SCHEMA_DIR / "uischema.json"
 
 
-def _mask_secrets(data):
-    """Mask secret values in data for logging (simple implementation)"""
-    if isinstance(data, dict):
-        masked = {}
-        for key, value in data.items():
-            if 'secret' in key.lower() or 'token' in key.lower() or 'password' in key.lower():
-                masked[key] = '***MASKED***'
-            elif isinstance(value, (dict, list)):
-                masked[key] = _mask_secrets(value)
-            else:
-                masked[key] = value
-        return masked
-    elif isinstance(data, list):
-        return [_mask_secrets(item) for item in data]
-    return data
-
-
 # ============================================================================
 # Configuration Endpoints
 # ============================================================================
@@ -96,7 +79,7 @@ def save_config():
     # Save using loader (with file locking)
     loader.save(validated_config.model_dump(mode='json', exclude_none=True))
     
-    logger.warning(f"Configuration saved successfully (masked): {_mask_secrets(config_data)}")
+    logger.info("Configuration saved successfully")
     return jsonify({
         "message": "Configuration saved successfully",
         "status": 200
