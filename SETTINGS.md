@@ -130,9 +130,9 @@ Configure your home battery storage system for optimal energy management and cos
 | `reduce_power_high_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
 | `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `dc_to_bat max power` | number (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
+| `dc_to_bat max power` | [FlexFloat](#flexfloat) (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
-| `bat_to_dc_max_power` | number (optional) | No | `null` | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
+| `bat_to_dc max power` | [FlexFloat](#flexfloat) (optional) | No | `null` | Battery to DC max power in watts (Unit: `W`) _Must be > 0_ |
 | `cycle cost` | number | Yes | — | Cost per battery cycle in euros (Unit: `€`) _Must be >= 0, typically €0.50-€1.50 per cycle_ |
 | `entity set power feedin` | [EntityId](#entityid) (optional) | No | `null` | HA entity to set power feed-in to grid |
 | `entity set operating mode` | [EntityId](#entityid) (optional) | No | `null` | HA entity to set battery operating mode |
@@ -221,7 +221,7 @@ Maximum power for DC-coupled solar charging in watts. Determines how much DC sol
 
 Efficiency of battery to DC bus conversion. Typically 0.95-0.98. Only relevant for DC-coupled loads or reverse DC flow scenarios.
 
-**`bat_to_dc_max_power`**
+**`bat_to_dc max power`**
 
 Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.
 
