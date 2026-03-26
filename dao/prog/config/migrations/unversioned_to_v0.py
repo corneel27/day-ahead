@@ -133,6 +133,39 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
                 del graphics[old_key]
                 logger.info(f"Migrated graphics.'{old_key}' to graphics.'{new_key}'")
 
+    # Normalize solar orientation from [0, 360] to [-180, 180].
+    # The solar radiation model uses 0=south, negative=east, positive=west.
+    # Some configs (or UIs) use a 0-360 compass convention; values > 180 are
+    # equivalent to negative azimuths: 270° east == -90°.
+    def _normalize_orientation(solar_obj: dict, context: str) -> None:
+        for key in ("orientation",):
+            if key in solar_obj and isinstance(solar_obj[key], (int, float)):
+                val = solar_obj[key]
+                if val > 180:
+                    solar_obj[key] = val - 360
+                    logger.info(
+                        f"Normalized {context}.orientation from {val} to {solar_obj[key]}"
+                    )
+
+    for i, solar in enumerate(migrated.get("solar", []) or []):
+        if not isinstance(solar, dict):
+            continue
+        _normalize_orientation(solar, f"solar[{i}]")
+        for j, string in enumerate(solar.get("strings", []) or []):
+            if isinstance(string, dict):
+                _normalize_orientation(string, f"solar[{i}].strings[{j}]")
+
+    for b, battery in enumerate(migrated.get("battery", []) or []):
+        if not isinstance(battery, dict):
+            continue
+        for i, solar in enumerate(battery.get("solar", []) or []):
+            if not isinstance(solar, dict):
+                continue
+            _normalize_orientation(solar, f"battery[{b}].solar[{i}]")
+            for j, string in enumerate(solar.get("strings", []) or []):
+                if isinstance(string, dict):
+                    _normalize_orientation(string, f"battery[{b}].solar[{i}].strings[{j}]")
+
     # Coerce boiler_present and heater_present to boolean.
     # Old configs may have stored these as strings ("True"/"False", "yes"/"no", etc.).
     # The discriminated union requires actual booleans for routing, so we normalise here
