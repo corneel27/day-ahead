@@ -100,6 +100,16 @@ export const AppThemeProvider: React.FC<AppThemeProviderProps> = ({ children }) 
               },
             },
           },
+          MuiTab: {
+            styleOverrides: {
+              root: {
+                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+                '&.Mui-selected': {
+                  color: mode === 'dark' ? '#90caf9' : '#1976d2',
+                },
+              },
+            },
+          },
         },
       }),
     [mode]
