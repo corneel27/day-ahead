@@ -1,4 +1,14 @@
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+logger = logging.getLogger(__name__)
 
 if not os.path.lexists("app/static/data"):
     os.symlink("../data", "app/static/data")
@@ -15,7 +25,8 @@ if __name__ == "__main__":
             "allow_headers": ["Content-Type", "X-HA-Host", "X-HA-Port", "X-HA-Protocol", "X-HA-Token"],
         }
     })
-    print("Development mode: CORS enabled for /api/v2/* endpoints")
+    logger.info("Development mode: CORS enabled for /api/v2/* endpoints")
     
     port = int(os.environ.get("FLASK_PORT", 5000))
-    app.run(port=port, host="0.0.0.0",debug=True, use_reloader=False)
+    logger.info(f"Starting Flask server on http://0.0.0.0:{port}")
+    app.run(port=port, host="0.0.0.0", debug=True, use_reloader=False)

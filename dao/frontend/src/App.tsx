@@ -116,6 +116,7 @@ function App() {
   const [originalData, setOriginalData] = useState<any>(null)
   const [currentCategory, setCurrentCategory] = useState<string>('General')
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [saveDialogType, setSaveDialogType] = useState<'config' | 'secrets'>('config')
@@ -447,6 +448,7 @@ function App() {
               onClick={handleRevert}
               variant="outlined"
               size="small"
+              disabled={saving}
             >
               Revert
             </Button>
@@ -457,8 +459,9 @@ function App() {
                 variant="contained"
                 size="small"
                 color="warning"
+                disabled={saving}
               >
-                Save Secrets
+                {saving ? 'Saving...' : 'Save Secrets'}
               </Button>
             ) : (
               <Button
@@ -467,8 +470,9 @@ function App() {
                 variant="contained"
                 size="small"
                 color="primary"
+                disabled={saving}
               >
-                Save Configuration
+                {saving ? 'Saving...' : 'Save Configuration'}
               </Button>
             )}
           </Box>
