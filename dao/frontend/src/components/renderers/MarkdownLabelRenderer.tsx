@@ -17,22 +17,28 @@ const MarkdownLabelRenderer = ({ text, visible }: { text?: string; visible?: boo
   return (
     <Box sx={{ 
       mb: 2,
-      '& h1': { fontSize: '1.5rem', fontWeight: 600, mt: 2, mb: 1.5 },
-      '& h2': { fontSize: '1.25rem', fontWeight: 600, mt: 2, mb: 1 },
-      '& h3': { fontSize: '1.1rem', fontWeight: 600, mt: 1.5, mb: 0.75 },
-      '& p': { mb: 1, lineHeight: 1.6 },
+      color: 'text.primary',
+      '& h1': { fontSize: '1.5rem', fontWeight: 600, mt: 2, mb: 1.5, color: 'text.primary' },
+      '& h2': { fontSize: '1.25rem', fontWeight: 600, mt: 2, mb: 1, color: 'text.primary' },
+      '& h3': { fontSize: '1.1rem', fontWeight: 600, mt: 1.5, mb: 0.75, color: 'text.primary' },
+      '& p': { mb: 1, lineHeight: 1.6, color: 'text.primary' },
       '& ul, & ol': { pl: 3, mb: 1 },
-      '& li': { mb: 0.5 },
+      '& li': { mb: 0.5, color: 'text.primary' },
       '& code': { 
-        bgcolor: 'grey.100', 
+        bgcolor: (theme) => theme.palette.mode === 'dark'
+          ? 'rgba(255, 255, 255, 0.05)'
+          : 'grey.100',
         px: 0.75, 
         py: 0.25, 
         borderRadius: 0.5,
         fontSize: '0.875em',
-        fontFamily: 'monospace'
+        fontFamily: 'monospace',
+        color: 'text.primary'
       },
       '& pre': { 
-        bgcolor: 'grey.100', 
+        bgcolor: (theme) => theme.palette.mode === 'dark'
+          ? 'rgba(255, 255, 255, 0.05)'
+          : 'grey.100',
         p: 2, 
         borderRadius: 1,
         overflow: 'auto',
@@ -42,11 +48,13 @@ const MarkdownLabelRenderer = ({ text, visible }: { text?: string; visible?: boo
         bgcolor: 'transparent',
         p: 0
       },
-      '& strong': { fontWeight: 600 },
+      '& strong': { fontWeight: 600, color: 'text.primary' },
       '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
       '& blockquote': { 
         borderLeft: '4px solid',
-        borderColor: 'grey.300',
+        borderColor: (theme) => theme.palette.mode === 'dark'
+          ? 'rgba(144, 202, 249, 0.3)'
+          : 'grey.300',
         pl: 2,
         ml: 0,
         fontStyle: 'italic',

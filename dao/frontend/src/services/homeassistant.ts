@@ -148,15 +148,13 @@ export function clearEntityCache(): void {
 }
 
 /**
- * Filter entities by domain(s) and optionally by unit of measurement
+ * Filter entities by domain(s)
  * @param entities List of entities
  * @param domainFilter Comma-separated domain list (e.g., "sensor,input_number")
- * @param unitFilter Optional unit to match exactly (e.g., "%", "W", "kWh")
  */
 export function filterEntitiesByDomain(
   entities: HAEntityOption[],
-  domainFilter?: string,
-  unitFilter?: string
+  domainFilter?: string
 ): HAEntityOption[] {
   let filtered = entities
   
@@ -164,11 +162,6 @@ export function filterEntitiesByDomain(
   if (domainFilter) {
     const domains = domainFilter.split(',').map(d => d.trim().toLowerCase())
     filtered = filtered.filter(entity => domains.includes(entity.domain))
-  }
-  
-  // Filter by unit if specified (strict matching)
-  if (unitFilter) {
-    filtered = filtered.filter(entity => entity.unit === unitFilter)
   }
   
   return filtered
