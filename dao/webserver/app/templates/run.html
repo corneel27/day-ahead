@@ -45,6 +45,19 @@
     <pre class="log_content">{{ log_content }}</pre>
 {% endif %}
 
+    <pre id="status"></pre>
+    <pre id="log"></pre>
+
+    <script>
+    setInterval(async () => {
+        const s = await fetch('/status').then(r => r.json());
+        document.getElementById('status').textContent = JSON.stringify(s);
+
+        const l = await fetch('/log').then(r => r.text());
+        document.getElementById('log').innerHTML = l;
+    }, 2000);
+    </script>
+    """)
 </div>
 <hr>
 
