@@ -22,7 +22,8 @@ app_datapath = "app/static/data/"
 images_folder = os.path.join(web_datapath, "images")
 config = None
 task_state = {
-    "status": "idle",   # idle | running | done | error
+    "status": "idle",    # idle | running | done | error
+    "task" : "",
     "returncode": None
 }
 lock = threading.Lock()
@@ -462,12 +463,13 @@ def home():
 
 logfile = "../data/log/run.log"
 
-def run_and_log(cmd):
+def run_and_log(cmd,task):
     global task_state
     global logfile
 
     with lock:
         task_state["status"] = "running"
+        task_state["task"] = task
         task_state["returncode"] = None
 
     with open(logfile, "wb") as f:
@@ -491,9 +493,6 @@ def run_and_log(cmd):
         else:
             task_state["status"] = "error"
 
-@app.route("/status")
-def status():
-    return jsonify(task_state)
 
 @app.route("/run", methods=["POST", "GET"])
 def run_process():
@@ -530,9 +529,10 @@ def run_process():
 
                     cmd = run_bewerking["cmd"] + extra_parameters
                     bewerking = ""
+                    task = current_bewerking
                     threading.Thread(
                         target=run_and_log,
-                        args=(cmd,),
+                        args=(cmd,task,),
                         daemon=True
                     ).start()
                     log_content = "Opdracht is gestart"
@@ -564,6 +564,21 @@ def run_process():
         version=__version__,
     )
 
+@app.route("/status")
+def status():
+    with lock:
+        task = task_state["task"]
+        state = task_state["status"]
+        if state == "running":
+            msg = f"Opdracht {task} draait nog"
+        elif state == "done":
+            msg = f"✅ Opdracht {task} succesvol afgerond"
+        elif state == "error":
+            msg = f"❌ Opdracht {task} geëindigd met fout"
+        else:
+            msg = f"Opdracht {task} : {state}"
+        return jsonify({"status": state, "msg": msg})
+
 
 @app.route("/log")
 def show_log():
@@ -572,8 +587,13 @@ def show_log():
         return "Nog geen log beschikbaar"
     with open(logfile, "rb") as f:
         lines = f.readlines()
-    last_lines = lines[-20:]  # laatste 20 regels
-    text = b"".join(last_lines).decode(errors="ignore")
+    with lock:
+        state = task_state["status"]
+    if state == "running":
+        last_lines = lines[-20:]  # laatste 20 regels
+        text = b"".join(last_lines).decode(errors="ignore")
+    else:
+        text = b"".join(lines).decode(errors="ignore")
     return f"<pre>{text}</pre>"
 
 

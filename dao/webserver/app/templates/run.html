@@ -41,20 +41,25 @@
 {% endif %}
 
 {% if current_bewerking != "" %}
-  <h2> Logging van bewerking "{{ bewerkingen[current_bewerking]["name"] }}":</h2>
-    <pre class="log_content">{{ log_content }}</pre>
 
-    <pre id="status"></pre>
-    <pre id="log"></pre>
+  <h2> Status: <span id="status"></span></h2>
+<hr>
+   <h2> Logging van bewerking "{{ bewerkingen[current_bewerking]["name"] }}":</h2>
+
+    <div id="log_content"></div>
 
     <script>
     setInterval(async () => {
         const s = await fetch('/status').then(r => r.json());
-        document.getElementById('status').textContent = JSON.stringify(s);
+        document.getElementById('status').textContent = s.msg
 
         const l = await fetch('/log').then(r => r.text());
-        document.getElementById('log').innerHTML = l;
-    }, 2000);
+        document.getElementById('log_content').innerHTML = l;
+
+        if (s.status !== "running") {
+          clearInterval(interval);
+        }
+    }, 1000);
     </script>
 {% endif %}
 </div>
