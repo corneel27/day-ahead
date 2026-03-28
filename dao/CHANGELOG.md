@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.3
+Fix error daylight saving change
+
 # 2026.03.0
 ### New features:
 - Add Fast Forward and Fast Reverse to web interface Home page (PR from @tomvandepoel3)
