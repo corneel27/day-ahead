@@ -22,3 +22,9 @@ dao/data/*.csv
 dao/data/options_unversioned.json
 dao/pred/data/da_prediction.pkl
 dao/data/options_new.json
+
+# Frontend build artifacts
+dao/frontend/dist/
+dao/frontend/node_modules/
+dao/frontend/.vite/
+dao/webserver/app/static/config-ui/

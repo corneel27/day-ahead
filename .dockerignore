@@ -1,0 +1,39 @@
+# Test directories
+dao/tests/
+dao/pred/
+
+# Frontend build artifacts (will be generated in Docker)
+dao/frontend/node_modules/
+dao/frontend/.vite/
+dao/frontend/dist/
+
+# Data files (not needed in image)
+dao/data/images/
+dao/data/log/
+dao/data/*.db
+dao/data/secrets.json
+dao/data/options.json
+dao/data/baseload/
+dao/data/prediction/models/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+
+# Development environment
+.venv/
+**/.venv/
+
+# Config GUI POC (not needed in production image)
+config-gui-poc/
+
+# Release testing artifacts
+release-testing/
+
+# Documentation and config files
+*.md
+LICENSE.txt
+.gitignore
+.git/
+CODEOWNERS
+repository.yaml
