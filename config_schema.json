@@ -195,8 +195,7 @@
         "dc_to_bat max power": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0,
-              "type": "number"
+              "$ref": "#/$defs/FlexFloat"
             },
             {
               "type": "null"
@@ -204,11 +203,11 @@
           ],
           "default": null,
           "description": "DC to battery max power in watts",
-          "title": "Dc To Bat Max Power",
           "x-help": "Maximum power for DC-coupled solar charging in watts. Determines how much DC solar power can flow directly to battery.",
           "x-ui-section": "Power Configuration",
           "x-unit": "W",
-          "x-validation-hint": "Must be > 0"
+          "x-validation-hint": "Must be > 0",
+          "title": "Dc To Bat Max Power"
         },
         "bat_to_dc efficiency": {
           "description": "Battery to DC efficiency",
@@ -221,11 +220,10 @@
           "x-unit": "ratio",
           "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         },
-        "bat_to_dc_max_power": {
+        "bat_to_dc max power": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0,
-              "type": "number"
+              "$ref": "#/$defs/FlexFloat"
             },
             {
               "type": "null"
@@ -233,11 +231,11 @@
           ],
           "default": null,
           "description": "Battery to DC max power in watts",
-          "title": "Bat To Dc Max Power",
           "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
           "x-ui-section": "Power Configuration",
           "x-unit": "W",
-          "x-validation-hint": "Must be > 0"
+          "x-validation-hint": "Must be > 0",
+          "title": "Bat To Dc Max Power"
         },
         "cycle cost": {
           "description": "Cost per battery cycle in euros",
@@ -1707,7 +1705,7 @@
           "x-help": "Optional: Home Assistant sensor showing current electrical power consumption. Used for monitoring and validation.",
           "x-ui-section": "Sensors",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "W",
+          "x-unit": "kW",
           "title": "Entity Hp Power"
         },
         "entity hp switch": {

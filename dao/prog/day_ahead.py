@@ -492,13 +492,15 @@ class DaCalc(DaBase):
                     f"No reduced hours applied for {self.battery_options[b].name}"
                 )
 
+            _bat_to_dc_max = self.battery_options[b].bat_to_dc_max_power
             max_dc_from_bat_power.append(
-                max_discharge_power[b] * 2 if self.battery_options[b].bat_to_dc_max_power is None
-                else self.battery_options[b].bat_to_dc_max_power / 1000
+                max_discharge_power[b] * 2 if _bat_to_dc_max is None
+                else _bat_to_dc_max.resolve(ha_getter) / 1000
             )
+            _dc_to_bat_max = self.battery_options[b].dc_to_bat_max_power
             max_dc_to_bat_power.append(
-                max_charge_power[b] * 2 if self.battery_options[b].dc_to_bat_max_power is None
-                else self.battery_options[b].dc_to_bat_max_power / 1000
+                max_charge_power[b] * 2 if _dc_to_bat_max is None
+                else _dc_to_bat_max.resolve(ha_getter) / 1000
             )
 
             # reduce power low soc
