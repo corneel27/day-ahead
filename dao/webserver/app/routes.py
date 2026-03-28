@@ -24,6 +24,7 @@ config = None
 task_state = {
     "status": "idle",    # idle | running | done | error
     "task" : "",
+    "msg" : "",
     "returncode": None
 }
 lock = threading.Lock()
@@ -470,6 +471,7 @@ def run_and_log(cmd,task):
     with lock:
         task_state["status"] = "running"
         task_state["task"] = task
+        task_state["msg"] = ""
         task_state["returncode"] = None
 
     with open(logfile, "wb") as f:
@@ -506,7 +508,8 @@ def run_process():
     if request.method in ["POST", "GET"]:
         with lock:
             if task_state["status"] == "running":
-                log_content =  "Er draait al een opdracht"
+                log_content = "Er draait al een opdracht."
+                status = "running"
             else:
                 dct = request.form.to_dict(flat=False)
                 if "current_bewerking" in dct:
@@ -536,6 +539,7 @@ def run_process():
                         daemon=True
                     ).start()
                     log_content = "Opdracht is gestart"
+                    status = "running"
                 else:
                     for i in range(len(dct.keys())):
                         bew = list(dct.keys())[i]
@@ -550,6 +554,7 @@ def run_process():
                                         ][0]
                                         parameters[param_str] = param_value
                             break
+                    status = "idle"
 
     return render_template(
         "run.html",
@@ -560,6 +565,7 @@ def run_process():
         bewerking=bewerking,
         current_bewerking=current_bewerking,
         parameters=parameters,
+        status=status,
         log_content=log_content,
         version=__version__,
     )
@@ -569,8 +575,10 @@ def status():
     with lock:
         task = task_state["task"]
         state = task_state["status"]
+        msg = task_state["msg"]
+        task_state["msg"] = ""
         if state == "running":
-            msg = f"Opdracht {task} draait nog"
+            msg = f"{msg}Opdracht {task} draait nog"
         elif state == "done":
             msg = f"✅ Opdracht {task} succesvol afgerond"
         elif state == "error":
