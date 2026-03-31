@@ -2142,7 +2142,7 @@
         },
         "vat consumption": {
           "additionalProperties": {
-            "type": "integer"
+            "type": "number"
           },
           "description": "VAT percentage for consumption by date (YYYY-MM-DD -> %)",
           "title": "Vat Consumption",
@@ -2154,7 +2154,7 @@
         },
         "vat production": {
           "additionalProperties": {
-            "type": "integer"
+            "type": "number"
           },
           "description": "VAT percentage for production by date (YYYY-MM-DD -> %)",
           "title": "Vat Production",
