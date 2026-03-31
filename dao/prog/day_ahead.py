@@ -655,7 +655,7 @@ class DaCalc(DaBase):
         ]
         pv_prod_dc_sum = [
             [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=2 * max_charge_power[b])
+                model.add_var(var_type=CONTINUOUS, lb=0, ub=2 * max_discharge_power[b])
                 for _ in range(U)
             ]
             for b in range(B)
