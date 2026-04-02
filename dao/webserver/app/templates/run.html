@@ -49,8 +49,9 @@
   <h2> Status: <span id="status"></span></h2>
 <hr>
    <h2> Logging van bewerking "{{ bewerkingen[current_bewerking]["name"] }}":</h2>
-
-    <div id="log_content"></div>
+    <div class="show table">
+      <textarea id="log_content"></textarea>
+    </div>
 
     <script>
     setInterval(async () => {
@@ -61,6 +62,7 @@
         document.getElementById('log_content').innerHTML = l;
 
         if (s.status !== "running") {
+          $('input:checkbox').removeAttr('disabled');
           clearInterval(interval);
         }
     }, 1000);
