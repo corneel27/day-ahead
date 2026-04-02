@@ -5,6 +5,7 @@ on:
       - main
     paths:
       - 'dao/config.yaml'
+  workflow_dispatch:
 
 
 permissions:
