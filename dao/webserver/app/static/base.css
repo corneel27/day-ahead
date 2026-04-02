@@ -228,6 +228,7 @@ textarea{
   width: 100%; /* takes the 100 % width of its container (.box div)*/
   height: 100%; /* takes the 100 % height of its container (.box div)*/
   font-family: monospace;
+  background-color: #2196f3;
 }
 
 table {
@@ -256,6 +257,6 @@ table tr:last-child {
   font-weight: bold;
 }
 
-.log_content{
+#log_content{
   font-family: monospace;
 }
