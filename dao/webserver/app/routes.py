@@ -474,12 +474,12 @@ def run_and_log(cmd,task):
         task_state["msg"] = ""
         task_state["returncode"] = None
 
-    with open(logfile, "wb") as f:
+    with open(logfile, "w") as f:
         proc = Popen(
             cmd,
             stdout=PIPE,
             stderr=STDOUT,
-            bufsize=1
+            text = True
         )
 
         for line in proc.stdout:
@@ -593,16 +593,15 @@ def show_log():
     global logfile
     if not os.path.exists(logfile):
         return "Nog geen log beschikbaar"
-    with open(logfile, "rb") as f:
+    with open(logfile, "r") as f:
         lines = f.readlines()
     with lock:
         state = task_state["status"]
     if state == "running":
-        last_lines = lines[-20:]  # laatste 20 regels
-        text = b"".join(last_lines).decode(errors="ignore")
+        text = "".join(lines[-20:]) # laatste 20 regels
     else:
-        text = b"".join(lines).decode(errors="ignore")
-    return f"<pre>{text}</pre>"
+        text = "".join(lines)
+    return text
 
 
 @app.route("/reports", methods=["POST", "GET"])
