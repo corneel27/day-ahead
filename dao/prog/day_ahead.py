@@ -3281,7 +3281,7 @@ class DaCalc(DaBase):
                 df_accu[b].iloc[-1, 6] = np.nan  # eff (dc->bat)
                 df_accu[b].iloc[-1, 8] = np.nan  # o_eff
                 df_accu[b].iloc[-1, 9] = np.nan  # SoC
-
+                df_accu[b] = df_accu[b].fillna('')
             logging.info(
                 f"In- en uitgaande energie per {self.interval_name} batterij "
                 f"{self.battery_options[b].name}"
