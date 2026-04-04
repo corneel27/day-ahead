@@ -30,4 +30,4 @@ scipy~=1.17.1
 joblib~=1.5.3
 knmi-py~=0.2.0
 asteval~=1.0.8
-tzdata~=2025.3
+tzdata~=2026.1
