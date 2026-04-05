@@ -46,7 +46,7 @@ python3 check_db.py || { bashio::log.info "check_db.py failed, exiting"; sleep 5
 if bashio::config.true 'use_self_compiled_miplib'; then
   if [ -d /config/miplib/lib ]; then
     bashio::log.info "Copying saved miplib-binaries"
-    cp -a /config/miplib/lib/*.so /root/dao/prog/miplib/lib
+    cp -a /config/miplib miplib
   else
     bashio::log.info "Building new miplib-binaries"
     chmod a+x build_miplib.sh
