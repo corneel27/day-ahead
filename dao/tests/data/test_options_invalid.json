@@ -1,0 +1,31 @@
+{
+  "config_version": 2,
+  "general": {
+    "time_zone": "Invalid/Timezone",
+    "ha_url": "not-a-valid-url",
+    "ha_token": "!secret ha_token",
+    "logging_level": "INVALID_LEVEL"
+  },
+  "batteries": [
+    {
+      "name": "",
+      "capacity_kwh": -10.0,
+      "charge_rate_kw": 0,
+      "discharge_rate_kw": -5.0,
+      "min_soc_pct": 150.0,
+      "max_soc_pct": 200.0,
+      "charge_efficiency_pct": 120.0,
+      "discharge_efficiency_pct": -5.0
+    }
+  ],
+  "solar": {
+    "panels_kw": -8.0,
+    "azimuth_deg": 400.0,
+    "tilt_deg": -35.0
+  },
+  "optimization": {
+    "objective": "invalid_objective",
+    "time_horizon_hours": -48,
+    "time_step_minutes": 0
+  }
+}

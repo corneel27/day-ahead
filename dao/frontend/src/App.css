@@ -1,0 +1,12 @@
+/* Custom styles for the application */
+
+/* Secrets tab styling - light red background to distinguish it */
+.MuiTab-root:has-text("Secrets") {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-radius: 4px;
+  margin: 0 2px;
+}
+
+.MuiTab-root.Mui-selected:has-text("Secrets") {
+  background-color: rgba(244, 67, 54, 0.2);
+}

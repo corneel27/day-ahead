@@ -1,4 +1,14 @@
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+logger = logging.getLogger(__name__)
 
 if not os.path.lexists("app/static/data"):
     os.symlink("../data", "app/static/data")
@@ -6,5 +16,17 @@ if not os.path.lexists("app/static/data"):
 from app import app
 
 if __name__ == "__main__":
+    # Enable CORS for development (Vite dev server runs on different port)
+    from flask_cors import CORS
+    CORS(app, resources={
+        r"/api/v2/*": {
+            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "X-HA-Host", "X-HA-Port", "X-HA-Protocol", "X-HA-Token"],
+        }
+    })
+    logger.info("Development mode: CORS enabled for /api/v2/* endpoints")
+    
     port = int(os.environ.get("FLASK_PORT", 5000))
-    app.run(port=port, host="0.0.0.0")
+    logger.info(f"Starting Flask server on http://0.0.0.0:{port}")
+    app.run(port=port, host="0.0.0.0", debug=True)
