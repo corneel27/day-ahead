@@ -49,7 +49,8 @@ if bashio::config.true 'use_self_compiled_miplib'; then
     cp -a /config/miplib/lib/*.so /root/dao/prog/miplib/lib
   else
     bashio::log.info "Building new miplib-binaries"
-    bash ./build_mip.sh
+    chmod a+x build_mip.sh
+    ./build_mip.sh
   fi
   export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
   export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib"
