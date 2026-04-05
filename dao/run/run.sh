@@ -15,7 +15,7 @@ if [ ! -d "$dir" ]; then
     cp /config/dao_data/secrets_vb.json $file
   fi
 else
-  bashio::log.info"=> directory dao_data exist"
+  bashio::log.info "=> directory dao_data exist"
 fi
 
 cd /root/dao/prog
