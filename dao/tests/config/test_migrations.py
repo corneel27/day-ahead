@@ -130,6 +130,116 @@ def test_migrate_config_already_at_target():
     assert migrated["latitude"] == 52.0
 
 
+class TestGraphicsKeyMigration:
+    def test_prices_delivery_renamed(self):
+        config = {"graphics": {"prices delivery": True, "style": "dark_background"}}
+        result = migrate_unversioned_to_v0(config)
+        assert "prices delivery" not in result["graphics"]
+        assert result["graphics"]["prices consumption"] is True
+
+    def test_prices_redelivery_renamed(self):
+        config = {"graphics": {"prices redelivery": False}}
+        result = migrate_unversioned_to_v0(config)
+        assert "prices redelivery" not in result["graphics"]
+        assert result["graphics"]["prices production"] is False
+
+    def test_average_delivery_renamed(self):
+        config = {"graphics": {"average delivery": True}}
+        result = migrate_unversioned_to_v0(config)
+        assert "average delivery" not in result["graphics"]
+        assert result["graphics"]["average consumption"] is True
+
+    def test_all_three_renamed_together(self):
+        config = {"graphics": {
+            "prices delivery": True,
+            "prices redelivery": False,
+            "average delivery": True,
+            "style": "dark_background",
+        }}
+        result = migrate_unversioned_to_v0(config)
+        g = result["graphics"]
+        assert "prices delivery" not in g
+        assert "prices redelivery" not in g
+        assert "average delivery" not in g
+        assert g["prices consumption"] is True
+        assert g["prices production"] is False
+        assert g["average consumption"] is True
+        assert g["style"] == "dark_background"
+
+    def test_new_key_wins_when_both_present(self):
+        # If config already has the new key, old key is dropped and new key is kept
+        config = {"graphics": {"prices delivery": False, "prices consumption": True}}
+        result = migrate_unversioned_to_v0(config)
+        assert "prices delivery" not in result["graphics"]
+        assert result["graphics"]["prices consumption"] is True
+
+    def test_no_graphics_section(self):
+        config = {}
+        result = migrate_unversioned_to_v0(config)
+        assert "graphics" not in result
+
+    def test_graphics_without_old_keys(self):
+        config = {"graphics": {"prices consumption": True, "style": "dark_background"}}
+        result = migrate_unversioned_to_v0(config)
+        assert result["graphics"] == {"prices consumption": True, "style": "dark_background"}
+
+
+class TestSolarOrientationMigration:
+    def test_top_level_solar_flat_orientation_normalized(self):
+        config = {"solar": [{"name": "roof", "orientation": 270}]}
+        result = migrate_unversioned_to_v0(config)
+        assert result["solar"][0]["orientation"] == -90
+
+    def test_top_level_solar_string_orientation_normalized(self):
+        config = {"solar": [{"name": "roof", "strings": [{"orientation": 270, "tilt": 35}]}]}
+        result = migrate_unversioned_to_v0(config)
+        assert result["solar"][0]["strings"][0]["orientation"] == -90
+
+    def test_battery_dc_solar_flat_orientation_normalized(self):
+        config = {"battery": [{"name": "bat", "solar": [{"name": "dc", "orientation": 315}]}]}
+        result = migrate_unversioned_to_v0(config)
+        assert result["battery"][0]["solar"][0]["orientation"] == -45
+
+    def test_battery_dc_solar_string_orientation_normalized(self):
+        config = {"battery": [{"name": "bat", "solar": [
+            {"name": "dc", "strings": [{"orientation": 225, "tilt": 30}]}
+        ]}]}
+        result = migrate_unversioned_to_v0(config)
+        assert result["battery"][0]["solar"][0]["strings"][0]["orientation"] == -135
+
+    def test_orientation_already_in_range_untouched(self):
+        config = {"solar": [{"name": "roof", "orientation": 5}]}
+        result = migrate_unversioned_to_v0(config)
+        assert result["solar"][0]["orientation"] == 5
+
+    def test_orientation_exactly_180_untouched(self):
+        config = {"solar": [{"name": "roof", "orientation": 180}]}
+        result = migrate_unversioned_to_v0(config)
+        assert result["solar"][0]["orientation"] == 180
+
+    def test_negative_orientation_untouched(self):
+        config = {"solar": [{"name": "roof", "orientation": -90}]}
+        result = migrate_unversioned_to_v0(config)
+        assert result["solar"][0]["orientation"] == -90
+
+    def test_multiple_strings_all_normalized(self):
+        config = {"solar": [{"name": "roof", "strings": [
+            {"orientation": 270, "tilt": 35},
+            {"orientation": 90, "tilt": 35},
+            {"orientation": 181, "tilt": 35},
+        ]}]}
+        result = migrate_unversioned_to_v0(config)
+        strings = result["solar"][0]["strings"]
+        assert strings[0]["orientation"] == -90
+        assert strings[1]["orientation"] == 90   # <= 180, untouched
+        assert strings[2]["orientation"] == -179
+
+    def test_no_solar_section(self):
+        config = {}
+        result = migrate_unversioned_to_v0(config)
+        assert "solar" not in result
+
+
 # Example test for future v0→v1 migration (uncomment when implementing):
 # def test_v0_to_v1_adds_efficiency():
 #     """Test v0→v1 migration adds efficiency to batteries."""

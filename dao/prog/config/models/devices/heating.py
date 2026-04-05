@@ -199,7 +199,7 @@ class HeatingEnabled(BaseModel):
         description="HA entity for heat pump power",
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor showing current electrical power consumption. Used for monitoring and validation.",
-            "x-unit": "W",
+            "x-unit": "kW",
             "x-ui-section": "Sensors",
             "x-ui-widget-filter": "sensor"
         }

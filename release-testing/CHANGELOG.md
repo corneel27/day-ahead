@@ -1,5 +1,7 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.03.3.rc6
+
 # 2026.03.3.rc5
 In this release all the errors the testers found during testing are fixed.
 Many thanks to all of them: great job.
