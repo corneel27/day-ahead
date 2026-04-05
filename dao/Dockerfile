@@ -50,7 +50,8 @@ COPY run /root/dao/prog/
 EXPOSE 5000
 WORKDIR /root/dao/prog
 RUN chmod a+x run.sh
-ENTRYPOINT  ["/bin/bash", "./run.sh"]
+ENTRYPOINT  ["./run.sh"]
+CMD ["bash", "-c", "while true; do sleep 3600; done"]
 
 # Labels
 LABEL \
