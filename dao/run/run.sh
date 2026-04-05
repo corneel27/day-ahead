@@ -43,7 +43,7 @@ export PYTHONPATH="/root:/root/dao:/root/dao/lib:/root/dao/prog"
 cd /root/dao/prog
 python3 check_db.py || { bashio::log.info "check_db.py failed, exiting"; sleep 5; exit 1; }
 
-if [bashio::config.true 'use_self_compiled_miplib'; then
+if bashio::config.true 'use_self_compiled_miplib'; then
   if [ -d /config/miplib/lib ]; then
     bashio::log.info "Copying saved miplib-binaries"
     cp -a /config/miplib/lib/*.so /root/dao/prog/miplib/lib
