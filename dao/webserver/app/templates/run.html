@@ -4,12 +4,16 @@
 <form method="post" name="bewerk_form" id="bewerk_form">
 <h3>Voer een bewerking, berekening of actie uit door een van onderstaande onderdelen aan te klikken</h3>
   <input type="hidden" id="current_menu" name="current_menu" value="run">
+  {% set disabled = "" %}
+  {% if status == "running" %}
+    {% set disabled = "disabled" %}
+  {% endif %}
   {% for key, value in bewerkingen.items() %}
     {% set id_= "id_" ~ key %}
     {% if key == bewerking  %}
-    <input type="checkbox" id= "{{ id_ }}" name= "{{ key }}" checked onchange="this.form.submit()"/>
+    <input type="checkbox" id= "{{ id_ }}" name= "{{ key }}" {{disabled}} checked onchange="this.form.submit()"/>
     {% else %}
-    <input type="checkbox" id= "{{ id_ }}" name= "{{ key }}" onchange="this.form.submit()"/>
+    <input type="checkbox" id= "{{ id_ }}" name= "{{ key }}" {{disabled}} onchange="this.form.submit()"/>
     {% endif %}
     <label for= "{{ id_ }}"> {{ value["name"] }} </label>
     {% for parameter in value["parameters"] %}
@@ -41,10 +45,29 @@
 {% endif %}
 
 {% if current_bewerking != "" %}
-  <h2> Logging van bewerking "{{ bewerkingen[current_bewerking]["name"] }}":</h2>
-    <pre class="log_content">{{ log_content }}</pre>
-{% endif %}
 
+  <h2> Status: <span id="status"></span></h2>
+<hr>
+   <h2> Logging van bewerking "{{ bewerkingen[current_bewerking]["name"] }}":</h2>
+    <div class="show table">
+      <textarea id="log_content"></textarea>
+    </div>
+
+    <script>
+    setInterval(async () => {
+        const s = await fetch('/status').then(r => r.json());
+        document.getElementById('status').textContent = s.msg
+
+        const l = await fetch('/log').then(r => r.text());
+        document.getElementById('log_content').innerHTML = l;
+
+        if (s.status !== "running") {
+          $('input:checkbox').removeAttr('disabled');
+          clearInterval(interval);
+        }
+    }, 1000);
+    </script>
+{% endif %}
 </div>
 <hr>
 
