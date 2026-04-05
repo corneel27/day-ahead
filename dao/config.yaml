@@ -22,6 +22,6 @@ homeassistant_api: true
 ports:
   5000/tcp: 5000
 options:
-  compile_miplib: true
+  use_self_compiled_miplib: false
 schema:
-  compile_miplib: bool?
+  use_self_compiled_miplib: bool?
