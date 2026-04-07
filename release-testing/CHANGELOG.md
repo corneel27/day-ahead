@@ -1,6 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# 2026.03.3.rc6
+# 2026.04.0.rc1
+### Fixes
+
+- changed vat_production and vat_consumption from int-> float
+- fix limitation of pv_dc-production when chargelimit =0 (reported by @thesaxofonist)
+- replaced NaN in battery overview with blancs (reported by @rescla)
+
+### Changes
+- changed the handling of the run-requests of the run-menu: no time limit (120 sec) but feedback
+- introduced the possibility to compile and use your own mip-binaries (see wiki: https://github.com/corneel27/day-ahead/wiki/2.-Installatie-en-basis-configuratie#installatie-zelf-gecompileerde-mip-binaries)
 
 # 2026.03.3.rc5
 In this release all the errors the testers found during testing are fixed.
