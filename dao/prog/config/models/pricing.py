@@ -82,7 +82,7 @@ class PricingConfig(BaseModel):
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
         }
     )
-    vat_consumption: dict[str, int] = Field(
+    vat_consumption: dict[str, float] = Field(
         alias="vat consumption",
         description="VAT percentage for consumption by date (YYYY-MM-DD -> %)",
         json_schema_extra={
@@ -92,7 +92,7 @@ class PricingConfig(BaseModel):
             "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         }
     )
-    vat_production: dict[str, int] = Field(
+    vat_production: dict[str, float] = Field(
         alias="vat production",
         description="VAT percentage for production by date (YYYY-MM-DD -> %)",
         json_schema_extra={
