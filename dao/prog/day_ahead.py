@@ -105,7 +105,7 @@ class DaCalc(DaBase):
         end_prog = price_data["time"].iloc[-1]
         if self.interval == "15min":
             num_quaters = round((end_prog - start).total_seconds() / 900)
-            if len(price_data) < num_quaters - 1:
+            if len(price_data) < num_quaters - 5:
                 logging.error(
                     f"Er ontbreken kwartierwaarden van de day-ahead tarieven, "
                     f"de berekening wordt afgebroken"
