@@ -1,7 +1,7 @@
 ---
-name: 刀 Day Ahead Optimizer (edge)
-version: 2026.04.0.rc2d
-slug: day_ahead_opt_edge
+name: 刀 Day Ahead Optimizer
+version: 2026.03.2
+slug: day_ahead_opt
 description: Home Assistant Community Add-ons for day ahead optimizations
 url: https://github.com/corneel27/day-ahead
 arch:
@@ -21,7 +21,4 @@ map:
 homeassistant_api: true
 ports:
   5000/tcp: 5000
-options:
-  use_self_compiled_miplib: false
-schema:
-  use_self_compiled_miplib: bool?
+image: "ghcr.io/corneel27/dao-{arch}"
