@@ -12,7 +12,7 @@ try:
     port = _config.dashboard.port
 except Exception:
     port = DashboardConfig().port
-workers = 2
+workers = 1
 bind = f"0.0.0.0:{port}"
 forwarded_allow_ips = "*"
 secure_scheme_headers = {"X-Forwarded-Proto": "https"}
