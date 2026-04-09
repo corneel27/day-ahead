@@ -46,7 +46,7 @@
 
 {% if current_bewerking != "" %}
 
-  <h2> Status: <span id="status"></span></h2>
+  <h2><span id="status"></span></h2>
 <hr>
    <h2> Logging van bewerking "{{ bewerkingen[current_bewerking]["name"] }}":</h2>
     <div class="show table">
@@ -54,18 +54,34 @@
     </div>
 
     <script>
-    setInterval(async () => {
-        const s = await fetch('/status').then(r => r.json());
-        document.getElementById('status').textContent = s.msg
+      // debugger;
+      const statusEl = document.getElementById('status');
+      const logEl = document.getElementById('log_content');
 
-        const l = await fetch('/log').then(r => r.text());
-        document.getElementById('log_content').innerHTML = l;
+      jinja_status = '{{ status }}'
+      if (jinja_status !== "running") {
+        $('input:checkbox').removeAttr('disabled');
+      } else {
+        startPolling();
+      }
 
-        if (s.status !== "running") {
-          $('input:checkbox').removeAttr('disabled');
-          clearInterval(interval);
-        }
-    }, 1000);
+      function startPolling() {
+          let interval = setInterval(async () => {
+              const s = await fetch('status').then(r => r.json());
+              // console.log("status: "+s.state)
+              // console.log("msg: "+s.msg)
+              statusEl.innerText = s.msg;
+
+              const l = await fetch('log').then(r => r.text());
+              // console.log("log: "+l)
+              logEl.innerHTML = l;
+
+              if (s.status !== "running") {
+                  $('input:checkbox').removeAttr('disabled');
+                  clearInterval(interval);
+              }
+          }, 1000);
+      }
     </script>
 {% endif %}
 </div>
