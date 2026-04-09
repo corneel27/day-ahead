@@ -43,15 +43,16 @@ export PYTHONPATH="/root:/root/dao:/root/dao/lib:/root/dao/prog"
 cd /root/dao/prog
 python3 check_db.py || { bashio::log.info "check_db.py failed, exiting"; sleep 5; exit 1; }
 
-if bashio::config.true 'use_self_compiled_miplib'; then
-  if [ -d /config/miplib/lib ]; then
-    bashio::log.info "Copying saved miplib-binaries"
-    cp -a /config/miplib miplib
-  else
-    bashio::log.info "Building new miplib-binaries"
-    chmod a+x build_miplib.sh
-    ./build_miplib.sh
-  fi
+if [ -d /config/miplib/lib ]; then
+  bashio::log.info "Copying saved miplib-binaries"
+  cp -a /config/miplib miplib
+elif bashio::config.true 'use_self_compiled_miplib'; then
+  bashio::log.info "Building new miplib-binaries"
+  chmod a+x build_miplib.sh
+  ./build_miplib.sh
+fi
+
+if [ -d miplib/lib ]; then
   export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
   export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib"
   echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc
