@@ -1,5 +1,6 @@
 import collections
 import datetime
+import time
 
 # from sqlalchemy.sql.coercions import expect_col_expression_collection
 
@@ -15,19 +16,13 @@ from pathlib import Path
 from dao.prog.config.loader import ConfigurationLoader
 from dao.prog.da_report import Report
 from dao.prog.version import __version__
+import json
 
 # globals
 web_datapath = "static/data/"
 app_datapath = "app/static/data/"
 images_folder = os.path.join(web_datapath, "images")
 config = None
-task_state = {
-    "status": "idle",    # idle | running | done | error
-    "task" : "",
-    "msg" : "",
-    "returncode": None
-}
-lock = threading.Lock()
 
 # Introduced previous_time and active_view as global variables
 # This is used to enable switching between "grafiek" and "tabel" and retaining the (closest) timestamp
@@ -463,17 +458,50 @@ def home():
     )
 
 logfile = "../data/log/run.log"
+"""
+task_state = {
+    "status": "idle",    # idle | running | done | error
+    "task" : "",
+    "msg" : "",
+    "returncode": None
+}
+"""
+lock = threading.Lock()
+
+STATEFILE = "../data/task_state.json"
+STALE_AFTER = 300
+
+def save_state(task_state):
+    task_state["last_update"] = time.time()
+    with open(STATEFILE, "w") as f:
+        json.dump(task_state, f)
+
+def load_state():
+    if not os.path.exists(STATEFILE):
+        return {"status": "idle", "task": None}
+    try:
+        with open(STATEFILE) as f:
+            state = json.load(f)
+
+        # 🔥 check op "stale" state
+        last = state.get("last_update", 0)
+        if state.get("status") == "running":
+            if time.time() - last > STALE_AFTER:
+                # taak is waarschijnlijk dood
+                return {"status": "idle", "task": None}
+        return state
+    except Exception:
+        return {"status": "idle", "task": None}
+
 
 def run_and_log(cmd,task):
-    global task_state
     global logfile
 
-    with lock:
-        task_state["status"] = "running"
-        task_state["task"] = task
-        task_state["msg"] = ""
-        task_state["returncode"] = None
-
+    save_state({
+        "status": "running",
+        "task": task,
+        "returncode": None
+    })
     with open(logfile, "w") as f:
         proc = Popen(
             cmd,
@@ -488,17 +516,14 @@ def run_and_log(cmd,task):
 
         proc.wait()
 
-    with lock:
-        task_state["returncode"] = proc.returncode
-        if proc.returncode == 0:
-            task_state["status"] = "done"
-        else:
-            task_state["status"] = "error"
-
+    save_state({
+        "status": "done" if proc.returncode == 0 else "error",
+        "task": task,
+        "returncode": proc.returncode
+    })
 
 @app.route("/run", methods=["POST", "GET"])
 def run_process():
-    global task_state
     global logfile
     bewerking = ""
     current_bewerking = ""
@@ -506,55 +531,55 @@ def run_process():
     parameters = {}
 
     if request.method in ["POST", "GET"]:
-        with lock:
-            if task_state["status"] == "running":
-                log_content = "Er draait al een opdracht."
-                status = "running"
-            else:
-                dct = request.form.to_dict(flat=False)
-                if "current_bewerking" in dct:
-                    current_bewerking = dct["current_bewerking"][0]
-                    run_bewerking = bewerkingen[current_bewerking]
-                    extra_parameters = []
-                    if "parameters" in run_bewerking:
-                        for j in range(len(run_bewerking["parameters"])):
-                            if run_bewerking["parameters"][j] in dct:
-                                param_value = dct[run_bewerking["parameters"][j]][0]
-                                if len(param_value) > 0:
-                                    extra_parameters.append(param_value)
-                    logfile = (
-                        "../data/log/"
-                        + run_bewerking["file_name"]
-                        + "_"
-                        + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
-                        + ".log"
-                    )
+        task_state = load_state()
+        if task_state.get("status") == "running":
+            log_content = "Er draait al een opdracht."
+            state = "running"
+        else:
+            dct = request.form.to_dict(flat=False)
+            if "current_bewerking" in dct:
+                current_bewerking = dct["current_bewerking"][0]
+                run_bewerking = bewerkingen[current_bewerking]
+                extra_parameters = []
+                if "parameters" in run_bewerking:
+                    for j in range(len(run_bewerking["parameters"])):
+                        if run_bewerking["parameters"][j] in dct:
+                            param_value = dct[run_bewerking["parameters"][j]][0]
+                            if len(param_value) > 0:
+                                extra_parameters.append(param_value)
+                logfile = (
+                    "../data/log/"
+                    + run_bewerking["file_name"]
+                    + "_"
+                    + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
+                    + ".log"
+                )
 
-                    cmd = run_bewerking["cmd"] + extra_parameters
-                    bewerking = ""
-                    task = current_bewerking
-                    threading.Thread(
-                        target=run_and_log,
-                        args=(cmd,task,),
-                        daemon=True
-                    ).start()
-                    log_content = "Opdracht is gestart"
-                    status = "running"
-                else:
-                    for i in range(len(dct.keys())):
-                        bew = list(dct.keys())[i]
-                        if bew in bewerkingen:
-                            bewerking = bew
-                            if "parameters" in bewerkingen[bewerking]:
-                                for j in range(len(bewerkingen[bewerking]["parameters"])):
-                                    if bewerkingen[bewerking]["parameters"][j] in dct:
-                                        param_str = bewerkingen[bewerking]["parameters"][j]
-                                        param_value = dct[
-                                            bewerkingen[bewerking]["parameters"][j]
-                                        ][0]
-                                        parameters[param_str] = param_value
-                            break
-                    status = "idle"
+                cmd = run_bewerking["cmd"] + extra_parameters
+                bewerking = ""
+                task = current_bewerking
+                threading.Thread(
+                    target=run_and_log,
+                    args=(cmd,task,),
+                    daemon=True
+                ).start()
+                log_content = "Opdracht is gestart"
+                state = "running"
+            else:
+                for i in range(len(dct.keys())):
+                    bew = list(dct.keys())[i]
+                    if bew in bewerkingen:
+                        bewerking = bew
+                        if "parameters" in bewerkingen[bewerking]:
+                            for j in range(len(bewerkingen[bewerking]["parameters"])):
+                                if bewerkingen[bewerking]["parameters"][j] in dct:
+                                    param_str = bewerkingen[bewerking]["parameters"][j]
+                                    param_value = dct[
+                                        bewerkingen[bewerking]["parameters"][j]
+                                    ][0]
+                                    parameters[param_str] = param_value
+                        break
+                state = "idle"
 
     return render_template(
         "run.html",
@@ -565,27 +590,31 @@ def run_process():
         bewerking=bewerking,
         current_bewerking=current_bewerking,
         parameters=parameters,
-        status=status,
+        status=state,
         log_content=log_content,
         version=__version__,
     )
 
 @app.route("/status")
 def status():
-    with lock:
-        task = task_state["task"]
-        state = task_state["status"]
-        msg = task_state["msg"]
-        task_state["msg"] = ""
-        if state == "running":
-            msg = f"{msg}Opdracht {task} draait nog"
-        elif state == "done":
-            msg = f"✅ Opdracht {task} succesvol afgerond"
-        elif state == "error":
-            msg = f"❌ Opdracht {task} geëindigd met fout"
-        else:
-            msg = f"Opdracht {task} : {state}"
-        return jsonify({"status": state, "msg": msg})
+    task_state = load_state()
+    task = task_state.get("task")
+    if task in bewerkingen:
+        task_name = bewerkingen[task]["name"]
+    else:
+        task_name = task
+    state = task_state.get("status")
+    msg = task_state.get("msg")
+    task_state["msg"] = ""
+    if state == "running":
+        msg = f"Opdracht '{task_name}' wordt uitgevoerd"
+    elif state == "done":
+        msg = f"✅ Opdracht '{task_name}' succesvol afgerond"
+    elif state == "error":
+        msg = f"❌ Opdracht '{task_name}' geëindigd met fout"
+    else:
+        msg = f"Opdracht '{task}' : {state}"
+    return jsonify({"status": state, "msg": msg})
 
 
 @app.route("/log")
@@ -595,8 +624,8 @@ def show_log():
         return "Nog geen log beschikbaar"
     with open(logfile, "r") as f:
         lines = f.readlines()
-    with lock:
-        state = task_state["status"]
+    task_state = load_state()
+    state = task_state["status"]
     if state == "running":
         text = "".join(lines[-20:]) # laatste 20 regels
     else:
