@@ -1,5 +1,6 @@
 import collections
 import datetime
+import re
 
 # from sqlalchemy.sql.coercions import expect_col_expression_collection
 
@@ -275,16 +276,30 @@ bewerkingen = {
 
 def get_file_list(path: str, pattern: str) -> list:
     """
-    get a time-ordered file list with name and modified time
+    get a time-ordered file list with name and timestamp from filename
     :parameter path: folder
     :parameter pattern: wildcards to search for
     """
     flist = []
     for f in os.listdir(path):
         if fnmatch.fnmatch(f, pattern):
-            fullname = os.path.join(path, f)
-            flist.append({"name": f, "time": os.path.getmtime(fullname)})
-            # print(f, time.ctime(os.path.getmtime(f)))
+            # Extract timestamp from filename (e.g. calc_2026-02-17__08-45.png) because datetime picker works with
+            # absolut timestamps and then file modification date might differ from the timestamp in the filename, which is the intended reference time for the user  
+            m = re.search(r'(\d{4}-\d{2}-\d{2})__(\d{2})(:|\-)(\d{2})', f)
+            if m:
+                try:
+                    dt_str = f"{m.group(1)} {m.group(2)}:{m.group(4)}"
+                    dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                    timestamp = dt.timestamp()  # Local time as epoch
+                    flist.append({"name": f, "time": timestamp})
+                except (ValueError, OSError):
+                    # Fallback to mtime if filename parsing fails
+                    fullname = os.path.join(path, f)
+                    flist.append({"name": f, "time": os.path.getmtime(fullname)})
+            else:
+                # Fallback to mtime if no timestamp in filename
+                fullname = os.path.join(path, f)
+                flist.append({"name": f, "time": os.path.getmtime(fullname)})
     flist.sort(key=lambda x: x.get("time"), reverse=True)
     return flist
 
@@ -421,7 +436,7 @@ def home():
 
     if len(flist) > 0:
         # print('Active index:', index )
-        # print('Flist[',index,']:',time.ctime(flist[index]["time"]))
+        # print(flist[index]["name"], datetime.datetime.fromtimestamp(flist[index]["time"]))
         active_time = str(flist[index]["time"])
         if active_view == "grafiek":
             image = os.path.join(web_datapath + active_map, flist[index]["name"])
@@ -438,6 +453,10 @@ def home():
 # Remember this active time in global variable
     previous_time = active_time
 
+    flatpickr_times = [datetime.datetime.fromtimestamp(f["time"]).strftime('%Y-%m-%d %H:%M') for f in flist]
+    flatpickr_default_ts = float(active_time) if active_time else None
+    flatpickr_default = datetime.datetime.fromtimestamp(float(active_time)).strftime('%Y-%m-%d %H:%M') if active_time else ''
+
     return render_template(
         "home.html",
         title="Optimization",
@@ -450,6 +469,9 @@ def home():
         image=image,
         tabel=tabel,
         active_time=active_time,
+        flatpickr_times=flatpickr_times,
+        flatpickr_default_ts=flatpickr_default_ts,
+        flatpickr_default=flatpickr_default,
         version=__version__,
     )
 
