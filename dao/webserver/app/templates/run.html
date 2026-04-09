@@ -67,12 +67,12 @@
 
       function startPolling() {
           let interval = setInterval(async () => {
-              const s = await fetch('/status').then(r => r.json());
+              const s = await fetch('status').then(r => r.json());
               // console.log("status: "+s.state)
               // console.log("msg: "+s.msg)
               statusEl.innerText = s.msg;
 
-              const l = await fetch('/log').then(r => r.text());
+              const l = await fetch('log').then(r => r.text());
               // console.log("log: "+l)
               logEl.innerHTML = l;
 
