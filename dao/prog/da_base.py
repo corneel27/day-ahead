@@ -164,7 +164,7 @@ class DaBase(hass.Hass):
             longitude=self.ha_context.longitude,
             secrets=self.loader.secrets,
         )
-        if self.ha_context.country == "NL":
+        if (self.ha_context.country == "NL") or (self.ha_context.country == "BE"):
             self.knmi_station = self.meteo.which_station()
         self.solar = self.config.solar
         self.interval = self.config.interval
