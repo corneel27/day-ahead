@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.04.0.rc3
+### Changes
+Belgian users can now use a nearby Dutch weather station for the solar (or wind) ml-prediction
 # 2026.04.0.rc2
 Fixed the error with the handling of the run-requests of the run-menu: no time limit (120 sec) but feedback
 

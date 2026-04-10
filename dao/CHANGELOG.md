@@ -1,5 +1,47 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.04.0
+
+### Breaking change
+The ML model was extended to allow for windspeed in predictions. 
+This means you have to retrain your ML models before running a calculation!
+
+### Changes
+
+- In the back-end we are moving to gui-interface to fill in our settings.
+This release is the first step in that direction.
+The first step is that all our current settings are compared and validated with a model that is build of all possible settings.
+Until now this model is only tested by a few testers. We are very greatfull for their test-efforts. <br>
+@simnet is the great force and hard worker behind all these changes, all credits to him!<br>
+Watch at the logging of the new app and if you find any "irregularities" tell us via tweakers or Github.
+After installation there are a few new files in the app which are possibly interesting to read:
+  - DEVELOPER_GUIDE.md (in dao/prof/config) for developersand collaborators who want make new settings. 
+  - config_schema.json to validate the configurations
+  - SETTINGS.md a completely automatic generated summary of all possible settings 
+
+  Most important **changes** in the config/options.json:<br>
+  - all booleans are now noted as true or false: no "True" or "False" anymore.
+  - changed entity_avg_temp to entity_avg_outside_temp (reported by @f.welvering)
+  - removed "show_graph" from settings
+  - implemented windvelocity as feature variable for solar prediction
+  - (re)moved deprecated "entity stop victron" in favor of "entity stop inverter"<br>
+  
+Other **changes**:
+- The handling of the run-requests of the run-menu is changed: no time limit (120 sec) but feedback
+- The suppliers if the mip-binaries have updated their product. DAO now uses the updates binaries. For users who
+cannot use this binaries we introduced the possibility to compile and use your own mip-binaries (see wiki: https://github.com/corneel27/day-ahead/wiki/2.-Installatie-en-basis-configuratie#installatie-zelf-gecompileerde-mip-binaries)
+- Belgian users can now use a nearby Dutch weather station for the solar (or wind) ml-prediction
+
+### Fixes
+- Fix limitation of pv_dc-production when chargelimit =0 (reported by @thesaxofonist)
+- Replaced NaN in battery overview with blancs (reported by @rescla)
+- defaults for battery low- (20%) and upper-limit (100%)
+- default for ev "entity stop charging" (none) 
+- boiler activate service must have a value if boiler activate entity is set
+- removed the requirement of stages from heating when adjustement is on/off
+- when boiler_present = false or heating_present= false all the other settings are optional
+- if scheduler active = true is not present it will be set to true
+
 # 2026.03.2
 ### New features:
 - Add Fast Forward and Fast Reverse to web interface Home page (PR from @tomvandepoel3)
