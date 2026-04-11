@@ -1,6 +1,6 @@
 ---
 name: 刀 Day Ahead Optimizer (TESTING)
-version: 2026.04.0.rc3
+version: 2026.04.1.rc1
 stage: experimental
 slug: day_ahead_opt-testing
 description: Beta version of DAO. Use only for testing!

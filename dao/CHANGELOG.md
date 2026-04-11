@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.04.1
+Fix stopping startup after error in options.json
+
 # 2026.04.0
 
 ### Breaking change
