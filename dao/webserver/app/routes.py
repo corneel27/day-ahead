@@ -2,10 +2,11 @@ import collections
 import datetime
 import re
 
+
 # from sqlalchemy.sql.coercions import expect_col_expression_collection
 
 from dao.webserver.app import app
-from flask import render_template, request
+from flask import render_template, request, session as flask_session
 import fnmatch
 import os
 from subprocess import PIPE, run
@@ -346,11 +347,14 @@ def home():
     cur_subject = "grid"
     active_subject = "grid"
     cur_view = "grafiek"
-    global active_view 
+    #global active_view 
     global previous_time
     active_time = None
     action = None
     confirm_delete = False
+    #get active_view from session if available, otherwise use the default value; 
+    #this is to enable switching between grafiek and tabel while retaining the active time  
+    active_view = flask_session.get('active_view', 'grafiek')
 
     if config is not None:
         battery_options = config.battery
@@ -370,10 +374,11 @@ def home():
             active_subject = lst["subject"][0]
         if "view" in lst:
             active_view = lst["view"][0]
+            flask_session['active_view'] = active_view #update session with the new active_view
         if "active_time" in lst:
-            # Ignore active_time from POST if switching between grafiek & table; keep the active_time from the previous call
+            # Ignore active_time from POST if switching between grafiek & table; keep the active_time from the previous call from session.
             if cur_view != active_view:
-                active_time = previous_time
+                active_time = flask_session.get('active_time')
             else:
                 active_time = float(lst["active_time"][0])
         if "action" in lst:
@@ -405,7 +410,9 @@ def home():
             if abs(flist[i]["time"] - active_time) < diff_time:
                 diff_time = abs(flist[i]["time"] - active_time)
                 index = i
-        
+    # Ensure index is within valid range
+    index = max(0, min(index, len(flist) - 1))
+
     if action == "first":
         index = 0
     if action == "previous":
@@ -451,7 +458,8 @@ def home():
         tabel = None
         
 # Remember this active time in global variable
-    previous_time = active_time
+    #previous_time = active_time
+    flask_session['active_time'] = active_time #Store active_time in session to enable switching between grafiek and tabel while retaining the active time  
 
     flatpickr_times = [datetime.datetime.fromtimestamp(f["time"]).strftime('%Y-%m-%d %H:%M') for f in flist]
     flatpickr_default_ts = float(active_time) if active_time else None
