@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.04.1.rc1
+Fix leaving startup after error in options.json
+
 # 2026.04.0.rc3
 ### Changes
 Belgian users can now use a nearby Dutch weather station for the solar (or wind) ml-prediction
