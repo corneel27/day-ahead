@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.04.2.rc1
+Accept uppercase for entities
+
 # 2026.04.1.rc1
 Fix leaving startup after error in options.json
 
