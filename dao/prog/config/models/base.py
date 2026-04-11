@@ -15,7 +15,7 @@ from pydantic_core import core_schema as _core_schema
 
 # Matches Home Assistant entity IDs: "domain.object_id"
 # domain must start with a letter (rules out numeric strings like "0.45")
-_HA_ENTITY_ID_RE = re.compile(r'^[a-z_][a-z0-9_]*\.[a-z0-9_]+$')
+_HA_ENTITY_ID_RE = re.compile(r'^[a-z_][a-z0-9_]*\.[a-zA-Z0-9_]+$')
 
 # Re-use a single TypeAdapter for bool coercion — Pydantic's lax bool validator
 # accepts "true"/"false", "1"/"0", "on"/"off", "yes"/"no", integers, etc.
