@@ -1,7 +1,7 @@
 #!/usr/bin/env bashio
 
 # exit immediately if a command exits with a non-zero status
-// set -e
+# set -e
 
 dir="/config/dao_data"
 if [ ! -d "$dir" ]; then
