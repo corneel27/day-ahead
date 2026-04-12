@@ -1,10 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bashio
+
 # exit immediately if a command exits with a non-zero status
-set -e
+# set -e
 
 dir="/config/dao_data"
 if [ ! -d "$dir" ]; then
-  echo "=> directory dao_data made, files copied"
+  bashio::log.info "=> directory dao_data made, files copied"
   cp -r /tmp/daodata /config/dao_data
   file=/config/dao_data/options.json
   if [ ! -L "$file" ]; then
@@ -15,16 +16,16 @@ if [ ! -d "$dir" ]; then
     cp /config/dao_data/secrets_vb.json $file
   fi
 else
-  echo "=> directory dao_data exist"
+  bashio::log.info "=> directory dao_data exist"
 fi
 
 cd /root/dao/prog
 file=../data
 if [ -L "$file" ]
 then
-  echo "=> /root/dao/data exist"
+  bashio::log.info "=> /root/dao/data exist"
 else
-  echo "=> /root/dao/data doesn't exist, made"
+  bashio::log.info "=> /root/dao/data doesn't exist, made"
   ln -s /config/dao_data $file
 fi
 
@@ -32,15 +33,31 @@ cd /root/dao/webserver/
 file=app/static/data
 if [ -L "$file" ]
 then
-  echo "=> /root/dao/webserver/app/static/data exist"
+  bashio::log.info "=> /root/dao/webserver/app/static/data exist"
 else
-  echo "=> /root/dao/webserver/app/static/data doesn't exist, made"
+  bashio::log.info "=> /root/dao/webserver/app/static/data doesn't exist, made"
   ln -s /config/dao_data $file
 fi
 
 export PYTHONPATH="/root:/root/dao:/root/dao/lib:/root/dao/prog"
 cd /root/dao/prog
-python3 check_db.py || { echo "check_db.py failed, exiting"; sleep 5; exit 1; }
+python3 check_db.py || { bashio::log.info "check_db.py failed, exiting"; sleep 5; exit 1; }
+
+if [ -d /config/miplib/lib ]; then
+  bashio::log.info "Copying saved miplib-binaries"
+  cp -a /config/miplib miplib
+elif bashio::config.true 'use_self_compiled_miplib'; then
+  bashio::log.info "Building new miplib-binaries"
+  chmod a+x build_miplib.sh
+  ./build_miplib.sh
+fi
+
+if [ -d miplib/lib ]; then
+  export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"
+  export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib"
+  echo 'export PMIP_CBC_LIBRARY="/root/dao/prog/miplib/lib/libCbc.so"' >> ~/.bashrc
+  echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc
+fi
 
 cd /root/dao/webserver/
 gunicorn --config gunicorn_config.py app:app &

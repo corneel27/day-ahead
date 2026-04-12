@@ -1,5 +1,28 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.04.2.rc1
+Accept uppercase for entities
+
+# 2026.04.1.rc1
+Fix leaving startup after error in options.json
+
+# 2026.04.0.rc3
+### Changes
+Belgian users can now use a nearby Dutch weather station for the solar (or wind) ml-prediction
+# 2026.04.0.rc2
+Fixed the error with the handling of the run-requests of the run-menu: no time limit (120 sec) but feedback
+
+# 2026.04.0.rc1
+### Fixes
+
+- changed vat_production and vat_consumption from int-> float
+- fix limitation of pv_dc-production when chargelimit =0 (reported by @thesaxofonist)
+- replaced NaN in battery overview with blancs (reported by @rescla)
+
+### Changes
+- changed the handling of the run-requests of the run-menu: no time limit (120 sec) but feedback
+- introduced the possibility to compile and use your own mip-binaries (see wiki: https://github.com/corneel27/day-ahead/wiki/2.-Installatie-en-basis-configuratie#installatie-zelf-gecompileerde-mip-binaries)
+
 # 2026.03.3.rc5
 In this release all the errors the testers found during testing are fixed.
 Many thanks to all of them: great job.

@@ -105,7 +105,7 @@ class DaCalc(DaBase):
         end_prog = price_data["time"].iloc[-1]
         if self.interval == "15min":
             num_quaters = round((end_prog - start).total_seconds() / 900)
-            if len(price_data) < num_quaters - 1:
+            if len(price_data) < num_quaters - 5:
                 logging.error(
                     f"Er ontbreken kwartierwaarden van de day-ahead tarieven, "
                     f"de berekening wordt afgebroken"
@@ -492,13 +492,15 @@ class DaCalc(DaBase):
                     f"No reduced hours applied for {self.battery_options[b].name}"
                 )
 
+            _bat_to_dc_max = self.battery_options[b].bat_to_dc_max_power
             max_dc_from_bat_power.append(
-                max_discharge_power[b] * 2 if self.battery_options[b].bat_to_dc_max_power is None
-                else self.battery_options[b].bat_to_dc_max_power / 1000
+                max_discharge_power[b] * 2 if _bat_to_dc_max is None
+                else _bat_to_dc_max.resolve(ha_getter) / 1000
             )
+            _dc_to_bat_max = self.battery_options[b].dc_to_bat_max_power
             max_dc_to_bat_power.append(
-                max_charge_power[b] * 2 if self.battery_options[b].dc_to_bat_max_power is None
-                else self.battery_options[b].dc_to_bat_max_power / 1000
+                max_charge_power[b] * 2 if _dc_to_bat_max is None
+                else _dc_to_bat_max.resolve(ha_getter) / 1000
             )
 
             # reduce power low soc
@@ -653,7 +655,7 @@ class DaCalc(DaBase):
         ]
         pv_prod_dc_sum = [
             [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=2 * max_charge_power[b])
+                model.add_var(var_type=CONTINUOUS, lb=0, ub=2 * max_discharge_power[b])
                 for _ in range(U)
             ]
             for b in range(B)
@@ -3279,7 +3281,7 @@ class DaCalc(DaBase):
                 df_accu[b].iloc[-1, 6] = np.nan  # eff (dc->bat)
                 df_accu[b].iloc[-1, 8] = np.nan  # o_eff
                 df_accu[b].iloc[-1, 9] = np.nan  # SoC
-
+                df_accu[b] = df_accu[b].fillna('')
             logging.info(
                 f"In- en uitgaande energie per {self.interval_name} batterij "
                 f"{self.battery_options[b].name}"

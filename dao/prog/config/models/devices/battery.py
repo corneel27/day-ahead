@@ -4,7 +4,7 @@ Battery configuration models.
 
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator, ConfigDict, PrivateAttr
-from ..base import EntityId, FlexInt
+from ..base import EntityId, FlexFloat, FlexInt
 from .solar import SolarConfig
 
 
@@ -107,7 +107,7 @@ class BatteryConfig(BaseModel):
         }
     )
     upper_limit: FlexInt = Field(
-        default=100,
+        default=FlexInt(value=100),
         alias="upper limit",
         description="Maximum SOC % (can be HA entity)",
         json_schema_extra={
@@ -118,7 +118,7 @@ class BatteryConfig(BaseModel):
         }
     )
     lower_limit: FlexInt = Field(
-        default=20,
+        default=FlexInt(value=20),
         alias="lower limit",
         description="Minimum SOC % (can be HA entity)",
         json_schema_extra={
@@ -241,9 +241,8 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    dc_to_bat_max_power: Optional[float] = Field(
+    dc_to_bat_max_power: Optional[FlexFloat] = Field(
         default=None,
-        gt=0,
         alias="dc_to_bat max power",
         description="DC to battery max power in watts",
         json_schema_extra={
@@ -264,9 +263,9 @@ class BatteryConfig(BaseModel):
             "x-validation-hint": "0.0-1.0, typically 0.95-0.98"
         }
     )
-    bat_to_dc_max_power:  Optional[float] = Field(
+    bat_to_dc_max_power: Optional[FlexFloat] = Field(
         default=None,
-        gt=0,
+        alias="bat_to_dc max power",
         description="Battery to DC max power in watts",
         json_schema_extra={
             "x-help": "Maximum power for battery to DC bus conversion in watts. Rarely used in typical residential setups.",
