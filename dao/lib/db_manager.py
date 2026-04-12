@@ -271,6 +271,8 @@ class DBmanagerObj(object):
                 value = dfrow["value"]
                 if not isinstance(value, (int, float)):
                     continue
+                if pd.isna(value):
+                    continue
                 if value == float("inf"):
                     continue
 
