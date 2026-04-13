@@ -965,7 +965,7 @@
           "description": "Charging current in amperes",
           "minimum": 0,
           "title": "Ampere",
-          "type": "integer",
+          "type": "number",
           "x-help": "Charging current in amperes for this stage. Typical values: 6A (1.4kW), 10A (2.3kW), 16A (3.7kW), 32A (7.4kW) for single-phase.",
           "x-ui-section": "General",
           "x-unit": "A",
