@@ -1,5 +1,14 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.4.3.rc1
+### Changes:
+- Added flatpickr datetime picker in Home-menu (PR from @Doogooder)
+
+### Fixes
+- changed ev-ampere from integer to float
+- Skip NaN values when persisting DB records
+- Fix startup issue (PR from @simnet)
+
 # 2026.04.2.rc1
 Accept uppercase for entities
 
