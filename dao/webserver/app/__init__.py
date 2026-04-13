@@ -3,6 +3,7 @@ from flask import Flask
 # sys.path.append("../")
 
 app = Flask(__name__)
+app.secret_key = 'secret_cookie_key' 
 
 from dao.webserver.app.routes import *
 

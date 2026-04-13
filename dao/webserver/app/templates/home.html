@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block selectie %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script>
   function confirmation(){
     var result = confirm("Wil je dit verwijderen?");
@@ -10,7 +12,71 @@
     else {
       return false;
     }
-}
+  }
+  
+  function onDateChange(selectedDates) {
+    // User just closed the picker; they still need to click Apply
+  }
+    
+  document.addEventListener('DOMContentLoaded', function() {
+    // Parse available datetime strings (already formatted as Y-m-d H:i)
+    var availableTimes = {{ flatpickr_times | tojson }};
+    var defaultTimeTs = {{ flatpickr_default_ts | tojson }};
+    var defaultDateStr = "{{ flatpickr_default }}";
+    
+    // Convert datetime strings to Date objects to only show available options in the picker  
+    var enableDates = availableTimes.map(function(dateStr) {
+      return new Date(dateStr.replace(' ', 'T'));  // Parse ISO format
+    });
+    
+    flatpickr("#datetime_picker", {
+      enableTime: true,
+      dateFormat: "Y-m-d H:i",
+      time_24hr: true,
+      minuteIncrement: 15,
+      onClose: onDateChange,
+      minDate: new Date(Math.min(...enableDates.map(dateStr => new Date(dateStr)))), // Set minDate to the earliest available datetime  
+      maxDate: new Date(Math.max(...enableDates.map(dateStr => new Date(dateStr)))), // Set maxDate to the latest available datetime     
+      defaultDate: defaultDateStr || null, //set default so it matches the current active_time, or null if no active time
+      onBlur: function(selectedDates, dateStr, instance) {
+        // Prevent reverting when blurring away from picker
+        if (instance.selectedDates.length === 0 && defaultDateStr) {
+          instance.setDate(defaultDateStr, false);
+        }
+      },
+      onReady: function(selectedDates, dateStr, instance) {
+        // Add buttons to the calendar container
+        var calendarContainer = instance.calendarContainer;
+        var buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = 'display: flex; justify-content: center; gap: 10px; padding: 10px; border-top: 1px solid #e5e5e5;';
+        
+        var clearButton = document.createElement('button');
+        clearButton.textContent = 'Clear';
+        clearButton.style.cssText = 'background: #f8f8f8; color: #292a2e; border: 1px solid #ddd; padding: 5px 15px; border-radius: 4px; cursor: pointer;';
+        clearButton.onclick = function() {
+          instance.clear();
+          instance.close();
+        };
+        
+        var applyButton = document.createElement('button');
+        applyButton.textContent = 'Apply';
+        applyButton.style.cssText = 'background: #569ff7; color: #fff; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer;';
+        applyButton.onclick = function() {
+          if (instance.selectedDates.length > 0) {
+            // Get UTC timestamp from selected Date object
+            var selectedDate = instance.selectedDates[0];
+            var utcTimestamp = Math.floor(selectedDate.getTime() / 1000);
+            $('#active_time').val(utcTimestamp);
+            $("#content_form").submit();
+          }
+        };
+        
+        buttonContainer.appendChild(clearButton);
+        buttonContainer.appendChild(applyButton);
+        calendarContainer.appendChild(buttonContainer);
+      }
+    });
+  });
 </script>
 <form method="post" id="content_form">
 <div class="selector-container">
@@ -56,13 +122,14 @@
       <button name="action" class="btn btn_mid" value="fast_forward" title="-6 uur">
         <img src="static/frev.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
-	  <button name="action" class="btn btn_mid" value="next">
+      <button name="action" class="btn btn_mid" value="next">
         <img src="static/next.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
+      <input type="text" id="datetime_picker" placeholder="Select datetime" value="{{ flatpickr_default }}" style="height: 1em; padding: 0.25em; min-width: 110px; max-width: 160px;">
       <button name="action" class="btn btn_mid" value="previous">
         <img src="static/prev.png" alt="next" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
-	  <button name="action" class="btn btn_mid" value="fast_reverse" title="+6 uur">
+      <button name="action" class="btn btn_mid" value="fast_reverse" title="+6 uur">
         <img src="static/ffwd.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
       <button name="action" class="btn btn_mid" value="first">
