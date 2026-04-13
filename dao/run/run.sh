@@ -41,7 +41,7 @@ fi
 
 export PYTHONPATH="/root:/root/dao:/root/dao/lib:/root/dao/prog"
 cd /root/dao/prog
-python3 check_db.py || { bashio::log.info "check_db.py failed, exiting"; sleep 5; exit 1; }
+python3 check_db.py || bashio::log.info "check_db.py failed"
 
 if [ -d /config/miplib/lib ]; then
   bashio::log.info "Copying saved miplib-binaries"
@@ -59,16 +59,9 @@ if [ -d miplib/lib ]; then
   echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc
 fi
 
-cd /root/dao/webserver/
-gunicorn --config gunicorn_config.py app:app &
 
 cd /root/dao/prog
-bash ./watchdog.sh python3 da_scheduler.py
+bash ./watchdog.sh python3 da_scheduler.py &
 
-
-
-
-
-
-
-
+cd /root/dao/webserver/
+gunicorn --config gunicorn_config.py app:app
