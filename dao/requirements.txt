@@ -1,5 +1,5 @@
 pandas~=3.0.2
-pydantic~=2.12.5
+pydantic~=2.13.0
 pydantic-settings~=2.13.1
 pytz~=2026.1
 requests~=2.33.1

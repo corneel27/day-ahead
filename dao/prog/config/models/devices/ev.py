@@ -10,7 +10,7 @@ from ..base import EntityId, FlexBool
 class EVChargeStage(BaseModel):
     """Single EV charging stage with amperage and efficiency."""
     
-    ampere: int = Field(
+    ampere: float = Field(
         ge=0,
         description="Charging current in amperes",
         json_schema_extra={

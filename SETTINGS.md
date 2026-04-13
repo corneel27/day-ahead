@@ -1854,7 +1854,7 @@ Define charging curve by specifying amperage and efficiency pairs. Multiple stag
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `ampere` | integer | Yes | — | Charging current in amperes (Unit: `A`) _Must be >= 0, typically 6-32A_ |
+| `ampere` | number | Yes | — | Charging current in amperes (Unit: `A`) _Must be >= 0, typically 6-32A_ |
 | `efficiency` | number | Yes | — | Charging efficiency at this amperage (0-1) (Unit: `ratio`) _0.0-1.0, typically 0.85-0.95_ |
 
 <details>
