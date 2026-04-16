@@ -34,6 +34,7 @@
       dateFormat: "Y-m-d H:i",
       time_24hr: true,
       minuteIncrement: 15,
+      disableMobile: "true", // use Desktop version on mobile devices to ensure consistent behavior
       onClose: onDateChange,
       minDate: new Date(Math.min(...enableDates.map(dateStr => new Date(dateStr)))), // Set minDate to the earliest available datetime  
       maxDate: new Date(Math.max(...enableDates.map(dateStr => new Date(dateStr)))), // Set maxDate to the latest available datetime     
