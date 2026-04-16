@@ -11,7 +11,7 @@ from datetime import date
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
     
-    source_day_ahead: Literal['nordpool', 'entsoe', 'tibber'] = Field(
+    source_day_ahead: Literal["nordpool", "entsoe", "tibber", "easyenergy"] = Field(
         default='nordpool',
         alias="source day ahead",
         description="Source for day-ahead prices",
@@ -19,6 +19,19 @@ class PricingConfig(BaseModel):
             "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
             "x-ui-section": "Prices"
         }
+    )
+    source_day_ahead_fallback: list[Literal["nordpool", "entsoe", "tibber", "easyenergy"]] = Field(
+        default_factory=list,
+        alias="source day ahead fallback",
+        description="Fallback sources for day-ahead prices (used when primary source fails)",
+        json_schema_extra={
+            "default": [],
+            "x-help": (
+                "Optional fallback sources to try when the primary 'source day ahead' is unavailable "
+                "or returns no data. Example: ['entsoe', 'tibber']."
+            ),
+            "x-ui-section": "Prices",
+        },
     )
     entsoe_api_key: Optional[SecretStr] = Field(
         default=None,

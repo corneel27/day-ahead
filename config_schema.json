@@ -2059,11 +2059,29 @@
           "enum": [
             "nordpool",
             "entsoe",
-            "tibber"
+            "tibber",
+            "easyenergy"
           ],
           "title": "Source Day Ahead",
           "type": "string",
           "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+          "x-ui-section": "Prices"
+        },
+        "source day ahead fallback": {
+          "default": [],
+          "description": "Fallback sources for day-ahead prices (used when primary source fails)",
+          "items": {
+            "enum": [
+              "nordpool",
+              "entsoe",
+              "tibber",
+              "easyenergy"
+            ],
+            "type": "string"
+          },
+          "title": "Source Day Ahead Fallback",
+          "type": "array",
+          "x-help": "Optional fallback sources to try when the primary 'source day ahead' is unavailable or returns no data. Example: ['entsoe', 'tibber'].",
           "x-ui-section": "Prices"
         },
         "entsoe-api-key": {
