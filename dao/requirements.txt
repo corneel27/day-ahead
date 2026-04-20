@@ -1,6 +1,6 @@
 pandas~=3.0.2
 pydantic~=2.13.0
-pydantic-settings~=2.13.1
+pydantic-settings~=2.14.0
 pytz~=2026.1
 requests~=2.33.1
 matplotlib~=3.10.8
