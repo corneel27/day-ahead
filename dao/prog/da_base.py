@@ -328,8 +328,34 @@ class DaBase(hass.Hass):
         report.consolidate_data(start_dt)
 
     def get_day_ahead_prices(self):
-        source = self.prices_options.source_day_ahead if self.prices_options else "nordpool"
-        self.prices.get_prices(source)
+        primary_source = (
+            self.prices_options.source_day_ahead if self.prices_options else "nordpool"
+        )
+        fallback_sources = []
+        if self.prices_options is not None:
+            fallback_sources = getattr(self.prices_options, "source_day_ahead_fallback", []) or []
+
+        sources = []
+        for source in [primary_source, *fallback_sources]:
+            if not source:
+                continue
+            source_norm = str(source).strip().lower()
+            if source_norm not in sources:
+                sources.append(source_norm)
+
+        for source in sources:
+            ok, fetched = self.prices.get_prices(source)
+            if ok:
+                if fetched:
+                    logging.info(f"Day-ahead prijzen opgehaald via bron: {source}")
+                else:
+                    logging.info("Day-ahead prijzen waren al aanwezig; ophalen is overgeslagen.")
+                return
+            logging.warning(f"Day-ahead bron '{source}' leverde geen data; trying fallback.")
+
+        logging.error(
+            "Geen day-ahead prijzen opgehaald: alle geconfigureerde bronnen faalden of leverden geen data."
+        )
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """

@@ -1294,7 +1294,8 @@ System uses tariff active on optimization date.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
+| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber`, `easyenergy` |
+| `source day ahead fallback` | list[string] | No | `[]` | Fallback sources for day-ahead prices (used when primary source fails) |
 | `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
@@ -1311,6 +1312,10 @@ System uses tariff active on optimization date.
 **`source day ahead`**
 
 Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.
+
+**`source day ahead fallback`**
+
+Optional fallback sources to try when the primary 'source day ahead' is unavailable or returns no data. Example: ['entsoe', 'tibber'].
 
 **`entsoe-api-key`**
 

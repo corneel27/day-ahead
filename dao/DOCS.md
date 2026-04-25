@@ -657,6 +657,7 @@ Het is allemaal optioneel.
 | **meteoserver-model**     |                               | string           | harmonie                           | keuze uit harmonie of gfs                          |
 | **meteoserver-attempts**  |                               | getal            | 2                                  | aantal ophaal pogingen                             |
 | **prices**                | source day ahead              | string           | nordpool                           | keuze uit: nordpool / entsoe / easyenergy / tibber |
+|                           | source day ahead fallback     | list             | []                                 | fallback bronnen (op volgorde) als de eerste bron geen data geeft |
 |                           | entsoe-api-key                | string           |                                    | alleen bij entsoe als source                       |
 |                           | regular high                  | getal            |                                    |                                                    |
 |                           | regular low                   | getal            |                                    |                                                    |
@@ -932,6 +933,11 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
    * entsoe
    * easyenergy
    * tibber<br>
+
+ * source day ahead fallback, default []
+     Optioneel: lijst van fallback bronnen (op volgorde) die geprobeerd worden als de primaire bron geen data geeft.
+     Voorbeeld (1 fallback): `["nordpool"]`  
+     Voorbeeld (meerdere fallbacks): `["entsoe", "tibber"]`
 
     Als je kiest voor **entsoe** dan moet je hieronder een api key invullen.
  * entsoe-api-key:  
