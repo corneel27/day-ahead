@@ -3900,7 +3900,6 @@ class DaCalc(DaBase):
                                 else:
                                     self.turn_off(entity_pv_switch)
                                     logging.info(f"PV {pv_name} uitgezet")
-                            self.turn_on(entity_pv_switch)
 
             ##################################################
             # heatpump
