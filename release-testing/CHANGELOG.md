@@ -1,9 +1,5 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-#2026.4.4.rc1
-- Fix error closing pv_dc
-- Fix error datepicker on android
-
 # 2026.4.3.rc1
 ### Changes:
 - Added flatpickr datetime picker in Home-menu (PR from @Doogooder)
