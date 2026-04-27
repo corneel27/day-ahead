@@ -39,7 +39,7 @@ COPY requirements.txt /build/
 RUN if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -s `which mariadb_config` /usr/local/bin/mariadb_config; fi
 RUN uv pip install -r requirements.txt
 
-# Copy Python source with expected directory structure (script expects dao/prog/)
+# Copy Python source with expected directory structure (script expects dao/prog)
 RUN mkdir -p /build/dao
 COPY prog/ /build/dao/prog/
 
@@ -48,7 +48,7 @@ COPY frontend/ /build/dao/frontend/
 
 # Generate schemas
 RUN mkdir -p /build/schemas && \
-    python3 /build/dao/frontend/generate_uischema.py \
+    PYTHONPATH=/build/dao/prog python3 /build/dao/frontend/generate_uischema.py \
         --quiet --output-dir /build/schemas
 
 # Build frontend
