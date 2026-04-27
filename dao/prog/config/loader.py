@@ -2,6 +2,8 @@
 Configuration loader with support for versioning, migration, and unknown key preservation.
 """
 
+import os
+import tempfile
 import shutil
 import json
 import logging
@@ -176,6 +178,7 @@ class ConfigurationLoader:
     def save(self, config_data: dict[str, Any], save_path: Optional[Path] = None) -> None:
         """
         Save configuration to disk, preserving unknown keys.
+        Uses file locking and atomic save for safe concurrent access.
         
         Args:
             config_data: Configuration to save (can be Pydantic model dict or raw dict)
@@ -194,11 +197,45 @@ class ConfigurationLoader:
         else:
             save_data = config_data
         
-        # Write to disk
-        with open(save_path, 'w', encoding='utf-8') as f:
-            json.dump(save_data, f, indent=2, ensure_ascii=False)
+        # Ensure parent directory exists
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         
-        logger.info(f"Saved configuration to {save_path}")
+        # Create lock file if it doesn't exist
+        lock_file = None
+        try:
+            # Open/create lock file for exclusive locking
+            lock_file = open(save_path, 'a+', encoding='utf-8')
+            
+            # Acquire exclusive lock (blocks until available)
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            
+            # Write to temporary file in same directory (for atomic rename)
+            temp_fd, temp_path = tempfile.mkstemp(
+                dir=save_path.parent,
+                prefix=f".{save_path.name}.",
+                suffix=".tmp"
+            )
+            
+            try:
+                # Write JSON to temp file
+                with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+                    json.dump(save_data, f, indent=2, ensure_ascii=False)
+                
+                # Atomic rename (replaces target file)
+                os.replace(temp_path, save_path)
+                
+                logger.info(f"Saved configuration to {save_path}")
+                
+            except Exception as e:
+                # Clean up temp file on error
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
+            
+        finally:
+            # Release lock and close file
+            if lock_file:
+                lock_file.close()
     
     @property
     def secrets(self) -> dict[str, str]:
@@ -206,3 +243,68 @@ class ConfigurationLoader:
         if self._secrets is None:
             self._load_secrets()
         return self._secrets
+    
+    def save_secrets(self, secrets_data: dict[str, str], save_path: Optional[Path] = None) -> None:
+        """
+        Save secrets to disk with file locking and atomic save.
+        
+        Args:
+            secrets_data: Dictionary of secret key-value pairs (all values must be strings)
+            save_path: Path to save to (defaults to self.secrets_path)
+        
+        Raises:
+            ValueError: If secrets_data is not a dict or contains non-string values
+        """
+        if save_path is None:
+            save_path = self.secrets_path
+        
+        # Validate structure
+        if not isinstance(secrets_data, dict):
+            raise ValueError("Secrets must be a dictionary")
+        
+        for key, value in secrets_data.items():
+            if not isinstance(key, str) or not isinstance(value, str):
+                raise ValueError(f"All secrets keys and values must be strings (invalid: {key})")
+        
+        # Ensure parent directory exists
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Create lock file if it doesn't exist
+        lock_file = None
+        try:
+            # Open/create lock file for exclusive locking
+            lock_file = open(save_path, 'a+', encoding='utf-8')
+            
+            # Acquire exclusive lock (blocks until available)
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            
+            # Write to temporary file in same directory (for atomic rename)
+            temp_fd, temp_path = tempfile.mkstemp(
+                dir=save_path.parent,
+                prefix=f".{save_path.name}.",
+                suffix=".tmp"
+            )
+            
+            try:
+                # Write JSON to temp file
+                with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+                    json.dump(secrets_data, f, indent=2, ensure_ascii=False)
+                
+                # Atomic rename (replaces target file)
+                os.replace(temp_path, save_path)
+                
+                # Update cache
+                self._secrets = secrets_data.copy()
+                
+                logger.warning(f"Saved {len(secrets_data)} secrets to {save_path} (values not logged)")
+                
+            except Exception as e:
+                # Clean up temp file on error
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
+            
+        finally:
+            # Release lock and close file
+            if lock_file:
+                lock_file.close()
