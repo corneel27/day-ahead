@@ -14,13 +14,10 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update -y && \
-  apt-get install -y \
-    python3 python3-pip python3-venv \
-    wget curl gnupg \
-    gcc g++ \
-    libmariadb-dev libmariadb3 mariadb-client \
-    postgresql-client sqlite3 \
-    libjpeg-dev libffi-dev libnauty-dev coinor-libcgl-dev
+  apt-get install -y pkgconf nano file mariadb-client inotify-tools procps \
+    gunicorn libmariadb3 libmariadb-dev postgresql-client sqlite3 libjpeg-dev libffi-dev \
+    wget libnauty-dev coinor-libcgl-dev gcc g++ git \
+    python3 python3-pip python3-venv
 
 # Install Node.js 24 LTS (current LTS)
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
@@ -42,20 +39,20 @@ COPY requirements.txt /build/
 RUN if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -s `which mariadb_config` /usr/local/bin/mariadb_config; fi
 RUN uv pip install -r requirements.txt
 
-# Copy Python source needed for schema generation
-COPY prog/config/ /build/prog/config/
-COPY prog/__init__.py /build/prog/__init__.py
+# Copy Python source with expected directory structure (script expects dao/prog/)
+RUN mkdir -p /build/dao
+COPY prog/ /build/dao/prog/
 
 # Copy frontend with schema generation script
-COPY frontend/ /build/frontend/
+COPY frontend/ /build/dao/frontend/
 
 # Generate schemas
 RUN mkdir -p /build/schemas && \
-    PYTHONPATH=/build python3 frontend/generate_uischema.py \
+    python3 /build/dao/frontend/generate_uischema.py \
         --quiet --output-dir /build/schemas
 
 # Build frontend
-WORKDIR /build/frontend
+WORKDIR /build/dao/frontend
 
 # Install frontend dependencies
 RUN pnpm install --frozen-lockfile
@@ -64,7 +61,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 # Verify build outputs exist
-RUN test -f /build/frontend/dist/index.html && \
+RUN test -f /build/dao/frontend/dist/index.html && \
     test -f /build/schemas/schema.json && \
     test -f /build/schemas/uischema.json && \
     echo "✅ Build verification passed"
@@ -99,7 +96,7 @@ COPY webserver /root/dao/webserver/
 COPY data /tmp/daodata/
 
 # Copy built frontend from builder stage
-COPY --from=builder /build/frontend/dist/ /root/dao/webserver/app/static/config-ui/
+COPY --from=builder /build/dao/frontend/dist/ /root/dao/webserver/app/static/config-ui/
 
 # Copy generated schemas from builder stage
 COPY --from=builder /build/schemas/ /root/dao/webserver/app/static/schemas/
