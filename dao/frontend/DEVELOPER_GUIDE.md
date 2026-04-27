@@ -77,7 +77,7 @@ source .venv/bin/activate  # macOS/Linux
 pip install -r dao/requirements.txt
 
 # Generate schemas (required for config UI)
-python scripts/generate_uischema.py
+python dao/frontend/generate_uischema.py
 
 # Start Flask backend
 cd dao/webserver
@@ -274,7 +274,7 @@ python da_server.py
 ```bash
 cd /path/to/day-ahead
 source .venv/bin/activate
-python scripts/generate_uischema.py
+python dao/frontend/generate_uischema.py
 ```
 
 #### 4. TypeScript errors in IDE

@@ -482,7 +482,7 @@ Schemas must be generated before starting the server:
 ```bash
 # From workspace root
 source .venv/bin/activate
-python scripts/generate_uischema.py
+python dao/frontend/generate_uischema.py
 
 # Output location:
 # - dao/webserver/app/static/schemas/schema.json

@@ -19,8 +19,6 @@ import {
   IconButton,
   Toolbar,
   AppBar,
-  Tabs,
-  Tab,
   Alert,
   Tooltip,
   Snackbar,
@@ -137,12 +135,41 @@ function App() {
   const [showRevertDialog, setShowRevertDialog] = useState(false)
 
   useEffect(() => {
+    // Helper to fetch and handle errors gracefully
+    const fetchJSON = async (url: string, optional = false) => {
+      try {
+        const response = await fetch(url)
+        
+        // Check if response is ok
+        if (!response.ok) {
+          if (optional && response.status === 404) {
+            return null
+          }
+          throw new Error(`Server returned ${response.status}: ${response.statusText}`)
+        }
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server did not return JSON data')
+        }
+        
+        return await response.json()
+      } catch (err) {
+        if (err instanceof TypeError && err.message.includes('fetch')) {
+          // Network error - backend not running
+          throw new Error('Cannot connect to backend server. Please ensure the backend is running.')
+        }
+        throw err
+      }
+    }
+
     // Load schemas, config, and secrets
     Promise.all([
-      fetch('/api/v2/config/uischema').then(r => r.json()),
-      fetch('/api/v2/config/schema').then(r => r.json()),
-      fetch('/api/v2/config').then(r => r.json()),
-      fetch('/api/v2/secrets').then(r => r.json()).catch(() => ({}))
+      fetchJSON('/api/v2/config/uischema'),
+      fetchJSON('/api/v2/config/schema'),
+      fetchJSON('/api/v2/config'),
+      fetchJSON('/api/v2/secrets', true).catch(() => ({}))
     ])
       .then(([uischemaData, schemaData, configData, secretsData]) => {
         // Add Secrets category to UISchema
@@ -278,26 +305,31 @@ function App() {
         fetch('/api/v2/secrets')
       ])
       
-      if (configResponse.ok) {
-        const freshConfig = await configResponse.json()
-        setData(freshConfig)
-        setOriginalData(freshConfig)
+      if (!configResponse.ok) {
+        throw new Error(`Failed to reload configuration: ${configResponse.statusText}`)
       }
       
-      if (secretsResponse.ok) {
-        const freshSecrets = await secretsResponse.json()
-        setSecrets(freshSecrets)
-        setOriginalSecrets(freshSecrets)
+      if (!secretsResponse.ok) {
+        throw new Error(`Failed to reload secrets: ${secretsResponse.statusText}`)
       }
+      
+      const freshConfig = await configResponse.json()
+      const freshSecrets = await secretsResponse.json()
+      
+      setData(freshConfig)
+      setOriginalData(freshConfig)
+      setSecrets(freshSecrets)
+      setOriginalSecrets(freshSecrets)
       
       console.log('Reverted to saved config')
       showNotification('Reverted to saved configuration', 'info')
     } catch (err) {
       console.error('Failed to revert:', err)
-      showNotification(
-        'Failed to revert changes: ' + (err instanceof Error ? err.message : 'Unknown error'),
-        'error'
-      )
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      const friendlyMessage = message.includes('fetch') 
+        ? 'Cannot connect to backend server. Please ensure it is running.'
+        : message
+      showNotification(`Failed to revert changes: ${friendlyMessage}`, 'error')
     }
   }
   
@@ -313,7 +345,9 @@ function App() {
       })
       
       if (!response.ok) {
-        const error = await response.json()
+        const error = await response.json().catch(() => ({ 
+          error: `Server returned ${response.status}: ${response.statusText}` 
+        }))
         console.error('Failed to save config:', error)
         showNotification(
           error.error || 'Failed to save configuration',
@@ -328,10 +362,11 @@ function App() {
       showNotification('Configuration saved successfully', 'success')
     } catch (err) {
       console.error('Failed to save config:', err)
-      showNotification(
-        'Failed to save configuration: ' + (err instanceof Error ? err.message : 'Unknown error'),
-        'error'
-      )
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      const friendlyMessage = message.includes('fetch') 
+        ? 'Cannot connect to backend server. Please ensure it is running.'
+        : message
+      showNotification(`Failed to save configuration: ${friendlyMessage}`, 'error')
     } finally {
       setSaving(false)
     }
@@ -350,7 +385,9 @@ function App() {
       })
       
       if (!saveResponse.ok) {
-        const error = await saveResponse.json()
+        const error = await saveResponse.json().catch(() => ({ 
+          error: `Server returned ${saveResponse.status}: ${saveResponse.statusText}` 
+        }))
         console.error('Failed to save secrets:', error)
         showNotification(
           error.error || 'Failed to save secrets',
@@ -371,10 +408,11 @@ function App() {
       showNotification('Secrets saved successfully', 'success')
     } catch (err) {
       console.error('Failed to save/reload secrets:', err)
-      showNotification(
-        'Failed to save secrets: ' + (err instanceof Error ? err.message : 'Unknown error'),
-        'error'
-      )
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      const friendlyMessage = message.includes('fetch') 
+        ? 'Cannot connect to backend server. Please ensure it is running.'
+        : message
+      showNotification(`Failed to save secrets: ${friendlyMessage}`, 'error')
     } finally {
       setSaving(false)
     }
@@ -389,7 +427,7 @@ function App() {
     
     navigator.clipboard.writeText(jsonString)
       .then(() => {
-        console.log(`${type} copied to clipboard`)
+        console.log('Configuration copied to clipboard')
       })
       .catch(err => {
         console.error('Failed to copy:', err)
@@ -408,8 +446,55 @@ function App() {
   if (error) {
     return (
       <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Paper sx={{ p: 3, bgcolor: 'error.light' }}>
-          <Typography color="error">Error loading configuration: {error}</Typography>
+        <Paper sx={{ p: 4, bgcolor: 'background.paper', border: 2, borderColor: 'error.main' }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+            <Box
+              sx={{
+                bgcolor: 'error.main',
+                color: 'error.contrastText',
+                borderRadius: '50%',
+                width: 48,
+                height: 48,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                flexShrink: 0
+              }}
+            >
+              ⚠
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h5" color="error.main" gutterBottom fontWeight="bold">
+                Unable to Load Configuration
+              </Typography>
+              <Typography variant="body1" color="text.primary" sx={{ mb: 2 }}>
+                {error}
+              </Typography>
+              
+              <Box sx={{ bgcolor: 'action.hover', p: 2, borderRadius: 1, mb: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="bold">
+                  How to fix this:
+                </Typography>
+                <Typography variant="body2" component="div" color="text.secondary">
+                  <ol style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                    <li>Make sure the backend server is running</li>
+                    <li>Check that the server is accessible at <code>http://localhost:5000</code></li>
+                    <li>Verify your network connection</li>
+                    <li>Check the browser console for detailed error messages</li>
+                  </ol>
+                </Typography>
+              </Box>
+
+              <Button
+                variant="contained"
+                onClick={() => window.location.reload()}
+                sx={{ mt: 1 }}
+              >
+                Retry
+              </Button>
+            </Box>
+          </Box>
         </Paper>
       </Container>
     )
