@@ -5,17 +5,22 @@ ARG BUILD_FROM
 # ==============================================================================
 FROM ${BUILD_FROM} as builder
 
+ARG BUILD_ARCH
+
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install build dependencies
+# Install build dependencies (including MariaDB dev libs for Python mariadb package)
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update -y && \
   apt-get install -y \
     python3 python3-pip python3-venv \
     wget curl gnupg \
-    gcc g++
+    gcc g++ \
+    libmariadb-dev libmariadb3 mariadb-client \
+    postgresql-client sqlite3 \
+    libjpeg-dev libffi-dev libnauty-dev coinor-libcgl-dev
 
 # Install Node.js 24 LTS (current LTS)
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
@@ -34,6 +39,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 # Install Python dependencies for schema generation
 RUN pip3 install uv
 COPY requirements.txt /build/
+RUN if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -s `which mariadb_config` /usr/local/bin/mariadb_config; fi
 RUN uv pip install -r requirements.txt
 
 # Copy Python source needed for schema generation
