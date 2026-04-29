@@ -1127,7 +1127,7 @@ class DaCalc(DaBase):
             cooling_rate = self.boiler_options.cooling_rate
             boiler_cooling = cooling_rate * self.interval_s / 3600
             # 45 oC grens daaronder kan worden verwarmd
-            boiler_bovengrens = self.boiler_options.heating_allowed_below
+            boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(ha_getter)
 
             # maximeren op setpoint
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
