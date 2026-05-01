@@ -211,7 +211,17 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
-    
+    entity_stop_laden: Optional[EntityId] = Field(
+        default=None,
+        alias="entity stop laden",
+        description="HA entity for stop charging datetime",
+        json_schema_extra={
+            "x-help": "Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.",
+            "x-ui-section": "General",
+            "x-ui-widget-filter": "input_datetime,datetime"
+        }
+    )
+
     @model_validator(mode='after')
     def validate_charging_method(self) -> 'EVConfig':
         """Ensure either instant charging entities OR charge scheduler is configured."""
@@ -223,7 +233,15 @@ class EVConfig(BaseModel):
                 "EV must have either instant charging entities "
                 "(entity_instant_start + entity_instant_level) OR charge_scheduler configured"
             )
-        
+
+        has_stop_charging = self.entity_stop_charging is not None
+        has_stop_laden = self.entity_stop_laden is not None
+        if has_stop_charging and has_stop_laden:
+            raise ValueError(
+                "EV must have either 'entity stop charging' or 'entity stop laden' "
+                "configured NOT both"
+            )
+
         return self
     
     model_config = ConfigDict(
