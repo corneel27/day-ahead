@@ -14,7 +14,7 @@ class MachineProgram(BaseModel):
         description="Program name (e.g., 'eco', 'quick wash', 'off')",
         json_schema_extra={
             "x-help": "Descriptive name for this program. Examples: 'eco', 'quick wash', 'intensive', 'off'. Must include an 'off' program with zero power.",
-            "x-ui-section": "Battery Specifications"
+            "x-ui-section": "Machine Specifications"
         }
     )
     power: list[float] = Field(
@@ -22,7 +22,7 @@ class MachineProgram(BaseModel):
         json_schema_extra={
             "x-help": "Power profile as list of watts per time interval. Length defines program duration. Example: [2000, 2000, 500, 500, 100] for 5-hour wash cycle.",
             "x-unit": "W",
-            "x-ui-section": "Battery Specifications",
+            "x-ui-section": "Machine Specifications",
             "x-validation-hint": "List of power values, one per interval (typically 1h each)"
         }
     )
@@ -31,7 +31,7 @@ class MachineProgram(BaseModel):
         extra='allow',
         json_schema_extra={
             "x-help": "Define power profile for a machine program. Each program has a name and power consumption pattern over time.",
-            "x-ui-section": "Battery Specifications"
+            "x-ui-section": "Machine Specifications"
         }
     )
 
@@ -43,7 +43,7 @@ class MachineConfig(BaseModel):
         description="Machine name/identifier",
         json_schema_extra={
             "x-help": "Unique name for this appliance. Use descriptive names like 'Washing Machine', 'Dishwasher', or 'Dryer' for multiple machines.",
-            "x-ui-section": "Battery Specifications"
+            "x-ui-section": "Machine Specifications"
         }
     )
     programs: list[MachineProgram] = Field(
@@ -51,7 +51,7 @@ class MachineConfig(BaseModel):
         description="Available programs with power profiles",
         json_schema_extra={
             "x-help": "List of available programs with their power profiles. Must include at least one program. Always include an 'off' program with zero power consumption.",
-            "x-ui-section": "Battery Specifications",
+            "x-ui-section": "Machine Specifications",
             "x-validation-hint": "At least 1 program required, include 'off' program"
         }
     )
@@ -60,7 +60,7 @@ class MachineConfig(BaseModel):
         description="HA entity for start window datetime",
         json_schema_extra={
             "x-help": "Home Assistant datetime entity for earliest allowed start time. Machine can start any time after this. Example: 'Now' or '18:00 today'.",
-            "x-ui-section": "Battery Specifications",
+            "x-ui-section": "Machine Specifications",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
@@ -69,7 +69,7 @@ class MachineConfig(BaseModel):
         description="HA entity for end window datetime",
         json_schema_extra={
             "x-help": "Home Assistant datetime entity for latest allowed completion time. Machine must finish before this deadline. Example: '08:00 tomorrow'.",
-            "x-ui-section": "Battery Specifications",
+            "x-ui-section": "Machine Specifications",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
@@ -78,7 +78,7 @@ class MachineConfig(BaseModel):
         description="HA entity for selected program",
         json_schema_extra={
             "x-help": "Home Assistant entity to select which program to run. Must match program names defined in 'programs' list.",
-            "x-ui-section": "Battery Specifications",
+            "x-ui-section": "Machine Specifications",
             "x-ui-widget-filter": "input_select,select"
         }
     )
@@ -87,7 +87,7 @@ class MachineConfig(BaseModel):
         description="HA entity for calculated optimal start time",
         json_schema_extra={
             "x-help": "Home Assistant entity where system writes the calculated optimal start time. User/automation can use this to trigger machine.",
-            "x-ui-section": "Battery Specifications",
+            "x-ui-section": "Machine Specifications",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
@@ -96,7 +96,7 @@ class MachineConfig(BaseModel):
         description="HA entity for calculated end time",
         json_schema_extra={
             "x-help": "Home Assistant entity where system writes the calculated program end time. Useful for notifications and planning.",
-            "x-ui-section": "Battery Specifications",
+            "x-ui-section": "Machine Specifications",
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
@@ -106,7 +106,7 @@ class MachineConfig(BaseModel):
         description="HA entity for instant start",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to force immediate start, bypassing optimization. Useful for urgent wash cycles.",
-            "x-ui-section": "Battery Specifications",
+            "x-ui-section": "Machine Specifications",
             "x-ui-widget-filter": "input_boolean,switch,button"
         }
     )
