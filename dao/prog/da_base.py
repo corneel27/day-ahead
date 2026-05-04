@@ -143,7 +143,7 @@ class DaBase(hass.Hass):
         else:
             self.hasstoken = _tok.resolve(self.loader.secrets)
 
-        super().__init__(hassurl=self.hassurl, token=self.hasstoken)
+        super().__init__(hassurl=self.hassurl, token=self.hasstoken, timeout=10)
         headers = {
             "Authorization": "Bearer " + self.hasstoken,
             "content-type": "application/json",
