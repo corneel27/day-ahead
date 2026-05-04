@@ -2879,7 +2879,7 @@
       "x-ui-group": "DAO",
       "x-ui-section": "Weather"
     },
-    "meteoserver-attemps": {
+    "meteoserver-attempts": {
       "anyOf": [
         {
           "minimum": 1,
@@ -2891,7 +2891,7 @@
       ],
       "default": 2,
       "description": "Number of meteoserver fetch attempts",
-      "title": "Meteoserver-Attemps",
+      "title": "Meteoserver-Attempts",
       "x-ui-group": "DAO",
       "x-ui-section": "Weather"
     },

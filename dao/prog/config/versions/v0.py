@@ -6,8 +6,8 @@ Version 0 represents the initial Pydantic migration - unversioned configs
 get migrated to this version with no format changes.
 """
 
-from typing import Optional, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, Literal, Any, Dict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 from ..models.base import FlexFloat, FlexEnum, SecretStr, DAOConfigBaseModel
 from ..models.database import HADatabaseConfig, DatabaseConfig
@@ -96,9 +96,8 @@ class ConfigurationV0(DAOConfigBaseModel):
             "x-ui-section": "Weather"
         }
     )
-    meteoserver_attemps: Optional[int] = Field(
+    meteoserver_attempts: Optional[int] = Field(
         default=2,
-        alias="meteoserver-attemps",
         ge=1,
         description="Number of meteoserver fetch attempts",
         json_schema_extra={
@@ -326,3 +325,17 @@ class ConfigurationV0(DAOConfigBaseModel):
         extra='allow',  # Preserve unknown keys
         populate_by_name=True  # Allow both snake_case and aliases
     )
+
+    @model_validator(mode="before")
+    def _accept_multiple_aliases(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(values, dict):
+            return values
+        # prefer canonical name if provided
+        if "meteoserver_attempts" in values:
+            return values
+        # accept both misspelled aliases (underscore and hyphen)
+        if "meteoserver_attemps" in values:
+            values["meteoserver_attempts"] = values.pop("meteoserver_attemps")
+        if "meteoserver-attemps" in values:
+            values["meteoserver_attempts"] = values.pop("meteoserver-attemps")
+        return values

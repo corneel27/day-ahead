@@ -23,7 +23,7 @@ class Meteo:
         mk = config.meteoserver_key
         self.meteoserver_key = mk.resolve(_secrets) if mk is not None else None
         self.meteoserver_model = config.meteoserver_model
-        self.meteoserver_attemps = config.meteoserver_attemps
+        self.meteoserver_attempts = config.meteoserver_attempts
         self.latitude = latitude
         self.longitude = longitude
         self.solar = config.solar
@@ -403,7 +403,7 @@ class Meteo:
             url = "https://data.meteoserver.nl/api/uurverwachting.php"
         else:
             url = "https://data.meteoserver.nl/api/uurverwachting_gfs.php"
-        while count <= self.meteoserver_attemps:
+        while count <= self.meteoserver_attempts:
             resp = get(url + parameters)
             logging.debug(resp.text)
             json_object = {}
@@ -416,7 +416,7 @@ class Meteo:
                 break
             count += 1
 
-        if count > self.meteoserver_attemps:
+        if count > self.meteoserver_attempts:
             return pd.DataFrame()
 
         df = pd.DataFrame.from_records(data)
@@ -424,7 +424,7 @@ class Meteo:
         df1 = df1[:96]
         logging.info(f"Meteodata model {model}")
         logging.info(
-            f"Aantal uitgevoerde ophaalpogingen: {count + 1} van maximaal: {self.meteoserver_attemps}"
+            f"Aantal uitgevoerde ophaalpogingen: {count + 1} van maximaal: {self.meteoserver_attempts}"
         )
         logging.info(f"Aantal records: {len(df1)}")
         logging.info(f"Data {model}: \n{df1.to_string(index=True)}")

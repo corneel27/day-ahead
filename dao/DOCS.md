@@ -225,7 +225,7 @@ Er zijn twee modellen:<br>
   Deze instelling is optioneel. Als je niets instelt wordt "harmonie" als model gekozen.<br>
   De laatste is het best bruikbaar voor gebruikers die via een api een langere termijn voorspelling willen van hun pv-productie.
 * **ophaalpogingen**<br>
-    Met de instelling "meteoserver-attemps" kun je het aantal maximaal aantal pogingen instellingen die DAO doet om meteodata binnen te krijgen.<br>
+    Met de instelling "meteoserver-attempts" kun je het aantal maximaal aantal pogingen instellingen die DAO doet om meteodata binnen te krijgen.<br>
     Ook deze instelling is optioneel. Als je niets instelt worden er maximaal 2 ophaalpogingen per keer gedaan.
 ### **Dynamische uurprijzen**<br>
 Ook het ophalen van dynamische uurprijzen (day ahead prices) stel je in via 
