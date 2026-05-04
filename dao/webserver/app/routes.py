@@ -523,8 +523,8 @@ def load_state():
         return {"status": "idle", "task": None}
 
 
-def run_and_log(cmd,task):
-    logfile = f"../data/log/run_{int(time.time())}.log"
+def run_and_log(cmd, task, logfile):
+    # logfile = f"../data/log/run_{int(time.time())}.log"
     save_state({
         "status": "running",
         "task": task,
@@ -579,7 +579,7 @@ def run_process():
                 logfile = (
                     "../data/log/"
                     + run_bewerking["file_name"]
-                    + "_"
+                    + "_tmp_"
                     + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
                     + ".log"
                 )
@@ -589,7 +589,7 @@ def run_process():
                 task = current_bewerking
                 threading.Thread(
                     target=run_and_log,
-                    args=(cmd,task,),
+                    args=(cmd, task, logfile),
                     daemon=True
                 ).start()
                 log_content = "Opdracht is gestart"
