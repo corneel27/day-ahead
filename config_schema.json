@@ -580,10 +580,16 @@
           "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
         },
         "cooling rate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FlexFloat"
+            },
+            {
+              "$ref": "#/$defs/FlexStr"
+            }
+          ],
           "description": "Cooling rate in degrees per hour",
-          "minimum": 0,
           "title": "Cooling Rate",
-          "type": "number",
           "x-help": "Rate at which water temperature drops when not heating, in °C per hour. Depends on insulation quality. Typical: 0.5-2.0°C/h for well-insulated boilers.",
           "x-ui-section": "Physical Properties",
           "x-unit": "°C/h",
@@ -601,9 +607,16 @@
           "x-validation-hint": "Must be > 0, typically 100-300L"
         },
         "heating allowed below": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FlexFloat"
+            },
+            {
+              "$ref": "#/$defs/FlexStr"
+            }
+          ],
           "description": "Temperature below which heating is allowed",
           "title": "Heating Allowed Below",
-          "type": "number",
           "x-help": "Maximum temperature for starting heating cycle. Heating only occurs when water is below this temperature. Typically same as or slightly above setpoint.",
           "x-ui-section": "Configuration",
           "x-unit": "°C",
@@ -1212,6 +1225,20 @@
       ],
       "x-help": "FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs."
     },
+    "FlexStr": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "boolean"
+        }
+      ],
+      "x-help": "FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs."
+    },
     "GraphicsConfig": {
       "additionalProperties": true,
       "description": "Graphics and visualization settings.",
@@ -1545,14 +1572,21 @@
           "title": "Entity Hp Enabled"
         },
         "degree days factor": {
-          "$ref": "#/$defs/FlexFloat",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FlexFloat"
+            },
+            {
+              "$ref": "#/$defs/FlexStr"
+            }
+          ],
           "default": 1.0,
           "description": "Degree days factor for heat demand calculation",
+          "title": "Degree Days Factor",
           "x-help": "Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.",
           "x-ui-section": "Configuration",
           "x-unit": "factor",
-          "x-validation-hint": "Must be > 0, typically 0.5-10.0",
-          "title": "Degree Days Factor"
+          "x-validation-hint": "Must be > 0, typically 0.5-10.0"
         },
         "adjustment": {
           "default": "power",
