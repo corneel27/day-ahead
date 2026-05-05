@@ -50,6 +50,7 @@
   - [FlexEnum](#flexenum)
   - [FlexFloat](#flexfloat)
   - [FlexInt](#flexint)
+  - [FlexStr](#flexstr)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
   - [ScheduleEntry](#scheduleentry)
@@ -677,7 +678,7 @@ Define power levels and corresponding COP values:
 |-------|------|----------|---------|-------------|
 | `heater present` | boolean | Discriminator | `true` | Whether heating system is present/enabled |
 | `entity hp enabled` | [EntityId](#entityid) (optional) | No | `null` | HA binary sensor for heat pump enabled status |
-| `degree days factor` | [FlexFloat](#flexfloat) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-10.0_ |
+| `degree days factor` | [FlexFloat](#flexfloat) or [FlexStr](#flexstr) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-10.0_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | No | `[]` | Heating power/COP stages _Required for 'power' and 'heating curve' adjustment; must be sorted by max_power_ |
 | `entity adjust heating curve` | [EntityId](#entityid) (optional) | No | `null` | HA entity to adjust heating curve |
@@ -809,9 +810,9 @@ The system models boiler as a thermal battery:
 | `entity boiler enabled` | [EntityId](#entityid) (optional) | No | `null` | HA entity for boiler enabled status |
 | `entity instant start` | [EntityId](#entityid) (optional) | No | `null` | HA entity for instant start |
 | `cop` | number | No | `3.0` | Coefficient of Performance (Unit: `ratio`) _Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump_ |
-| `cooling rate` | number | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
+| `cooling rate` | [FlexFloat](#flexfloat) or [FlexStr](#flexstr) | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
 | `volume` | number | No | `200.0` | Water volume in liters (Unit: `L`) _Must be > 0, typically 100-300L_ |
-| `heating allowed below` | number | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
+| `heating allowed below` | [FlexFloat](#flexfloat) or [FlexStr](#flexstr) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
 | `elec. power` | number | No | `1000.0` | Electrical power in watts (Unit: `W`) _Must be > 0, typically 1000-3000W_ |
 | `activate service` | string (optional) | No | `null` | Service type to activate boiler (e.g., 'press', 'switch') |
 | `activate entity` | [EntityId](#entityid) (optional) | No | `null` | HA entity to activate boiler |
@@ -1888,6 +1889,13 @@ FlexValue enables dynamic configuration using Home Assistant entities. Instead o
 ### Unknown
 
 Select from predefined values or use Home Assistant entity ID. Entity IDs are always valid.
+
+*No configuration fields.*
+
+
+### Unknown
+
+FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
 
 *No configuration fields.*
 
