@@ -4,7 +4,7 @@ Heating system / heat pump configuration models.
 
 from typing import Annotated, Literal, Optional, Union
 from pydantic import BaseModel, Field, model_validator, ConfigDict
-from ..base import EntityId, FlexFloat
+from ..base import EntityId, FlexFloat, FlexStr
 
 
 class HeatingStage(BaseModel):
@@ -88,7 +88,7 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "binary_sensor"
         }
     )
-    degree_days_factor: FlexFloat = Field(
+    degree_days_factor: FlexFloat | FlexStr = Field(
         default=FlexFloat(value=1.0),
         alias="degree days factor",
         description="Degree days factor for heat demand calculation",
