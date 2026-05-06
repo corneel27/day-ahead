@@ -12,7 +12,7 @@ import fcntl
 from .migrations.migrator import migrate_config
 from .versions.v0 import ConfigurationV0
 # Uncomment when creating v1:
-# from .versions.v1 import ConfigurationV1
+from .versions.v1 import ConfigurationV1
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +31,9 @@ class ConfigValidationError(ValueError):
 # Version models registry: maps version number -> Pydantic model class
 VERSION_MODELS: dict[int, Type[BaseModel]] = {
     0: ConfigurationV0,
-    # Uncomment when creating v1:
-    # 1: ConfigurationV1,
+    1: ConfigurationV1,
+    # Uncomment when creating v2:
+    # 2: ConfigurationV2,
 }
 
 # Derive current version from registry

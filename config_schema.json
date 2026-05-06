@@ -1137,22 +1137,6 @@
           "x-ui-section": "General",
           "x-ui-widget-filter": "input_datetime,datetime",
           "title": "Entity Stop Charging"
-        },
-        "entity stop laden": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/EntityId"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "HA entity for stop charging datetime",
-          "x-help": "Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.",
-          "x-ui-section": "General",
-          "x-ui-widget-filter": "input_datetime,datetime",
-          "title": "Entity Stop Laden"
         }
       },
       "required": [
@@ -2894,7 +2878,7 @@
       "x-ui-group": "DAO",
       "x-ui-section": "Weather"
     },
-    "meteoserver_attempts": {
+    "meteoserver-attemps": {
       "anyOf": [
         {
           "minimum": 1,
@@ -2906,7 +2890,7 @@
       ],
       "default": 2,
       "description": "Number of meteoserver fetch attempts",
-      "title": "Meteoserver Attempts",
+      "title": "Meteoserver-Attemps",
       "x-ui-group": "DAO",
       "x-ui-section": "Weather"
     },
