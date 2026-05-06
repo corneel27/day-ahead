@@ -78,7 +78,13 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
         }
         
         logger.info(f"Migrated scheduler: active={active}, {len(schedule)} schedule entries")
-    
+ 
+    _prices_renames = {
+        "cost supplier delivery": "cost supplier consumption",
+        "cost supplier redelivery": "cost supplier production",
+        "energy taxes delivery": "energy taxes consumption",
+        "energy taxes redelivery": "energy taxes production",
+    }   
     # Migrate prices.vat to prices.vat_consumption and prices.vat_production
     if "prices" in migrated and isinstance(migrated["prices"], dict):
         prices = migrated["prices"]
@@ -88,7 +94,12 @@ def migrate_unversioned_to_v0(config: dict[str, Any]) -> dict[str, Any]:
             prices.setdefault("vat production", vat_value)
             del prices["vat"]
             logger.info(f"Migrated prices.vat: set vat consumption and vat production to {vat_value}")
-    
+        for old_key, new_key in _prices_renames.items():
+            if old_key in prices:
+                prices.setdefault(new_key, prices[old_key])
+                del prices[old_key]
+                logger.info(f"Migrated prices.'{old_key}' to prices.'{new_key}'")
+
     # Set database engines to mysql (old default) if not specified
     if "database ha" in migrated and isinstance(migrated["database ha"], dict) and "engine" not in migrated["database ha"]:
         migrated["database ha"]["engine"] = "mysql"
