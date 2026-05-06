@@ -814,7 +814,7 @@ The system models boiler as a thermal battery:
 | `entity boiler enabled` | [EntityId](#entityid) (optional) | No | `null` | HA entity for boiler enabled status |
 | `entity instant start` | [EntityId](#entityid) (optional) | No | `null` | HA entity for instant start |
 | `cop` | number | No | `3.0` | Coefficient of Performance (Unit: `ratio`) _Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump_ |
-| `cooling rate` | number | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
+| `cooling rate` | [FlexFloat](#flexfloat) | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
 | `volume` | number | No | `200.0` | Water volume in liters (Unit: `L`) _Must be > 0, typically 100-300L_ |
 | `heating allowed below` | [FlexFloat](#flexfloat) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
 | `elec. power` | number | No | `1000.0` | Electrical power in watts (Unit: `W`) _Must be > 0, typically 1000-3000W_ |

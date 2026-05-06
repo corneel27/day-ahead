@@ -1124,14 +1124,18 @@ class DaCalc(DaBase):
             )
             # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
             logging.info(f"Boiler hysterese {boiler_hysterese} K")
-            cooling_rate = self.boiler_options.cooling_rate
+
+            cooling_rate = self.boiler_options.cooling_rate.resolve(ha_getter) # FlexFloat
+            logging.info(f"Boiler cooling rate {cooling_rate} K/uur")
             boiler_cooling = cooling_rate * self.interval_s / 3600
-            # 45 oC grens daaronder kan worden verwarmd
-            boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(ha_getter)
+
+            # 45 °C grens daaronder kan worden verwarmd
+            boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(ha_getter) # FlexFloat
+            logging.info(f"Boiler heating allowed below {boiler_bovengrens} °C")
 
             # maximeren op setpoint
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
-            # 37 oC als boiler onder ondergrens komt moet er worden verwarmd
+            # 37 °C als boiler onder ondergrens komt moet er worden verwarmd
             boiler_ondergrens = boiler_setpoint - boiler_hysterese
             # volume in  liter
             vol = self.boiler_options.volume
