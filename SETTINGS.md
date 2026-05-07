@@ -187,11 +187,11 @@ Optional: Home Assistant entity specifying maximum battery level at end of optim
 
 **`charge stages`**
 
-Power stages for charging with corresponding efficiencies. Defines charge curve from AC grid to battery. At least one stage required.
+Power stages for charging with corresponding efficiencies. Defines charge curve from AC grid to battery. At least one stage required. When a 0 W stage is missed this is supplied by the program.
 
 **`discharge stages`**
 
-Power stages for discharging with corresponding efficiencies. Defines discharge curve from battery to AC grid. At least one stage required.
+Power stages for discharging with corresponding efficiencies. Defines discharge curve from battery to AC grid. At least one stage required. When a 0 W stage is missed this is supplied by the program.
 
 **`reduced hours`**
 
@@ -711,7 +711,7 @@ Heat pump control mode: 'on/off' = simple binary control, 'power' = variable pow
 
 **`stages`**
 
-Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.
+Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending. When a 0 W stage is missed this is supplied by the program.
 
 **`entity adjust heating curve`**
 
@@ -1914,7 +1914,7 @@ Define heat pump performance curve by power stages and corresponding COP values.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `max_power` | number | Yes | — | Maximum power in watts for this stage (Unit: `W`) _Must be > 0, stages must be sorted ascending_ |
+| `max_power` | number | Yes | — | Maximum power in watts for this stage (Unit: `W`) _Must be >= 0, stages must be sorted ascending_ |
 | `cop` | number | Yes | — | Coefficient of Performance at this power level (Unit: `ratio`) _Must be > 0, typically 2.5-5.5_ |
 
 <details>

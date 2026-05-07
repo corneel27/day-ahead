@@ -89,23 +89,19 @@ Er zijn drie mogelijke enginess om te verbinden met de db van Home
         "db_path": "/homeassistant"
       }
     ```
-*  **mysql/mariadb** (via een addon van Home Assistant, waarbij zowel 
-     de gebruikte database, als de gedefinieerde user `homeassistant` heten). 
-     Dan vul je in:
-    ```
-   "database ha": {
-      "engine": "mysql",
-      "database": "homeassistant",
-      "username": "homeassistant",
-      "password": "!secret db_ha_password"
-      },```
+  *  **mysql/mariadb** (via een addon van Home Assistant, waarbij zowel 
+       de gebruikte database, als de gedefinieerde user `homeassistant` heten). 
+       Dan vul je in:
+      ```
+     "database ha": {
+        "engine": "mysql",
+        "port": 3306,
+        "database": "homeassistant",
+        "username": "homeassistant",
+        "password": "!secret db_ha_password"
+        },```
 
   waarbij geldt:<br>
-    * het veld engine mag weggelaten worden ("mysql" is default)<br>
-    * als de database "homeassistant" heet kan deze weggelaten worden 
-(Homeassistant is default) <br>
-    * als de username "homeassistant" is kan ook deze weggelaten worden.
-<br>
     * !secret db_ha_password verwijst naar het gedefinieerde 
       wachtwoord dat je hebt opgenomen in het bestand `secrets.json` 
   * **postgresql** <br>
@@ -229,7 +225,7 @@ Er zijn twee modellen:<br>
   Deze instelling is optioneel. Als je niets instelt wordt "harmonie" als model gekozen.<br>
   De laatste is het best bruikbaar voor gebruikers die via een api een langere termijn voorspelling willen van hun pv-productie.
 * **ophaalpogingen**<br>
-    Met de instelling "meteoserver-attemps" kun je het aantal maximaal aantal pogingen instellingen die DAO doet om meteodata binnen te krijgen.<br>
+    Met de instelling "meteoserver-attempts" kun je het aantal maximaal aantal pogingen instellingen die DAO doet om meteodata binnen te krijgen.<br>
     Ook deze instelling is optioneel. Als je niets instelt worden er maximaal 2 ophaalpogingen per keer gedaan.
 ### **Dynamische uurprijzen**<br>
 Ook het ophalen van dynamische uurprijzen (day ahead prices) stel je in via 
@@ -827,9 +823,9 @@ Vul de volgende gegevens in:
  * server: (is niet van toepassing als je kiest engine sqlite) voer ip adres van de server
 (waar mysql, mariadb of postgresql draait); kan achterwege blijven als je werkt met de dao add-on en ok mariadb hebt geinstalleerd als addon
  (default = "core-mariadb")
- * database: naam van de database, default "homeassistant", als je engine sqlite is dan wordt dit de naam van het database-bestand: `homeassistant_v2.db`
+ * database: naam van de database, als je engine sqlite is dan wordt dit de naam van het database-bestand: `homeassistant_v2.db`
  * port: poort op de server, default 3306, niet van toepassing bij engine sqlite
- * username: user name, default "homeassistant", niet van toepassing bij engine sqlite
+ * username: user name, niet van toepassing bij engine sqlite
  * password: wachtwoord, niet van toepassing bij engine sqlite
  * db_path: (alleen van toepassing bij engine sqlite) het pad naar de folder waar het databasebestand in zit (meestal `/config`) 
 

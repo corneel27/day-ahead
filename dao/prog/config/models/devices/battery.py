@@ -174,7 +174,10 @@ class BatteryConfig(BaseModel):
         min_length=1,
         description="Charge power/efficiency curve",
         json_schema_extra={
-            "x-help": "Power stages for charging with corresponding efficiencies. Defines charge curve from AC grid to battery. At least one stage required.",
+            "x-help": "Power stages for charging with corresponding efficiencies. "
+                      "Defines charge curve from AC grid to battery. "
+                      "At least one stage required. "
+                      "When a 0 W stage is missed this is supplied by the program.",
             "x-ui-section": "Power Configuration",
             "x-validation-hint": "At least 1 stage required, ordered by power"
         }
@@ -184,7 +187,10 @@ class BatteryConfig(BaseModel):
         min_length=1,
         description="Discharge power/efficiency curve",
         json_schema_extra={
-            "x-help": "Power stages for discharging with corresponding efficiencies. Defines discharge curve from battery to AC grid. At least one stage required.",
+            "x-help": "Power stages for discharging with corresponding efficiencies. "
+                      "Defines discharge curve from battery to AC grid. "
+                      "At least one stage required. "
+                      "When a 0 W stage is missed this is supplied by the program.",
             "x-ui-section": "Power Configuration",
             "x-validation-hint": "At least 1 stage required, ordered by power"
         }

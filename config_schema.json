@@ -116,7 +116,7 @@
           "minItems": 1,
           "title": "Charge Stages",
           "type": "array",
-          "x-help": "Power stages for charging with corresponding efficiencies. Defines charge curve from AC grid to battery. At least one stage required.",
+          "x-help": "Power stages for charging with corresponding efficiencies. Defines charge curve from AC grid to battery. At least one stage required. When a 0 W stage is missed this is supplied by the program.",
           "x-ui-section": "Power Configuration",
           "x-validation-hint": "At least 1 stage required, ordered by power"
         },
@@ -128,7 +128,7 @@
           "minItems": 1,
           "title": "Discharge Stages",
           "type": "array",
-          "x-help": "Power stages for discharging with corresponding efficiencies. Defines discharge curve from battery to AC grid. At least one stage required.",
+          "x-help": "Power stages for discharging with corresponding efficiencies. Defines discharge curve from battery to AC grid. At least one stage required. When a 0 W stage is missed this is supplied by the program.",
           "x-ui-section": "Power Configuration",
           "x-validation-hint": "At least 1 stage required, ordered by power"
         },
@@ -1574,7 +1574,7 @@
           },
           "title": "Stages",
           "type": "array",
-          "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
+          "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending. When a 0 W stage is missed this is supplied by the program.",
           "x-ui-section": "Power Stages",
           "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power"
         },
@@ -1745,7 +1745,7 @@
           "x-help": "Maximum electrical power consumption for this heating stage in watts. Heat pumps often have multiple stages (e.g., compressor speeds).",
           "x-ui-section": "General",
           "x-unit": "W",
-          "x-validation-hint": "Must be > 0, stages must be sorted ascending"
+          "x-validation-hint": "Must be >= 0, stages must be sorted ascending"
         },
         "cop": {
           "description": "Coefficient of Performance at this power level",
@@ -1866,7 +1866,7 @@
           "title": "Name",
           "type": "string",
           "x-help": "Unique name for this appliance. Use descriptive names like 'Washing Machine', 'Dishwasher', or 'Dryer' for multiple machines.",
-          "x-ui-section": "Battery Specifications"
+          "x-ui-section": "Machine Specifications"
         },
         "programs": {
           "description": "Available programs with power profiles",
@@ -1877,14 +1877,14 @@
           "title": "Programs",
           "type": "array",
           "x-help": "List of available programs with their power profiles. Must include at least one program. Always include an 'off' program with zero power consumption.",
-          "x-ui-section": "Battery Specifications",
+          "x-ui-section": "Machine Specifications",
           "x-validation-hint": "At least 1 program required, include 'off' program"
         },
         "entity start window": {
           "$ref": "#/$defs/EntityId",
           "description": "HA entity for start window datetime",
           "x-help": "Home Assistant datetime entity for earliest allowed start time. Machine can start any time after this. Example: 'Now' or '18:00 today'.",
-          "x-ui-section": "Battery Specifications",
+          "x-ui-section": "Machine Specifications",
           "x-ui-widget-filter": "input_datetime,datetime",
           "title": "Entity Start Window"
         },
@@ -1892,7 +1892,7 @@
           "$ref": "#/$defs/EntityId",
           "description": "HA entity for end window datetime",
           "x-help": "Home Assistant datetime entity for latest allowed completion time. Machine must finish before this deadline. Example: '08:00 tomorrow'.",
-          "x-ui-section": "Battery Specifications",
+          "x-ui-section": "Machine Specifications",
           "x-ui-widget-filter": "input_datetime,datetime",
           "title": "Entity End Window"
         },
@@ -1900,7 +1900,7 @@
           "$ref": "#/$defs/EntityId",
           "description": "HA entity for selected program",
           "x-help": "Home Assistant entity to select which program to run. Must match program names defined in 'programs' list.",
-          "x-ui-section": "Battery Specifications",
+          "x-ui-section": "Machine Specifications",
           "x-ui-widget-filter": "input_select,select",
           "title": "Entity Selected Program"
         },
@@ -1908,7 +1908,7 @@
           "$ref": "#/$defs/EntityId",
           "description": "HA entity for calculated optimal start time",
           "x-help": "Home Assistant entity where system writes the calculated optimal start time. User/automation can use this to trigger machine.",
-          "x-ui-section": "Battery Specifications",
+          "x-ui-section": "Machine Specifications",
           "x-ui-widget-filter": "input_datetime,datetime",
           "title": "Entity Calculated Start"
         },
@@ -1916,7 +1916,7 @@
           "$ref": "#/$defs/EntityId",
           "description": "HA entity for calculated end time",
           "x-help": "Home Assistant entity where system writes the calculated program end time. Useful for notifications and planning.",
-          "x-ui-section": "Battery Specifications",
+          "x-ui-section": "Machine Specifications",
           "x-ui-widget-filter": "input_datetime,datetime",
           "title": "Entity Calculated End"
         },
@@ -1932,7 +1932,7 @@
           "default": null,
           "description": "HA entity for instant start",
           "x-help": "Optional: Home Assistant entity to force immediate start, bypassing optimization. Useful for urgent wash cycles.",
-          "x-ui-section": "Battery Specifications",
+          "x-ui-section": "Machine Specifications",
           "x-ui-widget-filter": "input_boolean,switch,button",
           "title": "Entity Instant Start"
         }
@@ -1963,7 +1963,7 @@
           "title": "Name",
           "type": "string",
           "x-help": "Descriptive name for this program. Examples: 'eco', 'quick wash', 'intensive', 'off'. Must include an 'off' program with zero power.",
-          "x-ui-section": "Battery Specifications"
+          "x-ui-section": "Machine Specifications"
         },
         "power": {
           "description": "Power consumption in watts for each time interval",
@@ -1973,7 +1973,7 @@
           "title": "Power",
           "type": "array",
           "x-help": "Power profile as list of watts per time interval. Length defines program duration. Example: [2000, 2000, 500, 500, 100] for 5-hour wash cycle.",
-          "x-ui-section": "Battery Specifications",
+          "x-ui-section": "Machine Specifications",
           "x-unit": "W",
           "x-validation-hint": "List of power values, one per interval (typically 1h each)"
         }
@@ -1985,7 +1985,7 @@
       "title": "MachineProgram",
       "type": "object",
       "x-help": "Define power profile for a machine program. Each program has a name and power consumption pattern over time.",
-      "x-ui-section": "Battery Specifications"
+      "x-ui-section": "Machine Specifications"
     },
     "NotificationsConfig": {
       "additionalProperties": true,

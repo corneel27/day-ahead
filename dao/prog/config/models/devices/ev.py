@@ -211,7 +211,7 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "input_datetime,datetime"
         }
     )
-    
+
     @model_validator(mode='after')
     def validate_charging_method(self) -> 'EVConfig':
         """Ensure either instant charging entities OR charge scheduler is configured."""
@@ -223,7 +223,7 @@ class EVConfig(BaseModel):
                 "EV must have either instant charging entities "
                 "(entity_instant_start + entity_instant_level) OR charge_scheduler configured"
             )
-        
+
         return self
     
     model_config = ConfigDict(

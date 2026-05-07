@@ -486,7 +486,7 @@ def home():
         version=__version__,
     )
 
-logfile = "../data/log/run.log"
+# logfile = "../data/log/run.log"
 """
 task_state = {
     "status": "idle",    # idle | running | done | error
@@ -523,13 +523,13 @@ def load_state():
         return {"status": "idle", "task": None}
 
 
-def run_and_log(cmd,task):
-    global logfile
-
+def run_and_log(cmd, task, logfile):
+    # logfile = f"../data/log/run_{int(time.time())}.log"
     save_state({
         "status": "running",
         "task": task,
-        "returncode": None
+        "returncode": None,
+        "logfile": logfile
     })
     with open(logfile, "w") as f:
         proc = Popen(
@@ -548,12 +548,12 @@ def run_and_log(cmd,task):
     save_state({
         "status": "done" if proc.returncode == 0 else "error",
         "task": task,
-        "returncode": proc.returncode
+        "returncode": proc.returncode,
+        "logfile": logfile
     })
 
 @app.route("/run", methods=["POST", "GET"])
 def run_process():
-    global logfile
     bewerking = ""
     current_bewerking = ""
     log_content = ""
@@ -579,7 +579,7 @@ def run_process():
                 logfile = (
                     "../data/log/"
                     + run_bewerking["file_name"]
-                    + "_"
+                    + "_tmp_"
                     + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
                     + ".log"
                 )
@@ -589,7 +589,7 @@ def run_process():
                 task = current_bewerking
                 threading.Thread(
                     target=run_and_log,
-                    args=(cmd,task,),
+                    args=(cmd, task, logfile),
                     daemon=True
                 ).start()
                 log_content = "Opdracht is gestart"
@@ -648,12 +648,12 @@ def status():
 
 @app.route("/log")
 def show_log():
-    global logfile
+    task_state = load_state()
+    logfile = task_state["logfile"]
     if not os.path.exists(logfile):
         return "Nog geen log beschikbaar"
     with open(logfile, "r") as f:
         lines = f.readlines()
-    task_state = load_state()
     state = task_state["status"]
     if state == "running":
         text = "".join(lines[-20:]) # laatste 20 regels

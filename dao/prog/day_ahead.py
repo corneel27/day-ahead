@@ -1128,8 +1128,6 @@ class DaCalc(DaBase):
             cooling_rate = self.boiler_options.cooling_rate.resolve(ha_getter) # FlexFloat
             logging.info(f"Boiler cooling rate {cooling_rate} K/uur")
             boiler_cooling = cooling_rate * self.interval_s / 3600
-                                                       
-                                                                         
 
             # 45 °C grens daaronder kan worden verwarmd
             boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(ha_getter) # FlexFloat

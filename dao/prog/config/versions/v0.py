@@ -96,6 +96,7 @@ class ConfigurationV0(DAOConfigBaseModel):
             "x-ui-section": "Weather"
         }
     )
+
     meteoserver_attemps: Optional[int] = Field(
         default=2,
         alias="meteoserver-attemps",

@@ -18,7 +18,7 @@ class HeatingStage(BaseModel):
             "x-help": "Maximum electrical power consumption for this heating stage in watts. Heat pumps often have multiple stages (e.g., compressor speeds).",
             "x-unit": "W",
             "x-ui-section": "General",
-            "x-validation-hint": "Must be > 0, stages must be sorted ascending"
+            "x-validation-hint": "Must be >= 0, stages must be sorted ascending"
         }
     )
     cop: float = Field(
@@ -111,7 +111,11 @@ class HeatingEnabled(BaseModel):
         default=[],
         description="Heating power/COP stages",
         json_schema_extra={
-            "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending.",
+            "x-help": "Power and efficiency stages for heat pump. "
+                      "Required (at least 1) when adjustment is 'power' or 'heating curve'. "
+                      "Multiple stages model variable-speed compressors. "
+                      "Must be sorted by power ascending. "
+                      "When a 0 W stage is missed this is supplied by the program.",
             "x-ui-section": "Power Stages",
             "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power"
         }
