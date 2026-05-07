@@ -3840,7 +3840,7 @@ class DaCalc(DaBase):
                 else:
                     # export the ess grid setpoint in W
                     self.set_entity_value(
-                        "entity ess grid setpoint",
+                        "entity_grid_setpoint",
                         self.battery_options[b],
                         grid_set_point,
                     )
