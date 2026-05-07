@@ -8,12 +8,13 @@
 - Updates for several python modules
 - Correct typos in DOCS.md
 - Changed boiler heating_allowed_below to flex-setting (reported by @Impossibl3)
-- Added the possibility to use both "entity_stop_charging" and "entity_stop_laden" (reported by @Darkwings)
 - Fixed error logging during execution of a run
 - Fixed typo "Battery" -> Machine in machines.py
 - Added x-help-text with 0 W stages
 - Changed typo meteo-attemps -> meteo_attempts
 - Changed timeout hassapi to 10 sec.
+- Converted ev "entity stop laden" -> "entity_stop_charging" (reported by @Darkwings)
+- made boiler cooling_rate float and flexsetting (pr from tomvanterve)
 
 # 2026.4.4.rc1
 - Fix error closing pv_dc
