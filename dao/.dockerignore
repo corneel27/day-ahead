@@ -1,2 +1,23 @@
 tests/
 pred/
+
+# Frontend build artifacts (will be generated in Docker)
+frontend/node_modules/
+frontend/.vite/
+frontend/dist/
+
+# Data files (not needed in image)
+data/images/
+data/log/
+data/*.db
+data/secrets.json
+data/options.json
+data/baseload/
+data/prediction/models/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Development environment
+.venv/

@@ -1,0 +1,31 @@
+{
+  "config_version": 2,
+  "general": {
+    "time_zone": "Europe/Amsterdam",
+    "ha_url": "http://homeassistant.local:8123",
+    "ha_token": "!secret ha_token",
+    "logging_level": "INFO"
+  },
+  "batteries": [
+    {
+      "name": "Test Battery 1",
+      "capacity_kwh": 10.0,
+      "charge_rate_kw": 5.0,
+      "discharge_rate_kw": 5.0,
+      "min_soc_pct": 20.0,
+      "max_soc_pct": 90.0,
+      "charge_efficiency_pct": 95.0,
+      "discharge_efficiency_pct": 95.0
+    }
+  ],
+  "solar": {
+    "panels_kw": 8.0,
+    "azimuth_deg": 180.0,
+    "tilt_deg": 35.0
+  },
+  "optimization": {
+    "objective": "cost",
+    "time_horizon_hours": 48,
+    "time_step_minutes": 60
+  }
+}
