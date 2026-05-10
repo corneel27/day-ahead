@@ -1,5 +1,20 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.5.0
+
+- Updated several python modules
+- Correct typos in DOCS.md
+- Changed boiler heating_allowed_below to flex-setting (reported by @Impossibl3)
+- Fixed error logging during execution of a run
+- Fixed typo "Battery" -> Machine in machines.py
+- Added x-help-text with 0 W stages
+- Changed typo meteo-attemps -> meteo_attempts
+- Changed timeout hassapi to 10 sec.
+- Converted ev "entity stop laden" -> "entity_stop_charging" (reported by @Darkwings)
+- made boiler cooling_rate float and flexsetting (pr from tomvanterve)
+- Added functional error message when missing price or meteo data (reported by @balk)
+- Fixed key-error when started a run and logfile is not yet present (reported by @balk)
+
 # 2026.4.4
 - Fix error closing pv_dc
 - Fix error datepicker on android
