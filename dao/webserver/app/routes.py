@@ -498,7 +498,7 @@ task_state = {
 lock = threading.Lock()
 
 STATEFILE = "../data/task_state.json"
-STALE_AFTER = 300
+STALE_AFTER = 600
 
 def save_state(task_state):
     task_state["last_update"] = time.time()
@@ -507,7 +507,7 @@ def save_state(task_state):
 
 def load_state():
     if not os.path.exists(STATEFILE):
-        return {"status": "idle", "task": None}
+        return {"status": "idle", "task": None, "logfile": None}
     try:
         with open(STATEFILE) as f:
             state = json.load(f)
@@ -517,7 +517,7 @@ def load_state():
         if state.get("status") == "running":
             if time.time() - last > STALE_AFTER:
                 # taak is waarschijnlijk dood
-                return {"status": "idle", "task": None}
+                return {"status": "idle", "task": None, "logfile": None}
         return state
     except Exception:
         return {"status": "idle", "task": None}
@@ -649,8 +649,8 @@ def status():
 @app.route("/log")
 def show_log():
     task_state = load_state()
-    logfile = task_state["logfile"]
-    if not os.path.exists(logfile):
+    logfile = task_state.get("logfile", None)
+    if logfile is None or not os.path.exists(logfile):
         return "Nog geen log beschikbaar"
     with open(logfile, "r") as f:
         lines = f.readlines()
