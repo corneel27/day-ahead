@@ -468,12 +468,14 @@ class DBmanagerObj(object):
                 fld_df = self.get_prognose_field(field, start, end, interval)
                 # fld_df.index = pd.to_datetime(fld_df["tijd"])
                 # fld_df = interpolate(fld_df, field, 15, (field == "gr"))
-                fld_df = interpolate(fld_df, field, False)
+                if fld_df is not None and len(fld_df) > 0:
+                    fld_df = interpolate(fld_df, field, False)
                 if result_df is None:
                     result_df = fld_df
                 else:
                     result_df[new_field] = fld_df[field]
-            result_df["time"] = result_df["tijd"].astype(int) // 1e9
+            if result_df is not None:
+                result_df["time"] = result_df["tijd"].astype(int) // 1e9
             return result_df
 
     def get_column_data(

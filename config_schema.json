@@ -341,6 +341,21 @@
           "x-ui-widget-filter": "switch",
           "title": "Entity Balance Switch"
         },
+        "entity grid setpoint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the grid setpoint",
+          "x-help": "Optional: Home Assistant entity to save the average calculated power on the grid-point. Can be used for XOM-regulation.",
+          "x-ui-section": "Power Configuration",
+          "title": "Entity Grid Setpoint"
+        },
         "entity from battery": {
           "anyOf": [
             {

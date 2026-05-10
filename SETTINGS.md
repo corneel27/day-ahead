@@ -140,6 +140,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `entity set operating mode off` | string (optional) | No | `"Uit"` | Value for operating mode OFF |
 | `entity stop inverter` | [EntityId](#entityid) (optional) | No | `null` | HA entity to stop inverter |
 | `entity balance switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity for grid balancing switch |
+| `entity grid setpoint` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid setpoint |
 | `entity from battery` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from battery (Unit: `W`) |
 | `entity from pv` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
 | `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
@@ -252,6 +253,10 @@ Optional: Home Assistant entity to stop the battery inverter. Usefull in situati
 **`entity balance switch`**
 
 Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.
+
+**`entity grid setpoint`**
+
+Optional: Home Assistant entity to save the average calculated power on the grid-point. Can be used for XOM-regulation.
 
 **`entity from battery`**
 

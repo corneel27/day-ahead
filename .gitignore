@@ -24,3 +24,4 @@ dao/pred/data/da_prediction.pkl
 dao/data/options_new.json
 
 /dao/data/task_state.json
+/dao/data/options_v0.json

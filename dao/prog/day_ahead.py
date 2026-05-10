@@ -118,6 +118,12 @@ class DaCalc(DaBase):
         prog_data = self.db_da.get_prognose_data(
             start=start_hour, end=None, interval=self.interval
         )
+        if prog_data is None or len(prog_data) == 0:
+            logging.error(
+                f"Er ontbreken meteo waarden, "
+                "de berekening wordt afgebroken")
+            return None
+
         prog_data.index = pd.to_datetime(prog_data["tijd"])
         while len(prog_data) > 0 and prog_data.iloc[0]["tijd"] < start_interval_dt:
             prog_data = prog_data.iloc[1:]
@@ -3840,7 +3846,7 @@ class DaCalc(DaBase):
                 else:
                     # export the ess grid setpoint in W
                     self.set_entity_value(
-                        "entity ess grid setpoint",
+                        "entity_grid_setpoint",
                         self.battery_options[b],
                         grid_set_point,
                     )

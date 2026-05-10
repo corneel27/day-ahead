@@ -1,6 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2026.5.0.rc2
+- Added functional error message when missing price or meteo data (reported by @balk)
+- Fixed key-error when started a run and logfile is not yet present (reported by @balk)
+
 # 2026.5.0.rc1
 
 ### Fixes
