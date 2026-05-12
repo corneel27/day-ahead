@@ -2755,6 +2755,7 @@ class Report(DaBase):
                 t2.c.start_ts.label("tijd"),
                 t1.c.state.label("state_t1"),
                 t2.c.state.label("state_t2"),
+                statistics_meta.c.unit_of_measurement.label("dim"),
             )
             .select_from(
                 t1.join(t2, t2.c.start_ts == t1.c.start_ts + 3600).join(
@@ -2777,13 +2778,20 @@ class Report(DaBase):
             df_raw = pd.read_sql(query, connection)
 
         if len(df_raw) > 0:
+            dim = df_raw.iloc[0]["dim"]
+            if dim == "Wh":
+                factor = 0.001
+            elif dim == "MWh":
+                factor = 1000
+            else:
+                factor = 1
             # Convert UNIX timestamps to datetime
             df_raw["tijd"] = df_raw.apply(
                 lambda x: datetime.datetime.fromtimestamp(x["tijd"]), axis=1
             )
             # Calculate the value
             df_raw[col_name] = df_raw.apply(
-                lambda row: round(max(row["state_t2"] - row["state_t1"], 0), 3), axis=1
+                lambda row: round(max(row["state_t2"] - row["state_t1"], 0) * factor, 3), axis=1
             )
             df_raw["weekdag"] = df_raw.apply(
                 lambda x: self.tijd_at_interval("weekdag", x["tijd"]), axis=1
