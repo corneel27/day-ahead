@@ -1796,6 +1796,16 @@ class DaCalc(DaBase):
             for _ in range(EV)
         ]
 
+        ev_partial_sum = [
+            model.add_var(var_type=INTEGER, lb=0)
+            for e in range(EV)
+        ]  # sum is_partial
+
+        ev_boundary_sum = [
+            model.add_var(var_type=INTEGER, lb=0)
+            for e in range(EV)
+        ]  # sum is_boundaru
+
         ev_start_stops_sum = [
             model.add_var(var_type=INTEGER, lb=0)
             for e in range(EV)
@@ -1853,22 +1863,6 @@ class DaCalc(DaBase):
                         for cs in range(ECS[e])
                     )
 
-                """                
-                sf = stage_factor[e][0][u]
-                ev_is_off
-                # ev_is_off = 1 iff sf == 1
-                model += sf >= ev_is_off[e][u]
-                model += sf <= 1 - eps + eps * ev_is_off[e][u]
-                
-                ev_is_on
-                model += sf <= (1 - ev_is_on[e][u])
-                
-                ev_is_partial
-                model += sf >= eps * ev_is_partial[e][u]
-                model += sf <= 1 - eps * ev_is_partial[e][u]
-                
-                
-                """
                 eps = 0.0001
                 for u in range(U)[:ready_u[e] + 1]:
                     # ev_is_off
@@ -1897,10 +1891,14 @@ class DaCalc(DaBase):
                         model += ev_boundary_stop[e][u] <= ev_is_off[e][u+1]
                         model += ev_boundary_stop[e][u] >= (ev_is_on[e][u] + ev_is_off[e][u+1] - 1)
 
-                    model += (ev_start_stops_sum[e] ==
-                              xsum((ev_is_partial[e][u] + ev_boundary_stop[e][u])
-                                   for u in range(U)) * 2
-                              )
+                model += (ev_partial_sum[e] ==
+                           xsum(ev_is_partial[e][u] for u in range(ready_u[e] + 1))
+                         )
+                model += (ev_boundary_sum[e] ==
+                           xsum(ev_boundary_stop[e][u] for u in range(ready_u[e] + 1))
+                         )
+
+                model += ev_start_stops_sum[e] == (ev_partial_sum[e] + ev_boundary_sum[e]) * 2 - 2
 
                 model += energy_needed[e] == xsum(
                     ev_accu_in[e][u] for u in range(ready_u[e] + 1)
@@ -1928,6 +1926,7 @@ class DaCalc(DaBase):
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
                     model += ev_is_partial[e][u] == 0
+                    model += ev_is_boundary[e][u] == 0
                 model += ev_start_stops_sum[e] == 0
 
 
@@ -3660,20 +3659,21 @@ class DaCalc(DaBase):
                         print("uur   ", end=" ")
                         for cs in range(ECS[e]):
                             print(
-                                f"    {ev_charge_stages[e][cs]['ampere']:4.1f}A", end="  "
+                                f"    {ev_charge_stages[e][cs]['ampere']:4.1f}A", end="    "
                             )
-                        print("     cons  power   on     off     stop")
+                        print("    cons   power    on    off   part  bound")
                         for u in range(ready_u[e] + 1):
-                            print(f"{uur[u]}", end="    ")
+                            print(f"{uur[u]}", end="  ")
                             for cs in range(ECS[e]):
                                 print(
-                                    f"{stage_factor[e][cs][u].x:.2f}({stage_on[e][cs][u].x})",
+                                    f"{stage_factor[e][cs][u].x:.4f}({stage_on[e][cs][u].x})",
                                     end="   ",
                                 )
                             print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
                                   f"   {ev_is_on[e][u].x}"
                                   f"   {ev_is_off[e][u].x}"
-                                  f"   {ev_is_partial[e][u].x + ev_boundary_stop[e][u].x}"
+                                  f"   {ev_is_partial[e][u].x}"
+                                  f"   {ev_boundary_stop[e][u].x}"
                                   )
 
                 start_ev_laden = stop_ev_laden = None
@@ -3697,7 +3697,8 @@ class DaCalc(DaBase):
                     logging.info(
                         f"Laden van {self.ev_options[e].name} is niet ingepland"
                     )
-
+                logging.info(f"Aantal partial stops: {ev_partial_sum[e].x:2.0f}")
+                logging.info(f"Aantal boundary stops: {ev_boundary_sum[e].x:2.0f}")
                 logging.info(f"Aantal start/stops: {ev_start_stops_sum[e].x:2.0f}")
                 logging.info(f"Penalty per start/stop: {ev_switch_cost[e]:4.3f}")
                 logging.info(f"Totale switch kosten: {switch_cost[e].x:4.2f}")
