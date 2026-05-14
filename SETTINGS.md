@@ -322,6 +322,7 @@ For panels facing different directions, use the 'strings' configuration:
 | `yield` | number (optional) | No | `null` | Yield factor (for single installation) (Unit: `ratio`) _Greater than 0, typically 0.8-0.9, leave empty when using strings_ |
 | `strings` | list[[SolarString](#solarstring)] | No | `null` | Multiple panel strings with different configurations |
 | `ml_prediction` | boolean | No | `false` | Use ML model to predict solar production for this installation |
+| `ml_training_start_date` | string (optional) | No | `"2000-01-01"` | If configured the ml-traning of the solar model will be trained with the data since the start date |
 | `entities sensors` | list[[EntityId](#entityid)] | No | `null` | HA sensor entities for measuring actual solar production |
 | `max power` | number (optional) | No | `null` | Maximum output power cap in kW (MPPT limit) (Unit: `kW`) |
 
@@ -359,6 +360,10 @@ Advanced: Configure multiple strings for panels with different orientations or t
 **`ml_prediction`**
 
 Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.
+
+**`ml_training_start_date`**
+
+The ml-training will be restricted to the data since the start date with a maximum of three year
 
 **`entities sensors`**
 
@@ -464,6 +469,7 @@ Use `charge_scheduler` for time-based optimization:
 |-------|------|----------|---------|-------------|
 | `name` | string | Yes | — | EV name/identifier |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be > 0, typically 40-100 kWh_ |
+| `switch cost` | number (optional) | No | `0.0` | Switch cost in euro/switch to 'on' (Unit: `euro/switch to 'on'`) _Must be >= 0, typically 0.01- 0.10 euro/switch_ |
 | `entity position` | [EntityId](#entityid) | Yes | — | HA device tracker for vehicle position |
 | `charge three phase` | [FlexBool](#flexbool) | No | `true` | Whether vehicle charges on three phases |
 | `charge stages` | list[[EVChargeStage](#evchargestage)] | Yes | — | Charging amperage/efficiency curve _At least 1 stage required_ |
@@ -486,6 +492,10 @@ Unique name for this electric vehicle. Use descriptive names like 'Tesla Model 3
 **`capacity`**
 
 Usable battery capacity in kilowatt-hours. Check vehicle specifications (often less than advertised total capacity).
+
+**`switch cost`**
+
+Virtual cost in euro per extra switch to 'on'.Every extra 'stop/start' will cause one switch_penalty to be accounted
 
 **`entity position`**
 
@@ -2029,8 +2039,6 @@ Configuration for a single string of solar panels with the same tilt and orienta
 | `tilt` | number | Yes | — | Panel tilt angle in degrees (0=horizontal, 90=vertical) (Unit: `degrees`) _Must be between 0 and 90 degrees_ |
 | `orientation` | number | Yes | — | Panel orientation in degrees (0=south, 90=west, -90=east) (Unit: `degrees`) _Must be between -180 and 180 degrees_ |
 | `capacity` | number | Yes | — | Installed capacity in kWp (Unit: `kWp`) _Must be greater than 0_ |
-| `ml_prediction` | boolean | No | `false` | Use ML model to predict solar production for this installation |
-| `entities sensors` | list[[EntityId](#entityid)] | No | `null` | HA sensor entities for measuring actual solar production |
 | `max power` | number (optional) | No | `null` | Maximum output power cap in kW (MPPT limit) (Unit: `kW`) |
 | `yield` | number | Yes | — | Yield factor for production calculation (Unit: `ratio`) _Must be greater than 0, typically 0.8-0.9_ |
 
@@ -2048,14 +2056,6 @@ Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° o
 **`capacity`**
 
 Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.
-
-**`ml_prediction`**
-
-Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.
-
-**`entities sensors`**
-
-Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.
 
 **`max power`**
 

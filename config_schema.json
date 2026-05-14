@@ -1027,6 +1027,24 @@
           "x-unit": "kWh",
           "x-validation-hint": "Must be > 0, typically 40-100 kWh"
         },
+        "switch cost": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0.0,
+          "description": "Switch cost in euro/switch to 'on'",
+          "title": "Switch Cost",
+          "x-help": "Virtual cost in euro per extra switch to 'on'.Every extra 'stop/start' will cause one switch_penalty to be accounted",
+          "x-ui-section": "General",
+          "x-unit": "euro/switch to 'on'",
+          "x-validation-hint": "Must be >= 0, typically 0.01- 0.10 euro/switch"
+        },
         "entity position": {
           "$ref": "#/$defs/EntityId",
           "description": "HA device tracker for vehicle position",
@@ -2600,6 +2618,22 @@
           "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
           "x-ui-section": "ML Prediction"
         },
+        "ml_training_start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "2000-01-01",
+          "description": "If configured the ml-traning of the solar model will be trained with the data since the start date",
+          "title": "Ml Training Start Date",
+          "x-help": "The ml-training will be restricted to the data since the start date with a maximum of three year",
+          "x-ui-section": "ML Prediction"
+        },
         "entities sensors": {
           "description": "HA sensor entities for measuring actual solar production",
           "items": {
@@ -2674,25 +2708,6 @@
           "x-ui-section": "Panel Orientation",
           "x-unit": "kWp",
           "x-validation-hint": "Must be greater than 0"
-        },
-        "ml_prediction": {
-          "default": false,
-          "description": "Use ML model to predict solar production for this installation",
-          "title": "Ml Prediction",
-          "type": "boolean",
-          "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
-          "x-ui-section": "ML Prediction"
-        },
-        "entities sensors": {
-          "description": "HA sensor entities for measuring actual solar production",
-          "items": {
-            "$ref": "#/$defs/EntityId"
-          },
-          "title": "Entities Sensors",
-          "type": "array",
-          "x-help": "Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.",
-          "x-ui-section": "ML Prediction",
-          "x-ui-widget-filter": "sensor"
         },
         "max power": {
           "anyOf": [
