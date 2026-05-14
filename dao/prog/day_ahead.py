@@ -1494,6 +1494,7 @@ class DaCalc(DaBase):
         ev_charge_stages = []
         ampere_factor = []
         ev_instant_charge = []
+        ev_switch_cost = []
         ECS = []
         for e in range(EV):
             ev_capacity = self.ev_options[e].capacity
@@ -1544,6 +1545,7 @@ class DaCalc(DaBase):
                     ).state
                 )
             wished_level.append(wished_lvl)
+            ev_switch_cost.append(self.ev_options[e].switch_cost)
             level_margin.append(
                 self.ev_options[e].charge_scheduler.level_margin if self.ev_options[e].charge_scheduler else 0
             )
@@ -1762,6 +1764,43 @@ class DaCalc(DaBase):
             for e in range(EV)
         ]  # load battery
 
+        ev_is_on = [
+            [
+                model.add_var(var_type=BINARY)
+                for _ in range(U)
+            ]
+            for _ in range(EV)
+        ]
+
+        ev_is_off = [
+            [
+                model.add_var(var_type=BINARY)
+                for _ in range(U)
+            ]
+            for _ in range(EV)
+        ]
+
+        ev_is_partial = [
+            [
+                model.add_var(var_type=BINARY)
+                for _ in range(U)
+            ]
+            for _ in range(EV)
+        ]
+
+        ev_boundary_stop = [
+            [
+                model.add_var(var_type=BINARY)
+                for _ in range(U)
+            ]
+            for _ in range(EV)
+        ]
+
+        ev_start_stops_sum = [
+            model.add_var(var_type=INTEGER, lb=0)
+            for e in range(EV)
+        ]  # sum of ev starts
+
         for e in range(EV):
             if (energy_needed[e] > 0) and (ready_u[e] < U):
                 for u in range(ready_u[e] + 1):
@@ -1791,8 +1830,8 @@ class DaCalc(DaBase):
                         """
                     # som van alle oplaadfactoren is 1
                     model += (xsum(stage_factor[e][cs][u] for cs in range(ECS[e]))) == 1
-                    # som van alle schakelaars boven 0 A en kleiner of gelijk aan 1
                     """
+                    # som van alle schakelaars boven 0 A en kleiner of gelijk aan 1
                     model += (
                         xsum(stage_on[e][cs][u] for cs in range(ECS[e]))
                     ) <= 1
@@ -1813,12 +1852,63 @@ class DaCalc(DaBase):
                         * stage_factor[e][cs][u]
                         for cs in range(ECS[e])
                     )
+
+                """                
+                sf = stage_factor[e][0][u]
+                ev_is_off
+                # ev_is_off = 1 iff sf == 1
+                model += sf >= ev_is_off[e][u]
+                model += sf <= 1 - eps + eps * ev_is_off[e][u]
+                
+                ev_is_on
+                model += sf <= (1 - ev_is_on[e][u])
+                
+                ev_is_partial
+                model += sf >= eps * ev_is_partial[e][u]
+                model += sf <= 1 - eps * ev_is_partial[e][u]
+                
+                
+                """
+                eps = 0.0001
+                for u in range(U)[:ready_u[e] + 1]:
+                    # ev_is_off
+                    # model += sf >= ev_is_off[e][u]
+                    model += stage_factor[e][0][u] >= ev_is_off[e][u]
+                    model += stage_factor[e][0][u] <= 1 - eps + eps * ev_is_off[e][u]
+
+                    # ev_is_on
+                    # model += sf <= 1 - ev_is_on[e][u]
+                    model += stage_factor[e][0][u] <= (1 - ev_is_on[e][u])
+
+                    # ev_is_partial
+                    # model += sf >= eps * ev_is_partial[e][u]
+                    model += stage_factor[e][0][u] >= eps * ev_is_partial[e][u]
+
+                    # model += sf <= (1 - eps) * ev_is_partial[e][u] + ev_is_off[e][u]
+                    model += stage_factor[e][0][u] <= (1 - eps) * ev_is_partial[e][u] + ev_is_off[e][u]
+
+                    # precies één toestand
+                    model += (ev_is_on[e][u] + ev_is_off[e][u] + ev_is_partial[e][u]) == 1
+
+                    if u == ready_u[e]:
+                        model += ev_boundary_stop[e][u] == ev_is_on[e][u]
+                    else:
+                        model += ev_boundary_stop[e][u] <= ev_is_on[e][u]
+                        model += ev_boundary_stop[e][u] <= ev_is_off[e][u+1]
+                        model += ev_boundary_stop[e][u] >= (ev_is_on[e][u] + ev_is_off[e][u+1] - 1)
+
+                    model += (ev_start_stops_sum[e] ==
+                              xsum((ev_is_partial[e][u] + ev_boundary_stop[e][u])
+                                   for u in range(U)) * 2
+                              )
+
                 model += energy_needed[e] == xsum(
                     ev_accu_in[e][u] for u in range(ready_u[e] + 1)
                 )
                 for u in range(U)[ready_u[e] + 1 :]:
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
+                    model += ev_is_partial[e][u]  == 0
 
                 """
                 max_beschikbaar = 0
@@ -1837,6 +1927,9 @@ class DaCalc(DaBase):
                 for u in range(U):
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
+                    model += ev_is_partial[e][u] == 0
+                model += ev_start_stops_sum[e] == 0
+
 
         ##################################################################
         #            salderen                                            #
@@ -2939,6 +3032,11 @@ class DaCalc(DaBase):
                 for u in range(U)
             )
 
+        # switch cost per ev
+        switch_cost = [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(EV)]
+        for e in range(EV):
+            model += switch_cost[e] == ev_switch_cost[e] * ev_start_stops_sum[e]
+
         if self.salderen:
             p_bat = p_avg
         else:
@@ -2948,6 +3046,7 @@ class DaCalc(DaBase):
         model += cost == (
             xsum(c_l[u] * pl[u] - c_t[u] * pt[u] for u in range(U))
             + xsum(cycle_cost[b] + penalty_cost[b] for b in range(B))
+            + xsum(switch_cost[e] for e in range(EV))
             + xsum(
                 (soc_mid[b][0] - soc_mid[b][U])
                 * one_soc[b]
@@ -3440,6 +3539,9 @@ class DaCalc(DaBase):
             )
             total_cycle_cost += cycle_cost[b].x
             total_penalty_cost += penalty_cost[b].x
+        total_switch_cost = 0
+        for e in range(EV):
+            total_switch_cost += switch_cost[e].x
         boiler_storage = (
             (boiler_temp[0].x - boiler_temp[U].x)
             * (spec_heat_boiler / (3600 * cop_boiler))
@@ -3450,6 +3552,7 @@ class DaCalc(DaBase):
             + profit_production
             + total_cycle_cost
             + total_penalty_cost
+            + total_switch_cost
             + battery_storage
             + boiler_storage
         )
@@ -3460,6 +3563,7 @@ class DaCalc(DaBase):
             f"Cost consumption   {cost_consumption: 7.2f}\n"
             f"Cycle cost         {total_cycle_cost: 7.2f}\n"
             f"Penalty cost       {total_penalty_cost: 7.2f}\n"
+            f"EV switch costs    {total_switch_cost: 7.2f}\n"
             f"Battery storage    {battery_storage: 7.2f}\n"
             f"Boiler storage     {boiler_storage: 7.2f}\n"
             f"Profit production  {profit_production: 7.2f}\n"
@@ -3551,14 +3655,14 @@ class DaCalc(DaBase):
                 if ready_u[e] < U:
                     if self.log_level <= logging.INFO:
                         logging.info(
-                            f"Inzet-factor laden {self.ev_options[e].name} per stap"
+                            f"Inzet-factor laden {self.ev_options[e].name} per stop"
                         )
                         print("uur   ", end=" ")
                         for cs in range(ECS[e]):
                             print(
-                                f" {ev_charge_stages[e][cs]['ampere']:4.1f}A", end=" "
+                                f"    {ev_charge_stages[e][cs]['ampere']:4.1f}A", end="  "
                             )
-                        print("     cons  power")
+                        print("     cons  power   on     off     stop")
                         for u in range(ready_u[e] + 1):
                             print(f"{uur[u]}", end="    ")
                             for cs in range(ECS[e]):
@@ -3566,7 +3670,11 @@ class DaCalc(DaBase):
                                     f"{stage_factor[e][cs][u].x:.2f}({stage_on[e][cs][u].x})",
                                     end="   ",
                                 )
-                            print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f}")
+                            print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
+                                  f"   {ev_is_on[e][u].x}"
+                                  f"   {ev_is_off[e][u].x}"
+                                  f"   {ev_is_partial[e][u].x + ev_boundary_stop[e][u].x}"
+                                  )
 
                 start_ev_laden = stop_ev_laden = None
                 for u in range(U):
@@ -3590,6 +3698,9 @@ class DaCalc(DaBase):
                         f"Laden van {self.ev_options[e].name} is niet ingepland"
                     )
 
+                logging.info(f"Aantal start/stops: {ev_start_stops_sum[e].x:2.0f}")
+                logging.info(f"Penalty per start/stop: {ev_switch_cost[e]:4.3f}")
+                logging.info(f"Totale switch kosten: {switch_cost[e].x:4.2f}")
                 entity_charge_switch = self.ev_options[e].charge_switch
                 entity_charging_ampere = self.ev_options[e].entity_set_charging_ampere
                 if ev_instant_charge[e]:
