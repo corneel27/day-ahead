@@ -1907,6 +1907,7 @@ class DaCalc(DaBase):
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
                     model += ev_is_partial[e][u]  == 0
+                    model += ev_boundary_stop[e][u] == 0
 
                 """
                 max_beschikbaar = 0
@@ -1926,7 +1927,7 @@ class DaCalc(DaBase):
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
                     model += ev_is_partial[e][u] == 0
-                    model += ev_is_boundary[e][u] == 0
+                    model += ev_boundary_stop[e][u] == 0
                 model += ev_start_stops_sum[e] == 0
 
 

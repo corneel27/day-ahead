@@ -3048,6 +3048,8 @@ class Report(DaBase):
         ol_t = 0
         btw_l = 0
         btw_t = 0
+        multiplier_l = 1
+        multiplier_t = 1
         columns = ["time", "da_ex", "da_cons", "da_prod", "datasoort"]
         df = pd.DataFrame(columns=columns)
         salderen = self.prices_options.tax_refund if self.prices_options else True
@@ -3062,10 +3064,12 @@ class Report(DaBase):
                 taxes_t = get_value_from_dict(dag_str, self.taxes_t_def)
                 btw_l = get_value_from_dict(dag_str, self.btw_l_def)
                 btw_t = get_value_from_dict(dag_str, self.btw_t_def)
+                multiplier_l = get_value_from_dict(dag_str, self.multiplier_l_def)
+                multiplier_t = get_value_from_dict(dag_str, self.multiplier_t_def)
                 old_dagstr = dag_str
-            da_cons = (row.value + taxes_l + ol_l) * (1 + btw_l / 100)
+            da_cons = (row.value * multiplier_l + taxes_l + ol_l) * (1 + btw_l / 100)
             if salderen:
-                da_prod = (row.value + taxes_t + ol_t) * (1 + btw_t / 100)
+                da_prod = (row.value * multiplier_t + taxes_t + ol_t) * (1 + btw_t / 100)
             else:
                 da_prod = (row.value + ol_t) * (1 + btw_t / 100)
             df.loc[df.shape[0]] = [
