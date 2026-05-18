@@ -3647,6 +3647,30 @@ class DaCalc(DaBase):
                     f"Boiler temperatuur {boiler_temp[U].x:.1f} °C, "
                     f" waardering: {boiler_waarde_el:.3f} kWh = {boiler_waarde_fin:.2f} euro"
                 )
+            ###########################################
+            # grid
+            ###########################################
+            grid_balance = (abs(c_l[0].x - c_t[0].x) <= 0.01)
+            balance_state = "on" if grid_balance else "off"
+            if self.debug:
+                logging.info(f"Grid balanceren zou zijn: {balance_state}")
+            else:
+                self.set_entity_state(
+                    "entity balance switch", self.grid, balance_state
+                )
+                logging.info(f"Grid balanceren: {balance_state}")
+            grid_set_point = round(
+                1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0
+            )
+            logging.info(f"Grid set point: {grid_set_point} W")
+            if not self.debug:
+                # export the ess grid setpoint in W
+                self.set_entity_value(
+                    "entity_grid_setpoint",
+                    self.grid,
+                    grid_set_point,
+                )
+            #####################################
 
             ###########################################
             # ev
@@ -3856,14 +3880,11 @@ class DaCalc(DaBase):
                     netto_vermogen_bat = 0
                     new_state = battery_state_off_value
                     stop_omvormer = None
-                    balance = False
-                elif abs(c_l[0].x - c_t[0].x) <= 0.01:
+                elif grid_balance:
                     new_state = battery_state_on_value
-                    balance = True
                     stop_omvormer = None
                 elif abs(netto_vermogen_bat) < minimum_power:
                     new_state = battery_state_on_value
-                    balance = False
                     new_ts = (
                         start_dt.timestamp()
                         + (abs(netto_vermogen_bat) / minimum_power) * self.interval_s
@@ -3883,7 +3904,6 @@ class DaCalc(DaBase):
                             sum_power += wf * charge_stages[b][cs]["power"]
                     if sum_weight_factor < 0.95:
                         new_state = battery_state_on_value
-                        balance = False
                         netto_vermogen_bat = round(sum_power / sum_weight_factor)
                         new_ts = (
                             start_dt.timestamp()
@@ -3892,7 +3912,6 @@ class DaCalc(DaBase):
                         stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
                     else:
                         new_state = battery_state_on_value
-                        balance = False
                         stop_omvormer = None
                 elif ac_from_dc[b][0].x > 0.0:  # ontladen met optimaal vermogen
                     sum_weight_factor = 0
@@ -3904,7 +3923,6 @@ class DaCalc(DaBase):
                             sum_power += wf * discharge_stages[b][ds]["power"]
                     if 0.10 <= sum_weight_factor < 0.95:
                         new_state = battery_state_on_value
-                        balance = False
                         netto_vermogen_bat = -round(sum_power / sum_weight_factor)
                         new_ts = (
                             start_dt.timestamp()
@@ -3913,11 +3931,9 @@ class DaCalc(DaBase):
                         stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
                     else:
                         new_state = battery_state_on_value
-                        balance = False
                         stop_omvormer = None
                 else:
                     new_state = battery_state_on_value
-                    balance = False
                     stop_omvormer = None
                 if stop_omvormer is None:
                     stop_str = "2000-01-01 00:00:00"
@@ -3942,12 +3958,7 @@ class DaCalc(DaBase):
                     first_row.from_ac.kWh * 1000 / hour_fraction_first_interval
                 )
                 calculated_soc = round(soc[b][1].x, 1)
-                grid_set_point = round(
-                    1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0
-                )
-                logging.info(f"Grid set point: {grid_set_point} W")
                 logging.info(f"Cycle cost {bat_name}: {cycle_cost[b].x:<0.2f} euro")
-                balance_state = "on" if balance else "off"
                 if self.debug:
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) batterij {bat_name} "
@@ -3955,14 +3966,7 @@ class DaCalc(DaBase):
                     )
                     if stop_omvormer:
                         logging.info(f"tot: {stop_str}")
-                    logging.info(f"Balanceren zou zijn: {balance_state}")
                 else:
-                    # export the ess grid setpoint in W
-                    self.set_entity_value(
-                        "entity_grid_setpoint",
-                        self.battery_options[b],
-                        grid_set_point,
-                    )
                     self.set_entity_value(
                         "entity set power feedin",
                         self.battery_options[b],
@@ -3971,15 +3975,11 @@ class DaCalc(DaBase):
                     self.set_entity_option(
                         "entity set operating mode", self.battery_options[b], new_state
                     )
-                    self.set_entity_state(
-                        "entity balance switch", self.battery_options[b], balance_state
-                    )
                     tot_str = f" tot: {stop_str}" if stop_omvormer else ""
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: "
                         f"{netto_vermogen_bat} W {tot_str}"
                     )
-                    logging.info(f"Balanceren: {balance_state}")
                     helper_id = self.battery_options[b].entity_stop_inverter
                     if helper_id is not None:
                         self.call_service(

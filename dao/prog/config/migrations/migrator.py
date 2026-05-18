@@ -12,6 +12,7 @@ from .unversioned_to_v0 import migrate_unversioned_to_v0
 
 # Uncomment when creating v0→v1 migration:
 from .v0_to_v1 import migrate_v0_to_v1
+from .v1_to_v2 import migrate_v1_to_v2
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ MIGRATIONS: dict[tuple[int, int], callable] = {
     (-1, 0): migrate_unversioned_to_v0,  # unversioned → v0
     # Uncomment when creating v0→v1 migration:
     (0, 1): migrate_v0_to_v1,
+    (1, 2): migrate_v1_to_v2,
 }
 
 

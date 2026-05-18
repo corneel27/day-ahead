@@ -325,37 +325,6 @@
           "x-ui-widget-filter": "switch,button",
           "title": "Entity Stop Inverter"
         },
-        "entity balance switch": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/EntityId"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "HA entity for grid balancing switch",
-          "x-help": "Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.",
-          "x-ui-section": "Power Configuration",
-          "x-ui-widget-filter": "switch",
-          "title": "Entity Balance Switch"
-        },
-        "entity grid setpoint": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/EntityId"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "HA entity for the grid setpoint",
-          "x-help": "Optional: Home Assistant entity to save the average calculated power on the grid-point. Can be used for XOM-regulation.",
-          "x-ui-section": "Power Configuration",
-          "title": "Entity Grid Setpoint"
-        },
         "entity from battery": {
           "anyOf": [
             {
@@ -1318,6 +1287,37 @@
           "x-help": "Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.",
           "x-unit": "kW",
           "x-validation-hint": "Must be > 0, typical 7-25 kW for residential"
+        },
+        "entity balance switch": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for grid balancing switch",
+          "x-help": "Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.",
+          "x-ui-section": "Power Configuration",
+          "x-ui-widget-filter": "switch",
+          "title": "Entity Balance Switch"
+        },
+        "entity grid setpoint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the grid setpoint",
+          "x-help": "Optional: Home Assistant entity to save the average calculated power on the grid-point. Can be used for XOM-regulation.",
+          "x-ui-section": "Power Configuration",
+          "title": "Entity Grid Setpoint"
         }
       },
       "title": "GridConfig",
@@ -2196,6 +2196,50 @@
           "x-unit": "%",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         },
+        "multiplier consumption": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": {
+            "2000-01-01": 1.0
+          },
+          "description": "Multiplier for consumption by date (YYYY-MM-DD -> x.xx)",
+          "title": "Multiplier Consumption",
+          "x-help": "Multiplier on consumption day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.",
+          "x-ui-section": "Cost",
+          "x-unit": "-",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values"
+        },
+        "multiplier production": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": {
+            "2000-01-01": 1.0
+          },
+          "description": "Multiplier for production by date (YYYY-MM-DD -> x.xx)",
+          "title": "Multiplier Production",
+          "x-help": "Multiplier on feed-in/production day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.",
+          "x-ui-section": "Cost",
+          "x-unit": "-",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values"
+        },
         "last invoice": {
           "description": "Date of last invoice (YYYY-MM-DD)",
           "format": "date",
@@ -2226,7 +2270,7 @@
       "title": "PricingConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration",
-      "x-help": "# Pricing & Tariff Configuration\n\nConfigure electricity market prices and tariff components for accurate cost optimization.\n\n## Price Components\n\nTotal electricity cost consists of:\n1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)\n2. **Energy taxes**: Government energy taxes\n3. **Supplier costs**: Your supplier's markup/fees\n4. **VAT**: Value-added tax on sum of above\n\nConsumption price = (market + taxes + supplier) × (1 + VAT)\n\n## Date-Based Tariffs\n\nAll tariff fields use date-indexed dictionaries:\n```json\n{\n  \"2024-01-01\": 0.05,\n  \"2024-07-01\": 0.06\n}\n```\n\nSystem uses tariff active on optimization date.\n\n## Data Sources\n\n- **nordpool**: Nord Pool (Nordic/Baltic markets)\n- **entsoe**: ENTSO-E Transparency Platform (all European markets)\n- **tibber**: Tibber API (if using Tibber as supplier)\n\n## Tips\n\n- All prices are EXCLUDING VAT (VAT applied separately)\n- Update tariffs when your supplier changes prices\n- Use !secret for API keys\n- Production costs often lower than consumption (or negative for feed-in credit)\n- Keep last_invoice updated for accurate cost tracking\n- Check your electricity bill for exact tariff components\n",
+      "x-help": "# Pricing & Tariff Configuration\n\nConfigure electricity market prices and tariff components for accurate cost optimization.\n\n## Price Components\n\nTotal electricity cost consists of:\n1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)\n2. **Energy taxes**: Government energy taxes\n3. **Supplier costs**: Your supplier's markup/fees\n4. **VAT**: Value-added tax on sum of above\n5. **Multiplier**: For calculation of productionprice in Belgium \n\nPrice = (market*multiplier + taxes + supplier) × (1 + VAT)\n\n## Date-Based Tariffs\n\nAll tariff fields use date-indexed dictionaries:\n```json\n{\n  \"2024-01-01\": 0.05,\n  \"2024-07-01\": 0.06\n}\n```\n\nSystem uses tariff active on optimization date.\n\n## Data Sources\n\n- **nordpool**: Nord Pool (Nordic/Baltic markets)\n- **entsoe**: ENTSO-E Transparency Platform (all European markets)\n- **tibber**: Tibber API (if using Tibber as supplier)\n\n## Tips\n\n- All prices are EXCLUDING VAT (VAT applied separately)\n- Update tariffs when your supplier changes prices\n- Use !secret for API keys\n- Production costs often lower than consumption (or negative for feed-in credit)\n- Keep last_invoice updated for accurate cost tracking\n- Check your electricity bill for exact tariff components\n",
       "x-icon": "currency-eur",
       "x-order": 11,
       "x-ui-group": "Pricing"

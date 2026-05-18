@@ -8,7 +8,7 @@ from dao.prog.config.migrations.unversioned_to_v0 import migrate_unversioned_to_
 from dao.prog.config.models.pricing import PricingConfig
 from dao.prog.config.models.database import HADatabaseConfig, DatabaseConfig
 from dao.prog.config.models.scheduler import SchedulerConfig
-
+from dao.prog.config.migrations.v1_to_v2 import migrate_v1_to_v2
 
 def test_migrate_unversioned_to_v0():
     """Test migration from unversioned config to v0."""
@@ -128,6 +128,7 @@ def test_migrate_config_already_at_target():
     
     assert migrated["config_version"] == 0
     assert migrated["latitude"] == 52.0
+
 
 
 class TestGraphicsKeyMigration:
@@ -266,3 +267,23 @@ class TestSolarOrientationMigration:
 #     
 #     assert migrated['config_version'] == 1
 #     assert migrated['battery'][0]['efficiency'] == 0.95
+
+def test_migrate_v1_to_v2():
+    old_config = {
+        "config_version": 1,
+        "battery": [
+            {"name": "Test1",
+             "entity_balance_switch": "input_boolean.nom"},
+            {"name": "Test2",
+             "entity_grid_setpoint": "input_number.grid_setpoint"}
+        ],
+        "grid": {
+            "max_power": 17.0
+        },
+    }
+
+    new_config = migrate_v1_to_v2(old_config)
+
+    assert new_config['config_version'] == 2
+    assert new_config['grid']["entity_balance_switch"] == "input_boolean.nom"
+    assert new_config['grid']["entity_grid_setpoint"] == "input_number.grid_setpoint"

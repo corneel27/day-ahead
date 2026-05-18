@@ -139,8 +139,6 @@ Configure your home battery storage system for optimal energy management and cos
 | `entity set operating mode on` | string (optional) | No | `"Aan"` | Value for operating mode ON |
 | `entity set operating mode off` | string (optional) | No | `"Uit"` | Value for operating mode OFF |
 | `entity stop inverter` | [EntityId](#entityid) (optional) | No | `null` | HA entity to stop inverter |
-| `entity balance switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity for grid balancing switch |
-| `entity grid setpoint` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid setpoint |
 | `entity from battery` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from battery (Unit: `W`) |
 | `entity from pv` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
 | `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
@@ -249,14 +247,6 @@ Value to send to operating mode entity for 'OFF' state. Example: 'manual', 'disa
 **`entity stop inverter`**
 
 Optional: Home Assistant entity to stop the battery inverter. Usefull in situations when the battery is idle and you don't want idle-conusmptions of the battery.
-
-**`entity balance switch`**
-
-Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.
-
-**`entity grid setpoint`**
-
-Optional: Home Assistant entity to save the average calculated power on the grid-point. Can be used for XOM-regulation.
 
 **`entity from battery`**
 
@@ -411,6 +401,8 @@ Optimizer ensures combined consumption never exceeds this limit:
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `max_power` | number | No | `17` | Maximum grid power in kW (Unit: `kW`) _Must be > 0, typical 7-25 kW for residential_ |
+| `entity balance switch` | [EntityId](#entityid) (optional) | No | `null` | HA entity for grid balancing switch |
+| `entity grid setpoint` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid setpoint |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -418,6 +410,14 @@ Optimizer ensures combined consumption never exceeds this limit:
 **`max_power`**
 
 Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.
+
+**`entity balance switch`**
+
+Optional: Home Assistant entity to enable/disable grid balancing mode. Used for frequency regulation participation or grid services.
+
+**`entity grid setpoint`**
+
+Optional: Home Assistant entity to save the average calculated power on the grid-point. Can be used for XOM-regulation.
 
 </details>
 
@@ -1274,8 +1274,9 @@ Total electricity cost consists of:
 2. **Energy taxes**: Government energy taxes
 3. **Supplier costs**: Your supplier's markup/fees
 4. **VAT**: Value-added tax on sum of above
+5. **Multiplier**: For calculation of productionprice in Belgium 
 
-Consumption price = (market + taxes + supplier) × (1 + VAT)
+Price = (market*multiplier + taxes + supplier) × (1 + VAT)
 
 ## Date-Based Tariffs
 
@@ -1317,6 +1318,8 @@ System uses tariff active on optimization date.
 | `cost supplier production` | object | Yes | — | Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `vat consumption` | object | Yes | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `vat production` | object | Yes | — | VAT percentage for production by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
+| `multiplier consumption` | object (optional) | No | `{'2000-01-01': 1.0}` | Multiplier for consumption by date (YYYY-MM-DD -> x.xx) (Unit: `-`) _Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values_ |
+| `multiplier production` | object (optional) | No | `{'2000-01-01': 1.0}` | Multiplier for production by date (YYYY-MM-DD -> x.xx) (Unit: `-`) _Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values_ |
 | `last invoice` | string | Yes | — | Date of last invoice (YYYY-MM-DD) _Must be YYYY-MM-DD format_ |
 | `tax refund` | boolean | No | `true` | Whether tax refund applies |
 
@@ -1354,6 +1357,14 @@ VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 
 **`vat production`**
 
 VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.
+
+**`multiplier consumption`**
+
+Multiplier on consumption day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.
+
+**`multiplier production`**
+
+Multiplier on feed-in/production day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.
 
 **`last invoice`**
 
