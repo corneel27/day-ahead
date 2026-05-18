@@ -1,8 +1,8 @@
-pandas~=3.0.2
+pandas~=3.0.3
 pydantic~=2.13.4
-pydantic-settings~=2.14.0
+pydantic-settings~=2.14.1
 pytz~=2026.2
-requests~=2.33.1
+requests~=2.34.2
 matplotlib~=3.10.9
 numpy~=2.4.4
 mysql~=0.0.3
