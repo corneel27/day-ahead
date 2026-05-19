@@ -1494,6 +1494,7 @@ class DaCalc(DaBase):
         ev_charge_stages = []
         ampere_factor = []
         ev_instant_charge = []
+        ev_switch_cost = []
         ECS = []
         for e in range(EV):
             ev_capacity = self.ev_options[e].capacity
@@ -1544,6 +1545,7 @@ class DaCalc(DaBase):
                     ).state
                 )
             wished_level.append(wished_lvl)
+            ev_switch_cost.append(self.ev_options[e].switch_cost)
             level_margin.append(
                 self.ev_options[e].charge_scheduler.level_margin if self.ev_options[e].charge_scheduler else 0
             )
@@ -1762,6 +1764,53 @@ class DaCalc(DaBase):
             for e in range(EV)
         ]  # load battery
 
+        ev_is_on = [
+            [
+                model.add_var(var_type=BINARY)
+                for _ in range(U)
+            ]
+            for _ in range(EV)
+        ]
+
+        ev_is_off = [
+            [
+                model.add_var(var_type=BINARY)
+                for _ in range(U)
+            ]
+            for _ in range(EV)
+        ]
+
+        ev_is_partial = [
+            [
+                model.add_var(var_type=BINARY)
+                for _ in range(U)
+            ]
+            for _ in range(EV)
+        ]
+
+        ev_boundary_stop = [
+            [
+                model.add_var(var_type=BINARY)
+                for _ in range(U)
+            ]
+            for _ in range(EV)
+        ]
+
+        ev_partial_sum = [
+            model.add_var(var_type=INTEGER, lb=0)
+            for e in range(EV)
+        ]  # sum is_partial
+
+        ev_boundary_sum = [
+            model.add_var(var_type=INTEGER, lb=0)
+            for e in range(EV)
+        ]  # sum is_boundaru
+
+        ev_start_stops_sum = [
+            model.add_var(var_type=INTEGER, lb=0)
+            for e in range(EV)
+        ]  # sum of ev starts
+
         for e in range(EV):
             if (energy_needed[e] > 0) and (ready_u[e] < U):
                 for u in range(ready_u[e] + 1):
@@ -1791,8 +1840,8 @@ class DaCalc(DaBase):
                         """
                     # som van alle oplaadfactoren is 1
                     model += (xsum(stage_factor[e][cs][u] for cs in range(ECS[e]))) == 1
-                    # som van alle schakelaars boven 0 A en kleiner of gelijk aan 1
                     """
+                    # som van alle schakelaars boven 0 A en kleiner of gelijk aan 1
                     model += (
                         xsum(stage_on[e][cs][u] for cs in range(ECS[e]))
                     ) <= 1
@@ -1813,12 +1862,52 @@ class DaCalc(DaBase):
                         * stage_factor[e][cs][u]
                         for cs in range(ECS[e])
                     )
+
+                eps = 0.0001
+                for u in range(U)[:ready_u[e] + 1]:
+                    # ev_is_off
+                    # model += sf >= ev_is_off[e][u]
+                    model += stage_factor[e][0][u] >= ev_is_off[e][u]
+                    model += stage_factor[e][0][u] <= 1 - eps + eps * ev_is_off[e][u]
+
+                    # ev_is_on
+                    # model += sf <= 1 - ev_is_on[e][u]
+                    model += stage_factor[e][0][u] <= (1 - ev_is_on[e][u])
+
+                    # ev_is_partial
+                    # model += sf >= eps * ev_is_partial[e][u]
+                    model += stage_factor[e][0][u] >= eps * ev_is_partial[e][u]
+
+                    # model += sf <= (1 - eps) * ev_is_partial[e][u] + ev_is_off[e][u]
+                    model += stage_factor[e][0][u] <= (1 - eps) * ev_is_partial[e][u] + ev_is_off[e][u]
+
+                    # precies één toestand
+                    model += (ev_is_on[e][u] + ev_is_off[e][u] + ev_is_partial[e][u]) == 1
+
+                    if u == ready_u[e]:
+                        model += ev_boundary_stop[e][u] == ev_is_on[e][u]
+                    else:
+                        model += ev_boundary_stop[e][u] <= ev_is_on[e][u]
+                        model += ev_boundary_stop[e][u] <= ev_is_off[e][u+1]
+                        model += ev_boundary_stop[e][u] >= (ev_is_on[e][u] + ev_is_off[e][u+1] - 1)
+
+                model += (ev_partial_sum[e] ==
+                           xsum(ev_is_partial[e][u] for u in range(ready_u[e] + 1))
+                         )
+                model += (ev_boundary_sum[e] ==
+                           xsum(ev_boundary_stop[e][u] for u in range(ready_u[e] + 1))
+                         )
+
+                model += ev_start_stops_sum[e] == (ev_partial_sum[e] + ev_boundary_sum[e]) * 2 - 2
+
                 model += energy_needed[e] == xsum(
                     ev_accu_in[e][u] for u in range(ready_u[e] + 1)
                 )
                 for u in range(U)[ready_u[e] + 1 :]:
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
+                    model += ev_is_partial[e][u]  == 0
+                    model += ev_boundary_stop[e][u] == 0
 
                 """
                 max_beschikbaar = 0
@@ -1837,6 +1926,10 @@ class DaCalc(DaBase):
                 for u in range(U):
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
+                    model += ev_is_partial[e][u] == 0
+                    model += ev_boundary_stop[e][u] == 0
+                model += ev_start_stops_sum[e] == 0
+
 
         ##################################################################
         #            salderen                                            #
@@ -2939,6 +3032,11 @@ class DaCalc(DaBase):
                 for u in range(U)
             )
 
+        # switch cost per ev
+        switch_cost = [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(EV)]
+        for e in range(EV):
+            model += switch_cost[e] == ev_switch_cost[e] * ev_start_stops_sum[e]
+
         if self.salderen:
             p_bat = p_avg
         else:
@@ -2948,6 +3046,7 @@ class DaCalc(DaBase):
         model += cost == (
             xsum(c_l[u] * pl[u] - c_t[u] * pt[u] for u in range(U))
             + xsum(cycle_cost[b] + penalty_cost[b] for b in range(B))
+            + xsum(switch_cost[e] for e in range(EV))
             + xsum(
                 (soc_mid[b][0] - soc_mid[b][U])
                 * one_soc[b]
@@ -3440,6 +3539,9 @@ class DaCalc(DaBase):
             )
             total_cycle_cost += cycle_cost[b].x
             total_penalty_cost += penalty_cost[b].x
+        total_switch_cost = 0
+        for e in range(EV):
+            total_switch_cost += switch_cost[e].x
         boiler_storage = (
             (boiler_temp[0].x - boiler_temp[U].x)
             * (spec_heat_boiler / (3600 * cop_boiler))
@@ -3450,6 +3552,7 @@ class DaCalc(DaBase):
             + profit_production
             + total_cycle_cost
             + total_penalty_cost
+            + total_switch_cost
             + battery_storage
             + boiler_storage
         )
@@ -3460,6 +3563,7 @@ class DaCalc(DaBase):
             f"Cost consumption   {cost_consumption: 7.2f}\n"
             f"Cycle cost         {total_cycle_cost: 7.2f}\n"
             f"Penalty cost       {total_penalty_cost: 7.2f}\n"
+            f"EV switch costs    {total_switch_cost: 7.2f}\n"
             f"Battery storage    {battery_storage: 7.2f}\n"
             f"Boiler storage     {boiler_storage: 7.2f}\n"
             f"Profit production  {profit_production: 7.2f}\n"
@@ -3543,6 +3647,30 @@ class DaCalc(DaBase):
                     f"Boiler temperatuur {boiler_temp[U].x:.1f} °C, "
                     f" waardering: {boiler_waarde_el:.3f} kWh = {boiler_waarde_fin:.2f} euro"
                 )
+            ###########################################
+            # grid
+            ###########################################
+            grid_balance = (abs(c_l[0].x - c_t[0].x) <= 0.01)
+            balance_state = "on" if grid_balance else "off"
+            if self.debug:
+                logging.info(f"Grid balanceren zou zijn: {balance_state}")
+            else:
+                self.set_entity_state(
+                    "entity balance switch", self.grid, balance_state
+                )
+                logging.info(f"Grid balanceren: {balance_state}")
+            grid_set_point = round(
+                1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0
+            )
+            logging.info(f"Grid set point: {grid_set_point} W")
+            if not self.debug:
+                # export the ess grid setpoint in W
+                self.set_entity_value(
+                    "entity_grid_setpoint",
+                    self.grid,
+                    grid_set_point,
+                )
+            #####################################
 
             ###########################################
             # ev
@@ -3551,22 +3679,27 @@ class DaCalc(DaBase):
                 if ready_u[e] < U:
                     if self.log_level <= logging.INFO:
                         logging.info(
-                            f"Inzet-factor laden {self.ev_options[e].name} per stap"
+                            f"Inzet-factor laden {self.ev_options[e].name} per stop"
                         )
                         print("uur   ", end=" ")
                         for cs in range(ECS[e]):
                             print(
-                                f" {ev_charge_stages[e][cs]['ampere']:4.1f}A", end=" "
+                                f"    {ev_charge_stages[e][cs]['ampere']:4.1f}A", end="    "
                             )
-                        print("     cons  power")
+                        print("    cons   power    on    off   part  bound")
                         for u in range(ready_u[e] + 1):
-                            print(f"{uur[u]}", end="    ")
+                            print(f"{uur[u]}", end="  ")
                             for cs in range(ECS[e]):
                                 print(
-                                    f"{stage_factor[e][cs][u].x:.2f}({stage_on[e][cs][u].x})",
+                                    f"{stage_factor[e][cs][u].x:.4f}({stage_on[e][cs][u].x})",
                                     end="   ",
                                 )
-                            print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f}")
+                            print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
+                                  f"   {ev_is_on[e][u].x}"
+                                  f"   {ev_is_off[e][u].x}"
+                                  f"   {ev_is_partial[e][u].x}"
+                                  f"   {ev_boundary_stop[e][u].x}"
+                                  )
 
                 start_ev_laden = stop_ev_laden = None
                 for u in range(U):
@@ -3589,7 +3722,11 @@ class DaCalc(DaBase):
                     logging.info(
                         f"Laden van {self.ev_options[e].name} is niet ingepland"
                     )
-
+                logging.info(f"Aantal partial stops: {ev_partial_sum[e].x:2.0f}")
+                logging.info(f"Aantal boundary stops: {ev_boundary_sum[e].x:2.0f}")
+                logging.info(f"Aantal start/stops: {ev_start_stops_sum[e].x:2.0f}")
+                logging.info(f"Penalty per start/stop: {ev_switch_cost[e]:4.3f}")
+                logging.info(f"Totale switch kosten: {switch_cost[e].x:4.2f}")
                 entity_charge_switch = self.ev_options[e].charge_switch
                 entity_charging_ampere = self.ev_options[e].entity_set_charging_ampere
                 if ev_instant_charge[e]:
@@ -3743,14 +3880,11 @@ class DaCalc(DaBase):
                     netto_vermogen_bat = 0
                     new_state = battery_state_off_value
                     stop_omvormer = None
-                    balance = False
-                elif abs(c_l[0].x - c_t[0].x) <= 0.01:
+                elif grid_balance:
                     new_state = battery_state_on_value
-                    balance = True
                     stop_omvormer = None
                 elif abs(netto_vermogen_bat) < minimum_power:
                     new_state = battery_state_on_value
-                    balance = False
                     new_ts = (
                         start_dt.timestamp()
                         + (abs(netto_vermogen_bat) / minimum_power) * self.interval_s
@@ -3770,7 +3904,6 @@ class DaCalc(DaBase):
                             sum_power += wf * charge_stages[b][cs]["power"]
                     if sum_weight_factor < 0.95:
                         new_state = battery_state_on_value
-                        balance = False
                         netto_vermogen_bat = round(sum_power / sum_weight_factor)
                         new_ts = (
                             start_dt.timestamp()
@@ -3779,7 +3912,6 @@ class DaCalc(DaBase):
                         stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
                     else:
                         new_state = battery_state_on_value
-                        balance = False
                         stop_omvormer = None
                 elif ac_from_dc[b][0].x > 0.0:  # ontladen met optimaal vermogen
                     sum_weight_factor = 0
@@ -3791,7 +3923,6 @@ class DaCalc(DaBase):
                             sum_power += wf * discharge_stages[b][ds]["power"]
                     if 0.10 <= sum_weight_factor < 0.95:
                         new_state = battery_state_on_value
-                        balance = False
                         netto_vermogen_bat = -round(sum_power / sum_weight_factor)
                         new_ts = (
                             start_dt.timestamp()
@@ -3800,11 +3931,9 @@ class DaCalc(DaBase):
                         stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
                     else:
                         new_state = battery_state_on_value
-                        balance = False
                         stop_omvormer = None
                 else:
                     new_state = battery_state_on_value
-                    balance = False
                     stop_omvormer = None
                 if stop_omvormer is None:
                     stop_str = "2000-01-01 00:00:00"
@@ -3829,12 +3958,7 @@ class DaCalc(DaBase):
                     first_row.from_ac.kWh * 1000 / hour_fraction_first_interval
                 )
                 calculated_soc = round(soc[b][1].x, 1)
-                grid_set_point = round(
-                    1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0
-                )
-                logging.info(f"Grid set point: {grid_set_point} W")
                 logging.info(f"Cycle cost {bat_name}: {cycle_cost[b].x:<0.2f} euro")
-                balance_state = "on" if balance else "off"
                 if self.debug:
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) batterij {bat_name} "
@@ -3842,14 +3966,7 @@ class DaCalc(DaBase):
                     )
                     if stop_omvormer:
                         logging.info(f"tot: {stop_str}")
-                    logging.info(f"Balanceren zou zijn: {balance_state}")
                 else:
-                    # export the ess grid setpoint in W
-                    self.set_entity_value(
-                        "entity_grid_setpoint",
-                        self.battery_options[b],
-                        grid_set_point,
-                    )
                     self.set_entity_value(
                         "entity set power feedin",
                         self.battery_options[b],
@@ -3858,15 +3975,11 @@ class DaCalc(DaBase):
                     self.set_entity_option(
                         "entity set operating mode", self.battery_options[b], new_state
                     )
-                    self.set_entity_state(
-                        "entity balance switch", self.battery_options[b], balance_state
-                    )
                     tot_str = f" tot: {stop_str}" if stop_omvormer else ""
                     logging.info(
                         f"Netto vermogen naar(+)/uit(-) omvormer {bat_name}: "
                         f"{netto_vermogen_bat} W {tot_str}"
                     )
-                    logging.info(f"Balanceren: {balance_state}")
                     helper_id = self.battery_options[b].entity_stop_inverter
                     if helper_id is not None:
                         self.call_service(

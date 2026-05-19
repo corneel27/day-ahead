@@ -13,6 +13,7 @@ from .migrations.migrator import migrate_config
 from .versions.v0 import ConfigurationV0
 # Uncomment when creating v1:
 from .versions.v1 import ConfigurationV1
+from .versions.v2 import ConfigurationV2
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ VERSION_MODELS: dict[int, Type[BaseModel]] = {
     0: ConfigurationV0,
     1: ConfigurationV1,
     # Uncomment when creating v2:
-    # 2: ConfigurationV2,
+    2: ConfigurationV2,
 }
 
 # Derive current version from registry

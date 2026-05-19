@@ -105,6 +105,19 @@ class EVConfig(BaseModel):
             "x-validation-hint": "Must be > 0, typically 40-100 kWh"
         }
     )
+    switch_cost: Optional[float] = Field(
+        ge=0,
+        default=0.0,
+        alias="switch cost",
+        description="Switch cost in euro/switch to 'on'",
+        json_schema_extra={
+            "x-help": "Virtual cost in euro per extra switch to 'on'."
+                      "Every extra 'stop/start' will cause one switch_penalty to be accounted",
+            "x-unit": "euro/switch to 'on'",
+            "x-ui-section": "General",
+            "x-validation-hint": "Must be >= 0, typically 0.01- 0.10 euro/switch"
+        }
+    )
     entity_position: EntityId = Field(
         alias="entity position",
         description="HA device tracker for vehicle position",

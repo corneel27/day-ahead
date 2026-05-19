@@ -3,8 +3,9 @@ Solar configuration models.
 """
 
 from typing import Any, Optional
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict, PastDate
 from ..base import EntityId
+from datetime import date
 
 
 class SolarString(BaseModel):
@@ -38,24 +39,6 @@ class SolarString(BaseModel):
             "x-unit": "kWp",
             "x-ui-section": "Panel Orientation",
             "x-validation-hint": "Must be greater than 0"
-        }
-    )
-    ml_prediction: bool = Field(
-        default=False,
-        description="Use ML model to predict solar production for this installation",
-        json_schema_extra={
-            "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
-            "x-ui-section": "ML Prediction"
-        }
-    )
-    entities_sensors: list[EntityId] = Field(
-        default_factory=list,
-        alias="entities sensors",
-        description="HA sensor entities for measuring actual solar production",
-        json_schema_extra={
-            "x-help": "Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.",
-            "x-ui-section": "ML Prediction",
-            "x-ui-widget-filter": "sensor"
         }
     )
     max_power: Optional[float] = Field(
@@ -174,6 +157,14 @@ class SolarConfig(BaseModel):
         description="Use ML model to predict solar production for this installation",
         json_schema_extra={
             "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
+            "x-ui-section": "ML Prediction"
+        }
+    )
+    ml_training_start_date: Optional[PastDate] = Field(
+        default=date(2000, 1, 1),
+        description="If configured the ml-traning of the solar model will be trained with the data since the start date",
+        json_schema_extra={
+            "x-help": "The ml-training will be restricted to the data since the start date with a maximum of three year",
             "x-ui-section": "ML Prediction"
         }
     )

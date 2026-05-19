@@ -181,6 +181,8 @@ class DaBase(hass.Hass):
         self.ol_t_def = self.prices_options.cost_supplier_production if self.prices_options else None
         self.btw_l_def = self.prices_options.vat_consumption if self.prices_options else None
         self.btw_t_def = self.prices_options.vat_production if self.prices_options else self.btw_l_def
+        self.multiplier_l_def = self.prices_options.multiplier_consumption if self.prices_options else None
+        self.multiplier_t_def = self.prices_options.multiplier_production if self.prices_options else None
         self.salderen = self.prices_options.tax_refund if self.prices_options else True
 
         self.history_options = self.config.history

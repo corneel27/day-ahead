@@ -102,7 +102,28 @@ class PricingConfig(BaseModel):
             "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
         }
     )
-    
+    multiplier_consumption: Optional[dict[str, float]] = Field(
+        default={"2000-01-01": 1.0},
+        alias="multiplier consumption",
+        description="Multiplier for consumption by date (YYYY-MM-DD -> x.xx)",
+        json_schema_extra={
+            "x-help": "Multiplier on consumption day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.",
+            "x-unit": "-",
+            "x-ui-section": "Cost",
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values"
+        }
+    )
+    multiplier_production: Optional[dict[str, float]] = Field(
+        default={"2000-01-01": 1.0},
+        alias="multiplier production",
+        description="Multiplier for production by date (YYYY-MM-DD -> x.xx)",
+        json_schema_extra={
+            "x-help": "Multiplier on feed-in/production day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.",
+            "x-unit": "-",
+            "x-ui-section": "Cost",
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values"
+        }
+    )
     # Invoice settings
     last_invoice: date = Field(
         alias="last invoice",
@@ -125,7 +146,7 @@ class PricingConfig(BaseModel):
     
     @field_validator('vat_consumption', 'vat_production')
     @classmethod
-    def validate_vat_percentages(cls, v: dict[str, int]) -> dict[str, int]:
+    def validate_vat_percentages(cls, v: dict[str, float]) -> dict[str, float]:
         """Validate VAT percentages are between 0 and 100."""
         for date, percentage in v.items():
             if not (0 <= percentage <= 100):
@@ -150,8 +171,9 @@ Total electricity cost consists of:
 2. **Energy taxes**: Government energy taxes
 3. **Supplier costs**: Your supplier's markup/fees
 4. **VAT**: Value-added tax on sum of above
+5. **Multiplier**: For calculation of productionprice in Belgium 
 
-Consumption price = (market + taxes + supplier) × (1 + VAT)
+Price = (market*multiplier + taxes + supplier) × (1 + VAT)
 
 ## Date-Based Tariffs
 

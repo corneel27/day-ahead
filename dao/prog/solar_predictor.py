@@ -18,6 +18,7 @@ import knmi
 import copy
 import math
 
+from pip._internal.utils import datetime
 # ML imports
 from xgboost import XGBRegressor
 from sklearn.model_selection import GridSearchCV
@@ -81,6 +82,7 @@ class SolarPredictor(DaBase):
         ]
         self.is_trained = False
         self.training_stats = {}
+        self.ml_training_start_date = dt.date(2000,1,1)
         self.solar_entities = []
         """
         # Set default physics-based constraints for typical residential system
@@ -954,6 +956,9 @@ class SolarPredictor(DaBase):
         self.azimut = solar_option.effective_orientation + 180
         self.solar_capacity = solar_option.total_capacity
         self.solar_entities = solar_option.entities_sensors
+        start_date = solar_option.ml_training_start_date
+        start_dt = dt.datetime(start_date.year, start_date.month, start_date.day)
+        start = max(start, start_dt)
         if not self.solar_entities:
             raise ValueError(
                 f"No entities configured in your solar-option of {self.solar_name}"

@@ -2755,6 +2755,7 @@ class Report(DaBase):
                 t2.c.start_ts.label("tijd"),
                 t1.c.state.label("state_t1"),
                 t2.c.state.label("state_t2"),
+                statistics_meta.c.unit_of_measurement.label("dim"),
             )
             .select_from(
                 t1.join(t2, t2.c.start_ts == t1.c.start_ts + 3600).join(
@@ -2777,13 +2778,20 @@ class Report(DaBase):
             df_raw = pd.read_sql(query, connection)
 
         if len(df_raw) > 0:
+            dim = df_raw.iloc[0]["dim"]
+            if dim == "Wh":
+                factor = 0.001
+            elif dim == "MWh":
+                factor = 1000
+            else:
+                factor = 1
             # Convert UNIX timestamps to datetime
             df_raw["tijd"] = df_raw.apply(
                 lambda x: datetime.datetime.fromtimestamp(x["tijd"]), axis=1
             )
             # Calculate the value
             df_raw[col_name] = df_raw.apply(
-                lambda row: round(max(row["state_t2"] - row["state_t1"], 0), 3), axis=1
+                lambda row: round(max(row["state_t2"] - row["state_t1"], 0) * factor, 3), axis=1
             )
             df_raw["weekdag"] = df_raw.apply(
                 lambda x: self.tijd_at_interval("weekdag", x["tijd"]), axis=1
@@ -3040,6 +3048,8 @@ class Report(DaBase):
         ol_t = 0
         btw_l = 0
         btw_t = 0
+        multiplier_l = 1
+        multiplier_t = 1
         columns = ["time", "da_ex", "da_cons", "da_prod", "datasoort"]
         df = pd.DataFrame(columns=columns)
         salderen = self.prices_options.tax_refund if self.prices_options else True
@@ -3054,10 +3064,12 @@ class Report(DaBase):
                 taxes_t = get_value_from_dict(dag_str, self.taxes_t_def)
                 btw_l = get_value_from_dict(dag_str, self.btw_l_def)
                 btw_t = get_value_from_dict(dag_str, self.btw_t_def)
+                multiplier_l = get_value_from_dict(dag_str, self.multiplier_l_def)
+                multiplier_t = get_value_from_dict(dag_str, self.multiplier_t_def)
                 old_dagstr = dag_str
-            da_cons = (row.value + taxes_l + ol_l) * (1 + btw_l / 100)
+            da_cons = (row.value * multiplier_l + taxes_l + ol_l) * (1 + btw_l / 100)
             if salderen:
-                da_prod = (row.value + taxes_t + ol_t) * (1 + btw_t / 100)
+                da_prod = (row.value * multiplier_t + taxes_t + ol_t) * (1 + btw_t / 100)
             else:
                 da_prod = (row.value + ol_t) * (1 + btw_t / 100)
             df.loc[df.shape[0]] = [
