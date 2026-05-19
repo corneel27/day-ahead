@@ -25,4 +25,4 @@ class ConfigurationV2(ConfigurationV1):
     All other fields are inherited from ConfigurationV0 and ConfigurationV1
     """
 
-    config_version: Literal[1] = 2
+    config_version: Literal[2] = 2
