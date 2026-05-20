@@ -45,6 +45,7 @@ class DaCalc(DaBase):
         self.boiler_present = False
         self.boiler_enabled = False
         self.grid_max_power = self.config.grid.max_power
+        self.grid = self.config.grid
         self.machines = self.config.machines
         # self.start_logging()
 
