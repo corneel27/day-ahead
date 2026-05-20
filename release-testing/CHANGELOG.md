@@ -1,5 +1,8 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.5.1.rc2
+Fixed error writing grid values
+
 # 2026.5.1.rc1
 - updated several python modules
 - fixed error when calculating baseload from sensors with Wh and MWh
