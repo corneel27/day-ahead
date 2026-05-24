@@ -1,12 +1,21 @@
 #!/bin/sh
 
+# Heartbeat file
 HEARTBEAT="/tmp/dao_scheduler_heartbeat"
-# Scheduler updates heartbeat every ~5s while tasks run; 120s leaves enough slack.
-MAX_HEARTBEAT_AGE_S=120
-# Users expect config changes to apply immediately; polling every 1s keeps reload latency low
-CHECK_INTERVAL_S=1
+
+# Stale-heartbeat threshold: watchdog restarts the scheduler when the heartbeat file is
+# older than MAX_HEARTBEAT_AGE_S seconds (checked every CHECK_INTERVAL_S). Must be >= longest inline
+# scheduler task; inline runs do not refresh the heartbeat until they finish. Subprocess
+# actions refresh it in a poll loop. Higher heartbeat_age = more tolerance for long inline work but slower hang recovery.
+MAX_HEARTBEAT_AGE_S=450
+
+# How often the loop checks child, inotify, and heartbeat age.
+# Users expect config changes to apply immediately; polling every 2s keeps reload latency low
+CHECK_INTERVAL_S=2
 
 start_child() {
+  # Drop stale heartbeat from a previous run so we don't restart-loop before the child writes.
+  rm -f "$HEARTBEAT"
   "$@" &
   CHILD_PID=$!
   echo "watchdog: started da_scheduler pid=$CHILD_PID cmd=$*"
@@ -67,4 +76,3 @@ while true; do
 
   sleep "$CHECK_INTERVAL_S"
 done
-

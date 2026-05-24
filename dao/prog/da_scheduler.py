@@ -12,24 +12,46 @@ from da_base import DaBase
 
 
 class DaScheduler(DaBase):
+    """Scheduler with selective subprocess execution and watchdog heartbeat.
+
+    ``watchdog.sh`` restarts the scheduler child on crash (process gone) or on a stale
+    heartbeat file (process still alive but hangs).
+    
+    Actions listed in ``_SUBPROCESS_ACTIONS`` run in a child process; all other
+    scheduled actions run inline in this process (``run_task_function``).
+
+    We use a subprocess when a task can be long-running: the parent stays in a poll
+    loop, refreshes the heartbeat about every ``_poll_s`` seconds, and can stop the child
+    on timeout (SIGTERM/SIGKILL on the process group) without killing the scheduler.
+    
+    We use inline for short or frequent tasks (e.g. quarterly ``calc``): each
+    start of a subprocess forks a new Python interpreter and adds some overhead,
+    which might add up when the same action runs frequently.
+
+    Trade-off for inline tasks: no heartbeat updates while the task runs, so a
+    task longer than the watchdog ``MAX_HEARTBEAT_AGE_S`` can look like a hang and cause
+    a watchdog restart.
+    """
+
+    # Subprocess actions; flock per action so we never start a duplicate long job (e.g. after watchdog
+    # restart).
+    _SUBPROCESS_ACTIONS = ("train_ml_predictions", "calc_baseloads")
+
     def __init__(self, file_name: str = None):
         super().__init__(file_name)
         self.active = self.config.scheduler.active
         self.scheduler_tasks = {entry.time: entry.action for entry in self.config.scheduler.schedule}
-
+        
         # Heartbeat monitored by watchdog.sh.
         self._heartbeat_path = Path("/tmp/dao_scheduler_heartbeat")
-
+        
         # Poll interval while waiting for subprocess completion.
         self._poll_s = 5
 
-        # Generic timeout for all tasks, with a single override for ML training.
-        self._default_timeout_s = 10 * 60
-        self._train_timeout_s = 30 * 60
+        # Generic timeout for all tasks in subprocesses.
+        self._subprocess_timeout_s = 30 * 60
 
-        # Only lock ML training: on watchdog restarts (config change / heartbeat) it's the only task where a
-        # concurrent second run is both plausible and costly; other tasks are short and safe to re-run.
-        self._no_overlap_actions = {"train_ml_predictions"}
+        # Lock directory for per-action locks.
         self._lock_dir = Path("/tmp/dao_scheduler_locks")
         self._lock_dir.mkdir(parents=True, exist_ok=True)
 
@@ -38,17 +60,11 @@ class DaScheduler(DaBase):
         self._workdir = os.getcwd()
 
     def _touch_heartbeat(self):
-        # Best effort: watchdog signal only; must not break scheduling.
         try:
             self._heartbeat_path.write_text(str(time.time()))
         except Exception:
             # Don't let heartbeat failures break scheduling.
             pass
-
-    def _timeout_for_action(self, action: str) -> int:
-        if action == "train_ml_predictions":
-            return self._train_timeout_s
-        return self._default_timeout_s
 
     def _task_key_for_action(self, action: str) -> str | None:
         for task_key, task in self.tasks.items():
@@ -92,11 +108,12 @@ class DaScheduler(DaBase):
             logging.error(f"scheduler: task_key={task_key} has no cmd for action={action}")
             return
 
-        timeout_s = int(self._timeout_for_action(action))
+        timeout_s = int(self._subprocess_timeout_s)
         start_ts = time.time()
 
         logging.info(
-            f"scheduler: start action={action} task_key={task_key} timeout_s={timeout_s} cmd={cmd}"
+            f"scheduler: start subprocess action={action} task_key={task_key} "
+            f"timeout_s={timeout_s} cmd={cmd}"
         )
 
         # New process group so we can kill the full tree (joblib/loky).
@@ -107,16 +124,21 @@ class DaScheduler(DaBase):
             preexec_fn=os.setsid,
         )
 
-        # Poll-loop keeps heartbeat alive during long tasks and enables soft timeout handling (try SIGTERM before SIGKILL).
+        # Poll-loop keeps heartbeat alive during long tasks and enables timeout handling (try SIGTERM before SIGKILL).
         while True:
             self._touch_heartbeat()
 
             exit_code = proc.poll()
             if exit_code is not None:
                 dur = int(time.time() - start_ts)
-                logging.info(
-                    f"scheduler: done action={action} exit_code={exit_code} duration_s={dur}"
-                )
+                if exit_code == 0:
+                    logging.info(
+                        f"scheduler: done action={action} exit_code={exit_code} duration_s={dur}"
+                    )
+                else:
+                    logging.error(
+                        f"scheduler: failed action={action} exit_code={exit_code} duration_s={dur}"
+                    )
                 return
 
             runtime_s = time.time() - start_ts
@@ -156,6 +178,22 @@ class DaScheduler(DaBase):
 
             time.sleep(self._poll_s)
 
+    def _run_action_inline(self, action: str):
+        task_key = self._task_key_for_action(action)
+        if task_key is None:
+            logging.error(f"scheduler: no task found for action={action}")
+            return
+
+        logging.info(f"scheduler: start inline action={action} task_key={task_key}")
+        self.run_task_function(task_key)
+        logging.info(f"scheduler: done inline action={action} task_key={task_key}")
+
+    def _run_action(self, action: str):
+        if action in self._SUBPROCESS_ACTIONS:
+            self._run_action_subprocess(action)
+        else:
+            self._run_action_inline(action)
+
     def scheduler(self):
         # if not (self.notification_entity is None) and self.notification_opstarten:
         #     self.set_value(self.notification_entity, "DAO scheduler gestart " +
@@ -169,10 +207,11 @@ class DaScheduler(DaBase):
             # wacht tot hele minuut 0% cpu
             time.sleep((next_min - t).total_seconds())
 
-            # heartbeat at least once per minute (even when inactive)
+            # heartbeat once per minute
             self._touch_heartbeat()
             if not self.active:
                 continue
+
             hour = next_min.hour
             minute = next_min.minute
             key0 = str(hour).zfill(2) + str(minute).zfill(2)
@@ -191,14 +230,14 @@ class DaScheduler(DaBase):
 
             for action in actions:
                 lock_f = None
-                if action in self._no_overlap_actions:
+                if action in self._SUBPROCESS_ACTIONS:
                     lock_f = self._acquire_action_lock(action)
                     if lock_f is None:
                         logging.warning(f"scheduler: skip action={action} (already running)")
                         continue
 
                 try:
-                    self._run_action_subprocess(action)
+                    self._run_action(action)
                 except KeyboardInterrupt:
                     sys.exit()
                 except Exception:
@@ -210,6 +249,8 @@ class DaScheduler(DaBase):
 
 def main():
     da_sched = DaScheduler("../data/options.json")
+    # Touch heartbeat as soon as init finishes; doing it later can trigger watchdog restart on stale file.
+    da_sched._touch_heartbeat()
     da_sched.scheduler()
 
 
