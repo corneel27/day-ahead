@@ -1,5 +1,14 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.5.1
+- updated several python modules
+- fixed error when calculating baseload from sensors with Wh and MWh
+- added ml_training_start_date for installations with changed configuration within past three years(feature request from @TheMystery)
+- added optional switch_cost for charging the EV (=float, euro/switch change). <br>
+All extra stops/starts (more than 2) will contribute to virtual penalty cost and so reduce the switch actions.
+- added multiplier_consumption and multiplier_production to price-parameters(for users in Belgium)
+- moved "entity_balance_switch" and "entity_grid_setpoint" from battery to grid
+
 # 2026.5.0
 
 - Updated several python modules
