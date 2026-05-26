@@ -1148,8 +1148,8 @@ class DaCalc(DaBase):
             vol = self.boiler_options.volume
             # spec heat in kJ/K = vol in liter * 4,2 kJ/k.liter + 100 kg boiler * 0,5 kJ/k.kg
             spec_heat_boiler = 1.1 * (vol * 4.2 + 100 * 0.5)  # kJ/K
-            # cop
-            cop_boiler = float(self.boiler_options.cop)
+            # cop flexfloat
+            cop_boiler = float(self.boiler_options.cop.resolve(ha_getter))
             # kWh elektriciteit / K
             # spec_elec_boiler = spec_heat_boiler / 3600 * cop_boiler
             # elektrisch vermogen in W

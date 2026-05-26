@@ -553,15 +553,14 @@
           "title": "Entity Instant Start"
         },
         "cop": {
+          "$ref": "#/$defs/FlexFloat",
           "default": 3.0,
           "description": "Coefficient of Performance",
-          "exclusiveMinimum": 0,
-          "title": "Cop",
-          "type": "number",
           "x-help": "Coefficient of Performance if using heat pump water heater. For resistive heating element, use 1.0. For heat pump water heater, typically 2.5-4.0.",
           "x-ui-section": "Physical Properties",
           "x-unit": "ratio",
-          "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
+          "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump",
+          "title": "Cop"
         },
         "cooling rate": {
           "$ref": "#/$defs/FlexFloat",
