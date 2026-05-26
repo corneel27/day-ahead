@@ -50,11 +50,15 @@ class DaCalc(DaBase):
         # self.start_logging()
 
     def calc_optimum(
-        self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
+        self,
+            _start_dt: dt.datetime | None = None,
+            _start_soc: float | None = None,
+            _start_ev_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2026, month=2, day=25, hour=14, minute=30)
+        # _start_dt = datetime.datetime(year=2026, month=5, day=24, hour=11, minute=0)
         # _start_soc = 78.0
-        if _start_dt is not None or _start_soc is not None:
+        # _start_ev_soc = 67.0
+        if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
         # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
@@ -1149,7 +1153,7 @@ class DaCalc(DaBase):
             # spec heat in kJ/K = vol in liter * 4,2 kJ/k.liter + 100 kg boiler * 0,5 kJ/k.kg
             spec_heat_boiler = 1.1 * (vol * 4.2 + 100 * 0.5)  # kJ/K
             # cop flexfloat
-            cop_boiler = float(self.boiler_options.cop.resolve(ha_getter))
+            cop_boiler = self.boiler_options.cop.resolve(ha_getter)
             # kWh elektriciteit / K
             # spec_elec_boiler = spec_heat_boiler / 3600 * cop_boiler
             # elektrisch vermogen in W
@@ -1522,6 +1526,8 @@ class DaCalc(DaBase):
             except Exception as ex:
                 logging.error(f"EV: entity actual level: {ex}" )
                 soc_state = 100.0
+            if _start_ev_soc is not None:
+                soc_state = _start_ev_soc
 
             # onderstaande regel eventueel voor testen
             # soc_state = min(soc_state, 90.0)
@@ -1645,9 +1651,9 @@ class DaCalc(DaBase):
                 logging.warning(
                     f"Er is te weinig tijd om tot {wished_level[e]}% te laden"
                 )
-                wished_level[e] = actual_soc[e] - 1 + max_possible * 100 / ev_capacity
+                wished_level[e] = actual_soc[e] + max_possible * 100 / ev_capacity
                 logging.info(f"Bijgesteld gewenst laadniveau:{wished_level[e]:.1f} %")
-                e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
+                e_needed = max_possible  # ev_capacity * (wished_level[e] - actual_soc[e]) / 100
             e_needed = max(0, e_needed)  # nooit minder dan 0
             energy_needed.append(e_needed)  # in kWh
             logging.info(f"Benodigde netto energie: {energy_needed[e]:.3f} kWh")
