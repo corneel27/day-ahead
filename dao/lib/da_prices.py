@@ -22,7 +22,18 @@ class DaPrices:
 
     def get_prices(
         self, source, _start: datetime.datetime = None, _end: datetime.datetime = None
-    ):
+    ) -> tuple[bool, bool]:
+        """
+        Fetch and store day-ahead prices.
+
+        Returns:
+            A tuple of two booleans: (available, fetched_now).
+
+            - available: True if day-ahead prices are available after this call (either they were
+              already present in the database, or they were fetched and saved now).
+            - fetched_now: True only when this call performed a fetch and saved data. This is used
+              by `DaBase.get_day_ahead_prices()` to log "fetched now" vs "already present".
+        """
         if self.interval == "1hour":
             resolution = 60
         else:
@@ -61,7 +72,7 @@ class DaPrices:
                     end = tz.normalize(tz.localize(end))
                 if present >= (end - datetime.timedelta(hours=1)):
                     logging.info(f"Day ahead data already present")
-                    return
+                    return True, False
 
         # day-ahead market prices (€/MWh)
         if source.lower() == "entsoe":
@@ -80,6 +91,10 @@ class DaPrices:
             except Exception as ex:
                 logging.error(ex)
                 logging.error(f"Geen data van Entsoe: tussen {start} en {end}")
+                return False, False
+            if len(da_prices.index) == 0:
+                logging.error(f"Geen data van Entsoe: tussen {start} en {end}")
+                return False, False
             if len(da_prices.index) > 0:
                 df_db = pd.DataFrame(columns=["time", "code", "value"])
                 da_prices = (
@@ -106,6 +121,7 @@ class DaPrices:
                         logging.warning(
                             f"Geen data van Entsoe tussen {last_time_dt} en {end_dt}"
                         )
+                return True, True
 
         if source.lower() == "nordpool":
             # ophalen bij Nordpool
@@ -114,25 +130,27 @@ class DaPrices:
                 end_date = None
             else:
                 end_date = start
+            expected_count = 24 if self.interval == "1hour" else 96
             try:
                 act_spot_prices = prices_spot.fetch(
                     areas=[self.country], end_date=end_date, resolution=resolution
                 )
             except ConnectionError:
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
-                return
+                return False, False
             except Exception as ex:
                 logging.exception(ex)
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
-                return
+                return False, False
             if act_spot_prices is None:
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
-                return
+                return False, False
 
             act_values = act_spot_prices["areas"][self.country]["values"]
             s = pp.pformat(act_values, indent=2)
             logging.info(f"Day ahead prijzen van Nordpool:\n {s}")
             df_db = pd.DataFrame(columns=["time", "code", "value"])
+            time_ts = None
             for act_value in act_values:
                 time_dt = act_value["start"]
                 time_ts = int(time_dt.timestamp())
@@ -147,10 +165,15 @@ class DaPrices:
                 f"{end_date.strftime('%Y-%m-%d') if end_date else 'tomorrow'}"
                 f" (source: nordpool, db-records): \n {df_db.to_string(index=False)}"
             )
-            if len(df_db) < 24 and datetime.datetime.fromtimestamp(
-                time_ts
-            ) < datetime.datetime(
-                end_date.year, end_date.month, end_date.day, end_date.hour
+            if len(df_db) == 0:
+                logging.error(f"Geen bruikbare Nordpool data: tussen {start} en {end}")
+                return False, False
+            if (
+                end_date is not None
+                and time_ts is not None
+                and len(df_db) < expected_count
+                and datetime.datetime.fromtimestamp(time_ts)
+                < datetime.datetime(end_date.year, end_date.month, end_date.day, end_date.hour)
             ):
                 logging.warning(
                     f"Retrieve of day ahead prices for "
@@ -158,6 +181,7 @@ class DaPrices:
                     f"failed"
                 )
             self.db_da.savedata(df_db)
+            return True, True
 
         if source.lower() == "easyenergy":
             # ophalen bij EasyEnergy
@@ -170,10 +194,18 @@ class DaPrices:
                 + "&endTimestamp="
                 + endstr
             )
-            resp = get(url)
-            logging.debug(resp.text)
-            json_object = json.loads(resp.text)
-            df = pd.DataFrame.from_records(json_object)
+            try:
+                resp = get(url)
+                logging.debug(resp.text)
+                json_object = json.loads(resp.text)
+                df = pd.DataFrame.from_records(json_object)
+            except Exception as ex:
+                logging.error(ex)
+                logging.error(f"Geen data van EasyEnergy: tussen {start} en {end}")
+                return False, False
+            if len(df.index) == 0:
+                logging.error(f"Geen data van EasyEnergy: tussen {start} en {end}")
+                return False, False
             logging.info(
                 f"Day ahead prijzen van Easyenergy:\n {df.to_string(index=False)}"
             )
@@ -191,6 +223,7 @@ class DaPrices:
                 f"{df_db.to_string(index=False)}"
             )
             self.db_da.savedata(df_db)
+            return True, True
 
         if source.lower() == "tibber":
             now_ts = datetime.datetime.now().timestamp()
@@ -250,17 +283,22 @@ class DaPrices:
                 "Authorization": "Bearer " + api_token,
                 "content-type": "application/json",
             }
-            resp = post(url, headers=headers, data=query)
-            tibber_dict = json.loads(resp.text)
-            today_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-                "currentSubscription"
-            ]["priceInfo"]["today"]
-            tomorrow_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-                "currentSubscription"
-            ]["priceInfo"]["tomorrow"]
-            range_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-                "currentSubscription"
-            ]["priceInfoRange"]["nodes"]
+            try:
+                resp = post(url, headers=headers, data=query)
+                tibber_dict = json.loads(resp.text)
+                today_nodes = tibber_dict["data"]["viewer"]["homes"][0]["currentSubscription"][
+                    "priceInfo"
+                ]["today"]
+                tomorrow_nodes = tibber_dict["data"]["viewer"]["homes"][0]["currentSubscription"][
+                    "priceInfo"
+                ]["tomorrow"]
+                range_nodes = tibber_dict["data"]["viewer"]["homes"][0]["currentSubscription"][
+                    "priceInfoRange"
+                ]["nodes"]
+            except Exception as ex:
+                logging.error(ex)
+                logging.error(f"Geen data van Tibber: tussen {start} en {end}")
+                return False, False
             df_db = pd.DataFrame(columns=["time", "code", "value"])
             for lst in [today_nodes, tomorrow_nodes, range_nodes]:
                 for node in lst:
@@ -275,4 +313,11 @@ class DaPrices:
                 f"Day ahead prijzen (source: tibber, db-records): \n "
                 f"{df_db.to_string(index=False)}"
             )
+            if len(df_db) == 0:
+                logging.error(f"Geen bruikbare Tibber data: tussen {start} en {end}")
+                return False, False
             self.db_da.savedata(df_db)
+            return True, True
+
+        logging.error(f"Onbekende day-ahead source: {source}")
+        return False, False
