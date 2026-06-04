@@ -904,6 +904,13 @@ class SolarPredictor(DaBase):
         # get weather-dataframe from database
         weather_data = pd.DataFrame(columns=["utc", "gr", "temp", "winds"])
         for weather_item in weather_data.columns[1:]:
+            latest_dt = self.db_da.get_time_border_record(weather_item, latest=True)
+            if latest_dt < end and not prognose:
+                table_name = "prognoses"
+                logging.warning(f"Er zijn geen meetdata van {weather_item} op "
+                                f"{start.strftime('%Y-%m_%d')}")
+            else:
+                table_name = "values"
             df_item = self.db_da.get_column_data(
                 table_name, weather_item, start=start, end=end
             )
