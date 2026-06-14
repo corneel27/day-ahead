@@ -1,5 +1,14 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.6.0
+- Changed watchdog.sh: also restart scheduler when it crashes
+- Changed boiler cop to FlexFloat (request from @hemertje)
+- Fixed error loading EV when there is not enough time (reported by @PcFer
+- Moved last print-statements to logging
+- Added "share" to mapped directories (feature request from @DeadMetal)
+- When missing measured data in "Solar"-report prognose-data is used(feature request from @MvdB1982)
+- Updated several python modules
+
 # 2026.5.1
 - updated several python modules
 - fixed error when calculating baseload from sensors with Wh and MWh
