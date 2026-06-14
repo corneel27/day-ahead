@@ -104,7 +104,8 @@
     "last activity entity": "input_datetime.laatste_activiteit"
   },
   "grid": {
-    "max_power": 17
+    "max_power": 17,
+    "entity balance switch": "input_boolean.balanceer_grid"
   },
   "history": {
     "save days": 7
@@ -303,7 +304,6 @@
       "entity set operating mode on": "Aan",
       "entity set operating mode off": "Uit",
       "entity stop inverter": "input_datetime.stop_victron",
-      "entity balance switch": "input_boolean.balanceer_grid",
       "entity from battery": "input_number.growatt_from_battery",
       "entity from pv": "input_number.growatt_from_pv",
       "entity from ac": "input_number.growatt_from_ac",

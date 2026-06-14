@@ -50,11 +50,15 @@ class DaCalc(DaBase):
         # self.start_logging()
 
     def calc_optimum(
-        self, _start_dt: dt.datetime | None = None, _start_soc: float | None = None
+        self,
+            _start_dt: dt.datetime | None = None,
+            _start_soc: float | None = None,
+            _start_ev_soc: float | None = None
     ):
-        # _start_dt = datetime.datetime(year=2026, month=2, day=25, hour=14, minute=30)
+        # _start_dt = datetime.datetime(year=2026, month=5, day=24, hour=11, minute=0)
         # _start_soc = 78.0
-        if _start_dt is not None or _start_soc is not None:
+        # _start_ev_soc = 67.0
+        if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
         # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
@@ -487,9 +491,9 @@ class DaCalc(DaBase):
                     logging.debug(
                         f"Reduced hours for {self.battery_options[b].name}"
                     )
-                    print(f"hour max-power(kW)")
+                    logging.info(f"hour max-power(kW)")
                     for u in range(U):
-                        print(f"{uur[u]} {red_power[u]:6.3f}")
+                        logging.info(f"{uur[u]} {red_power[u]:6.3f}")
                 else:
                     logging.info(
                         f"Reduced hours applied for {self.battery_options[b].name}"
@@ -1148,8 +1152,8 @@ class DaCalc(DaBase):
             vol = self.boiler_options.volume
             # spec heat in kJ/K = vol in liter * 4,2 kJ/k.liter + 100 kg boiler * 0,5 kJ/k.kg
             spec_heat_boiler = 1.1 * (vol * 4.2 + 100 * 0.5)  # kJ/K
-            # cop
-            cop_boiler = float(self.boiler_options.cop)
+            # cop flexfloat
+            cop_boiler = self.boiler_options.cop.resolve(ha_getter)
             # kWh elektriciteit / K
             # spec_elec_boiler = spec_heat_boiler / 3600 * cop_boiler
             # elektrisch vermogen in W
@@ -1380,7 +1384,7 @@ class DaCalc(DaBase):
                             model += c_b[u] == 0.0
                             model += boiler_on[u] == 0
                 """
-                # beste oplossing die nog niet werkt
+                # beste oplossing
 
                 for u in range(U)[0:boiler_start_index]:
                     model += c_b[u] == 0
@@ -1388,7 +1392,7 @@ class DaCalc(DaBase):
                     model += boiler_st[u] == 0
 
                 for u in range(U)[boiler_end_index + 1 :]:
-                    # print(f"u {u}, {uur[u]}")
+                    logging.debug(f"u {u}, {uur[u]}")
                     model += boiler_st[u] == 0
                     if u > boiler_end_index + est_needed_intv[boiler_end_index] - 1:
                         model += boiler_on[u] == 0
@@ -1410,12 +1414,11 @@ class DaCalc(DaBase):
                         if u - j < len(est_needed_elec_st[j])
                     )
                     """
-                    # for debugging
-                    print(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
+                    logging.debug(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
                     for j in range(U)[max(0, u - est_needed_intv[u]+1): u + 1]:
-                        # print(f"len(est_needed_elec_st[j]): {len(est_needed_elec_st[j])}")
+                        logging.debug(f"len(est_needed_elec_st[j]): {len(est_needed_elec_st[j])}")
                         if est_needed_intv[u]>0 and u - j < len(est_needed_elec_st[j]):
-                            print(f"j: {j}, est_needed_elec_st[j][u - j]: "
+                            logging.debug(f"j: {j}, est_needed_elec_st[j][u - j]: "
                                   f"{est_needed_elec_st[j][u - j]}")
                     """
                     model += boiler_on[u] == xsum(
@@ -1429,7 +1432,7 @@ class DaCalc(DaBase):
                 """
                     j_vanaf = u - est_needed_intv[u]
                     j_tot = min(u + 1, len(cb_hr_run))
-                    print(u, j_vanaf, j_tot)
+                    logging.debug(u, j_vanaf, j_tot)
                     model += c_b[u] == xsum(
                         boiler_st[j] * cb_hr_run[j][u]
                         for j in range(U)[j_vanaf: j_tot]
@@ -1522,6 +1525,8 @@ class DaCalc(DaBase):
             except Exception as ex:
                 logging.error(f"EV: entity actual level: {ex}" )
                 soc_state = 100.0
+            if _start_ev_soc is not None:
+                soc_state = _start_ev_soc
 
             # onderstaande regel eventueel voor testen
             # soc_state = min(soc_state, 90.0)
@@ -1645,9 +1650,9 @@ class DaCalc(DaBase):
                 logging.warning(
                     f"Er is te weinig tijd om tot {wished_level[e]}% te laden"
                 )
-                wished_level[e] = actual_soc[e] - 1 + max_possible * 100 / ev_capacity
+                wished_level[e] = actual_soc[e] + max_possible * 100 / ev_capacity
                 logging.info(f"Bijgesteld gewenst laadniveau:{wished_level[e]:.1f} %")
-                e_needed = ev_capacity * (wished_level[e] - actual_soc[e]) / 100
+                e_needed = max_possible  # ev_capacity * (wished_level[e] - actual_soc[e]) / 100
             e_needed = max(0, e_needed)  # nooit minder dan 0
             energy_needed.append(e_needed)  # in kWh
             logging.info(f"Benodigde netto energie: {energy_needed[e]:.3f} kWh")
@@ -2917,18 +2922,16 @@ class DaCalc(DaBase):
             if self.log_level == logging.DEBUG:
                 logging.debug(f"Per kwartier welke run en met welk vermogen")
                 for kw in range(KW[m]):
-                    print(
+                    line = (
                         f"kw: {kw} tijd: {ma_kw_dt[m][kw].strftime('%H:%M')} "
-                        f"range r: {max(0, kw - RL[m] + 1)} <-> {min(kw, R[m]) + 1} r:",
-                        end=" ",
+                        f"range r: {max(0, kw - RL[m] + 1)} <-> {min(kw, R[m]) + 1} r: "
                     )
                     for r in range(R[m])[max(0, kw - RL[m] + 1) : min(kw, R[m]) + 1]:
-                        print(
+                        line += (
                             f"{r} power: "
-                            f"{self.machines[m].programs[program_index[m]].power[kw - r]}",
-                            end=" ",
+                            f"{self.machines[m].programs[program_index[m]].power[kw - r]}"
                         )
-                    print()
+                    logging.debug(line)
 
             for kw in range(KW[m]):
                 model += (
@@ -3676,31 +3679,45 @@ class DaCalc(DaBase):
             ###########################################
             # ev
             ##########################################
+            """
+            # build the first line (hour + amps)
+            amps = "    ".join(f"{ev_charge_stages[e][cs]['ampere']:4.1f}A" for cs in range(ECS[e]))
+            line1 = f"uur   {amps}"
+            logging.info(line1)
+            
+            # build the second header line
+            line2 = "    cons   power    on    off   part  bound"
+            logging.info(line2)
+            
+            # if you had subsequent columns per stop, build them the same way:
+            # cols = "    ".join(str(value) for value in some_list)
+            # logging.info(f"{some_label}   {cols}")            
+            """
             for e in range(EV):
                 if ready_u[e] < U:
                     if self.log_level <= logging.INFO:
                         logging.info(
                             f"Inzet-factor laden {self.ev_options[e].name} per stop"
                         )
-                        print("uur   ", end=" ")
-                        for cs in range(ECS[e]):
-                            print(
-                                f"    {ev_charge_stages[e][cs]['ampere']:4.1f}A", end="    "
-                            )
-                        print("    cons   power    on    off   part  bound")
+                        amps = "         ".join(
+                            f"{ev_charge_stages[e][cs]['ampere']:4.1f}A" for cs in range(ECS[e]))
+                        line1 = f"  uur        {amps}   cons   power     on   off  part bound"
+                        logging.info(line1)
+
                         for u in range(ready_u[e] + 1):
-                            print(f"{uur[u]}", end="  ")
-                            for cs in range(ECS[e]):
-                                print(
-                                    f"{stage_factor[e][cs][u].x:.4f}({stage_on[e][cs][u].x})",
-                                    end="   ",
-                                )
-                            print(f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
-                                  f"   {ev_is_on[e][u].x}"
-                                  f"   {ev_is_off[e][u].x}"
-                                  f"   {ev_is_partial[e][u].x}"
-                                  f"   {ev_boundary_stop[e][u].x}"
-                                  )
+                            line2 = f"{uur[u]}  "
+                            stages = "   ".join(
+                                f"{stage_factor[e][cs][u].x:.4f}({stage_on[e][cs][u].x})"
+                                for cs in range(ECS[e])
+                            )
+                            line2 += stages + (
+                                f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
+                                f"   {ev_is_on[e][u].x}"
+                                f"   {ev_is_off[e][u].x}"
+                                f"   {ev_is_partial[e][u].x}"
+                                f"   {ev_boundary_stop[e][u].x}"
+                            )
+                            logging.info(line2)
 
                 start_ev_laden = stop_ev_laden = None
                 for u in range(U):
@@ -3740,8 +3757,9 @@ class DaCalc(DaBase):
                 new_switch_state = "off"
                 new_state_stop_laden = None  # "2000-01-01 00:00:00"
 
+                line = "  ".join(f"{stage_factor[e][cs][0].x:.2f}" for cs in range(ECS[e])[1:])
+                logging.debug(line)
                 for cs in range(ECS[e])[1:]:
-                    # print(f"{stage_factor[e][cs][0].x:.2f}", end="  ")
                     if stage_factor[e][cs][0].x > 0:
                         new_ampere_state = ev_charge_stages[e][cs]["ampere"]
                         if new_ampere_state > 0:
@@ -4140,7 +4158,7 @@ class DaCalc(DaBase):
                         f"Per kwartier het berekende verbruik en het bijbehorende tarief"
                     )
                     for kw in range(KW[m]):
-                        print(
+                        logging.debug(
                             f"kwartier {kw:>2} tijd: {ma_kw_dt[m][kw].strftime('%H:%M')} "
                             f"consumption: {c_ma_kw[m][kw].x:>7.3f} "
                             f"uur: {math.floor(kw / 4)} tarief: {pl[math.floor(kw / 4)]:.4f}"
@@ -4150,7 +4168,7 @@ class DaCalc(DaBase):
                         f"het bijbehorende tarief en de kosten"
                     )
                     for u in range(U):
-                        print(
+                        logging.debug(
                             f"uur {u:>2} tijdstip {tijd[u].strftime('%H:%M')} "
                             f"consumption: {c_ma_u[m][u].x:>7.3f} tarief: {pl[u]:.4f}"
                         )

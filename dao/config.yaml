@@ -18,6 +18,7 @@ map:
   - ssl:rw
   - addon_config:rw
   - homeassistant_config:rw
+  - share:rw
 homeassistant_api: true
 ports:
   5000/tcp: 5000

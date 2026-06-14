@@ -1,6 +1,6 @@
 ---
 name: 刀 Day Ahead Optimizer (TESTING)
-version: 2026.5.1.rc2
+version: 2026.6.0.rc1
 stage: experimental
 slug: day_ahead_opt-testing
 description: Beta version of DAO. Use only for testing!
@@ -19,6 +19,7 @@ map:
   - ssl:rw
   - addon_config:rw
   - homeassistant_config:rw
+  - share:rw
 homeassistant_api: true
 ports:
   5000/tcp: 5000

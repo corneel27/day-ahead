@@ -61,7 +61,7 @@ fi
 
 
 cd /root/dao/prog
-bash ./watchdog.sh python3 da_scheduler.py &
+bash ./watchdog.sh&
 
 cd /root/dao/webserver/
 gunicorn --config gunicorn_config.py app:app

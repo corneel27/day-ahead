@@ -877,7 +877,7 @@ class SolarPredictor(DaBase):
         return None
 
     def get_weatherdata(
-        self, start: dt.datetime, end: dt.datetime | None = None, prognose: bool = False
+        self, start: dt.datetime, _end: dt.datetime | None = None, prognose: bool = False
     ) -> pd.DataFrame:
         """
         vult database aan met ontbrekende data
@@ -890,20 +890,28 @@ class SolarPredictor(DaBase):
         """
         # haal ontbrekende data op bij knmi
 
-        if end is None:
+        if _end is None:
             end = dt.datetime.now()
+        else:
+            end = _end
         if not prognose:
             # knmi data evt aanvullen
             self.import_knmi_df(start, end)
 
-        if prognose:
-            table_name = "prognoses"
-        else:
-            table_name = "values"
         start = dt.datetime(start.year, start.month, start.day, start.hour)
         # get weather-dataframe from database
         weather_data = pd.DataFrame(columns=["utc", "gr", "temp", "winds"])
         for weather_item in weather_data.columns[1:]:
+            if prognose:
+                table_name = "prognoses"
+            else:
+                latest_dt = self.db_da.get_time_border_record(weather_item, latest=True)
+                if latest_dt < end and _end is not None:
+                    table_name = "prognoses"
+                    logging.warning(f"Er zijn geen meetdata van {weather_item} op "
+                                    f"{start.strftime('%Y-%m_%d')}")
+                else:
+                    table_name = "values"
             df_item = self.db_da.get_column_data(
                 table_name, weather_item, start=start, end=end
             )
@@ -1023,8 +1031,8 @@ class SolarPredictor(DaBase):
             raise FileNotFoundError(
                 f"Er is geen model aanwezig voor {self.solar_name},svp eerst trainen."
             )
-        latest_dt = self.db_da.get_time_border_record("gr", latest=True)
-        prognose = latest_dt < end
+        latest_dt = self.db_da.get_time_border_record("gr", latest=True, table_name="prognoses")
+        prognose = True # latest_dt < end
         weather_data = self.get_weatherdata(start, end, prognose=prognose)
         prediction = self.predict(weather_data)
         weather_data.reset_index(inplace=True)
