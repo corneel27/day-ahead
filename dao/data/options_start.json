@@ -12,6 +12,8 @@
   "meteoserver-key": "!secret meteoserver-key",
   "prices": {
     "source day ahead": "nordpool",
+    "energypriceforecast-api-url": "https://api.energypriceforecast.eu/api/v1/dao/prices",
+    "energypriceforecast-country": "nl",
     "regular high": 0.50,
     "regular low": 0.40,
     "switch to low": 23,

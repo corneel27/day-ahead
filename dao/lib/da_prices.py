@@ -20,6 +20,27 @@ class DaPrices:
         self.interval = str(config.interval or "1hour").lower()
         self.country = country if country is not None else "NL"
 
+    def _resolve_energypriceforecast_country(self):
+        configured = getattr(self.config.prices, "energypriceforecast_country", None)
+        if configured:
+            return str(configured).strip().lower()
+        mapping = {
+            "NL": "nl",
+            "BE": "be",
+            "DE": "de",
+            "FR": "fr",
+            "AT": "at",
+            "CZ": "cz",
+            "DK1": "dk1",
+            "DK2": "dk2",
+            "NO1": "no1",
+            "NO2": "no2",
+            "NO3": "no3",
+            "NO4": "no4",
+            "NO5": "no5",
+        }
+        return mapping.get(str(self.country or "").upper(), "nl")
+
     def get_prices(
         self, source, _start: datetime.datetime = None, _end: datetime.datetime = None
     ):
@@ -191,6 +212,44 @@ class DaPrices:
                 f"{df_db.to_string(index=False)}"
             )
             self.db_da.savedata(df_db)
+
+        if source.lower() == "energypriceforecast":
+            now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
+            end_ts = end.timestamp() if hasattr(end, "timestamp") else now_ts + 48 * 3600
+            hours = max(1, min(168, math.ceil((end_ts - now_ts) / 3600)))
+            api_url = (
+                getattr(self.config.prices, "energypriceforecast_api_url", None)
+                or "https://api.energypriceforecast.eu/api/v1/dao/prices"
+            )
+            country = self._resolve_energypriceforecast_country()
+            url = f"{api_url}?country={country}&hours={hours}"
+            resp = get(url, timeout=15)
+            resp.raise_for_status()
+            payload = json.loads(resp.text)
+            entries = payload.get("entries") or []
+            logging.info(
+                f"Day ahead prijzen van Energy Price Forecast EU ({country}): \n"
+                f"{pp.pformat(entries[:24], indent=2)}"
+            )
+            df_db = pd.DataFrame(columns=["time", "code", "value"])
+            for entry in entries:
+                start_raw = str(entry.get("start") or "")
+                value = entry.get("value")
+                if not start_raw:
+                    continue
+                try:
+                    dt = datetime.datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
+                    time_stamp = int(dt.timestamp())
+                    value = float(value)
+                except (TypeError, ValueError):
+                    continue
+                df_db.loc[df_db.shape[0]] = [str(time_stamp), "da", value]
+            logging.debug(
+                f"Day ahead prijzen (source: energypriceforecast, db-records): \n "
+                f"{df_db.to_string(index=False)}"
+            )
+            self.db_da.savedata(df_db)
+            return
 
         if source.lower() == "tibber":
             now_ts = datetime.datetime.now().timestamp()

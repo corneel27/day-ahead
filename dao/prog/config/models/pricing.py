@@ -11,12 +11,12 @@ from datetime import date
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
     
-    source_day_ahead: Literal['nordpool', 'entsoe', 'tibber'] = Field(
+    source_day_ahead: Literal['nordpool', 'entsoe', 'tibber', 'energypriceforecast'] = Field(
         default='nordpool',
         alias="source day ahead",
         description="Source for day-ahead prices",
         json_schema_extra={
-            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration, 'energypriceforecast' for forecast fallback from Energy Price Forecast EU.",
             "x-ui-section": "Prices"
         }
     )
@@ -35,6 +35,42 @@ class PricingConfig(BaseModel):
                     "scope": "#/properties/source_day_ahead",
                     "schema": {
                         "const": "entsoe"
+                    }
+                }
+            }
+        }
+    )
+    energypriceforecast_api_url: Optional[str] = Field(
+        default="https://api.energypriceforecast.eu/api/v1/dao/prices",
+        alias="energypriceforecast-api-url",
+        description="Energy Price Forecast EU DAO API URL",
+        json_schema_extra={
+            "x-help": "Custom API endpoint for Energy Price Forecast EU DAO prices. Expected response: format=dao-prices with entries[].",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/source_day_ahead",
+                    "schema": {
+                        "const": "energypriceforecast"
+                    }
+                }
+            }
+        }
+    )
+    energypriceforecast_country: Optional[str] = Field(
+        default=None,
+        alias="energypriceforecast-country",
+        description="Override country code for Energy Price Forecast EU",
+        json_schema_extra={
+            "x-help": "Optional explicit country/market code for Energy Price Forecast EU, for example 'nl', 'de', 'dk1' or 'no3'. Leave empty to map from DAO country automatically.",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/source_day_ahead",
+                    "schema": {
+                        "const": "energypriceforecast"
                     }
                 }
             }
@@ -167,7 +203,7 @@ Configure electricity market prices and tariff components for accurate cost opti
 ## Price Components
 
 Total electricity cost consists of:
-1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)
+1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber/energypriceforecast)
 2. **Energy taxes**: Government energy taxes
 3. **Supplier costs**: Your supplier's markup/fees
 4. **VAT**: Value-added tax on sum of above
@@ -192,6 +228,7 @@ System uses tariff active on optimization date.
 - **nordpool**: Nord Pool (Nordic/Baltic markets)
 - **entsoe**: ENTSO-E Transparency Platform (all European markets)
 - **tibber**: Tibber API (if using Tibber as supplier)
+- **energypriceforecast**: Energy Price Forecast EU DAO endpoint (forecast fallback before official publication)
 
 ## Tips
 

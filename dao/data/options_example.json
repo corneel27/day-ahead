@@ -13,6 +13,8 @@
   "prices": {
     "source day ahead": "nordpool",
     "entsoe-api-key": "!secret entsoe-api-key",
+    "energypriceforecast-api-url": "https://api.energypriceforecast.eu/api/v1/dao/prices",
+    "energypriceforecast-country": "nl",
     "regular high": 0.5,
     "regular low": 0.4,
     "switch to low": 23,
