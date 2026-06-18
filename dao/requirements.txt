@@ -25,7 +25,7 @@ cryptography~=48.0.1
 tzlocal~=5.3.1
 mip==1.17.6
 scikit-learn~=1.9.0
-xgboost~=3.2.0
+xgboost~=3.3.0
 scipy~=1.17.1
 joblib~=1.5.3
 knmi-py~=0.2.0
