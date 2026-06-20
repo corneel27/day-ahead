@@ -234,9 +234,11 @@ Ook het ophalen van dynamische uurprijzen (day ahead prices) stel je in via
     Daar is alles al ingevuld, maar je kunt het aanpassen aan jouw situatie: <br>
 De belangrijkste onderdelen zijn: <br>
     * source day ahead: waar haal je de data vandaan: nordpool is een goede 
- eerste keuze. Je kunt ook `energypriceforecast` gebruiken als forecast-fallback voor markten waar je voor publicatie van de officiele day-ahead prijs al een prijsreeks wilt gebruiken.<br>
-    * energypriceforecast-api-url: optionele override voor de DAO-price feed van Energy Price Forecast EU<br>
-    * energypriceforecast-country: optionele marktcode zoals `nl`, `de`, `dk1` of `no3`<br>
+ eerste keuze.<br>
+    * forecast extension provider: optionele provider voor een aanvullende forecast-extensie voorbij de officiele day-ahead horizon. Momenteel is `energypriceforecast` beschikbaar.<br>
+    * forecast extension hours: aantal extra uren dat je voorbij de officiele horizon wilt toevoegen.<br>
+    * energypriceforecast-extension-api-url: optionele override voor de Energy Price Forecast EU extensie-feed.<br>
+    * energypriceforecast-extension-country: optionele marktcode zoals `nl`, `de`, `dk1` of `no3` voor die extensie-feed.<br>
     * energy taxes consumption: energiebelasting (euro/kWh, ex BTW) bij afname <br>
     * energy taxes production: energiebelasting bij teruglevering (euro/kWh, ex BTW)<br>
     * cost supplier consumption: kosten leverancier voor levering (euro/kWh, ex BTW) <br>
@@ -654,10 +656,12 @@ Het is allemaal optioneel.
 | **meteoserver-key**       |                               | string           |                                    |                                                    |
 | **meteoserver-model**     |                               | string           | harmonie                           | keuze uit harmonie of gfs                          |
 | **meteoserver-attempts**  |                               | getal            | 2                                  | aantal ophaal pogingen                             |
-| **prices**                | source day ahead              | string           | nordpool                           | keuze uit: nordpool / entsoe / easyenergy / tibber / energypriceforecast |
+| **prices**                | source day ahead              | string           | nordpool                           | keuze uit: nordpool / entsoe / easyenergy / tibber |
 |                           | entsoe-api-key                | string           |                                    | alleen bij entsoe als source                       |
-|                           | energypriceforecast-api-url   | string, url      | https://api.energypriceforecast.eu/api/v1/dao/prices | optioneel, alleen bij energypriceforecast |
-|                           | energypriceforecast-country   | string           |                                    | optioneel, alleen bij energypriceforecast |
+|                           | forecast extension provider   | string           | none                               | keuze uit: none / energypriceforecast             |
+|                           | forecast extension hours      | integer          | 0                                  | extra uren voorbij officiele horizon              |
+|                           | energypriceforecast-extension-api-url | string, url | https://api.energypriceforecast.eu/api/v1/dao/prices | optioneel, alleen bij energypriceforecast extensie |
+|                           | energypriceforecast-extension-country | string      |                                    | optioneel, alleen bij energypriceforecast extensie |
 |                           | regular high                  | getal            |                                    |                                                    |
 |                           | regular low                   | getal            |                                    |                                                    |
 |                           | switch to low                 | integer          | 23                                 |                                                    |
@@ -927,19 +931,24 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
 
 ### **prices**<br>
  * source day ahead, default "nordpool"
-     Hier bepaal je waar je je day ahead prijzen vandaan wilt halen. Je hebt de keuze uit vijf bronnen:
+     Hier bepaal je waar je je officiele day ahead prijzen vandaan wilt halen. Je hebt de keuze uit vier bronnen:
    * nordpool
    * entsoe
    * easyenergy
-   * tibber
-   * energypriceforecast<br>
+   * tibber<br>
 
-    Kies je voor **energypriceforecast**, dan gebruikt DAO de aparte DAO-feed van Energy Price Forecast EU. Die feed combineert officiele day-ahead prijzen met forecast-slots voor uren die nog niet officieel gepubliceerd zijn.
- * energypriceforecast-api-url:
-     Optionele override voor de DAO-price feed. Standaard:
+    De officiele bron blijft altijd leidend. Een forecast-provider kan alleen als aparte extensie worden gebruikt bovenop de al geimporteerde day-ahead prijzen.
+ * forecast extension provider:
+     Optionele provider voor een horizon-extensie voorbij de officiele day-ahead prijzen. Momenteel ondersteunt DAO hiervoor:
+   * none
+   * energypriceforecast
+ * forecast extension hours:
+     Het aantal uren dat je voorbij de officiele horizon wilt aanvullen. DAO vertaalt deze instelling intern naar de `hours` parameter van de gekozen provider-URL.
+ * energypriceforecast-extension-api-url:
+     Optionele override voor de Energy Price Forecast EU extensie-feed. Standaard:
      `https://api.energypriceforecast.eu/api/v1/dao/prices`
- * energypriceforecast-country:
-     Optionele expliciete marktcode voor de feed, bijvoorbeeld `nl`, `de`, `dk1` of `no3`. Laat je dit leeg, dan probeert DAO te mappen vanuit de ingestelde landcode.
+ * energypriceforecast-extension-country:
+     Optionele expliciete marktcode voor de extensie-feed, bijvoorbeeld `nl`, `de`, `dk1` of `no3`. Laat je dit leeg, dan probeert DAO te mappen vanuit de ingestelde landcode.
 
     Als je kiest voor **entsoe** dan moet je hieronder een api key invullen.
  * entsoe-api-key:  

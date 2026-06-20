@@ -271,6 +271,11 @@ class CheckDB:
             print(f'Meteo-data verhuizen van "values" naar "prognoses"')
             self.move_meteodata_to_prognoses()
 
+        if l_version < 20260620:
+            record_2026_6_20 = [25, "da_ext", "Tarief forecast extension", "euro/kWh"]
+            self.upsert_variabel(variabel_tabel, record_2026_6_20)
+            print('Table "variabel" geupdated met day-ahead forecast extension.')
+
         """
         if l_version < 20250700:
             # update variabel with records voor calculated pv_ac, pv_dc and corr. factors

@@ -13,6 +13,8 @@ import logging
 
 
 class DaPrices:
+    EXTENSION_CODE = "da_ext"
+
     def __init__(self, config, db_da: DBmanagerObj, country: str = None, secrets: dict = None):
         self.config = config
         self.db_da = db_da
@@ -20,12 +22,7 @@ class DaPrices:
         self.interval = str(config.interval or "1hour").lower()
         self.country = country if country is not None else "NL"
 
-    def _resolve_energypriceforecast_country(self, fallback: bool = False):
-        configured = getattr(
-            self.config.prices,
-            "energypriceforecast_fallback_country" if fallback else "energypriceforecast_country",
-            None,
-        )
+    def _resolve_market_country(self, configured):
         if configured:
             return str(configured).strip().lower()
         mapping = {
@@ -45,10 +42,29 @@ class DaPrices:
         }
         return mapping.get(str(self.country or "").upper(), "nl")
 
-    def _energypriceforecast_api_url(self, fallback: bool = False):
+    def _forecast_extension_provider(self) -> str:
+        provider = getattr(self.config.prices, "forecast_extension_provider", "none")
+        return str(provider or "none").strip().lower()
+
+    def _forecast_extension_hours(self) -> int:
+        hours = getattr(self.config.prices, "forecast_extension_hours", 0)
+        try:
+            return max(0, min(168, int(hours)))
+        except (TypeError, ValueError):
+            return 0
+
+    def _energypriceforecast_extension_country(self):
         configured = getattr(
             self.config.prices,
-            "energypriceforecast_fallback_api_url" if fallback else "energypriceforecast_api_url",
+            "energypriceforecast_extension_country",
+            None,
+        )
+        return self._resolve_market_country(configured)
+
+    def _energypriceforecast_extension_api_url(self):
+        configured = getattr(
+            self.config.prices,
+            "energypriceforecast_extension_api_url",
             None,
         )
         configured = str(configured or "").strip()
@@ -63,12 +79,17 @@ class DaPrices:
         end,
         api_url: str,
         country: str,
+        code: str,
         forecast_only: bool = False,
         min_timestamp: int | None = None,
+        max_timestamp: int | None = None,
+        hours_override: int | None = None,
     ) -> pd.DataFrame:
         now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
         end_ts = end.timestamp() if hasattr(end, "timestamp") else now_ts + 48 * 3600
-        hours = max(1, min(168, math.ceil((end_ts - now_ts) / 3600)))
+        hours = hours_override if hours_override is not None else max(
+            1, min(168, math.ceil((end_ts - now_ts) / 3600))
+        )
         mode_suffix = "&mode=forecast_only" if forecast_only else ""
         url = f"{api_url}?country={country}&hours={hours}{mode_suffix}"
         resp = get(url, timeout=15)
@@ -104,41 +125,79 @@ class DaPrices:
             for time_stamp in timestamps:
                 if min_timestamp is not None and time_stamp <= min_timestamp:
                     continue
-                df_db.loc[df_db.shape[0]] = [str(time_stamp), "da", value]
+                if max_timestamp is not None and time_stamp >= max_timestamp:
+                    continue
+                df_db.loc[df_db.shape[0]] = [str(time_stamp), code, value]
         return df_db
 
-    def _append_energypriceforecast_fallback(self, start, end, source_name: str):
-        if str(source_name or "").strip().lower() == "energypriceforecast":
+    def get_price_forecast_extension(self):
+        provider = self._forecast_extension_provider()
+        extension_hours = self._forecast_extension_hours()
+        if provider == "none" or extension_hours <= 0:
+            self.db_da.delete_code_range(
+                self.EXTENSION_CODE,
+                start=int(datetime.datetime.now().timestamp()),
+            )
+            logging.info("Geen day-ahead forecast-extensie geconfigureerd.")
             return
-        api_url = self._energypriceforecast_api_url(fallback=True)
-        configured = getattr(self.config.prices, "energypriceforecast_fallback_api_url", None)
-        if not str(configured or "").strip():
+        official_source = str(self.config.prices.source_day_ahead or "").strip().lower()
+        if official_source not in {"nordpool", "entsoe", "tibber"}:
+            logging.warning(
+                "Forecast-extensie overgeslagen: source day ahead moet een officiele provider zijn."
+            )
             return
-        country = self._resolve_energypriceforecast_country(fallback=True)
         present = self.db_da.get_time_border_record("da")
-        min_timestamp = None
-        if present is not None:
-            try:
-                min_timestamp = int(present.timestamp())
-            except Exception:
-                min_timestamp = None
-        df_db = self._build_energypriceforecast_df(
-            start=start,
-            end=end,
-            api_url=api_url,
-            country=country,
-            forecast_only=True,
-            min_timestamp=min_timestamp,
-        )
-        if df_db.empty:
-            logging.info("Energy Price Forecast fallback: geen extra future slots nodig (%s).", country)
+        if present is None:
+            logging.info(
+                "Forecast-extensie overgeslagen: er is nog geen officiele day-ahead horizon aanwezig."
+            )
             return
-        logging.info(
-            "Energy Price Forecast fallback (%s): voeg %d slot(s) toe voorbij de officiele day-ahead horizon.",
-            country,
-            len(df_db),
+        resolution_seconds = 3600 if self.interval == "1hour" else 900
+        official_last_ts = int(present.timestamp())
+        extension_start_ts = official_last_ts + resolution_seconds
+        now_ts = int(datetime.datetime.now().timestamp())
+        if extension_start_ts <= now_ts:
+            logging.info(
+                "Forecast-extensie overgeslagen: officiele day-ahead horizon loopt niet verder dan nu."
+            )
+            return
+        target_end_ts = extension_start_ts + extension_hours * 3600
+        request_hours = max(
+            1,
+            min(168, math.ceil((target_end_ts - now_ts) / 3600)),
         )
-        self.db_da.savedata(df_db)
+        self.db_da.delete_code_range(self.EXTENSION_CODE, start=extension_start_ts)
+
+        if provider == "energypriceforecast":
+            api_url = self._energypriceforecast_extension_api_url()
+            country = self._energypriceforecast_extension_country()
+            df_db = self._build_energypriceforecast_df(
+                start=datetime.datetime.fromtimestamp(extension_start_ts),
+                end=datetime.datetime.fromtimestamp(target_end_ts),
+                api_url=api_url,
+                country=country,
+                code=self.EXTENSION_CODE,
+                forecast_only=True,
+                min_timestamp=official_last_ts,
+                max_timestamp=target_end_ts,
+                hours_override=request_hours,
+            )
+            if df_db.empty:
+                logging.info(
+                    "Energy Price Forecast extensie: geen aanvullende slots beschikbaar (%s).",
+                    country,
+                )
+                return
+            logging.info(
+                "Energy Price Forecast extensie (%s): %d slot(s) toegevoegd voorbij officiele horizon, +%d uur.",
+                country,
+                len(df_db),
+                extension_hours,
+            )
+            self.db_da.savedata(df_db)
+            return
+
+        logging.warning("Onbekende forecast-extensie provider: %s", provider)
 
     def get_prices(
         self, source, _start: datetime.datetime = None, _end: datetime.datetime = None
@@ -312,27 +371,6 @@ class DaPrices:
             )
             self.db_da.savedata(df_db)
 
-        if source.lower() == "energypriceforecast":
-            api_url = self._energypriceforecast_api_url()
-            country = self._resolve_energypriceforecast_country()
-            df_db = self._build_energypriceforecast_df(
-                start=start,
-                end=end,
-                api_url=api_url,
-                country=country,
-                forecast_only=False,
-            )
-            logging.info(
-                f"Day ahead prijzen van Energy Price Forecast EU ({country}, rows={len(df_db)}): \n"
-                f"{df_db.head(24).to_string(index=False)}"
-            )
-            logging.debug(
-                f"Day ahead prijzen (source: energypriceforecast, db-records): \n "
-                f"{df_db.to_string(index=False)}"
-            )
-            self.db_da.savedata(df_db)
-            return
-
         if source.lower() == "tibber":
             now_ts = datetime.datetime.now().timestamp()
             get_ts = start.timestamp()
@@ -417,8 +455,3 @@ class DaPrices:
                 f"{df_db.to_string(index=False)}"
             )
             self.db_da.savedata(df_db)
-
-        try:
-            self._append_energypriceforecast_fallback(start, end, source)
-        except Exception as ex:
-            logging.warning("Energy Price Forecast fallback mislukt: %s", ex)
