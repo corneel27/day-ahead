@@ -235,10 +235,11 @@ Ook het ophalen van dynamische uurprijzen (day ahead prices) stel je in via
 De belangrijkste onderdelen zijn: <br>
     * source day ahead: waar haal je de data vandaan: nordpool is een goede 
  eerste keuze.<br>
-    * forecast extension provider: optionele provider voor een aanvullende forecast-extensie voorbij de officiele day-ahead horizon. Momenteel is `energypriceforecast` beschikbaar.<br>
+    * forecast extension provider: optionele provider voor een aanvullende forecast-extensie voorbij de officiele day-ahead horizon. Beschikbaar zijn `energypriceforecast` en `dayaheadprediction`.<br>
     * forecast extension hours: aantal extra uren dat je voorbij de officiele horizon wilt toevoegen.<br>
     * energypriceforecast-extension-api-url: optionele override voor de Energy Price Forecast EU extensie-feed.<br>
     * energypriceforecast-extension-country: optionele marktcode zoals `nl`, `de`, `dk1` of `no3` voor die extensie-feed.<br>
+    * day-ahead-prediction-extension-url: optionele override voor de `corneel27/day-ahead-prediction` feed. Deze provider is momenteel alleen geschikt voor `NL`.<br>
     * energy taxes consumption: energiebelasting (euro/kWh, ex BTW) bij afname <br>
     * energy taxes production: energiebelasting bij teruglevering (euro/kWh, ex BTW)<br>
     * cost supplier consumption: kosten leverancier voor levering (euro/kWh, ex BTW) <br>
@@ -658,10 +659,11 @@ Het is allemaal optioneel.
 | **meteoserver-attempts**  |                               | getal            | 2                                  | aantal ophaal pogingen                             |
 | **prices**                | source day ahead              | string           | nordpool                           | keuze uit: nordpool / entsoe / easyenergy / tibber |
 |                           | entsoe-api-key                | string           |                                    | alleen bij entsoe als source                       |
-|                           | forecast extension provider   | string           | none                               | keuze uit: none / energypriceforecast             |
+|                           | forecast extension provider   | string           | none                               | keuze uit: none / energypriceforecast / dayaheadprediction |
 |                           | forecast extension hours      | integer          | 0                                  | extra uren voorbij officiele horizon              |
 |                           | energypriceforecast-extension-api-url | string, url | https://api.energypriceforecast.eu/api/v1/dao/prices | optioneel, alleen bij energypriceforecast extensie |
 |                           | energypriceforecast-extension-country | string      |                                    | optioneel, alleen bij energypriceforecast extensie |
+|                           | day-ahead-prediction-extension-url | string, url | https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json | optioneel, alleen bij dayaheadprediction extensie (NL) |
 |                           | regular high                  | getal            |                                    |                                                    |
 |                           | regular low                   | getal            |                                    |                                                    |
 |                           | switch to low                 | integer          | 23                                 |                                                    |
@@ -942,6 +944,7 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
      Optionele provider voor een horizon-extensie voorbij de officiele day-ahead prijzen. Momenteel ondersteunt DAO hiervoor:
    * none
    * energypriceforecast
+   * dayaheadprediction
  * forecast extension hours:
      Het aantal uren dat je voorbij de officiele horizon wilt aanvullen. DAO vertaalt deze instelling intern naar de `hours` parameter van de gekozen provider-URL.
  * energypriceforecast-extension-api-url:
@@ -949,6 +952,8 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
      `https://api.energypriceforecast.eu/api/v1/dao/prices`
  * energypriceforecast-extension-country:
      Optionele expliciete marktcode voor de extensie-feed, bijvoorbeeld `nl`, `de`, `dk1` of `no3`. Laat je dit leeg, dan probeert DAO te mappen vanuit de ingestelde landcode.
+ * day-ahead-prediction-extension-url:
+     Optionele override voor de gepubliceerde `prediction.json` van `corneel27/day-ahead-prediction`. Deze provider verwacht een JSON-array met minimaal `time_ts` en `prediction` en is momenteel alleen bedoeld voor `NL`.
 
     Als je kiest voor **entsoe** dan moet je hieronder een api key invullen.
  * entsoe-api-key:  

@@ -40,7 +40,7 @@ class PricingConfig(BaseModel):
             }
         }
     )
-    forecast_extension_provider: Literal['none', 'energypriceforecast'] = Field(
+    forecast_extension_provider: Literal['none', 'energypriceforecast', 'dayaheadprediction'] = Field(
         default='none',
         alias="forecast extension provider",
         description="Optional provider for extending the day-ahead horizon with forecast data",
@@ -90,6 +90,24 @@ class PricingConfig(BaseModel):
                     "scope": "#/properties/forecast_extension_provider",
                     "schema": {
                         "const": "energypriceforecast"
+                    }
+                }
+            }
+        }
+    )
+    day_ahead_prediction_extension_url: Optional[str] = Field(
+        default="https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+        alias="day-ahead-prediction-extension-url",
+        description="day-ahead-prediction extension URL",
+        json_schema_extra={
+            "x-help": "Provider-specific URL for the corneel27/day-ahead-prediction extension feed. Expected response: JSON array with fields like time_ts and prediction. This provider currently only fits the NL market.",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {
+                        "const": "dayaheadprediction"
                     }
                 }
             }

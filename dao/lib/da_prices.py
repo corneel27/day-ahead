@@ -72,6 +72,20 @@ class DaPrices:
             return configured
         return "https://api.energypriceforecast.eu/api/v1/dao/prices"
 
+    def _day_ahead_prediction_extension_url(self):
+        configured = getattr(
+            self.config.prices,
+            "day_ahead_prediction_extension_url",
+            None,
+        )
+        configured = str(configured or "").strip()
+        if configured:
+            return configured
+        return (
+            "https://raw.githubusercontent.com/"
+            "corneel27/day-ahead-prediction/main/dap/data/prediction.json"
+        )
+
     def _build_energypriceforecast_df(
         self,
         *,
@@ -130,6 +144,39 @@ class DaPrices:
                 df_db.loc[df_db.shape[0]] = [str(time_stamp), code, value]
         return df_db
 
+    def _build_day_ahead_prediction_df(
+        self,
+        *,
+        api_url: str,
+        code: str,
+        min_timestamp: int | None = None,
+        max_timestamp: int | None = None,
+    ) -> pd.DataFrame:
+        resp = get(api_url, timeout=15)
+        resp.raise_for_status()
+        payload = json.loads(resp.text)
+        entries = payload if isinstance(payload, list) else payload.get("entries") or []
+        df_db = pd.DataFrame(columns=["time", "code", "value"])
+        for entry in entries:
+            try:
+                time_stamp = int(entry.get("time_ts"))
+                value = float(entry.get("prediction"))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            if min_timestamp is not None and time_stamp <= min_timestamp:
+                continue
+            if max_timestamp is not None and time_stamp >= max_timestamp:
+                continue
+            if self.interval == "15min":
+                for idx in range(4):
+                    quarter_ts = time_stamp + idx * 900
+                    if max_timestamp is not None and quarter_ts >= max_timestamp:
+                        continue
+                    df_db.loc[df_db.shape[0]] = [str(quarter_ts), code, value]
+            else:
+                df_db.loc[df_db.shape[0]] = [str(time_stamp), code, value]
+        return df_db
+
     def get_price_forecast_extension(self):
         provider = self._forecast_extension_provider()
         extension_hours = self._forecast_extension_hours()
@@ -141,7 +188,7 @@ class DaPrices:
             logging.info("Geen day-ahead forecast-extensie geconfigureerd.")
             return
         official_source = str(self.config.prices.source_day_ahead or "").strip().lower()
-        if official_source not in {"nordpool", "entsoe", "tibber"}:
+        if official_source not in {"nordpool", "entsoe", "tibber", "easyenergy"}:
             logging.warning(
                 "Forecast-extensie overgeslagen: source day ahead moet een officiele provider zijn."
             )
@@ -191,6 +238,32 @@ class DaPrices:
             logging.info(
                 "Energy Price Forecast extensie (%s): %d slot(s) toegevoegd voorbij officiele horizon, +%d uur.",
                 country,
+                len(df_db),
+                extension_hours,
+            )
+            self.db_da.savedata(df_db)
+            return
+
+        if provider == "dayaheadprediction":
+            if str(self.country or "").strip().upper() != "NL":
+                logging.warning(
+                    "day-ahead-prediction extensie overgeslagen: provider ondersteunt momenteel alleen NL."
+                )
+                return
+            api_url = self._day_ahead_prediction_extension_url()
+            df_db = self._build_day_ahead_prediction_df(
+                api_url=api_url,
+                code=self.EXTENSION_CODE,
+                min_timestamp=official_last_ts,
+                max_timestamp=target_end_ts,
+            )
+            if df_db.empty:
+                logging.info(
+                    "day-ahead-prediction extensie: geen aanvullende slots beschikbaar."
+                )
+                return
+            logging.info(
+                "day-ahead-prediction extensie: %d slot(s) toegevoegd voorbij officiele horizon, +%d uur.",
                 len(df_db),
                 extension_hours,
             )
