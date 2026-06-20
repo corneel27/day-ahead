@@ -76,6 +76,24 @@ class PricingConfig(BaseModel):
             }
         }
     )
+    energypriceforecast_fallback_api_url: Optional[str] = Field(
+        default=None,
+        alias="energypriceforecast-fallback-api-url",
+        description="Optional Energy Price Forecast EU fallback API URL",
+        json_schema_extra={
+            "x-help": "Optional fallback feed that only fills future hours that are not yet available from the selected official day-ahead source.",
+            "x-ui-section": "Prices",
+        }
+    )
+    energypriceforecast_fallback_country: Optional[str] = Field(
+        default=None,
+        alias="energypriceforecast-fallback-country",
+        description="Optional override country code for Energy Price Forecast EU fallback",
+        json_schema_extra={
+            "x-help": "Optional explicit country/market code for the fallback feed, for example 'nl', 'de', 'dk1' or 'no3'. Leave empty to map from DAO country automatically.",
+            "x-ui-section": "Prices",
+        }
+    )
     
     # Date-based tariff configurations (date string -> value)
     energy_taxes_consumption: dict[str, float] = Field(

@@ -20,8 +20,12 @@ class DaPrices:
         self.interval = str(config.interval or "1hour").lower()
         self.country = country if country is not None else "NL"
 
-    def _resolve_energypriceforecast_country(self):
-        configured = getattr(self.config.prices, "energypriceforecast_country", None)
+    def _resolve_energypriceforecast_country(self, fallback: bool = False):
+        configured = getattr(
+            self.config.prices,
+            "energypriceforecast_fallback_country" if fallback else "energypriceforecast_country",
+            None,
+        )
         if configured:
             return str(configured).strip().lower()
         mapping = {
@@ -40,6 +44,101 @@ class DaPrices:
             "NO5": "no5",
         }
         return mapping.get(str(self.country or "").upper(), "nl")
+
+    def _energypriceforecast_api_url(self, fallback: bool = False):
+        configured = getattr(
+            self.config.prices,
+            "energypriceforecast_fallback_api_url" if fallback else "energypriceforecast_api_url",
+            None,
+        )
+        configured = str(configured or "").strip()
+        if configured:
+            return configured
+        return "https://api.energypriceforecast.eu/api/v1/dao/prices"
+
+    def _build_energypriceforecast_df(
+        self,
+        *,
+        start,
+        end,
+        api_url: str,
+        country: str,
+        forecast_only: bool = False,
+        min_timestamp: int | None = None,
+    ) -> pd.DataFrame:
+        now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
+        end_ts = end.timestamp() if hasattr(end, "timestamp") else now_ts + 48 * 3600
+        hours = max(1, min(168, math.ceil((end_ts - now_ts) / 3600)))
+        mode_suffix = "&mode=forecast_only" if forecast_only else ""
+        url = f"{api_url}?country={country}&hours={hours}{mode_suffix}"
+        resp = get(url, timeout=15)
+        resp.raise_for_status()
+        payload = json.loads(resp.text)
+        entries = payload.get("entries") or []
+        df_db = pd.DataFrame(columns=["time", "code", "value"])
+        for entry in entries:
+            start_raw = str(entry.get("start") or "")
+            end_raw = str(entry.get("end") or "")
+            value = entry.get("value")
+            if not start_raw:
+                continue
+            try:
+                start_dt = datetime.datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
+                end_dt = (
+                    datetime.datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
+                    if end_raw
+                    else start_dt + datetime.timedelta(hours=1)
+                )
+                value = float(value)
+            except (TypeError, ValueError):
+                continue
+            timestamps: list[int]
+            if self.interval == "15min" and end_dt > start_dt:
+                quarter_count = max(1, int(round((end_dt - start_dt).total_seconds() / 900)))
+                timestamps = [
+                    int((start_dt + datetime.timedelta(minutes=15 * idx)).timestamp())
+                    for idx in range(quarter_count)
+                ]
+            else:
+                timestamps = [int(start_dt.timestamp())]
+            for time_stamp in timestamps:
+                if min_timestamp is not None and time_stamp <= min_timestamp:
+                    continue
+                df_db.loc[df_db.shape[0]] = [str(time_stamp), "da", value]
+        return df_db
+
+    def _append_energypriceforecast_fallback(self, start, end, source_name: str):
+        if str(source_name or "").strip().lower() == "energypriceforecast":
+            return
+        api_url = self._energypriceforecast_api_url(fallback=True)
+        configured = getattr(self.config.prices, "energypriceforecast_fallback_api_url", None)
+        if not str(configured or "").strip():
+            return
+        country = self._resolve_energypriceforecast_country(fallback=True)
+        present = self.db_da.get_time_border_record("da")
+        min_timestamp = None
+        if present is not None:
+            try:
+                min_timestamp = int(present.timestamp())
+            except Exception:
+                min_timestamp = None
+        df_db = self._build_energypriceforecast_df(
+            start=start,
+            end=end,
+            api_url=api_url,
+            country=country,
+            forecast_only=True,
+            min_timestamp=min_timestamp,
+        )
+        if df_db.empty:
+            logging.info("Energy Price Forecast fallback: geen extra future slots nodig (%s).", country)
+            return
+        logging.info(
+            "Energy Price Forecast fallback (%s): voeg %d slot(s) toe voorbij de officiele day-ahead horizon.",
+            country,
+            len(df_db),
+        )
+        self.db_da.savedata(df_db)
 
     def get_prices(
         self, source, _start: datetime.datetime = None, _end: datetime.datetime = None
@@ -214,36 +313,19 @@ class DaPrices:
             self.db_da.savedata(df_db)
 
         if source.lower() == "energypriceforecast":
-            now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
-            end_ts = end.timestamp() if hasattr(end, "timestamp") else now_ts + 48 * 3600
-            hours = max(1, min(168, math.ceil((end_ts - now_ts) / 3600)))
-            api_url = (
-                getattr(self.config.prices, "energypriceforecast_api_url", None)
-                or "https://api.energypriceforecast.eu/api/v1/dao/prices"
-            )
+            api_url = self._energypriceforecast_api_url()
             country = self._resolve_energypriceforecast_country()
-            url = f"{api_url}?country={country}&hours={hours}"
-            resp = get(url, timeout=15)
-            resp.raise_for_status()
-            payload = json.loads(resp.text)
-            entries = payload.get("entries") or []
-            logging.info(
-                f"Day ahead prijzen van Energy Price Forecast EU ({country}): \n"
-                f"{pp.pformat(entries[:24], indent=2)}"
+            df_db = self._build_energypriceforecast_df(
+                start=start,
+                end=end,
+                api_url=api_url,
+                country=country,
+                forecast_only=False,
             )
-            df_db = pd.DataFrame(columns=["time", "code", "value"])
-            for entry in entries:
-                start_raw = str(entry.get("start") or "")
-                value = entry.get("value")
-                if not start_raw:
-                    continue
-                try:
-                    dt = datetime.datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
-                    time_stamp = int(dt.timestamp())
-                    value = float(value)
-                except (TypeError, ValueError):
-                    continue
-                df_db.loc[df_db.shape[0]] = [str(time_stamp), "da", value]
+            logging.info(
+                f"Day ahead prijzen van Energy Price Forecast EU ({country}, rows={len(df_db)}): \n"
+                f"{df_db.head(24).to_string(index=False)}"
+            )
             logging.debug(
                 f"Day ahead prijzen (source: energypriceforecast, db-records): \n "
                 f"{df_db.to_string(index=False)}"
@@ -335,3 +417,8 @@ class DaPrices:
                 f"{df_db.to_string(index=False)}"
             )
             self.db_da.savedata(df_db)
+
+        try:
+            self._append_energypriceforecast_fallback(start, end, source)
+        except Exception as ex:
+            logging.warning("Energy Price Forecast fallback mislukt: %s", ex)
