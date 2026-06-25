@@ -313,6 +313,37 @@ class DBmanagerObj(object):
             connection.close()
         self.log_pool_status()
 
+    def delete_code_range(
+        self,
+        code: str,
+        start: int | None = None,
+        end: int | None = None,
+        tablename: str = "values",
+    ):
+        """
+        Delete rows for a variable code in an optional unix-timestamp range.
+        """
+        connection = self.engine.connect()
+        try:
+            values_table = Table(tablename, self.metadata, autoload_with=self.engine)
+            variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
+            select_variabel = select(variabel_table.c.id).where(
+                variabel_table.c.code == code
+            )
+            variabel_result = connection.execute(select_variabel).first()
+            if not variabel_result:
+                return
+            variabel_id = variabel_result[0]
+            query = delete(values_table).where(values_table.c.variabel == variabel_id)
+            if start is not None:
+                query = query.where(values_table.c.time >= int(start))
+            if end is not None:
+                query = query.where(values_table.c.time < int(end))
+            connection.execute(query)
+            connection.commit()
+        finally:
+            connection.close()
+
     def get_time_border_record(
         self, code: str, latest: bool = True, table_name: str = "values"
     ) -> datetime.datetime:
