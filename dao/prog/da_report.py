@@ -1497,6 +1497,7 @@ class Report(DaBase):
                 - row.ev
                 - row.wp
                 - row.boil
+                - row.mach
             )
         result = df.assign(base=base_load)
         return result
