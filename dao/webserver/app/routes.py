@@ -395,24 +395,48 @@ def home():
     
     if active_view == "grafiek":
         active_map = "/images/"
-        active_filter = "*.png"
+        # Home toont optimalisatie-overzicht (calc_*), niet meteo-grafieken (meteo_*)
+        active_filter = "calc_*.png"
     else:
         active_map = "/log/"
-        active_filter = "*.log"
+        active_filter = "calc_*.log"
         
     flist = get_file_list(app_datapath + active_map, active_filter)
     index = 0
-    
-    if active_time:
-        # Find index in the current flist with timestamp closest to active_time (possibly from other flist)
-        # The timestamp between e.g. calc_2026-02-17__08-45.png & calc_2026-02-17__08-45.log are NOT identical
-        # The intent is to be able to switch between grafiek and table while keeping the active time
-        active_time = float(active_time)
-        diff_time = active_time # high intialization value
-        for i in range(len(flist)):
-            if abs(flist[i]["time"] - active_time) < diff_time:
-                diff_time = abs(flist[i]["time"] - active_time)
-                index = i
+
+    view_switch = request.method == "POST" and cur_view != active_view
+    datetime_pick = (
+        request.method == "POST"
+        and action is None
+        and "active_time" in lst
+        and cur_view == active_view
+        and "subject" not in lst
+        and "view" not in lst
+    )
+
+    def pick_index_from_time(files, target_time):
+        target = float(target_time)
+        best_i = 0
+        best_diff = abs(files[0]["time"] - target) if files else float("inf")
+        for i in range(1, len(files)):
+            diff = abs(files[i]["time"] - target)
+            if diff < best_diff:
+                best_diff = diff
+                best_i = i
+        return best_i
+
+    if len(flist) > 0:
+        if view_switch and flask_session.get("active_time"):
+            index = pick_index_from_time(flist, flask_session["active_time"])
+        elif datetime_pick:
+            index = pick_index_from_time(flist, lst["active_time"][0])
+        else:
+            session_file = flask_session.get("active_file")
+            if session_file:
+                for i, entry in enumerate(flist):
+                    if entry["name"] == session_file:
+                        index = i
+                        break
     # Ensure index is within valid range
     index = max(0, min(index, len(flist) - 1))
 
@@ -425,18 +449,16 @@ def home():
     if action == "last":
         index = len(flist) - 1
         
-    if action in ["fast_forward", "fast_reverse"]:
-        if type( active_time ) != float:
+    if action in ["fast_forward", "fast_reverse"] and len(flist) > 0:
+        if active_time is None:
+            active_time = flask_session.get("active_time")
+        if active_time is not None:
             active_time = float(active_time)
-        if action == "fast_forward":
-            target_time = active_time - (6 * 3600) # Add 6 hours
-        if action == "fast_reverse":
-            target_time = active_time + (6 * 3600) # Subtract 6 hours
-        diff_time = active_time # high intialization value
-        for i in range(len(flist)):
-            if abs(flist[i]["time"] - target_time) < diff_time:
-               diff_time = abs(flist[i]["time"] - target_time)
-               index = i
+            if action == "fast_forward":
+                target_time = active_time - (6 * 3600)
+            else:
+                target_time = active_time + (6 * 3600)
+            index = pick_index_from_time(flist, target_time)
         
     if action == "delete" and confirm_delete:
         os.remove(app_datapath + active_map + flist[index]["name"])
@@ -462,7 +484,11 @@ def home():
         
 # Remember this active time in global variable
     #previous_time = active_time
-    flask_session['active_time'] = active_time #Store active_time in session to enable switching between grafiek and tabel while retaining the active time  
+    flask_session['active_time'] = active_time
+    if len(flist) > 0:
+        flask_session['active_file'] = flist[index]["name"]
+    else:
+        flask_session.pop('active_file', None)
 
     flatpickr_times = [datetime.datetime.fromtimestamp(f["time"]).strftime('%Y-%m-%d %H:%M') for f in flist]
     flatpickr_default_ts = float(active_time) if active_time else None
