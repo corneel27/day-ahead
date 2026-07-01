@@ -14,6 +14,9 @@ import logging
 
 class DaPrices:
     EXTENSION_CODE = "da_ext"
+    EXTENSION_RECORD_ID = 25
+    EXTENSION_RECORD_NAME = "Tarief forecast extension"
+    EXTENSION_RECORD_DIM = "euro/kWh"
 
     def __init__(self, config, db_da: DBmanagerObj, country: str = None, secrets: dict = None):
         self.config = config
@@ -84,6 +87,14 @@ class DaPrices:
         return (
             "https://raw.githubusercontent.com/"
             "corneel27/day-ahead-prediction/main/dap/data/prediction.json"
+        )
+
+    def _ensure_extension_code_available(self):
+        self.db_da.ensure_variabel_record(
+            record_id=self.EXTENSION_RECORD_ID,
+            code=self.EXTENSION_CODE,
+            name=self.EXTENSION_RECORD_NAME,
+            dim=self.EXTENSION_RECORD_DIM,
         )
 
     def _build_energypriceforecast_df(
@@ -178,6 +189,7 @@ class DaPrices:
         return df_db
 
     def get_price_forecast_extension(self):
+        self._ensure_extension_code_available()
         provider = self._forecast_extension_provider()
         extension_hours = self._forecast_extension_hours()
         if provider == "none" or extension_hours <= 0:
