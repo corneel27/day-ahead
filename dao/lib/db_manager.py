@@ -12,6 +12,7 @@ from sqlalchemy import (
     and_,
     text,
     TIMESTAMP,
+    delete,
 )
 import sqlalchemy_utils
 import os
@@ -312,6 +313,85 @@ class DBmanagerObj(object):
         finally:
             connection.close()
         self.log_pool_status()
+
+    def ensure_variabel_record(
+        self,
+        *,
+        record_id: int,
+        code: str,
+        name: str,
+        dim: str,
+    ) -> int:
+        """
+        Ensure that a variabel record exists for the given code.
+        If the code already exists, return its id.
+        Otherwise create or update the requested record id and return it.
+        """
+        connection = self.engine.connect()
+        try:
+            variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
+
+            select_by_code = select(variabel_table.c.id).where(
+                variabel_table.c.code == code
+            )
+            existing_by_code = connection.execute(select_by_code).first()
+            if existing_by_code:
+                return int(existing_by_code[0])
+
+            select_by_id = select(variabel_table.c.id).where(
+                variabel_table.c.id == record_id
+            )
+            existing_by_id = connection.execute(select_by_id).first()
+            if existing_by_id:
+                connection.execute(
+                    update(variabel_table)
+                    .where(variabel_table.c.id == record_id)
+                    .values(code=code, name=name, dim=dim)
+                )
+            else:
+                connection.execute(
+                    insert(variabel_table).values(
+                        id=record_id,
+                        code=code,
+                        name=name,
+                        dim=dim,
+                    )
+                )
+            connection.commit()
+            return int(record_id)
+        finally:
+            connection.close()
+
+    def delete_code_range(
+        self,
+        code: str,
+        start: int | None = None,
+        end: int | None = None,
+        tablename: str = "values",
+    ):
+        """
+        Delete rows for a variable code in an optional unix-timestamp range.
+        """
+        connection = self.engine.connect()
+        try:
+            values_table = Table(tablename, self.metadata, autoload_with=self.engine)
+            variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
+            select_variabel = select(variabel_table.c.id).where(
+                variabel_table.c.code == code
+            )
+            variabel_result = connection.execute(select_variabel).first()
+            if not variabel_result:
+                return
+            variabel_id = variabel_result[0]
+            query = delete(values_table).where(values_table.c.variabel == variabel_id)
+            if start is not None:
+                query = query.where(values_table.c.time >= int(start))
+            if end is not None:
+                query = query.where(values_table.c.time < int(end))
+            connection.execute(query)
+            connection.commit()
+        finally:
+            connection.close()
 
     def get_time_border_record(
         self, code: str, latest: bool = True, table_name: str = "values"

@@ -10,13 +10,13 @@ from datetime import date
 
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
-    
-    source_day_ahead: Literal['nordpool', 'entsoe', 'tibber'] = Field(
+
+    source_day_ahead: Literal['nordpool', 'entsoe', 'easyenergy', 'tibber'] = Field(
         default='nordpool',
         alias="source day ahead",
         description="Source for day-ahead prices",
         json_schema_extra={
-            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+            "x-help": "Data source for imported official day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'easyenergy' for the EasyEnergy public tariff feed, 'tibber' if using Tibber integration.",
             "x-ui-section": "Prices"
         }
     )
@@ -35,6 +35,79 @@ class PricingConfig(BaseModel):
                     "scope": "#/properties/source_day_ahead",
                     "schema": {
                         "const": "entsoe"
+                    }
+                }
+            }
+        }
+    )
+    forecast_extension_provider: Literal['none', 'energypriceforecast', 'dayaheadprediction'] = Field(
+        default='none',
+        alias="forecast extension provider",
+        description="Optional provider for extending the day-ahead horizon with forecast data",
+        json_schema_extra={
+            "x-help": "Optional provider that extends the imported official day-ahead horizon with forecast prices. The extension never replaces already imported official prices.",
+            "x-ui-section": "Prices",
+        }
+    )
+    forecast_extension_hours: int = Field(
+        default=0,
+        alias="forecast extension hours",
+        description="How many additional hours should be appended beyond the official day-ahead horizon",
+        json_schema_extra={
+            "x-help": "Number of hours to extend beyond the imported official day-ahead horizon. DAO translates this into the provider-specific URL parameter.",
+            "x-ui-section": "Prices",
+            "x-validation-hint": "Integer between 0 and 168"
+        }
+    )
+    energypriceforecast_extension_api_url: Optional[str] = Field(
+        default="https://api.energypriceforecast.eu/api/v1/dao/prices",
+        alias="energypriceforecast-extension-api-url",
+        description="Energy Price Forecast EU extension API URL",
+        json_schema_extra={
+            "x-help": "Provider-specific URL for the Energy Price Forecast EU horizon extension feed. Expected response: format=dao-prices with entries[].",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {
+                        "const": "energypriceforecast"
+                    }
+                }
+            }
+        }
+    )
+    energypriceforecast_extension_country: Optional[str] = Field(
+        default=None,
+        alias="energypriceforecast-extension-country",
+        description="Override country code for Energy Price Forecast EU extension",
+        json_schema_extra={
+            "x-help": "Optional explicit country/market code for the Energy Price Forecast EU extension feed, for example 'nl', 'de', 'dk1' or 'no3'. Leave empty to map from DAO country automatically.",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {
+                        "const": "energypriceforecast"
+                    }
+                }
+            }
+        }
+    )
+    day_ahead_prediction_extension_url: Optional[str] = Field(
+        default="https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+        alias="day-ahead-prediction-extension-url",
+        description="day-ahead-prediction extension URL",
+        json_schema_extra={
+            "x-help": "Provider-specific URL for the corneel27/day-ahead-prediction extension feed. Expected response: JSON array with fields like time_ts and prediction. This provider currently only fits the NL market.",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {
+                        "const": "dayaheadprediction"
                     }
                 }
             }
@@ -152,6 +225,13 @@ class PricingConfig(BaseModel):
             if not (0 <= percentage <= 100):
                 raise ValueError(f"VAT percentage must be between 0 and 100, got {percentage} for date {date}")
         return v
+
+    @field_validator('forecast_extension_hours')
+    @classmethod
+    def validate_forecast_extension_hours(cls, v: int) -> int:
+        if not (0 <= v <= 168):
+            raise ValueError("forecast extension hours must be between 0 and 168")
+        return v
     
     model_config = ConfigDict(
         extra='allow',
@@ -167,7 +247,7 @@ Configure electricity market prices and tariff components for accurate cost opti
 ## Price Components
 
 Total electricity cost consists of:
-1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)
+1. **Market price**: Imported official day-ahead spot price (nordpool/entsoe/easyenergy/tibber)
 2. **Energy taxes**: Government energy taxes
 3. **Supplier costs**: Your supplier's markup/fees
 4. **VAT**: Value-added tax on sum of above
@@ -191,7 +271,14 @@ System uses tariff active on optimization date.
 
 - **nordpool**: Nord Pool (Nordic/Baltic markets)
 - **entsoe**: ENTSO-E Transparency Platform (all European markets)
+- **easyenergy**: EasyEnergy tariff endpoint
 - **tibber**: Tibber API (if using Tibber as supplier)
+
+## Optional Horizon Extension
+
+- **forecast extension provider**: Optional forecast provider for extending the imported official horizon
+- **forecast extension hours**: How many additional hours should be appended beyond the official horizon
+- **energypriceforecast**: Provider-specific extension feed from Energy Price Forecast EU
 
 ## Tips
 

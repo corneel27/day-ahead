@@ -251,6 +251,12 @@ class DaBase(hass.Hass):
                 "function": "get_day_ahead_prices",
                 "file_name": "prices",
             },
+            "price_forecast": {
+                "name": "Day ahead forecast-extensie ophalen",
+                "cmd": ["python3", "../prog/day_ahead.py", "price_forecast"],
+                "function": "get_day_ahead_price_forecast",
+                "file_name": "price_forecast",
+            },
             "calc_baseloads": {
                 "name": "Bereken de baseloads",
                 "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],
@@ -332,6 +338,9 @@ class DaBase(hass.Hass):
     def get_day_ahead_prices(self):
         source = self.prices_options.source_day_ahead if self.prices_options else "nordpool"
         self.prices.get_prices(source)
+
+    def get_day_ahead_price_forecast(self):
+        self.prices.get_price_forecast_extension()
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """
