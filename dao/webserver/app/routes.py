@@ -955,7 +955,11 @@ def api_report(fld: str, periode: str):
         except ValueError:
             cumulate = False
     result = report.get_api_data(fld, periode, cumulate=cumulate)
-    return result
+
+    headers = {
+        "Content-Type": "application/json",
+    }
+    return result, headers
 
 
 @app.route("/api/run/<string:bewerking>", methods=["GET", "POST"])
