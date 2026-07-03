@@ -1,4 +1,4 @@
-pandas~=3.0.4
+pandas~=3.0.3
 pydantic~=2.13.4
 pydantic-settings~=2.14.2
 pytz~=2026.2
