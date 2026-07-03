@@ -814,7 +814,7 @@ class DaCalc(DaBase):
         ]
         dc_to_ac = [
             [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=max_discharge_power[b])
+                model.add_var(var_type=CONTINUOUS, lb=0, ub=max(dc_to_ac_samples[b]) if dc_to_ac_samples[b] else 0)
                 for _ in range(U)
             ]
             for b in range(B)
