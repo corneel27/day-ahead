@@ -120,8 +120,9 @@ class DaCalc(DaBase):
         while price_data.iloc[0]["time"] < start_interval_dt:
             price_data = price_data.iloc[1:]
         price_data.index = pd.to_datetime(price_data["time"])
+        prog_end_ts = (end_prog + dt.timedelta(seconds=self.interval_s)).timestamp()
         prog_data = self.db_da.get_prognose_data(
-            start=start_hour, end=None, interval=self.interval
+            start=start_hour, end=prog_end_ts, interval=self.interval
         )
         if prog_data is None or len(prog_data) == 0:
             logging.error(
