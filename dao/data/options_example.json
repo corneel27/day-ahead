@@ -16,6 +16,7 @@
     "forecast extension provider": "energypriceforecast",
     "forecast extension hours": 24,
     "energypriceforecast-extension-api-url": "https://api.energypriceforecast.eu/api/v1/dao/prices",
+    "energypriceforecast-extension-api-key": "!secret energypriceforecast_api_key",
     "energypriceforecast-extension-country": "nl",
     "day-ahead-prediction-extension-url": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
     "regular high": 0.5,

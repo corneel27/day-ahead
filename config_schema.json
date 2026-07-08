@@ -2170,6 +2170,31 @@
           },
           "x-ui-section": "Prices"
         },
+        "energypriceforecast-extension-api-key": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SecretStr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Energy Price Forecast EU extension API key (can use !secret)",
+          "x-help": "Optional API key for the Energy Price Forecast EU extension feed. If set, DAO sends it as an Authorization Bearer token. Use !secret for security.",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "const": "energypriceforecast"
+              },
+              "scope": "#/properties/forecast_extension_provider"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Prices",
+          "x-validation-hint": "Use !secret for API tokens",
+          "title": "Energypriceforecast Extension Api Key"
+        },
         "energypriceforecast-extension-country": {
           "anyOf": [
             {

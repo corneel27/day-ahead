@@ -1322,6 +1322,7 @@ System uses tariff active on optimization date.
 | `forecast extension provider` | string | No | `"none"` | Optional provider for extending the day-ahead horizon with forecast data. Options: `none`, `energypriceforecast`, `dayaheadprediction` |
 | `forecast extension hours` | [FlexInt](#flexint) | No | `0` | How many additional hours should be appended beyond the official day-ahead horizon _Integer or HA entity, effective value between 0 and 168_ |
 | `energypriceforecast-extension-api-url` | string (optional) | No | `"https://api.energypriceforecast.eu/api/v1/dao/prices"` | Energy Price Forecast EU extension API URL |
+| `energypriceforecast-extension-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | Energy Price Forecast EU extension API key (can use !secret) _Use !secret for API tokens_ |
 | `energypriceforecast-extension-country` | string (optional) | No | `null` | Override country code for Energy Price Forecast EU extension |
 | `day-ahead-prediction-extension-url` | string (optional) | No | `"https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"` | day-ahead-prediction extension URL |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
@@ -1357,6 +1358,10 @@ Number of hours to extend beyond the imported official day-ahead horizon. Suppor
 **`energypriceforecast-extension-api-url`**
 
 Provider-specific URL for the Energy Price Forecast EU horizon extension feed. Expected response: format=dao-prices with entries[].
+
+**`energypriceforecast-extension-api-key`**
+
+Optional API key for the Energy Price Forecast EU extension feed. If set, DAO sends it as an Authorization Bearer token. Use !secret for security.
 
 **`energypriceforecast-extension-country`**
 

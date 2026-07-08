@@ -77,6 +77,25 @@ class PricingConfig(BaseModel):
             }
         }
     )
+    energypriceforecast_extension_api_key: Optional[SecretStr] = Field(
+        default=None,
+        alias="energypriceforecast-extension-api-key",
+        description="Energy Price Forecast EU extension API key (can use !secret)",
+        json_schema_extra={
+            "x-help": "Optional API key for the Energy Price Forecast EU extension feed. If set, DAO sends it as an Authorization Bearer token. Use !secret for security.",
+            "x-ui-section": "Prices",
+            "x-validation-hint": "Use !secret for API tokens",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {
+                        "const": "energypriceforecast"
+                    }
+                }
+            }
+        }
+    )
     energypriceforecast_extension_country: Optional[str] = Field(
         default=None,
         alias="energypriceforecast-extension-country",

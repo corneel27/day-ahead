@@ -94,6 +94,22 @@ class DaPrices:
             return configured
         return "https://api.energypriceforecast.eu/api/v1/dao/prices"
 
+    def _energypriceforecast_extension_headers(self) -> dict | None:
+        configured = getattr(
+            self.config.prices,
+            "energypriceforecast_extension_api_key",
+            None,
+        )
+        if not configured:
+            return None
+        token = configured.resolve(self._secrets) if hasattr(configured, "resolve") else str(configured)
+        token = str(token or "").strip()
+        if not token:
+            return None
+        return {
+            "Authorization": "Bearer " + token,
+        }
+
     def _day_ahead_prediction_extension_url(self):
         configured = getattr(
             self.config.prices,
@@ -128,6 +144,7 @@ class DaPrices:
         min_timestamp: int | None = None,
         max_timestamp: int | None = None,
         hours_override: int | None = None,
+        headers: dict | None = None,
     ) -> pd.DataFrame:
         now_ts = datetime.datetime.now(datetime.timezone.utc).timestamp()
         end_ts = end.timestamp() if hasattr(end, "timestamp") else now_ts + 48 * 3600
@@ -136,7 +153,7 @@ class DaPrices:
         )
         mode_suffix = "&mode=forecast_only" if forecast_only else ""
         url = f"{api_url}?country={country}&hours={hours}{mode_suffix}"
-        resp = get(url, timeout=15)
+        resp = get(url, timeout=15, headers=headers)
         resp.raise_for_status()
         payload = json.loads(resp.text)
         entries = payload.get("entries") or []
@@ -249,6 +266,7 @@ class DaPrices:
         if provider == "energypriceforecast":
             api_url = self._energypriceforecast_extension_api_url()
             country = self._energypriceforecast_extension_country()
+            headers = self._energypriceforecast_extension_headers()
             df_db = self._build_energypriceforecast_df(
                 start=datetime.datetime.fromtimestamp(extension_start_ts),
                 end=datetime.datetime.fromtimestamp(target_end_ts),
@@ -259,6 +277,7 @@ class DaPrices:
                 min_timestamp=official_last_ts,
                 max_timestamp=target_end_ts,
                 hours_override=request_hours,
+                headers=headers,
             )
             if df_db.empty:
                 logging.info(
