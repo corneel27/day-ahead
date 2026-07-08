@@ -22,7 +22,7 @@
         },
         "capacity": {
           "description": "Battery capacity in kWh",
-          "exclusiveMinimum": 0,
+          "exclusiveMinimum": 0.0,
           "title": "Capacity",
           "type": "number",
           "x-help": "Total usable energy storage capacity of your battery. Check your battery specifications. For multiple batteries, sum their capacities.",
@@ -183,8 +183,8 @@
         },
         "dc_to_bat efficiency": {
           "description": "DC to battery efficiency",
-          "maximum": 1,
-          "minimum": 0,
+          "maximum": 1.0,
+          "minimum": 0.0,
           "title": "Dc To Bat Efficiency",
           "type": "number",
           "x-help": "Efficiency of DC-coupled solar to battery conversion. Typically 0.95-0.98 for modern DC-coupled systems. Only relevant if DC-coupled solar is configured.",
@@ -211,8 +211,8 @@
         },
         "bat_to_dc efficiency": {
           "description": "Battery to DC efficiency",
-          "maximum": 1,
-          "minimum": 0,
+          "maximum": 1.0,
+          "minimum": 0.0,
           "title": "Bat To Dc Efficiency",
           "type": "number",
           "x-help": "Efficiency of battery to DC bus conversion. Typically 0.95-0.98. Only relevant for DC-coupled loads or reverse DC flow scenarios.",
@@ -239,7 +239,7 @@
         },
         "cycle cost": {
           "description": "Cost per battery cycle in euros",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Cycle Cost",
           "type": "number",
           "x-help": "Degradation cost per full charge-discharge cycle in euros. Used to factor battery wear into optimization. Calculate as: (battery_cost / warranted_cycles). Example: €5000 battery with 6000 cycles = €0.83/cycle.",
@@ -431,7 +431,7 @@
       "properties": {
         "power": {
           "description": "Power level in Watts",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Power",
           "type": "number",
           "x-help": "Power level for this charge/discharge stage. Stages define how battery efficiency changes at different power levels.",
@@ -441,8 +441,8 @@
         },
         "efficiency": {
           "description": "Efficiency at this power level (0-1)",
-          "maximum": 1,
-          "minimum": 0,
+          "maximum": 1.0,
+          "minimum": 0.0,
           "title": "Efficiency",
           "type": "number",
           "x-help": "Energy conversion efficiency at this power level. Value between 0 and 1, where 1 = 100% efficient.",
@@ -574,7 +574,7 @@
         "volume": {
           "default": 200.0,
           "description": "Water volume in liters",
-          "exclusiveMinimum": 0,
+          "exclusiveMinimum": 0.0,
           "title": "Volume",
           "type": "number",
           "x-help": "Hot water tank volume in liters. Affects thermal inertia and heating time. Typical residential: 100-300 liters.",
@@ -594,7 +594,7 @@
         "elec. power": {
           "default": 1000.0,
           "description": "Electrical power in watts",
-          "exclusiveMinimum": 0,
+          "exclusiveMinimum": 0.0,
           "title": "Elec. Power",
           "type": "number",
           "x-help": "Electrical power consumption of heating element or heat pump compressor in watts. Typical: 1000-3000W for resistive, 400-800W for heat pump water heater.",
@@ -945,7 +945,7 @@
       "properties": {
         "ampere": {
           "description": "Charging current in amperes",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Ampere",
           "type": "number",
           "x-help": "Charging current in amperes for this stage. Typical values: 6A (1.4kW), 10A (2.3kW), 16A (3.7kW), 32A (7.4kW) for single-phase.",
@@ -955,8 +955,8 @@
         },
         "efficiency": {
           "description": "Charging efficiency at this amperage (0-1)",
-          "maximum": 1,
-          "minimum": 0,
+          "maximum": 1.0,
+          "minimum": 0.0,
           "title": "Efficiency",
           "type": "number",
           "x-help": "Charging efficiency ratio at this amperage level. Accounts for charger losses, cable losses, and battery acceptance. Typically 0.85-0.95.",
@@ -987,7 +987,7 @@
         },
         "capacity": {
           "description": "Battery capacity in kWh",
-          "exclusiveMinimum": 0,
+          "exclusiveMinimum": 0.0,
           "title": "Capacity",
           "type": "number",
           "x-help": "Usable battery capacity in kilowatt-hours. Check vehicle specifications (often less than advertised total capacity).",
@@ -998,7 +998,7 @@
         "switch cost": {
           "anyOf": [
             {
-              "minimum": 0,
+              "minimum": 0.0,
               "type": "number"
             },
             {
@@ -1280,7 +1280,7 @@
         "max_power": {
           "default": 17,
           "description": "Maximum grid power in kW",
-          "exclusiveMinimum": 0,
+          "exclusiveMinimum": 0.0,
           "title": "Max Power",
           "type": "number",
           "x-help": "Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.",
@@ -1771,7 +1771,7 @@
       "properties": {
         "max_power": {
           "description": "Maximum power in watts for this stage",
-          "minimum": 0,
+          "minimum": 0.0,
           "title": "Max Power",
           "type": "number",
           "x-help": "Maximum electrical power consumption for this heating stage in watts. Heat pumps often have multiple stages (e.g., compressor speeds).",
@@ -1781,7 +1781,7 @@
         },
         "cop": {
           "description": "Coefficient of Performance at this power level",
-          "exclusiveMinimum": 0,
+          "exclusiveMinimum": 0.0,
           "title": "Cop",
           "type": "number",
           "x-help": "Coefficient of Performance (COP) at this power level. COP = heat_output / electrical_input. Typical values: 3.0-5.0 (3-5x more heat than electricity used).",
@@ -2090,11 +2090,12 @@
           "enum": [
             "nordpool",
             "entsoe",
+            "easyenergy",
             "tibber"
           ],
           "title": "Source Day Ahead",
           "type": "string",
-          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+          "x-help": "Data source for imported official day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'easyenergy' for the EasyEnergy public tariff feed, 'tibber' if using Tibber integration.",
           "x-ui-section": "Prices"
         },
         "entsoe-api-key": {
@@ -2122,6 +2123,100 @@
           "x-ui-section": "Prices",
           "x-validation-hint": "Required for entsoe source, use !secret",
           "title": "Entsoe Api Key"
+        },
+        "forecast extension provider": {
+          "default": "none",
+          "description": "Optional provider for extending the day-ahead horizon with forecast data",
+          "enum": [
+            "none",
+            "energypriceforecast",
+            "dayaheadprediction"
+          ],
+          "title": "Forecast Extension Provider",
+          "type": "string",
+          "x-help": "Optional provider that extends the imported official day-ahead horizon with forecast prices. The extension never replaces already imported official prices.",
+          "x-ui-section": "Prices"
+        },
+        "forecast extension hours": {
+          "$ref": "#/$defs/FlexInt",
+          "default": 0,
+          "description": "How many additional hours should be appended beyond the official day-ahead horizon",
+          "x-help": "Number of hours to extend beyond the imported official day-ahead horizon. Supports either a fixed integer or a Home Assistant entity. DAO translates the resolved value into the provider-specific URL parameter.",
+          "x-ui-section": "Prices",
+          "x-validation-hint": "Integer or HA entity, effective value between 0 and 168",
+          "title": "Forecast Extension Hours"
+        },
+        "energypriceforecast-extension-api-url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "https://api.energypriceforecast.eu/api/v1/dao/prices",
+          "description": "Energy Price Forecast EU extension API URL",
+          "title": "Energypriceforecast-Extension-Api-Url",
+          "x-help": "Provider-specific URL for the Energy Price Forecast EU horizon extension feed. Expected response: format=dao-prices with entries[].",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "const": "energypriceforecast"
+              },
+              "scope": "#/properties/forecast_extension_provider"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Prices"
+        },
+        "energypriceforecast-extension-country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override country code for Energy Price Forecast EU extension",
+          "title": "Energypriceforecast-Extension-Country",
+          "x-help": "Optional explicit country/market code for the Energy Price Forecast EU extension feed, for example 'nl', 'de', 'dk1' or 'no3'. Leave empty to map from DAO country automatically.",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "const": "energypriceforecast"
+              },
+              "scope": "#/properties/forecast_extension_provider"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Prices"
+        },
+        "day-ahead-prediction-extension-url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+          "description": "day-ahead-prediction extension URL",
+          "title": "Day-Ahead-Prediction-Extension-Url",
+          "x-help": "Provider-specific URL for the corneel27/day-ahead-prediction extension feed. Expected response: JSON array with fields like time_ts and prediction. This provider currently only fits the NL market.",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "const": "dayaheadprediction"
+              },
+              "scope": "#/properties/forecast_extension_provider"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Prices"
         },
         "energy taxes consumption": {
           "additionalProperties": {
@@ -2269,7 +2364,7 @@
       "title": "PricingConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration",
-      "x-help": "# Pricing & Tariff Configuration\n\nConfigure electricity market prices and tariff components for accurate cost optimization.\n\n## Price Components\n\nTotal electricity cost consists of:\n1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)\n2. **Energy taxes**: Government energy taxes\n3. **Supplier costs**: Your supplier's markup/fees\n4. **VAT**: Value-added tax on sum of above\n5. **Multiplier**: For calculation of productionprice in Belgium \n\nPrice = (market*multiplier + taxes + supplier) × (1 + VAT)\n\n## Date-Based Tariffs\n\nAll tariff fields use date-indexed dictionaries:\n```json\n{\n  \"2024-01-01\": 0.05,\n  \"2024-07-01\": 0.06\n}\n```\n\nSystem uses tariff active on optimization date.\n\n## Data Sources\n\n- **nordpool**: Nord Pool (Nordic/Baltic markets)\n- **entsoe**: ENTSO-E Transparency Platform (all European markets)\n- **tibber**: Tibber API (if using Tibber as supplier)\n\n## Tips\n\n- All prices are EXCLUDING VAT (VAT applied separately)\n- Update tariffs when your supplier changes prices\n- Use !secret for API keys\n- Production costs often lower than consumption (or negative for feed-in credit)\n- Keep last_invoice updated for accurate cost tracking\n- Check your electricity bill for exact tariff components\n",
+      "x-help": "# Pricing & Tariff Configuration\n\nConfigure electricity market prices and tariff components for accurate cost optimization.\n\n## Price Components\n\nTotal electricity cost consists of:\n1. **Market price**: Imported official day-ahead spot price (nordpool/entsoe/easyenergy/tibber)\n2. **Energy taxes**: Government energy taxes\n3. **Supplier costs**: Your supplier's markup/fees\n4. **VAT**: Value-added tax on sum of above\n5. **Multiplier**: For calculation of productionprice in Belgium \n\nPrice = (market*multiplier + taxes + supplier) × (1 + VAT)\n\n## Date-Based Tariffs\n\nAll tariff fields use date-indexed dictionaries:\n```json\n{\n  \"2024-01-01\": 0.05,\n  \"2024-07-01\": 0.06\n}\n```\n\nSystem uses tariff active on optimization date.\n\n## Data Sources\n\n- **nordpool**: Nord Pool (Nordic/Baltic markets)\n- **entsoe**: ENTSO-E Transparency Platform (all European markets)\n- **easyenergy**: EasyEnergy tariff endpoint\n- **tibber**: Tibber API (if using Tibber as supplier)\n\n## Optional Horizon Extension\n\n- **forecast extension provider**: Optional forecast provider for extending the imported official horizon\n- **forecast extension hours**: How many additional hours should be appended beyond the official horizon\n- **energypriceforecast**: Provider-specific extension feed from Energy Price Forecast EU\n\n## Tips\n\n- All prices are EXCLUDING VAT (VAT applied separately)\n- Update tariffs when your supplier changes prices\n- Use !secret for API keys\n- Production costs often lower than consumption (or negative for feed-in credit)\n- Keep last_invoice updated for accurate cost tracking\n- Check your electricity bill for exact tariff components\n",
       "x-icon": "currency-eur",
       "x-order": 11,
       "x-ui-group": "Pricing"
@@ -2418,7 +2513,6 @@
         "sensors": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -2456,6 +2550,7 @@
             "get_meteo_data",
             "get_tibber_data",
             "get_day_ahead_prices",
+            "get_day_ahead_price_forecast",
             "calc_optimum",
             "clean_data",
             "calc_baseloads",
@@ -2500,7 +2595,7 @@
       "title": "SchedulerConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Scheduler",
-      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"active\": true,\n  \"schedule\": [\n    {\"time\": \"0435\", \"action\": \"get_day_ahead_prices\"},\n    {\"time\": \"0445\", \"action\": \"get_meteo_data\"},\n    {\"time\": \"0500\", \"action\": \"calc_optimum\"},\n    {\"time\": \"xx00\", \"action\": \"calc_baseloads\"},\n    {\"time\": \"0300\", \"action\": \"clean_data\"}\n  ]\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)\n2. **05:00**: Run optimization with fresh data\n3. **Hourly**: Update baseload calculations\n4. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
+      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n- **get_day_ahead_price_forecast**: Refresh optional forecast-based horizon extension\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"active\": true,\n  \"schedule\": [\n    {\"time\": \"0435\", \"action\": \"get_day_ahead_prices\"},\n    {\"time\": \"xx20\", \"action\": \"get_day_ahead_price_forecast\"},\n    {\"time\": \"0445\", \"action\": \"get_meteo_data\"},\n    {\"time\": \"0500\", \"action\": \"calc_optimum\"},\n    {\"time\": \"xx00\", \"action\": \"calc_baseloads\"},\n    {\"time\": \"0300\", \"action\": \"clean_data\"}\n  ]\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch official prices and weather\n2. **xx20 / every few hours**: Refresh optional forecast horizon extension\n3. **05:00**: Run optimization with fresh data\n4. **Hourly**: Update baseload calculations\n5. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
       "x-icon": "clock-outline",
       "x-order": 18,
       "x-ui-group": "DAO"
@@ -2572,8 +2667,8 @@
         "tilt": {
           "anyOf": [
             {
-              "maximum": 90,
-              "minimum": 0,
+              "maximum": 90.0,
+              "minimum": 0.0,
               "type": "number"
             },
             {
@@ -2591,8 +2686,8 @@
         "orientation": {
           "anyOf": [
             {
-              "maximum": 180,
-              "minimum": -180,
+              "maximum": 180.0,
+              "minimum": -180.0,
               "type": "number"
             },
             {
@@ -2610,7 +2705,7 @@
         "capacity": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0,
+              "exclusiveMinimum": 0.0,
               "type": "number"
             },
             {
@@ -2628,7 +2723,7 @@
         "yield": {
           "anyOf": [
             {
-              "exclusiveMinimum": 0,
+              "exclusiveMinimum": 0.0,
               "type": "number"
             },
             {
@@ -2722,8 +2817,8 @@
       "properties": {
         "tilt": {
           "description": "Panel tilt angle in degrees (0=horizontal, 90=vertical)",
-          "maximum": 90,
-          "minimum": 0,
+          "maximum": 90.0,
+          "minimum": 0.0,
           "title": "Tilt",
           "type": "number",
           "x-help": "Angle of the solar panels relative to horizontal. 0° = flat/horizontal, 30-35° = optimal for Netherlands, 90° = vertical mounting.",
@@ -2733,8 +2828,8 @@
         },
         "orientation": {
           "description": "Panel orientation in degrees (0=south, 90=west, -90=east)",
-          "maximum": 180,
-          "minimum": -180,
+          "maximum": 180.0,
+          "minimum": -180.0,
           "title": "Orientation",
           "type": "number",
           "x-help": "Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° or 270° = east, 180° = north. South-facing panels produce most energy.",
@@ -2744,7 +2839,7 @@
         },
         "capacity": {
           "description": "Installed capacity in kWp",
-          "exclusiveMinimum": 0,
+          "exclusiveMinimum": 0.0,
           "title": "Capacity",
           "type": "number",
           "x-help": "Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.",
@@ -2770,7 +2865,7 @@
         },
         "yield": {
           "description": "Yield factor for production calculation",
-          "exclusiveMinimum": 0,
+          "exclusiveMinimum": 0.0,
           "title": "Yield",
           "type": "number",
           "x-help": "Efficiency factor for this string. Typically 0.8-0.9. Accounts for inverter losses, cable losses, shading, and dirt on panels.",
@@ -2844,7 +2939,6 @@
         "param_grid": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {
@@ -2859,7 +2953,6 @@
         "parameters": {
           "anyOf": [
             {
-              "additionalProperties": true,
               "type": "object"
             },
             {

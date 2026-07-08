@@ -4,7 +4,7 @@ Pricing configuration models.
 
 from typing import Optional, Literal
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from .base import SecretStr
+from .base import SecretStr, FlexInt
 from datetime import date
 
 
@@ -49,14 +49,14 @@ class PricingConfig(BaseModel):
             "x-ui-section": "Prices",
         }
     )
-    forecast_extension_hours: int = Field(
-        default=0,
+    forecast_extension_hours: FlexInt = Field(
+        default=FlexInt(value=0),
         alias="forecast extension hours",
         description="How many additional hours should be appended beyond the official day-ahead horizon",
         json_schema_extra={
-            "x-help": "Number of hours to extend beyond the imported official day-ahead horizon. DAO translates this into the provider-specific URL parameter.",
+            "x-help": "Number of hours to extend beyond the imported official day-ahead horizon. Supports either a fixed integer or a Home Assistant entity. DAO translates the resolved value into the provider-specific URL parameter.",
             "x-ui-section": "Prices",
-            "x-validation-hint": "Integer between 0 and 168"
+            "x-validation-hint": "Integer or HA entity, effective value between 0 and 168"
         }
     )
     energypriceforecast_extension_api_url: Optional[str] = Field(
@@ -228,10 +228,16 @@ class PricingConfig(BaseModel):
 
     @field_validator('forecast_extension_hours')
     @classmethod
-    def validate_forecast_extension_hours(cls, v: int) -> int:
-        if not (0 <= v <= 168):
+    def validate_forecast_extension_hours(cls, v: FlexInt) -> FlexInt:
+        if v is None:
+            return FlexInt(value=0)
+        raw_value = v.value
+        if isinstance(raw_value, str) and FlexInt.is_entity_id(raw_value):
+            return v
+        numeric_value = int(float(raw_value))
+        if not (0 <= numeric_value <= 168):
             raise ValueError("forecast extension hours must be between 0 and 168")
-        return v
+        return FlexInt(value=numeric_value)
     
     model_config = ConfigDict(
         extra='allow',

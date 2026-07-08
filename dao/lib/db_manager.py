@@ -462,18 +462,6 @@ class DBmanagerObj(object):
                 t1.c.time
                 < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
             )
-        else:
-            start_dt = datetime.datetime.fromtimestamp(start)
-            if start_dt.hour < 13:
-                num_days = 1
-            else:
-                num_days = 2
-            end_dt = start_dt + datetime.timedelta(days=num_days)
-            end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
-            end_ts = end_dt.timestamp()
-            query = query.where(
-                t1.c.time < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
-            )
 
         query = query.order_by(t1.c.time)
 
@@ -518,19 +506,6 @@ class DBmanagerObj(object):
                 query = query.where(
                     t1.c.time
                     < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
-                )
-            else:
-                start_dt = datetime.datetime.fromtimestamp(start)
-                if start_dt.hour < 13:
-                    num_days = 1
-                else:
-                    num_days = 2
-                end_dt = start_dt + datetime.timedelta(days=num_days)
-                end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
-                end_ts = end_dt.timestamp()
-                query = query.where(
-                    t1.c.time
-                    < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
                 )
 
             query = query.order_by(t1.c.time)

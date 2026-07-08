@@ -49,12 +49,31 @@ class DaPrices:
         provider = getattr(self.config.prices, "forecast_extension_provider", "none")
         return str(provider or "none").strip().lower()
 
-    def _forecast_extension_hours(self) -> int:
-        hours = getattr(self.config.prices, "forecast_extension_hours", 0)
+    def _resolve_bounded_hours(self, hours, ha_state_getter=None) -> int:
+        if hasattr(hours, "resolve"):
+            try:
+                if ha_state_getter is None:
+                    raw_value = getattr(hours, "value", 0)
+                    if getattr(hours, "is_entity_id", None) and hours.is_entity_id(raw_value):
+                        logging.warning(
+                            "Forecast-extensie uren verwijzen naar een HA entity, "
+                            "maar er is geen state getter beschikbaar."
+                        )
+                        return 0
+                    hours = raw_value
+                else:
+                    hours = hours.resolve(ha_state_getter)
+            except Exception as ex:
+                logging.warning("Forecast-extensie uren konden niet worden opgelost: %s", ex)
+                return 0
         try:
-            return max(0, min(168, int(hours)))
+            return max(0, min(168, int(float(hours))))
         except (TypeError, ValueError):
             return 0
+
+    def _forecast_extension_hours(self, ha_state_getter=None) -> int:
+        hours = getattr(self.config.prices, "forecast_extension_hours", 0)
+        return self._resolve_bounded_hours(hours, ha_state_getter)
 
     def _energypriceforecast_extension_country(self):
         configured = getattr(
@@ -188,10 +207,10 @@ class DaPrices:
                 df_db.loc[df_db.shape[0]] = [str(time_stamp), code, value]
         return df_db
 
-    def get_price_forecast_extension(self):
+    def get_price_forecast_extension(self, ha_state_getter=None):
         self._ensure_extension_code_available()
         provider = self._forecast_extension_provider()
-        extension_hours = self._forecast_extension_hours()
+        extension_hours = self._forecast_extension_hours(ha_state_getter)
         if provider == "none" or extension_hours <= 0:
             self.db_da.delete_code_range(
                 self.EXTENSION_CODE,

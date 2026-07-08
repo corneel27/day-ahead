@@ -340,7 +340,9 @@ class DaBase(hass.Hass):
         self.prices.get_prices(source)
 
     def get_day_ahead_price_forecast(self):
-        self.prices.get_price_forecast_extension()
+        self.prices.get_price_forecast_extension(
+            lambda eid: self.get_state(eid).state
+        )
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """

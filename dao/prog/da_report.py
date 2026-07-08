@@ -3044,7 +3044,9 @@ class Report(DaBase):
         ext_provider = str(
             getattr(self.prices_options, "forecast_extension_provider", "none") or "none"
         ).lower()
-        ext_hours = int(getattr(self.prices_options, "forecast_extension_hours", 0) or 0)
+        ext_hours = self.prices._forecast_extension_hours(
+            lambda eid: self.get_state(eid).state
+        )
         if ext_provider != "none" and ext_hours > 0:
             df_da_ext = self.db_da.get_column_data(
                 "values", "da_ext", start=start, end=end, agg_func=agg_func
