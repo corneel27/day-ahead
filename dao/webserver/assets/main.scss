@@ -1,0 +1,16 @@
+@import "bootstrap/scss/bootstrap";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+@import "prismjs/themes/prism.css";
+
+.icon-nav {
+    .bi{
+        font-size: 200%;
+    }
+    .form-control {
+        margin-top: 1em;
+    }
+}
+
+h1 {
+  font-size: 2rem;
+}

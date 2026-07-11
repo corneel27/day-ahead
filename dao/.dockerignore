@@ -1,2 +1,4 @@
 tests/
 pred/
+webserver/node_modules
+webserver/app/data

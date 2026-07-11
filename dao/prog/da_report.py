@@ -16,7 +16,18 @@ import math
 import json
 import itertools
 import logging
-from sqlalchemy import Table, select, and_, literal, func, case
+from sqlalchemy import (
+    Table,
+    select,
+    func,
+    literal,
+    and_,
+    case,
+    true,
+    bindparam,
+    union_all,
+    String,
+)
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
 
@@ -848,16 +859,15 @@ class Report(DaBase):
         :return: datum en tijd van het laatst aanwezige record
         """
 
-        with self.db_ha.engine.connect() as connection:
-            statistics = Table(
-                "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-            )
-            statistics_meta = Table(
-                "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-            )
-            # Define aliases for the tables
-            t1 = statistics.alias("t1")
-            v1 = statistics_meta.alias("v1")
+        statistics = Table(
+            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
+        )
+        statistics_meta = Table(
+            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
+        )
+        # Define aliases for the tables
+        t1 = statistics.alias("t1")
+        v1 = statistics_meta.alias("v1")
 
         # Construct the query
         query = select(
@@ -1514,7 +1524,7 @@ class Report(DaBase):
 
     @staticmethod
     def tijd_at_interval(
-        interval: str, moment: datetime.datetime, as_index: bool = False
+            interval: str, moment: datetime.datetime, as_index: bool = False
     ) -> str | int:
         if interval == "maand":
             result = datetime.datetime(moment.year, moment.month, day=1)
@@ -2453,11 +2463,11 @@ class Report(DaBase):
         return df_result
 
     def calc_saving_co2(
-        self,
-        active_period: str,
-        active_interval: str | None = None,
-        active_view: str = "table",
-        _tot: datetime.datetime | None = None,
+            self,
+            active_period: str,
+            active_interval: str | None = None,
+            active_view: str = "table",
+            _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2703,12 +2713,12 @@ class Report(DaBase):
 
     #  ------------------------------------------------
     def get_sensor_week_data(
-        self,
-        sensor: str,
-        weekday: int,
-        vanaf: datetime.datetime,
-        tot: datetime.datetime,
-        col_name: str,
+            self,
+            sensor: str,
+            weekday: int,
+            vanaf: datetime.datetime,
+            tot: datetime.datetime,
+            col_name: str,
     ) -> pd.DataFrame:
         """
         Berekent de waarde van een HA-sensor over 24 uur voor een bepaalde weekdag
@@ -3413,3 +3423,235 @@ class Report(DaBase):
         report_data = base64.b64encode(buf.getbuffer()).decode("ascii")
         plt.close(fig)
         return report_data
+
+    def build_series_query(self, start, end, step="1 day", codes=None):
+        if codes is None:
+            codes = ["da", "cons", "prod", "pv_dc", "pv_ac"]
+
+        metadata = self.db_da.metadata
+        engine = self.db_da.engine
+
+        variabel = Table("variabel", metadata, autoload_with=engine)
+        values_table = Table("values", metadata, autoload_with=engine)
+        prognoses = Table("prognoses", metadata, autoload_with=engine)
+
+        # params CTE
+        params = (
+            select(
+                func.datetime(bindparam("serie_start")).label("serie_start"),
+                func.datetime(bindparam("serie_end")).label("serie_end"),
+                bindparam("step").label("step"),
+            )
+            .cte("params")
+        )
+
+        # selected_vars CTE
+        selected_vars = union_all(
+            *[
+                select(literal(code, type_=String).label("code"))
+                for code in codes
+            ]
+        ).cte("selected_vars")
+
+        # recursive series CTE - base query
+        series = (
+            select(
+                params.c.serie_start.label("dt_start"),
+                func.unixepoch(params.c.serie_start).label("ts_start"),
+                func.datetime(params.c.serie_start, params.c.step).label("dt_end"),
+                func.unixepoch(func.datetime(params.c.serie_start, params.c.step)).label("ts_end"),
+            )
+            .select_from(params)
+            .cte("series", recursive=True)
+        )
+
+        # recursive series CTE - recursive part
+        series = series.union_all(
+            select(
+                series.c.dt_end.label("dt_start"),
+                series.c.ts_end.label("ts_start"),
+                func.datetime(series.c.dt_end, params.c.step).label("dt_end"),
+                func.unixepoch(func.datetime(series.c.dt_end, params.c.step)).label("ts_end"),
+            )
+            .select_from(series, params)
+            .where(
+                func.datetime(series.c.dt_end, params.c.step) <= params.c.serie_end
+            )
+        )
+
+        # vals CTE
+        vals = (
+            select(
+                series.c.ts_start.label("ts"),
+                variabel.c.code.label("code"),
+                case(
+                    (
+                        variabel.c.aggregate == "sum",
+                        func.sum(values_table.c.value),
+                    ),
+                    else_=func.avg(values_table.c.value),
+                ).label("val"),
+            )
+            .select_from(
+                series
+                .join(
+                    variabel,
+                    variabel.c.code.in_(
+                        select(selected_vars.c.code)
+                    ),
+                )
+                .outerjoin(
+                    values_table,
+                    and_(
+                        variabel.c.id == values_table.c.variabel,
+                        values_table.c.time >= series.c.ts_start,
+                        values_table.c.time < series.c.ts_end,
+                    ),
+                )
+            )
+            .group_by(
+                variabel.c.code,
+                series.c.dt_start,
+            )
+            .cte("vals")
+        )
+
+        # forecasts CTE
+        forecasts = (
+            select(
+                series.c.ts_start.label("ts"),
+                variabel.c.code.label("code"),
+                case(
+                    (
+                        variabel.c.aggregate == "sum",
+                        func.sum(prognoses.c.value),
+                    ),
+                    else_=func.avg(prognoses.c.value),
+                ).label("val"),
+            )
+            .select_from(
+                series
+                .join(
+                    variabel,
+                    variabel.c.code.in_(
+                        select(selected_vars.c.code)
+                    ),
+                )
+                .outerjoin(
+                    prognoses,
+                    and_(
+                        variabel.c.id == prognoses.c.variabel,
+                        prognoses.c.time >= series.c.ts_start,
+                        prognoses.c.time < series.c.ts_end,
+                    ),
+                )
+            )
+            .group_by(
+                variabel.c.code,
+                series.c.dt_start,
+            )
+            .cte("forecasts")
+        )
+
+        # final SELECT
+        query = (
+            select(
+                series.c.dt_start.label("ts"),
+                variabel.c.code,
+                variabel.c.dim,
+                vals.c.val.label("v"),
+                forecasts.c.val.label("f"),
+            )
+            .select_from(
+                series
+                .join(
+                    variabel,
+                    variabel.c.code.in_(
+                        select(selected_vars.c.code)
+                    ),
+                )
+                .outerjoin(
+                    vals,
+                    and_(
+                        vals.c.ts == series.c.ts_start,
+                        vals.c.code == variabel.c.code,
+                    ),
+                )
+                .outerjoin(
+                    forecasts,
+                    and_(
+                        forecasts.c.ts == series.c.ts_start,
+                        forecasts.c.code == variabel.c.code,
+                    ),
+                )
+            )
+        )
+
+        return query.params(
+            serie_start=start,
+            serie_end=end,
+            step=step,
+        )
+
+    def get_data(
+            self,
+            start: datetime.datetime,
+            end: datetime.datetime,
+            aggregate: str = "hour",
+            vars: list[str] = ["da", "cons", "prod", "pv_dc", "pv_ac", "profit", "cost", "bat_in", "bat_out", "soc"],
+    ):
+        intervals = {
+            "15min": {
+                "step": "+15 minutes",
+                "start_func": func.datetime,
+            },
+            "hour": {
+                "step": "+1 hour",
+                "start_func": func.datetime,
+            },
+            "day": {
+                "step": "+1 day",
+                "start_func": func.date,
+            },
+            "week": {
+                "step": "+7 days",
+                "start_func": func.date,
+            },
+            "month": {
+                "step": "+1 month",
+                "start_func": func.date,
+            },
+        }
+
+        if aggregate not in intervals:
+            raise ValueError(f"Invalid aggregate interval: {aggregate}")
+
+        interval = intervals[aggregate]
+        step = interval["step"]
+
+        query = self.build_series_query(
+            start=start,
+            end=end,
+            step=step,
+            codes=vars,
+        )
+
+        with self.db_da.engine.connect() as connection:
+            df = pd.read_sql_query(query, connection)
+
+        target_tz = start.tzinfo
+        df["ts"] = (
+            pd.to_datetime(df["ts"], utc=True)
+            .dt.tz_convert(target_tz)
+        )
+
+        return [
+            {"ts": ts, **row.unstack(0).to_dict()}
+            for ts, row in (
+                df.pivot(index="ts", columns="code", values=["v", "f"])
+                .swaplevel(axis=1)
+                .sort_index(axis=1)
+                .astype(object)
+                .where(pd.notnull, None)
+            ).iterrows()
+        ]

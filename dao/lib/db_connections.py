@@ -48,25 +48,19 @@ def _build_db_da(
         db_port=db.port,
         db_path=db.db_path,
     )
-    try:
-        import sqlalchemy_utils
-        db_url = DBmanagerObj.db_url(**kwargs)
-        if not sqlalchemy_utils.database_exists(db_url):
-            if check_create:
-                sqlalchemy_utils.create_database(db_url)
-            else:
-                if db.engine == "sqlite":
-                    logger.error(f"day_ahead database not found: {db.db_path}/{db.database}")
-                else:
-                    logger.error(f"day_ahead database does not exist ({db.engine} / {db.server})")
-                return None
-        return DBmanagerObj(**kwargs, db_time_zone=config.time_zone)
-    except Exception as ex:
-        if db.engine == "sqlite":
-            logger.error(f"day_ahead database not found: {db.db_path}/{db.database}")
+
+    import sqlalchemy_utils
+    db_url = DBmanagerObj.db_url(**kwargs)
+    if not sqlalchemy_utils.database_exists(db_url):
+        if check_create:
+            sqlalchemy_utils.create_database(db_url)
         else:
-            logger.error(f"Cannot connect to day_ahead database ({db.engine} / {db.server}): {ex}")
-        return None
+            if db.engine == "sqlite":
+                logger.error(f"day_ahead database not found: {db.db_path}/{db.database}")
+            else:
+                logger.error(f"day_ahead database does not exist ({db.engine} / {db.server})")
+            return None
+    return DBmanagerObj(**kwargs, db_time_zone=config.time_zone)
 
 
 def _build_db_ha(
