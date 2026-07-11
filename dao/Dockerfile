@@ -1,6 +1,8 @@
 ARG BUILD_FROM
+ARG BUILD_ARCH
 
 FROM ${BUILD_FROM} AS builder
+ARG BUILD_ARCH
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -9,7 +11,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update -y && \
     apt-get install -y pkgconf file \
       libmariadb-dev postgresql-client libjpeg-dev libffi-dev \
-      libnauty-dev coinor-libcgl-dev gcc g++ \
+      libnauty-dev coinor-libcgl-dev gcc g++ libmariadb3 mariadb-client \
       python3 python3-venv python3-pip npm
 
 COPY . /root/dao
