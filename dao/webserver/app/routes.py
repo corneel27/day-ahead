@@ -5,7 +5,7 @@ import time
 
 # from sqlalchemy.sql.coercions import expect_col_expression_collection
 
-from dao.webserver.app import app
+from . import app
 from flask import render_template, request, jsonify, session as flask_session
 from markupsafe import escape
 import fnmatch
