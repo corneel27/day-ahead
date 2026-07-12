@@ -49,7 +49,9 @@ def migrate_v0_to_v1(config: dict[str, Any]) -> dict[str, Any]:
         logger.info("changed meteo_attemps -> meteo_attempts")
 
     # entity_stop_charging
-    if "electric_vehicle" in migrated and isinstance(migrated["electric_vehicle"], list):
+    if "electric_vehicle" in migrated and isinstance(
+        migrated["electric_vehicle"], list
+    ):
         for ev in migrated["electric_vehicle"]:
             value = None
             if "entity_stop_laden" in ev:
@@ -62,10 +64,8 @@ def migrate_v0_to_v1(config: dict[str, Any]) -> dict[str, Any]:
                 ev["entity_stop_charging"] = value
                 logger.info("changed entity_stop_laden -> entity_stop_charging")
 
-
-
-# Update version
-    migrated['config_version'] = 1
+    # Update version
+    migrated["config_version"] = 1
 
     logger.info("Migrated configuration from v0 to v1")
     return migrated

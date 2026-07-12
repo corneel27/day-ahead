@@ -31,8 +31,5 @@ class ConfigurationV1(ConfigurationV0):
         alias="meteoserver-attempts",
         ge=1,
         description="Number of meteoserver fetch attempts",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Weather"
-        }
+        json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Weather"},
     )

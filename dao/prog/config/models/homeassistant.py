@@ -9,15 +9,15 @@ from .base import SecretStr
 
 class HomeAssistantConfig(BaseModel):
     """Home Assistant connection configuration."""
-    
+
     ip_address: str = Field(
         default="supervisor",
         alias="host",
         description="Home Assistant IP address (auto-detected if not set)",
         json_schema_extra={
             "x-help": "Home Assistant IP address or hostname. Usually auto-detected when running as HA add-on. Set manually only if auto-detection fails. Examples: '192.168.1.100', 'homeassistant.local'.",
-            "x-ui-section": "Homeassistant"
-        }
+            "x-ui-section": "Homeassistant",
+        },
     )
     ip_port: Optional[int] = Field(
         default=None,
@@ -27,8 +27,8 @@ class HomeAssistantConfig(BaseModel):
             "x-help": "Home Assistant web interface port. Default is 8123. Change only if using custom port. Usually auto-detected when running as add-on.",
             "x-unit": "port",
             "x-ui-section": "Homeassistant",
-            "x-validation-hint": "Default 8123, change if custom"
-        }
+            "x-validation-hint": "Default 8123, change if custom",
+        },
     )
     hasstoken: Optional[SecretStr] = Field(
         default=None,
@@ -37,27 +37,27 @@ class HomeAssistantConfig(BaseModel):
         json_schema_extra={
             "x-help": "Long-lived access token for HA API. Usually auto-provided when running as add-on. Create manually: Profile → Security → Long-Lived Access Tokens. Use !secret for security.",
             "x-ui-section": "Homeassistant",
-            "x-validation-hint": "Auto-provided as add-on, use !secret if manual"
-        }
+            "x-validation-hint": "Auto-provided as add-on, use !secret if manual",
+        },
     )
-    protocol_api: Literal['http', 'https'] = Field(
+    protocol_api: Literal["http", "https"] = Field(
         default="http",
         alias="protocol api",
         description="API protocol",
         json_schema_extra={
             "x-help": "Protocol for Home Assistant API. 'http' for local access, 'https' for SSL/TLS. Usually auto-detected. Set manually only if needed.",
-            "x-ui-section": "Homeassistant"
-        }
+            "x-ui-section": "Homeassistant",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'HASS',
-            'x-icon': 'home-assistant',
-            'x-order': 20,
-            'x-help': '''# Home Assistant Connection
+            "x-ui-group": "HASS",
+            "x-icon": "home-assistant",
+            "x-order": 20,
+            "x-help": """# Home Assistant Connection
 
 Configure connection to Home Assistant for API access.
 
@@ -107,7 +107,7 @@ Only needed if:
 - Always use !secret for tokens
 - Test connection from dashboard
 - Check HA logs if issues persist
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Home-Assistant-Integration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Home-Assistant-Integration",
+        },
     )

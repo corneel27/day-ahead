@@ -7,6 +7,7 @@ import time
 
 from dao.webserver.app import app
 from flask import render_template, request, jsonify, session as flask_session
+from markupsafe import escape
 import fnmatch
 import os
 import threading
@@ -27,8 +28,9 @@ config = None
 
 # Introduced previous_time and active_view as global variables
 # This is used to enable switching between "grafiek" and "tabel" and retaining the (closest) timestamp
-previous_time = None 
+previous_time = None
 active_view = "grafiek"
+
 
 def create_config():
     global config
@@ -214,7 +216,9 @@ logging.basicConfig(
 )
 
 if config is not None:
-    sensor_co2_intensity = config.report.co2_intensity_sensor if config and config.report else None
+    sensor_co2_intensity = (
+        config.report.co2_intensity_sensor if config and config.report else None
+    )
 else:
     sensor_co2_intensity = None
 
@@ -288,8 +292,8 @@ def get_file_list(path: str, pattern: str) -> list:
     for f in os.listdir(path):
         if fnmatch.fnmatch(f, pattern):
             # Extract timestamp from filename (e.g. calc_2026-02-17__08-45.png) because datetime picker works with
-            # absolut timestamps and then file modification date might differ from the timestamp in the filename, which is the intended reference time for the user  
-            m = re.search(r'(\d{4}-\d{2}-\d{2})__(\d{2})(:|\-)(\d{2})', f)
+            # absolut timestamps and then file modification date might differ from the timestamp in the filename, which is the intended reference time for the user
+            m = re.search(r"(\d{4}-\d{2}-\d{2})__(\d{2})(:|\-)(\d{2})", f)
             if m:
                 try:
                     dt_str = f"{m.group(1)} {m.group(2)}:{m.group(4)}"
@@ -350,14 +354,14 @@ def home():
     cur_subject = "grid"
     active_subject = "grid"
     cur_view = "grafiek"
-    #global active_view 
+    # global active_view
     global previous_time
     active_time = None
     action = None
     confirm_delete = False
-    #get active_view from session if available, otherwise use the default value; 
-    #this is to enable switching between grafiek and tabel while retaining the active time  
-    active_view = flask_session.get('active_view', 'grafiek')
+    # get active_view from session if available, otherwise use the default value;
+    # this is to enable switching between grafiek and tabel while retaining the active time
+    active_view = flask_session.get("active_view", "grafiek")
 
     if config is not None:
         battery_options = config.battery
@@ -368,20 +372,22 @@ def home():
         lst = request.form.to_dict(flat=False)
         # print('Home:', lst)
         if "cur_subject" in lst:
-        #   active_subject = lst["cur_subject"][0]
+            #   active_subject = lst["cur_subject"][0]
             cur_subject = lst["cur_subject"][0]
         if "cur_view" in lst:
-        #   active_view = lst["cur_view"][0]
+            #   active_view = lst["cur_view"][0]
             cur_view = lst["cur_view"][0]
         if "subject" in lst:
             active_subject = lst["subject"][0]
         if "view" in lst:
             active_view = lst["view"][0]
-            flask_session['active_view'] = active_view #update session with the new active_view
+            flask_session["active_view"] = (
+                active_view  # update session with the new active_view
+            )
         if "active_time" in lst:
             # Ignore active_time from POST if switching between grafiek & table; keep the active_time from the previous call from session.
             if cur_view != active_view:
-                active_time = flask_session.get('active_time')
+                active_time = flask_session.get("active_time")
             else:
                 active_time = float(lst["active_time"][0])
         if "action" in lst:
@@ -389,26 +395,26 @@ def home():
         if "file_delete" in lst:
             confirm_delete = lst["file_delete"][0] == "delete"
 
-#  Every mouse click on Home page calls the home() function
-#  By design; the get_file_list() is called over and over again to ensure an accurate reflection of the files
-#  Files might have been added/removed since last call
-    
+    #  Every mouse click on Home page calls the home() function
+    #  By design; the get_file_list() is called over and over again to ensure an accurate reflection of the files
+    #  Files might have been added/removed since last call
+
     if active_view == "grafiek":
         active_map = "/images/"
         active_filter = "*.png"
     else:
         active_map = "/log/"
         active_filter = "*.log"
-        
+
     flist = get_file_list(app_datapath + active_map, active_filter)
     index = 0
-    
+
     if active_time:
         # Find index in the current flist with timestamp closest to active_time (possibly from other flist)
         # The timestamp between e.g. calc_2026-02-17__08-45.png & calc_2026-02-17__08-45.log are NOT identical
         # The intent is to be able to switch between grafiek and table while keeping the active time
         active_time = float(active_time)
-        diff_time = active_time # high intialization value
+        diff_time = active_time  # high intialization value
         for i in range(len(flist)):
             if abs(flist[i]["time"] - active_time) < diff_time:
                 diff_time = abs(flist[i]["time"] - active_time)
@@ -424,25 +430,24 @@ def home():
         index = min(len(flist) - 1, index + 1)
     if action == "last":
         index = len(flist) - 1
-        
+
     if action in ["fast_forward", "fast_reverse"]:
-        if type( active_time ) != float:
+        if type(active_time) != float:
             active_time = float(active_time)
         if action == "fast_forward":
-            target_time = active_time - (6 * 3600) # Add 6 hours
+            target_time = active_time - (6 * 3600)  # Add 6 hours
         if action == "fast_reverse":
-            target_time = active_time + (6 * 3600) # Subtract 6 hours
-        diff_time = active_time # high intialization value
+            target_time = active_time + (6 * 3600)  # Subtract 6 hours
+        diff_time = active_time  # high intialization value
         for i in range(len(flist)):
             if abs(flist[i]["time"] - target_time) < diff_time:
-               diff_time = abs(flist[i]["time"] - target_time)
-               index = i
-        
+                diff_time = abs(flist[i]["time"] - target_time)
+                index = i
+
     if action == "delete" and confirm_delete:
         os.remove(app_datapath + active_map + flist[index]["name"])
         flist = get_file_list(app_datapath + active_map, active_filter)
         index = min(len(flist) - 1, index)
-
 
     if len(flist) > 0:
         # print('Active index:', index )
@@ -459,14 +464,23 @@ def home():
         active_time = None
         image = None
         tabel = None
-        
-# Remember this active time in global variable
-    #previous_time = active_time
-    flask_session['active_time'] = active_time #Store active_time in session to enable switching between grafiek and tabel while retaining the active time  
 
-    flatpickr_times = [datetime.datetime.fromtimestamp(f["time"]).strftime('%Y-%m-%d %H:%M') for f in flist]
+    # Remember this active time in global variable
+    # previous_time = active_time
+    flask_session["active_time"] = (
+        active_time  # Store active_time in session to enable switching between grafiek and tabel while retaining the active time
+    )
+
+    flatpickr_times = [
+        datetime.datetime.fromtimestamp(f["time"]).strftime("%Y-%m-%d %H:%M")
+        for f in flist
+    ]
     flatpickr_default_ts = float(active_time) if active_time else None
-    flatpickr_default = datetime.datetime.fromtimestamp(float(active_time)).strftime('%Y-%m-%d %H:%M') if active_time else ''
+    flatpickr_default = (
+        datetime.datetime.fromtimestamp(float(active_time)).strftime("%Y-%m-%d %H:%M")
+        if active_time
+        else ""
+    )
 
     return render_template(
         "home.html",
@@ -486,6 +500,7 @@ def home():
         version=__version__,
     )
 
+
 # logfile = "../data/log/run.log"
 """
 task_state = {
@@ -500,10 +515,12 @@ lock = threading.Lock()
 STATEFILE = "../data/task_state.json"
 STALE_AFTER = 600
 
+
 def save_state(task_state):
     task_state["last_update"] = time.time()
     with open(STATEFILE, "w") as f:
         json.dump(task_state, f)
+
 
 def load_state():
     if not os.path.exists(STATEFILE):
@@ -525,19 +542,11 @@ def load_state():
 
 def run_and_log(cmd, task, logfile):
     # logfile = f"../data/log/run_{int(time.time())}.log"
-    save_state({
-        "status": "running",
-        "task": task,
-        "returncode": None,
-        "logfile": logfile
-    })
+    save_state(
+        {"status": "running", "task": task, "returncode": None, "logfile": logfile}
+    )
     with open(logfile, "w") as f:
-        proc = Popen(
-            cmd,
-            stdout=PIPE,
-            stderr=STDOUT,
-            text = True
-        )
+        proc = Popen(cmd, stdout=PIPE, stderr=STDOUT, text=True)
 
         for line in proc.stdout:
             f.write(line)
@@ -545,12 +554,15 @@ def run_and_log(cmd, task, logfile):
 
         proc.wait()
 
-    save_state({
-        "status": "done" if proc.returncode == 0 else "error",
-        "task": task,
-        "returncode": proc.returncode,
-        "logfile": logfile
-    })
+    save_state(
+        {
+            "status": "done" if proc.returncode == 0 else "error",
+            "task": task,
+            "returncode": proc.returncode,
+            "logfile": logfile,
+        }
+    )
+
 
 @app.route("/run", methods=["POST", "GET"])
 def run_process():
@@ -588,9 +600,7 @@ def run_process():
                 bewerking = ""
                 task = current_bewerking
                 threading.Thread(
-                    target=run_and_log,
-                    args=(cmd, task, logfile),
-                    daemon=True
+                    target=run_and_log, args=(cmd, task, logfile), daemon=True
                 ).start()
                 log_content = "Opdracht is gestart"
                 state = "running"
@@ -624,6 +634,7 @@ def run_process():
         version=__version__,
     )
 
+
 @app.route("/status")
 def status():
     task_state = load_state()
@@ -656,7 +667,7 @@ def show_log():
         lines = f.readlines()
     state = task_state["status"]
     if state == "running":
-        text = "".join(lines[-20:]) # laatste 20 regels
+        text = "".join(lines[-20:])  # laatste 20 regels
     else:
         text = "".join(lines)
     return text
@@ -943,6 +954,7 @@ def api_report(fld: str, periode: str):
     :return: de gevraagde data in json formaat
     """
     cumulate = request.args.get("cumulate")
+    cumulate = escape(cumulate)
     report = Report(app_datapath + "/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
@@ -954,6 +966,8 @@ def api_report(fld: str, periode: str):
             cumulate = cumulate == 1
         except ValueError:
             cumulate = False
+    fld = escape(fld)
+    periode = escape(periode)
     result = report.get_api_data(fld, periode, cumulate=cumulate)
     return result
 

@@ -863,12 +863,7 @@ class Report(DaBase):
         query = select(
             self.db_ha.from_unixtime(t1.c.start_ts).label("tijd"),
             t1.c.state,
-        ).where(
-            and_(
-                v1.c.statistic_id == sensor,
-                t1.c.metadata_id == v1.c.id
-            )
-        )
+        ).where(and_(v1.c.statistic_id == sensor, t1.c.metadata_id == v1.c.id))
 
         if latest:
             query = query.order_by(t1.c.start_ts.desc()).limit(1)
@@ -2792,7 +2787,10 @@ class Report(DaBase):
             )
             # Calculate the value
             df_raw[col_name] = df_raw.apply(
-                lambda row: round(max(row["state_t2"] - row["state_t1"], 0) * factor, 3), axis=1
+                lambda row: round(
+                    max(row["state_t2"] - row["state_t1"], 0) * factor, 3
+                ),
+                axis=1,
             )
             df_raw["weekdag"] = df_raw.apply(
                 lambda x: self.tijd_at_interval("weekdag", x["tijd"]), axis=1
@@ -3070,7 +3068,9 @@ class Report(DaBase):
                 old_dagstr = dag_str
             da_cons = (row.value * multiplier_l + taxes_l + ol_l) * (1 + btw_l / 100)
             if salderen:
-                da_prod = (row.value * multiplier_t + taxes_t + ol_t) * (1 + btw_t / 100)
+                da_prod = (row.value * multiplier_t + taxes_t + ol_t) * (
+                    1 + btw_t / 100
+                )
             else:
                 da_prod = (row.value + ol_t) * (1 + btw_t / 100)
             df.loc[df.shape[0]] = [

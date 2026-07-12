@@ -8,7 +8,9 @@ class DaScheduler(DaBase):
     def __init__(self, file_name: str = None):
         super().__init__(file_name)
         self.active = self.config.scheduler.active
-        self.scheduler_tasks = {entry.time: entry.action for entry in self.config.scheduler.schedule}
+        self.scheduler_tasks = {
+            entry.time: entry.action for entry in self.config.scheduler.schedule
+        }
 
     def scheduler(self):
         # if not (self.notification_entity is None) and self.notification_opstarten:

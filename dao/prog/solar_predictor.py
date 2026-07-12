@@ -19,6 +19,7 @@ import copy
 import math
 
 from pip._internal.utils import datetime
+
 # ML imports
 from xgboost import XGBRegressor
 from sklearn.model_selection import GridSearchCV
@@ -82,7 +83,7 @@ class SolarPredictor(DaBase):
         ]
         self.is_trained = False
         self.training_stats = {}
-        self.ml_training_start_date = dt.date(2000,1,1)
+        self.ml_training_start_date = dt.date(2000, 1, 1)
         self.solar_entities = []
         """
         # Set default physics-based constraints for typical residential system
@@ -777,12 +778,14 @@ class SolarPredictor(DaBase):
             utc = int(dati.timestamp())
             save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
             save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
-            save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds/10]
+            save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds / 10]
         self.db_da.savedata(save_df, tablename="values")
         os.remove(filename)
         return
 
-    def get_and_save_knmi_data(self, start: dt.datetime, end: dt.datetime, variables:list=["FH", "T", "Q"]):
+    def get_and_save_knmi_data(
+        self, start: dt.datetime, end: dt.datetime, variables: list = ["FH", "T", "Q"]
+    ):
         """
         haalt data op en bewaart ze in dao-db
         :param start: datetime
@@ -822,7 +825,7 @@ class SolarPredictor(DaBase):
             if "gr" in knmi_df.columns:
                 save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
             if "winds" in knmi_df.columns:
-                save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds/10]
+                save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds / 10]
         self.db_da.savedata(save_df, tablename="values")
         return None
 
@@ -855,7 +858,11 @@ class SolarPredictor(DaBase):
             logging.info("Er zijn nog geen winddata van knmi aanwezig")
             self.get_and_save_knmi_data(start, latest_dt, ["FH"])
         else:
-            if latest_dt is not None and latest_wind_dt is not None and latest_wind_dt < latest_dt:
+            if (
+                latest_dt is not None
+                and latest_wind_dt is not None
+                and latest_wind_dt < latest_dt
+            ):
                 self.get_and_save_knmi_data(latest_wind_dt, latest_dt, ["FH"])
 
         first_dt = self.db_da.get_time_border_record("gr", latest=False)
@@ -877,7 +884,10 @@ class SolarPredictor(DaBase):
         return None
 
     def get_weatherdata(
-        self, start: dt.datetime, _end: dt.datetime | None = None, prognose: bool = False
+        self,
+        start: dt.datetime,
+        _end: dt.datetime | None = None,
+        prognose: bool = False,
     ) -> pd.DataFrame:
         """
         vult database aan met ontbrekende data
@@ -908,8 +918,10 @@ class SolarPredictor(DaBase):
                 latest_dt = self.db_da.get_time_border_record(weather_item, latest=True)
                 if latest_dt < end and _end is not None:
                     table_name = "prognoses"
-                    logging.warning(f"Er zijn geen meetdata van {weather_item} op "
-                                    f"{start.strftime('%Y-%m_%d')}")
+                    logging.warning(
+                        f"Er zijn geen meetdata van {weather_item} op "
+                        f"{start.strftime('%Y-%m_%d')}"
+                    )
                 else:
                     table_name = "values"
             df_item = self.db_da.get_column_data(
@@ -921,7 +933,12 @@ class SolarPredictor(DaBase):
         weather_data["utc"] = pd.to_datetime(weather_data["utc"], unit="s", utc=True)
         weather_data = weather_data.set_index(weather_data["utc"])
         weather_data = weather_data.rename(
-            columns={"utc": "datetime", "gr": "irradiance", "temp": "temperature", "winds": "windvelocity"}
+            columns={
+                "utc": "datetime",
+                "gr": "irradiance",
+                "temp": "temperature",
+                "winds": "windvelocity",
+            }
         )
         return weather_data
 
@@ -1031,8 +1048,10 @@ class SolarPredictor(DaBase):
             raise FileNotFoundError(
                 f"Er is geen model aanwezig voor {self.solar_name},svp eerst trainen."
             )
-        latest_dt = self.db_da.get_time_border_record("gr", latest=True, table_name="prognoses")
-        prognose = True # latest_dt < end
+        latest_dt = self.db_da.get_time_border_record(
+            "gr", latest=True, table_name="prognoses"
+        )
+        prognose = True  # latest_dt < end
         weather_data = self.get_weatherdata(start, end, prognose=prognose)
         prediction = self.predict(weather_data)
         weather_data.reset_index(inplace=True)
@@ -1044,7 +1063,7 @@ class SolarPredictor(DaBase):
         )
         prediction.drop("irradiance", axis=1, inplace=True)
         """
-        prediction['prediction'][prediction['prediction'] < 0] = 0
+        prediction["prediction"][prediction["prediction"] < 0] = 0
         prediction["prediction"].round(3)
         logging.info(f"ML prediction {self.solar_name}\n{prediction}")
         return prediction
