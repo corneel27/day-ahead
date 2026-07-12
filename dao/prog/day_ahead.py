@@ -814,7 +814,7 @@ class DaCalc(DaBase):
         ]
         dc_to_ac = [
             [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=max_discharge_power[b])
+                model.add_var(var_type=CONTINUOUS, lb=0, ub=max(dc_to_ac_samples[b]) if dc_to_ac_samples[b] else 0)
                 for _ in range(U)
             ]
             for b in range(B)
@@ -3121,8 +3121,9 @@ class DaCalc(DaBase):
         model.max_nodes = 1500
         # model.max_seconds = 20
         if self.log_level > logging.DEBUG:
-            model.verbose = 0
-        model.check_optimization_results()
+            model.verbose = 1
+        model.threads = -1 #use all available cores
+        # model.check_optimization_results()
 
         # kosten optimalisering
         if self.strategy == "minimize cost":
