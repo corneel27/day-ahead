@@ -2,3 +2,7 @@ tests/
 pred/
 webserver/node_modules
 webserver/app/data
+data
+!data/options_start.json
+!data/options_example.json
+!data/secrets_vb.json

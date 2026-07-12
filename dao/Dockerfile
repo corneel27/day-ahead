@@ -14,17 +14,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       libnauty-dev coinor-libcgl-dev gcc g++ libmariadb3 mariadb-client \
       python3 python3-venv python3-pip npm
 
-COPY . /root/dao
 WORKDIR /root/dao
 ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
 RUN python3 -m venv $VIRTUAL_ENV
 
+COPY requirements.txt /root/dao/requirements.txt
+
 RUN if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -s `which mariadb_config` /usr/local/bin/mariadb_config; fi
 RUN source $VIRTUAL_ENV/bin/activate \
     && pip3 install uv \
-    && cd /root/dao/prog \
     && uv pip install  -r /root/dao/requirements.txt \
     && pip3 uninstall -y uv
+
+COPY webserver/package.json webserver/package-lock.json webserver/vite.config.js /root/dao/webserver/
+COPY webserver/assets /root/dao/webserver/assets
 
 WORKDIR /root/dao/webserver
 RUN  npm install \
@@ -51,6 +54,7 @@ COPY __init__.py /root/dao
 COPY lib /root/dao/lib/
 COPY prog /root/dao/prog/
 COPY webserver /root/dao/webserver/
+COPY data /tmp/daodata/
 COPY --from=builder /root/dao/webserver/app/static/build /root/dao/webserver/app/static/build
 COPY --from=builder /root/dao/venv /root/dao/venv
 

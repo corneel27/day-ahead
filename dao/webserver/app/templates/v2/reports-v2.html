@@ -111,7 +111,7 @@
     }
 
     async function getData(params) {
-        const response = await fetch(`/v2/api/data?${params.toString()}`);
+        const response = await fetch(`{{url_for('api.data')}}?${params.toString()}`);
 
         if (!response.ok) {
             throw new Error(`Could not fetch chart data: ${response.status}`);
