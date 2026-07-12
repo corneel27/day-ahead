@@ -1,4 +1,4 @@
-<div class="row sticky-top {% if run_status["status"] == "running" %}bg-warning-subtle{% else %}bg-success-subtle{% endif %}">
+<div class="row sticky-top {% if run_status["status"] == "running" %}bg-warning-subtle{% elif run_status["status"] == "error" %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
 <h2>
     {{run_status["task"]}}: {{run_status["status"]}}
 </h2>
