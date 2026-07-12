@@ -124,7 +124,7 @@ if [ "$SETUP" = true ]; then
   npm install
 else
   if [ ! -d "$VENV_DIR" ]; then
-    echo "No .venv found. Run: $0 --setup"
+    echo "No venv found. Run: $0 --setup"
     exit 1
   fi
 
