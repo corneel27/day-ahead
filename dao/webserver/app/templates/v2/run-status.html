@@ -1,0 +1,15 @@
+<div class="row sticky-top {% if run_status["status"] == "running" %}bg-warning-subtle{% elif run_status["status"] == "error" %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
+<h2>
+    {{run_status["task"]}}: {{run_status["status"]}}
+</h2>
+{%if run_status["status"] != "idle" %}
+<p class="lead">
+    Started: {{started.strftime("%Y-%m-%d %H:%M:%S") if started else "-"}} || {{seconds_running if seconds_running else "-"}} seconds
+</p>
+{% endif %}
+</div>
+<pre>{{content}}</pre>
+
+{% if run_status["status"] == "running" %}
+<span hx-get="{{url_for('v2.run_status')}}" hx-trigger="load delay:1000ms" hx-swap="innerHTML scroll:bottom transition:true" hx-push-url="false"></span>
+{% endif %}

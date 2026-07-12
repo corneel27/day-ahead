@@ -1,13 +1,8 @@
-dao/data/images/*.png
-dao/data/log/*.txt
-dao/data/log/*.log
-dao/data/log/dashboard*
-dao/data/secrets.json
-dao/data/options.json
-dao/data/baseload/*.json
-dao/data/prediction/models/*.pkl
-dao/data/*.db
-dao/data/tst_options
+dao/data
+!dao/data/options_example.json
+!dao/data/options_start.json
+!dao/data/secrets_vb.json
+
 dao/prog/tst_py
 dao/prog/miplib
 dao/tests
@@ -25,5 +20,7 @@ dao/data/options_new.json
 
 /dao/data/task_state.json
 /dao/data/options_v0.json
+dao/webserver/node_modules
+dao/webserver/app/static/build
 /dao/data/home-assistant_v2.db-journal
 /dao/data/meta

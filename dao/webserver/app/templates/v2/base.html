@@ -1,0 +1,78 @@
+{% macro nav_item(endpoint, label, icon=None) %}
+<li class="nav-item">
+    <a class="nav-link {% if request.endpoint == endpoint %}active{% endif %}"
+       aria-current="page" href="{{ url_for(endpoint) }}">{{label}}</a>
+</li>
+{% endmacro %}
+
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}DAO{% endblock %}</title>
+    {{ vite_tags|safe }}
+    <meta
+            name="htmx-config"
+            content='{
+        "responseHandling":[
+            {"code":"204", "swap": false},
+            {"code":"[23]..", "swap": true},
+            {"code":"422", "swap": true},
+            {"code":"[45]..", "swap": true, "error":true},
+            {"code":"...", "swap": true}
+        ]
+    }'
+    />
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container">
+            <a class="navbar-brand text-center" href="{{ url_for('v2.chart') }}">DAO</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    {{ nav_item('v2.chart', 'Charts') }}
+                    {{ nav_item('v2.log', 'Logs') }}
+                    {{ nav_item('v2.run', 'Run') }}
+                    {{ nav_item('v2.reports', 'Reports') }}
+                    {{ nav_item('v2.savings', 'Savings') }}
+                    {{ nav_item('v2.solar', 'Solar') }}
+                    {{ nav_item('v2.reportsv2', 'Reports V2') }}
+                    {{ nav_item('v2.config', 'Config') }}
+                    {{ nav_item('v2.secrets', 'Secrets') }}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container my-2 flex-grow-1 d-flex flex-column">
+        {% if error %}
+            <div class="alert alert-danger" role="alert">
+                {{ error }}
+            </div>
+        {% endif %}
+        {% if success %}
+            <div class="alert alert-success" role="alert">
+                {{ success }}
+            </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-light text-muted py-3">
+        <div class="container text-center">
+            <div class="row">
+                <div class="col">&copy; 2026: <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2.0</a></div>
+                <div class="col"><small>Version: {{version}}</small></div>
+                <div class="col"><a aria-current="page" href="{{ url_for('home') }}">legacy UI</a></div>
+                <div class="col"><a aria-current="page" href="https://github.com/corneel27/">Github</a></div>
+                <div class="col"><a aria-current="page" href="https://github.com/corneel27/day-ahead/wiki">Wiki</a></div>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

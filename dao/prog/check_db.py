@@ -172,12 +172,13 @@ class CheckDB:
             Column("code", String(10), unique=True, nullable=False),
             Column("name", String(50), unique=True, nullable=False),
             Column("dim", String(10), nullable=False),
+            Column("aggregate", String(3), nullable=False, default="avg"),
             sqlite_autoincrement=True,  # Ensure SQLite uses AUTOINCREMENT
         )
 
         if l_version <= 472:
             # check variabel
-            # Create the version table (if not exists)
+            # Create the variabel table (if not exists)
             variabel_tabel.create(self.engine)
             records = [
                 [1, "cons", "Verbruik", "kWh"],
@@ -325,6 +326,36 @@ class CheckDB:
                 self.upsert_variabel(variabel_tabel, record)
             print('Table "variabel" geupdated.')
         """
+
+        inspector = inspect(self.engine)
+        columns = [column["name"] for column in inspector.get_columns("variabel")]
+        has_aggregate = "aggregate" in columns
+
+        if not has_aggregate:
+            with self.engine.begin() as connection:
+                quoted_aggregate = self.engine.dialect.identifier_preparer.quote("aggregate")
+
+                connection.execute(
+                    text(
+                        f'ALTER TABLE variabel '
+                        f'ADD COLUMN {quoted_aggregate} VARCHAR(3) NOT NULL DEFAULT "avg"'
+                    )
+                )
+
+                connection.execute(
+                    text(
+                        f"""
+                        UPDATE variabel
+                        SET {quoted_aggregate} = CASE
+                            WHEN dim IN ('kWh', 'euro', 'mm') THEN 'sum'
+                            ELSE 'avg'
+                        END
+                        """
+                    )
+                )
+
+            print('Kolom "aggregate" toegevoegd aan tabel "variabel"    ')
+
 
         # timezone in postgresql could be wrong, check and report
         if self.db_da.db_dialect == "postgresql":

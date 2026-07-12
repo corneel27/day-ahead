@@ -112,10 +112,10 @@ class DaBase(hass.Hass):
 
         self.db_da = make_db_da(self.config, self.loader.secrets)
         if self.db_da is None:
-            return
+            raise RuntimeError('No database connection for Day Ahead')
         self.db_ha = make_db_ha(self.config, self.loader.secrets)
         if self.db_ha is None:
-            return
+            raise RuntimeError('No database connection for Home Assistant')
 
         log_level_str = self.config.logging_level or "info"
         _log_level = getattr(logging, log_level_str.upper(), None)

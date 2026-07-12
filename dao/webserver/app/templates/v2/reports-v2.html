@@ -1,0 +1,690 @@
+{% extends "v2/base.html" %}
+
+{% block title %}Reports V2 - DAO{% endblock %}
+{% block content %}
+<h1>Reports</h1>
+<form id="report-form" method="GET">
+    <input type="hidden" name="timezone" data-current-tz>
+    <div class="row">
+        <div class="dropdown col-6 col-lg-1">
+            <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+               aria-expanded="false">
+                Periods
+            </a>
+
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="javascript: setDataRange('today')">Today per hour</a></li>
+                <li><a class="dropdown-item" href="javascript: setDataRange('today and tomorrow')">Today &amp;
+                    tomorrow per hour</a></li>
+                <li><a class="dropdown-item" href="javascript: setDataRange('yesterday')">Yesterday per hour</a></li>
+                <li><a class="dropdown-item" href="javascript: setDataRange('this week')">This week per day</a></li>
+                <li><a class="dropdown-item" href="javascript: setDataRange('this month')">This month per day</a></li>
+            </ul>
+        </div>
+        <div class=" col-6 col-md-3 col-lg-2">
+            <select class="form-select" id="preset">
+                <option value="grid">Grid</option>
+                <option value="cost">Cost</option>
+                <option value="battery">Battery</option>
+                <option value="pv">Solar</option>
+                <option value="ev">EV</option>
+            </select>
+        </div>
+        <div class="col-12 col-sm-8 col-lg-7">
+            <div class="input-group">
+                <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1m')">- 1m</a>
+                <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1w')">- 1w</a>
+                <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1d')">- 1d</a>
+                <input type="datetime-local" name="start" id="start" class="form-control"
+                       value="{{ start|default('') }}">
+                <span class="input-group-text"> - </span>
+                <input type="datetime-local" name="end" id="end" class="form-control" value="{{ end|default('') }}">
+                <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1d')">+ 1d</a>
+                <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1w')">+ 1w</a>
+                <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1m')">+ 1m</a>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="input-group">
+                <span class="input-group-text">Agg: </span>
+                <select name="aggregate" id="aggregate" class="form-select">
+                    <option value="15min" {% if aggregate==
+                    '15min' %}selected{% endif %}>15 min</option>
+                    <option value="hour" {% if aggregate==
+                    'hour' %}selected{% endif %}>Hour</option>
+                    <option value="day" {% if aggregate==
+                    'day' %}selected{% endif %}>Day</option>
+                    <option value="week" {% if aggregate==
+                    'week' %}selected{% endif %}>Week</option>
+                    <option value="month" {% if aggregate==
+                    'month' %}selected{% endif %}>Month</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</form>
+<ul class="nav nav-tabs mt-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="simple-tab-0" data-bs-toggle="tab" href="#simple-tabpanel-0" role="tab"
+           aria-controls="simple-tabpanel-0" aria-selected="true">Chart</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="simple-tab-1" data-bs-toggle="tab" href="#simple-tabpanel-1" role="tab"
+           aria-controls="simple-tabpanel-1" aria-selected="false">Table</a>
+    </li>
+</ul>
+<div class="tab-content flex-grow-1 d-flex flex-column pt-4" id="tab-content">
+    <div class="tab-pane active flex-grow-1 " id="simple-tabpanel-0" role="tabpanel" aria-labelledby="simple-tab-0">
+        <canvas id="data-chart"></canvas>
+    </div>
+    <div class="tab-pane flex-grow-1 overflow-auto " id="simple-tabpanel-1" role="tabpanel"
+         aria-labelledby="simple-tab-1">
+        <table class="table table-striped" id="data-table">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('report-form');
+    const chartCanvas = document.getElementById('data-chart');
+
+    let dataChart = null;
+
+    function getFormParams() {
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+
+        for (const [key, value] of formData.entries()) {
+            if (value !== '') {
+                params.set(key, value);
+            }
+        }
+
+        return params;
+    }
+
+    function updateUrl(params) {
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({}, '', newUrl);
+    }
+
+    async function getData(params) {
+        const response = await fetch(`{{url_for('api.data')}}?${params.toString()}`);
+
+        if (!response.ok) {
+            throw new Error(`Could not fetch chart data: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    function buildChartConfig(data) {
+        const labels = data.map(row => row.ts);
+        const defaultLegendClickHandler = Chart.defaults.plugins.legend.onClick;
+
+        return {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y_kwh: {
+                        title: {
+                            display: true,
+                            text: 'kWh'
+                        },
+                        stacked: false,
+                        beginAtZero: true
+                    },
+                    y_eur: {
+                        stacked: false,
+                        title: {
+                            display: true,
+                            text: 'EUR'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    },
+                    y_eurkwh: {
+                        stacked: false,
+                        title: {
+                            display: true,
+                            text: 'EUR/kWh'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    },
+                    y_perc: {
+                        stacked: false,
+                        title: {
+                            display: true,
+                            text: '%'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                const unit = context.dataset.unit || '';
+
+                                if (value === null || value === undefined) {
+                                    return label;
+                                }
+
+                                return `${label}: ${value} ${unit}`;
+                            },
+                        },
+                    },
+                    legend: {
+                        onClick(event, legendItem, legend) {
+                            defaultLegendClickHandler(event, legendItem, legend);
+
+                            const chart = legend.chart;
+                            updateVisibleAxes(chart);
+                            chart.update('none');
+                        },
+                    },
+                },
+            },
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Consumption',
+                        data: data.map(row => row.cons.v ?? 0),
+                        "borderColor": "#f9a825",
+                        "backgroundColor": "rgba(249, 168, 37, 0.15)",
+                        type: 'bar',
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["value", "grid"],
+                    },
+                    {
+                        label: 'Consumption forecast',
+                        data: data.map(row => row.cons.f ?? 0),
+                        borderColor: "#f9a825",
+                        backgroundColor: "rgba(249, 168, 37, 0.15)",
+                        type: 'line',
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["forecast", "grid"],
+                    },
+                    {
+                        label: 'Production',
+                        data: data.map(row => row.prod.v ?? 0),
+                        borderColor: "#2e7d32",
+                        backgroundColor: "rgba(46, 125, 50, 0.25)",
+                        type: 'bar',
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["value", "grid"],
+                    },
+                    {
+                        label: 'Production forecast',
+                        data: data.map(row => row.prod.f ?? 0),
+                        borderColor: "#2e7d32",
+                        backgroundColor: "rgba(46, 125, 50, 0.15)",
+                        type: 'line',
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["forecast", "grid"],
+                    },
+                    {
+                        label: 'Net consumption',
+                        data: data.map(row => (row.cons.v - row.prod.v) ?? 0),
+                        borderColor: "#2e507d",
+                        backgroundColor: "rgba(46, 80, 125, 0.45)",
+                        type: 'bar',
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["value", "grid"],
+                    },
+                    {
+                        label: 'Cost',
+                        data: data.map(row => row.cost.v ?? 0),
+                        borderColor: "#dc3545",
+                        backgroundColor: "rgba(220, 53, 69, 0.25)",
+                        type: 'line',
+                        yAxisID: "y_eur",
+                        unit: "EUR",
+                        tags: ["value", "cost"],
+                    },
+                    {
+                        label: 'Cost forecast',
+                        data: data.map(row => row.cost.f ?? 0),
+                        borderColor: "#dc3545",
+                        backgroundColor: "rgba(220, 53, 69, 0.15)",
+                        type: 'line',
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_eur",
+                        unit: "EUR",
+                        tags: ["forecast", "cost"],
+                    },
+                    {
+                        label: 'Profit',
+                        data: data.map(row => row.profit.v ?? 0),
+                        borderColor: "#198754",
+                        backgroundColor: "rgba(25, 135, 84, 0.25)",
+                        type: 'line',
+                        yAxisID: "y_eur",
+                        unit: "EUR",
+                        tags: ["value", "cost"],
+                    },
+                    {
+                        label: 'Profit forecast',
+                        data: data.map(row => row.profit.f ?? 0),
+                        borderColor: "#198754",
+                        backgroundColor: "rgba(25, 135, 84, 0.15)",
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_eur",
+                        unit: "EUR",
+                        tags: ["forecast", "cost"],
+                    },
+                    {
+                        label: 'Net cost',
+                        data: data.map(row => (row.cost.v - row.profit.v) ?? 0),
+                        borderColor: '#193f87',
+                        backgroundColor: '#162545',
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_eur",
+                        unit: "EUR",
+                        tags: ["value", "cost"],
+                    },
+                    {
+                        label: 'Energy price',
+                        data: data.map(row => row.da.v ?? 0),
+                        borderColor: '#198754',
+                        backgroundColor: '#19875433',
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_eurkwh",
+                        unit: "EUR/kWh",
+                        tags: ["value", "cost"],
+                    },
+                    // {
+                    //     data: data.map(row => row.bat_in.v ?? 0),
+                    //     type: "bar",
+                    //     label: "Battery in",
+                    //     fallbackValue: 0,
+                    //     borderColor: "#20c997",
+                    //     backgroundColor: "rgba(32, 201, 151, 0.25)",
+                    //     yAxisID: "y_kwh",
+                    //     unit: "kWh",
+                    //     tags: ["value", "battery"],
+                    // },
+                    {
+                        data: data.map(row => row.bat_in.f ?? 0),
+                        type: "line",
+                        label: "Battery in forecast",
+                        fallbackValue: 0,
+                        borderColor: "#20c997",
+                        backgroundColor: "rgba(32, 201, 151, 0.15)",
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["forecast", "battery"],
+                    },
+                    // {
+                    //     data: data.map(row => row.bat_out.v ?? 0),
+                    //     type: "bar",
+                    //     label: "Battery out",
+                    //     fallbackValue: 0,
+                    //     borderColor: "#0d6efd",
+                    //     backgroundColor: "rgba(13, 110, 253, 0.25)",
+                    //     yAxisID: "y_kwh",
+                    //     unit: "kWh",
+                    //     tags: ["value", "battery"],
+                    // },
+                    {
+                        data: data.map(row => row.bat_out.f ?? 0),
+                        type: "line",
+                        label: "Battery out forecast",
+                        fallbackValue: 0,
+                        borderColor: "#0d6efd",
+                        backgroundColor: "rgba(13, 110, 253, 0.15)",
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["forecast", "battery"],
+                    },
+                    {
+                        data: data.map(row => (row.bat_in.f ?? 0) - (row.bat_out.f ?? 0)),
+                        type: "bar",
+                        label: "Battery net forecast",
+                        fallbackValue: 0,
+                        borderColor: "#fd690d",
+                        backgroundColor: "rgb(253 77 13 / 0.15)",
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["forecast", "battery", "net"],
+                    },
+                    {
+                        data: data.map(row => row.soc.f ?? 0),
+                        type: "line",
+                        label: "Battery SoC forecast",
+                        fallbackValue: 0,
+                        borderColor: "#38274c",
+                        backgroundColor: "rgb(93 13 253 / 0.15)",
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_perc",
+                        unit: "%",
+                        tags: ["forecast", "battery"],
+                    },
+                    // {
+                    //     data: data.map(row => row.pv_ac.v ?? 0),
+                    //     type: "bar",
+                    //     label: "PV AC",
+                    //     fallbackValue: 0,
+                    //     borderColor: "#0d6efd",
+                    //     backgroundColor: "rgba(13, 110, 253, 0.25)",
+                    //     yAxisID: "y_kwh",
+                    //     unit: "kWh",
+                    //     tags: ["value", "pv"],
+                    // },
+                    {
+                        data: data.map(row => row.pv_ac.f ?? 0),
+                        type: "bar",
+                        label: "PV AC Forecast",
+                        fallbackValue: 0,
+                        borderColor: "#0d6efd",
+                        backgroundColor: "rgba(13, 110, 253, 0.15)",
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["forecast", "pv"],
+                    },
+                    // {
+                    //     data: data.map(row => row.pv_dc.v ?? 0),
+                    //     type: "bar",
+                    //     label: "PV DC",
+                    //     fallbackValue: 0,
+                    //     borderColor: "#0d6efd",
+                    //     backgroundColor: "rgba(13, 110, 253, 0.25)",
+                    //     yAxisID: "y_kwh",
+                    //     unit: "kWh",
+                    //     tags: ["value", "pv"],
+                    // },
+                    {
+                        data: data.map(row => row.pv_dc.f ?? 0),
+                        type: "bar",
+                        label: "PV DC Forecast",
+                        fallbackValue: 0,
+                        borderColor: "#0d6efd",
+                        backgroundColor: "rgba(13, 110, 253, 0.15)",
+                        borderWidth: 1,
+                        borderDash: [6, 4],
+                        yAxisID: "y_kwh",
+                        unit: "kWh",
+                        tags: ["forecast", "pv"],
+                    },
+                ],
+            }
+        };
+    }
+
+    function axisHasVisibleData(chart, axisId) {
+        return chart.data.datasets.some((dataset, index) =>
+            dataset.yAxisID === axisId &&
+            chart.isDatasetVisible(index)
+        );
+    }
+
+    function updateVisibleAxes(chart) {
+        for (const axisId of Object.keys(chart.options.scales)) {
+            if (axisId === 'x') {
+                continue;
+            }
+
+            const visible = axisHasVisibleData(chart, axisId);
+
+            chart.options.scales[axisId].display = visible;
+
+            if (chart.options.scales[axisId].title) {
+                chart.options.scales[axisId].title.display = visible;
+            }
+        }
+    }
+
+    async function updateData(params) {
+        const data = await getData(params);
+        const config = buildChartConfig(data);
+
+        if (dataChart === null) {
+            dataChart = new Chart(chartCanvas, config);
+        } else {
+
+            dataChart.data.labels = config.data.labels;
+            dataChart.data.datasets.forEach((dataset, key) => {
+                dataset.data = config.data.datasets[key].data;
+            });
+
+            dataChart.update();
+        }
+
+        const columns = Object.keys(data[0]);
+        columns.splice(columns.indexOf('ts'), 1);
+
+        setDatasetPreset(document.getElementById('preset').value);
+        updateVisibleAxes(dataChart);
+        dataChart.update();
+
+        updateTable('#data-table', data, 'ts', columns);
+    }
+
+    form.addEventListener('change', (e) => {
+        const params = getFormParams();
+        updateUrl(params);
+
+        if (e.target.id !== 'preset') {
+            updateData(params).catch(error => {
+                console.error(error);
+            });
+        } else {
+            setDatasetPreset(document.getElementById('preset').value);
+            dataChart.update("none");
+        }
+    });
+
+    updateData(getFormParams()).catch(error => {
+        console.error(error);
+    });
+
+    function toDatetimeLocalValue(date) {
+        const pad = n => String(n).padStart(2, '0');
+
+        return [
+            date.getFullYear(),
+            pad(date.getMonth() + 1),
+            pad(date.getDate()),
+        ].join('-') + 'T' + [
+            pad(date.getHours()),
+            pad(date.getMinutes()),
+        ].join(':');
+    }
+
+    function setDataRange(range) {
+        let start = new Date();
+        let end = new Date();
+        const inputStart = document.getElementById('start');
+        const inputEnd = document.getElementById('end');
+
+        if (range.match('^[+-]')) {
+            start = new Date(inputStart.value);
+            end = new Date(inputEnd.value);
+        }
+
+        switch (range) {
+            case 'today':
+                start.setHours(0, 0, 0, 0);
+                end.setDate(start.getDate() + 1);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'hour';
+                break;
+            case 'today and tomorrow':
+                start.setHours(0, 0, 0, 0);
+                end.setDate(start.getDate() + 2);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'hour';
+                break;
+            case 'yesterday':
+                start.setDate(start.getDate() - 1);
+                start.setHours(0, 0, 0, 0);
+                end.setDate(start.getDate() + 1);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'hour';
+                break;
+            case 'this week':
+                start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+                start.setHours(0, 0, 0, 0);
+                end.setDate(start.getDate() + 7);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'day';
+                break;
+            case 'this month':
+                start.setDate(1);
+                start.setHours(0, 0, 0, 0);
+                end.setDate(1);
+                end.setMonth(start.getMonth() + 1);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'day';
+                break;
+            case '+1d':
+                start.setDate(start.getDate() + 1);
+                end.setDate(end.getDate() + 1);
+                break;
+            case '-1d':
+                start.setDate(start.getDate() - 1);
+                end.setDate(end.getDate() - 1);
+                break;
+            case '+1w':
+                start.setDate(start.getDate() + 7);
+                end.setDate(end.getDate() + 7);
+                break;
+            case '-1w':
+                start.setDate(start.getDate() - 7);
+                end.setDate(end.getDate() - 7);
+                break;
+            case '+1m':
+                start.setMonth(start.getMonth() + 1);
+                end.setMonth(end.getMonth() + 1);
+                break;
+            case '-1m':
+                start.setMonth(start.getMonth() - 1);
+                end.setMonth(end.getMonth() - 1);
+                break;
+            default:
+                console.log('Invalid range: ' + range);
+                return;
+        }
+
+        inputStart.value = toDatetimeLocalValue(start);
+        inputEnd.value = toDatetimeLocalValue(end);
+        updateData(getFormParams());
+    }
+
+    function setDatasetPreset(presetName) {
+        dataChart.data.datasets.map((dataset, index) => {
+            if (dataset.tags.indexOf(presetName) === -1) {
+                dataChart.hide(index);
+            } else {
+                dataChart.show(index);
+            }
+        });
+    }
+
+    function updateTable(tableSelector, data, rowHeaderColumn, dataColumns) {
+        const table = document.querySelector(tableSelector);
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+
+        const headerRow = document.createElement('tr');
+
+        const thTs = document.createElement('th');
+        thTs.textContent = rowHeaderColumn;
+        headerRow.appendChild(thTs);
+
+        dataColumns.forEach(column => {
+            const th = document.createElement('th');
+            th.textContent = column;
+            th.colSpan = 2;
+            headerRow.appendChild(th);
+        });
+
+        thead.appendChild(headerRow);
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            const rowHeader = document.createElement('th');
+            rowHeader.textContent = row[rowHeaderColumn];
+            tr.appendChild(rowHeader);
+
+            dataColumns.forEach(column => {
+                const tdValue = document.createElement('td');
+
+                tdValue.textContent = formatTableValue(row[column].v, column);
+                tr.appendChild(tdValue);
+
+                const tdForecast = document.createElement('td');
+
+                tdForecast.textContent = formatTableValue(row[column].f, column);
+                tr.appendChild(tdForecast);
+            });
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    function formatTableValue(value, column) {
+        if (value === null || value === undefined || typeof value === 'object') {
+            return '';
+        }
+
+
+        if (typeof value === 'number') {
+            const decimals = column.decimals ?? 2;
+            const formatted = value.toLocaleString('nl-NL', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals,
+            });
+
+            return column.unit ? `${formatted} ${column.unit}` : formatted;
+        }
+
+        return value;
+    }
+</script>
+
+{% endblock %}
