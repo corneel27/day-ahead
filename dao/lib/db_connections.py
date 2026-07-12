@@ -58,8 +58,8 @@ def _build_db_da(
             if db.engine == "sqlite":
                 logger.error(f"day_ahead database not found: {db.db_path}/{db.database}")
             else:
-                logger.error(f"day_ahead database does not exist ({db.engine} / {db.server})"
-            )return None
+                logger.error(f"day_ahead database does not exist ({db.engine} / {db.server})")
+            return None
     return DBmanagerObj(**kwargs, db_time_zone=config.time_zone)
 
 
