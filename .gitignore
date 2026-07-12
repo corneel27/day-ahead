@@ -25,3 +25,5 @@ dao/data/options_new.json
 
 /dao/data/task_state.json
 /dao/data/options_v0.json
+/dao/data/home-assistant_v2.db-journal
+/dao/data/meta

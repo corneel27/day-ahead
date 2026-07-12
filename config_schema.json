@@ -172,10 +172,18 @@
           "x-ui-section": "Power Configuration"
         },
         "minimum power": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0,
           "description": "Minimum power in watts",
-          "minimum": 0,
           "title": "Minimum Power",
-          "type": "integer",
           "x-help": "Minimum power threshold in watts. Operations below this power level will be rounded to zero. Prevents inefficient micro-charging/discharging.",
           "x-ui-section": "Power Configuration",
           "x-unit": "W",
@@ -412,7 +420,6 @@
         "capacity",
         "charge stages",
         "discharge stages",
-        "minimum power",
         "dc_to_bat efficiency",
         "bat_to_dc efficiency",
         "cycle cost"
@@ -1012,6 +1019,24 @@
           "x-ui-section": "General",
           "x-unit": "euro/switch to 'on'",
           "x-validation-hint": "Must be >= 0, typically 0.01- 0.10 euro/switch"
+        },
+        "low soc cost": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0.0,
+          "description": "Los soc cost in euro/kWh.hour",
+          "title": "Low Soc Cost",
+          "x-help": "Virtual cost in euro per kWh per hour when soc is lower then wish_level",
+          "x-ui-section": "General",
+          "x-unit": "euro/kWh.hour",
+          "x-validation-hint": "Must be >= 0, typically 0.001 - 0.01 euro/kWh.hour"
         },
         "entity position": {
           "$ref": "#/$defs/EntityId",
