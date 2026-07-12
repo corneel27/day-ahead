@@ -327,7 +327,11 @@ class CheckDB:
             print('Table "variabel" geupdated.')
         """
 
-        if l_version <= 20260701:
+        inspector = inspect(self.engine)
+        columns = [column["name"] for column in inspector.get_columns("variabel")]
+        has_aggregate = "aggregate" in columns
+
+        if not has_aggregate:
             with self.engine.begin() as connection:
                 quoted_aggregate = self.engine.dialect.identifier_preparer.quote("aggregate")
 
@@ -350,7 +354,7 @@ class CheckDB:
                     )
                 )
 
-            print('Kolom "aggregate" toegevoegd aan tabel "variabel" gemaakt.')
+            print('Kolom "aggregate" toegevoegd aan tabel "variabel"    ')
 
 
         # timezone in postgresql could be wrong, check and report
