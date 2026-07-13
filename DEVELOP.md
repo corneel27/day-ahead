@@ -183,6 +183,9 @@ export LD_LIBRARY_PATH=~/day-ahead/dao/prog/miplib/lib/
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 cd dao/webserver
 
+# If you want to use the assets from the Vite dev server:
+export VITE_DEV=1
+
 # Run the Flask development server
 python da_server.py --debug
 ```
@@ -206,11 +209,21 @@ Then access the application at `http://localhost:5001/` instead of port 5000.
 
 **Warning:** Never run with `debug=True` in production as it exposes security risks.
 
-#### Start Vite development server
+#### Build or serve the assets
+
+If you want to change or update the stylesheets or js dependencies, it is recommended to run 
+the Vite server. Mind setting the VITE_DEV env in the step when starting the Python server.
 
 ```bash
 cd dao/webserver
 npm run vite-serve
+```
+
+If you just want to build on Python you can build the assets:
+
+```bash
+cd dao/webserver
+npm run build
 ```
 
 #### Option 2: Run with Gunicorn (Production-like Environment)

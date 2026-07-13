@@ -28,6 +28,9 @@ def vite_tags(entry: str) -> str:
         return f'<script type="module" src="{VITE_DEV_SERVER}/@vite/client"></script>' \
                f'<script type="module" src="{VITE_DEV_SERVER}/{entry}"></script>'
 
+    if not VITE_MANIFEST.exists():
+        raise RuntimeError("Vite manifest not found. Run 'npm run build' in the Vite server directory.")
+
     with VITE_MANIFEST.open() as f:
         manifest = json.load(f)
 
