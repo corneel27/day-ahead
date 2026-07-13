@@ -20,6 +20,7 @@ from sqlalchemy import (
     and_,
     delete,
     literal_column,
+    inspect,
 )
 import pandas as pd
 import sys
