@@ -79,7 +79,7 @@
     </div>
     <div class="tab-pane flex-grow-1 overflow-auto " id="simple-tabpanel-1" role="tabpanel"
          aria-labelledby="simple-tab-1">
-        <table class="table table-striped" id="data-table">
+        <table class="data-table" id="data-table">
             <thead></thead>
             <tbody></tbody>
         </table>
@@ -630,20 +630,30 @@
         thead.innerHTML = '';
         tbody.innerHTML = '';
 
-        const headerRow = document.createElement('tr');
+        const headerRow1 = document.createElement('tr');
+        const headerRow2 = document.createElement('tr');
 
         const thTs = document.createElement('th');
         thTs.textContent = rowHeaderColumn;
-        headerRow.appendChild(thTs);
+        thTs.rowSpan = 2;
+        headerRow1.appendChild(thTs);
 
         dataColumns.forEach(column => {
             const th = document.createElement('th');
             th.textContent = column;
             th.colSpan = 2;
-            headerRow.appendChild(th);
+            headerRow1.appendChild(th);
+
+            const th2 = document.createElement('th');
+            th2.textContent = "v";
+            const th3 = document.createElement('th');
+            th3.textContent = "f";
+            headerRow2.appendChild(th2);
+            headerRow2.appendChild(th3);
         });
 
-        thead.appendChild(headerRow);
+        thead.appendChild(headerRow1);
+        thead.appendChild(headerRow2);
 
         data.forEach(row => {
             const tr = document.createElement('tr');

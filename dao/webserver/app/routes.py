@@ -347,7 +347,7 @@ def menu():
             return home()
 
 
-@app.route("/home", methods=["POST", "GET"])
+@app.route("/", methods=["POST", "GET"])
 def home():
     subjects = ["balans"]
     views = ["grafiek", "tabel"]

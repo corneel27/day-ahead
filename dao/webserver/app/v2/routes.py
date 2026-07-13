@@ -1,12 +1,14 @@
 import time, os, fnmatch, re, datetime, time, threading, json
 from flask import Blueprint, render_template, request, redirect, url_for
 from dao.prog.version import __version__
-from subprocess import Popen, PIPE, run, STDOUT
+from subprocess import Popen, PIPE, run, STDOUT, DEVNULL
 from pathlib import Path
 from dao.prog.da_report import Report
 from dao.prog.config.loader import ConfigurationLoader
 
+
 v2 = Blueprint("v2", __name__)
+
 
 @v2.context_processor
 def inject_data():
@@ -15,6 +17,7 @@ def inject_data():
         "vite_tags": vite_tags("assets/main.js")
     }
 
+
 # globals
 web_datapath = "/static/data/"
 app_datapath = "app/static/data/"
@@ -22,6 +25,7 @@ app_datapath = "app/static/data/"
 VITE_DEV_SERVER = "http://localhost:5173/static/build"
 VITE_BUILD_URL = "/static/build/"
 VITE_MANIFEST = Path("app/static/build/.vite/manifest.json")
+
 
 def vite_tags(entry: str) -> str:
     if os.getenv("VITE_DEV") == "1":
@@ -63,13 +67,23 @@ def get_file_list_with_ts(path: str, pattern: str) -> list:
                     dt_str = f"{m.group(1)} {m.group(2)}:{m.group(4)}"
                     dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
                     timestamp = dt.timestamp()  # Local time as epoch
-                    flist.append({"name": f, "time": timestamp})
+                    flist.append({
+                        "name": f,
+                        "time": timestamp,
+                        "mtime": os.path.getmtime(os.path.join(path, f))
+                    })
                 except (ValueError, OSError):
                     # Fallback to mtime if filename parsing fails
                     fullname = os.path.join(path, f)
-                    flist.append({"name": f, "time": int(os.path.getmtime(fullname))})
-    flist.sort(key=lambda x: x.get("time"))
+                    flist.append({
+                        "name": f,
+                        "time": int(os.path.getmtime(fullname)),
+                        "mtime": os.path.getmtime(fullname)
+                    })
+
+    flist.sort(key=lambda x: (x["time"], x["mtime"], x["name"].lower()))
     return flist
+
 
 def get_closest_index_from_list(flist: list, ts: float) -> int:
     return min(
@@ -77,13 +91,16 @@ def get_closest_index_from_list(flist: list, ts: float) -> int:
         key=lambda i: abs(flist[i].get("time", 0) - ts)
     )
 
+
 STATEFILE = "../data/task_state.json"
 STALE_AFTER = 600
+
 
 def save_run_state(state):
     state["last_update"] = time.time()
     with open(STATEFILE, "w") as f:
         json.dump(state, f)
+
 
 def get_run_state():
     no_state = {"status": "idle", "task": None, "logfile": None, "started": None}
@@ -101,6 +118,11 @@ def get_run_state():
     return state
 
 def run_and_log(cmd, task):
+    last_log_file = app_datapath + "log/" + get_file_list_with_ts(
+                os.path.join(app_datapath, "log"),
+                "*.log",
+            )[-1]["name"]
+
     state = {
         "status": "running",
         "started": time.time(),
@@ -110,27 +132,54 @@ def run_and_log(cmd, task):
     }
     save_run_state(state)
 
-    logfile = None
-
     proc = Popen(
         cmd,
-        stdout=PIPE,
-        stderr=STDOUT,
-        text = True
+        stdout=DEVNULL,
+        stderr=DEVNULL,
+        text=True,
     )
 
-    for line in proc.stdout:
-        if logfile is None:
-            flist = get_file_list_with_ts(app_datapath + 'log/', '*.log')
-            logfile = flist[-1]["name"]
-            state["logfile"] = app_datapath + 'log/' + logfile
-            save_run_state(state)
+    while proc.poll() is None:
+        if state["logfile"] is None:
+            flist = get_file_list_with_ts(
+                os.path.join(app_datapath, "log"),
+                "*.log",
+            )
+
+            if flist:
+                logfile = os.path.join(
+                    app_datapath,
+                    "log",
+                    flist[-1]["name"],
+                )
+
+                if logfile != last_log_file:
+                    state["logfile"] = logfile
+                    save_run_state(state)
+
+        if state["logfile"] is not None:
+            updated_state = get_run_state()
+
+            if (
+                state["logfile"] != updated_state["logfile"]
+                or updated_state["status"] == "cancelled"
+            ):
+                os.remove(state["logfile"])
+                proc.kill()
+                break
+
+        # Processtatus iedere seconde controleren
+        time.sleep(1)
 
     proc.wait()
 
-    state["status"] = "done" if proc.returncode == 0 else "error"
-    state["returncode"] = proc.returncode
-    save_run_state(state)
+    updated_state = get_run_state()
+
+    if updated_state["logfile"] == state["logfile"]:
+        state["status"] = "done" if proc.returncode == 0 else "error"
+        state["returncode"] = proc.returncode
+        save_run_state(state)
+
 
 def log_chart(datapath: str, pattern: str):
     #  By design; the get_file_list() is called over and over again to ensure an accurate reflection of the files
@@ -154,8 +203,10 @@ def log_chart(datapath: str, pattern: str):
     first_index = 0
     prev_index = max(0, show_index - 1)
     next_index = min(last_index, show_index + 1)
-    ffprev_index = max(0, get_closest_index_from_list(flist, flist[show_index]["time"] - (6 * 3600)))  # Subtract 6 hours
-    ffnext_index = min(last_index, get_closest_index_from_list(flist, flist[show_index]["time"] + (6 * 3600)))  # Add 6 hours
+    ffprev_index = max(0,
+                       get_closest_index_from_list(flist, flist[show_index]["time"] - (6 * 3600)))  # Subtract 6 hours
+    ffnext_index = min(last_index,
+                       get_closest_index_from_list(flist, flist[show_index]["time"] + (6 * 3600)))  # Add 6 hours
     show_ts = datetime.datetime.fromtimestamp(flist[show_index]["time"]).isoformat()
 
     return {
@@ -169,6 +220,7 @@ def log_chart(datapath: str, pattern: str):
         "last_index": last_index,
         "show_ts": show_ts,
     }
+
 
 def get_solar_items_with_ml():
     loader = ConfigurationLoader(Path(app_datapath + "options.json"))
@@ -191,6 +243,7 @@ def get_solar_items_with_ml():
         if solar_option.ml_prediction
     }
 
+
 @v2.route("/")
 @v2.route("/chart")
 def chart():
@@ -203,6 +256,7 @@ def chart():
         "v2/chart.html",
         **kwargs
     )
+
 
 @v2.route("/log")
 def log():
@@ -219,6 +273,7 @@ def log():
         **kwargs
     )
 
+
 @v2.route("/delete-file", methods=["POST"])
 def delete_file():
     post_data = request.form.to_dict(flat=True)
@@ -226,12 +281,20 @@ def delete_file():
     if post_data["confirm"] == "1" and re.match(r'^(images|log)/[^/]+\.(log|png)$', post_data["file"]):
         os.remove(app_datapath + post_data["file"])
 
-    return redirect(url_for('v2.' + post_data["action"], i=post_data["show_index"] ))
+    return redirect(url_for('v2.' + post_data["action"], i=post_data["show_index"]))
 
 
 @v2.route("/run")
 def run():
     return render_template("v2/run.html")
+
+@v2.route("/run-cancel")
+def run_cancel():
+    state = get_run_state()
+    state["status"] = "cancelled"
+    save_run_state(state)
+    return render_template("v2/run.html")
+
 
 @v2.route("/run-exec", methods=["POST"])
 def run_exec():
@@ -272,6 +335,7 @@ def run_exec():
 
     return redirect(url_for('v2.run_status'))
 
+
 @v2.route("/run-status", methods=["GET"])
 def run_status():
     current_state = get_run_state()
@@ -298,14 +362,14 @@ def run_status():
         seconds_running = None
         if last_update is not None and started is not None:
             last_update = datetime.datetime.fromtimestamp(last_update)
-            seconds_running = int((last_update-started).total_seconds())
+            seconds_running = int((last_update - started).total_seconds())
 
         if current_state.get("logfile") is None:
             content = "No log data available yet"
         else:
             try:
                 with open(current_state["logfile"], "r") as f:
-                        content = f.read()
+                    content = f.read()
             except:
                 content = "Could not read logfile"
 
@@ -321,9 +385,14 @@ def run_status():
         content=content,
     ), headers
 
-def reports_gen(subject: str, view: str, period: str, prognose: bool, solar_item = None):
+
+def reports_gen(subject: str, view: str, period: str, prognose: bool, solar_item=None):
     report = Report(app_datapath + "/options.json")
-    prognose = period in ["vandaag", "deze week", "deze maand", "dit jaar", "dit contractjaar", "vandaag en morgen", "morgen"] and prognose
+    prognose = (
+            period in ["morgen", "vandaag en morgen"]
+            or (period in ["vandaag", "deze week", "deze maand", "dit jaar", "dit contractjaar"] and prognose)
+    )
+
     tot = None
 
     if not prognose:
@@ -423,7 +492,7 @@ def reports():
     view = request.args.get("view", default="tabel")
     period = request.args.get("period", default="vandaag")
     req_prognose: Any = request.args.get("prognose", default="0")
-    report_data = reports_gen( subject, view, period, req_prognose == "1")
+    report_data = reports_gen(subject, view, period, req_prognose == "1")
     return render_template(
         "v2/report.html",
         title="Reports",
@@ -480,7 +549,7 @@ def solar():
         report_data=report_data,
         hide_period=True,
         hide_prognose=True,
-        subject_options= [
+        subject_options=[
             {"label": key, "value": key}
             for key in solar_items.keys()
         ]
@@ -504,6 +573,7 @@ def reportsv2():
         end=end,
         aggregate=aggregate,
     )
+
 
 @v2.route("/config", methods=["GET", "POST"])
 def config():
@@ -531,6 +601,8 @@ def config():
         success=success,
         error=error,
     )
+
+
 @v2.route("/secrets", methods=["GET", "POST"])
 def secrets():
     path = app_datapath + "secrets.json"

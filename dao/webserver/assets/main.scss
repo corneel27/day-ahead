@@ -14,3 +14,16 @@
 h1 {
   font-size: 2rem;
 }
+
+.dataframe.data, .data-table{
+  @extend .table;
+  @extend .table-striped;
+  @extend .table-hover;
+  @extend .table-sm;
+  @extend .table-bordered;
+  @extend .border-primary;
+  td, th
+  {
+    text-align: right;;
+  }
+}
