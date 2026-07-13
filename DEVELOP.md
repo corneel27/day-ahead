@@ -219,7 +219,7 @@ cd dao/webserver
 npm run vite-serve
 ```
 
-If you just want to build on Python you can build the assets:
+If you just want to work on the Python codebase, you can build the assets:
 
 ```bash
 cd dao/webserver
