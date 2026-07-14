@@ -697,7 +697,7 @@ class DaBase(hass.Hass):
                 "../data/log/"
                 + run_task["file_name"]
                 + "_"
-                + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M")
+                + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
                 + ".log"
             )
 

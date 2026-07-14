@@ -60,16 +60,16 @@ def get_file_list_with_ts(path: str, pattern: str) -> list:
         if fnmatch.fnmatch(f, pattern):
             # Extract timestamp from filename (e.g. calc_2026-02-17__08-45.png) because datetime picker works with
             # absolute timestamps and the file modification date might differ from the timestamp in the filename, which is the intended reference time for the user
-            m = re.search(r'(\d{4}-\d{2}-\d{2})__(\d{2})(:|\-)(\d{2})', f)
+            m = re.search(r"(\d{4}-\d{2}-\d{2})__(\d{2})[:-](\d{2})(?:[:-](\d{2}))?", f)
             if m:
                 try:
-                    dt_str = f"{m.group(1)} {m.group(2)}:{m.group(4)}"
-                    dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                    seconds = m.group(4) or "00"
+                    dt_str = f"{m.group(1)} {m.group(2)}:{m.group(3)}:{seconds}"
+                    dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
                     timestamp = dt.timestamp()  # Local time as epoch
                     flist.append({
                         "name": f,
                         "time": timestamp,
-                        "mtime": os.path.getmtime(os.path.join(path, f))
                     })
                 except (ValueError, OSError):
                     # Fallback to mtime if filename parsing fails
@@ -77,10 +77,9 @@ def get_file_list_with_ts(path: str, pattern: str) -> list:
                     flist.append({
                         "name": f,
                         "time": int(os.path.getmtime(fullname)),
-                        "mtime": os.path.getmtime(fullname)
                     })
 
-    flist.sort(key=lambda x: (x["time"], x["mtime"], x["name"].lower()))
+    flist.sort(key=lambda x: (x["time"], x["name"].lower()))
     return flist
 
 
@@ -116,20 +115,11 @@ def get_run_state():
         return no_state
     return state
 
-def run_and_log(cmd, task):
+def run_and_log(cmd, state):
     last_log_file = app_datapath + "log/" + get_file_list_with_ts(
                 os.path.join(app_datapath, "log"),
                 "*.log",
             )[-1]["name"]
-
-    state = {
-        "status": "running",
-        "started": time.time(),
-        "task": task,
-        "returncode": None,
-        "logfile": None,
-    }
-    save_run_state(state)
 
     proc = Popen(
         cmd,
@@ -156,7 +146,7 @@ def run_and_log(cmd, task):
                     state["logfile"] = logfile
                     save_run_state(state)
 
-        if state["logfile"] is not None:
+        else:
             updated_state = get_run_state()
 
             if (
@@ -167,6 +157,8 @@ def run_and_log(cmd, task):
                 proc.kill()
                 break
 
+        # Heartbeat
+        save_run_state(state)
         # Processtatus iedere seconde controleren
         time.sleep(1)
 
@@ -324,11 +316,21 @@ def run_exec():
     if cmd is None:
         return "Invalid action", 500
 
+    # Save the state synchronous to prevent race condition
+    state = {
+        "status": "running",
+        "started": time.time(),
+        "task": task,
+        "returncode": None,
+        "logfile": None,
+    }
+    save_run_state(state)
+
     cmd = ["python3", "../prog/day_ahead.py", *cmd]
 
     threading.Thread(
         target=run_and_log,
-        args=(cmd, task),
+        args=(cmd, state),
         daemon=True
     ).start()
 
