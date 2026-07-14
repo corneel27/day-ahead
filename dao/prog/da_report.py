@@ -3566,6 +3566,7 @@ class Report(DaBase):
             )
             .group_by(
                 variabel.c.code,
+                variabel.c.aggregate,
                 intervals_cte.c.ts_start,
             )
             .cte("forecasts")
@@ -3655,6 +3656,7 @@ class Report(DaBase):
         )
 
         with self.db_da.engine.connect() as connection:
+            # return str(query.compile(connection, compile_kwargs={"literal_binds": True}))
             df = pd.read_sql_query(query, connection)
 
         target_tz = start.tzinfo

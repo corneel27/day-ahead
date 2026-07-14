@@ -27,7 +27,7 @@ def data():
             end=datetime.fromisoformat(end).replace(tzinfo=ZoneInfo(timezone_raw)),
             aggregate=aggregate
         )
-        return data
+
     except Exception as e:
         return {"error": str(e)}, 500
 
