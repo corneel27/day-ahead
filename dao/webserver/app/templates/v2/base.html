@@ -12,18 +12,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}DAO{% endblock %}</title>
     {{ vite_tags|safe }}
-    <meta
-            name="htmx-config"
-            content='{
-        "responseHandling":[
-            {"code":"204", "swap": false},
-            {"code":"[23]..", "swap": true},
-            {"code":"422", "swap": true},
-            {"code":"[45]..", "swap": true, "error":true},
-            {"code":"...", "swap": true}
-        ]
-    }'
-    />
 </head>
 <body class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg bg-body-tertiary">
@@ -47,8 +35,21 @@
             </div>
         </div>
     </nav>
-
     <main class="container my-2 flex-grow-1 d-flex flex-column">
+        <div
+            id="htmx-error"
+            class="alert alert-danger alert-dismissible fade show d-none"
+            role="alert"
+        >
+            <span id="htmx-error-message"></span>
+
+            <button
+                type="button"
+                class="btn-close"
+                aria-label="Sluiten"
+                onclick="this.parentElement.classList.add('d-none')"
+            ></button>
+        </div>
         {% if error %}
             <div class="alert alert-danger" role="alert">
                 {{ error }}
