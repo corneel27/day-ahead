@@ -17,7 +17,6 @@ def inject_data():
         "vite_tags": vite_tags("assets/main.js")
     }
 
-
 # globals
 web_datapath = "/static/data/"
 app_datapath = "app/static/data/"
@@ -386,12 +385,11 @@ def run_status():
     ), headers
 
 
-def reports_gen(subject: str, view: str, period: str, prognose: bool, solar_item=None):
+def reports_gen(subject: str, view: str, period: str, solar_item=None):
     report = Report(app_datapath + "/options.json")
-    prognose = (
-            period in ["morgen", "vandaag en morgen"]
-            or (period in ["vandaag", "deze week", "deze maand", "dit jaar", "dit contractjaar"] and prognose)
-    )
+    prognose = period in ["vandaag en morgen", "morgen", "today_with_forecast"]
+    if period == "today_with_forecast":
+        period = "vandaag"
 
     tot = None
 
@@ -491,13 +489,11 @@ def reports():
     subject = request.args.get("subject", default="grid")
     view = request.args.get("view", default="tabel")
     period = request.args.get("period", default="vandaag")
-    req_prognose: Any = request.args.get("prognose", default="0")
-    report_data = reports_gen(subject, view, period, req_prognose == "1")
+    report_data = reports_gen(subject, view, period)
     return render_template(
         "v2/report.html",
         title="Reports",
         period=period,
-        prognose=req_prognose,
         subject=subject,
         view=view,
         report_data=report_data,
@@ -511,13 +507,11 @@ def savings():
     subject = request.args.get("subject", default="save_cons")
     view = request.args.get("view", default="tabel")
     period = request.args.get("period", default="vandaag")
-    req_prognose: Any = request.args.get("prognose", default="0")
-    report_data = reports_gen(subject, view, period, req_prognose == "1")
+    report_data = reports_gen(subject, view, period)
     return render_template(
         "v2/report.html",
         title="Savings",
         period=period,
-        prognose=req_prognose,
         subject=subject,
         view=view,
         report_data=report_data,
@@ -536,19 +530,16 @@ def solar():
     subject = request.args.get("subject", default=next(iter(solar_items.keys())))
     view = request.args.get("view", default="grafiek")
     period = request.args.get("period", default="vandaag")
-    req_prognose: Any = request.args.get("prognose", default="0")
 
-    report_data = reports_gen("solar", view, period, prognose=req_prognose == "1", solar_item=solar_items[subject])
+    report_data = reports_gen("solar", view, period, solar_item=solar_items[subject])
     return render_template(
         "v2/report.html",
         title="Solar",
         period=period,
-        prognose=req_prognose,
         subject=subject,
         view=view,
         report_data=report_data,
         hide_period=True,
-        hide_prognose=True,
         subject_options=[
             {"label": key, "value": key}
             for key in solar_items.keys()
