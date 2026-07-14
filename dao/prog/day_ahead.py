@@ -3965,13 +3965,13 @@ class DaCalc(DaBase):
                     and abs(netto_vermogen_bat) < minimum_power
                     and stop_inverter_id is not None
                     and (
-                        len(red_power_low_soc[b]) == 0
+                        len(reduce_power_low_soc[b]) == 0
                         or start_soc[b]
-                        > red_power_low_soc[b][len(red_power_low_soc[b]) - 1]["soc"]
+                        > reduce_power_low_soc[b][len(reduce_power_low_soc[b]) - 1]["soc"]
                     )
                     and (
-                        len(red_power_high_soc[b]) == 0
-                        or start_soc[b] < red_power_high_soc[b][0]["soc"]
+                        len(reduce_power_high_soc[b]) == 0
+                        or start_soc[b] < reduce_power_high_soc[b][0]["soc"]
                     )
                 ):
                     new_state = battery_state_on_value
