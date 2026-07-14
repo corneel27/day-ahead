@@ -116,10 +116,11 @@ def get_run_state():
     return state
 
 def run_and_log(cmd, state):
-    last_log_file = app_datapath + "log/" + get_file_list_with_ts(
-                os.path.join(app_datapath, "log"),
-                "*.log",
-            )[-1]["name"]
+    flist = get_file_list_with_ts(os.path.join(app_datapath, "log"),"*.log",)
+
+    last_log_file = None
+    if len(flist) > 0:
+        last_log_file = app_datapath + "log/" + flist[-1]["name"]
 
     proc = Popen(
         cmd,
@@ -281,10 +282,13 @@ def run():
 
 @v2.route("/run-cancel")
 def run_cancel():
-    state = get_run_state()
-    state["status"] = "cancelled"
-    save_run_state(state)
-    return render_template("v2/run.html")
+    try:
+        state = get_run_state()
+        state["status"] = "cancelled"
+        save_run_state(state)
+        return render_template("v2/run.html")
+    except Exception as e:
+        return "Error cancelling run: " + str(e), 500
 
 
 @v2.route("/run-exec", methods=["POST"])
