@@ -32,6 +32,7 @@
         <div class="col-6 col-md-4 col-lg-3">
             <select name="period" class="form-select">
                 {{option("Today", "vandaag", period)}}
+                {{option("Today with forecast", "today_with_forecast", period)}}
                 {{option("Tomorrow", "morgen", period)}}
                 {{option("Today and tomorrow", "vandaag en morgen", period)}}
                 {{option("Yesterday", "gisteren", period)}}
@@ -44,16 +45,6 @@
                 {{option("This contract year", "dit contractjaar", period)}}
                 {{option("365 days", "365 dagen", period)}}
             </select>
-        </div>
-        {% endif %}
-        {% if not hide_prognose %}
-        <div class="col-4 col-md-3 col-lg-2 mt-2">
-            <div class="form-check">
-                <input class="form-check-input" type="checkbox" value="1" name="prognose" {% if prognose == "1" %}checked{% endif %}>
-                <label class="form-check-label" for="checkDefault">
-                    With forecast
-                </label>
-            </div>
         </div>
         {% endif %}
     </div>

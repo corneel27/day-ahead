@@ -293,11 +293,12 @@ def get_file_list(path: str, pattern: str) -> list:
         if fnmatch.fnmatch(f, pattern):
             # Extract timestamp from filename (e.g. calc_2026-02-17__08-45.png) because datetime picker works with
             # absolut timestamps and then file modification date might differ from the timestamp in the filename, which is the intended reference time for the user
-            m = re.search(r"(\d{4}-\d{2}-\d{2})__(\d{2})(:|\-)(\d{2})", f)
+            m = re.search(r"(\d{4}-\d{2}-\d{2})__(\d{2})[:-](\d{2})(?:[:-](\d{2}))?", f)
             if m:
                 try:
-                    dt_str = f"{m.group(1)} {m.group(2)}:{m.group(4)}"
-                    dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+                    seconds = m.group(4) or "00"
+                    dt_str = f"{m.group(1)} {m.group(2)}:{m.group(3)}:{seconds}"
+                    dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
                     timestamp = dt.timestamp()  # Local time as epoch
                     flist.append({"name": f, "time": timestamp})
                 except (ValueError, OSError):
@@ -472,12 +473,12 @@ def home():
     )
 
     flatpickr_times = [
-        datetime.datetime.fromtimestamp(f["time"]).strftime("%Y-%m-%d %H:%M")
+        datetime.datetime.fromtimestamp(f["time"]).strftime("%Y-%m-%d %H:%M:%S")
         for f in flist
     ]
     flatpickr_default_ts = float(active_time) if active_time else None
     flatpickr_default = (
-        datetime.datetime.fromtimestamp(float(active_time)).strftime("%Y-%m-%d %H:%M")
+        datetime.datetime.fromtimestamp(float(active_time)).strftime("%Y-%m-%d %H:%M::%S")
         if active_time
         else ""
     )
@@ -983,7 +984,7 @@ def run_api(bewerking: str):
             "../data/log/"
             + bewerkingen[bewerking]["file_name"]
             + "_"
-            + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M")
+            + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
             + ".log"
         )
         with open(filename, "w") as f:
