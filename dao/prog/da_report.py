@@ -3473,7 +3473,7 @@ class Report(DaBase):
             start : datetime.datetime,
             end: datetime.datetime,
             step: datetime.timedelta="1 day",
-            codes=["da", "cons", "prod", "pv_dc", "pv_ac"]
+            var_codes: list= None
     ):
         metadata = self.db_da.metadata
         engine = self.db_da.engine
@@ -3488,13 +3488,20 @@ class Report(DaBase):
             step=step,
         )
 
-        # selected_vars CTE
-        selected_vars = union_all(
-            *[
-                select(literal(code, type_=String).label("code"))
-                for code in codes
-            ]
-        ).cte("selected_vars")
+        if var_codes:
+            selected_vars = (
+                values(
+                    column("code", String),
+                    name="selected_var_values",
+                )
+                .data([(code,) for code in var_codes])
+                .cte("selected_vars")
+            )
+        else:
+            selected_vars = (
+                select(variabel.c.code)
+                .cte("selected_vars")
+            )
 
         # vals CTE
         vals = (
@@ -3617,7 +3624,7 @@ class Report(DaBase):
             start: datetime.datetime,
             end: datetime.datetime,
             aggregate: str = "hour",
-            vars: list[str] = ["da", "cons", "prod", "pv_dc", "pv_ac", "profit", "cost", "bat_in", "bat_out", "soc"],
+            var_codes: list[str] = None
     ):
         intervals = {
             "15min": {
@@ -3652,7 +3659,7 @@ class Report(DaBase):
             start=start,
             end=end,
             step=interval["timedelta"],
-            codes=vars,
+            var_codes=var_codes,
         )
 
         with self.db_da.engine.connect() as connection:
