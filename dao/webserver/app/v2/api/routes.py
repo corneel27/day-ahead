@@ -18,14 +18,23 @@ def data():
     start = request.args.get('start')
     end = request.args.get('end')
     aggregate = request.args.get('aggregate')
+    fields = request.args.get('fields')
+
+    if fields:
+        fields = fields.split(",")
 
     timezone_raw = request.args.get('timezone') if None else "Europe/Amsterdam"
 
-    data = data_report.get_data(
-        start=datetime.fromisoformat(start).replace(tzinfo=ZoneInfo(timezone_raw)),
-        end=datetime.fromisoformat(end).replace(tzinfo=ZoneInfo(timezone_raw)),
-        aggregate=aggregate
-    )
+    try:
+        data = data_report.get_data(
+            start=datetime.fromisoformat(start).replace(tzinfo=ZoneInfo(timezone_raw)),
+            end=datetime.fromisoformat(end).replace(tzinfo=ZoneInfo(timezone_raw)),
+            aggregate=aggregate,
+            var_codes=fields,
+        )
+
+    except Exception as e:
+        return {"error": str(e)}, 500
 
     def format_ts(dt, aggregate: str) -> str:
         if aggregate == "15min":

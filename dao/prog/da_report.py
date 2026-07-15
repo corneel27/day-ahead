@@ -27,6 +27,9 @@ from sqlalchemy import (
     bindparam,
     union_all,
     String,
+    values,
+    column,
+    BigInteger,
 )
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
@@ -3424,10 +3427,54 @@ class Report(DaBase):
         plt.close(fig)
         return report_data
 
-    def build_series_query(self, start, end, step="1 day", codes=None):
-        if codes is None:
-            codes = ["da", "cons", "prod", "pv_dc", "pv_ac"]
+    @staticmethod
+    def create_interval_cte(
+            start: datetime.datetime,
+            end: datetime.datetime,
+            step: datetime.timedelta,
+            max_datapoints: int = 500,
+    ):
+        if end <= start:
+            raise ValueError("end moet na start liggen")
 
+        if step <= datetime.timedelta(0):
+            raise ValueError("step moet groter zijn dan 0")
+
+        intervals: list[tuple[int, int]] = []
+        current = start
+
+        while current < end:
+            if len(intervals) >= max_datapoints:
+                raise ValueError(
+                    f"Meer dan {max_datapoints} datapoints"
+                )
+
+            interval_end = min(current + step, end)
+
+            intervals.append((
+                int(current.timestamp()),
+                int(interval_end.timestamp()),
+            ))
+
+            current = interval_end
+
+        return (
+            values(
+                column("ts_start", BigInteger()),
+                column("ts_end", BigInteger()),
+                name="interval_values",
+            )
+            .data(intervals)
+            .cte("intervals")
+        )
+
+    def build_series_query(
+            self,
+            start : datetime.datetime,
+            end: datetime.datetime,
+            step: datetime.timedelta="1 day",
+            var_codes: list= None
+    ):
         metadata = self.db_da.metadata
         engine = self.db_da.engine
 
@@ -3435,54 +3482,31 @@ class Report(DaBase):
         values_table = Table("values", metadata, autoload_with=engine)
         prognoses = Table("prognoses", metadata, autoload_with=engine)
 
-        # params CTE
-        params = (
-            select(
-                func.datetime(bindparam("serie_start")).label("serie_start"),
-                func.datetime(bindparam("serie_end")).label("serie_end"),
-                bindparam("step").label("step"),
-            )
-            .cte("params")
+        intervals_cte = self.create_interval_cte(
+            start=start,
+            end=end,
+            step=step,
         )
 
-        # selected_vars CTE
-        selected_vars = union_all(
-            *[
-                select(literal(code, type_=String).label("code"))
-                for code in codes
-            ]
-        ).cte("selected_vars")
-
-        # recursive series CTE - base query
-        series = (
-            select(
-                params.c.serie_start.label("dt_start"),
-                func.unixepoch(params.c.serie_start).label("ts_start"),
-                func.datetime(params.c.serie_start, params.c.step).label("dt_end"),
-                func.unixepoch(func.datetime(params.c.serie_start, params.c.step)).label("ts_end"),
+        if var_codes:
+            selected_vars = (
+                values(
+                    column("code", String),
+                    name="selected_var_values",
+                )
+                .data([(code,) for code in var_codes])
+                .cte("selected_vars")
             )
-            .select_from(params)
-            .cte("series", recursive=True)
-        )
-
-        # recursive series CTE - recursive part
-        series = series.union_all(
-            select(
-                series.c.dt_end.label("dt_start"),
-                series.c.ts_end.label("ts_start"),
-                func.datetime(series.c.dt_end, params.c.step).label("dt_end"),
-                func.unixepoch(func.datetime(series.c.dt_end, params.c.step)).label("ts_end"),
+        else:
+            selected_vars = (
+                select(variabel.c.code)
+                .cte("selected_vars")
             )
-            .select_from(series, params)
-            .where(
-                func.datetime(series.c.dt_end, params.c.step) <= params.c.serie_end
-            )
-        )
 
         # vals CTE
         vals = (
             select(
-                series.c.ts_start.label("ts"),
+                intervals_cte.c.ts_start.label("ts"),
                 variabel.c.code.label("code"),
                 case(
                     (
@@ -3493,7 +3517,7 @@ class Report(DaBase):
                 ).label("val"),
             )
             .select_from(
-                series
+                intervals_cte
                 .join(
                     variabel,
                     variabel.c.code.in_(
@@ -3504,14 +3528,15 @@ class Report(DaBase):
                     values_table,
                     and_(
                         variabel.c.id == values_table.c.variabel,
-                        values_table.c.time >= series.c.ts_start,
-                        values_table.c.time < series.c.ts_end,
+                        values_table.c.time >= intervals_cte.c.ts_start,
+                        values_table.c.time < intervals_cte.c.ts_end,
                     ),
                 )
             )
             .group_by(
                 variabel.c.code,
-                series.c.dt_start,
+                variabel.c.aggregate,
+                intervals_cte.c.ts_start,
             )
             .cte("vals")
         )
@@ -3519,7 +3544,7 @@ class Report(DaBase):
         # forecasts CTE
         forecasts = (
             select(
-                series.c.ts_start.label("ts"),
+                intervals_cte.c.ts_start.label("ts"),
                 variabel.c.code.label("code"),
                 case(
                     (
@@ -3530,7 +3555,7 @@ class Report(DaBase):
                 ).label("val"),
             )
             .select_from(
-                series
+                intervals_cte
                 .join(
                     variabel,
                     variabel.c.code.in_(
@@ -3541,14 +3566,15 @@ class Report(DaBase):
                     prognoses,
                     and_(
                         variabel.c.id == prognoses.c.variabel,
-                        prognoses.c.time >= series.c.ts_start,
-                        prognoses.c.time < series.c.ts_end,
+                        prognoses.c.time >= intervals_cte.c.ts_start,
+                        prognoses.c.time < intervals_cte.c.ts_end,
                     ),
                 )
             )
             .group_by(
                 variabel.c.code,
-                series.c.dt_start,
+                variabel.c.aggregate,
+                intervals_cte.c.ts_start,
             )
             .cte("forecasts")
         )
@@ -3556,14 +3582,14 @@ class Report(DaBase):
         # final SELECT
         query = (
             select(
-                series.c.dt_start.label("ts"),
+                intervals_cte.c.ts_start.label("ts"),
                 variabel.c.code,
                 variabel.c.dim,
                 vals.c.val.label("v"),
                 forecasts.c.val.label("f"),
             )
             .select_from(
-                series
+                intervals_cte
                 .join(
                     variabel,
                     variabel.c.code.in_(
@@ -3573,14 +3599,14 @@ class Report(DaBase):
                 .outerjoin(
                     vals,
                     and_(
-                        vals.c.ts == series.c.ts_start,
+                        vals.c.ts == intervals_cte.c.ts_start,
                         vals.c.code == variabel.c.code,
                     ),
                 )
                 .outerjoin(
                     forecasts,
                     and_(
-                        forecasts.c.ts == series.c.ts_start,
+                        forecasts.c.ts == intervals_cte.c.ts_start,
                         forecasts.c.code == variabel.c.code,
                     ),
                 )
@@ -3598,28 +3624,29 @@ class Report(DaBase):
             start: datetime.datetime,
             end: datetime.datetime,
             aggregate: str = "hour",
-            vars: list[str] = ["da", "cons", "prod", "pv_dc", "pv_ac", "profit", "cost", "bat_in", "bat_out", "soc"],
+            var_codes: list[str] = None
     ):
         intervals = {
             "15min": {
-                "step": "+15 minutes",
                 "start_func": func.datetime,
+                "timedelta": datetime.timedelta(minutes=15),
             },
             "hour": {
-                "step": "+1 hour",
                 "start_func": func.datetime,
+                "timedelta": datetime.timedelta(hours=1),
             },
             "day": {
                 "step": "+1 day",
                 "start_func": func.date,
+                "timedelta": datetime.timedelta(days=1),
             },
             "week": {
-                "step": "+7 days",
                 "start_func": func.date,
+                "timedelta": datetime.timedelta(days=7),
             },
             "month": {
-                "step": "+1 month",
                 "start_func": func.date,
+                "timedelta": datetime.timedelta(days=31),
             },
         }
 
@@ -3627,21 +3654,21 @@ class Report(DaBase):
             raise ValueError(f"Invalid aggregate interval: {aggregate}")
 
         interval = intervals[aggregate]
-        step = interval["step"]
 
         query = self.build_series_query(
             start=start,
             end=end,
-            step=step,
-            codes=vars,
+            step=interval["timedelta"],
+            var_codes=var_codes,
         )
 
         with self.db_da.engine.connect() as connection:
+            # return str(query.compile(connection, compile_kwargs={"literal_binds": True}))
             df = pd.read_sql_query(query, connection)
 
         target_tz = start.tzinfo
         df["ts"] = (
-            pd.to_datetime(df["ts"], utc=True)
+            pd.to_datetime(df["ts"], unit="s", utc=True)
             .dt.tz_convert(target_tz)
         )
 

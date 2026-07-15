@@ -4,38 +4,39 @@ import 'bootstrap-icons/font/bootstrap-icons.css'
 
 // HTMX
 import htmx from 'htmx.org'
+
 window.htmx = htmx
 
 // Chart.js
 import {
-  Chart,
-  LineController,
-  BarController,
-  PieController,
-  DoughnutController,
-  LineElement,
-  BarElement,
-  ArcElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Tooltip,
-  Legend
+    Chart,
+    LineController,
+    BarController,
+    PieController,
+    DoughnutController,
+    LineElement,
+    BarElement,
+    ArcElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    Tooltip,
+    Legend
 } from 'chart.js'
 
 Chart.register(
-  LineController,
-  BarController,
-  PieController,
-  DoughnutController,
-  LineElement,
-  BarElement,
-  ArcElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Tooltip,
-  Legend
+    LineController,
+    BarController,
+    PieController,
+    DoughnutController,
+    LineElement,
+    BarElement,
+    ArcElement,
+    PointElement,
+    LinearScale,
+    CategoryScale,
+    Tooltip,
+    Legend
 )
 
 window.Chart = Chart
@@ -48,8 +49,8 @@ import 'prismjs/plugins/line-numbers/prism-line-numbers'
 import 'prismjs/plugins/line-numbers/prism-line-numbers.css'
 
 import {
-  registerTemplate,
-  Template,
+    registerTemplate,
+    Template,
 } from '@webcoder49/code-input/code-input.mjs'
 
 import Indent from '@webcoder49/code-input/plugins/indent.mjs'
@@ -60,33 +61,56 @@ import '@webcoder49/code-input/plugins/prism-line-numbers.css'
 import '@webcoder49/code-input/plugins/find-and-replace.css'
 
 registerTemplate(
-  'syntax-highlighted',
-  new Template(
-    (codeElement) => {
-      Prism.highlightElement(codeElement)
-    },
-    true,  // preElementStyled
-    true,  // isCode; zorgt voor language-* class
-    false, // includeCodeInputInHighlightFunc
-    [
-      new Indent(true, 4, true),
-      new FindAndReplace()
-    ]
-  )
+    'syntax-highlighted',
+    new Template(
+        (codeElement) => {
+            Prism.highlightElement(codeElement)
+        },
+        true,  // preElementStyled
+        true,  // isCode; zorgt voor language-* class
+        false, // includeCodeInputInHighlightFunc
+        [
+            new Indent(true, 4, true),
+            new FindAndReplace()
+        ]
+    )
 )
 
 function fillCurrentTimezoneFields(root = document) {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  root
-    .querySelectorAll('input[data-current-tz], select[data-current-tz], textarea[data-current-tz]')
-    .forEach((field) => {
-      field.value = timezone;
-    });
+    root
+        .querySelectorAll('input[data-current-tz], select[data-current-tz], textarea[data-current-tz]')
+        .forEach((field) => {
+            field.value = timezone;
+        });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  fillCurrentTimezoneFields();
+    fillCurrentTimezoneFields();
+});
+
+document.body.addEventListener("htmx:responseError", function (event) {
+    const errorElement = document.getElementById("htmx-error");
+    const messageElement = document.getElementById("htmx-error-message");
+
+    const response = event.detail.xhr.responseText;
+    const status = event.detail.xhr.status;
+
+    messageElement.textContent =
+        response || `Er is een fout opgetreden (${status}).`;
+
+    errorElement.classList.remove("d-none");
+});
+
+document.body.addEventListener("htmx:sendError", function () {
+    const errorElement = document.getElementById("htmx-error");
+    const messageElement = document.getElementById("htmx-error-message");
+
+    messageElement.textContent =
+        "De server kon niet worden bereikt.";
+
+    errorElement.classList.remove("d-none");
 });
 
 // Eigen styling als laatste
