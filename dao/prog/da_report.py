@@ -3565,7 +3565,7 @@ class Report(DaBase):
                     statistics,
                     and_(
                         statistics.c.start_ts >= intervals_cte.c.ts_start,
-                        statistics.c.start_ts < intervals_cte.c.ts_end,
+                        statistics.c.start_ts <= intervals_cte.c.ts_end,
                     ),
                 )
                 .join(
@@ -3804,6 +3804,7 @@ class Report(DaBase):
             pd.to_datetime(df["ts"], unit="s", utc=True)
             .dt.tz_convert(target_tz)
         )
+        df[["v", "f"]] = df[["v", "f"]].round(3)
 
         return [
             {"ts": ts, **row.unstack(0).to_dict()}

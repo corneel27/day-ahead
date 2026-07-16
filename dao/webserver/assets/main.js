@@ -1,5 +1,5 @@
 // Bootstrap
-import 'bootstrap'
+import * as bootstrap from 'bootstrap'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
 // HTMX
@@ -88,6 +88,9 @@ function fillCurrentTimezoneFields(root = document) {
 
 document.addEventListener('DOMContentLoaded', () => {
     fillCurrentTimezoneFields();
+
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 });
 
 document.body.addEventListener("htmx:responseError", function (event) {
@@ -120,6 +123,7 @@ document.querySelectorAll('.tom-select').forEach((el)=>{
 	let settings = {};
  	new TomSelect(el,settings);
 });
+
 
 // Eigen styling als laatste
 import './main.scss'

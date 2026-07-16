@@ -81,6 +81,12 @@
                             <option value="month" {% if aggregate==
                             'month' %}selected{% endif %}>Month</option>
                         </select>
+                        <span class="input-group-text">
+                        <i class="bi bi-info-circle-fill"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="right"
+                           title="The 15min interval does not work for most values pulled from Home Assistant, as HA only stores hourly data in the statistics table."></i>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -458,7 +464,7 @@
         for (let i = 0; i < config.length; i++) {
             const c = config[i];
             try {
-                c.data = c.data(data);
+                c.data = c.data(data).map(v => v ? Math.round(v * 1000) / 1000 : v);
 
                 if (c.data.filter(v => v).length === 0) {
                     continue;
@@ -829,7 +835,7 @@
         }
 
         if (typeof value === 'number') {
-            const decimals = column.decimals ?? 2;
+            const decimals = column.decimals ?? 3;
             const formatted = value.toLocaleString('nl-NL', {
                 minimumFractionDigits: decimals,
                 maximumFractionDigits: decimals,
