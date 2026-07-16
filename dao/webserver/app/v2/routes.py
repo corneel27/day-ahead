@@ -1,5 +1,7 @@
 import time, os, fnmatch, re, datetime, time, threading, json
 from flask import Blueprint, render_template, request, redirect, url_for
+
+from dao.prog import da_report
 from dao.prog.version import __version__
 from subprocess import Popen, PIPE, run, STDOUT, DEVNULL
 from pathlib import Path
@@ -564,11 +566,17 @@ def reportsv2():
     start = request.args.get('start', default=today.isoformat())
     end = request.args.get('end', default=tomorrow.isoformat())
     aggregate = request.args.get('aggregate', default="hour")
+
+
+    report = Report(app_datapath + "/options.json")
+    vars = report.get_vars()
+
     return render_template(
         "v2/reports-v2.html",
         start=start,
         end=end,
         aggregate=aggregate,
+        vars=vars,
     )
 
 

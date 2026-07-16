@@ -22,8 +22,13 @@ h1 {
   @extend .table-sm;
   @extend .table-bordered;
   @extend .border-primary;
-  td, th
+  @extend .my-2;
+  td, th:not(.text-center)
   {
     text-align: right;;
   }
+}
+
+#data-chart {
+  min-height: calc(80vh);
 }
