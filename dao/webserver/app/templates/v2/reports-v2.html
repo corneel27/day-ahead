@@ -35,16 +35,14 @@
                     </a>
 
                     <ul class="dropdown-menu">
-                        <li><a class="dropdown-item">Grid</a></li>
-                        <li><a class="dropdown-item">Cost</a></li>
-                        <li><a class="dropdown-item">Battery</a></li>
-                        <li><a class="dropdown-item">Solar</a></li>
-                        <li><a class="dropdown-item">EV</a></li>
+                        <li><a class="dropdown-item" href="javascript:selectValues('fields', '')">All</a></li>
+                        <li><a class="dropdown-item" href="javascript:selectValues('fields', 'cons,prod,cost,profit')">Grid</a></li>
+                        <li><a class="dropdown-item" href="javascript:selectValues('fields', 'pv_ac,pv_dc,ev,bat_in,bat_out,boil,wp')">Balance</a></li>
                     </ul>
                 </div>
             </div>
 
-            <select class="tom-select col-12 mt-2" name="fields" multiple>
+            <select class="tom-select col-12 mt-2" id="fields" name="fields" multiple>
                 {% for var in vars %}
                 <option value="{{var.code}}">{{ var.name }}</option>
                 {% endfor %}
@@ -171,8 +169,7 @@
                 type: 'bar',
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                stack: 'grid',
-                tags: ["value", "grid"],
+                stack: 'cons_prod',
             },
             {
                 label: 'Consumption forecast',
@@ -184,7 +181,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "grid"],
             },
             {
                 label: 'Production',
@@ -192,10 +188,9 @@
                 borderColor: "#2e7d32",
                 backgroundColor: "rgba(46, 125, 50, 0.25)",
                 type: 'bar',
-                stack: 'grid',
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["value", "grid"],
+                stack: 'cons_prod',
             },
             {
                 label: 'Production forecast',
@@ -207,7 +202,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "grid"],
             },
             // {
             //     label: 'Net consumption',
@@ -217,7 +211,6 @@
             //     type: 'bar',
             //     yAxisID: "y_kwh",
             //     unit: "kWh",
-            //     tags: ["value", "grid"],
             // },
             {
                 label: 'Cost',
@@ -227,7 +220,7 @@
                 type: 'line',
                 yAxisID: "y_eur",
                 unit: "EUR",
-                tags: ["value", "cost"],
+                stack: 'cons_cost',
             },
             {
                 label: 'Cost forecast',
@@ -239,7 +232,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_eur",
                 unit: "EUR",
-                tags: ["forecast", "cost"],
             },
             {
                 label: 'Profit',
@@ -249,7 +241,7 @@
                 type: 'line',
                 yAxisID: "y_eur",
                 unit: "EUR",
-                tags: ["value", "cost"],
+                stack: 'cons_cost',
             },
             {
                 label: 'Profit forecast',
@@ -260,7 +252,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_eur",
                 unit: "EUR",
-                tags: ["forecast", "cost"],
             },
             {
                 label: 'Net cost',
@@ -271,7 +262,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_eur",
                 unit: "EUR",
-                tags: ["value", "cost"],
             },
             {
                 label: 'Energy price',
@@ -282,7 +272,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_eurkwh",
                 unit: "EUR/kWh",
-                tags: ["value", "cost"],
             },
             {
                 data: (data) => data.map(row => row.bat_in.v ?? 0),
@@ -293,7 +282,7 @@
                 backgroundColor: "rgba(32, 201, 151, 0.25)",
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["value", "battery"],
+                stack: "battery_stack",
             },
             {
                 data: (data) => data.map(row => row.bat_in.f ?? 0),
@@ -306,7 +295,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "battery"],
             },
             {
                 data: (data) => data.map(row => -row.bat_out.v ?? 0),
@@ -317,7 +305,7 @@
                 backgroundColor: "rgba(13, 110, 253, 0.25)",
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["value", "battery"],
+                stack: "battery_stack"
             },
             {
                 data: (data) => data.map(row => -row.bat_out.f ?? 0),
@@ -330,11 +318,10 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "battery"],
             },
             {
                 data: (data) => data.map(row => (row.bat_in.f ?? 0) - (row.bat_out.f ?? 0)),
-                type: "bar",
+                type: "line",
                 label: "Battery net forecast",
                 fallbackValue: 0,
                 borderColor: "#fd690d",
@@ -343,7 +330,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "battery", "net"],
             },
             {
                 data: (data) => data.map(row => row.soc.f ?? 0),
@@ -356,7 +342,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_perc",
                 unit: "%",
-                tags: ["forecast", "battery"],
             },
             {
                 data: (data) => data.map(row => row.pv_ac.v ?? 0),
@@ -367,7 +352,6 @@
                 backgroundColor: "rgba(13, 110, 253, 0.25)",
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["value", "pv"],
             },
             {
                 data: (data) => data.map(row => row.pv_ac.f ?? 0),
@@ -380,7 +364,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "pv"],
             },
             {
                 data: (data) => data.map(row => row.pv_dc.v ?? 0),
@@ -391,11 +374,10 @@
                 backgroundColor: "rgba(13, 110, 253, 0.25)",
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["value", "pv"],
             },
             {
                 data: (data) => data.map(row => row.pv_dc.f ?? 0),
-                type: "bar",
+                type: "line",
                 label: "PV DC Forecast",
                 fallbackValue: 0,
                 borderColor: "#0d6efd",
@@ -404,7 +386,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "pv"],
             },
             {
                 data: (data) => data.map(row => row.boil.v ?? 0),
@@ -415,7 +396,6 @@
                 backgroundColor: "rgba(13, 110, 253, 0.15)",
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["value", "boiler"],
             },
             {
                 data: (data) => data.map(row => row.boil.f ?? 0),
@@ -428,7 +408,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "boiler"],
             },
             {
                 data: (data) => data.map(row => row.wp.v ?? 0),
@@ -439,7 +418,6 @@
                 backgroundColor: "rgba(13, 110, 253, 0.15)",
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["value", "wp"],
             },
             {
                 data: (data) => data.map(row => row.wp.f ?? 0),
@@ -452,7 +430,6 @@
                 borderDash: [6, 4],
                 yAxisID: "y_kwh",
                 unit: "kWh",
-                tags: ["forecast", "wp"],
             },
         ];
 
@@ -845,6 +822,18 @@
         }
 
         return value;
+    }
+
+    function selectValues(targetElId, valueStr) {
+        const values = valueStr.split(',').map((v) => v.trim());
+
+        const select = document.getElementById(targetElId);
+        for (let i = 0; i < select.options.length; i++) {
+            select.options[i].selected = values.includes(select.options[i].value);
+        }
+
+        const evt = new Event('change', {bubbles: true});
+        select.dispatchEvent(evt);
     }
 </script>
 

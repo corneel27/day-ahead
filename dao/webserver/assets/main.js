@@ -120,7 +120,7 @@ import TomSelect from "tom-select";
 import "tom-select/dist/css/tom-select.bootstrap5.css";
 
 document.querySelectorAll('.tom-select').forEach((el)=>{
-	let settings = {};
+	let settings = {plugins: ['change_listener'],};
  	new TomSelect(el,settings);
 });
 
