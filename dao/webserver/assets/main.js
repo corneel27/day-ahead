@@ -113,5 +113,13 @@ document.body.addEventListener("htmx:sendError", function () {
     errorElement.classList.remove("d-none");
 });
 
+import TomSelect from "tom-select";
+import "tom-select/dist/css/tom-select.bootstrap5.css";
+
+document.querySelectorAll('.tom-select').forEach((el)=>{
+	let settings = {};
+ 	new TomSelect(el,settings);
+});
+
 // Eigen styling als laatste
 import './main.scss'

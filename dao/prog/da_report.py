@@ -30,6 +30,7 @@ from sqlalchemy import (
     values,
     column,
     BigInteger,
+    union,
 )
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
@@ -45,7 +46,7 @@ class Report(DaBase):
     periodes = {}
 
     def __init__(
-        self, file_name: str = "../data/options.json", _now: datetime.datetime = None
+            self, file_name: str = "../data/options.json", _now: datetime.datetime = None
     ):
         super().__init__(file_name=file_name)
         if self.config is None:
@@ -853,7 +854,7 @@ class Report(DaBase):
         return
 
     def get_time_border_ha_record(
-        self, sensor: str, latest: bool = True
+            self, sensor: str, latest: bool = True
     ) -> datetime.datetime:
         """
         Zoekt de tijd op van het laatst aanwezige record van "code"
@@ -892,13 +893,13 @@ class Report(DaBase):
         return result
 
     def get_sensor_data(
-        self,
-        sensor: str,
-        vanaf: datetime.datetime,
-        tot: datetime.datetime,
-        col_name: str,
-        agg: str = "uur",
-        sensor_type: str = "quantity",
+            self,
+            sensor: str,
+            vanaf: datetime.datetime,
+            tot: datetime.datetime,
+            col_name: str,
+            agg: str = "uur",
+            sensor_type: str = "quantity",
     ) -> pd.DataFrame:
         """
         Retrieves and aggregates sensordata from ha database
@@ -1023,12 +1024,12 @@ class Report(DaBase):
                     & (t1.c.state.isnot(None))
                     & (t2.c.state.isnot(None))
                     & (
-                        t1.c.start_ts
-                        >= self.db_ha.unix_timestamp(start_ts_param1) - 3600
+                            t1.c.start_ts
+                            >= self.db_ha.unix_timestamp(start_ts_param1) - 3600
                     )
                     & (
-                        t1.c.start_ts
-                        < self.db_ha.unix_timestamp(start_ts_param2) - 3600
+                            t1.c.start_ts
+                            < self.db_ha.unix_timestamp(start_ts_param2) - 3600
                     )
                 )
             )
@@ -1135,7 +1136,7 @@ class Report(DaBase):
 
     @staticmethod
     def aggregate_data(
-        df_raw: pd.DataFrame, col_name: str, agg: str = "uur"
+            df_raw: pd.DataFrame, col_name: str, agg: str = "uur"
     ) -> pd.DataFrame:
         df_raw["tot"] = df_raw.apply(
             lambda x: datetime.datetime.fromtimestamp(x["tijd"]), axis=1
@@ -1169,7 +1170,7 @@ class Report(DaBase):
                         dag=(
                             "start_ts_t2",
                             lambda x: f"{x.dt.year.iloc[0]}-{x.dt.month.iloc[0]:2}-"
-                            f"{x.dt.day.iloc[0]:2}",
+                                      f"{x.dt.day.iloc[0]:2}",
                         ),
                         tijd=(
                             "start_ts_t2",
@@ -1194,7 +1195,7 @@ class Report(DaBase):
 
     @staticmethod
     def copy_col_df(
-        copy_from: pd.DataFrame, copy_to: pd.DataFrame, col_name: str
+            copy_from: pd.DataFrame, copy_to: pd.DataFrame, col_name: str
     ) -> pd.DataFrame:
         """
         kopieert kolom "col_name" van copy_from naar copy_to,
@@ -1216,11 +1217,11 @@ class Report(DaBase):
 
     @staticmethod
     def add_col_df(
-        add_from: pd.DataFrame,
-        add_to: pd.DataFrame,
-        col_name_from: str,
-        col_name_to: str = None,
-        negation: bool = False,
+            add_from: pd.DataFrame,
+            add_to: pd.DataFrame,
+            col_name_from: str,
+            col_name_to: str = None,
+            negation: bool = False,
     ) -> pd.DataFrame:
         # add_from = add_from.reset_index()
         if add_from is None:
@@ -1241,7 +1242,7 @@ class Report(DaBase):
                         org_value = 0
                     if pd.notna(row[col_index]):
                         add_to.at[row.tijd, col_name_to] = (
-                            org_value + factor * row[col_index]
+                                org_value + factor * row[col_index]
                         )
         else:
             for row in add_from.itertuples():
@@ -1251,7 +1252,7 @@ class Report(DaBase):
                     if pd.isna(org_value):
                         org_value = 0
                     add_to.at[row.time, col_name_to] = (
-                        org_value + factor * row[col_index]
+                            org_value + factor * row[col_index]
                     )
         return add_to
 
@@ -1299,11 +1300,11 @@ class Report(DaBase):
         return result
 
     def get_sensor_sum(
-        self,
-        sensor_list: list,
-        vanaf: datetime.datetime,
-        tot: datetime.datetime,
-        col_name: str,
+            self,
+            sensor_list: list,
+            vanaf: datetime.datetime,
+            tot: datetime.datetime,
+            col_name: str,
     ) -> pd.DataFrame:
         """
         Berekent een dataframe met sum van de waarden van de sensoren in de list
@@ -1326,7 +1327,7 @@ class Report(DaBase):
         return result
 
     def calc_cost(
-        self, vanaf: datetime.datetime, tot: datetime.datetime
+            self, vanaf: datetime.datetime, tot: datetime.datetime
     ) -> pd.DataFrame:
         cons_df = self.get_sensor_sum(
             self.grid_dict["cons"]["sensors"], vanaf, tot, "cons"
@@ -1542,11 +1543,11 @@ class Report(DaBase):
 
     @staticmethod
     def generate_df(
-        vanaf: datetime.datetime,
-        tot: datetime.datetime,
-        rep_interval: str,
-        get_interval: str | None = None,
-        column: str | None = None,
+            vanaf: datetime.datetime,
+            tot: datetime.datetime,
+            rep_interval: str,
+            get_interval: str | None = None,
+            column: str | None = None,
     ) -> pd.DataFrame:
         result = pd.DataFrame(columns=[rep_interval, "tijd", "tot", "datasoort"])
         moment = vanaf
@@ -1582,13 +1583,13 @@ class Report(DaBase):
         return result
 
     def get_energy_balance_data(
-        self,
-        periode: str,
-        col_dict: dict = None,
-        field: str = None,
-        _vanaf: datetime.datetime = None,
-        _tot: datetime.datetime = None,
-        _interval: str = None,
+            self,
+            periode: str,
+            col_dict: dict = None,
+            field: str = None,
+            _vanaf: datetime.datetime = None,
+            _tot: datetime.datetime = None,
+            _interval: str = None,
     ):
         """
         berekent een report conform de col_dict configuratie
@@ -1867,13 +1868,13 @@ class Report(DaBase):
         return result, last_moment
 
     def get_da_data(
-        self,
-        key: str,
-        vanaf: datetime.datetime,
-        tot: datetime.datetime,
-        get_interval: str,
-        rep_interval: str,
-        table: str = "values",
+            self,
+            key: str,
+            vanaf: datetime.datetime,
+            tot: datetime.datetime,
+            get_interval: str,
+            rep_interval: str,
+            table: str = "values",
     ) -> pd.DataFrame:
         """
         genereert een dataframe van de data in de da-database
@@ -1942,7 +1943,7 @@ class Report(DaBase):
         return code_result
 
     def get_columns(
-        self, calc_dict, active_period: str, _tot: datetime.datetime | None = None
+            self, calc_dict, active_period: str, _tot: datetime.datetime | None = None
     ) -> pd.DataFrame:
         if "calc_interval" in calc_dict:
             get_interval = calc_dict["calc_interval"]
@@ -2024,12 +2025,12 @@ class Report(DaBase):
         return result
 
     def get_grid_data(
-        self,
-        periode: str,
-        _vanaf=None,
-        _tot=None,
-        _interval: str | None = None,
-        _source: str = "all",
+            self,
+            periode: str,
+            _vanaf=None,
+            _tot=None,
+            _interval: str | None = None,
+            _source: str = "all",
     ) -> pd.DataFrame:
         """
         Haalt de grid data: consumptie, productie, cost, profit op de drie tabellen:
@@ -2298,12 +2299,12 @@ class Report(DaBase):
         return input_df
 
     def clean_df(
-        self,
-        calc_dict: dict,
-        df_input: pd.DataFrame,
-        rep_columns: list,
-        active_view: str,
-        rep_interval: str,
+            self,
+            calc_dict: dict,
+            df_input: pd.DataFrame,
+            rep_columns: list,
+            active_view: str,
+            rep_interval: str,
     ):
         """
 
@@ -2352,20 +2353,20 @@ class Report(DaBase):
         return df_result
 
     def calc_report(
-        self,
-        active_period: str,
-        active_interval: str | None = None,
-        active_view: str = "table",
-        _tot: datetime.datetime | None = None,
+            self,
+            active_period: str,
+            active_interval: str | None = None,
+            active_view: str = "table",
+            _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         return
 
     def calc_saving_consumption(
-        self,
-        active_period: str,
-        active_interval: str | None = None,
-        active_view: str = "table",
-        _tot: datetime.datetime | None = None,
+            self,
+            active_period: str,
+            active_interval: str | None = None,
+            active_view: str = "table",
+            _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op verbruik
@@ -2414,11 +2415,11 @@ class Report(DaBase):
         return df
 
     def calc_saving_cost(
-        self,
-        active_period: str,
-        active_interval: str | None = None,
-        active_view: str = "table",
-        _tot: datetime.datetime | None = None,
+            self,
+            active_period: str,
+            active_interval: str | None = None,
+            active_view: str = "table",
+            _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2502,11 +2503,11 @@ class Report(DaBase):
         return df_result
 
     def calc_co2_emission(
-        self,
-        active_period: str,
-        active_interval: str | None = None,
-        active_view: str = "table",
-        _tot: datetime.datetime | None = None,
+            self,
+            active_period: str,
+            active_interval: str | None = None,
+            active_view: str = "table",
+            _tot: datetime.datetime | None = None,
     ) -> pd.DataFrame:
         """
         Berekent besparing op kosten
@@ -2821,7 +2822,7 @@ class Report(DaBase):
         return df_wd
 
     def get_sensor_week_sum(
-        self, sensor_list: list, weekday: int, vanaf: datetime.datetime, col_name: str
+            self, sensor_list: list, weekday: int, vanaf: datetime.datetime, col_name: str
     ) -> pd.DataFrame:
         # counter = 0
         result = None
@@ -3082,7 +3083,7 @@ class Report(DaBase):
             da_cons = (row.value * multiplier_l + taxes_l + ol_l) * (1 + btw_l / 100)
             if salderen:
                 da_prod = (row.value * multiplier_t + taxes_t + ol_t) * (
-                    1 + btw_t / 100
+                        1 + btw_t / 100
                 )
             else:
                 da_prod = (row.value + ol_t) * (1 + btw_t / 100)
@@ -3229,13 +3230,13 @@ class Report(DaBase):
         return count
 
     def get_soc_data(
-        self, field: str, start: datetime.datetime, end: datetime.datetime
+            self, field: str, start: datetime.datetime, end: datetime.datetime
     ) -> pd.DataFrame:
         df = self.db_da.get_column_data("prognoses", field, start=start, end=end)
         return df
 
     def get_pv_prognose(
-        self, field: str, vanaf: datetime.datetime, tot: datetime.datetime
+            self, field: str, vanaf: datetime.datetime, tot: datetime.datetime
     ) -> pd.DataFrame:
         df_result = pd.DataFrame()
         if field == "pv_ac":
@@ -3249,7 +3250,7 @@ class Report(DaBase):
                     df_result = df_data
                 else:
                     df_result["prediction"] = (
-                        df_result["prediction"] + df_data["prediction"]
+                            df_result["prediction"] + df_data["prediction"]
                     )
             df_result = df_result.rename(
                 columns={"prediction": field, "date_time": "time"}
@@ -3270,7 +3271,7 @@ class Report(DaBase):
                         df_result = df_data
                     else:
                         df_result["prediction"] = (
-                            df_result["prediction"] + df_data["prediction"]
+                                df_result["prediction"] + df_data["prediction"]
                         )
                     count += 1
             df_result = df_result.rename(
@@ -3427,6 +3428,32 @@ class Report(DaBase):
         plt.close(fig)
         return report_data
 
+    def get_vars(self):
+        metadata = self.db_da.metadata
+        engine = self.db_da.engine
+        variabel = Table("variabel", metadata, autoload_with=engine)
+        prognoses = Table("prognoses", metadata, autoload_with=engine)
+        values = Table("values", metadata, autoload_with=engine)
+
+        gebruikte_variabelen = union(
+            select(prognoses.c.variabel),
+            select(values.c.variabel),
+        )
+
+        query = (
+            select(
+                variabel.c.code,
+                variabel.c.name,
+            )
+            .where(variabel.c.id.in_(gebruikte_variabelen))
+            .order_by(variabel.c.name)
+        )
+
+        with self.db_da.engine.connect() as connection:
+            rows = connection.execute(query).mappings().all()
+
+        return [dict(row) for row in rows]
+
     @staticmethod
     def create_interval_cte(
             start: datetime.datetime,
@@ -3468,12 +3495,120 @@ class Report(DaBase):
             .cte("intervals")
         )
 
-    def build_series_query(
+    def create_ha_sensors_cte(self, var_codes: list = None):
+        sensor_rows = []
+
+        for code, config in self.energy_balance_dict.items():
+            if var_codes and code not in var_codes:
+                continue
+
+            sensors = config.get("sensors", [])
+
+            # Speciale waarden zoals "calc" niet als sensor opnemen.
+            if not isinstance(sensors, (list, tuple, set)) or not sensors:
+                continue
+
+            if sensors:
+                sensor_rows.extend(
+                    (code, sensor)
+                    for sensor in sensors
+                )
+            else:
+                # Code behouden wanneer de sensorlijst leeg is.
+                sensor_rows.append((code, None))
+
+        return (
+            values(
+                column("code", String),
+                column("sensor", String),
+                name="sensor_values",
+            )
+            .data(sensor_rows)
+            .cte("sensors")
+        )
+
+    def get_ha_data_query(
             self,
-            start : datetime.datetime,
+            start: datetime.datetime,
             end: datetime.datetime,
-            step: datetime.timedelta="1 day",
-            var_codes: list= None
+            step: datetime.timedelta,
+            var_codes: list = None
+    ):
+        statistics = Table(
+            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
+        )
+        statistics_meta = Table(
+            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
+        )
+
+        intervals_cte = self.create_interval_cte(
+            start=start,
+            end=end,
+            step=step,
+        )
+        sensors_cte = self.create_ha_sensors_cte(var_codes)
+        sensor_values_cte = (
+            select(
+                intervals_cte.c.ts_start.label("ts"),
+                sensors_cte.c.code.label("code"),
+                sensors_cte.c.sensor.label("sensor"),
+                (
+                        (
+                                func.max(statistics.c.sum)
+                                - func.min(statistics.c.sum)
+                        )
+                ).label("sensor_value"),
+            )
+            .select_from(
+                intervals_cte
+                .join(
+                    statistics,
+                    and_(
+                        statistics.c.start_ts >= intervals_cte.c.ts_start,
+                        statistics.c.start_ts < intervals_cte.c.ts_end,
+                    ),
+                )
+                .join(
+                    statistics_meta,
+                    statistics_meta.c.id == statistics.c.metadata_id,
+                )
+                .join(
+                    sensors_cte,
+                    sensors_cte.c.sensor == statistics_meta.c.statistic_id,
+                )
+            )
+            .group_by(
+                intervals_cte.c.ts_start,
+                sensors_cte.c.code,
+                sensors_cte.c.sensor,
+            )
+            .cte("sensor_values")
+        )
+
+        query = (
+            select(
+                sensor_values_cte.c.ts,
+                sensor_values_cte.c.code,
+                func.sum(sensor_values_cte.c.sensor_value).label("v"),
+            )
+            .group_by(
+                sensor_values_cte.c.ts,
+                sensor_values_cte.c.code,
+            )
+            .order_by(
+                sensor_values_cte.c.ts,
+                sensor_values_cte.c.code,
+            )
+        )
+
+        return query
+
+    def get_da_data_query(
+            self,
+            start: datetime.datetime,
+            end: datetime.datetime,
+            step: datetime.timedelta,
+            var_codes: list = None
     ):
         metadata = self.db_da.metadata
         engine = self.db_da.engine
@@ -3613,11 +3748,7 @@ class Report(DaBase):
             )
         )
 
-        return query.params(
-            serie_start=start,
-            serie_end=end,
-            step=step,
-        )
+        return query
 
     def get_data(
             self,
@@ -3626,45 +3757,47 @@ class Report(DaBase):
             aggregate: str = "hour",
             var_codes: list[str] = None
     ):
-        intervals = {
-            "15min": {
-                "start_func": func.datetime,
-                "timedelta": datetime.timedelta(minutes=15),
-            },
-            "hour": {
-                "start_func": func.datetime,
-                "timedelta": datetime.timedelta(hours=1),
-            },
-            "day": {
-                "step": "+1 day",
-                "start_func": func.date,
-                "timedelta": datetime.timedelta(days=1),
-            },
-            "week": {
-                "start_func": func.date,
-                "timedelta": datetime.timedelta(days=7),
-            },
-            "month": {
-                "start_func": func.date,
-                "timedelta": datetime.timedelta(days=31),
-            },
+        deltas = {
+            "15min": datetime.timedelta(minutes=15),
+            "hour": datetime.timedelta(hours=1),
+            "day": datetime.timedelta(days=1),
+            "week": datetime.timedelta(days=7),
+            "month": datetime.timedelta(days=31),
         }
 
-        if aggregate not in intervals:
+        if aggregate not in deltas:
             raise ValueError(f"Invalid aggregate interval: {aggregate}")
 
-        interval = intervals[aggregate]
-
-        query = self.build_series_query(
+        query_da = self.get_da_data_query(
             start=start,
             end=end,
-            step=interval["timedelta"],
+            step=deltas[aggregate],
             var_codes=var_codes,
         )
 
         with self.db_da.engine.connect() as connection:
             # return str(query.compile(connection, compile_kwargs={"literal_binds": True}))
-            df = pd.read_sql_query(query, connection)
+            df = pd.read_sql_query(query_da, connection)
+
+        query_ha = self.get_ha_data_query(
+            start=start,
+            end=end,
+            step=deltas[aggregate],
+            var_codes=var_codes,
+        )
+        with self.db_ha.engine.connect() as connection:
+            df_ha = pd.read_sql_query(query_ha, connection)
+
+        df = df.merge(
+            df_ha[["ts", "code", "v"]].rename(columns={"v": "v_ha"}),
+            on=["ts", "code"],
+            how="left",
+        )
+
+        mask = df["v"].isna() | df["v"].eq(0)
+
+        df.loc[mask, "v"] = df.loc[mask, "v_ha"]
+        df = df.drop(columns="v_ha")
 
         target_tz = start.tzinfo
         df["ts"] = (

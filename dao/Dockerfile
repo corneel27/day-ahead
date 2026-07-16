@@ -30,7 +30,7 @@ COPY webserver/package.json webserver/package-lock.json webserver/vite.config.js
 COPY webserver/assets /root/dao/webserver/assets
 
 WORKDIR /root/dao/webserver
-RUN  npm install \
+RUN  npm ci \
      && npm run build
 
 FROM ${BUILD_FROM}
