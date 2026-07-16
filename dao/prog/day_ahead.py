@@ -4007,7 +4007,7 @@ class DaCalc(DaBase):
                     if sum_power > 0:
                         new_state = battery_state_on_value
                         netto_vermogen_bat = -round(sum_power)
-                        stop_omvormer = None
+                    stop_omvormer = None
                 else:
                     new_state = battery_state_on_value
                     stop_omvormer = None
