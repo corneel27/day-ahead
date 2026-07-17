@@ -47,36 +47,7 @@ class DaCalc(DaBase):
         self.grid_max_power = self.config.grid.max_power
         self.grid = self.config.grid
         self.machines = self.config.machines
-        self.next_grid_set_point: int | None = None
         # self.start_logging()
-
-    def restore_next_grid_set_point(self):
-        """Push the precomputed next grid setpoint back to HA before a new run starts."""
-        if self.debug:
-            return
-
-        entity_id = getattr(self.grid, "entity_grid_setpoint", None)
-        if entity_id is None:
-            return
-
-        set_point = self.next_grid_set_point
-        if set_point is None:
-            try:
-                state = self.get_state(entity_id).state
-                if state not in (None, "unknown", "unavailable"):
-                    set_point = int(round(float(state)))
-            except (TypeError, ValueError):
-                logging.warning(
-                    f"Kan huidig grid setpoint uit HA niet lezen voor {entity_id}"
-                )
-
-        if set_point is None:
-            return
-
-        self.set_value(entity_id, set_point)
-        logging.info(
-            f"Vooraf berekende grid set point direct naar HA gezet: {set_point} W"
-        )
 
     def calc_optimum(
         self,
@@ -90,7 +61,6 @@ class DaCalc(DaBase):
         if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
-        self.restore_next_grid_set_point()
         # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
         ha_getter = lambda eid: self.get_state(eid).state
         if _start_dt is None:
@@ -3697,11 +3667,6 @@ class DaCalc(DaBase):
                 1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0
             )
             logging.info(f"Grid set point: {grid_set_point} W")
-            next_grid_set_point = grid_set_point
-            if U > 1:
-                next_grid_set_point = round(
-                    1000 * (c_l[1].x - c_t[1].x) / hour_fraction[1], 0
-                )
             if not self.debug:
                 # export the ess grid setpoint in W
                 self.set_entity_value(
@@ -3709,7 +3674,6 @@ class DaCalc(DaBase):
                     self.grid,
                     grid_set_point,
                 )
-            self.next_grid_set_point = int(next_grid_set_point)
             #####################################
 
             ###########################################
