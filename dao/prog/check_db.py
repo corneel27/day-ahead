@@ -21,6 +21,8 @@ from sqlalchemy import (
     delete,
     literal_column,
     inspect,
+    Index,
+    column,
 )
 import pandas as pd
 import sys
@@ -328,6 +330,7 @@ class CheckDB:
             print('Table "variabel" geupdated.')
         """
 
+        # Maak de kolom "aggregate" als deze niet bestaat
         inspector = inspect(self.engine)
         columns = [column["name"] for column in inspector.get_columns("variabel")]
         has_aggregate = "aggregate" in columns
@@ -357,6 +360,8 @@ class CheckDB:
 
             print('Kolom "aggregate" toegevoegd aan tabel "variabel"    ')
 
+        # Voeg indexen toe op kolom `time` in de values en prognoses tabel, indien niet bestaand
+        self.ensure_time_indexes()
 
         # timezone in postgresql could be wrong, check and report
         if self.db_da.db_dialect == "postgresql":
@@ -384,6 +389,44 @@ class CheckDB:
                 connection.execute(insert_query)
                 connection.commit()
 
+
+    def ensure_time_indexes(self) -> None:
+        indexes = (
+            ("prognoses", "ix_prognoses_time"),
+            ("values", "ix_values_time"),
+        )
+
+        with self.engine.begin() as connection:
+            inspector = inspect(connection)
+
+            for table_name, index_name in indexes:
+                existing_indexes = inspector.get_indexes(table_name)
+
+                has_time_index = any(
+                    index.get("column_names") == ["time"]
+                    for index in existing_indexes
+                )
+
+                if not has_time_index:
+                    table = Table(
+                        table_name,
+                        self.db_da.metadata,
+                        autoload_with=connection,
+                        extend_existing=True,
+                    )
+
+                    index = Index(
+                        index_name,
+                        table.c.time,
+                    )
+
+                    index.create(
+                        bind=connection,
+                        checkfirst=True,
+                    )
+                    print(
+                        f"Index '{index_name}' toegevoegd aan tabel '{table_name}'."
+                    )
 
 def main():
     checkdb = CheckDB("../data/options.json")
