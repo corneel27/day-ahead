@@ -6,9 +6,11 @@ Zie verder: DOCS.md
 
 import datetime
 import datetime as dt
+import json
 import time
 import sys
 import math
+from pathlib import Path
 import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS, INTEGER
 from pandas.core.dtypes.inference import is_number
@@ -25,6 +27,9 @@ from dao.prog.da_base import DaBase
 
 
 class DaCalc(DaBase):
+    _next_grid_set_point_cache: int | None = None
+    _next_grid_set_point_cache_file = Path("../data/next_grid_set_point_cache.json")
+
     def __init__(self, file_name=None):
         super().__init__(file_name=file_name)
         if self.config is None:
@@ -49,6 +54,79 @@ class DaCalc(DaBase):
         self.machines = self.config.machines
         # self.start_logging()
 
+    def restore_next_grid_set_point(self):
+        """Push the precomputed next grid setpoint back to HA before a new run starts."""
+        if self.debug:
+            return
+
+        entity_id = self._resolve_grid_setpoint_entity_id()
+        if entity_id is None:
+            logging.info(
+                "Geen entity set power feedin geconfigureerd; vooraf berekende grid set point niet toegepast"
+            )
+            return
+
+        set_point = DaCalc._next_grid_set_point_cache
+        source = "geheugen"
+
+        if set_point is None:
+            set_point = self._load_next_grid_set_point_cache()
+            source = "bestand"
+
+        if set_point is None:
+            logging.info("Geen vooraf berekende grid set point beschikbaar; HA niet aangepast")
+            return
+
+        DaCalc._next_grid_set_point_cache = set_point
+        self.set_value(entity_id, set_point)
+        logging.info(
+            f"Vooraf berekende grid set point direct naar HA gezet ({source}): {set_point} W"
+        )
+
+    def _get_primary_battery_options(self):
+        if self.battery_options is None:
+            return None
+        if isinstance(self.battery_options, list) and len(self.battery_options) > 0:
+            return self.battery_options[0]
+        return self.battery_options
+
+    def _resolve_grid_setpoint_entity_id(self):
+        battery_options = self._get_primary_battery_options()
+        return self._get_option("entity_set_power_feedin", battery_options)
+
+    def _load_next_grid_set_point_cache(self) -> int | None:
+        cache_file = DaCalc._next_grid_set_point_cache_file
+        if not cache_file.exists():
+            return None
+
+        try:
+            cache_data = json.loads(cache_file.read_text(encoding="utf-8"))
+            set_point = cache_data.get("set_point")
+            if set_point is None:
+                return None
+            return int(set_point)
+        except Exception as ex:
+            logging.warning(
+                f"Kon vooraf berekende grid set point niet lezen uit cachebestand ({cache_file}): {ex}"
+            )
+            return None
+
+    def _store_next_grid_set_point_cache(self, set_point: int) -> None:
+        cache_file = DaCalc._next_grid_set_point_cache_file
+        cache_payload = {
+            "set_point": int(set_point),
+            "stored_at": dt.datetime.now().isoformat(timespec="seconds"),
+        }
+        try:
+            cache_file.write_text(
+                json.dumps(cache_payload, ensure_ascii=True),
+                encoding="utf-8",
+            )
+        except Exception as ex:
+            logging.warning(
+                f"Kon vooraf berekende grid set point niet opslaan in cachebestand ({cache_file}): {ex}"
+            )
+
     def calc_optimum(
         self,
         _start_dt: dt.datetime | None = None,
@@ -61,6 +139,7 @@ class DaCalc(DaBase):
         if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
+        self.restore_next_grid_set_point()
         # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
         ha_getter = lambda eid: self.get_state(eid).state
         if _start_dt is None:
@@ -3713,13 +3792,25 @@ class DaCalc(DaBase):
                 logging.info(f"Grid balanceren: {balance_state}")
             grid_set_point = round(1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0)
             logging.info(f"Grid set point: {grid_set_point} W")
+            next_grid_set_point = grid_set_point
+            if U > 1:
+                next_grid_set_point = round(
+                    1000 * (c_l[1].x - c_t[1].x) / hour_fraction[1], 0
+                )
             if not self.debug:
                 # export the ess grid setpoint in W
-                self.set_entity_value(
-                    "entity_grid_setpoint",
-                    self.grid,
-                    grid_set_point,
-                )
+                setpoint_entity_id = self._resolve_grid_setpoint_entity_id()
+                if setpoint_entity_id is not None:
+                    self.set_value(setpoint_entity_id, grid_set_point)
+                else:
+                    logging.info(
+                        "Geen grid setpoint-entity geconfigureerd; setpoint niet naar HA geschreven"
+                    )
+            DaCalc._next_grid_set_point_cache = int(next_grid_set_point)
+            self._store_next_grid_set_point_cache(DaCalc._next_grid_set_point_cache)
+            logging.info(
+                f"Volgende vooraf berekende grid set point gecached: {DaCalc._next_grid_set_point_cache} W"
+            )
             #####################################
 
             ###########################################
