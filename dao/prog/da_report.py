@@ -3642,36 +3642,23 @@ class Report(DaBase):
         vals = (
             select(
                 intervals_cte.c.ts_start.label("ts"),
-                variabel.c.code.label("code"),
-                case(
-                    (
-                        variabel.c.aggregate == "sum",
-                        func.sum(values_table.c.value),
-                    ),
-                    else_=func.avg(values_table.c.value),
-                ).label("val"),
+                values_table.c.variabel,
+                func.sum(values_table.c.value).label("csum"),
+                func.avg(values_table.c.value).label("cavg"),
             )
             .select_from(
                 intervals_cte
                 .join(
-                    variabel,
-                    variabel.c.code.in_(
-                        select(selected_vars.c.code)
-                    ),
-                )
-                .outerjoin(
                     values_table,
                     and_(
-                        variabel.c.id == values_table.c.variabel,
                         values_table.c.time >= intervals_cte.c.ts_start,
                         values_table.c.time < intervals_cte.c.ts_end,
                     ),
                 )
             )
             .group_by(
-                variabel.c.code,
-                variabel.c.aggregate,
                 intervals_cte.c.ts_start,
+                values_table.c.variabel,
             )
             .cte("vals")
         )
@@ -3680,36 +3667,23 @@ class Report(DaBase):
         forecasts = (
             select(
                 intervals_cte.c.ts_start.label("ts"),
-                variabel.c.code.label("code"),
-                case(
-                    (
-                        variabel.c.aggregate == "sum",
-                        func.sum(prognoses.c.value),
-                    ),
-                    else_=func.avg(prognoses.c.value),
-                ).label("val"),
+                prognoses.c.variabel,
+                func.sum(prognoses.c.value).label("csum"),
+                func.avg(prognoses.c.value).label("cavg"),
             )
             .select_from(
                 intervals_cte
                 .join(
-                    variabel,
-                    variabel.c.code.in_(
-                        select(selected_vars.c.code)
-                    ),
-                )
-                .outerjoin(
                     prognoses,
                     and_(
-                        variabel.c.id == prognoses.c.variabel,
                         prognoses.c.time >= intervals_cte.c.ts_start,
                         prognoses.c.time < intervals_cte.c.ts_end,
                     ),
                 )
             )
             .group_by(
-                variabel.c.code,
-                variabel.c.aggregate,
                 intervals_cte.c.ts_start,
+                prognoses.c.variabel,
             )
             .cte("forecasts")
         )
@@ -3720,8 +3694,20 @@ class Report(DaBase):
                 intervals_cte.c.ts_start.label("ts"),
                 variabel.c.code,
                 variabel.c.dim,
-                vals.c.val.label("v"),
-                forecasts.c.val.label("f"),
+                case(
+                    (
+                        variabel.c.aggregate == "sum",
+                        vals.c.csum,
+                    ),
+                    else_=vals.c.cavg,
+                ).label("v"),
+                case(
+                    (
+                        variabel.c.aggregate == "sum",
+                        forecasts.c.csum,
+                    ),
+                    else_=forecasts.c.cavg,
+                ).label("f"),
             )
             .select_from(
                 intervals_cte
@@ -3731,19 +3717,21 @@ class Report(DaBase):
                         select(selected_vars.c.code)
                     ),
                 )
-                .outerjoin(
+                .join(
                     vals,
                     and_(
                         vals.c.ts == intervals_cte.c.ts_start,
-                        vals.c.code == variabel.c.code,
+                        vals.c.variabel == variabel.c.id,
                     ),
+                    isouter=True,
                 )
-                .outerjoin(
+                .join(
                     forecasts,
                     and_(
                         forecasts.c.ts == intervals_cte.c.ts_start,
-                        forecasts.c.code == variabel.c.code,
+                        forecasts.c.variabel == variabel.c.id,
                     ),
+                    isouter=True,
                 )
             )
         )
