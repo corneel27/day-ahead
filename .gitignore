@@ -2,8 +2,9 @@ dao/data/images/*.png
 dao/data/log/*.txt
 dao/data/log/*.log
 dao/data/log/dashboard*
-dao/data/secrets.json
+# Lokale runtime-configuratie: wel bewerken/syncen, nooit committen.
 dao/data/options.json
+dao/data/secrets.json
 dao/data/baseload/*.json
 dao/data/prediction/models/*.pkl
 dao/data/*.db

@@ -32,18 +32,7 @@ class GridConfig(BaseModel):
             "x-ui-widget-filter": "switch"
         }
     )
-    entity_grid_setpoint: Optional[EntityId] = Field(
-        default=None,
-        alias="entity grid setpoint",
-        description="HA entity for the grid setpoint",
-        json_schema_extra={
-            "x-help": "Optional: Home Assistant entity to save the average calculated power on "
-                      "the grid-point. Can be used for XOM-regulation.",
-            "x-ui-section": "Power Configuration",
-        }
-    )
 
-    
     model_config = ConfigDict(
         extra='allow',
         populate_by_name=True,
