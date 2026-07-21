@@ -1493,6 +1493,7 @@ class DaCalc(DaBase):
         wished_level = []
         level_margin = []
         ready_u = []
+        ev_ready_dt = []
         intervals_needed = []
         max_power = []
         energy_needed = []
@@ -1729,6 +1730,7 @@ class DaCalc(DaBase):
             else:
                 logging.info(f"Opladen wordt ingepland.")
             ready_u.append(ready_index)
+            ev_ready_dt.append(ready)
 
         # charger_on = [[model.add_var(var_type=BINARY) for u in range(U)] for e in range(EV)]
         # charger_ampere = [[model.add_var(var_type=CONTINUOUS, lb=0,
@@ -1839,7 +1841,7 @@ class DaCalc(DaBase):
                         # daadwerkelijk ac verbruik (kWh) per stage =
                         # vermogen van de stap x oplaadfactor (0..1) x uur-fractie
                         if u == ready_u[e]:
-                            hr_fraction = (ready - tijd[u]).total_seconds() / 3600
+                            hr_fraction = (ev_ready_dt[e] - tijd[u]).total_seconds() / 3600
                         else:
                             hr_fraction = hour_fraction[u]
                         model += (
@@ -1942,8 +1944,25 @@ class DaCalc(DaBase):
                     == (ev_partial_sum[e] + ev_boundary_sum[e]) * 2 - 2
                 )
 
-                model += energy_needed[e] == xsum(
-                    ev_accu_in[e][u] for u in range(ready_u[e] + 1)
+                # equality relaxed to a small epsilon band: energy_needed[e]
+                # is computed outside the model via `hours_avail` (raw
+                # timestamp subtraction), while the sum below is realized
+                # inside the model via the independently-derived
+                # hour_fraction[u] / hr_fraction chain. These normally agree
+                # to many decimal places but are not guaranteed bit-
+                # identical; pinning to an exact equality at the computed
+                # ceiling (max_possible, see energy_needed[e] derivation
+                # above) can turn a trivially-achievable target into a hard
+                # infeasibility from float noise alone. 1 Wh (0.001 kWh) is
+                # far below anything physically meaningful here.
+                ev_energy_slack = 0.001  # kWh
+                model += (
+                    xsum(ev_accu_in[e][u] for u in range(ready_u[e] + 1))
+                    <= energy_needed[e] + ev_energy_slack
+                )
+                model += (
+                    xsum(ev_accu_in[e][u] for u in range(ready_u[e] + 1))
+                    >= energy_needed[e] - ev_energy_slack
                 )
                 for u in range(U)[ready_u[e] + 1 :]:
                     model += c_ev[e][u] == 0
