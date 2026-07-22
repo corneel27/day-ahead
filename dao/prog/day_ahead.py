@@ -49,6 +49,68 @@ class DaCalc(DaBase):
         self.machines = self.config.machines
         # self.start_logging()
 
+    @staticmethod
+    def _format_horizon(value) -> str:
+        if value is None or pd.isna(value):
+            return "niet beschikbaar"
+        if hasattr(value, "to_pydatetime"):
+            value = value.to_pydatetime()
+        if isinstance(value, (datetime.datetime, datetime.date)):
+            return value.strftime("%d-%m-%Y %H:%M")
+        return str(value)
+
+    def _log_available_data_horizons(self, prog_data, optimization_times) -> None:
+        def read_horizon(code, table_name="values"):
+            try:
+                return self.db_da.get_time_border_record(
+                    code, table_name=table_name
+                )
+            except Exception as ex:
+                logging.warning(
+                    "Horizon voor %s kon niet worden bepaald: %s", code, ex
+                )
+                return None
+
+        official_source = str(
+            getattr(self.prices_options, "source_day_ahead", "day-ahead")
+            or "day-ahead"
+        )
+        extension_provider = str(
+            getattr(self.prices_options, "forecast_extension_provider", "none")
+            or "none"
+        ).lower()
+        weather_model = str(
+            getattr(self.config, "meteoserver_model", "meteoserver")
+            or "meteoserver"
+        )
+
+        official_horizon = read_horizon("da")
+        extension_horizon = None
+        if extension_provider != "none":
+            extension_horizon = read_horizon("da_ext")
+        weather_horizon = read_horizon("glob_rad", table_name="prognoses")
+        if weather_horizon is None and prog_data is not None and len(prog_data) > 0:
+            weather_horizon = prog_data["tijd"].iloc[-1]
+        optimization_horizon = optimization_times[-1] if optimization_times else None
+
+        lines = [
+            "Beschikbare gegevens:",
+            f"  - Bron <{official_source}> tot: {self._format_horizon(official_horizon)}",
+        ]
+        if extension_horizon is not None:
+            lines.append(
+                f"  - Verlenging <{extension_provider}> tot: "
+                f"{self._format_horizon(extension_horizon)}"
+            )
+        lines.extend(
+            [
+                f"  - Meteo <{weather_model}> tot: {self._format_horizon(weather_horizon)}",
+                "Optimalisering voor de periode tot en met: "
+                f"{self._format_horizon(optimization_horizon)}",
+            ]
+        )
+        logging.info("\n".join(lines))
+
     def calc_optimum(
         self,
             _start_dt: dt.datetime | None = None,
@@ -359,6 +421,7 @@ class DaCalc(DaBase):
             b_l = b_l[:-1]
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
+        self._log_available_data_horizons(prog_data, tijd)
         try:
             if self.log_level <= logging.INFO:
                 start_df = pd.DataFrame(

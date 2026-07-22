@@ -947,6 +947,8 @@ De meteodata worden opgehaald bij meteoserver. Ook hiervoor heb je een key nodig
    * dayaheadprediction
  * forecast extension hours:
      Het aantal uren dat je voorbij de officiele horizon wilt aanvullen. DAO vertaalt deze instelling intern naar de `hours` parameter van de gekozen provider-URL.
+
+     De extensie verlengt alleen de beschikbare **prijshorizon**. Voor een optimalisering heeft DAO ook volledige meteogegevens nodig. De daadwerkelijk gebruikte planningshorizon eindigt daarom bij de kortste beschikbare reeks van prijzen en meteogegevens. Met het standaardmodel `harmonie` kan de weersverwachting dus eerder eindigen dan de prijs-extensie; kies eventueel `gfs` als je een langere weershorizon nodig hebt.
  * energypriceforecast-extension-api-url:
      Optionele override voor de Energy Price Forecast EU extensie-feed. Standaard:
      `https://api.energypriceforecast.eu/api/v1/dao/prices`
