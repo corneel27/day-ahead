@@ -7,3 +7,7 @@ data
 !data/options_start.json
 !data/options_example.json
 !data/secrets_vb.json
+!data/log
+!data/images
+!data/baseload
+!data/prediction
