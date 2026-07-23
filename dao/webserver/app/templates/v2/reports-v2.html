@@ -44,7 +44,7 @@
 
             <select class="tom-select col-12 mt-2" id="fields" name="fields" multiple>
                 {% for var in vars %}
-                <option value="{{var.code}}">{{ var.name }}</option>
+                <option value="{{var.code}}" {% if var.code in fields %}selected{% endif %}>{{ var.name }}</option>
                 {% endfor %}
             </select>
         </div>
