@@ -590,10 +590,12 @@ def reportsv2():
     )
 
     tomorrow = today + datetime.timedelta(days=1)
-    start = request.args.get('start', default=today.isoformat())
-    end = request.args.get('end', default=tomorrow.isoformat())
-    aggregate = request.args.get('aggregate', default="hour")
+    start = request.args.get("start", default=today.isoformat())
+    end = request.args.get("end", default=tomorrow.isoformat())
+    fields = request.args.get("fields", default="prod,cons,cost,profit")
+    aggregate = request.args.get("aggregate", default="hour")
 
+    fields = fields.split(",")
 
     report = Report(app_datapath + "/options.json")
     vars = report.get_vars()
@@ -604,6 +606,7 @@ def reportsv2():
         end=end,
         aggregate=aggregate,
         vars=vars,
+        fields=fields,
     )
 
 
