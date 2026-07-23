@@ -1,16 +1,13 @@
 import time, os, fnmatch, re, datetime, time, threading, json
 from flask import Blueprint, render_template, request, redirect, url_for
 
-from dao.prog import da_report
 from dao.prog.version import __version__
 from subprocess import Popen, PIPE, run, STDOUT, DEVNULL
 from pathlib import Path
 from dao.prog.da_report import Report
 from dao.prog.config.loader import ConfigurationLoader
 
-
 v2 = Blueprint("v2", __name__)
-
 
 @v2.context_processor
 def inject_data():
@@ -24,9 +21,7 @@ web_datapath = "/static/data/"
 app_datapath = "app/static/data/"
 
 VITE_DEV_SERVER = "http://localhost:5173/static/build"
-VITE_BUILD_URL = "/static/build/"
 VITE_MANIFEST = Path("app/static/build/.vite/manifest.json")
-
 
 def vite_tags(entry: str) -> str:
     if os.getenv("VITE_DEV") == "1":
@@ -44,9 +39,11 @@ def vite_tags(entry: str) -> str:
     tags = []
 
     for css in asset.get("css", []):
-        tags.append(f'<link rel="stylesheet" href="{VITE_BUILD_URL}{css}">')
+        href = url_for("static", filename=f"build/{css}")
+        tags.append(f'<link rel="stylesheet" href="{href}">')
 
-    tags.append(f'<script type="module" src="{VITE_BUILD_URL}{asset["file"]}"></script>')
+    src = url_for("static", filename=f'build/{asset["file"]}')
+    tags.append(f'<script type="module" src="{src}"></script>')
 
     return "\n".join(tags)
 
@@ -94,7 +91,6 @@ def get_closest_index_from_list(flist: list, ts: float) -> int:
 
 STATEFILE = "../data/task_state.json"
 STALE_AFTER = 600
-
 
 def save_run_state(state):
     # Write to tmp file and replace (atomic)
@@ -155,6 +151,15 @@ def run_and_log(cmd, state):
     )
 
     while proc.poll() is None:
+        updated_state = get_run_state()
+
+        if updated_state.get("status") == "cancelled":
+            if state["logfile"] and os.path.exists(state["logfile"]):
+                os.remove(state["logfile"])
+
+            proc.kill()
+            break
+
         if state["logfile"] is None:
             flist = get_file_list_with_ts(
                 os.path.join(app_datapath, "log"),
@@ -172,20 +177,19 @@ def run_and_log(cmd, state):
                     state["logfile"] = logfile
                     save_run_state(state)
 
-        else:
-            updated_state = get_run_state()
-
-            if (
-                state["logfile"] != updated_state["logfile"]
-                or updated_state["status"] == "cancelled"
-            ):
+        elif state["logfile"] != updated_state.get("logfile"):
+            if os.path.exists(state["logfile"]):
                 os.remove(state["logfile"])
-                proc.kill()
-                break
 
-        # Heartbeat
-        save_run_state(state)
-        # Processtatus iedere seconde controleren
+            proc.kill()
+            break
+
+        # Neem de actuele status over voordat de heartbeat geschreven wordt.
+        state["status"] = updated_state.get("status", state["status"])
+
+        if state["status"] == "running":
+            save_run_state(state)
+
         time.sleep(1)
 
     proc.wait()
