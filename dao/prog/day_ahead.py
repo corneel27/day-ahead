@@ -27,8 +27,7 @@ from dao.prog.da_base import DaBase
 
 
 class DaCalc(DaBase):
-    _next_grid_set_point_cache: int | None = None
-    _next_grid_set_point_cache_file = Path("../data/next_grid_set_point_cache.json")
+    _next_interval_controls_cache_file = Path("../data/next_interval_controls.json")
 
     def __init__(self, file_name=None):
         super().__init__(file_name=file_name)
@@ -54,34 +53,69 @@ class DaCalc(DaBase):
         self.machines = self.config.machines
         # self.start_logging()
 
-    def restore_next_grid_set_point(self):
-        """Push the precomputed next grid setpoint back to HA before a new run starts."""
-        if self.debug:
+    def _preload_next_interval_controls_enabled(self) -> bool:
+        return bool(getattr(self.grid, "preload_next_interval_controls", True))
+
+    def restore_next_interval_controls(self, interval_start: dt.datetime):
+        """Restore cached battery and EV controls for the exact next interval."""
+        if self.debug or not self._preload_next_interval_controls_enabled():
             return
 
-        entity_id = self._resolve_grid_setpoint_entity_id()
-        if entity_id is None:
+        cache_data = self._load_next_interval_controls_cache()
+        if cache_data is None:
+            return
+
+        interval_start_str = interval_start.strftime("%Y-%m-%d %H:%M:%S")
+        if cache_data.get("interval_start") != interval_start_str:
             logging.info(
-                "Geen entity set power feedin geconfigureerd; vooraf berekende grid set point niet toegepast"
+                "Preload overgeslagen: cache hoort niet bij het huidige interval %s",
+                interval_start_str,
             )
             return
 
-        set_point = DaCalc._next_grid_set_point_cache
-        source = "geheugen"
+        for battery_control in cache_data.get("battery_controls", []):
+            try:
+                battery_options = self.battery_options[battery_control["index"]]
+                self.set_entity_value(
+                    "entity set power feedin",
+                    battery_options,
+                    battery_control["net_power"],
+                )
+                self.set_entity_option(
+                    "entity set operating mode",
+                    battery_options,
+                    battery_control["operating_mode"],
+                )
+                if battery_options.entity_stop_inverter is not None:
+                    self.call_service(
+                        "set_datetime",
+                        entity_id=battery_options.entity_stop_inverter,
+                        datetime=battery_control["stop_datetime"],
+                    )
+            except Exception as ex:
+                logging.warning(f"Kon preload voor batterij niet toepassen: {ex}")
 
-        if set_point is None:
-            set_point = self._load_next_grid_set_point_cache()
-            source = "bestand"
+        for ev_control in cache_data.get("ev_controls", []):
+            try:
+                ev_options = self.ev_options[ev_control["index"]]
+                if (
+                    self.get_state(ev_options.entity_plugged_in).state != "on"
+                    or self.get_state(ev_options.entity_position).state != "home"
+                ):
+                    continue
+                if float(ev_control["ampere"]) > 0:
+                    self.set_value(
+                        ev_options.entity_set_charging_ampere,
+                        ev_control["ampere"],
+                    )
+                    self.turn_on(ev_options.charge_switch)
+                else:
+                    self.set_value(ev_options.entity_set_charging_ampere, 0)
+                    self.turn_off(ev_options.charge_switch)
+            except Exception as ex:
+                logging.warning(f"Kon preload voor EV niet toepassen: {ex}")
 
-        if set_point is None:
-            logging.info("Geen vooraf berekende grid set point beschikbaar; HA niet aangepast")
-            return
-
-        DaCalc._next_grid_set_point_cache = set_point
-        self.set_value(entity_id, set_point)
-        logging.info(
-            f"Vooraf berekende grid set point direct naar HA gezet ({source}): {set_point} W"
-        )
+        logging.info("Vooraf berekende batterij- en EV-instellingen toegepast voor %s", interval_start_str)
 
     def _get_primary_battery_options(self):
         if self.battery_options is None:
@@ -94,29 +128,18 @@ class DaCalc(DaBase):
         battery_options = self._get_primary_battery_options()
         return self._get_option("entity_set_power_feedin", battery_options)
 
-    def _load_next_grid_set_point_cache(self) -> int | None:
-        cache_file = DaCalc._next_grid_set_point_cache_file
-        if not cache_file.exists():
-            return None
-
+    def _load_next_interval_controls_cache(self) -> dict | None:
+        cache_file = DaCalc._next_interval_controls_cache_file
         try:
-            cache_data = json.loads(cache_file.read_text(encoding="utf-8"))
-            set_point = cache_data.get("set_point")
-            if set_point is None:
-                return None
-            return int(set_point)
+            return json.loads(cache_file.read_text(encoding="utf-8"))
         except Exception as ex:
             logging.warning(
-                f"Kon vooraf berekende grid set point niet lezen uit cachebestand ({cache_file}): {ex}"
+                f"Kon preload-cache niet lezen uit cachebestand ({cache_file}): {ex}"
             )
             return None
 
-    def _store_next_grid_set_point_cache(self, set_point: int) -> None:
-        cache_file = DaCalc._next_grid_set_point_cache_file
-        cache_payload = {
-            "set_point": int(set_point),
-            "stored_at": dt.datetime.now().isoformat(timespec="seconds"),
-        }
+    def _store_next_interval_controls_cache(self, cache_payload: dict) -> None:
+        cache_file = DaCalc._next_interval_controls_cache_file
         try:
             cache_file.write_text(
                 json.dumps(cache_payload, ensure_ascii=True),
@@ -124,7 +147,7 @@ class DaCalc(DaBase):
             )
         except Exception as ex:
             logging.warning(
-                f"Kon vooraf berekende grid set point niet opslaan in cachebestand ({cache_file}): {ex}"
+                f"Kon preload-cache niet opslaan in cachebestand ({cache_file}): {ex}"
             )
 
     def calc_optimum(
@@ -139,7 +162,6 @@ class DaCalc(DaBase):
         if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
-        self.restore_next_grid_set_point()
         # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
         ha_getter = lambda eid: self.get_state(eid).state
         if _start_dt is None:
@@ -158,6 +180,7 @@ class DaCalc(DaBase):
             self.interval_s * math.floor(start_ts / self.interval_s)
         )
         start_interval_dt = datetime.datetime.fromtimestamp(start_interval_ts)
+        self.restore_next_interval_controls(start_interval_dt)
         # loopt af van 1 (starts_ds == start_interval) naar
         # 0 (start_interval is bijna bij begin volgend interval)
         interval_fraction_first_interval = (
@@ -3806,11 +3829,87 @@ class DaCalc(DaBase):
                     logging.info(
                         "Geen grid setpoint-entity geconfigureerd; setpoint niet naar HA geschreven"
                     )
-            DaCalc._next_grid_set_point_cache = int(next_grid_set_point)
-            self._store_next_grid_set_point_cache(DaCalc._next_grid_set_point_cache)
-            logging.info(
-                f"Volgende vooraf berekende grid set point gecached: {DaCalc._next_grid_set_point_cache} W"
-            )
+            if not self.debug and self._preload_next_interval_controls_enabled():
+                next_interval_index = 1
+                next_interval_dt = tijd[next_interval_index]
+                battery_controls = []
+                for b in range(B):
+                    next_grid_balance = abs(c_l[next_interval_index].x - c_t[next_interval_index].x) <= 0.01
+                    net_power = int(
+                        1000
+                        * (ac_to_dc[b][next_interval_index].x - ac_from_dc[b][next_interval_index].x)
+                    )
+                    minimum_power = int(self.battery_options[b].minimum_power)
+                    operating_mode = self.battery_options[b].entity_set_operating_mode_on
+                    stop_dt = None
+                    soc_at_interval_start = soc[b][next_interval_index].x
+                    if abs(net_power) <= 20:
+                        net_power = 0
+                        operating_mode = self.battery_options[b].entity_set_operating_mode_off
+                    elif not next_grid_balance and minimum_power > 0 and abs(net_power) < minimum_power and self.battery_options[b].entity_stop_inverter is not None and (
+                        len(reduce_power_low_soc[b]) == 0
+                        or soc_at_interval_start > reduce_power_low_soc[b][len(reduce_power_low_soc[b]) - 1]["soc"]
+                    ) and (
+                        len(reduce_power_high_soc[b]) == 0
+                        or soc_at_interval_start < reduce_power_high_soc[b][0]["soc"]
+                    ):
+                        stop_dt = dt.datetime.fromtimestamp(
+                            int(
+                                next_interval_dt.timestamp()
+                                + (abs(net_power) / minimum_power) * self.interval_s
+                            )
+                        )
+                        net_power = minimum_power if net_power > 0 else -minimum_power
+                    elif ac_to_dc[b][next_interval_index].x > 0.0:
+                        net_power = round(
+                            sum(
+                                ac_to_dc_w[b][next_interval_index][cs].x * charge_stages[b][cs]["power"]
+                                for cs in range(CS[b])
+                                if ac_to_dc_w[b][next_interval_index][cs].x > 0
+                            )
+                        )
+                    elif ac_from_dc[b][next_interval_index].x > 0.0:
+                        net_power = -round(
+                            sum(
+                                ac_from_dc_w[b][next_interval_index][ds].x * discharge_stages[b][ds]["power"]
+                                for ds in range(DS[b])
+                                if ac_from_dc_w[b][next_interval_index][ds].x > 0
+                            )
+                        )
+                    battery_controls.append(
+                        {
+                            "index": b,
+                            "net_power": net_power,
+                            "operating_mode": operating_mode,
+                            "stop_datetime": (
+                                stop_dt.strftime("%Y-%m-%d %H:%M")
+                                if stop_dt is not None
+                                else "2000-01-01 00:00:00"
+                            ),
+                        }
+                    )
+
+                ev_controls = []
+                for e in range(EV):
+                    ampere = 0
+                    if ready_u[e] >= next_interval_index:
+                        for cs in range(ECS[e])[1:]:
+                            if stage_factor[e][cs][next_interval_index].x > 0:
+                                ampere = ev_charge_stages[e][cs]["ampere"]
+                                break
+                    ev_controls.append({"index": e, "ampere": ampere})
+
+                self._store_next_interval_controls_cache(
+                    {
+                        "interval_start": next_interval_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                        "battery_controls": battery_controls,
+                        "ev_controls": ev_controls,
+                    }
+                )
+                logging.info(
+                    "Vooraf berekende batterij- en EV-instellingen gecached voor %s",
+                    next_interval_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                )
             #####################################
 
             ###########################################

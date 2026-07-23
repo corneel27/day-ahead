@@ -105,7 +105,8 @@
   },
   "grid": {
     "max_power": 17,
-    "entity balance switch": "input_boolean.balanceer_grid"
+    "entity balance switch": "input_boolean.balanceer_grid",
+    "preload next interval controls": true
   },
   "history": {
     "save days": 7
