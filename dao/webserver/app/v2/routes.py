@@ -97,24 +97,47 @@ STALE_AFTER = 600
 
 
 def save_run_state(state):
-    state["last_update"] = time.time()
-    with open(STATEFILE, "w") as f:
+    # Write to tmp file and replace (atomic)
+    # This prevents race condition between read and write
+    state = {
+        **state,
+        "last_update": time.time(),
+    }
+
+    temp_file = STATEFILE + ".tmp"
+
+    with open(temp_file, "w", encoding="utf-8") as f:
         json.dump(state, f)
+        f.flush()
+        os.fsync(f.fileno())
+
+    os.replace(temp_file, STATEFILE)
 
 
-def get_run_state():
-    no_state = {"status": "idle", "task": None, "logfile": None, "started": None}
-    if not os.path.exists(STATEFILE):
+def get_run_state() -> dict:
+    no_state = {
+        "status": "idle",
+        "task": None,
+        "logfile": None,
+        "started": None,
+    }
+
+    try:
+        with open(STATEFILE, "r", encoding="utf-8") as f:
+            state = json.load(f)
+    except FileNotFoundError:
+        return no_state
+    except (json.JSONDecodeError, OSError):
         return no_state
 
-    with open(STATEFILE) as f:
-        state = json.load(f)
+    last_update = state.get("last_update", 0)
 
-    # 🔥 check for "stale" state
-    last = state.get("last_update", 0)
-    if state.get("status") == "running" and time.time() - last > STALE_AFTER:
-        # tasks probably stale/dead
+    if (
+        state.get("status") == "running"
+        and time.time() - last_update > STALE_AFTER
+    ):
         return no_state
+
     return state
 
 def run_and_log(cmd, state):
