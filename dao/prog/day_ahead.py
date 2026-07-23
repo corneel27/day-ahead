@@ -73,6 +73,7 @@ class DaCalc(DaBase):
             )
             return
 
+        applied_battery_controls = []
         for battery_control in cache_data.get("battery_controls", []):
             try:
                 battery_options = self.battery_options[battery_control["index"]]
@@ -92,9 +93,18 @@ class DaCalc(DaBase):
                         entity_id=battery_options.entity_stop_inverter,
                         datetime=battery_control["stop_datetime"],
                     )
+                applied_battery_controls.append(
+                    {
+                        "index": battery_control["index"],
+                        "net_power": battery_control["net_power"],
+                        "operating_mode": battery_control["operating_mode"],
+                        "stop_datetime": battery_control["stop_datetime"],
+                    }
+                )
             except Exception as ex:
                 logging.warning(f"Kon preload voor batterij niet toepassen: {ex}")
 
+        applied_ev_controls = []
         for ev_control in cache_data.get("ev_controls", []):
             try:
                 ev_options = self.ev_options[ev_control["index"]]
@@ -102,6 +112,14 @@ class DaCalc(DaBase):
                     self.get_state(ev_options.entity_plugged_in).state != "on"
                     or self.get_state(ev_options.entity_position).state != "home"
                 ):
+                    applied_ev_controls.append(
+                        {
+                            "index": ev_control["index"],
+                            "ampere": ev_control["ampere"],
+                            "applied": False,
+                            "reason": "not_home_or_unplugged",
+                        }
+                    )
                     continue
                 if float(ev_control["ampere"]) > 0:
                     self.set_value(
@@ -112,10 +130,22 @@ class DaCalc(DaBase):
                 else:
                     self.set_value(ev_options.entity_set_charging_ampere, 0)
                     self.turn_off(ev_options.charge_switch)
+                applied_ev_controls.append(
+                    {
+                        "index": ev_control["index"],
+                        "ampere": ev_control["ampere"],
+                        "applied": True,
+                    }
+                )
             except Exception as ex:
                 logging.warning(f"Kon preload voor EV niet toepassen: {ex}")
 
-        logging.info("Vooraf berekende batterij- en EV-instellingen toegepast voor %s", interval_start_str)
+        logging.info(
+            "Vooraf berekende instellingen toegepast voor %s | batterijen=%s | ev=%s",
+            interval_start_str,
+            json.dumps(applied_battery_controls, ensure_ascii=True),
+            json.dumps(applied_ev_controls, ensure_ascii=True),
+        )
 
     def _get_primary_battery_options(self):
         if self.battery_options is None:
@@ -141,6 +171,7 @@ class DaCalc(DaBase):
     def _store_next_interval_controls_cache(self, cache_payload: dict) -> None:
         cache_file = DaCalc._next_interval_controls_cache_file
         try:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
             cache_file.write_text(
                 json.dumps(cache_payload, ensure_ascii=True),
                 encoding="utf-8",
@@ -149,6 +180,22 @@ class DaCalc(DaBase):
             logging.warning(
                 f"Kon preload-cache niet opslaan in cachebestand ({cache_file}): {ex}"
             )
+
+    def _format_next_interval_controls_for_log(
+        self, battery_controls: list[dict], ev_controls: list[dict]
+    ) -> tuple[str, str]:
+        battery_parts = []
+        for control in battery_controls:
+            battery_parts.append(
+                f"B{control['index']}: {control['net_power']}W, modus={control['operating_mode']}, stop={control['stop_datetime']}"
+            )
+        ev_parts = []
+        for control in ev_controls:
+            ev_parts.append(f"EV{control['index']}: {control['ampere']}A")
+
+        battery_summary = ", ".join(battery_parts) if battery_parts else "geen"
+        ev_summary = ", ".join(ev_parts) if ev_parts else "geen"
+        return battery_summary, ev_summary
 
     def calc_optimum(
         self,
@@ -3820,16 +3867,28 @@ class DaCalc(DaBase):
                 next_grid_set_point = round(
                     1000 * (c_l[1].x - c_t[1].x) / hour_fraction[1], 0
                 )
+            if U > 1:
+                logging.info(
+                    "Verwachte grid set point volgend interval (%s): %s W",
+                    tijd[1].strftime("%Y-%m-%d %H:%M:%S"),
+                    next_grid_set_point,
+                )
             if not self.debug:
                 # export the ess grid setpoint in W
                 setpoint_entity_id = self._resolve_grid_setpoint_entity_id()
                 if setpoint_entity_id is not None:
+                    logging.info(
+                        "HA write (bron=grid_set_point_huidig): %s W -> %s",
+                        grid_set_point,
+                        setpoint_entity_id,
+                    )
                     self.set_value(setpoint_entity_id, grid_set_point)
                 else:
                     logging.info(
                         "Geen grid setpoint-entity geconfigureerd; setpoint niet naar HA geschreven"
                     )
             if not self.debug and self._preload_next_interval_controls_enabled():
+                next_interval_cache_payload = None
                 next_interval_index = 1
                 next_interval_dt = tijd[next_interval_index]
                 battery_controls = []
@@ -3906,9 +3965,16 @@ class DaCalc(DaBase):
                         "ev_controls": ev_controls,
                     }
                 )
+                next_interval_cache_payload = {
+                    "interval_start": next_interval_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    "battery_controls": battery_controls,
+                    "ev_controls": ev_controls,
+                }
                 logging.info(
-                    "Vooraf berekende batterij- en EV-instellingen gecached voor %s",
+                    "Vooraf berekende instellingen gecached voor %s | batterijen=%s | ev=%s",
                     next_interval_dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    json.dumps(battery_controls, ensure_ascii=True),
+                    json.dumps(ev_controls, ensure_ascii=True),
                 )
             #####################################
 
@@ -4235,6 +4301,16 @@ class DaCalc(DaBase):
                     if stop_omvormer:
                         logging.info(f"tot: {stop_str}")
                 else:
+                    battery_set_power_entity = self._get_option(
+                        "entity set power feedin", self.battery_options[b]
+                    )
+                    if battery_set_power_entity is not None:
+                        logging.info(
+                            "HA write (bron=battery_dispatch_%s): %s W -> %s",
+                            bat_name,
+                            netto_vermogen_bat,
+                            battery_set_power_entity,
+                        )
                     self.set_entity_value(
                         "entity set power feedin",
                         self.battery_options[b],
@@ -4424,6 +4500,21 @@ class DaCalc(DaBase):
                             f"uur {u:>2} tijdstip {tijd[u].strftime('%H:%M')} "
                             f"consumption: {c_ma_u[m][u].x:>7.3f} tarief: {pl[u]:.4f}"
                         )
+
+            if next_interval_cache_payload is not None:
+                battery_summary, ev_summary = (
+                    self._format_next_interval_controls_for_log(
+                        next_interval_cache_payload["battery_controls"],
+                        next_interval_cache_payload["ev_controls"],
+                    )
+                )
+                logging.info(
+                    "Eindstatus cache volgend %s %s | batterijen: %s | ev: %s",
+                    self.interval_name,
+                    next_interval_cache_payload["interval_start"],
+                    battery_summary,
+                    ev_summary,
+                )
 
         except Exception as ex:
             error_handling(ex)
