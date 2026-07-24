@@ -140,11 +140,15 @@ class DaCalc(DaBase):
             except Exception as ex:
                 logging.warning(f"Kon preload voor EV niet toepassen: {ex}")
 
+        battery_summary, ev_summary = self._format_next_interval_controls_for_log(
+            applied_battery_controls,
+            applied_ev_controls,
+        )
         logging.info(
-            "Vooraf berekende instellingen toegepast voor %s | batterijen=%s | ev=%s",
+            "Vooraf berekende instellingen toegepast voor %s | batterijen=[%s] | ev=[%s]",
             interval_start_str,
-            json.dumps(applied_battery_controls, ensure_ascii=True),
-            json.dumps(applied_ev_controls, ensure_ascii=True),
+            battery_summary,
+            ev_summary,
         )
 
     def _get_primary_battery_options(self):
@@ -191,7 +195,12 @@ class DaCalc(DaBase):
             )
         ev_parts = []
         for control in ev_controls:
-            ev_parts.append(f"EV{control['index']}: {control['ampere']}A")
+            ev_part = f"EV{control['index']}: {control['ampere']}A"
+            if "applied" in control:
+                ev_part += ", toegepast=" + ("ja" if control["applied"] else "nee")
+            if control.get("reason"):
+                ev_part += f", reden={control['reason']}"
+            ev_parts.append(ev_part)
 
         battery_summary = ", ".join(battery_parts) if battery_parts else "geen"
         ev_summary = ", ".join(ev_parts) if ev_parts else "geen"
@@ -3970,11 +3979,15 @@ class DaCalc(DaBase):
                     "battery_controls": battery_controls,
                     "ev_controls": ev_controls,
                 }
+                battery_summary, ev_summary = self._format_next_interval_controls_for_log(
+                    battery_controls,
+                    ev_controls,
+                )
                 logging.info(
-                    "Vooraf berekende instellingen gecached voor %s | batterijen=%s | ev=%s",
+                    "Vooraf berekende instellingen gecached voor %s | batterijen=[%s] | ev=[%s]",
                     next_interval_dt.strftime("%Y-%m-%d %H:%M:%S"),
-                    json.dumps(battery_controls, ensure_ascii=True),
-                    json.dumps(ev_controls, ensure_ascii=True),
+                    battery_summary,
+                    ev_summary,
                 )
             #####################################
 
