@@ -1859,12 +1859,15 @@ class DaCalc(DaBase):
                         """
                     # som van alle oplaadfactoren is 1
                     model += (xsum(stage_factor[e][cs][u] for cs in range(ECS[e]))) == 1
-                    """
-                    # som van alle schakelaars boven 0 A en kleiner of gelijk aan 1
+
+                    # per interval mag maar een echte laadstap aan staan.
+                    # een lader kan niet tegelijk op 6 A en op 10 A staan.
+                    # stap 0 (0 A) doet hier niet mee: die vangt het deel van
+                    # het interval op waarin niet geladen wordt. zo blijft
+                    # deellading binnen een interval mogelijk.
                     model += (
-                        xsum(stage_on[e][cs][u] for cs in range(ECS[e]))
+                        xsum(stage_on[e][cs][u] for cs in range(ECS[e])[1:])
                     ) <= 1
-                    """
                     model += c_ev[e][u] == xsum(
                         stage_consumption[e][cs][u] for cs in range(ECS[e])
                     )
@@ -1931,6 +1934,17 @@ class DaCalc(DaBase):
                         model += ev_boundary_stop[e][u] >= (
                             ev_is_on[e][u] + ev_is_off[e][u + 1] - 1
                         )
+
+                # zonder stop-entiteit kan de lader niet halverwege een
+                # interval stoppen. interval 0 moet dan helemaal aan of
+                # helemaal uit zijn. alleen interval 0 telt, want alleen dat
+                # interval wordt echt naar de lader gestuurd; de rest van het
+                # plan wordt later opnieuw berekend.
+                can_stop = (not ev_instant_charge[e]) and (
+                    self.ev_options[e].entity_stop_charging is not None
+                )
+                if (not can_stop) and (ready_u[e] > 0):
+                    model += ev_is_partial[e][0] == 0
 
                 model += ev_partial_sum[e] == xsum(
                     ev_is_partial[e][u] for u in range(ready_u[e] + 1)
@@ -3831,20 +3845,41 @@ class DaCalc(DaBase):
                     f"{stage_factor[e][cs][0].x:.2f}" for cs in range(ECS[e])[1:]
                 )
                 logging.debug(line)
-                for cs in range(ECS[e])[1:]:
-                    if stage_factor[e][cs][0].x > 0:
-                        new_ampere_state = ev_charge_stages[e][cs]["ampere"]
-                        if new_ampere_state > 0:
-                            new_switch_state = "on"
-                        if (stage_factor[e][cs][0].x < 1) and (
-                            energy_needed[e] > (ev_accu_in[e][0].x + 0.01)
-                        ):
-                            new_ts = (
-                                start_dt.timestamp() + stage_factor[e][cs][0].x * 3600
-                            )
-                            stop_laden = dt.datetime.fromtimestamp(int(new_ts))
-                            new_state_stop_laden = stop_laden.strftime("%Y-%m-%d %H:%M")
-                        break
+                # na de exclusiviteits-constraint hoort er maar een laadstap
+                # actief te zijn. we nemen de stap met het grootste aandeel,
+                # niet de eerste. hele kleine waarden zijn rekenruis van de
+                # solver en negeren we.
+                stage_tol = 1e-4
+                active_stages = [
+                    cs
+                    for cs in range(ECS[e])[1:]
+                    if stage_factor[e][cs][0].x > stage_tol
+                ]
+                if len(active_stages) > 1:
+                    logging.warning(
+                        f"Meer dan een laadstap actief voor "
+                        f"{self.ev_options[e].name}: {active_stages}. "
+                        f"De stap met het grootste aandeel wordt gebruikt."
+                    )
+                if len(active_stages) > 0:
+                    cs = max(
+                        active_stages, key=lambda k: stage_factor[e][k][0].x
+                    )
+                    stage_fraction = stage_factor[e][cs][0].x
+                    new_ampere_state = ev_charge_stages[e][cs]["ampere"]
+                    if new_ampere_state > 0:
+                        new_switch_state = "on"
+                    if (stage_fraction < 1) and (
+                        energy_needed[e] > (ev_accu_in[e][0].x + 0.01)
+                    ):
+                        # stage_fraction is een deel van dit interval, niet van
+                        # een heel uur. daarom maal hour_fraction[0].
+                        new_ts = (
+                            start_dt.timestamp()
+                            + stage_fraction * hour_fraction[0] * 3600
+                        )
+                        stop_laden = dt.datetime.fromtimestamp(int(new_ts))
+                        new_state_stop_laden = stop_laden.strftime("%Y-%m-%d %H:%M")
                 ev_name = self.ev_options[e].name
                 logging.info(f"Berekeningsuitkomst voor opladen van {ev_name}:")
                 logging.info(
