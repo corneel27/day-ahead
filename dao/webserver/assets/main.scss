@@ -37,8 +37,13 @@ h1 {
 #tab-report-data {
   .spinner {
     display: none;
-    left: 50%;
     position: absolute;
+    left: 50%;
+  }
+  .error {
+    display: none;
+    position: absolute;
+    left: 50%;
   }
 
   &.loading {
@@ -46,6 +51,15 @@ h1 {
       display: block;
     }
 
+    .tab-pane {
+      opacity: 0.3;
+    }
+  }
+
+  &.error {
+    .error {
+      display: block;
+    }
     .tab-pane {
       opacity: 0.3;
     }

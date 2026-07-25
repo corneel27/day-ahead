@@ -96,22 +96,25 @@
 </form>
 <ul class="nav nav-tabs mt-3" role="tablist">
     <li class="nav-item" role="presentation">
-        <a class="nav-link active" id="simple-tab-0" data-bs-toggle="tab" href="#simple-tabpanel-0" role="tab"
-           aria-controls="simple-tabpanel-0" aria-selected="true">Chart</a>
+        <a class="nav-link active" id="simple-tab-0" data-bs-toggle="tab" href="#tabpanel-chart" role="tab"
+           aria-controls="tabpanel-chart" aria-selected="true">Chart</a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link" id="simple-tab-1" data-bs-toggle="tab" href="#simple-tabpanel-1" role="tab"
-           aria-controls="simple-tabpanel-1" aria-selected="false">Table</a>
+        <a class="nav-link" id="simple-tab-1" data-bs-toggle="tab" href="#tabpanel-table" role="tab"
+           aria-controls="tabpanel-table" aria-selected="false">Table</a>
     </li>
 </ul>
 <div class="tab-content flex-grow-1 d-flex flex-column pt-4" id="tab-report-data">
     <div role="status" class="spinner spinner-border text-secondary mt-5">
       <span class="visually-hidden">Loading...</span>
     </div>
-    <div class="tab-pane active flex-grow-1 " id="simple-tabpanel-0" role="tabpanel" aria-labelledby="simple-tab-0">
+    <div role="status" class="error text-danger h1 mt-5">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+    </div>
+    <div class="tab-pane active flex-grow-1 " id="tabpanel-chart" role="tabpanel" aria-labelledby="simple-tab-0">
         <canvas id="data-chart"></canvas>
     </div>
-    <div class="tab-pane flex-grow-1 overflow-auto " id="simple-tabpanel-1" role="tabpanel"
+    <div class="tab-pane flex-grow-1 overflow-auto " id="tabpanel-table" role="tabpanel"
          aria-labelledby="simple-tab-1">
         <table class="data-table" id="data-table">
             <thead></thead>
@@ -640,9 +643,14 @@
     async function updateData(params) {
         const tabData = document.getElementById('tab-report-data');
         tabData.classList.add('loading');
+        tabData.classList.remove('error');
 
         const data = await getData(params);
-        if (data === false) return;
+        if (data === false) {
+            tabData.classList.remove('loading');
+            tabData.classList.add('error');
+            return;
+        }
 
         const config = buildChartConfig(data);
 
