@@ -104,7 +104,10 @@
            aria-controls="simple-tabpanel-1" aria-selected="false">Table</a>
     </li>
 </ul>
-<div class="tab-content flex-grow-1 d-flex flex-column pt-4" id="tab-content">
+<div class="tab-content flex-grow-1 d-flex flex-column pt-4" id="tab-report-data">
+    <div role="status" class="spinner spinner-border text-secondary mt-5">
+      <span class="visually-hidden">Loading...</span>
+    </div>
     <div class="tab-pane active flex-grow-1 " id="simple-tabpanel-0" role="tabpanel" aria-labelledby="simple-tab-0">
         <canvas id="data-chart"></canvas>
     </div>
@@ -635,6 +638,9 @@
     }
 
     async function updateData(params) {
+        const tabData = document.getElementById('tab-report-data');
+        tabData.classList.add('loading');
+
         const data = await getData(params);
         if (data === false) return;
 
@@ -654,6 +660,7 @@
         dataChart.update();
 
         updateTable('#data-table', data, 'ts', columns);
+        tabData.classList.remove('loading');
     }
 
     form.addEventListener('change', (e) => {

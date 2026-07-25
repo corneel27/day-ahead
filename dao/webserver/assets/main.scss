@@ -3,19 +3,20 @@
 @import "prismjs/themes/prism.css";
 
 .icon-nav {
-    .bi{
-        font-size: 200%;
-    }
-    .form-control {
-        margin-top: 1em;
-    }
+  .bi {
+    font-size: 200%;
+  }
+
+  .form-control {
+    margin-top: 1em;
+  }
 }
 
 h1 {
   font-size: 2rem;
 }
 
-.dataframe.data, .data-table{
+.dataframe.data, .data-table {
   @extend .table;
   @extend .table-striped;
   @extend .table-hover;
@@ -23,12 +24,30 @@ h1 {
   @extend .table-bordered;
   @extend .border-primary;
   @extend .my-2;
-  td, th:not(.text-center)
-  {
+
+  td, th:not(.text-center) {
     text-align: right;;
   }
 }
 
 #data-chart {
   min-height: calc(80vh);
+}
+
+#tab-report-data {
+  .spinner {
+    display: none;
+    left: 50%;
+    position: absolute;
+  }
+
+  &.loading {
+    .spinner {
+      display: block;
+    }
+
+    .tab-pane {
+      opacity: 0.3;
+    }
+  }
 }
