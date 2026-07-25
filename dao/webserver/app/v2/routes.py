@@ -17,7 +17,6 @@ def inject_data():
     }
 
 # globals
-web_datapath = "/static/data/"
 app_datapath = "app/static/data/"
 
 VITE_DEV_SERVER = "http://localhost:5173/static/build"
@@ -272,7 +271,7 @@ def chart():
     if kwargs is None:
         return render_template("v2/no-run.html", )
 
-    kwargs["image"] = web_datapath + "images/" + kwargs["filename"]
+    kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
     return render_template(
         "v2/chart.html",
         **kwargs
@@ -462,7 +461,7 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None):
             active_view=view,
         )
     elif subject == "save_cost":
-        report_df = report.calc_saving_consumption(
+        report_df = report.calc_saving_cost(
             active_period=period,
             _tot=tot,
             active_interval=interval,
