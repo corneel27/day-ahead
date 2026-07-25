@@ -461,7 +461,7 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None):
             active_view=view,
         )
     elif subject == "save_cost":
-        report_df = report.calc_saving_consumption(
+        report_df = report.calc_saving_cost(
             active_period=period,
             _tot=tot,
             active_interval=interval,
