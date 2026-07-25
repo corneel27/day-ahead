@@ -1830,20 +1830,63 @@ class DaCalc(DaBase):
             for _ in range(EV)
         ]  # penalty per interval in eur
 
+        ev_energy_slack = 0.001  # kWh
+        # minimale schakelduur voor de laadpaal (seconden). Korter is niet
+        # uitvoerbaar: een relais dat een paar seconden dichtvalt levert niets
+        # nuttigs op, en de stoptijd wordt afgerond op hele minuten.
+        ev_min_duty_s = 300.0
+
         for e in range(EV):
             if (energy_needed[e] > 0) and (ready_u[e] < U):
+                # kleinste hoeveelheid energie die met deze minimumduur nog
+                # geleverd kan worden (kWh). Is er minder nodig, dan zou de eis
+                # het model onoplosbaar maken en slaan we hem over.
+                min_stage_accu = min(
+                    ev_charge_stages[e][cs]["accu_power"]
+                    for cs in range(1, ECS[e])
+                    if ev_charge_stages[e][cs]["accu_power"] > 0
+                )
+                min_deliverable = min_stage_accu * ev_min_duty_s / 3600
+                apply_min_duty = energy_needed[e] >= min_deliverable + ev_energy_slack
+                if not apply_min_duty:
+                    logging.info(
+                        f"EV {self.ev_options[e].name}: minimale schakelduur van "
+                        f"{ev_min_duty_s:.0f} s wordt niet toegepast; er is maar "
+                        f"{energy_needed[e]:.3f} kWh nodig en de kortste "
+                        f"schakelactie levert al {min_deliverable:.3f} kWh."
+                    )
+
                 for u in range(ready_u[e] + 1):
                     # laden, alles uitgedrukt in vermogen kW
+                    # uur-fractie van dit interval: het laatste interval loopt
+                    # maar tot de deadline, de rest is een heel interval
+                    if u == ready_u[e]:
+                        hr_fraction = (ev_ready_dt[e] - tijd[u]).total_seconds() / 3600
+                    else:
+                        hr_fraction = hour_fraction[u]
+
+                    # stage_factor is een fractie van hr_fraction, niet van een
+                    # heel uur. De minimale duty verschilt dus per interval. Is
+                    # het interval zelf korter dan de minimumduur, dan wordt
+                    # min_duty 1: helemaal aan of helemaal uit.
+                    if apply_min_duty and hr_fraction > 0:
+                        min_duty = min(1.0, ev_min_duty_s / (hr_fraction * 3600))
+                    else:
+                        min_duty = 0.0
+
                     for cs in range(ECS[e]):
                         model += stage_on[e][cs][u] - stage_factor[e][cs][u] <= 0.9999
                         model += stage_on[e][cs][u] - stage_factor[e][cs][u] >= 0
+                        # een echte stap staat uit, of draait minstens
+                        # ev_min_duty_s seconden
+                        if cs >= 1 and min_duty > 0:
+                            model += (
+                                stage_factor[e][cs][u] >= min_duty * stage_on[e][cs][u]
+                            )
+
                     for cs in range(ECS[e]):
                         # daadwerkelijk ac verbruik (kWh) per stage =
                         # vermogen van de stap x oplaadfactor (0..1) x uur-fractie
-                        if u == ready_u[e]:
-                            hr_fraction = (ev_ready_dt[e] - tijd[u]).total_seconds() / 3600
-                        else:
-                            hr_fraction = hour_fraction[u]
                         model += (
                             stage_consumption[e][cs][u]
                             == ev_charge_stages[e][cs]["power"]
@@ -1969,7 +2012,6 @@ class DaCalc(DaBase):
                 # above) can turn a trivially-achievable target into a hard
                 # infeasibility from float noise alone. 1 Wh (0.001 kWh) is
                 # far below anything physically meaningful here.
-                ev_energy_slack = 0.001  # kWh
                 model += (
                     xsum(ev_accu_in[e][u] for u in range(ready_u[e] + 1))
                     <= energy_needed[e] + ev_energy_slack
