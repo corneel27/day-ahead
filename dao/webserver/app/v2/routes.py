@@ -17,7 +17,6 @@ def inject_data():
     }
 
 # globals
-web_datapath = "/static/data/"
 app_datapath = "app/static/data/"
 
 VITE_DEV_SERVER = "http://localhost:5173/static/build"
@@ -272,7 +271,7 @@ def chart():
     if kwargs is None:
         return render_template("v2/no-run.html", )
 
-    kwargs["image"] = web_datapath + "images/" + kwargs["filename"]
+    kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
     return render_template(
         "v2/chart.html",
         **kwargs
