@@ -36,8 +36,11 @@
 
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="javascript:selectValues('fields', '')">All</a></li>
-                        <li><a class="dropdown-item" href="javascript:selectValues('fields', 'cons,prod,cost,profit')">Grid</a></li>
-                        <li><a class="dropdown-item" href="javascript:selectValues('fields', 'pv_ac,pv_dc,ev,bat_in,bat_out,boil,wp')">Balance</a></li>
+                        <li><a class="dropdown-item" href="javascript:selectValues('fields', 'cons,prod,cost,profit')">Grid</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                               href="javascript:selectValues('fields', 'pv_ac,pv_dc,ev,bat_in,bat_out,boil,wp')">Balance</a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -118,6 +121,7 @@
 <script>
     const form = document.getElementById('report-form');
     const chartCanvas = document.getElementById('data-chart');
+    let controller = new AbortController();
 
     let dataChart = null;
 
@@ -150,13 +154,32 @@
     }
 
     async function getData(params) {
-        const response = await fetch(`{{url_for('api.data')}}?${params.toString()}`);
-
-        if (!response.ok) {
-            throw new Error(`Could not fetch chart data: ${response.status}`);
+        // Cancel the previous request if it exists
+        if (controller) {
+            controller.abort();
         }
 
-        return response.json();
+        // Create a new controller for the new request
+        controller = new AbortController();
+
+        return fetch(
+            `{{url_for('api.data')}}?${params.toString()}`,
+            {signal: controller.signal}
+        )
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Could not fetch chart data: ${response.status}`);
+                }
+                return response.json();
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') {
+                    console.log('Fetch request aborted');
+                } else {
+                    console.error('Fetch error:', err);
+                }
+                return false;
+            });
     }
 
     function getDatasets(data) {
@@ -599,8 +622,22 @@
         dataChart.update();
     }
 
+    let timeout;
+    function updateDataThrottled(params) {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+        // Throttle with 100ms for now, as API responds quite fast usually
+        // A larger value would make the interface feel sluggish, while the API is very fast
+        // an improvement could be: measure the avg response time of api, if fast, low throttle, if slow, larger throttle
+        // to prevent server overload
+        timeout = setTimeout(() => { updateData(params) }, 100);
+    }
+
     async function updateData(params) {
         const data = await getData(params);
+        if (data === false) return;
+
         const config = buildChartConfig(data);
 
         if (dataChart === null) {
@@ -624,18 +661,14 @@
         updateUrl(params);
 
         if (e.target.id !== 'preset') {
-            updateData(params).catch(error => {
-                console.error(error);
-            });
+            updateDataThrottled(params);
         } else {
             dataChart.update("none");
         }
     });
 
     window.addEventListener('load', () => {
-        updateData(getFormParams()).catch(error => {
-            console.error(error);
-        });
+        updateData(getFormParams());
     });
 
     function toDatetimeLocalValue(date) {
@@ -728,7 +761,8 @@
 
         inputStart.value = toDatetimeLocalValue(start);
         inputEnd.value = toDatetimeLocalValue(end);
-        updateData(getFormParams());
+
+        form.dispatchEvent(new Event('change'));
     }
 
     function updateTable(tableSelector, data, rowHeaderColumn, dataColumns) {

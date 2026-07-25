@@ -18,10 +18,8 @@ def data():
     start = request.args.get('start')
     end = request.args.get('end')
     aggregate = request.args.get('aggregate')
-    fields = request.args.get('fields')
-
-    if fields:
-        fields = fields.split(",")
+    fields = request.args.get('fields', default="")
+    fields = fields.split(",")
 
     timezone_raw = request.args.get('timezone') if None else "Europe/Amsterdam"
 
