@@ -396,7 +396,8 @@
       },
       "charge switch": "switch.wvwzzzauz_charging",
       "entity set charging ampere": "input_number.set_car_charging_ampere",
-      "entity stop charging": "input_datetime.stop_laden_ev"
+      "entity stop charging": "input_datetime.stop_laden_ev",
+      "entity charging schedule": "input_text.ev_laadplanning"
     }
   ],
   "machines": [

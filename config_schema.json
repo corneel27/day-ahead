@@ -1138,6 +1138,22 @@
           "x-ui-section": "General",
           "x-ui-widget-filter": "input_datetime,datetime",
           "title": "Entity Stop Charging"
+        },
+        "entity charging schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA text entity for the calculated charging schedule",
+          "x-help": "Optional Home Assistant text entity where DAO writes all planned EV charging periods after each optimization.",
+          "x-ui-section": "General",
+          "x-ui-widget-filter": "input_text,text",
+          "title": "Entity Charging Schedule"
         }
       },
       "required": [

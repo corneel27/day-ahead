@@ -13,6 +13,7 @@ import pandas as pd
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS, INTEGER
 from pandas.core.dtypes.inference import is_number
 from dao.prog.da_report import Report
+from dao.prog.ev_schedule import format_ev_charge_schedule
 from utils import (
     interpolate,
     convert_timestr,
@@ -3745,6 +3746,23 @@ class DaCalc(DaBase):
                 logging.info(f"Aantal start/stops: {ev_start_stops_sum[e].x:2.0f}")
                 logging.info(f"Penalty per start/stop: {ev_switch_cost[e]:4.3f}")
                 logging.info(f"Totale switch kosten: {switch_cost[e].x:4.2f}")
+                entity_charging_schedule = self.ev_options[e].entity_charging_schedule
+                if entity_charging_schedule is not None:
+                    charging_schedule = format_ev_charge_schedule(
+                        tijd,
+                        [c_ev[e][u].x for u in range(U)],
+                        self.interval_s,
+                    )
+                    logging.info(
+                        f"Laadschema {self.ev_options[e].name}: {charging_schedule}"
+                    )
+                    if self.debug:
+                        logging.info(
+                            f"Laadschema voor {self.ev_options[e].name} zou naar "
+                            f"'{entity_charging_schedule}' zijn geschreven"
+                        )
+                    else:
+                        self.set_value(entity_charging_schedule, charging_schedule)
                 entity_charge_switch = self.ev_options[e].charge_switch
                 entity_charging_ampere = self.ev_options[e].entity_set_charging_ampere
                 if ev_instant_charge[e]:
