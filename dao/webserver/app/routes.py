@@ -263,6 +263,12 @@ bewerkingen = {
         "parameters": ["prijzen_start", "prijzen_tot"],
         "file_name": "prices",
     },
+    "get_price_forecast": {
+        "name": "Day ahead forecast-extensie ophalen",
+        "cmd": ["python3", "../prog/day_ahead.py", "price_forecast"],
+        "task": "get_day_ahead_price_forecast",
+        "file_name": "price_forecast",
+    },
     "calc_baseloads": {
         "name": "Bereken de baseloads",
         "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],

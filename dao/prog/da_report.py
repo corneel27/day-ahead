@@ -3042,6 +3042,23 @@ class Report(DaBase):
         df_da = self.db_da.get_column_data(
             "values", "da", start=start, end=end, agg_func=agg_func
         )
+        ext_provider = str(
+            getattr(self.prices_options, "forecast_extension_provider", "none") or "none"
+        ).lower()
+        ext_hours = self.prices._forecast_extension_hours(
+            lambda eid: self.get_state(eid).state
+        )
+        if ext_provider != "none" and ext_hours > 0:
+            df_da_ext = self.db_da.get_column_data(
+                "values", "da_ext", start=start, end=end, agg_func=agg_func
+            )
+            if len(df_da_ext) > 0:
+                df_da["source_rank"] = 0
+                df_da_ext["source_rank"] = 1
+                df_da = pd.concat([df_da, df_da_ext], ignore_index=True)
+                df_da = df_da.sort_values(["time", "source_rank"])
+                df_da = df_da.drop_duplicates(subset=["time"], keep="first")
+                df_da = df_da.drop(columns=["source_rank"])
         old_dagstr = ""
         taxes_l = 0
         taxes_t = 0

@@ -1270,7 +1270,7 @@ Configure electricity market prices and tariff components for accurate cost opti
 ## Price Components
 
 Total electricity cost consists of:
-1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)
+1. **Market price**: Imported official day-ahead spot price (nordpool/entsoe/easyenergy/tibber)
 2. **Energy taxes**: Government energy taxes
 3. **Supplier costs**: Your supplier's markup/fees
 4. **VAT**: Value-added tax on sum of above
@@ -1294,7 +1294,14 @@ System uses tariff active on optimization date.
 
 - **nordpool**: Nord Pool (Nordic/Baltic markets)
 - **entsoe**: ENTSO-E Transparency Platform (all European markets)
+- **easyenergy**: EasyEnergy tariff endpoint
 - **tibber**: Tibber API (if using Tibber as supplier)
+
+## Optional Horizon Extension
+
+- **forecast extension provider**: Optional forecast provider for extending the imported official horizon
+- **forecast extension hours**: How many additional hours should be appended beyond the official horizon
+- **energypriceforecast**: Provider-specific extension feed from Energy Price Forecast EU
 
 ## Tips
 
@@ -1310,8 +1317,14 @@ System uses tariff active on optimization date.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
+| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `easyenergy`, `tibber` |
 | `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
+| `forecast extension provider` | string | No | `"none"` | Optional provider for extending the day-ahead horizon with forecast data. Options: `none`, `energypriceforecast`, `dayaheadprediction` |
+| `forecast extension hours` | [FlexInt](#flexint) | No | `0` | How many additional hours should be appended beyond the official day-ahead horizon _Integer or HA entity, effective value between 0 and 168_ |
+| `energypriceforecast-extension-api-url` | string (optional) | No | `"https://api.energypriceforecast.eu/api/v1/dao/prices"` | Energy Price Forecast EU extension API URL |
+| `energypriceforecast-extension-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | Energy Price Forecast EU extension API key (can use !secret) _Use !secret for API tokens_ |
+| `energypriceforecast-extension-country` | string (optional) | No | `null` | Override country code for Energy Price Forecast EU extension |
+| `day-ahead-prediction-extension-url` | string (optional) | No | `"https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"` | day-ahead-prediction extension URL |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `cost supplier consumption` | object | Yes | — | Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
@@ -1328,11 +1341,35 @@ System uses tariff active on optimization date.
 
 **`source day ahead`**
 
-Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.
+Data source for imported official day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'easyenergy' for the EasyEnergy public tariff feed, 'tibber' if using Tibber integration.
 
 **`entsoe-api-key`**
 
 API key for ENTSO-E Transparency Platform. Required if source_day_ahead='entsoe'. Get free key at transparency.entsoe.eu. Use !secret for security.
+
+**`forecast extension provider`**
+
+Optional provider that extends the imported official day-ahead horizon with forecast prices. The extension never replaces already imported official prices.
+
+**`forecast extension hours`**
+
+Number of hours to extend beyond the imported official day-ahead horizon. Supports either a fixed integer or a Home Assistant entity. DAO translates the resolved value into the provider-specific URL parameter.
+
+**`energypriceforecast-extension-api-url`**
+
+Provider-specific URL for the Energy Price Forecast EU horizon extension feed. Expected response: format=dao-prices with entries[].
+
+**`energypriceforecast-extension-api-key`**
+
+Optional API key for the Energy Price Forecast EU extension feed. If set, DAO sends it as an Authorization Bearer token. Use !secret for security.
+
+**`energypriceforecast-extension-country`**
+
+Optional explicit country/market code for the Energy Price Forecast EU extension feed, for example 'nl', 'de', 'dk1' or 'no3'. Leave empty to map from DAO country automatically.
+
+**`day-ahead-prediction-extension-url`**
+
+Provider-specific URL for the corneel27/day-ahead-prediction extension feed. Expected response: JSON array with fields like time_ts and prediction. This provider currently only fits the NL market.
 
 **`energy taxes consumption`**
 
@@ -1658,6 +1695,7 @@ Define when automatic tasks run using time patterns.
 - **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)
 - **get_tibber_data**: Fetch Tibber prices (if using Tibber)
 - **get_day_ahead_prices**: Fetch day-ahead market prices
+- **get_day_ahead_price_forecast**: Refresh optional forecast-based horizon extension
 
 ### Optimization
 - **calc_optimum**: Run main optimization algorithm
@@ -1673,6 +1711,7 @@ Define when automatic tasks run using time patterns.
   "active": true,
   "schedule": [
     {"time": "0435", "action": "get_day_ahead_prices"},
+    {"time": "xx20", "action": "get_day_ahead_price_forecast"},
     {"time": "0445", "action": "get_meteo_data"},
     {"time": "0500", "action": "calc_optimum"},
     {"time": "xx00", "action": "calc_baseloads"},
@@ -1683,10 +1722,11 @@ Define when automatic tasks run using time patterns.
 
 ## Typical Schedule
 
-1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)
-2. **05:00**: Run optimization with fresh data
-3. **Hourly**: Update baseload calculations
-4. **03:00**: Clean old data (low activity time)
+1. **04:00-05:00**: Fetch official prices and weather
+2. **xx20 / every few hours**: Refresh optional forecast horizon extension
+3. **05:00**: Run optimization with fresh data
+4. **Hourly**: Update baseload calculations
+5. **03:00**: Clean old data (low activity time)
 
 ## Tips
 
@@ -1989,7 +2029,7 @@ _A single scheduled task entry._
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
-| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `calc_optimum`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
+| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `get_day_ahead_price_forecast`, `calc_optimum`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
