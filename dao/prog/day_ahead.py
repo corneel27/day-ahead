@@ -2597,6 +2597,8 @@ class DaCalc(DaBase):
         ma_planned_start_dt = []  # start tijdstip planning window
         ma_planned_end_dt = []  # eind tijdstip planning window
         ma_instant_start = []  # direct starten
+        ma_flex_cost = []  # penalty in euro/kwartier vertraging t.o.v. het begin van de window
+        ma_flex_cost_max = []  # maximum totale flex cost in euro, 0 = geen maximum
         for m in range(M):
             error = False
             ma_name.append(self.machines[m].name)
@@ -2609,6 +2611,8 @@ class DaCalc(DaBase):
             ma_entity_plan_end.append(
                 self.machines[m].entity_calculated_end
             )
+            ma_flex_cost.append(self.machines[m].flex_cost.resolve(ha_getter))  # FlexFloat
+            ma_flex_cost_max.append(self.machines[m].flex_cost_max.resolve(ha_getter))  # FlexFloat
             entity_machine_program = self.machines[m].entity_selected_program
             if entity_machine_program:
                 try:
@@ -2872,6 +2876,22 @@ class DaCalc(DaBase):
             [model.add_var(var_type=BINARY) for _ in range(KW[m])] for m in range(M)
         ]
 
+        # flex cost per machine: penalty die oploopt naarmate de machine later in
+        # zijn planning-window start. Net als bij de EV switch_cost zorgt dit
+        # ervoor dat bij een klein verschil in kosten de machine toch eerder start.
+        flex_cost_ma = [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(M)]
+        for m in range(M):
+            if KW[m] == 0:
+                model += flex_cost_ma[m] == 0
+            else:
+                model += flex_cost_ma[m] == xsum(
+                    ma_flex_cost[m] * kw * ma_start[m][kw] for kw in range(KW[m])
+                )
+                # flex cost max: bovengrens op de extra kosten door de flex cost
+                # penalty. 0 (default) betekent geen maximum.
+                if ma_flex_cost_max[m] > 0:
+                    model += flex_cost_ma[m] <= ma_flex_cost_max[m]
+
         # machine aan per kwartier per run
         # ma_on = [[[model.add_var(var_type=BINARY) for kw in range(KW[m])]
         #           for r in range(R[m])] for m in range(M)]
@@ -3051,6 +3071,7 @@ class DaCalc(DaBase):
             xsum(c_l[u] * pl[u] - c_t[u] * pt[u] for u in range(U))
             + xsum(cycle_cost[b] + penalty_cost[b] for b in range(B))
             + xsum(switch_cost[e] for e in range(EV))
+            + xsum(flex_cost_ma[m] for m in range(M))
             + xsum(
                 (soc_mid[b][0] - soc_mid[b][U])
                 * one_soc[b]
@@ -3079,11 +3100,31 @@ class DaCalc(DaBase):
             model.verbose = 0
         model.check_optimization_results()
 
+        # extra kosten door de flex cost-voorkeur (zowel de zachte kwartier-
+        # penalty als een eventueel flex cost max budget) - alleen relevant
+        # bij strategie "minimize cost"
+        machine_flex_extra_cost = 0.0
+
         # kosten optimalisering
         if self.strategy == "minimize cost":
             strategie = "minimale kosten"
             logging.info(f"Strategie: {strategie}")
             logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
+
+            flex_terms = xsum(flex_cost_ma[m] for m in range(M))
+
+            # baseline: de echt goedkoopste oplossing, zonder de flex cost-
+            # voorkeur voor eerder starten, puur om het effect ervan te
+            # kunnen rapporteren. Deze oplossing wordt niet gebruikt.
+            baseline_real_cost = None
+            if any(ma_flex_cost[m] > 0 or ma_flex_cost_max[m] > 0 for m in range(M)):
+                model.objective = minimize(cost - flex_terms)
+                model.optimize()
+                if model.num_solutions > 0:
+                    baseline_real_cost = cost.x - sum(
+                        flex_cost_ma[m].x for m in range(M)
+                    )
+
             model.objective = minimize(cost)
             start_calc = time.perf_counter()
             model.optimize()
@@ -3092,6 +3133,50 @@ class DaCalc(DaBase):
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return None
+
+            # machines met een flex cost max: binnen dat kostenbudget zo vroeg
+            # mogelijk starten (i.p.v. de goedkoopste toegestane starttijd).
+            ma_flex_early = [
+                m for m in range(M) if KW[m] > 0 and ma_flex_cost_max[m] > 0
+            ]
+            if ma_flex_early:
+                min_cost = cost.x
+                budget = sum(ma_flex_cost_max[m] for m in ma_flex_early)
+                model += cost <= min_cost + budget
+                model.objective = minimize(
+                    xsum(
+                        kw * ma_start[m][kw]
+                        for m in ma_flex_early
+                        for kw in range(KW[m])
+                    )
+                )
+                model.optimize()
+                if model.num_solutions == 0:
+                    logging.warning(
+                        "Geen oplossing bij herberekening voor zo vroeg mogelijk "
+                        "starten binnen flex cost max; val terug op goedkoopste "
+                        "oplossing"
+                    )
+                    model += cost <= min_cost
+                    model.objective = minimize(cost)
+                    model.optimize()
+                else:
+                    logging.info(
+                        f"Herberekening: machines zo vroeg mogelijk gestart "
+                        f"binnen budget van {budget:.2f} euro "
+                        f"(kosten na herberekening: {cost.x:.2f} euro, "
+                        f"was {min_cost:.2f} euro)"
+                    )
+
+            # echte extra kosten (in euro) door de flex cost-voorkeur, t.o.v.
+            # de goedkoopste oplossing zonder die voorkeur
+            if baseline_real_cost is not None:
+                final_real_cost = cost.x - sum(
+                    flex_cost_ma[m].x for m in range(M)
+                )
+                machine_flex_extra_cost = max(
+                    0.0, final_real_cost - baseline_real_cost
+                )
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
             logging.info(f"Strategie: {strategie}")
@@ -3546,6 +3631,9 @@ class DaCalc(DaBase):
         total_switch_cost = 0
         for e in range(EV):
             total_switch_cost += switch_cost[e].x
+        total_flex_cost_ma = 0
+        for m in range(M):
+            total_flex_cost_ma += flex_cost_ma[m].x
         boiler_storage = (
             (boiler_temp[0].x - boiler_temp[U].x)
             * (spec_heat_boiler / (3600 * cop_boiler))
@@ -3557,6 +3645,7 @@ class DaCalc(DaBase):
             + total_cycle_cost
             + total_penalty_cost
             + total_switch_cost
+            + total_flex_cost_ma
             + battery_storage
             + boiler_storage
         )
@@ -3568,12 +3657,15 @@ class DaCalc(DaBase):
             f"Cycle cost         {total_cycle_cost: 7.2f}\n"
             f"Penalty cost       {total_penalty_cost: 7.2f}\n"
             f"EV switch costs    {total_switch_cost: 7.2f}\n"
+            f"Machine flex costs {total_flex_cost_ma: 7.2f}\n"
+            f"  waarvan zo vroeg mogelijk binnen budget: "
+            f"{machine_flex_extra_cost: 7.2f} "
+            f"(zit al in Cost consumption)\n"
             f"Battery storage    {battery_storage: 7.2f}\n"
             f"Boiler storage     {boiler_storage: 7.2f}\n"
             f"Profit production  {profit_production: 7.2f}\n"
             f"Total              {total_cost: 7.2f}\n"
-            f"Cost after optimize            {cost.x: 7.2f}\n"
-            f"Profit:                        {old_cost_da - cost.x: 7.2f}"
+            f"Cost after optimize            {cost.x: 7.2f}\n"            f"Profit:                        {old_cost_da - cost.x: 7.2f}"
         )
 
         # doorzetten van alle settings naar HA

@@ -4,7 +4,7 @@ Appliance/machine configuration models (washing machine, dishwasher, etc.).
 
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
-from ..base import EntityId
+from ..base import EntityId, FlexFloat
 
 
 class MachineProgram(BaseModel):
@@ -108,6 +108,38 @@ class MachineConfig(BaseModel):
             "x-help": "Optional: Home Assistant entity to force immediate start, bypassing optimization. Useful for urgent wash cycles.",
             "x-ui-section": "Machine Specifications",
             "x-ui-widget-filter": "input_boolean,switch,button"
+        }
+    )
+    flex_cost: FlexFloat = Field(
+        default=FlexFloat(value=0.0),
+        alias="flex cost",
+        description="Flex cost in euro per kwartier (15 min) that the start is delayed",
+        json_schema_extra={
+            "x-help": "Virtual cost in euro per kwartier (15 minutes) that the calculated start is "
+                      "delayed within the planning window. Makes the optimizer prefer an earlier start "
+                      "when the cost difference with a later start is small. Set to 0 to disable "
+                      "(machine starts purely on lowest cost, regardless of timing). Can be a fixed "
+                      "number or a Home Assistant entity ID (e.g. an input_number helper) so you can "
+                      "tune it live.",
+            "x-unit": "euro/kwartier delay",
+            "x-ui-section": "General",
+            "x-validation-hint": "Must be >= 0, typically 0.001 - 0.02 euro/kwartier"
+        }
+    )
+    flex_cost_max: FlexFloat = Field(
+        default=FlexFloat(value=0.0),
+        alias="flex cost max",
+        description="Maximum extra cost in euro to let this machine start as early as possible",
+        json_schema_extra={
+            "x-help": "Budget in euro. When set (> 0), the machine starts at the earliest possible "
+                      "time whose total cost does not exceed the cheapest possible cost plus this "
+                      "budget — i.e. 'start as early as possible, but never spend more than this much "
+                      "extra to do it'. Set to 0 to disable (machine starts purely on lowest cost, "
+                      "regardless of timing; 'flex cost' can still be used as a soft tie-breaker). "
+                      "Can be a fixed number or a Home Assistant entity ID.",
+            "x-unit": "euro",
+            "x-ui-section": "General",
+            "x-validation-hint": "Must be >= 0. 0 means disabled (only 'flex cost' applies, if set)."
         }
     )
     
