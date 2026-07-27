@@ -54,7 +54,7 @@ class DaCalc(DaBase):
         # self.start_logging()
 
     def _preload_next_interval_controls_enabled(self) -> bool:
-        return bool(getattr(self.grid, "preload_next_interval_controls", True))
+        return bool(getattr(self.grid, "preload_next_interval_controls", False))
 
     def restore_next_interval_controls(self, interval_start: dt.datetime):
         """Restore cached battery and EV controls for the exact next interval."""
@@ -68,7 +68,7 @@ class DaCalc(DaBase):
         interval_start_str = interval_start.strftime("%Y-%m-%d %H:%M:%S")
         if cache_data.get("interval_start") != interval_start_str:
             logging.info(
-                "Preload overgeslagen: cache hoort niet bij het huidige interval %s",
+                "Preload skipped: cache does not match current interval %s",
                 interval_start_str,
             )
             return
@@ -102,7 +102,7 @@ class DaCalc(DaBase):
                     }
                 )
             except Exception as ex:
-                logging.warning(f"Kon preload voor batterij niet toepassen: {ex}")
+                logging.warning(f"Failed to apply battery preload controls: {ex}")
 
         applied_ev_controls = []
         for ev_control in cache_data.get("ev_controls", []):
@@ -138,29 +138,18 @@ class DaCalc(DaBase):
                     }
                 )
             except Exception as ex:
-                logging.warning(f"Kon preload voor EV niet toepassen: {ex}")
+                logging.warning(f"Failed to apply EV preload controls: {ex}")
 
         battery_summary, ev_summary = self._format_next_interval_controls_for_log(
             applied_battery_controls,
             applied_ev_controls,
         )
         logging.info(
-            "Vooraf berekende instellingen toegepast voor %s | batterijen=[%s] | ev=[%s]",
+            "Precomputed controls applied for %s | batteries=[%s] | ev=[%s]",
             interval_start_str,
             battery_summary,
             ev_summary,
         )
-
-    def _get_primary_battery_options(self):
-        if self.battery_options is None:
-            return None
-        if isinstance(self.battery_options, list) and len(self.battery_options) > 0:
-            return self.battery_options[0]
-        return self.battery_options
-
-    def _resolve_grid_setpoint_entity_id(self):
-        battery_options = self._get_primary_battery_options()
-        return self._get_option("entity_set_power_feedin", battery_options)
 
     def _load_next_interval_controls_cache(self) -> dict | None:
         cache_file = DaCalc._next_interval_controls_cache_file
@@ -168,7 +157,7 @@ class DaCalc(DaBase):
             return json.loads(cache_file.read_text(encoding="utf-8"))
         except Exception as ex:
             logging.warning(
-                f"Kon preload-cache niet lezen uit cachebestand ({cache_file}): {ex}"
+                f"Failed to read preload cache from cache file ({cache_file}): {ex}"
             )
             return None
 
@@ -182,7 +171,7 @@ class DaCalc(DaBase):
             )
         except Exception as ex:
             logging.warning(
-                f"Kon preload-cache niet opslaan in cachebestand ({cache_file}): {ex}"
+                f"Failed to write preload cache to cache file ({cache_file}): {ex}"
             )
 
     def _format_next_interval_controls_for_log(
@@ -191,19 +180,19 @@ class DaCalc(DaBase):
         battery_parts = []
         for control in battery_controls:
             battery_parts.append(
-                f"B{control['index']}: {control['net_power']}W, modus={control['operating_mode']}, stop={control['stop_datetime']}"
+                f"B{control['index']}: {control['net_power']}W, mode={control['operating_mode']}, stop={control['stop_datetime']}"
             )
         ev_parts = []
         for control in ev_controls:
             ev_part = f"EV{control['index']}: {control['ampere']}A"
             if "applied" in control:
-                ev_part += ", toegepast=" + ("ja" if control["applied"] else "nee")
+                ev_part += ", applied=" + ("yes" if control["applied"] else "no")
             if control.get("reason"):
-                ev_part += f", reden={control['reason']}"
+                ev_part += f", reason={control['reason']}"
             ev_parts.append(ev_part)
 
-        battery_summary = ", ".join(battery_parts) if battery_parts else "geen"
-        ev_summary = ", ".join(ev_parts) if ev_parts else "geen"
+        battery_summary = ", ".join(battery_parts) if battery_parts else "none"
+        ev_summary = ", ".join(ev_parts) if ev_parts else "none"
         return battery_summary, ev_summary
 
     def calc_optimum(
@@ -3813,6 +3802,99 @@ class DaCalc(DaBase):
         logging.debug("\n")
 
         try:
+            next_interval_cache_payload = None
+
+            def _calculate_battery_control_for_interval(
+                battery_index: int,
+                interval_index: int,
+                interval_dt: dt.datetime,
+            ) -> tuple[int, str, dt.datetime | None]:
+                interval_grid_balance = (
+                    abs(c_l[interval_index].x - c_t[interval_index].x) <= 0.01
+                )
+                net_power = int(
+                    1000
+                    * (
+                        ac_to_dc[battery_index][interval_index].x
+                        - ac_from_dc[battery_index][interval_index].x
+                    )
+                )
+                minimum_power = int(self.battery_options[battery_index].minimum_power)
+                operating_mode = self.battery_options[
+                    battery_index
+                ].entity_set_operating_mode_on
+                stop_dt = None
+                soc_at_interval_start = soc[battery_index][interval_index].x
+
+                if abs(net_power) <= 20:
+                    net_power = 0
+                    operating_mode = self.battery_options[
+                        battery_index
+                    ].entity_set_operating_mode_off
+                elif interval_grid_balance:
+                    operating_mode = self.battery_options[
+                        battery_index
+                    ].entity_set_operating_mode_on
+                elif (
+                    minimum_power > 0
+                    and abs(net_power) < minimum_power
+                    and self.battery_options[battery_index].entity_stop_inverter
+                    is not None
+                    and (
+                        len(reduce_power_low_soc[battery_index]) == 0
+                        or soc_at_interval_start
+                        > reduce_power_low_soc[battery_index][
+                            len(reduce_power_low_soc[battery_index]) - 1
+                        ]["soc"]
+                    )
+                    and (
+                        len(reduce_power_high_soc[battery_index]) == 0
+                        or soc_at_interval_start
+                        < reduce_power_high_soc[battery_index][0]["soc"]
+                    )
+                ):
+                    stop_dt = dt.datetime.fromtimestamp(
+                        int(
+                            interval_dt.timestamp()
+                            + (abs(net_power) / minimum_power) * self.interval_s
+                        )
+                    )
+                    net_power = minimum_power if net_power > 0 else -minimum_power
+                elif ac_to_dc[battery_index][interval_index].x > 0.0:
+                    net_power = round(
+                        sum(
+                            ac_to_dc_w[battery_index][interval_index][cs].x
+                            * charge_stages[battery_index][cs]["power"]
+                            for cs in range(CS[battery_index])
+                            if ac_to_dc_w[battery_index][interval_index][cs].x > 0
+                        )
+                    )
+                elif ac_from_dc[battery_index][interval_index].x > 0.0:
+                    net_power = -round(
+                        sum(
+                            ac_from_dc_w[battery_index][interval_index][ds].x
+                            * discharge_stages[battery_index][ds]["power"]
+                            for ds in range(DS[battery_index])
+                            if ac_from_dc_w[battery_index][interval_index][ds].x > 0
+                        )
+                    )
+
+                return net_power, operating_mode, stop_dt
+
+            def _calculate_ev_ampere_for_interval(
+                ev_index: int,
+                interval_index: int,
+            ) -> tuple[int, float]:
+                if ready_u[ev_index] < interval_index:
+                    return 0, 0.0
+
+                for cs in range(ECS[ev_index])[1:]:
+                    stage_value = stage_factor[ev_index][cs][interval_index].x
+                    if stage_value > 0:
+                        return ev_charge_stages[ev_index][cs]["ampere"], stage_value
+
+                return 0, 0.0
+
             if self.boiler_present:
                 if float(c_b[0].x) > 0.0:
                     if self.debug:
@@ -3871,79 +3953,28 @@ class DaCalc(DaBase):
                 logging.info(f"Grid balanceren: {balance_state}")
             grid_set_point = round(1000 * (c_l[0].x - c_t[0].x) / hour_fraction[0], 0)
             logging.info(f"Grid set point: {grid_set_point} W")
-            next_grid_set_point = grid_set_point
-            if U > 1:
-                next_grid_set_point = round(
-                    1000 * (c_l[1].x - c_t[1].x) / hour_fraction[1], 0
-                )
-            if U > 1:
-                logging.info(
-                    "Verwachte grid set point volgend interval (%s): %s W",
-                    tijd[1].strftime("%Y-%m-%d %H:%M:%S"),
-                    next_grid_set_point,
-                )
+            next_grid_set_point = round(
+                1000 * (c_l[1].x - c_t[1].x) / hour_fraction[1], 0
+            )
+            logging.info(
+                "Verwachte grid set point volgend interval (%s): %s W",
+                tijd[1].strftime("%Y-%m-%d %H:%M:%S"),
+                next_grid_set_point,
+            )
             if not self.debug:
-                # export the ess grid setpoint in W
-                setpoint_entity_id = self._resolve_grid_setpoint_entity_id()
-                if setpoint_entity_id is not None:
-                    logging.info(
-                        "HA write (bron=grid_set_point_huidig): %s W -> %s",
-                        grid_set_point,
-                        setpoint_entity_id,
-                    )
-                    self.set_value(setpoint_entity_id, grid_set_point)
-                else:
-                    logging.info(
-                        "Geen grid setpoint-entity geconfigureerd; setpoint niet naar HA geschreven"
-                    )
+                self.set_entity_value("entity grid setpoint", self.grid, grid_set_point)
             if not self.debug and self._preload_next_interval_controls_enabled():
-                next_interval_cache_payload = None
                 next_interval_index = 1
                 next_interval_dt = tijd[next_interval_index]
                 battery_controls = []
                 for b in range(B):
-                    next_grid_balance = abs(c_l[next_interval_index].x - c_t[next_interval_index].x) <= 0.01
-                    net_power = int(
-                        1000
-                        * (ac_to_dc[b][next_interval_index].x - ac_from_dc[b][next_interval_index].x)
+                    net_power, operating_mode, stop_dt = (
+                        _calculate_battery_control_for_interval(
+                            b,
+                            next_interval_index,
+                            next_interval_dt,
+                        )
                     )
-                    minimum_power = int(self.battery_options[b].minimum_power)
-                    operating_mode = self.battery_options[b].entity_set_operating_mode_on
-                    stop_dt = None
-                    soc_at_interval_start = soc[b][next_interval_index].x
-                    if abs(net_power) <= 20:
-                        net_power = 0
-                        operating_mode = self.battery_options[b].entity_set_operating_mode_off
-                    elif not next_grid_balance and minimum_power > 0 and abs(net_power) < minimum_power and self.battery_options[b].entity_stop_inverter is not None and (
-                        len(reduce_power_low_soc[b]) == 0
-                        or soc_at_interval_start > reduce_power_low_soc[b][len(reduce_power_low_soc[b]) - 1]["soc"]
-                    ) and (
-                        len(reduce_power_high_soc[b]) == 0
-                        or soc_at_interval_start < reduce_power_high_soc[b][0]["soc"]
-                    ):
-                        stop_dt = dt.datetime.fromtimestamp(
-                            int(
-                                next_interval_dt.timestamp()
-                                + (abs(net_power) / minimum_power) * self.interval_s
-                            )
-                        )
-                        net_power = minimum_power if net_power > 0 else -minimum_power
-                    elif ac_to_dc[b][next_interval_index].x > 0.0:
-                        net_power = round(
-                            sum(
-                                ac_to_dc_w[b][next_interval_index][cs].x * charge_stages[b][cs]["power"]
-                                for cs in range(CS[b])
-                                if ac_to_dc_w[b][next_interval_index][cs].x > 0
-                            )
-                        )
-                    elif ac_from_dc[b][next_interval_index].x > 0.0:
-                        net_power = -round(
-                            sum(
-                                ac_from_dc_w[b][next_interval_index][ds].x * discharge_stages[b][ds]["power"]
-                                for ds in range(DS[b])
-                                if ac_from_dc_w[b][next_interval_index][ds].x > 0
-                            )
-                        )
                     battery_controls.append(
                         {
                             "index": b,
@@ -3959,12 +3990,10 @@ class DaCalc(DaBase):
 
                 ev_controls = []
                 for e in range(EV):
-                    ampere = 0
-                    if ready_u[e] >= next_interval_index:
-                        for cs in range(ECS[e])[1:]:
-                            if stage_factor[e][cs][next_interval_index].x > 0:
-                                ampere = ev_charge_stages[e][cs]["ampere"]
-                                break
+                    ampere, _ = _calculate_ev_ampere_for_interval(
+                        e,
+                        next_interval_index,
+                    )
                     ev_controls.append({"index": e, "ampere": ampere})
 
                 self._store_next_interval_controls_cache(
@@ -3984,7 +4013,7 @@ class DaCalc(DaBase):
                     ev_controls,
                 )
                 logging.info(
-                    "Vooraf berekende instellingen gecached voor %s | batterijen=[%s] | ev=[%s]",
+                    "Precomputed controls cached for %s | batteries=[%s] | ev=[%s]",
                     next_interval_dt.strftime("%Y-%m-%d %H:%M:%S"),
                     battery_summary,
                     ev_summary,
@@ -4073,28 +4102,23 @@ class DaCalc(DaBase):
                     entity_stop_laden = self.ev_options[e].entity_stop_charging
                 old_switch_state = self.get_state(entity_charge_switch).state
                 old_ampere_state = self.get_state(entity_charging_ampere).state
-                new_ampere_state = 0
-                new_switch_state = "off"
+                new_ampere_state, first_stage_factor = _calculate_ev_ampere_for_interval(
+                    e,
+                    0,
+                )
+                new_switch_state = "on" if new_ampere_state > 0 else "off"
                 new_state_stop_laden = None  # "2000-01-01 00:00:00"
 
                 line = "  ".join(
                     f"{stage_factor[e][cs][0].x:.2f}" for cs in range(ECS[e])[1:]
                 )
                 logging.debug(line)
-                for cs in range(ECS[e])[1:]:
-                    if stage_factor[e][cs][0].x > 0:
-                        new_ampere_state = ev_charge_stages[e][cs]["ampere"]
-                        if new_ampere_state > 0:
-                            new_switch_state = "on"
-                        if (stage_factor[e][cs][0].x < 1) and (
-                            energy_needed[e] > (ev_accu_in[e][0].x + 0.01)
-                        ):
-                            new_ts = (
-                                start_dt.timestamp() + stage_factor[e][cs][0].x * 3600
-                            )
-                            stop_laden = dt.datetime.fromtimestamp(int(new_ts))
-                            new_state_stop_laden = stop_laden.strftime("%Y-%m-%d %H:%M")
-                        break
+                if (first_stage_factor > 0) and (first_stage_factor < 1) and (
+                    energy_needed[e] > (ev_accu_in[e][0].x + 0.01)
+                ):
+                    new_ts = start_dt.timestamp() + first_stage_factor * 3600
+                    stop_laden = dt.datetime.fromtimestamp(int(new_ts))
+                    new_state_stop_laden = stop_laden.strftime("%Y-%m-%d %H:%M")
                 ev_name = self.ev_options[e].name
                 logging.info(f"Berekeningsuitkomst voor opladen van {ev_name}:")
                 logging.info(
@@ -4212,74 +4236,11 @@ class DaCalc(DaBase):
             ############################################
             for b in range(B):
                 # vermogen aan ac kant
-                netto_vermogen_bat = int(1000 * (ac_to_dc[b][0].x - ac_from_dc[b][0].x))
-                minimum_power = int(self.battery_options[b].minimum_power)
-                battery_state_on_value = self.battery_options[
-                    b
-                ].entity_set_operating_mode_on
-                battery_state_off_value = self.battery_options[
-                    b
-                ].entity_set_operating_mode_off
+                netto_vermogen_bat, new_state, stop_omvormer = (
+                    _calculate_battery_control_for_interval(b, 0, start_dt)
+                )
                 bat_name = self.battery_options[b].name
                 stop_inverter_id = self.battery_options[b].entity_stop_inverter
-                if abs(netto_vermogen_bat) <= 20:
-                    netto_vermogen_bat = 0
-                    new_state = battery_state_off_value
-                    stop_omvormer = None
-                elif grid_balance:
-                    new_state = battery_state_on_value
-                    stop_omvormer = None
-                elif (
-                    minimum_power > 0
-                    and abs(netto_vermogen_bat) < minimum_power
-                    and stop_inverter_id is not None
-                    and (
-                        len(reduce_power_low_soc[b]) == 0
-                        or start_soc[b]
-                        > reduce_power_low_soc[b][len(reduce_power_low_soc[b]) - 1]["soc"]
-                    )
-                    and (
-                        len(reduce_power_high_soc[b]) == 0
-                        or start_soc[b] < reduce_power_high_soc[b][0]["soc"]
-                    )
-                ):
-                    new_state = battery_state_on_value
-                    new_ts = (
-                        start_dt.timestamp()
-                        + (abs(netto_vermogen_bat) / minimum_power) * self.interval_s
-                    )
-                    stop_omvormer = dt.datetime.fromtimestamp(int(new_ts))
-                    if netto_vermogen_bat > 0:
-                        netto_vermogen_bat = minimum_power
-                    else:
-                        netto_vermogen_bat = -minimum_power
-                elif ac_to_dc[b][0].x > 0.0:  # laden met optimaal vermogen
-                    sum_weight_factor = 0
-                    sum_power = 0  # in W
-                    for cs in range(CS[b]):
-                        wf = ac_to_dc_w[b][0][cs].x
-                        if wf > 0:
-                            sum_weight_factor += wf
-                            sum_power += wf * charge_stages[b][cs]["power"]
-                    if sum_power > 0:
-                        new_state = battery_state_on_value
-                        netto_vermogen_bat = round(sum_power)
-                    stop_omvormer = None
-                elif ac_from_dc[b][0].x > 0.0:  # ontladen met optimaal vermogen
-                    sum_weight_factor = 0
-                    sum_power = 0  # in W
-                    for ds in range(DS[b]):
-                        wf = ac_from_dc_w[b][0][ds].x
-                        if wf > 0:
-                            sum_weight_factor += wf
-                            sum_power += wf * discharge_stages[b][ds]["power"]
-                    if sum_power > 0:
-                        new_state = battery_state_on_value
-                        netto_vermogen_bat = -round(sum_power)
-                    stop_omvormer = None
-                else:
-                    new_state = battery_state_on_value
-                    stop_omvormer = None
                 if stop_omvormer is not None and stop_inverter_id is None:
                     stop_omvormer = None
                 if stop_omvormer is None:
@@ -4522,7 +4483,7 @@ class DaCalc(DaBase):
                     )
                 )
                 logging.info(
-                    "Eindstatus cache volgend %s %s | batterijen: %s | ev: %s",
+                    "Final cache state for next %s %s | batteries: %s | ev: %s",
                     self.interval_name,
                     next_interval_cache_payload["interval_start"],
                     battery_summary,

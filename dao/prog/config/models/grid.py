@@ -43,7 +43,7 @@ class GridConfig(BaseModel):
         },
     )
     preload_next_interval_controls: bool = Field(
-        default=True,
+        default=False,
         alias="preload next interval controls",
         description="Restore cached battery and EV controls at the start of the next interval",
         json_schema_extra={
