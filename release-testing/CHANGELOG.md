@@ -1,5 +1,21 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.7.0.rc1
+
+This release contains two big changes/improvements:
+1. @storeman is started with the rewriting of the user-interface. 
+You can find his proceedings with the menu-option "UI V2". It is mostly written in javascript.
+2. @Dogooder has investigated and improved the mip-calculation of the ev-model of DAO. He also have build a test-suite
+for the ev-module under certain stress-circumstances.
+I thank both contributors for their great efforts!! <br>
+
+The other changes in this release:
+- when "stop_inverter" is not configured the calculated bat-power is now spread out over the hole interval.
+- correct stop_omvormer when feedin > 0.0 (suggested by @Dogooder) 
+- correct index error with reduce_power_low_soc and reduce_power_high_soc
+- added multithread so it uses all available cores during mip-calculation (thanks @Dogooder)
+- correct baseload calculation for machine usage (thanks @gijsstat)
+- updates of several used python modules
 
 # 2026.6.0.rc1
 - Changed watchdog.sh: also restart scheduler when it crashes
