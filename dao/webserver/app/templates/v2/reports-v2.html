@@ -1,0 +1,889 @@
+{% extends "v2/base.html" %}
+
+{% block title %}Reports V2 - DAO{% endblock %}
+{% block content %}
+<h1>Reports</h1>
+<form id="report-form" method="GET">
+    <input type="hidden" name="timezone" data-current-tz>
+    <div class="row">
+        <div class="dropdown col-6 col-lg-3">
+            <div class="row">
+                <div class="dropdown col-6">
+                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                        <i class="bi bi-calendar"> </i>Periods
+                    </a>
+
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="javascript: setDataRange('today')">Today per hour</a></li>
+                        <li><a class="dropdown-item" href="javascript: setDataRange('today and tomorrow')">Today &amp;
+                            tomorrow per hour</a></li>
+                        <li><a class="dropdown-item" href="javascript: setDataRange('yesterday')">Yesterday per hour</a>
+                        </li>
+                        <li><a class="dropdown-item" href="javascript: setDataRange('this week')">This week per day</a>
+                        </li>
+                        <li><a class="dropdown-item" href="javascript: setDataRange('this month')">This month per
+                            day</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="dropdown col-6">
+                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                        <i class="bi bi-bar-chart"> </i>Presets
+                    </a>
+
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="javascript:selectValues('fields', '')">All</a></li>
+                        <li><a class="dropdown-item" href="javascript:selectValues('fields', 'cons,prod,cost,profit')">Grid</a>
+                        </li>
+                        <li><a class="dropdown-item"
+                               href="javascript:selectValues('fields', 'pv_ac,pv_dc,ev,bat_in,bat_out,boil,wp')">Balance</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <select class="tom-select col-12 mt-2" id="fields" name="fields" multiple>
+                {% for var in vars %}
+                <option value="{{var.code}}" {% if var.code in fields %}selected{% endif %}>{{ var.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-sm-8 col-lg-8">
+            <div class="row">
+                <div class="input-group">
+                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1m')">- 1m</a>
+                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1w')">- 1w</a>
+                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1d')">- 1d</a>
+                    <input type="datetime-local" name="start" id="start" class="form-control"
+                           value="{{ start|default('') }}">
+                    <span class="input-group-text"> - </span>
+                    <input type="datetime-local" name="end" id="end" class="form-control" value="{{ end|default('') }}">
+                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1d')">+ 1d</a>
+                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1w')">+ 1w</a>
+                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1m')">+ 1m</a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6 mt-2">
+                    <div class="input-group">
+                        <span class="input-group-text">Aggregate: </span>
+                        <select name="aggregate" id="aggregate" class="form-select">
+                            <option value="15min" {% if aggregate==
+                            '15min' %}selected{% endif %}>15 min</option>
+                            <option value="hour" {% if aggregate==
+                            'hour' %}selected{% endif %}>Hour</option>
+                            <option value="day" {% if aggregate==
+                            'day' %}selected{% endif %}>Day</option>
+                            <option value="week" {% if aggregate==
+                            'week' %}selected{% endif %}>Week</option>
+                            <option value="month" {% if aggregate==
+                            'month' %}selected{% endif %}>Month</option>
+                        </select>
+                        <span class="input-group-text">
+                        <i class="bi bi-info-circle-fill"
+                           data-bs-toggle="tooltip"
+                           data-bs-placement="right"
+                           title="The 15min interval does not work for most values pulled from Home Assistant, as HA only stores hourly data in the statistics table."></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<ul class="nav nav-tabs mt-3" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="simple-tab-0" data-bs-toggle="tab" href="#tabpanel-chart" role="tab"
+           aria-controls="tabpanel-chart" aria-selected="true">Chart</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="simple-tab-1" data-bs-toggle="tab" href="#tabpanel-table" role="tab"
+           aria-controls="tabpanel-table" aria-selected="false">Table</a>
+    </li>
+</ul>
+<div class="tab-content flex-grow-1 d-flex flex-column pt-4" id="tab-report-data">
+    <div role="status" class="spinner spinner-border text-secondary mt-5">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <div role="status" class="error text-danger h1 mt-5">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+    </div>
+    <div class="tab-pane active flex-grow-1 " id="tabpanel-chart" role="tabpanel" aria-labelledby="simple-tab-0">
+        <canvas id="data-chart"></canvas>
+    </div>
+    <div class="tab-pane flex-grow-1 overflow-auto " id="tabpanel-table" role="tabpanel"
+         aria-labelledby="simple-tab-1">
+        <table class="data-table" id="data-table">
+            <thead></thead>
+            <tbody></tbody>
+            <tfoot></tfoot>
+        </table>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('report-form');
+    const chartCanvas = document.getElementById('data-chart');
+    let controller = new AbortController();
+
+    let dataChart = null;
+
+    function getFormParams() {
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+
+        for (const [key, value] of formData.entries()) {
+            if (value === '') {
+                continue;
+            }
+
+            if (key === 'fields') {
+                if (params.has(key)) {
+                    params.set(key, params.get(key) + ',' + value);
+                } else {
+                    params.set(key, value);
+                }
+            } else {
+                params.set(key, value);
+            }
+        }
+
+        return params;
+    }
+
+    function updateUrl(params) {
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({}, '', newUrl);
+    }
+
+    async function getData(params) {
+        // Cancel the previous request if it exists
+        if (controller) {
+            controller.abort();
+        }
+
+        // Create a new controller for the new request
+        controller = new AbortController();
+
+        return fetch(
+            `{{url_for('api.data')}}?${params.toString()}`,
+            {signal: controller.signal}
+        )
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Could not fetch chart data: ${response.status}`);
+                }
+                return response.json();
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') {
+                    console.log('Fetch request aborted');
+                } else {
+                    console.error('Fetch error:', err);
+                }
+                return false;
+            });
+    }
+
+    function getDatasets(data) {
+        const config = [
+            {
+                label: 'Consumption',
+                data: (data) => data.map(row => row.cons.v ?? 0),
+                "borderColor": "#f9a825",
+                "backgroundColor": "rgba(249, 168, 37, 0.15)",
+                type: 'bar',
+                yAxisID: "y_kwh",
+                unit: "kWh",
+                stack: 'cons_prod',
+            },
+            {
+                label: 'Consumption forecast',
+                data: (data) => data.map(row => row.cons.f ?? 0),
+                borderColor: "#f9a825",
+                backgroundColor: "rgba(249, 168, 37, 0.15)",
+                type: 'line',
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                label: 'Production',
+                data: (data) => data.map(row => -row.prod.v ?? 0),
+                borderColor: "#2e7d32",
+                backgroundColor: "rgba(46, 125, 50, 0.25)",
+                type: 'bar',
+                yAxisID: "y_kwh",
+                unit: "kWh",
+                stack: 'cons_prod',
+            },
+            {
+                label: 'Production forecast',
+                data: (data) => data.map(row => -row.prod.f ?? 0),
+                borderColor: "#2e7d32",
+                backgroundColor: "rgba(46, 125, 50, 0.15)",
+                type: 'line',
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            // {
+            //     label: 'Net consumption',
+            //     data: (data) => data.map(row => (row.cons.v - row.prod.v) ?? 0),
+            //     borderColor: "#2e507d",
+            //     backgroundColor: "rgba(46, 80, 125, 0.45)",
+            //     type: 'bar',
+            //     yAxisID: "y_kwh",
+            //     unit: "kWh",
+            // },
+            {
+                label: 'Cost',
+                data: (data) => data.map(row => row.cost.v ?? 0),
+                borderColor: "#dc3545",
+                backgroundColor: "rgba(220, 53, 69, 0.25)",
+                type: 'line',
+                yAxisID: "y_eur",
+                unit: "EUR",
+                stack: 'cons_cost',
+            },
+            {
+                label: 'Cost forecast',
+                data: (data) => data.map(row => row.cost.f ?? 0),
+                borderColor: "#dc3545",
+                backgroundColor: "rgba(220, 53, 69, 0.15)",
+                type: 'line',
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_eur",
+                unit: "EUR",
+            },
+            {
+                label: 'Profit',
+                data: (data) => data.map(row => row.profit.v ?? 0),
+                borderColor: "#198754",
+                backgroundColor: "rgba(25, 135, 84, 0.25)",
+                type: 'line',
+                yAxisID: "y_eur",
+                unit: "EUR",
+                stack: 'cons_cost',
+            },
+            {
+                label: 'Profit forecast',
+                data: (data) => data.map(row => row.profit.f ?? 0),
+                borderColor: "#198754",
+                backgroundColor: "rgba(25, 135, 84, 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_eur",
+                unit: "EUR",
+            },
+            {
+                label: 'Net cost',
+                data: (data) => data.map(row => (row.cost.v - row.profit.v) ?? 0),
+                borderColor: '#193f87',
+                backgroundColor: '#162545',
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_eur",
+                unit: "EUR",
+            },
+            {
+                label: 'Energy price',
+                data: (data) => data.map(row => row.da.v ?? 0),
+                borderColor: '#198754',
+                backgroundColor: '#19875433',
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_eurkwh",
+                unit: "EUR/kWh",
+            },
+            {
+                data: (data) => data.map(row => row.bat_in.v ?? 0),
+                type: "bar",
+                label: "Battery in",
+                fallbackValue: 0,
+                borderColor: "#20c997",
+                backgroundColor: "rgba(32, 201, 151, 0.25)",
+                yAxisID: "y_kwh",
+                unit: "kWh",
+                stack: "battery_stack",
+            },
+            {
+                data: (data) => data.map(row => row.bat_in.f ?? 0),
+                type: "line",
+                label: "Battery in forecast",
+                fallbackValue: 0,
+                borderColor: "#20c997",
+                backgroundColor: "rgba(32, 201, 151, 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => -row.bat_out.v ?? 0),
+                type: "bar",
+                label: "Battery out",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.25)",
+                yAxisID: "y_kwh",
+                unit: "kWh",
+                stack: "battery_stack"
+            },
+            {
+                data: (data) => data.map(row => -row.bat_out.f ?? 0),
+                type: "line",
+                label: "Battery out forecast",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => (row.bat_in.f ?? 0) - (row.bat_out.f ?? 0)),
+                type: "line",
+                label: "Battery net forecast",
+                fallbackValue: 0,
+                borderColor: "#fd690d",
+                backgroundColor: "rgb(253 77 13 / 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => row.soc.f ?? 0),
+                type: "line",
+                label: "Battery SoC forecast",
+                fallbackValue: 0,
+                borderColor: "#38274c",
+                backgroundColor: "rgb(93 13 253 / 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_perc",
+                unit: "%",
+            },
+            {
+                data: (data) => data.map(row => row.pv_ac.v ?? 0),
+                type: "bar",
+                label: "PV AC",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.25)",
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => row.pv_ac.f ?? 0),
+                type: "bar",
+                label: "PV AC Forecast",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => row.pv_dc.v ?? 0),
+                type: "bar",
+                label: "PV DC",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.25)",
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => row.pv_dc.f ?? 0),
+                type: "line",
+                label: "PV DC Forecast",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => row.boil.v ?? 0),
+                type: "bar",
+                label: "Boiler",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.15)",
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => row.boil.f ?? 0),
+                type: "line",
+                label: "Boiler Forecast",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => row.wp.v ?? 0),
+                type: "bar",
+                label: "Warmtepomp",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.15)",
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+            {
+                data: (data) => data.map(row => row.wp.f ?? 0),
+                type: "line",
+                label: "Warmtepomp Forecast",
+                fallbackValue: 0,
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.15)",
+                borderWidth: 1,
+                borderDash: [6, 4],
+                yAxisID: "y_kwh",
+                unit: "kWh",
+            },
+        ];
+
+        if (data.length === 0) {
+            return [];
+        }
+
+        const datasets = [];
+        for (let i = 0; i < config.length; i++) {
+            const c = config[i];
+            try {
+                c.data = c.data(data).map(v => v ? Math.round(v * 1000) / 1000 : v);
+
+                if (c.data.filter(v => v).length === 0) {
+                    continue;
+                }
+
+                datasets.push(c);
+            } catch (e) {
+                // Skip
+            }
+        }
+
+        return datasets;
+    }
+
+    function buildChartConfig(data) {
+        const labels = data.map(row => row.ts);
+        const defaultLegendClickHandler = Chart.defaults.plugins.legend.onClick;
+
+        return {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y_kwh: {
+                        title: {
+                            display: true,
+                            text: 'kWh'
+                        },
+                        beginAtZero: true
+                    },
+                    y_eur: {
+                        title: {
+                            display: true,
+                            text: 'EUR'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    },
+                    y_eurkwh: {
+                        title: {
+                            display: true,
+                            text: 'EUR/kWh'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    },
+                    y_perc: {
+                        title: {
+                            display: true,
+                            text: '%'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                const unit = context.dataset.unit || '';
+
+                                if (value === null || value === undefined) {
+                                    return label;
+                                }
+
+                                return `${label}: ${value} ${unit}`;
+                            },
+                        },
+                    },
+                    legend: {
+                        onClick(event, legendItem, legend) {
+                            defaultLegendClickHandler(event, legendItem, legend);
+
+                            const chart = legend.chart;
+                            updateVisibleAxes(chart);
+                            chart.update('none');
+                        },
+                    },
+                },
+            },
+            data: {
+                labels,
+                datasets: getDatasets(data)
+            }
+        };
+    }
+
+    function axisHasVisibleData(chart, axisId) {
+        return chart.data.datasets.some((dataset, index) =>
+            dataset.yAxisID === axisId &&
+            chart.isDatasetVisible(index)
+        );
+    }
+
+    function updateVisibleAxes(chart) {
+        for (const axisId of Object.keys(chart.options.scales)) {
+            if (axisId === 'x') {
+                continue;
+            }
+
+            const visible = axisHasVisibleData(chart, axisId);
+
+            chart.options.scales[axisId].display = visible;
+
+            if (chart.options.scales[axisId].title) {
+                chart.options.scales[axisId].title.display = visible;
+            }
+        }
+    }
+
+    function syncDatasets(dataChart, config) {
+        const currentDatasets = dataChart.data.datasets;
+        const newDatasets = config.data.datasets;
+
+        const currentById = new Map(
+            currentDatasets.map(dataset => [dataset.label, dataset])
+        );
+
+        const syncedDatasets = newDatasets.map(newDataset => {
+            const id = newDataset.label;
+            const currentDataset = currentById.get(id);
+
+            if (currentDataset) {
+                // Bestaande dataset behouden, zodat user-presets blijven staan.
+                currentDataset.data = newDataset.data;
+
+                return currentDataset;
+            }
+
+            // Nieuwe dataset toevoegen.
+            return {...newDataset};
+        });
+
+        // Bestaande array muteren in plaats van vervangen.
+        // Niet meer aanwezige datasets worden hierdoor verwijderd.
+        currentDatasets.splice(
+            0,
+            currentDatasets.length,
+            ...syncedDatasets
+        );
+
+        dataChart.update();
+    }
+
+    let timeout;
+    function updateDataThrottled(params) {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+        // Throttle with 100ms for now, as API responds quite fast usually
+        // A larger value would make the interface feel sluggish, while the API is very fast
+        // an improvement could be: measure the avg response time of api, if fast, low throttle, if slow, larger throttle
+        // to prevent server overload
+        timeout = setTimeout(() => { updateData(params) }, 100);
+    }
+
+    async function updateData(params) {
+        const tabData = document.getElementById('tab-report-data');
+        tabData.classList.add('loading');
+        tabData.classList.remove('error');
+
+        const data = await getData(params);
+        if (data === false) {
+            tabData.classList.remove('loading');
+            tabData.classList.add('error');
+            return;
+        }
+
+        const config = buildChartConfig(data);
+
+        if (dataChart === null) {
+            dataChart = new Chart(chartCanvas, config);
+        } else {
+            dataChart.data.labels = config.data.labels;
+            syncDatasets(dataChart, config);
+        }
+
+        const columns = Object.keys(data[0]);
+        columns.splice(columns.indexOf('ts'), 1);
+
+        updateVisibleAxes(dataChart);
+        dataChart.update();
+
+        updateTable('#data-table', data, 'ts', columns);
+        tabData.classList.remove('loading');
+    }
+
+    form.addEventListener('change', (e) => {
+        const params = getFormParams();
+        updateUrl(params);
+
+        if (e.target.id !== 'preset') {
+            updateDataThrottled(params);
+        } else {
+            dataChart.update("none");
+        }
+    });
+
+    window.addEventListener('load', () => {
+        updateData(getFormParams());
+    });
+
+    function toDatetimeLocalValue(date) {
+        const pad = n => String(n).padStart(2, '0');
+
+        return [
+            date.getFullYear(),
+            pad(date.getMonth() + 1),
+            pad(date.getDate()),
+        ].join('-') + 'T' + [
+            pad(date.getHours()),
+            pad(date.getMinutes()),
+        ].join(':');
+    }
+
+    function setDataRange(range) {
+        let start = new Date();
+        let end = new Date();
+        const inputStart = document.getElementById('start');
+        const inputEnd = document.getElementById('end');
+
+        if (range.match('^[+-]')) {
+            start = new Date(inputStart.value);
+            end = new Date(inputEnd.value);
+        }
+
+        switch (range) {
+            case 'today':
+                start.setHours(0, 0, 0, 0);
+                end.setDate(start.getDate() + 1);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'hour';
+                break;
+            case 'today and tomorrow':
+                start.setHours(0, 0, 0, 0);
+                end.setDate(start.getDate() + 2);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'hour';
+                break;
+            case 'yesterday':
+                start.setDate(start.getDate() - 1);
+                start.setHours(0, 0, 0, 0);
+                end.setDate(start.getDate() + 1);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'hour';
+                break;
+            case 'this week':
+                start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+                start.setHours(0, 0, 0, 0);
+                end.setDate(start.getDate() + 7);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'day';
+                break;
+            case 'this month':
+                start.setDate(1);
+                start.setHours(0, 0, 0, 0);
+                end.setDate(1);
+                end.setMonth(start.getMonth() + 1);
+                end.setHours(0, 0, 0, 0);
+                document.getElementById('aggregate').value = 'day';
+                break;
+            case '+1d':
+                start.setDate(start.getDate() + 1);
+                end.setDate(end.getDate() + 1);
+                break;
+            case '-1d':
+                start.setDate(start.getDate() - 1);
+                end.setDate(end.getDate() - 1);
+                break;
+            case '+1w':
+                start.setDate(start.getDate() + 7);
+                end.setDate(end.getDate() + 7);
+                break;
+            case '-1w':
+                start.setDate(start.getDate() - 7);
+                end.setDate(end.getDate() - 7);
+                break;
+            case '+1m':
+                start.setMonth(start.getMonth() + 1);
+                end.setMonth(end.getMonth() + 1);
+                break;
+            case '-1m':
+                start.setMonth(start.getMonth() - 1);
+                end.setMonth(end.getMonth() - 1);
+                break;
+            default:
+                console.log('Invalid range: ' + range);
+                return;
+        }
+
+        inputStart.value = toDatetimeLocalValue(start);
+        inputEnd.value = toDatetimeLocalValue(end);
+
+        form.dispatchEvent(new Event('change'));
+    }
+
+    function updateTable(tableSelector, data, rowHeaderColumn, dataColumns) {
+        const table = document.querySelector(tableSelector);
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+        const tfoot = table.querySelector('tfoot');
+        const sums = {};
+
+        thead.innerHTML = '';
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        const headerRow1 = document.createElement('tr');
+        const headerRow2 = document.createElement('tr');
+
+        const thTs = document.createElement('th');
+        thTs.textContent = rowHeaderColumn;
+        thTs.rowSpan = 2;
+        headerRow1.appendChild(thTs);
+
+        dataColumns.forEach(column => {
+            const th = document.createElement('th');
+            th.textContent = column;
+            th.colSpan = 2;
+            th.classList.add('text-center');
+            headerRow1.appendChild(th);
+
+            const th2 = document.createElement('th');
+            th2.textContent = "v";
+            const th3 = document.createElement('th');
+            th3.textContent = "f";
+            headerRow2.appendChild(th2);
+            headerRow2.appendChild(th3);
+        });
+
+        thead.appendChild(headerRow1);
+        thead.appendChild(headerRow2);
+
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            const rowHeader = document.createElement('th');
+            rowHeader.textContent = row[rowHeaderColumn];
+            tr.appendChild(rowHeader);
+
+            dataColumns.forEach(column => {
+                const tdValue = document.createElement('td');
+
+                tdValue.textContent = formatTableValue(row[column].v, column);
+                tr.appendChild(tdValue);
+
+                const tdForecast = document.createElement('td');
+
+                tdForecast.textContent = formatTableValue(row[column].f, column);
+                tr.appendChild(tdForecast);
+                sums[column + '.v'] = (sums[column + '.v'] ?? 0) + row[column].v;
+                sums[column + '.f'] = (sums[column + '.f'] ?? 0) + row[column].f;
+            });
+
+            tbody.appendChild(tr);
+        });
+
+        const footerRow = document.createElement('tr');
+        tfoot.appendChild(footerRow);
+
+        const tfTs = document.createElement('th');
+        tfTs.textContent = "Total   ";
+        tfTs.rowSpan = 2;
+        footerRow.appendChild(tfTs);
+
+        for (const key in sums) {
+            const tdValue = document.createElement('td');
+            tdValue.textContent = formatTableValue(sums[key], 'number');
+            footerRow.appendChild(tdValue);
+        }
+    }
+
+    function formatTableValue(value, column) {
+        if (value === null || value === undefined || typeof value === 'object') {
+            return '';
+        }
+
+        if (typeof value === 'number') {
+            const decimals = column.decimals ?? 3;
+            const formatted = value.toLocaleString('nl-NL', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals,
+            });
+
+            return column.unit ? `${formatted} ${column.unit}` : formatted;
+        }
+
+        return value;
+    }
+
+    function selectValues(targetElId, valueStr) {
+        const values = valueStr.split(',').map((v) => v.trim());
+
+        const select = document.getElementById(targetElId);
+        for (let i = 0; i < select.options.length; i++) {
+            select.options[i].selected = values.includes(select.options[i].value);
+        }
+
+        const evt = new Event('change', {bubbles: true});
+        select.dispatchEvent(evt);
+    }
+</script>
+
+{% endblock %}

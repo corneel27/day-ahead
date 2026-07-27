@@ -9,7 +9,7 @@ from .base import EntityId
 
 class GridConfig(BaseModel):
     """Electrical grid connection configuration."""
-    
+
     max_power: float = Field(
         default=17,
         gt=0,
@@ -17,8 +17,8 @@ class GridConfig(BaseModel):
         json_schema_extra={
             "x-help": "Maximum power available from grid connection in kilowatts. Based on your main fuse/circuit breaker rating. Typical residential: 1-phase=7.4kW (32A), 3-phase=17kW (25A) or 25kW (35A). Prevents optimization from exceeding grid capacity.",
             "x-unit": "kW",
-            "x-validation-hint": "Must be > 0, typical 7-25 kW for residential"
-        }
+            "x-validation-hint": "Must be > 0, typical 7-25 kW for residential",
+        },
     )
 
     entity_balance_switch: Optional[EntityId] = Field(
@@ -27,10 +27,10 @@ class GridConfig(BaseModel):
         description="HA entity for grid balancing switch",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to enable/disable grid balancing mode. "
-                      "Used for frequency regulation participation or grid services.",
+            "Used for frequency regulation participation or grid services.",
             "x-ui-section": "Power Configuration",
-            "x-ui-widget-filter": "switch"
-        }
+            "x-ui-widget-filter": "switch",
+        },
     )
     entity_grid_setpoint: Optional[EntityId] = Field(
         default=None,
@@ -38,20 +38,19 @@ class GridConfig(BaseModel):
         description="HA entity for the grid setpoint",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to save the average calculated power on "
-                      "the grid-point. Can be used for XOM-regulation.",
+            "the grid-point. Can be used for XOM-regulation.",
             "x-ui-section": "Power Configuration",
-        }
+        },
     )
 
-    
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Energy',
-            'x-icon': 'transmission-tower',
-            'x-order': 12,
-            'x-help': '''# Grid Connection Configuration
+            "x-ui-group": "Energy",
+            "x-icon": "transmission-tower",
+            "x-order": 12,
+            "x-help": """# Grid Connection Configuration
 
 Define electrical grid connection limits to prevent overload.
 
@@ -75,7 +74,7 @@ Optimizer ensures combined consumption never exceeds this limit:
 - Account for baseload when calculating available power
 - System will prioritize loads within this constraint
 - Consider upgrade if frequently hitting limits
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Grid-Configuration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Grid-Configuration",
+        },
     )

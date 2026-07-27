@@ -1,0 +1,31 @@
+{% extends "v2/base.html" %}
+
+{% block title %}Run - DAO{% endblock %}
+{% block content %}
+<div class="col flex-grow-0">
+    <h1>Run</h1>
+    <form method="POST" action="{{url_for('v2.run_exec')}}" hx-boost="true" hx-target="#status-target" hx-push-url="false" hx-replace-url="false">
+        <button type="submit" name="task" value="optimize_debug" class="btn btn-outline-secondary">Calc optimize
+            debug
+        </button>
+        <button type="submit" name="task" value="optimize_regular" class="btn btn-outline-secondary">Calc optimize
+            regular
+        </button>
+        <button type="submit" name="task" value="calc_baseloads" class="btn btn-outline-secondary">Calc baseloads
+        </button>
+        <button type="submit" name="task" value="update_tibber" class="btn btn-outline-secondary">Update Tibber
+        </button>
+        <button type="submit" name="task" value="update_meteo" class="btn btn-outline-secondary">Update Meteo
+        </button>
+        <button type="submit" name="task" value="update_prices" class="btn btn-outline-secondary">Update day ahead
+            prices
+        </button>
+        <button type="submit" name="task" value="train_ml" class="btn btn-outline-secondary">Train ML models
+        </button>
+        <a href="{{url_for('v2.run_cancel')}}" hx-boost="false" hx-get="{{url_for('v2.run_cancel')}}" hx-target="#status-target" class="btn btn-outline-danger disabled" id="run-cancel">Cancel</a>
+    </form>
+</div>
+<div class="col mt-2 flex-grow-1 overflow-auto" id="status-target"
+     hx-get="{{url_for('v2.run_status')}}" hx-trigger="load" hx-target="#status-target" hx-push-url="false">
+</div>
+{% endblock %}

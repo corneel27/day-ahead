@@ -10,15 +10,15 @@ from datetime import date
 
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
-    
-    source_day_ahead: Literal['nordpool', 'entsoe', 'tibber'] = Field(
-        default='nordpool',
+
+    source_day_ahead: Literal["nordpool", "entsoe", "tibber"] = Field(
+        default="nordpool",
         alias="source day ahead",
         description="Source for day-ahead prices",
         json_schema_extra={
             "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
-            "x-ui-section": "Prices"
-        }
+            "x-ui-section": "Prices",
+        },
     )
     entsoe_api_key: Optional[SecretStr] = Field(
         default=None,
@@ -33,14 +33,12 @@ class PricingConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/source_day_ahead",
-                    "schema": {
-                        "const": "entsoe"
-                    }
-                }
-            }
-        }
+                    "schema": {"const": "entsoe"},
+                },
+            },
+        },
     )
-    
+
     # Date-based tariff configurations (date string -> value)
     energy_taxes_consumption: dict[str, float] = Field(
         alias="energy taxes consumption",
@@ -49,8 +47,8 @@ class PricingConfig(BaseModel):
             "x-help": "Energy taxes on consumption (excluding VAT) indexed by effective date. Format: {'2024-01-01': 0.05}. Use date when tariff changes.",
             "x-unit": "€/kWh",
             "x-ui-section": "Taxes",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",
+        },
     )
     energy_taxes_production: dict[str, float] = Field(
         alias="energy taxes production",
@@ -59,8 +57,8 @@ class PricingConfig(BaseModel):
             "x-help": "Energy taxes on feed-in/production (excluding VAT) indexed by effective date. Often zero or negative. Format: {'2024-01-01': 0.0}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Taxes",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",
+        },
     )
     cost_supplier_consumption: dict[str, float] = Field(
         alias="cost supplier consumption",
@@ -69,8 +67,8 @@ class PricingConfig(BaseModel):
             "x-help": "Supplier markup/fees for consumption (excluding VAT) indexed by effective date. Fixed part of electricity cost. Format: {'2024-01-01': 0.02}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Cost",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",
+        },
     )
     cost_supplier_production: dict[str, float] = Field(
         alias="cost supplier production",
@@ -79,8 +77,8 @@ class PricingConfig(BaseModel):
             "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Cost",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",
+        },
     )
     vat_consumption: dict[str, float] = Field(
         alias="vat consumption",
@@ -89,8 +87,8 @@ class PricingConfig(BaseModel):
             "x-help": "VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 21}. Applied to market price + taxes + supplier costs.",
             "x-unit": "%",
             "x-ui-section": "Taxes",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values",
+        },
     )
     vat_production: dict[str, float] = Field(
         alias="vat production",
@@ -99,8 +97,8 @@ class PricingConfig(BaseModel):
             "x-help": "VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.",
             "x-unit": "%",
             "x-ui-section": "Taxes",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values",
+        },
     )
     multiplier_consumption: Optional[dict[str, float]] = Field(
         default={"2000-01-01": 1.0},
@@ -110,8 +108,8 @@ class PricingConfig(BaseModel):
             "x-help": "Multiplier on consumption day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.",
             "x-unit": "-",
             "x-ui-section": "Cost",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values",
+        },
     )
     multiplier_production: Optional[dict[str, float]] = Field(
         default={"2000-01-01": 1.0},
@@ -121,8 +119,8 @@ class PricingConfig(BaseModel):
             "x-help": "Multiplier on feed-in/production day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.",
             "x-unit": "-",
             "x-ui-section": "Cost",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values",
+        },
     )
     # Invoice settings
     last_invoice: date = Field(
@@ -131,8 +129,8 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.",
             "x-ui-section": "Prices",
-            "x-validation-hint": "Must be YYYY-MM-DD format"
-        }
+            "x-validation-hint": "Must be YYYY-MM-DD format",
+        },
     )
     tax_refund: bool = Field(
         default=True,
@@ -140,27 +138,29 @@ class PricingConfig(BaseModel):
         description="Whether tax refund applies",
         json_schema_extra={
             "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production.",
-            "x-ui-section": "Taxes"
-        }
+            "x-ui-section": "Taxes",
+        },
     )
-    
-    @field_validator('vat_consumption', 'vat_production')
+
+    @field_validator("vat_consumption", "vat_production")
     @classmethod
     def validate_vat_percentages(cls, v: dict[str, float]) -> dict[str, float]:
         """Validate VAT percentages are between 0 and 100."""
         for date, percentage in v.items():
             if not (0 <= percentage <= 100):
-                raise ValueError(f"VAT percentage must be between 0 and 100, got {percentage} for date {date}")
+                raise ValueError(
+                    f"VAT percentage must be between 0 and 100, got {percentage} for date {date}"
+                )
         return v
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Pricing',
-            'x-icon': 'currency-eur',
-            'x-order': 11,
-            'x-help': '''# Pricing & Tariff Configuration
+            "x-ui-group": "Pricing",
+            "x-icon": "currency-eur",
+            "x-order": 11,
+            "x-help": """# Pricing & Tariff Configuration
 
 Configure electricity market prices and tariff components for accurate cost optimization.
 
@@ -201,7 +201,7 @@ System uses tariff active on optimization date.
 - Production costs often lower than consumption (or negative for feed-in credit)
 - Keep last_invoice updated for accurate cost tracking
 - Check your electricity bill for exact tariff components
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration",
+        },
     )

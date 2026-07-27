@@ -1,0 +1,87 @@
+{% extends "v2/base.html" %}
+
+{% block title %}{{title}} - DAO{% endblock %}
+
+{% macro option(label, value, currentValue=None) %}
+<option value="{{value}}" {% if currentValue==value %}selected{% endif %}>{{label}}</option>
+{% endmacro %}
+{% macro radio(name, label, value, currentValue=None) %}
+<div class="form-check float-start mx-1">
+  <label class="form-check-label">
+    <input type="radio" name="{{name}}" class="form-check-input" value="{{value}}" {% if currentValue==value %}checked{% endif %}>
+
+    {{label}}
+  </label>
+</div>
+{% endmacro %}
+
+{% block content %}
+<h1>{{title}}</h1>
+<form method="GET" id="report-form">
+    <div class="row">
+        <div class="col-4 col-md-3 col-lg-3 pt-2">
+            {% for o in subject_options %}
+            {{radio("subject", o.label, o.value, subject)}}
+            {% endfor %}
+        </div>
+        <div class="col-4 col-md-3 col-lg-2 pt-2">
+            {{radio("view", "Table", "tabel", view)}}
+            {{radio("view", "Chart", "grafiek", view)}}
+        </div>
+        {% if not hide_period %}
+        <div class="col-6 col-md-4 col-lg-3">
+            <select name="period" class="form-select">
+                {{option("Today", "vandaag", period)}}
+                {{option("Today with forecast", "today_with_forecast", period)}}
+                {{option("Tomorrow", "morgen", period)}}
+                {{option("Today and tomorrow", "vandaag en morgen", period)}}
+                {{option("Yesterday", "gisteren", period)}}
+                {{option("This week", "deze week", period)}}
+                {{option("Last week", "vorige week", period)}}
+                {{option("This month", "deze maand", period)}}
+                {{option("Last month", "vorige maand", period)}}
+                {{option("This year", "dit jaar", period)}}
+                {{option("Last year", "vorig jaar", period)}}
+                {{option("This contract year", "dit contractjaar", period)}}
+                {{option("365 days", "365 dagen", period)}}
+            </select>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+{% if view == "grafiek" %}
+<div class="show graph mt-2" id="show_graph2">
+    <img src='data:image/png;base64,{{ report_data }}' alt="image" width="1000" height="auto"/>"
+</div>
+{% else %}
+<div class="show table mt-2">
+    <style>
+        table th[colspan='3'] {
+            text-align: center;
+        }
+    </style>
+
+    {% for table in report_data %}
+    {{ table|safe }}
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+    window.addEventListener('load', () => {
+
+        const tables = document.getElementsByTagName('table');
+
+        for (let i = 0; i < tables.length; i++) {
+            tables[i].classList.add('table', 'table-sm', 'table-striped', 'table-bordered', 'border-primary');
+        }
+    });
+
+    const form = document.getElementById('report-form');
+    form.addEventListener('change', (e) => {
+        form.submit();
+    });
+</script>
+
+{% endblock %}

@@ -13,7 +13,9 @@ import logging
 
 
 class DaPrices:
-    def __init__(self, config, db_da: DBmanagerObj, country: str = None, secrets: dict = None):
+    def __init__(
+        self, config, db_da: DBmanagerObj, country: str = None, secrets: dict = None
+    ):
         self.config = config
         self.db_da = db_da
         self._secrets = secrets or {}

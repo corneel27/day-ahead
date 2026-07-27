@@ -7,26 +7,27 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class DashboardConfig(BaseModel):
     """Dashboard web UI configuration."""
-    
+
     port: int = Field(
         default=5000,
-        ge=1024, le=65535,
+        ge=1024,
+        le=65535,
         description="Web UI port number",
         json_schema_extra={
             "x-help": "Port number for DAO web dashboard. Access at http://homeassistant.local:PORT. Must be between 1024-65535 (non-privileged ports).",
             "x-unit": "port",
-            "x-validation-hint": "1024-65535, default 5000"
-        }
+            "x-validation-hint": "1024-65535, default 5000",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         json_schema_extra={
-            'x-ui-group': 'Integration',
-            'x-ui-section': 'Dashboard',
-            'x-icon': 'view-dashboard',
-            'x-order': 16,
-            'x-help': '''# Dashboard Configuration
+            "x-ui-group": "Integration",
+            "x-ui-section": "Dashboard",
+            "x-icon": "view-dashboard",
+            "x-order": 16,
+            "x-help": """# Dashboard Configuration
 
 Configure web dashboard for monitoring and controlling Day Ahead Optimizer.
 
@@ -58,7 +59,7 @@ Access dashboard at:
 - Enable Ingress for secure access
 - Use reverse proxy for external access
 - Dashboard updates after each optimization
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Dashboard'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Dashboard",
+        },
     )

@@ -39,6 +39,7 @@ class HAContext:
     never be written back to disk.  Pass instances of this dataclass to any
     collaborator that needs location or timezone information.
     """
+
     latitude: float
     longitude: float
     time_zone: str
@@ -68,6 +69,7 @@ class DaBase(hass.Hass):
     _config = None
     _loader = None
     _init_lock = threading.Lock()
+
     def __init__(self, file_name: str = None):
         self.file_name = file_name
         path = os.getcwd()
@@ -92,7 +94,11 @@ class DaBase(hass.Hass):
         with DaBase._init_lock:
             if DaBase._config is None:
                 try:
-                    DaBase._loader = ConfigurationLoader(Path(self.file_name) if self.file_name else Path("../data/options.json"))
+                    DaBase._loader = ConfigurationLoader(
+                        Path(self.file_name)
+                        if self.file_name
+                        else Path("../data/options.json")
+                    )
                     DaBase._config = DaBase._loader.load_and_validate()
                 except FileNotFoundError as e:
                     logging.error(f"Configuratiebestand niet gevonden: {e}")
@@ -106,12 +112,12 @@ class DaBase(hass.Hass):
 
         self.db_da = make_db_da(self.config, self.loader.secrets)
         if self.db_da is None:
-            return
+            raise RuntimeError('No database connection for Day Ahead')
         self.db_ha = make_db_ha(self.config, self.loader.secrets)
         if self.db_ha is None:
-            return
+            raise RuntimeError('No database connection for Home Assistant')
 
-        log_level_str = (self.config.logging_level or "info")
+        log_level_str = self.config.logging_level or "info"
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
             raise ValueError("Invalid log level: %s" % _log_level)
@@ -159,7 +165,8 @@ class DaBase(hass.Hass):
         )
         self.time_zone = self.ha_context.time_zone
         self.meteo = Meteo(
-            self.config, self.db_da,
+            self.config,
+            self.db_da,
             latitude=self.ha_context.latitude,
             longitude=self.ha_context.longitude,
             secrets=self.loader.secrets,
@@ -170,19 +177,48 @@ class DaBase(hass.Hass):
         self.interval = self.config.interval
         self.interval_s = 3600 if self.interval == "1hour" else 900
 
-        self.prices = DaPrices(self.config, self.db_da, country=self.ha_context.country, secrets=self.loader.secrets)
+        self.prices = DaPrices(
+            self.config,
+            self.db_da,
+            country=self.ha_context.country,
+            secrets=self.loader.secrets,
+        )
         self.prices_options = self.config.prices
         # eb + ode levering
-        self.taxes_l_def = self.prices_options.energy_taxes_consumption if self.prices_options else None
+        self.taxes_l_def = (
+            self.prices_options.energy_taxes_consumption
+            if self.prices_options
+            else None
+        )
         # opslag kosten leverancier
-        self.ol_l_def = self.prices_options.cost_supplier_consumption if self.prices_options else None
+        self.ol_l_def = (
+            self.prices_options.cost_supplier_consumption
+            if self.prices_options
+            else None
+        )
         # eb+ode teruglevering
-        self.taxes_t_def = self.prices_options.energy_taxes_production if self.prices_options else None
-        self.ol_t_def = self.prices_options.cost_supplier_production if self.prices_options else None
-        self.btw_l_def = self.prices_options.vat_consumption if self.prices_options else None
-        self.btw_t_def = self.prices_options.vat_production if self.prices_options else self.btw_l_def
-        self.multiplier_l_def = self.prices_options.multiplier_consumption if self.prices_options else None
-        self.multiplier_t_def = self.prices_options.multiplier_production if self.prices_options else None
+        self.taxes_t_def = (
+            self.prices_options.energy_taxes_production if self.prices_options else None
+        )
+        self.ol_t_def = (
+            self.prices_options.cost_supplier_production
+            if self.prices_options
+            else None
+        )
+        self.btw_l_def = (
+            self.prices_options.vat_consumption if self.prices_options else None
+        )
+        self.btw_t_def = (
+            self.prices_options.vat_production
+            if self.prices_options
+            else self.btw_l_def
+        )
+        self.multiplier_l_def = (
+            self.prices_options.multiplier_consumption if self.prices_options else None
+        )
+        self.multiplier_t_def = (
+            self.prices_options.multiplier_production if self.prices_options else None
+        )
         self.salderen = self.prices_options.tax_refund if self.prices_options else True
 
         self.history_options = self.config.history
@@ -330,7 +366,9 @@ class DaBase(hass.Hass):
         report.consolidate_data(start_dt)
 
     def get_day_ahead_prices(self):
-        source = self.prices_options.source_day_ahead if self.prices_options else "nordpool"
+        source = (
+            self.prices_options.source_day_ahead if self.prices_options else "nordpool"
+        )
         self.prices.get_prices(source)
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
@@ -469,36 +507,28 @@ class DaBase(hass.Hass):
             return default
         if isinstance(options, dict):
             return options.get(key, default)
-        snake_key = key.replace(' ', '_').replace('-', '_')
+        snake_key = key.replace(" ", "_").replace("-", "_")
         val = getattr(options, snake_key, None)
         if val is None:
             val = getattr(options, key, None)
         return val if val is not None else default
 
-    def set_entity_value(
-        self, entity_key: str, options, value: int | float | str
-    ):
+    def set_entity_value(self, entity_key: str, options, value: int | float | str):
         entity_id = self._get_option(entity_key, options)
         if entity_id is not None:
             self.set_value(entity_id, value)
 
-    def set_entity_option(
-        self, entity_key: str, options, value: int | float | str
-    ):
+    def set_entity_option(self, entity_key: str, options, value: int | float | str):
         entity_id = self._get_option(entity_key, options)
         if entity_id is not None:
             self.select_option(entity_id, value)
 
-    def set_entity_state(
-        self, entity_key: str, options, value: int | float | str
-    ):
+    def set_entity_state(self, entity_key: str, options, value: int | float | str):
         entity_id = self._get_option(entity_key, options)
         if entity_id is not None:
             self.set_state(entity_id, value)
 
-    def get_entity_state(
-        self, entity_key: str, options
-    ) -> int | float | str | None:
+    def get_entity_state(self, entity_key: str, options) -> int | float | str | None:
         entity_id = self._get_option(entity_key, options)
         if entity_id is not None:
             result = self.get_state(entity_id).state
@@ -667,7 +697,7 @@ class DaBase(hass.Hass):
                 "../data/log/"
                 + run_task["file_name"]
                 + "_"
-                + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M")
+                + datetime.datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
                 + ".log"
             )
 
