@@ -315,8 +315,8 @@ def run_cancel():
         state["status"] = "cancelled"
         save_run_state(state)
         return render_template("v2/run.html")
-    except Exception as e:
-        return "Error cancelling run: " + str(e), 500
+    except Exception:
+        return "Error cancelling run", 500
 
 
 @v2.route("/run-exec", methods=["POST"])
