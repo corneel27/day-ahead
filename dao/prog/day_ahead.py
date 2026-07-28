@@ -4063,11 +4063,11 @@ class DaCalc(DaBase):
                     and (
                         len(reduce_power_low_soc[b]) == 0
                         or start_soc[b]
-                        > reduce_power_low_soc[b][len(reduce_power_low_soc[b]) - 1]["soc"]
+                        > reduce_power_low_soc[b][len(reduce_power_low_soc[b]) - 1].soc
                     )
                     and (
                         len(reduce_power_high_soc[b]) == 0
-                        or start_soc[b] < reduce_power_high_soc[b][0]["soc"]
+                        or start_soc[b] < reduce_power_high_soc[b][0].soc
                     )
                 ):
                     new_state = battery_state_on_value
