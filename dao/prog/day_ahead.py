@@ -1717,7 +1717,7 @@ class DaCalc(DaBase):
                 and (tijd[0] < ready)
             ):
                 if instant_charge:
-                    ready_index = intervals_needed[e]
+                    ready_index = max(0, intervals_needed[e] - 1)
                 else:
                     for u in range(U):
                         if (tijd[u] + dt.timedelta(seconds=self.interval_s)) >= ready:
