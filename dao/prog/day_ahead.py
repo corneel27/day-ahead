@@ -1584,6 +1584,11 @@ class DaCalc(DaBase):
                 ):
                     ready = ready + dt.timedelta(days=1)
             hours_avail = max(0, (ready - start_dt).total_seconds() / 3600)
+            if instant_charge:
+                # instant charge has no real deadline, so bound hours_avail by the
+                # planning horizon instead of the (possibly stale) configured ready time
+                horizon_end = tijd[U - 1] + dt.timedelta(seconds=self.interval_s)
+                hours_avail = max(0, (horizon_end - start_dt).total_seconds() / 3600)
             # model_dump() is required here: after building the list, two computed
             # keys ("power" and "accu_power") are injected into each dict at runtime
             # based on ampere × voltage and efficiency.  These derived values don't
@@ -1717,7 +1722,7 @@ class DaCalc(DaBase):
                 and (tijd[0] < ready)
             ):
                 if instant_charge:
-                    ready_index = intervals_needed[e]
+                    ready_index = max(0, intervals_needed[e] - 1)
                 else:
                     for u in range(U):
                         if (tijd[u] + dt.timedelta(seconds=self.interval_s)) >= ready:
