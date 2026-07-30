@@ -91,7 +91,7 @@ def get_closest_index_from_list(flist: list, ts: float) -> int:
 STATEFILE = "../data/task_state.json"
 STALE_AFTER = 600
 
-def save_run_state(state):
+def save_task_state(state):
     # Write to tmp file and replace (atomic)
     # This prevents race condition between read and write
     state = {
@@ -109,7 +109,7 @@ def save_run_state(state):
     os.replace(temp_file, STATEFILE)
 
 
-def get_run_state() -> dict:
+def get_task_state() -> dict:
     no_state = {
         "status": "idle",
         "task": None,
@@ -142,6 +142,7 @@ def run_and_log(cmd, state):
     if len(flist) > 0:
         last_log_file = app_datapath + "log/" + flist[-1]["name"]
 
+    print(cmd)
     proc = Popen(
         cmd,
         stdout=DEVNULL,
@@ -150,7 +151,7 @@ def run_and_log(cmd, state):
     )
 
     while proc.poll() is None:
-        updated_state = get_run_state()
+        updated_state = get_task_state()
 
         if updated_state.get("status") == "cancelled":
             if state["logfile"] and os.path.exists(state["logfile"]):
@@ -174,7 +175,7 @@ def run_and_log(cmd, state):
 
                 if logfile != last_log_file:
                     state["logfile"] = logfile
-                    save_run_state(state)
+                    save_task_state(state)
 
         elif state["logfile"] != updated_state.get("logfile"):
             if os.path.exists(state["logfile"]):
@@ -187,18 +188,20 @@ def run_and_log(cmd, state):
         state["status"] = updated_state.get("status", state["status"])
 
         if state["status"] == "running":
-            save_run_state(state)
+            save_task_state(state)
 
         time.sleep(1)
 
     proc.wait()
 
-    updated_state = get_run_state()
+    updated_state = get_task_state()
 
     if updated_state["logfile"] == state["logfile"]:
+        print("Task completed")
+        print(proc.returncode)
         state["status"] = "done" if proc.returncode == 0 else "error"
         state["returncode"] = proc.returncode
-        save_run_state(state)
+        save_task_state(state)
 
 
 def log_chart(datapath: str, pattern: str):
@@ -269,7 +272,7 @@ def get_solar_items_with_ml():
 def chart():
     kwargs = log_chart("images/", "*.png")
     if kwargs is None:
-        return render_template("v2/no-run.html", )
+        return render_template("v2/no-tasks.html", )
 
     kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
     return render_template(
@@ -282,7 +285,7 @@ def chart():
 def log():
     kwargs = log_chart("log/", "*.log")
     if kwargs is None:
-        return render_template("v2/no-run.html", )
+        return render_template("v2/no-tasks.html", )
 
     log_file = app_datapath + "log/" + kwargs["filename"]
     with open(log_file, "r") as f:
@@ -304,24 +307,24 @@ def delete_file():
     return redirect(url_for('v2.' + post_data["action"], i=post_data["show_index"]))
 
 
-@v2.route("/run")
-def run():
-    return render_template("v2/run.html")
+@v2.route("/tasks")
+def tasks():
+    return render_template("v2/tasks.html")
 
-@v2.route("/run-cancel")
-def run_cancel():
+@v2.route("/task-cancel")
+def task_cancel():
     try:
-        state = get_run_state()
+        state = get_task_state()
         state["status"] = "cancelled"
-        save_run_state(state)
-        return render_template("v2/run.html")
+        save_task_state(state)
+        return render_template("v2/tasks.html")
     except Exception:
-        return "Error cancelling run", 500
+        return "Error cancelling task", 500
 
 
-@v2.route("/run-exec", methods=["POST"])
-def run_exec():
-    current_state = get_run_state()
+@v2.route("/task-exec", methods=["POST"])
+def task_exec():
+    current_state = get_task_state()
 
     if current_state["status"] == "running":
         return "Process already running: " + current_state["task"], 500
@@ -356,7 +359,7 @@ def run_exec():
         "returncode": None,
         "logfile": None,
     }
-    save_run_state(state)
+    save_task_state(state)
 
     cmd = ["python3", "../prog/day_ahead.py", *cmd]
 
@@ -366,12 +369,12 @@ def run_exec():
         daemon=True
     ).start()
 
-    return redirect(url_for('v2.run_status'))
+    return redirect(url_for('v2.task_state'))
 
 
-@v2.route("/run-status", methods=["GET"])
-def run_status():
-    current_state = get_run_state()
+@v2.route("/task-state", methods=["GET"])
+def task_state():
+    current_state = get_task_state()
 
     content = "No logfile available"
     started = None
@@ -411,20 +414,22 @@ def run_status():
     }
 
     return render_template(
-        "v2/run-status.html",
-        run_status=current_state,
+        "v2/task-status.html",
+        task_state=current_state,
         started=started,
         seconds_running=seconds_running,
         content=content,
     ), headers
 
 
-def reports_gen(subject: str, view: str, period: str, solar_item=None):
+def reports_gen(subject: str, view: str, period: str, solar_item=None, date: datetime.datetime = None):
     report = Report(app_datapath + "/options.json")
     prognose = period in ["vandaag en morgen", "morgen", "today_with_forecast"]
     if period == "today_with_forecast":
         period = "vandaag"
 
+    if date is None:
+        date = datetime.date.today()
     tot = None
 
     if not prognose:
@@ -469,7 +474,9 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None):
         )
     elif subject == "solar":
         report_df = report.calc_solar_data(
-            solar_item, datetime.date.today(), view
+            device=solar_item,
+            day=date,
+            active_view=view,
         )
     else:
         raise Exception("Invalid subject")
@@ -511,6 +518,7 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None):
                 report_df,
                 "vandaag",
                 _options=report.solar_graph_options,
+                _title=f"Solar production {date.strftime('%Y-%m-%d')}"
             )
         else:
             raise Exception("Invalid subject")
@@ -564,8 +572,16 @@ def solar():
     subject = request.args.get("subject", default=next(iter(solar_items.keys())))
     view = request.args.get("view", default="grafiek")
     period = request.args.get("period", default="vandaag")
+    date_str = request.args.get("date")
 
-    report_data = reports_gen("solar", view, period, solar_item=solar_items[subject])
+    if date_str:
+        date = datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+    else:
+        date = datetime.datetime.today()
+
+    date_str = date.strftime("%Y-%m-%d")
+
+    report_data = reports_gen("solar", view, period, solar_item=solar_items[subject], date=date)
     return render_template(
         "v2/report.html",
         title="Solar",
@@ -574,6 +590,8 @@ def solar():
         view=view,
         report_data=report_data,
         hide_period=True,
+        show_datepicker=True,
+        date=date_str,
         subject_options=[
             {"label": key, "value": key}
             for key in solar_items.keys()

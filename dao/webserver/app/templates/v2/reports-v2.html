@@ -6,7 +6,7 @@
 <form id="report-form" method="GET">
     <input type="hidden" name="timezone" data-current-tz>
     <div class="row">
-        <div class="dropdown col-6 col-lg-3">
+        <div class="col-12 col-lg-3">
             <div class="row">
                 <div class="dropdown col-6">
                     <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
@@ -51,13 +51,13 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-12 col-sm-8 col-lg-8">
+        <div class="col-12 col-sm-8 col-lg-8 overflow-x-auto">
             <div class="row">
                 <div class="input-group">
                     <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1m')">- 1m</a>
                     <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1w')">- 1w</a>
                     <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1d')">- 1d</a>
-                    <input type="datetime-local" name="start" id="start" class="form-control"
+                    <input type="datetime-local" name="start" id="start" class="form-control col-6"
                            value="{{ start|default('') }}">
                     <span class="input-group-text"> - </span>
                     <input type="datetime-local" name="end" id="end" class="form-control" value="{{ end|default('') }}">
@@ -67,7 +67,7 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-6 mt-2">
+                <div class="col-12 col-md-6 mt-2">
                     <div class="input-group">
                         <span class="input-group-text">Aggregate: </span>
                         <select name="aggregate" id="aggregate" class="form-select">
@@ -686,18 +686,25 @@
         updateData(getFormParams());
     });
 
-    function toDatetimeLocalValue(date) {
-        const pad = n => String(n).padStart(2, '0');
 
-        return [
-            date.getFullYear(),
-            pad(date.getMonth() + 1),
-            pad(date.getDate()),
-        ].join('-') + 'T' + [
-            pad(date.getHours()),
-            pad(date.getMinutes()),
-        ].join(':');
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     function setDataRange(range) {
         let start = new Date();

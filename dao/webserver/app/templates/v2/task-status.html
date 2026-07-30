@@ -1,0 +1,18 @@
+<div class="col-12 p-1 sticky-top {% if task_state["status"] == "running" or task_state["status"] == "cancelled" %}bg-warning-subtle{% elif task_state["status"] == "error" %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
+<h2>
+    {{task_state["task"]}}: {{task_state["status"]}}
+</h2>
+{%if task_state["status"] != "idle" %}
+<p class="lead">
+    Started: {{started.strftime("%Y-%m-%d %H:%M:%S") if started else "-"}} || {{seconds_running if seconds_running else "-"}} seconds
+</p>
+{% endif %}
+</div>
+<pre>{{content}}</pre>
+
+{% if task_state["status"] == "running" %}
+<span hx-get="{{url_for('v2.task_state')}}" hx-trigger="load delay:1000ms" hx-swap="innerHTML scroll:bottom transition:true" hx-push-url="false"></span>
+<script>document.getElementById('run-cancel').classList.remove('disabled')</script>
+{% else %}
+<script>document.getElementById('run-cancel').classList.add('disabled')</script>
+{% endif %}
