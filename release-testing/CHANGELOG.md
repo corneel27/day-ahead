@@ -1,5 +1,17 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.7.0.rc2
+
+A number of found issues in rc1 are fixed:
+- the combination of Instant start and a very tiny window from entity_ready_datetime 
+from home assistant could let the CBC solver crash.
+- Also the entity_ready_datetime still influenced the amount to charge at instant charge. Now it's behaving like described in the wiki.
+- support light/dark mode
+- fix legacy topnav on mobile
+- rename run to tasks
+- added date-picker on savings
+- fix error reduce_power_low_soc/reduce_power_high_soc "SocPowerLimit"
+
 # 2026.7.0.rc1
 
 This release contains two big changes/improvements:

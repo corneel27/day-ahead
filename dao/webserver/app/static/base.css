@@ -71,22 +71,27 @@ code-input {
   height: auto;
   width: calc(100% - 24px);
 }
-
 .selector-container {
-  display: flex;
-  flex-wrap: wrap;}
+    overflow-x: auto;
+    display: flex;
+}
 
 .select {
-  flex-wrap: nowrap;
-  float:left;
-  width:auto;
-  border: 2px solid white;
-  border-radius: 4px;
-  margin: 0px;
-  padding: 0px;
-  height: 40px;
-  font-size: 0;
-  }
+    display: inline-flex;
+    flex-wrap: nowrap;
+
+    border: 2px solid white;
+    border-radius: 4px;
+    margin: 0;
+    padding: 0;
+    height: 40px;
+    font-size: 0;
+}
+
+.select > .menubtn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
 
 .spacer {
  padding: 5px;
@@ -126,19 +131,6 @@ code-input {
   margin-left : 0;
   border-right: 1px solid white;
   margin-right : 0;
-}
-
-
-/* menubuttons */
-.menu_box {
-  background-color: orange;
-  flex-wrap: nowrap;
-  float:left;
-  width:auto;
-  border: 2px solid white;
-  margin: 0px;
-  padding: 0px;
-  font-size: 0;
 }
 
 .menubtn:hover {
