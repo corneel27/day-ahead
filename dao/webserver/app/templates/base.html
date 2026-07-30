@@ -14,12 +14,12 @@
     <!-- https://fonts.googleapis.com/icon?family=Material+Icons -->
     <link href="static/icon.css" rel="stylesheet">
     <script src="static/prism.js"></script>
-    <link rel="stylesheet" href="static/prism.css" />
-    <link rel="stylesheet" href='static/base.css' />
-    <link rel="stylesheet" href='static/base.css' />
+    <link rel="stylesheet" href="static/prism.css"/>
+    <link rel="stylesheet" href='static/base.css'/>
+    <link rel="stylesheet" href='static/base.css'/>
     <link rel="stylesheet" media="screen and (min-width: 1100px)" href="static/widescreen.css">
     <link rel="stylesheet" media="screen and (max-width: 1100px)" href="static/smallscreen.css">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <meta charset="UTF-8">
     <title>{{ title }} - Day Ahead Optimization</title>
 </head>
@@ -28,24 +28,24 @@
     <header>
         <form method="post" name="menu_form" id="menu_form">
             <input type="hidden" id="active_menu" name="active_menu" value="{{active_menu}}">
-            <div class="selector-container">
             <div class="spacer">
-            <div class="select menubox">
-                {% for key, value in active_menu_list.items() %}
+            <div class="selector-container">
+                <div class="select">
+                    {% for key, value in active_menu_list.items() %}
                     {% set button_name= "menu_" ~ key %}
                     <button name={{button_name}} value="{{key}}"
-                        {% if active_menu == key %}
+                            {% if active_menu== key %}
                             class="menubtn menubtn_left active"
-                        {% else %}
+                            {% else %}
                             class="menubtn menubtn_left"
-                        {% endif %}
-                        >{{value}}
+                            {% endif %}
+                    >{{value}}
                     </button>
-                {% endfor %}
-                <a href="{{url_for('v2.chart')}}" class="menubtn menubtn_left" style="color:black">UI V2</a>
+                    {% endfor %}
+                    <a href="{{url_for('v2.chart')}}" class="menubtn menubtn_left" style="color:black; padding-top: 12px;">UI V2</a>
+                </div>
             </div>
-            </div>
-            </div>
+                </div>
         </form>
         <!---
         <ul>
@@ -63,12 +63,12 @@
         {% block selectie %}{% endblock %}
     </header>
     <div class="content">
-    {% block content %}{% endblock %}
+        {% block content %}{% endblock %}
     </div>
-  <footer>
-      <span style="float:right;"><a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank">&nbsp&copy;&nbsp{{ version[0:4] }}: Apache 2.0</a></span>
-      <span>&nbsp <a href="https://github.com/corneel27/day-ahead" target="_blank">Day Ahead Optimizer version: {{ version }}</a></span>&nbsp
-  </footer>
+    <footer>
+        <span style="float:right;"><a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank">&nbsp&copy;&nbsp{{ version[0:4] }}: Apache 2.0</a></span>
+        <span>&nbsp <a href="https://github.com/corneel27/day-ahead" target="_blank">Day Ahead Optimizer version: {{ version }}</a></span>&nbsp
+    </footer>
 </div>
 </body>
 </html>

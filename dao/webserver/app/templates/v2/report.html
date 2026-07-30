@@ -47,6 +47,17 @@
             </select>
         </div>
         {% endif %}
+
+        {% if show_datepicker %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="input-group">
+                    <a class="btn btn-outline-secondary" href="javascript: alterDate('-1d')">- 1d</a>
+                    <input type="date" name="date" id="date" class="form-control"
+                           value="{{ date|default('') }}">
+                    <a class="btn btn-outline-secondary" href="javascript: alterDate('+1d')">+ 1d</a>
+                </div>
+            </div>
+        {% endif %}
     </div>
 </form>
 
@@ -82,6 +93,32 @@
     form.addEventListener('change', (e) => {
         form.submit();
     });
+
+
+    function alterDate(mod) {
+        let date = new Date();
+        const dateInput = document.getElementById('date');
+
+        if (mod.match('^[+-]')) {
+            date = new Date(dateInput.value + 'T00:00:00');
+        }
+
+        switch (mod) {
+            case '+1d':
+                date.setDate(date.getDate() + 1);
+                break;
+            case '-1d':
+                date.setDate(date.getDate() - 1);
+                break;
+            default:
+                console.log('Invalid mod: ' + mod);
+                return;
+        }
+
+        dateInput.value = toDatetimeLocalValue(date, false);
+
+        form.dispatchEvent(new Event('change'));
+    }
 </script>
 
 {% endblock %}
