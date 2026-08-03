@@ -43,8 +43,8 @@ h1 {
 
   .error {
     display: none;
-    position: absolute;
-    left: 50%;
+    position: relative;
+    width: 100%;
   }
 
   &.loading {
