@@ -3517,6 +3517,9 @@ class Report(DaBase):
                 # Code behouden wanneer de sensorlijst leeg is.
                 sensor_rows.append((code, None))
 
+        if len(sensor_rows) == 0:
+            return None
+
         return (
             values(
                 column("code", String),
@@ -3547,6 +3550,10 @@ class Report(DaBase):
             step=step,
         )
         sensors_cte = self.create_ha_sensors_cte(var_codes)
+
+        if sensors_cte is None:
+            return None
+
         sensor_values_cte = (
             select(
                 intervals_cte.c.ts_start.label("ts"),
@@ -3764,7 +3771,7 @@ class Report(DaBase):
         )
 
         with self.db_da.engine.connect() as connection:
-            # return str(query.compile(connection, compile_kwargs={"literal_binds": True}))
+            # return str(query_da.compile(connection, compile_kwargs={"literal_binds": True}))
             df = pd.read_sql_query(query_da, connection)
 
         query_ha = self.get_ha_data_query(
@@ -3773,25 +3780,30 @@ class Report(DaBase):
             step=deltas[aggregate],
             var_codes=var_codes,
         )
-        with self.db_ha.engine.connect() as connection:
-            df_ha = pd.read_sql_query(query_ha, connection)
 
-        df = df.merge(
-            df_ha[["ts", "code", "v"]].rename(columns={"v": "v_ha"}),
-            on=["ts", "code"],
-            how="left",
-        )
+        if query_ha is not None:
+            with self.db_ha.engine.connect() as connection:
+                # return str(query_ha.compile(connection, compile_kwargs={"literal_binds": True}))
+                df_ha = pd.read_sql_query(query_ha, connection)
 
-        mask = df["v"].isna() | df["v"].eq(0)
+            # Alleen mergen wanneer de query daadwerkelijk data oplevert.
+            if not df_ha.empty:
+                df = df.merge(
+                    df_ha[["ts", "code", "v"]].rename(columns={"v": "v_ha"}),
+                    on=["ts", "code"],
+                    how="left",
+                )
 
-        df.loc[mask, "v"] = df.loc[mask, "v_ha"]
-        df = df.drop(columns="v_ha")
+                mask = df["v"].isna() | df["v"].eq(0)
+                df.loc[mask, "v"] = df.loc[mask, "v_ha"]
+                df = df.drop(columns="v_ha")
 
         target_tz = start.tzinfo
         df["ts"] = (
             pd.to_datetime(df["ts"], unit="s", utc=True)
             .dt.tz_convert(target_tz)
         )
+
         df[["v", "f"]] = df[["v", "f"]].round(3)
 
         return [
