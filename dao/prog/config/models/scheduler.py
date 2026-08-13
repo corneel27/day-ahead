@@ -12,6 +12,7 @@ SchedulerAction = Literal[
     "get_tibber_data",
     "get_day_ahead_prices",
     "calc_optimum",
+    "calc_optimum_met_debug",
     "clean_data",
     "calc_baseloads",
     "train_ml_predictions",
