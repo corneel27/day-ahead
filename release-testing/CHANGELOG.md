@@ -3,6 +3,8 @@
 
 # 2026.8.0.rc1
 
+NIET INSTALLEREN!!
+
 - Reload changed config for reports (changed watchdog.sh to restart scheduler and reload workers webserver)
 - fixed error if boiler setting gives no optimization room to DAO (setpoint - hysterese <= heating_allowed_below)
 - Fix: UI flickering in dark mode (UI V2)
