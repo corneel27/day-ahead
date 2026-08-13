@@ -1,5 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2026.8.0.rc3
+
+Fixed 2e error in watchdog
+
 # 2026.8.0.rc2
 
 Fixed error in watchdog
