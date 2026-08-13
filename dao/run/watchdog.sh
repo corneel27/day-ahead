@@ -36,7 +36,7 @@ start_gunicorn() {
 }
 
 start_inotify() {
-    inotifywait -q -e close_write,move "${WATCH_FILES[@]}" &
+    inotifywait -q -e modify "${WATCH_FILES[@]}" &
     INOTIFY_PID=$!
 }
 
