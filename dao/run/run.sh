@@ -60,4 +60,4 @@ if [ -d miplib/lib ]; then
 fi
 
 cd /root/dao/prog
-bash ./watchdog.sh&
+exec bash ./watchdog.sh
