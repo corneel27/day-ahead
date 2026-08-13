@@ -1,9 +1,10 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.8.0.rc2
+
+Fixed error in watchdog
 
 # 2026.8.0.rc1
-
-NIET INSTALLEREN!!
 
 - Reload changed config for reports (changed watchdog.sh to restart scheduler and reload workers webserver)
 - fixed error if boiler setting gives no optimization room to DAO (setpoint - hysterese <= heating_allowed_below)
