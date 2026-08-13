@@ -59,9 +59,5 @@ if [ -d miplib/lib ]; then
   echo 'export LD_LIBRARY_PATH="/root/dao/prog/miplib/lib/"' >> ~/.bashrc
 fi
 
-
 cd /root/dao/prog
 bash ./watchdog.sh&
-
-cd /root/dao/webserver/
-gunicorn --config gunicorn_config.py app:app
