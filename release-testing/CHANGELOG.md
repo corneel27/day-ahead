@@ -1,5 +1,15 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+
+# 2026.8.0.rc1
+
+- Reload changed config for reports (changed watchdog.sh to restart scheduler and reload workers webserver)
+- fixed error if boiler setting gives no optimization room to DAO (setpoint - hysterese <= heating_allowed_below)
+- Fix: UI flickering in dark mode (UI V2)
+- Fix: exception on Reports V2 with no ha-sensors to get data from
+- Fix: icon font on relative path
+- Updated several python modules
+
 # 2026.7.0.rc2
 
 A number of found issues in rc1 are fixed:
