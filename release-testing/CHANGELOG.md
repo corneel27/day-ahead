@@ -1,16 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
-# 2026.8.0.rc3
+# 2026.8.0.rc4
 
-Fixed 2e error in watchdog
-
-# 2026.8.0.rc2
-
-Fixed error in watchdog
-
-# 2026.8.0.rc1
-
+- rc4: Fixed error in app/docker entry
+- rc3: Fixed 2e error in watchdog
+- rc2: Fixed error in watchdog 
+Fixes rc1:
 - Reload changed config for reports (changed watchdog.sh to restart scheduler and reload workers webserver)
 - fixed error if boiler setting gives no optimization room to DAO (setpoint - hysterese <= heating_allowed_below)
 - Fix: UI flickering in dark mode (UI V2)
