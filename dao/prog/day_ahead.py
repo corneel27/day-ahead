@@ -1152,6 +1152,14 @@ class DaCalc(DaBase):
             boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
             # 37 °C als boiler onder ondergrens komt moet er worden verwarmd
             boiler_ondergrens = boiler_setpoint - boiler_hysterese
+            if boiler_bovengrens <= boiler_ondergrens:
+                logging.warning(f"Het programma heeft geen speelruimte tussen "
+                                f"heating allowed below {boiler_bovengrens} en de boiler ondergrens"
+                                f" {boiler_ondergrens}"
+                                f"(= setpoint {boiler_setpoint} - hysterese {boiler_hysterese}")
+                boiler_bovengrens = boiler_ondergrens + 1
+                logging.info(f"De waarde voor heating_allowed_below is verhoogd naar "
+                             f"{boiler_bovengrens}")
             # volume in  liter
             vol = self.boiler_options.volume
             # spec heat in kJ/K = vol in liter * 4,2 kJ/k.liter + 100 kg boiler * 0,5 kJ/k.kg
@@ -3250,9 +3258,9 @@ class DaCalc(DaBase):
             return None
 
         # Suppress FutureWarning messages
-        import warnings
+        # import warnings
 
-        warnings.simplefilter(action="ignore", category=FutureWarning)
+        # warnings.simplefilter(action="ignore", category=FutureWarning)
 
         if model.num_solutions == 0:
             logging.error(

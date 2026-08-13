@@ -1,48 +1,146 @@
 #!/usr/bin/env bash
 
 WATCH_FILES=(
-  "../data/options.json"
-  "../data/secrets.json"
+    "/root/dao/data/options.json"
+    "/root/dao/data/secrets.json"
 )
 
-CMD=(python3 da_scheduler.py)
+SCHEDULER_PID=""
+GUNICORN_PID=""
+INOTIFY_PID=""
+
+start_processes() {
+    echo "Starting scheduler..."
+    (
+        cd /root/dao/prog || exit 1
+        exec python3 da_scheduler.py
+    ) &
+    SCHEDULER_PID=$!
+
+    echo "Starting gunicorn..."
+    (
+        cd /root/dao/webserver || exit 1
+        exec gunicorn --config gunicorn_config.py app:app
+    ) &
+    GUNICORN_PID=$!
+
+    echo "Scheduler PID: $SCHEDULER_PID"
+    echo "Gunicorn PID:  $GUNICORN_PID"
+}
+
+stop_scheduler() {
+    if [ -n "$SCHEDULER_PID" ] && kill -0 "$SCHEDULER_PID" 2>/dev/null; then
+        echo "Stopping scheduler..."
+        kill -TERM "$SCHEDULER_PID" 2>/dev/null
+        wait "$SCHEDULER_PID" 2>/dev/null
+    fi
+}
+
+stop_gunicorn() {
+    if [ -n "$GUNICORN_PID" ] && kill -0 "$GUNICORN_PID" 2>/dev/null; then
+        echo "Stopping gunicorn..."
+        kill -TERM "$GUNICORN_PID" 2>/dev/null
+        wait "$GUNICORN_PID" 2>/dev/null
+    fi
+}
+
+cleanup() {
+    echo "Watchdog stopping..."
+
+    if [ -n "$INOTIFY_PID" ] && kill -0 "$INOTIFY_PID" 2>/dev/null; then
+        kill "$INOTIFY_PID" 2>/dev/null
+    fi
+
+    stop_scheduler
+    stop_gunicorn
+
+    exit 0
+}
+
+trap cleanup SIGTERM SIGINT
 
 while true; do
-    echo "Starting scheduler..."
-    "${CMD[@]}" &
-    PID=$!
 
-    # Start inotifywait op de achtergrond
-    inotifywait -q -e modify "${WATCH_FILES[@]}" &
+    start_processes
+
+    # Wacht op een configuratiewijziging.
+    # close_write: bestand is volledig geschreven en gesloten
+    # move: bestand is vervangen door een ander bestand
+
+    inotifywait -q -e close_write,move "${WATCH_FILES[@]}" &
     INOTIFY_PID=$!
 
-    # Wacht tot OF scheduler stopt OF file wijziging plaatsvindt
     while true; do
-        # Scheduler gecrasht / gestopt?
-        if ! kill -0 "$PID" 2>/dev/null; then
-            wait "$PID"
+
+        # ------------------------------------------------------------
+        # Scheduler is gestopt/gecrasht
+        # ------------------------------------------------------------
+        if ! kill -0 "$SCHEDULER_PID" 2>/dev/null; then
+            wait "$SCHEDULER_PID" 2>/dev/null
             EXIT=$?
 
             kill "$INOTIFY_PID" 2>/dev/null
 
             if [ "$EXIT" -eq 0 ]; then
-                echo "Scheduler stopped normally"
+                echo "scheduler stopped normally"
             else
-                logger "scheduler exited with $EXIT"
-                echo "Scheduler crashed with exit code $EXIT"
+                echo "scheduler crashed with exit code $EXIT"
                 sleep 2
+            fi
+
+            # Gunicorn ook stoppen; daarna worden beide opnieuw gestart.
+            stop_gunicorn
+
+            break
+        fi
+
+        # ------------------------------------------------------------
+        # Gunicorn is gestopt/gecrasht
+        # ------------------------------------------------------------
+        if ! kill -0 "$GUNICORN_PID" 2>/dev/null; then
+            wait "$GUNICORN_PID" 2>/dev/null
+            EXIT=$?
+
+            kill "$INOTIFY_PID" 2>/dev/null
+
+            if [ "$EXIT" -eq 0 ]; then
+                echo "gunicorn stopped normally"
+            else
+                echo "gunicorn crashed with exit code $EXIT"
+                sleep 2
+            fi
+
+            # Scheduler ook stoppen; daarna worden beide opnieuw gestart.
+            stop_scheduler
+
+            break
+        fi
+
+        # ------------------------------------------------------------
+        # Configuratie gewijzigd
+        # ------------------------------------------------------------
+        if ! kill -0 "$INOTIFY_PID" 2>/dev/null; then
+            echo "Configuration changed, restarting scheduler and reloading gunicorn..."
+
+            kill "$INOTIFY_PID" 2>/dev/null
+
+            # Scheduler volledig opnieuw starten.
+            stop_scheduler
+
+            # Gunicorn master een HUP geven.
+            #
+            # Gunicorn blijft draaien, maar start zijn workers
+            # opnieuw. Daardoor wordt DaBase opnieuw geïnitialiseerd
+            # en wordt de nieuwe configuratie geladen.
+            if kill -0 "$GUNICORN_PID" 2>/dev/null; then
+                echo "Reloading gunicorn..."
+                kill -HUP "$GUNICORN_PID" 2>/dev/null
             fi
 
             break
         fi
 
-        # Config gewijzigd?
-        if ! kill -0 "$INOTIFY_PID" 2>/dev/null; then
-            echo "Configuration changed, restarting scheduler..."
-            kill "$PID" 2>/dev/null
-            wait "$PID" 2>/dev/null
-            break
-        fi
         sleep 1
     done
+
 done

@@ -19,7 +19,7 @@ def inject_data():
 # globals
 app_datapath = "app/static/data/"
 
-VITE_DEV_SERVER = "http://localhost:5173/static/build"
+VITE_DEV_SERVER = "http://localhost:5173"
 VITE_MANIFEST = Path("app/static/build/.vite/manifest.json")
 
 def vite_tags(entry: str) -> str:
