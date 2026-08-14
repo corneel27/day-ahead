@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILD_FROM=debian:bookworm-slim
+        - BUILD_ARCH=amd64
+        - BUILD_VERSION=2026.4.3
+    volumes:
+      - .:/workspaces/day-ahead:cached
+    command: sleep infinity

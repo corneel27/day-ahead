@@ -1,0 +1,11 @@
+{
+    "name": "Day ahead Container",
+    "dockerComposeFile": "../dao/docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspaces/day-ahead",
+    "customizations": {
+        "vscode": {
+            "extensions": ["ms-python.python"]
+        }
+    }
+}

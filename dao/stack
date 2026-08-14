@@ -1,0 +1,12 @@
+services:
+  dao:
+    container_name: dao
+    image: dao-app:latest
+    volumes:
+      - /home/joost/Documents/Projects/day_ahead/home_assistant_config:/homeassistant
+      - /home/joost/Documents/Projects/day_ahead/data:/config
+    ports:
+      - 5000:5000
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Amsterdam
