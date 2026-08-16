@@ -4,12 +4,16 @@ je gebruik maakt van dynamische prijzen.
 Zie verder: DOCS.md
 """
 
+import ctypes
 import datetime
 import datetime as dt
+import os
+import tempfile
 import time
 import sys
 import math
 import pandas as pd
+from contextlib import contextmanager
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS, INTEGER
 from pandas.core.dtypes.inference import is_number
 from dao.prog.da_report import Report
@@ -22,6 +26,47 @@ from utils import (
 )
 import logging
 from dao.prog.da_base import DaBase
+
+_libc = ctypes.CDLL(None)
+
+
+@contextmanager
+def _capture_native_stdout():
+    """Redirects the OS-level stdout file descriptor (fd 1) for the
+    duration of a CBC solve. CBC writes its "Search completed...", "Exiting
+    as integer gap..." etc. lines via native C-level stdio, never through
+    Python's `logging` module, so they normally land on the console (or
+    wherever fd 1 points) but never in the log file. Plain
+    `contextlib.redirect_stdout` would not catch this, since it only
+    reassigns Python's `sys.stdout` object and native stdio bypasses that
+    entirely. `fflush(NULL)` is called before restoring the fd so CBC's own
+    buffered output isn't left sitting unflushed past the point we read it
+    back.
+    """
+    stdout_fd = 1
+    saved_fd = os.dup(stdout_fd)
+    tmp = tempfile.TemporaryFile(mode="w+b")
+    _libc.fflush(None)
+    os.dup2(tmp.fileno(), stdout_fd)
+    result = {"cbc_log": ""}
+    try:
+        yield result
+    finally:
+        _libc.fflush(None)
+        os.dup2(saved_fd, stdout_fd)
+        os.close(saved_fd)
+        tmp.seek(0)
+        result["cbc_log"] = tmp.read().decode(errors="replace")
+        tmp.close()
+
+
+def _log_native_output(text: str) -> None:
+    """Feeds captured CBC stdout output through logging.info, line by
+    line, so it ends up in the log file (and console, via the stream
+    handler) instead of only on raw stdout."""
+    for line in text.splitlines():
+        if line.strip():
+            logging.info(line)
 
 
 class DaCalc(DaBase):
@@ -355,7 +400,7 @@ class DaCalc(DaBase):
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
         try:
-            if self.log_level <= logging.INFO:
+            if self.debug or self.log_level <= logging.DEBUG:
                 start_df = pd.DataFrame(
                     {
                         "uur": uur,
@@ -3220,7 +3265,10 @@ class DaCalc(DaBase):
             logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
             model.objective = minimize(cost)
             start_calc = time.perf_counter()
-            model.optimize()
+            with _capture_native_stdout() as native:
+                model.optimize()
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             end_calc = time.perf_counter()
             logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
             if model.num_solutions == 0:
@@ -3230,7 +3278,10 @@ class DaCalc(DaBase):
             strategie = "minimale levering"
             logging.info(f"Strategie: {strategie}")
             model.objective = minimize(delivery)
-            model.optimize()
+            with _capture_native_stdout() as native:
+                model.optimize()
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return None
@@ -3240,10 +3291,16 @@ class DaCalc(DaBase):
             logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
             model += delivery <= min_delivery
             model.objective = minimize(cost)
-            model.optimize()
+            with _capture_native_stdout() as native:
+                model.optimize()
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
                 model.objective = minimize(delivery)
-                model.optimize()
+                with _capture_native_stdout() as native:
+                    model.optimize()
+                if self.debug or self.log_level <= logging.DEBUG:
+                    _log_native_output(native["cbc_log"])
                 if model.num_solutions == 0:
                     logging.warning(
                         f"Geen oplossing in na herberekening voor: {self.strategy}"
@@ -3463,7 +3520,7 @@ class DaCalc(DaBase):
                         dc_to_ac_eff = 
                             discharge_stages[ds]["efficiency"] * 100.0
                 """
-                if self.log_level == logging.INFO:
+                if self.debug or self.log_level <= logging.DEBUG:
                     # debug laden
                     if ac_to_dc[b][u].x > 0.0:
                         logging.info(
