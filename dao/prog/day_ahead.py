@@ -3468,7 +3468,7 @@ class DaCalc(DaBase):
                     if ac_to_dc[b][u].x > 0.0:
                         logging.info(
                             f"Laad volume in uur {u} {uur[u]} "
-                            f"{ac_from_dc[b][u].x * hour_fraction[u]} kWh"
+                            f"{ac_to_dc[b][u].x * hour_fraction[u]} kWh"
                         )
                         for cs in range(CS[b]):
                             if ac_to_dc_w[b][u][cs].x > 0:
