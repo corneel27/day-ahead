@@ -3525,7 +3525,7 @@ class DaCalc(DaBase):
                     if ac_to_dc[b][u].x > 0.0:
                         logging.info(
                             f"Laad volume in uur {u} {uur[u]} "
-                            f"{ac_from_dc[b][u].x * hour_fraction[u]} kWh"
+                            f"{ac_to_dc[b][u].x * hour_fraction[u]} kWh"
                         )
                         for cs in range(CS[b]):
                             if ac_to_dc_w[b][u][cs].x > 0:
@@ -4268,6 +4268,62 @@ class DaCalc(DaBase):
                                 else:
                                     self.turn_off(entity_pv_switch)
                                     logging.info(f"PV {pv_name} uitgezet")
+
+            ############################################
+            # battery next action (HA standby scheduling)
+            ############################################
+            for b in range(B):
+                entity_battery_next_action = self.battery_options[
+                    b
+                ].entity_battery_next_action
+                if entity_battery_next_action is None:
+                    continue
+                bat_name = self.battery_options[b].name
+                # same ~20W deadband as the u=0 dispatch logic above, but
+                # compared against the SoC delta (kWh).
+                # The threshold is converted to an energy-per-interval
+                # figure (not the delta to a %) to stay clear of the
+                # solver's own optimality gap noise on tiny SoC moves.
+                battery_idle_threshold_w = 20
+                found_u = None
+                found_soc_delta_kwh = None
+                for u in range(U):
+                    soc_delta_kwh = (soc[b][u + 1].x - soc[b][u].x) * one_soc[b]
+                    threshold_kwh = battery_idle_threshold_w / 1000 * hour_fraction[u]
+                    if abs(soc_delta_kwh) > threshold_kwh:
+                        found_u = u
+                        found_soc_delta_kwh = soc_delta_kwh
+                        break
+                if found_u is not None:
+                    next_action_dt = tijd[found_u]
+                else:
+                    # no activity anywhere in the horizon: confirmed idle
+                    # until the end of the horizon
+                    next_action_dt = tijd[U - 1] + dt.timedelta(
+                        seconds=self.interval_s
+                    )
+                next_action_str = next_action_dt.strftime("%Y-%m-%d %H:%M")
+                if found_u is not None:
+                    logging.info(
+                        f"Volgende actie batterij {bat_name}: {next_action_str} "
+                        f"(interval {found_u}, SoC-delta {found_soc_delta_kwh:.3f} kWh)"
+                    )
+                else:
+                    logging.info(
+                        f"Volgende actie batterij {bat_name}: {next_action_str} "
+                        f"(einde horizon, geen activiteit gevonden)"
+                    )
+                if self.debug:
+                    logging.info(
+                        f"Zou zijn geschreven naar {entity_battery_next_action}: "
+                        f"{next_action_str}"
+                    )
+                else:
+                    self.call_service(
+                        "set_datetime",
+                        entity_id=entity_battery_next_action,
+                        datetime=next_action_str,
+                    )
 
             ##################################################
             # heatpump
