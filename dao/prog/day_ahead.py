@@ -400,7 +400,7 @@ class DaCalc(DaBase):
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
         try:
-            if self.log_level <= logging.INFO:
+            if self.debug or self.log_level <= logging.DEBUG:
                 start_df = pd.DataFrame(
                     {
                         "uur": uur,
@@ -3267,7 +3267,8 @@ class DaCalc(DaBase):
             start_calc = time.perf_counter()
             with _capture_native_stdout() as native:
                 model.optimize()
-            _log_native_output(native["cbc_log"])
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             end_calc = time.perf_counter()
             logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
             if model.num_solutions == 0:
@@ -3279,7 +3280,8 @@ class DaCalc(DaBase):
             model.objective = minimize(delivery)
             with _capture_native_stdout() as native:
                 model.optimize()
-            _log_native_output(native["cbc_log"])
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return None
@@ -3291,12 +3293,14 @@ class DaCalc(DaBase):
             model.objective = minimize(cost)
             with _capture_native_stdout() as native:
                 model.optimize()
-            _log_native_output(native["cbc_log"])
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
                 model.objective = minimize(delivery)
                 with _capture_native_stdout() as native:
                     model.optimize()
-                _log_native_output(native["cbc_log"])
+                if self.debug or self.log_level <= logging.DEBUG:
+                    _log_native_output(native["cbc_log"])
                 if model.num_solutions == 0:
                     logging.warning(
                         f"Geen oplossing in na herberekening voor: {self.strategy}"
@@ -3516,7 +3520,7 @@ class DaCalc(DaBase):
                         dc_to_ac_eff = 
                             discharge_stages[ds]["efficiency"] * 100.0
                 """
-                if self.log_level == logging.INFO:
+                if self.debug or self.log_level <= logging.DEBUG:
                     # debug laden
                     if ac_to_dc[b][u].x > 0.0:
                         logging.info(
