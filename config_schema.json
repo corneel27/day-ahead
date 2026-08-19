@@ -402,6 +402,22 @@
           "x-unit": "%",
           "title": "Entity Calculated Soc"
         },
+        "entity battery next action": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the timestamp of this battery's next planned action",
+          "x-help": "Optional: Home Assistant input_datetime entity to save the timestamp of the next interval in which this battery is planned to do something. Used by automations that put the inverter into standby during confirmed-idle stretches.",
+          "x-ui-section": "Power Configuration",
+          "x-ui-widget-filter": "input_datetime,datetime",
+          "title": "Entity Battery Next Action"
+        },
         "solar": {
           "description": "DC-coupled solar panels attached to this battery",
           "items": {
@@ -2482,6 +2498,7 @@
             "get_tibber_data",
             "get_day_ahead_prices",
             "calc_optimum",
+            "calc_optimum_met_debug",
             "clean_data",
             "calc_baseloads",
             "train_ml_predictions"
