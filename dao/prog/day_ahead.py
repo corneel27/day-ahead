@@ -4,12 +4,16 @@ je gebruik maakt van dynamische prijzen.
 Zie verder: DOCS.md
 """
 
+import ctypes
 import datetime
 import datetime as dt
+import os
+import tempfile
 import time
 import sys
 import math
 import pandas as pd
+from contextlib import contextmanager
 from mip import Model, xsum, minimize, BINARY, CONTINUOUS, INTEGER
 from pandas.core.dtypes.inference import is_number
 from dao.prog.da_report import Report
@@ -22,6 +26,47 @@ from utils import (
 )
 import logging
 from dao.prog.da_base import DaBase
+
+_libc = ctypes.CDLL(None)
+
+
+@contextmanager
+def _capture_native_stdout():
+    """Redirects the OS-level stdout file descriptor (fd 1) for the
+    duration of a CBC solve. CBC writes its "Search completed...", "Exiting
+    as integer gap..." etc. lines via native C-level stdio, never through
+    Python's `logging` module, so they normally land on the console (or
+    wherever fd 1 points) but never in the log file. Plain
+    `contextlib.redirect_stdout` would not catch this, since it only
+    reassigns Python's `sys.stdout` object and native stdio bypasses that
+    entirely. `fflush(NULL)` is called before restoring the fd so CBC's own
+    buffered output isn't left sitting unflushed past the point we read it
+    back.
+    """
+    stdout_fd = 1
+    saved_fd = os.dup(stdout_fd)
+    tmp = tempfile.TemporaryFile(mode="w+b")
+    _libc.fflush(None)
+    os.dup2(tmp.fileno(), stdout_fd)
+    result = {"cbc_log": ""}
+    try:
+        yield result
+    finally:
+        _libc.fflush(None)
+        os.dup2(saved_fd, stdout_fd)
+        os.close(saved_fd)
+        tmp.seek(0)
+        result["cbc_log"] = tmp.read().decode(errors="replace")
+        tmp.close()
+
+
+def _log_native_output(text: str) -> None:
+    """Feeds captured CBC stdout output through logging.info, line by
+    line, so it ends up in the log file (and console, via the stream
+    handler) instead of only on raw stdout."""
+    for line in text.splitlines():
+        if line.strip():
+            logging.info(line)
 
 
 class DaCalc(DaBase):
@@ -355,7 +400,7 @@ class DaCalc(DaBase):
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
         try:
-            if self.log_level <= logging.INFO:
+            if self.debug or self.log_level <= logging.DEBUG:
                 start_df = pd.DataFrame(
                     {
                         "uur": uur,
@@ -3220,7 +3265,10 @@ class DaCalc(DaBase):
             logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
             model.objective = minimize(cost)
             start_calc = time.perf_counter()
-            model.optimize()
+            with _capture_native_stdout() as native:
+                model.optimize()
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             end_calc = time.perf_counter()
             logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
             if model.num_solutions == 0:
@@ -3230,7 +3278,10 @@ class DaCalc(DaBase):
             strategie = "minimale levering"
             logging.info(f"Strategie: {strategie}")
             model.objective = minimize(delivery)
-            model.optimize()
+            with _capture_native_stdout() as native:
+                model.optimize()
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return None
@@ -3240,10 +3291,16 @@ class DaCalc(DaBase):
             logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
             model += delivery <= min_delivery
             model.objective = minimize(cost)
-            model.optimize()
+            with _capture_native_stdout() as native:
+                model.optimize()
+            if self.debug or self.log_level <= logging.DEBUG:
+                _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
                 model.objective = minimize(delivery)
-                model.optimize()
+                with _capture_native_stdout() as native:
+                    model.optimize()
+                if self.debug or self.log_level <= logging.DEBUG:
+                    _log_native_output(native["cbc_log"])
                 if model.num_solutions == 0:
                     logging.warning(
                         f"Geen oplossing in na herberekening voor: {self.strategy}"
@@ -3463,12 +3520,12 @@ class DaCalc(DaBase):
                         dc_to_ac_eff = 
                             discharge_stages[ds]["efficiency"] * 100.0
                 """
-                if self.log_level == logging.INFO:
+                if self.debug or self.log_level <= logging.DEBUG:
                     # debug laden
                     if ac_to_dc[b][u].x > 0.0:
                         logging.info(
                             f"Laad volume in uur {u} {uur[u]} "
-                            f"{ac_from_dc[b][u].x * hour_fraction[u]} kWh"
+                            f"{ac_to_dc[b][u].x * hour_fraction[u]} kWh"
                         )
                         for cs in range(CS[b]):
                             if ac_to_dc_w[b][u][cs].x > 0:
@@ -4211,6 +4268,62 @@ class DaCalc(DaBase):
                                 else:
                                     self.turn_off(entity_pv_switch)
                                     logging.info(f"PV {pv_name} uitgezet")
+
+            ############################################
+            # battery next action (HA standby scheduling)
+            ############################################
+            for b in range(B):
+                entity_battery_next_action = self.battery_options[
+                    b
+                ].entity_battery_next_action
+                if entity_battery_next_action is None:
+                    continue
+                bat_name = self.battery_options[b].name
+                # same ~20W deadband as the u=0 dispatch logic above, but
+                # compared against the SoC delta (kWh).
+                # The threshold is converted to an energy-per-interval
+                # figure (not the delta to a %) to stay clear of the
+                # solver's own optimality gap noise on tiny SoC moves.
+                battery_idle_threshold_w = 20
+                found_u = None
+                found_soc_delta_kwh = None
+                for u in range(U):
+                    soc_delta_kwh = (soc[b][u + 1].x - soc[b][u].x) * one_soc[b]
+                    threshold_kwh = battery_idle_threshold_w / 1000 * hour_fraction[u]
+                    if abs(soc_delta_kwh) > threshold_kwh:
+                        found_u = u
+                        found_soc_delta_kwh = soc_delta_kwh
+                        break
+                if found_u is not None:
+                    next_action_dt = tijd[found_u]
+                else:
+                    # no activity anywhere in the horizon: confirmed idle
+                    # until the end of the horizon
+                    next_action_dt = tijd[U - 1] + dt.timedelta(
+                        seconds=self.interval_s
+                    )
+                next_action_str = next_action_dt.strftime("%Y-%m-%d %H:%M")
+                if found_u is not None:
+                    logging.info(
+                        f"Volgende actie batterij {bat_name}: {next_action_str} "
+                        f"(interval {found_u}, SoC-delta {found_soc_delta_kwh:.3f} kWh)"
+                    )
+                else:
+                    logging.info(
+                        f"Volgende actie batterij {bat_name}: {next_action_str} "
+                        f"(einde horizon, geen activiteit gevonden)"
+                    )
+                if self.debug:
+                    logging.info(
+                        f"Zou zijn geschreven naar {entity_battery_next_action}: "
+                        f"{next_action_str}"
+                    )
+                else:
+                    self.call_service(
+                        "set_datetime",
+                        entity_id=entity_battery_next_action,
+                        datetime=next_action_str,
+                    )
 
             ##################################################
             # heatpump
