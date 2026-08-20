@@ -2,6 +2,12 @@ name: Build and publish
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to build"
+        required: true
+        type: string
+
   release:
     types: [published]
 
@@ -35,8 +41,10 @@ jobs:
         run: |
           DAO_VERSION=$(grep '^version:' dao/config.yaml | awk '{print $2}')
           TEST_VERSION=$(grep '^version:' release-testing/config.yaml | awk '{print $2}')
-
           RELEASE_TAG="${{ github.event.release.tag_name }}"
+          if [[ -z "$RELEASE_TAG" ]]; then
+            RELEASE_TAG="${{ inputs.release_tag }}"
+          fi
 
           echo "Release tag:     ${RELEASE_TAG}"
           echo "DAO version:     ${DAO_VERSION}"
