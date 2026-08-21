@@ -2,78 +2,167 @@ name: Build and publish
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to build"
+        required: true
+        type: string
+
   release:
     types: [published]
 
+env:
+  ARCHITECTURES: '["amd64", "aarch64"]'
+  IMAGE_NAME: dao
+
+permissions:
+  contents: read
+
 jobs:
-  build:
+
+  init:
+    name: Initialize build
     runs-on: ubuntu-latest
-    name: Build ${{ matrix.arch }} ${{ matrix.release }} release
+
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      app_dir: ${{ steps.detect.outputs.app_dir }}
+      version: ${{ steps.detect.outputs.version }}
+      image_tags: ${{ steps.detect.outputs.image_tags }}
+
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Detect release type
+        id: detect
+        shell: bash
+        run: |
+          DAO_VERSION=$(grep '^version:' dao/config.yaml | awk '{print $2}')
+          TEST_VERSION=$(grep '^version:' release-testing/config.yaml | awk '{print $2}')
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          if [[ -z "$RELEASE_TAG" ]]; then
+            RELEASE_TAG="${{ inputs.release_tag }}"
+          fi
+
+          echo "Release tag:     ${RELEASE_TAG}"
+          echo "DAO version:     ${DAO_VERSION}"
+          echo "Testing version: ${TEST_VERSION}"
+
+          if [[ "${RELEASE_TAG}" == "${DAO_VERSION}" ]]; then
+            echo "Detected stable release"
+
+            echo "app_dir=dao" >> "$GITHUB_OUTPUT"
+            echo "version=${DAO_VERSION}" >> "$GITHUB_OUTPUT"
+
+            {
+              echo "image_tags<<EOF"
+              echo "${DAO_VERSION}"
+              echo "stable"
+              echo "latest"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+
+          elif [[ "${RELEASE_TAG}" == "${TEST_VERSION}" ]]; then
+            echo "Detected testing release"
+
+            echo "app_dir=release-testing" >> "$GITHUB_OUTPUT"
+            echo "version=${TEST_VERSION}" >> "$GITHUB_OUTPUT"
+
+            {
+              echo "image_tags<<EOF"
+              echo "${TEST_VERSION}"
+              echo "testing"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+
+          else
+            echo "ERROR: release tag '${RELEASE_TAG}' does not match:"
+            echo "  dao/config.yaml: ${DAO_VERSION}"
+            echo "  release-testing/config.yaml: ${TEST_VERSION}"
+            exit 1
+          fi
+
+      - name: Prepare multi-architecture matrix
+        id: matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: ${{ env.IMAGE_NAME }}
+
+
+  build:
+    name: Build ${{ matrix.arch }} image
+    needs: init
+
+    runs-on: ${{ matrix.os }}
+
     strategy:
-      matrix:
-        release: [ "stable", "testing" ]
-        arch: [ "aarch64", "amd64"]
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.init.outputs.matrix) }}
+
     permissions:
       contents: read
+      id-token: write
       packages: write
 
     steps:
-      # this will always checkout the triggered release tag
+
       - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v6
 
-      - name: Get version to build
+      - name: Prepare testing build context
+        if: needs.init.outputs.app_dir == 'release-testing'
         run: |
-          if [[ ${{ matrix.release }} == "stable" ]]; then
-            VERSION=$(grep 'version: ' dao/config.yaml | sed -e 's/^version: //')
-          else
-            VERSION=$(grep 'version: ' ./release-testing/config.yaml | sed -e 's/^version: //') 
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          cp -a dao/* release-testing/
 
-      - name: Set stable or testing on release
-        if: ${{ github.ref_name == env.VERSION }}
-        shell: bash
-        run: |
-          if [[ ${{ matrix.release }} == "stable" ]]; then
-            echo "this is a final release, setting stable tag"
-            echo "NO_LATEST=" >> $GITHUB_ENV;
-            echo "EXTRA_TAG=--additional-tag stable" >> $GITHUB_ENV
-            echo "TARGET=--target dao" >> $GITHUB_ENV
-          else
-            echo "this is a release candidate, not setting stable or latest tag"
-            echo "NO_LATEST=--no-latest" >> $GITHUB_ENV;
-            echo "EXTRA_TAG=--additional-tag testing" >> $GITHUB_ENV;
-            echo "TARGET=--target release-testing" >> $GITHUB_ENV
-          fi 
-
-      - name: Login to GHCR
-        if: ${{ github.ref_name == env.VERSION }}
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - name: Build and publish image
+        uses: home-assistant/builder/actions/build-image@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
         with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-          registry: ghcr.io
+          arch: ${{ matrix.arch }}
+
+          image: ${{ matrix.image }}
+
+          context: ${{ needs.init.outputs.app_dir }}
+
+          container-registry: ghcr.io
+          container-registry-username: ${{ github.repository_owner }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+          image-tags: ${{ needs.init.outputs.image_tags }}
+
+          version: ${{ needs.init.outputs.version }}
+
+          push: "true"
+
+          cache-gha: "true"
+          cache-gha-scope: ${{ needs.init.outputs.app_dir }}
 
 
-      - name: Prepare ${{ matrix.release }} build
-        if: ${{ github.ref_name == env.VERSION }}
-        run: |
-          if [[ ${{ matrix.release }} == "testing" ]]; then
-             cp -a dao/* ./release-${{ matrix.release }}
-          fi
+  manifest:
+    name: Publish multi-architecture manifest
+    needs:
+      - init
+      - build
 
-      - name: Build and publish ${{ matrix.release }} dao-image
-        if: ${{ github.ref_name == env.VERSION }}
-        uses: home-assistant/builder@2026.02.1
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      packages: write
+
+    steps:
+
+      - name: Publish multi-architecture manifest
+        uses: home-assistant/builder/actions/publish-multi-arch-manifest@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
         with:
-          args: |
-            --generic $VERSION \
-            --${{ matrix.arch }} \
-            --image "dao-${{ matrix.arch }}" \
-            ${{ env.TARGET }} \
-            --version $VERSION \
-            --docker-hub ghcr.io/${{ github.repository_owner }} \
-            ${{ env.NO_LATEST }} \
-            ${{ env.EXTRA_TAG }} \
-            --addon
+          architectures: ${{ env.ARCHITECTURES }}
+
+          image-name: ${{ env.IMAGE_NAME }}
+
+          container-registry: ghcr.io
+          container-registry-username: ${{ github.repository_owner }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+
+          image-tags: ${{ needs.init.outputs.image_tags }}
