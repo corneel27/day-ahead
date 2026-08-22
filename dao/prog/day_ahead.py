@@ -3255,7 +3255,16 @@ class DaCalc(DaBase):
         # model.max_seconds = 20
         if self.log_level > logging.DEBUG:
             model.verbose = 1
-        model.threads = -1 #use all available cores
+        model.threads = getattr(self, "_solver_threads", -1)
+        if getattr(self, "_debug_capture_vars", False):
+            try:
+                from da_debug import build_var_registry
+
+                self._debug_vars = build_var_registry(locals())
+            except Exception:
+                logging.warning(
+                    "Kon debug variabele-registry niet opbouwen", exc_info=True
+                )
         # model.check_optimization_results()
 
         # kosten optimalisering
