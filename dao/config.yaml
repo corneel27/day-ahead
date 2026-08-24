@@ -26,4 +26,4 @@ options:
   use_self_compiled_miplib: false
 schema:
   use_self_compiled_miplib: bool?
-image: "ghcr.io/corneel27/dao-{arch}"
+image: "ghcr.io/corneel27/dao"
