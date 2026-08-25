@@ -143,6 +143,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `entity from pv` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
 | `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
 | `entity calculated soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for saving calculated SOC (Unit: `%`) |
+| `entity battery next action` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the timestamp of this battery's next planned action |
 | `solar` | list[[SolarConfig](#solarconfig)] | No | `null` | DC-coupled solar panels attached to this battery |
 
 <details>
@@ -263,6 +264,10 @@ Optional: Home Assistant entity to save the calculated average grid power in wat
 **`entity calculated soc`**
 
 Optional: Home Assistant entity to save the calculated State of Charge at the end of the first interval. For battery systems that will stear at SoC-values
+
+**`entity battery next action`**
+
+Optional: Home Assistant input_datetime entity to save the timestamp of the next interval in which this battery is planned to do something. Used by automations that put the inverter into standby during confirmed-idle stretches.
 
 **`solar`**
 
@@ -1994,7 +1999,7 @@ _A single scheduled task entry._
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
-| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `calc_optimum`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
+| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `calc_optimum`, `calc_optimum_met_debug`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>

@@ -1,7 +1,6 @@
-ARG BUILD_FROM
 ARG BUILD_ARCH
-
-FROM ${BUILD_FROM} AS builder
+ARG BUILD_VERSION
+FROM ghcr.io/hassio-addons/debian-base/${BUILD_ARCH}:9.3.0 AS builder
 ARG BUILD_ARCH
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -33,7 +32,7 @@ WORKDIR /root/dao/webserver
 RUN  npm ci \
      && npm run build
 
-FROM ${BUILD_FROM}
+FROM ghcr.io/hassio-addons/debian-base/${BUILD_ARCH}:9.3.0
 ARG BUILD_ARCH
 ENV ENV_BUILD_ARCH=$BUILD_ARCH
 
@@ -83,6 +82,7 @@ ENTRYPOINT  ["./run.sh"]
 
 # Labels
 LABEL \
+    io.hass.type="app" \
     io.hass.arch="${BUILD_ARCH}" \
-    io.hass.type="addon" \
-    io.hass.version=${BUILD_VERSION}
+    org.opencontainers.image.version="${BUILD_VERSION}" \
+    org.opencontainers.image.source="https://github.com/corneel27/day-ahead"

@@ -6,37 +6,76 @@ on:
     branches:
       - main
 
+env:
+  ARCHITECTURES: '["amd64", "aarch64"]'
+  IMAGE_NAME: dao
+
+permissions:
+  contents: read
+
 jobs:
-  test:
+
+  init:
+    name: Initialize test build
     runs-on: ubuntu-latest
-    name: Test build ${{ matrix.arch }} ${{ matrix.release }} release
-    strategy:
-      matrix:
-        # we only test build release-testing for amd64
-        # this can be changed if desired
-        release: [ "testing" ]
-        arch: [ "amd64", "aarch64" ]
-    permissions:
-      contents: read
-      packages: write
+
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
 
     steps:
+
       - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v6
 
-      - name: Prepare build
+      - name: Prepare testing build context
         run: |
-          cp -a dao/* ./release-${{ matrix.release }}
+          cp -a dao/* release-testing/
 
-      - name: Test build 
-        uses: home-assistant/builder@2026.02.1
+      - name: Prepare multi-architecture matrix
+        id: matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
         with:
-          args: |
-            --test \
-            --no-latest \
-            --generic "test" \
-            --${{ matrix.arch }} \
-            --image "dao-${{ matrix.arch }}" \
-            --target release-${{ matrix.release }} \
-            --version "test" \
-            --addon
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: ${{ env.IMAGE_NAME }}
+
+
+  build:
+    name: Test build ${{ matrix.arch }}
+    needs: init
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.init.outputs.matrix) }}
+
+    permissions:
+      contents: read
+
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Prepare testing build context
+        run: |
+          cp -a dao/* release-testing/
+
+      - name: Test build
+        uses: home-assistant/builder/actions/build-image@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
+        with:
+          arch: ${{ matrix.arch }}
+
+          image: ${{ matrix.image }}
+
+          context: release-testing
+
+          image-tags: |
+            test
+
+          version: test
+
+          push: "false"
+
+          cache-gha: "true"
+          cache-gha-scope: testing

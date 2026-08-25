@@ -21,7 +21,7 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # extract version from dao/config.yaml
+      # extract version from release-testing/config.yaml
       - name: Get version number
         run: |
           VERSION=$(grep 'version: ' release-testing/config.yaml | sed -e 's/^version: //')

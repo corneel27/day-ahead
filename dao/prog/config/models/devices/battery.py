@@ -395,6 +395,18 @@ class BatteryConfig(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
+    entity_battery_next_action: Optional[EntityId] = Field(
+        default=None,
+        alias="entity battery next action",
+        description="HA entity for the timestamp of this battery's next planned action",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant input_datetime entity to save the timestamp of "
+            "the next interval in which this battery is planned to do something. Used by "
+            "automations that put the inverter into standby during confirmed-idle stretches.",
+            "x-ui-section": "Power Configuration",
+            "x-ui-widget-filter": "input_datetime,datetime",
+        },
+    )
 
     # DC-coupled solar (nested!)
     solar: list[SolarConfig] = Field(
