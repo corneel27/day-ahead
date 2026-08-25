@@ -1,7 +1,7 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
-# 2026.8.0.rc6
+# 2026.8.0.rc7
 ## Breaking change
 Users with a seperate container (no HA app/addon)change your pull command:
 `docker pull ghcr.io/corneel27/dao:testing`
