@@ -1,5 +1,32 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.8.0
+
+## Breaking change
+Users with a seperate container (no HA app/addon)change your pull command:
+`docker pull ghcr.io/corneel27/dao:latest`
+
+This release contains two big changes/improvements:
+1. @storeman is started with the rewriting of the user-interface. 
+You can find his proceedings with the menu-option "UI V2". It is mostly written in javascript.
+2. @Dogooder has investigated and improved the mip-calculation of the ev-model of DAO. He also have build a test-suite
+for the ev-module under certain stress-circumstances.
+I thank both contributors for their great efforts!! <br>
+
+The other changes in this release:
+- update workflows for (test)build images, packages are now oci-compliant
+- when "stop_inverter" is not configured the calculated bat-power is now spread out over the hole interval.
+- correct stop_omvormer when feedin > 0.0 (suggested by @Dogooder) 
+- correct index error with reduce_power_low_soc and reduce_power_high_soc
+- added multithread so it uses all available cores during mip-calculation (thanks @Dogooder)
+- correct baseload calculation for machine usage (thanks @gijsstat)
+- updates of several used python modules
+- Reload changed config for reports (changed watchdog.sh to restart scheduler and reload workers webserver)
+- fixed error if boiler setting gives no optimization room to DAO (setpoint - hysterese <= heating_allowed_below)
+- Add `battery_next_action` output for standby/sleep automation
+- Route CBC's native solver output into the logger
+- Updated several python modules
+
 # 2026.6.0
 - Changed watchdog.sh: also restart scheduler when it crashes
 - Changed boiler cop to FlexFloat (request from @hemertje)
