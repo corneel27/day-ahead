@@ -2003,14 +2003,20 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
     from dao.prog.day_ahead import DaCalc
 
     guard = _offline_guard() if args.offline else None
-    result = None
     try:
         with ReplayIO(snapshot_path, solver_threads=args.threads, png=args.png) as replay:
             file_name = str(snapshot_path)
             dacalc = DaCalc(file_name)
-            result = dacalc.calc_optimum()
+            # calc_optimum()'s return value is not a usable success signal —
+            # see the matching comment in cmd_dump: it returns None
+            # unconditionally, on success and on every failure path alike.
+            # The solved model's own num_solutions, captured by ReplayIO's
+            # mip.Model.optimize() wrapper, is what actually tells success
+            # from failure below.
+            dacalc.calc_optimum()
         reads = sorted(replay.reads)
         result_dict = replay.build_result()
+        solved = replay._model is not None and replay._model.num_solutions > 0
     finally:
         if guard is not None:
             _offline_unguard(guard)
@@ -2046,7 +2052,7 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
         print(f"result:   {d['result']}" if d["result"] else "result:   not written (solve never reached model.optimize())")
 
     _emit(args, data, render)
-    return EXIT_OK if result is not None else EXIT_SOLVER_FAILURE
+    return EXIT_OK if solved else EXIT_SOLVER_FAILURE
 
 
 # Toont een samenvatting van een snapshot en eventueel resultaat, zonder de solver te draaien.
@@ -2364,7 +2370,14 @@ def cmd_dump(args: argparse.Namespace, data_dir: Path) -> int:
         with ReplayIO(snapshot_path, solver_threads=args.threads) as replay:
             dacalc = DaCalc(str(snapshot_path))
             dacalc._debug_capture_vars = True
-            result = dacalc.calc_optimum()
+            # calc_optimum() always returns None — on success and on every
+            # failure path alike (day_ahead.py's own final line is an
+            # unconditional `return None`; it communicates outcome via
+            # self/notify/logging, not a return value). So the return value
+            # here is not a usable success signal; the solved model's own
+            # num_solutions/status, captured separately below via
+            # ReplayIO's mip.Model.optimize() wrapper, is.
+            dacalc.calc_optimum()
         model = replay._model
         registry = getattr(dacalc, "_debug_vars", None)
         meta = replay.meta
@@ -2372,10 +2385,15 @@ def cmd_dump(args: argparse.Namespace, data_dir: Path) -> int:
         if guard is not None:
             _offline_unguard(guard)
 
-    if model is None or result is None:
+    if model is None:
         raise UsageError(
-            "replay never reached a solved model.optimize() — nothing to "
-            "dump (see any error logged above)"
+            "replay never reached model.optimize() — nothing to dump "
+            "(check the replay's own log output above for why)"
+        )
+    if getattr(model, "num_solutions", 0) == 0:
+        raise UsageError(
+            f"replay's model has no solution (status="
+            f"{getattr(model.status, 'name', model.status)}) — nothing to dump"
         )
     if not registry:
         raise UsageError(
