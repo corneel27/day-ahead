@@ -27,9 +27,12 @@ Both classes are context managers that must be entered *before* any
 of the channels they patch (config, strategy resolution, the HA REST call in
 the constructor) are read inside ``DaBase.__init__`` itself.
 
-Only the input cut-set (§2.1) and the snapshot format (§2.2) are implemented
-here. The variable registry and ``dump_interval`` (§2.3-§2.5) are a
-separate, later piece of work; ``RecordingIO`` does not depend on them.
+The input cut-set (§2.1), the snapshot format (§2.2), the variable registry
+(§2.3) and ``dump_interval`` (§2.5) are all implemented here. ``RecordingIO``
+and ``ReplayIO`` do not depend on the registry or ``dump_interval`` — those
+are only wired together by the ``dump`` CLI command, which replays a
+snapshot to get a solved model plus its registry and then prints what the
+solver knew about one interval.
 """
 
 from __future__ import annotations
@@ -463,9 +466,11 @@ def _build_result_dict(model, cbc_log_chunks: list[str], extra_meta: dict) -> Op
             "cbc_log": "\n".join(cbc_log_chunks) if cbc_log_chunks else None,
             "note": (
                 "Per-interval dispatch and SoC trajectory are not captured "
-                "yet — they need the variable registry (architecture doc "
-                "§2.3/§2.5), which is separate follow-up work, not part of "
-                "this snapshot format."
+                "in this result file — objective/status/gap only. Use the "
+                "`dump` CLI command (architecture doc §2.5) against the "
+                "snapshot to see what a solved model knew about a specific "
+                "interval; that needs a live re-solve via ReplayIO and "
+                "isn't something a static result file can hold."
             ),
         }
     except Exception:
@@ -1158,6 +1163,559 @@ class ReplayIO:
 
 
 # ---------------------------------------------------------------------------
+# Variable registry (A1's hook 1, §2.3) and dump_interval (A3, §2.5)
+# ---------------------------------------------------------------------------
+#
+# day_ahead.py's calc_optimum() already calls build_var_registry(locals())
+# just before model.optimize() when self._debug_capture_vars is set (the
+# hook A1 landed). Nothing here is reachable from an ordinary run: the flag
+# defaults to unset, and everything below is only ever driven by the `dump`
+# CLI command or by tests that build a synthetic mip.Model directly.
+
+
+class VarRegistryError(RuntimeError):
+    """Raised when the registry contains a container with no SHAPES entry
+    and no SHAPES_IGNORE entry — i.e. calc_optimum() grew a new variable
+    family that dump_interval was never taught the axis layout of. This is
+    meant to fail loudly (§2.5's "completeness assertion") rather than
+    silently omit the new container from every future dump."""
+
+
+# Bouwt {var.idx: (containernaam, indextuple)} uit calc_optimum()'s eigen
+# locals() vlak vóór model.optimize(); loopt alleen door lists/tuples, dus
+# DataFrames, configobjecten en losse scalars worden vanzelf overgeslagen.
+def build_var_registry(local_vars: dict) -> dict[int, tuple[str, tuple]]:
+    """§2.3: ``{var.idx: (container_name, index_tuple)}`` built from
+    ``calc_optimum()``'s own ``locals()`` just before ``model.optimize()``.
+
+    Only walks values that are themselves ``list``/``tuple`` at the top
+    level, then recurses through nested lists/tuples looking for ``mip.Var``
+    leaves. This is deliberate, not incidental: mip never names variables
+    (0 of 81 ``add_var`` call sites in day_ahead.py pass ``name=``, per the
+    architecture doc's §0.7 finding 1), so there is nothing to key on but
+    the Python container structure — and restricting the walk to
+    list/tuple means DataFrames, pydantic config objects, and plain scalar
+    locals are dead ends rather than needing an exclude list. Keyed by
+    ``var.idx`` rather than the ``Var`` object itself, because
+    ``mip.Var.__eq__`` returns a ``LinExpr`` rather than a bool and
+    ``var.idx`` is unique per model regardless (architecture doc §2.3).
+    """
+    registry: dict[int, tuple[str, tuple]] = {}
+    if mip is None:
+        return registry
+
+    # Loopt recursief door een (geneste) list/tuple en registreert elke
+    # Var-leaf onder zijn containernaam en indexpad.
+    def _walk(name: str, value, path: tuple) -> None:
+        if isinstance(value, mip.Var):
+            registry[value.idx] = (name, path)
+        elif isinstance(value, (list, tuple)):
+            for i, item in enumerate(value):
+                _walk(name, item, path + (i,))
+        # Everything else (DataFrame, dict, pydantic model, float, str,
+        # None, ...) is neither a Var nor a container to recurse into.
+
+    for name, value in local_vars.items():
+        if isinstance(value, (list, tuple)):
+            _walk(name, value, ())
+    return registry
+
+
+# Declaratieve as-indeling per containernaam: welke Python-loopvariabele
+# hoort bij welke positie in de geneste lijst. "u" is het interval-as,
+# "u_boundary" is dezelfde as maar met lengte U+1 (SoC-grenzen). Geschreven
+# tegen de huidige day_ahead.py door de model-bouwsectie te lezen, niet
+# afgeleid uit de namen — zie de architectuurdoc §2.5 voor het voorbeeld dat
+# dit uitbreidt.
+SHAPES: dict[str, tuple[str, ...]] = {
+    # solar (top-level AC-coupled arrays, independent of any battery)
+    "pv_ac": ("s", "u"),
+    "pv_ac_on_off": ("s", "u"),
+    # battery — DC-coupled solar feeding this battery specifically
+    "pv_dc_on_off": ("b", "pvdc", "u"),
+    "pv_prod_dc_sum": ("b", "u"),
+    # battery — AC<->DC, both curves are SOS2 (§2.5); the commented
+    # on/off-without-SOS alternatives never execute, so they never appear
+    # in locals() and need no entry here
+    "ac_to_dc": ("b", "u"),
+    "ac_to_dc_on": ("b", "u"),
+    "ac_to_dc_w": ("b", "u", "cs"),  # SOS2 weight, charge
+    "ac_from_dc": ("b", "u"),
+    "ac_from_dc_on": ("b", "u"),
+    "ac_from_dc_w": ("b", "u", "ds"),  # SOS2 weight, discharge
+    "dc_from_ac": ("b", "u"),
+    "dc_to_ac": ("b", "u"),
+    "dc_from_bat": ("b", "u"),
+    "dc_to_bat": ("b", "u"),
+    "soc": ("b", "u_boundary"),
+    "soc_low": ("b", "u_boundary"),
+    "soc_mid": ("b", "u_boundary"),
+    "cycle_cost": ("b",),
+    "penalty_cost": ("b",),
+    # boiler (single, not indexed by asset)
+    "boiler_on": ("u",),
+    "boiler_st": ("u",),
+    "boiler_temp": ("u_boundary",),
+    "c_b": ("u",),
+    # ev — note stage_* is [e][ecs][u] (stage before interval), while every
+    # other per-ev container is [e][u]; a transposed index here would
+    # produce plausible-looking wrong numbers (architecture doc §8.5)
+    "stage_consumption": ("e", "ecs", "u"),
+    "stage_factor": ("e", "ecs", "u"),
+    "stage_on": ("e", "ecs", "u"),
+    "c_ev": ("e", "u"),
+    "p_ev": ("e", "u"),
+    "ev_accu_in": ("e", "u"),
+    "ev_soc_kwh": ("e", "u"),
+    "ev_is_on": ("e", "u"),
+    "ev_is_off": ("e", "u"),
+    "ev_is_partial": ("e", "u"),
+    "ev_boundary_stop": ("e", "u"),
+    "ev_partial_sum": ("e",),
+    "ev_boundary_sum": ("e",),
+    "ev_start_stops_sum": ("e",),
+    "ev_delta_soc": ("e", "u"),
+    "low_soc_penalty_int": ("e", "u"),
+    "low_soc_penalty": ("e",),
+    "switch_cost": ("e",),
+    # grid
+    "c_l": ("u",),
+    "c_t": ("u",),
+    "c_l_on": ("u",),
+    "c_t_on": ("u",),
+    # heat pump — mutually exclusive per run depending on
+    # heating_options.adjustment: "on/off" builds hp_bl_on/hp_start_index,
+    # "power"/"heating curve" builds p_hp/hp_s_w (third active add_sos() —
+    # architecture doc §11, A0 Q7). Note p_hp is [s][u] while its own
+    # SOS2 weight hp_s_w is [u][s] — transposed relative to each other,
+    # same class of trap as the EV stage arrays above.
+    "c_hp": ("u",),
+    "hp_on": ("u",),
+    "h_hp": ("u",),
+    "hp_bl_on": ("blk", "u"),
+    "hp_start_index": ("blk",),
+    "p_hp": ("s_hp", "u"),
+    "hp_s_w": ("u", "s_hp"),  # SOS2 weight, heat pump
+    # machines
+    "ma_start": ("m", "kw"),
+    "c_ma_kw": ("m", "kw"),
+    "c_ma_u": ("m", "u"),
+}
+
+# Containers that legitimately produce Var leaves but are deliberately not
+# part of a per-interval dump (currently none — every container that shows
+# up in the registry has a SHAPES entry above). Kept as a real set, not a
+# comment, so _assert_shapes_complete has somewhere to point a genuinely
+# non-interval container without that container silently vanishing from
+# every dump.
+SHAPES_IGNORE: frozenset[str] = frozenset()
+
+# Grouping used only for dump_interval's human-readable output — which
+# heading a container's values print under. Purely cosmetic: an unlisted
+# container still passes _assert_shapes_complete as long as it's in SHAPES,
+# it just prints under "other".
+FAMILY: dict[str, str] = {
+    "pv_ac": "solar",
+    "pv_ac_on_off": "solar",
+    "pv_dc_on_off": "battery",
+    "pv_prod_dc_sum": "battery",
+    "ac_to_dc": "battery",
+    "ac_to_dc_on": "battery",
+    "ac_to_dc_w": "battery",
+    "ac_from_dc": "battery",
+    "ac_from_dc_on": "battery",
+    "ac_from_dc_w": "battery",
+    "dc_from_ac": "battery",
+    "dc_to_ac": "battery",
+    "dc_from_bat": "battery",
+    "dc_to_bat": "battery",
+    "soc": "battery",
+    "soc_low": "battery",
+    "soc_mid": "battery",
+    "cycle_cost": "battery",
+    "penalty_cost": "battery",
+    "boiler_on": "boiler",
+    "boiler_st": "boiler",
+    "boiler_temp": "boiler",
+    "c_b": "boiler",
+    "stage_consumption": "ev",
+    "stage_factor": "ev",
+    "stage_on": "ev",
+    "c_ev": "ev",
+    "p_ev": "ev",
+    "ev_accu_in": "ev",
+    "ev_soc_kwh": "ev",
+    "ev_is_on": "ev",
+    "ev_is_off": "ev",
+    "ev_is_partial": "ev",
+    "ev_boundary_stop": "ev",
+    "ev_partial_sum": "ev",
+    "ev_boundary_sum": "ev",
+    "ev_start_stops_sum": "ev",
+    "ev_delta_soc": "ev",
+    "low_soc_penalty_int": "ev",
+    "low_soc_penalty": "ev",
+    "switch_cost": "ev",
+    "c_l": "grid",
+    "c_t": "grid",
+    "c_l_on": "grid",
+    "c_t_on": "grid",
+    "c_hp": "heatpump",
+    "hp_on": "heatpump",
+    "h_hp": "heatpump",
+    "hp_bl_on": "heatpump",
+    "hp_start_index": "heatpump",
+    "p_hp": "heatpump",
+    "hp_s_w": "heatpump",
+    "ma_start": "machine",
+    "c_ma_kw": "machine",
+    "c_ma_u": "machine",
+}
+
+# Asset-index axes that get their own sub-heading in the text render
+# ("battery 0", "ev 1", ...) when they are a container's leading axis.
+_ASSET_AXES = ("b", "e", "m")
+
+
+# Faalt hard, met de namen van de onbekende containers, zodra de registry
+# een containernaam bevat die niet in SHAPES of SHAPES_IGNORE voorkomt —
+# dit is de "voeg een container toe zonder SHAPES bij te werken" val uit de
+# A3-testparagraaf.
+def _assert_shapes_complete(registry: dict) -> None:
+    names = {name for name, _ in registry.values()}
+    unknown = sorted(names - set(SHAPES) - SHAPES_IGNORE)
+    if unknown:
+        raise VarRegistryError(
+            f"{len(unknown)} variable container(s) have no SHAPES entry "
+            f"and are not on SHAPES_IGNORE: {', '.join(unknown)}. "
+            f"calc_optimum() grew a new variable family; add its axis "
+            f"layout to SHAPES (or to SHAPES_IGNORE if it's deliberately "
+            f"not interval-addressable) in da_debug.py before dump can "
+            f"cover it."
+        )
+
+
+# Groepeert de registry per containernaam, nodig omdat build_var_registry
+# zelf per var.idx sleutelt en dump_interval juist per container wil kunnen
+# selecteren.
+def _group_by_container(registry: dict) -> dict[str, list[tuple[tuple, int]]]:
+    groups: dict[str, list[tuple[tuple, int]]] = {}
+    for var_idx, (name, idx_tuple) in registry.items():
+        groups.setdefault(name, []).append((idx_tuple, var_idx))
+    return groups
+
+
+# Zoekt de interval-as van een SHAPES-vorm op: positie plus of het de
+# U+1-grensvariant (soc-achtig) is. Geeft None als de container geen
+# interval-as heeft (bv. cycle_cost, alleen per batterij).
+def _interval_axis(shape: tuple[str, ...]) -> Optional[tuple[int, bool]]:
+    if "u_boundary" in shape:
+        return shape.index("u_boundary"), True
+    if "u" in shape:
+        return shape.index("u"), False
+    return None
+
+
+# Selecteert uit een containers items alleen de indextuples waarvan de
+# interval-as in `wanted` zit; geeft (indextuple, var_idx)-paren terug.
+def _select_at(entries: list[tuple[tuple, int]], axis_pos: int, wanted: set[int]):
+    return [(idx, vidx) for idx, vidx in entries if idx[axis_pos] in wanted]
+
+
+# Bouwt eenmalig var.idx -> [constraint-index, ...] en cachet dat op het
+# model, zodat meerdere dump_interval-aanroepen tegen hetzelfde opgeloste
+# model de O(aantal constraints)-kost maar één keer betalen (§2.5, gemeten
+# 10ms bij 2304 constraints).
+def _inverse_var_constraint_index(model) -> dict[int, list[int]]:
+    cached = getattr(model, "_debug_inv_index", None)
+    if cached is not None:
+        return cached
+    inv: dict[int, list[int]] = {}
+    for ci, c in enumerate(model.constrs):
+        for v in c.expr.expr:
+            inv.setdefault(v.idx, []).append(ci)
+    try:
+        model._debug_inv_index = inv
+    except Exception:  # pragma: no cover - mip.Model has no __slots__ today
+        pass
+    return inv
+
+
+# Berekent (activity, rhs) van een constraint rechtstreeks uit coëfficiënten
+# en opgeloste waarden, in plaats van op het teken van c.slack te vertrouwen
+# — c.expr.const is de negatieve RHS [geverifieerd tegen een echt mip-model].
+def _constraint_activity(c) -> tuple[float, float]:
+    activity = sum(coef * v.x for v, coef in c.expr.expr.items())
+    rhs = -c.expr.const
+    return activity, rhs
+
+
+# Een constraint is bindend als de activity binnen tolerantie gelijk is aan
+# de rhs.
+def _is_binding(c, tol: float = 1e-6) -> bool:
+    activity, rhs = _constraint_activity(c)
+    return abs(activity - rhs) < tol
+
+
+# Vertaalt een Var naar zijn leesbare label via de registry, of naar
+# var(idx) als de Var niet geregistreerd is (bv. de kale cost/delivery-
+# variabelen, die nooit in een list/tuple zaten en dus geen registry-entry
+# hebben — build_var_registry loopt bewust alleen door containers).
+def label_for_var(var, registry: dict) -> str:
+    entry = registry.get(var.idx)
+    if entry is None:
+        return f"var({var.idx})"
+    name, idx = entry
+    return name + "".join(f"[{i}]" for i in idx)
+
+
+_SENSE_SYMBOLS = {"<": "<=", ">": ">=", "=": "="}
+
+
+# Rendert een constraint met registry-labels in plaats van var(N)/constr(N),
+# bv. "ac_to_dc[0][14] - 0.95*dc_from_ac[0][14] = 0".
+def render_constraint(c, registry: dict) -> str:
+    terms = sorted(
+        ((coef, label_for_var(v, registry)) for v, coef in c.expr.expr.items()),
+        key=lambda t: t[1],
+    )
+    pieces: list[str] = []
+    for coef, label in terms:
+        magnitude = abs(coef)
+        coef_str = "" if abs(magnitude - 1) < 1e-12 else f"{magnitude:g}*"
+        term = f"{coef_str}{label}"
+        if not pieces:
+            pieces.append(f"-{term}" if coef < 0 else term)
+        else:
+            pieces.append(f"- {term}" if coef < 0 else f"+ {term}")
+    lhs = " ".join(pieces) if pieces else "0"
+    rhs = -c.expr.const + 0.0  # normalises -0.0 to 0.0 so it doesn't print as "-0"
+    sense = _SENSE_SYMBOLS.get(c.expr.sense, c.expr.sense)
+    return f"{lhs} {sense} {rhs:g}"
+
+
+# Elke actieve SOS2-curve in het model: (label, gewichtscontainer, as-naam
+# van de trap, container met de al-geïnterpoleerde waarde). python-mip
+# biedt geen manier om SOS-sets na add_sos() terug op te vragen, dus dit kan
+# alleen uit de gewichtsvariabelen zelf komen, niet uit constraint-inspectie
+# (§2.5). Drie sites, zie A0 Q7 / architectuurdoc §11: batterij laden,
+# batterij ontladen, warmtepomp (alleen aanwezig bij adjustment "power" /
+# "heating curve" — de "on/off"-tak gebruikt hp_bl_on zonder SOS2).
+_SOS2_CURVES = (
+    ("battery charge", "ac_to_dc_w", "cs", "ac_to_dc"),
+    ("battery discharge", "ac_from_dc_w", "ds", "ac_from_dc"),
+    ("heat pump", "hp_s_w", "s_hp", "h_hp"),
+)
+
+
+# Bouwt voor elke aanwezige SOS2-curve een rapport op interval u: welke
+# trappen actief zijn, of ze aangrenzend zijn, en de al-geïnterpoleerde
+# waarde uit de bijbehorende vermogenscontainer.
+def _sos2_reports(model, registry: dict, u: int) -> list[dict]:
+    by_container = _group_by_container(registry)
+    reports: list[dict] = []
+    for label, weight_name, stage_axis, power_name in _SOS2_CURVES:
+        entries = by_container.get(weight_name)
+        if not entries:
+            continue  # this run didn't build this curve (e.g. hp on/off mode)
+        shape = SHAPES[weight_name]
+        u_pos = shape.index("u")
+        stage_pos = shape.index(stage_axis)
+
+        groups: dict[tuple, dict[int, int]] = {}
+        for idx_tuple, var_idx in entries:
+            if idx_tuple[u_pos] != u:
+                continue
+            rest = tuple(
+                v for pos, v in enumerate(idx_tuple) if pos not in (u_pos, stage_pos)
+            )
+            groups.setdefault(rest, {})[idx_tuple[stage_pos]] = var_idx
+
+        power_by_key: dict[tuple, int] = {}
+        power_shape = SHAPES.get(power_name) if power_name else None
+        if power_name and power_shape and "u" in power_shape:
+            p_u_pos = power_shape.index("u")
+            for idx_tuple, var_idx in by_container.get(power_name, []):
+                if idx_tuple[p_u_pos] != u:
+                    continue
+                rest = tuple(v for pos, v in enumerate(idx_tuple) if pos != p_u_pos)
+                power_by_key[rest] = var_idx
+
+        for rest, stage_map in sorted(groups.items()):
+            stages = sorted(stage_map.items())
+            values = [(s, model.vars[vidx].x) for s, vidx in stages]
+            nonzero = [(s, v) for s, v in values if abs(v) > 1e-9]
+            indices = [s for s, _ in nonzero]
+            if len(indices) <= 1:
+                adjacent = True
+            elif len(indices) == 2:
+                adjacent = indices[1] - indices[0] == 1
+            else:
+                adjacent = False
+            interp_idx = power_by_key.get(rest)
+            reports.append(
+                {
+                    "curve": label,
+                    "asset": rest,
+                    "weights": values,
+                    "active_stages": nonzero,
+                    "adjacent": adjacent,
+                    "interpolated": model.vars[interp_idx].x
+                    if interp_idx is not None
+                    else None,
+                }
+            )
+    return reports
+
+
+# Bouwt de sectiesleutel voor de tekstuitvoer: "battery 0", "ev 1", of
+# gewoon "boiler"/"grid" als de container geen asset-as heeft. Neemt de
+# echte indexwaarde uit idx_tuple, niet de as-naam — anders zouden batterij
+# 0 en batterij 1 onder dezelfde sleutel samenvloeien.
+def _section_key(name: str, shape: tuple[str, ...], idx_tuple: tuple) -> str:
+    family = FAMILY.get(name, "other")
+    if shape and shape[0] in _ASSET_AXES:
+        return f"{family} {idx_tuple[0]}"
+    return family
+
+
+# Kernfunctie van A3 (§2.5): alles wat het opgeloste model wist over
+# interval u — elke variabele met leesbaar label, welke constraints
+# bindend zijn, en de SOS2-status van elke aanwezige piecewise-curve.
+# Geeft een structuur terug (geen platte tekst) zodat zowel de tekst- als
+# de --json-weergave van de CLI op dezelfde data werken.
+def dump_interval(model, registry: dict, u: int, *, header: Optional[dict] = None) -> dict:
+    """Everything the solved model knew about interval ``u``: every
+    registered variable touching it, which constraints on it are actually
+    binding, and the SOS2 active-stage/adjacency state for every piecewise
+    curve present in this run. Raises ``VarRegistryError`` if the registry
+    contains a container ``SHAPES`` doesn't know about (§2.5's completeness
+    assertion — a silent gap here is worse than a loud failure, since it
+    would just quietly omit part of the model from every dump)."""
+    _assert_shapes_complete(registry)
+    by_container = _group_by_container(registry)
+
+    sections: dict[str, list[dict]] = {}
+    touched_vars: set[int] = set()
+    for name, entries in by_container.items():
+        shape = SHAPES[name]
+        axis = _interval_axis(shape)
+        if axis is None:
+            continue  # no interval axis at all (e.g. cycle_cost[b])
+        axis_pos, is_boundary = axis
+        wanted = {u, u + 1} if is_boundary else {u}
+        matches = _select_at(entries, axis_pos, wanted)
+        for idx_tuple, var_idx in matches:
+            touched_vars.add(var_idx)
+            section_key = _section_key(name, shape, idx_tuple)
+            sections.setdefault(section_key, []).append(
+                {
+                    "label": name + "".join(f"[{i}]" for i in idx_tuple),
+                    "container": name,
+                    "index": idx_tuple,
+                    "value": model.vars[var_idx].x,
+                    "is_boundary_partner": is_boundary and idx_tuple[axis_pos] == u + 1,
+                }
+            )
+    for entries in sections.values():
+        entries.sort(key=lambda e: e["label"])
+
+    sos2 = _sos2_reports(model, registry, u)
+
+    inv = _inverse_var_constraint_index(model)
+    constraint_ids = sorted({ci for vidx in touched_vars for ci in inv.get(vidx, [])})
+    binding_constraints = [
+        {"index": ci, "text": render_constraint(model.constrs[ci], registry)}
+        for ci in constraint_ids
+        if _is_binding(model.constrs[ci])
+    ]
+
+    # Reduced-detail neighbour context (§2.5 / A3 testing): SoC and
+    # top-level charge/discharge only, no on/off flags, no SOS2, no
+    # constraints — just enough to see the trend across the interval.
+    context_names = ("soc", "ac_to_dc", "ac_from_dc", "c_hp", "c_ev", "c_b")
+    context: dict[str, dict[str, list[dict]]] = {}
+    for neighbour in (u - 1, u + 1):
+        if neighbour < 0:
+            continue
+        neighbour_sections: dict[str, list[dict]] = {}
+        for name in context_names:
+            entries = by_container.get(name)
+            if not entries:
+                continue
+            shape = SHAPES[name]
+            axis = _interval_axis(shape)
+            if axis is None:
+                continue
+            axis_pos, _is_boundary = axis
+            matches = _select_at(entries, axis_pos, {neighbour})
+            for idx_tuple, var_idx in matches:
+                section_key = _section_key(name, shape, idx_tuple)
+                neighbour_sections.setdefault(section_key, []).append(
+                    {
+                        "label": name + "".join(f"[{i}]" for i in idx_tuple),
+                        "value": model.vars[var_idx].x,
+                    }
+                )
+        if neighbour_sections:
+            for entries in neighbour_sections.values():
+                entries.sort(key=lambda e: e["label"])
+            context[str(neighbour)] = neighbour_sections
+
+    return {
+        "interval": u,
+        "header": dict(header) if header else {},
+        "sections": sections,
+        "sos2": sos2,
+        "binding_constraints": binding_constraints,
+        "context": context,
+    }
+
+
+# Formatteert de structuur van dump_interval() als leesbare platte tekst
+# voor stdout; --json op de CLI gebruikt de structuur direct.
+def _format_dump_text(data: dict) -> str:
+    lines: list[str] = []
+    header_bits = [f"interval {data['interval']}"]
+    for k, v in data.get("header", {}).items():
+        if v is not None:
+            header_bits.append(str(v))
+    lines.append("  ".join(header_bits))
+
+    for section_name in sorted(data["sections"]):
+        entries = data["sections"][section_name]
+        lines.append(f"  {section_name}")
+        for e in entries:
+            arrow = " (boundary)" if e.get("is_boundary_partner") else ""
+            lines.append(f"    {e['label']:<28} {e['value']:.4f}{arrow}")
+
+    if data["sos2"]:
+        lines.append("  SOS2 curves")
+        for r in data["sos2"]:
+            asset = f" {r['asset']}" if r["asset"] else ""
+            stages = ", ".join(f"stage {s} (w={v:.4f})" for s, v in r["active_stages"])
+            if not stages:
+                stages = "no active stage"
+            flag = "ok" if r["adjacent"] else "NON-ADJACENT — solver-correctness signal"
+            interp = f"  interpolated={r['interpolated']:.4f}" if r["interpolated"] is not None else ""
+            lines.append(f"    {r['curve']}{asset}: {stages}  [adjacent: {flag}]{interp}")
+
+    lines.append(f"  binding constraints ({len(data['binding_constraints'])})")
+    for bc in data["binding_constraints"]:
+        lines.append(f"    {bc['text']}")
+
+    for neighbour, sections in data.get("context", {}).items():
+        if not sections:
+            continue
+        lines.append(f"  context u={neighbour}")
+        for section_name in sorted(sections):
+            for e in sections[section_name]:
+                lines.append(f"    {e['label']:<28} {e['value']:.4f}")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # CLI (A6, §13)
 # ---------------------------------------------------------------------------
 #
@@ -1729,16 +2287,127 @@ def cmd_set(args: argparse.Namespace, data_dir: Path) -> int:
     return EXIT_OK
 
 
-# Stub: dump_interval bestaat nog niet, dit commando geeft een duidelijke melding in plaats van te crashen.
+# Best-effort (tijdstip, prijs-levering, prijs-teruglevering) voor de dump-
+# header; faalt nooit — geeft (None, None, None) bij twijfel in plaats van
+# een mogelijk verkeerde prijs te tonen. Rondt captured_at af op de
+# intervalgrens en zoekt de dichtstbijzijnde rij in het opgenomen
+# price_data (niet prog_data — dat laatste krijgt da_cons/da_prod pas
+# tijdens calc_optimum() zelf, dus de opgenomen kopie heeft die kolommen
+# nog niet).
+def _lookup_price_at_interval(
+    replay: "ReplayIO", meta: dict, u: int
+) -> tuple[Optional[dt.datetime], Optional[float], Optional[float]]:
+    try:
+        captured_at = meta.get("captured_at")
+        interval_str = meta.get("interval")
+        price_data = getattr(replay, "_price_data", None)
+        if not captured_at or not interval_str or price_data is None:
+            return None, None, None
+        if "time" not in price_data.columns:
+            return None, None, None
+        interval_s = 3600 if interval_str == "1hour" else 900
+        start = dt.datetime.fromisoformat(captured_at)
+        if interval_s == 3600:
+            rounded = start.replace(minute=0, second=0, microsecond=0)
+        else:
+            rounded = start.replace(
+                minute=(start.minute // 15) * 15, second=0, microsecond=0
+            )
+        target = rounded + dt.timedelta(seconds=interval_s * u)
+        times = pd.to_datetime(price_data["time"]).dt.tz_localize(None)
+        deltas = (times - target.replace(tzinfo=None)).abs()
+        pos = int(deltas.values.argmin())
+        if deltas.iloc[pos] > dt.timedelta(seconds=interval_s / 2):
+            return None, None, None
+        row = price_data.iloc[pos]
+        da_cons = float(row["da_cons"]) if "da_cons" in price_data.columns else None
+        da_prod = float(row["da_prod"]) if "da_prod" in price_data.columns else None
+        return target, da_cons, da_prod
+    except Exception:  # noqa: BLE001 - header enrichment only, never fatal
+        return None, None, None
+
+
+# Zoekt de hoogste interval-index die daadwerkelijk in de registry
+# voorkomt, om --interval tegen een zinnig bereik te kunnen valideren
+# zonder dat de CLI U apart hoeft te kennen.
+def _max_known_interval(registry: dict) -> int:
+    max_u = -1
+    for _var_idx, (name, idx_tuple) in registry.items():
+        shape = SHAPES.get(name)
+        if not shape:
+            continue
+        if "u" in shape:
+            max_u = max(max_u, idx_tuple[shape.index("u")])
+        elif "u_boundary" in shape:
+            max_u = max(max_u, idx_tuple[shape.index("u_boundary")] - 1)
+    return max_u
+
+
+# Speelt een snapshot af met _debug_capture_vars aan, zodat A1's hook in
+# day_ahead.py de variabele-registry opbouwt, en dumpt daarna interval
+# --interval: alles wat het opgeloste model erover wist.
 def cmd_dump(args: argparse.Namespace, data_dir: Path) -> int:
-    message = (
-        "dump is not implemented yet: it needs the variable registry "
-        "(architecture doc §2.3/§2.5), which is separate follow-up work "
-        "(A3), not part of this session."
-    )
-    data = {"error": message}
-    _emit(args, data, lambda d: print(d["error"]))
-    return EXIT_USAGE
+    if not args.snapshot:
+        raise UsageError("dump requires --snapshot PATH")
+    if args.interval is None:
+        raise UsageError("dump requires --interval N")
+
+    snapshot_path = _resolve_snapshot_arg(data_dir, args.snapshot)
+    if not snapshot_path.exists():
+        raise UsageError(f"Snapshot not found: {snapshot_path}")
+
+    _ensure_day_ahead_importable()
+    from dao.prog.day_ahead import DaCalc
+
+    guard = _offline_guard() if args.offline else None
+    try:
+        with ReplayIO(snapshot_path, solver_threads=args.threads) as replay:
+            dacalc = DaCalc(str(snapshot_path))
+            dacalc._debug_capture_vars = True
+            result = dacalc.calc_optimum()
+        model = replay._model
+        registry = getattr(dacalc, "_debug_vars", None)
+        meta = replay.meta
+    finally:
+        if guard is not None:
+            _offline_unguard(guard)
+
+    if model is None or result is None:
+        raise UsageError(
+            "replay never reached a solved model.optimize() — nothing to "
+            "dump (see any error logged above)"
+        )
+    if not registry:
+        raise UsageError(
+            "no variable registry was captured: day_ahead.py's hook imports "
+            "'da_debug' as a bare module name, which only resolves once "
+            "dao/prog is on sys.path — that should already be arranged by "
+            "this CLI, so this points at a real problem, not a missing flag"
+        )
+
+    max_u = _max_known_interval(registry)
+    if max_u >= 0 and not (0 <= args.interval <= max_u):
+        raise UsageError(
+            f"--interval {args.interval} is out of range for this run "
+            f"(intervals 0..{max_u})"
+        )
+
+    timestamp, da_cons, da_prod = _lookup_price_at_interval(replay, meta, args.interval)
+    header = {
+        "dao_version": meta.get("dao_version"),
+        "solver": getattr(model, "solver_name", None),
+        "snapshot": str(snapshot_path),
+    }
+    if timestamp is not None:
+        header["timestamp"] = timestamp.isoformat(sep=" ", timespec="minutes")
+    if da_cons is not None:
+        header["price_cons"] = round(da_cons, 4)
+    if da_prod is not None:
+        header["price_prod"] = round(da_prod, 4)
+
+    data = dump_interval(model, registry, args.interval, header=header)
+    _emit(args, data, lambda d: print(_format_dump_text(d)))
+    return EXIT_OK
 
 
 # Interne zelftest voor precies het scenario dat DaBase.get_state raakt: een geërfde, niet-eigen methode moet na restore weer via de klasse-hiërarchie lopen.
@@ -1764,6 +2433,67 @@ def _patch_list_restore_check() -> None:
         raise AssertionError("inherited attribute was not correctly un-shadowed")
     if Owner().greet() != "base":
         raise AssertionError("patch did not restore correctly")
+
+
+# Bouwt een klein maar structureel representatief 1-batterij/2-interval
+# SOS2-laad/ontlaadmodel (dezelfde vorm als day_ahead.py's echte battery-
+# sectie: ac_to_dc_w/ac_from_dc_w als SOS2-gewichten, soc als U+1-grens),
+# lost het op, en geeft (model, registry) terug — gebruikt door meerdere
+# A3-zelftests zodat die niet elk hun eigen kopie van de modelopbouw nodig
+# hebben.
+def _build_synthetic_sos2_model():
+    from mip import Model, xsum, BINARY, CONTINUOUS, maximize
+
+    B, U, CS, DS = 1, 2, 2, 2
+    ac_to_dc_samples = [[0.0, 5.0]]
+    dc_from_ac_samples = [[0.0, 4.5]]
+    ac_from_dc_samples = [[0.0, 3.0]]
+    dc_to_ac_samples = [[0.0, 3.3]]
+
+    model = Model()
+    ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=5) for _ in range(U)] for _ in range(B)]
+    ac_to_dc_on = [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(B)]
+    ac_to_dc_w = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(CS)] for _ in range(U)] for _ in range(B)]
+    ac_from_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=3) for _ in range(U)] for _ in range(B)]
+    ac_from_dc_on = [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(B)]
+    ac_from_dc_w = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(DS)] for _ in range(U)] for _ in range(B)]
+    dc_from_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=4.5) for _ in range(U)] for _ in range(B)]
+    dc_to_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=3.3) for _ in range(U)] for _ in range(B)]
+    dc_from_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=3.3) for _ in range(U)] for _ in range(B)]
+    dc_to_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=4.5) for _ in range(U)] for _ in range(B)]
+    soc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=100) for _ in range(U + 1)] for _ in range(B)]
+
+    for b in range(B):
+        model += soc[b][0] == 50
+        for u in range(U):
+            model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS)) == 1
+            model += xsum(ac_to_dc_w[b][u][cs] * ac_to_dc_samples[b][cs] for cs in range(CS)) == ac_to_dc[b][u]
+            model += xsum(ac_to_dc_w[b][u][cs] * dc_from_ac_samples[b][cs] for cs in range(CS)) == dc_from_ac[b][u]
+            model.add_sos([(ac_to_dc_w[b][u][cs], ac_to_dc_samples[b][cs]) for cs in range(CS)], 2)
+
+            model += xsum(ac_from_dc_w[b][u][ds] for ds in range(DS)) <= 1
+            model += xsum(ac_from_dc_w[b][u][ds] * ac_from_dc_samples[b][ds] for ds in range(DS)) == ac_from_dc[b][u]
+            model += xsum(ac_from_dc_w[b][u][ds] * dc_to_ac_samples[b][ds] for ds in range(DS)) == dc_to_ac[b][u]
+            model.add_sos([(ac_from_dc_w[b][u][ds], ac_from_dc_samples[b][ds]) for ds in range(DS)], 2)
+
+            model += dc_from_ac[b][u] <= ac_to_dc_on[b][u] * 5
+            model += ac_from_dc[b][u] <= ac_from_dc_on[b][u] * 3
+            model += ac_to_dc_on[b][u] + ac_from_dc_on[b][u] <= 1
+
+            model += dc_from_ac[b][u] + dc_from_bat[b][u] == dc_to_ac[b][u] + dc_to_bat[b][u]
+            model += soc[b][u + 1] == soc[b][u] + dc_to_bat[b][u] - dc_from_bat[b][u]
+
+    # Force interval 1 idle so a dump of it is a small, quiet contrast to
+    # interval 0's forced full-power charge (mirrors the "idle interval ->
+    # short binding-constraint list" check from the A3 testing section).
+    model += dc_to_bat[0][1] == 0
+    model += dc_from_bat[0][1] == 0
+    model.objective = maximize(dc_to_bat[0][0])
+    model.verbose = 0
+    model.optimize()
+
+    registry = build_var_registry(locals())
+    return model, registry
 
 
 # Draait alle offline zelftests van da_debug.py, zonder dat daar een live stack voor nodig is.
@@ -1816,12 +2546,93 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
             raise AssertionError("leak gate did not fire on a planted secret")
         _assert_no_secret_leak('{"x": "clean"}', ["leak-me"])  # must not raise
 
+    # Bouwt uit een geneste synthetische structuur de registry op en
+    # controleert dat een bekende Var op het juiste containernaam+indexpad
+    # terugkomt — dit is waar registry-bugs echt zitten (A1 Testing #2).
+    def _var_registry_nested_containers():
+        if mip is None:
+            return  # mip not installed: nothing to test against
+        model = mip.Model()
+        flat = [model.add_var(var_type=mip.CONTINUOUS) for _ in range(2)]
+        nested = [
+            [[model.add_var(var_type=mip.BINARY) for _k in range(2)] for _j in range(2)]
+            for _i in range(2)
+        ]
+        not_a_container = 3.14  # must be skipped, not walked
+        registry = build_var_registry(locals())
+        if registry.get(flat[1].idx) != ("flat", (1,)):
+            raise AssertionError("flat container entry missing or wrong")
+        if registry.get(nested[1][0][1].idx) != ("nested", (1, 0, 1)):
+            raise AssertionError("nested container entry missing or wrong index path")
+        if len(registry) != len(flat) + 8:  # 2 + 2*2*2
+            raise AssertionError(f"unexpected registry size {len(registry)}")
+
+    # Controleert dat de volledigheidscontrole afgaat op een containernaam
+    # die niet in SHAPES/SHAPES_IGNORE staat (A3 Testing: "add a container
+    # without updating SHAPES").
+    def _shapes_completeness_fires_on_unknown_container():
+        bad_registry = {0: ("mystery_container_nobody_declared", (0,))}
+        try:
+            _assert_shapes_complete(bad_registry)
+        except VarRegistryError:
+            pass
+        else:
+            raise AssertionError("completeness assertion did not fire on an unknown container")
+        _assert_shapes_complete({0: ("soc", (0, 0))})  # must not raise on a known one
+
+    # End-to-end: los het synthetische SOS2-model op en controleer dat
+    # dump_interval op de dwangmatig ladende interval de juiste vermogens,
+    # soc-in/out, en een aangrenzende actieve SOS2-trap teruggeeft, en dat
+    # de gerenderde binding constraints geen "var(N)"-fallback bevatten
+    # (d.w.z. dat elke variabele daadwerkelijk een registry-label kreeg).
+    def _dump_interval_charging_interval():
+        if mip is None:
+            return
+        model, registry = _build_synthetic_sos2_model()
+        data = dump_interval(model, registry, 0, header={"dao_version": "selftest"})
+        by_label = {e["label"]: e["value"] for e in data["sections"]["battery 0"]}
+        if abs(by_label["ac_to_dc[0][0]"] - 5.0) > 1e-6:
+            raise AssertionError("charging interval did not reach full charge power")
+        if abs(by_label["soc[0][0]"] - 50.0) > 1e-6 or abs(by_label["soc[0][1]"] - 54.5) > 1e-6:
+            raise AssertionError("soc in/out did not match the forced charge")
+        charge_curve = next(r for r in data["sos2"] if r["curve"] == "battery charge")
+        if not charge_curve["adjacent"] or not charge_curve["active_stages"]:
+            raise AssertionError("SOS2 charge curve should report one adjacent active stage")
+        if abs(charge_curve["interpolated"] - by_label["ac_to_dc[0][0]"]) > 1e-6:
+            raise AssertionError("SOS2 interpolated power should equal ac_to_dc[0][0]")
+        if not data["binding_constraints"]:
+            raise AssertionError("a forced-charge interval should have binding constraints")
+        if any("var(" in bc["text"] for bc in data["binding_constraints"]):
+            raise AssertionError("a binding constraint fell back to var(N) — a registered var wasn't labelled")
+        if "-0" in _format_dump_text(data):
+            raise AssertionError("rendered output contains a stray -0 (negative-zero formatting bug)")
+
+    # Idle interval (dwongen tot 0 laden/ontladen): moet nog steeds netjes
+    # dumpen zonder te crashen, en zonder een van de over-matching
+    # symptomen (een lege binding-constraint-lijst zou juist verdacht zijn
+    # geweest — hier moet de energie-balans/soc-koppeling nog steeds
+    # binding zijn).
+    def _dump_interval_idle_interval():
+        if mip is None:
+            return
+        model, registry = _build_synthetic_sos2_model()
+        data = dump_interval(model, registry, 1)
+        by_label = {e["label"]: e["value"] for e in data["sections"]["battery 0"]}
+        if abs(by_label["ac_to_dc[0][1]"]) > 1e-6 or abs(by_label["ac_from_dc[0][1]"]) > 1e-6:
+            raise AssertionError("forced-idle interval should show zero flow")
+        if not data["context"].get("0"):
+            raise AssertionError("interval 1 should carry reduced context for its u=0 neighbour")
+
     for name, fn in [
         ("dataframe_roundtrip", _dataframe_roundtrip),
         ("call_key_stability", _call_key_stability),
         ("config_hash_determinism", _config_hash_determinism),
         ("secret_leak_gate", _secret_leak_gate),
         ("patch_list_restore", _patch_list_restore_check),
+        ("var_registry_nested_containers", _var_registry_nested_containers),
+        ("shapes_completeness_fires_on_unknown_container", _shapes_completeness_fires_on_unknown_container),
+        ("dump_interval_charging_interval", _dump_interval_charging_interval),
+        ("dump_interval_idle_interval", _dump_interval_idle_interval),
     ]:
         check(name, fn)
 
@@ -1971,9 +2782,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--state", action="append", default=[], metavar="entity_id=value", help="Repeatable.")
     p.add_argument("--out", required=True)
 
-    p = sub.add_parser("dump", parents=[common], help="Interval dump (stub — needs A3's variable registry).")
-    p.add_argument("--snapshot", default=None)
-    p.add_argument("--interval", type=int, default=None)
+    p = sub.add_parser("dump", parents=[common], help="Replay a snapshot and print everything the solved model knew about one interval.")
+    p.add_argument("--snapshot", default=None, required=True)
+    p.add_argument("--interval", type=int, default=None, required=True, metavar="U")
+    p.add_argument("--offline", dest="offline", action="store_true", default=True, help="Block all network access during the replay this needs (default).")
+    p.add_argument("--allow-network", dest="offline", action="store_false", help="Disable the network block (escape hatch).")
+    p.add_argument(
+        "--threads",
+        type=int,
+        default=-1,
+        metavar="N",
+        help="CBC thread count for the replay dump reads from (same semantics as `replay --threads`). Default -1.",
+    )
 
     sub.add_parser("selftest", parents=[common], help="Run da_debug's own offline checks.")
 
@@ -2021,6 +2841,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     except UsageError as ex:
         _print_error(args, "usage-error", ex)
         return EXIT_USAGE
+    except VarRegistryError as ex:
+        _print_error(args, "assertion-failed", ex)
+        return EXIT_ASSERTION_FAILED
 
 
 if __name__ == "__main__":
