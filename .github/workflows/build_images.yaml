@@ -33,7 +33,7 @@ jobs:
     steps:
 
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Detect release type
         id: detect
@@ -110,7 +110,7 @@ jobs:
     steps:
 
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Prepare testing build context
         if: needs.init.outputs.app_dir == 'release-testing'
