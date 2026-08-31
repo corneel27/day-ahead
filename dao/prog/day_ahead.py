@@ -1840,7 +1840,6 @@ class DaCalc(DaBase):
             for e in range(EV)
         ]  # load battery in kWh
 
-
         ev_soc_kwh = [
             [
                 model.add_var(var_type=CONTINUOUS, lb=0)
@@ -1848,7 +1847,6 @@ class DaCalc(DaBase):
             ]
             for e in range(EV)
         ]  # soc in kWh na ieder interval
-
 
         ev_is_on = [
             [model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(EV)
@@ -2107,6 +2105,8 @@ class DaCalc(DaBase):
                     model += ev_accu_in[e][u] == 0
                     model += ev_is_partial[e][u] == 0
                     model += ev_boundary_stop[e][u] == 0
+                model += ev_boundary_sum[e]== 0
+                model += ev_partial_sum[e] == 0
                 model += ev_start_stops_sum[e] == 0
 
         ##################################################################
