@@ -2105,6 +2105,8 @@ class DaCalc(DaBase):
                     model += ev_accu_in[e][u] == 0
                     model += ev_is_partial[e][u] == 0
                     model += ev_boundary_stop[e][u] == 0
+                    model += ev_is_off[e][u] == 1
+                    model += ev_is_on[e][u] == 0
                 model += ev_boundary_sum[e]== 0
                 model += ev_partial_sum[e] == 0
                 model += ev_start_stops_sum[e] == 0
