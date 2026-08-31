@@ -859,7 +859,9 @@ class DaCalc(DaBase):
         ]
         dc_to_ac = [
             [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=max(dc_to_ac_samples[b]) if dc_to_ac_samples[b] else 0)
+                model.add_var(var_type=CONTINUOUS,
+                              lb=0,
+                              ub=max(dc_to_ac_samples[b]) if dc_to_ac_samples[b] else 0)
                 for _ in range(U)
             ]
             for b in range(B)
@@ -1876,10 +1878,10 @@ class DaCalc(DaBase):
             model.add_var(var_type=INTEGER, lb=0) for e in range(EV)
         ]  # sum of ev starts
 
-        ev_delta_soc =[
+        ev_delta_soc = [
             [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(U)]
             for _ in range(EV)
-        ] # delta soc in kWh between wished and actual
+        ]  # delta soc in kWh between wished and actual
 
         low_soc_penalty_int = [
             [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(U)]
@@ -1983,7 +1985,6 @@ class DaCalc(DaBase):
                         * stage_factor[e][cs][u]
                         for cs in range(ECS[e])
                     )
-
 
                     if u == 0:
                         model += (
@@ -2099,6 +2100,9 @@ class DaCalc(DaBase):
                 """
             else:
                 model += xsum(c_ev[e][u] for u in range(U)) == 0
+                for cs in range(ECS[e]):
+                    for u in range(U):
+                        model += stage_on[e][cs][u] == 0
                 for u in range(U):
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
