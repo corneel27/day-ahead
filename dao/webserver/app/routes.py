@@ -967,8 +967,8 @@ def api_report(fld: str, periode: str):
             cumulate = cumulate == 1
         except ValueError:
             cumulate = False
-    fld = escape(fld)
-    periode = escape(periode)
+    fld = str(escape(fld))
+    periode = str(escape(periode))
     result = report.get_api_data(fld, periode, cumulate=cumulate)
 
     headers = {
