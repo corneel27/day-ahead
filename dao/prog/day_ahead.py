@@ -68,6 +68,10 @@ def _log_native_output(text: str) -> None:
         if line.strip():
             logging.info(line)
 
+# Callable passed to FlexValue.resolve() — returns HA state as a plain string.
+def ha_getter(eid):
+    return self.get_state(eid).state
+
 
 class DaCalc(DaBase):
     def __init__(self, file_name=None):
@@ -106,8 +110,6 @@ class DaCalc(DaBase):
         if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
-        # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
-        ha_getter = lambda eid: self.get_state(eid).state
         if _start_dt is None:
             start_dt = dt.datetime.now()
         else:
