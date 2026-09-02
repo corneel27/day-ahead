@@ -2,6 +2,7 @@ import datetime
 import sys
 import time
 from da_base import DaBase
+from subprocess import Popen, PIPE, STDOUT
 
 
 class DaScheduler(DaBase):
@@ -11,6 +12,15 @@ class DaScheduler(DaBase):
         self.scheduler_tasks = {
             entry.time: entry.action for entry in self.config.scheduler.schedule
         }
+
+    def run_task_process(self, key_task):
+        run_task = self.tasks[key_task]
+        proc = Popen(run_task["cmd"], stdout=PIPE, stderr=STDOUT, text=True)
+        proc.wait()
+        if proc.returncode != 0 and proc.returncode is not None:
+            print(f"Task {key_task} crashed with exit code {proc.returncode}")
+            return False
+        return True
 
     def scheduler(self):
         # if not (self.notification_entity is None) and self.notification_opstarten:
@@ -45,7 +55,7 @@ class DaScheduler(DaBase):
                 for key_task in self.tasks:
                     if self.tasks[key_task]["function"] == task:
                         try:
-                            self.run_task_function(key_task, True)
+                            self.run_task_process(key_task)
                         except KeyboardInterrupt:
                             sys.exit()
                             pass

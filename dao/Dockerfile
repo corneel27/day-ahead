@@ -44,7 +44,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   apt-get update -y && \
   apt-get upgrade -y && \
   apt-get install -y file mariadb-client inotify-tools procps \
-    gunicorn libmariadb3 postgresql-client sqlite3 \
+    gunicorn libmariadb3 postgresql-client sqlite3 wget\
     python3
 
 # Copy software for add-on

@@ -68,6 +68,10 @@ def _log_native_output(text: str) -> None:
         if line.strip():
             logging.info(line)
 
+# Callable passed to FlexValue.resolve() — returns HA state as a plain string.
+def ha_getter(eid):
+    return self.get_state(eid).state
+
 
 class DaCalc(DaBase):
     def __init__(self, file_name=None):
@@ -106,8 +110,6 @@ class DaCalc(DaBase):
         if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
-        # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
-        ha_getter = lambda eid: self.get_state(eid).state
         if _start_dt is None:
             start_dt = dt.datetime.now()
         else:
@@ -859,7 +861,9 @@ class DaCalc(DaBase):
         ]
         dc_to_ac = [
             [
-                model.add_var(var_type=CONTINUOUS, lb=0, ub=max(dc_to_ac_samples[b]) if dc_to_ac_samples[b] else 0)
+                model.add_var(var_type=CONTINUOUS,
+                              lb=0,
+                              ub=max(dc_to_ac_samples[b]) if dc_to_ac_samples[b] else 0)
                 for _ in range(U)
             ]
             for b in range(B)
@@ -1840,7 +1844,6 @@ class DaCalc(DaBase):
             for e in range(EV)
         ]  # load battery in kWh
 
-
         ev_soc_kwh = [
             [
                 model.add_var(var_type=CONTINUOUS, lb=0)
@@ -1848,7 +1851,6 @@ class DaCalc(DaBase):
             ]
             for e in range(EV)
         ]  # soc in kWh na ieder interval
-
 
         ev_is_on = [
             [model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(EV)
@@ -1878,10 +1880,10 @@ class DaCalc(DaBase):
             model.add_var(var_type=INTEGER, lb=0) for e in range(EV)
         ]  # sum of ev starts
 
-        ev_delta_soc =[
+        ev_delta_soc = [
             [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(U)]
             for _ in range(EV)
-        ] # delta soc in kWh between wished and actual
+        ]  # delta soc in kWh between wished and actual
 
         low_soc_penalty_int = [
             [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(U)]
@@ -1985,7 +1987,6 @@ class DaCalc(DaBase):
                         * stage_factor[e][cs][u]
                         for cs in range(ECS[e])
                     )
-
 
                     if u == 0:
                         model += (
@@ -2101,12 +2102,19 @@ class DaCalc(DaBase):
                 """
             else:
                 model += xsum(c_ev[e][u] for u in range(U)) == 0
+                for cs in range(ECS[e]):
+                    for u in range(U):
+                        model += stage_on[e][cs][u] == 0
                 for u in range(U):
                     model += c_ev[e][u] == 0
                     model += p_ev[e][u] == 0
                     model += ev_accu_in[e][u] == 0
                     model += ev_is_partial[e][u] == 0
                     model += ev_boundary_stop[e][u] == 0
+                    model += ev_is_off[e][u] == 1
+                    model += ev_is_on[e][u] == 0
+                model += ev_boundary_sum[e]== 0
+                model += ev_partial_sum[e] == 0
                 model += ev_start_stops_sum[e] == 0
 
         ##################################################################
