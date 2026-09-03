@@ -1,6 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# 2026.9.0.rc2
+Fixed error when getting flex-value from HA (reported by $tomvandepoel3)
+
 # 2026.9.0.rc1
 - Moved the runs of scheduler-tasks to a separate process, SIGABRT in CBC killed the scheduler (reported by @tomvandepoel3)
 - Added wget to succeed a local build of miplib (reported by @stat)
