@@ -453,6 +453,7 @@ class DaCalc(DaBase):
         for s in range(solar_num):
             for u in range(U):
                 model += pv_ac[s][u] == solar_prod[s][u] * pv_ac_on_off[s][u]
+                model += pv_ac_on_off[s][u] + solar_prod[s][u] >= 1
         for s in range(solar_num):
             if entity_pv_ac_switch[s] is None:
                 for u in range(U):
@@ -1089,6 +1090,9 @@ class DaCalc(DaBase):
                     pv_prod_dc[b][s][u] * pv_dc_on_off[b][s][u] / hour_fraction[u]
                     for s in range(pv_dc_num[b])
                 )
+
+                for s in range(pv_dc_num[b]):
+                    model += pv_dc_on_off[b][s][u] + pv_prod_dc[b][s][u] >= 1
 
                 model += (
                     dc_from_ac[b][u] + dc_from_bat[b][u] + pv_prod_dc_sum[b][u]
