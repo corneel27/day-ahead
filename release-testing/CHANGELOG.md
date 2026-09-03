@@ -3,8 +3,8 @@
 
 # 2026.9.0.rc1
 - Moved the runs of scheduler-tasks to a separate process, SIGABRT in CBC killed the scheduler (reported by @tomvandepoel3)
-- Added wget to succeed a local buildof miplib (reported by @stat)
-- Corrected the "iternal server error" when api called with period "vandaag", "morgen" or "vandaag_en_morgen"
+- Added wget to succeed a local build of miplib (reported by @stat)
+- Corrected the "internal server error" when api called with period "vandaag", "morgen" or "vandaag_en_morgen"
 
 # 2026.8.0.rc8
 ## Breaking change
