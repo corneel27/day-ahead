@@ -222,9 +222,7 @@ class DaBase(hass.Hass):
         self.salderen = self.prices_options.tax_refund if self.prices_options else True
 
         self.history_options = self.config.history
-        self.strategy = self.config.strategy.resolve(
-            lambda eid: self.get_state(eid).state
-        )
+        self.strategy = self.config.strategy.resolve(self.ha_getter)
         self.tibber_options = self.config.tibber
         notif = self.config.notifications
         self.notification_entity = notif.notification_entity
@@ -235,6 +233,10 @@ class DaBase(hass.Hass):
         self.graphics_options = self.config.graphics
         self.db_da.log_pool_status()
         warnings.simplefilter("ignore", ResourceWarning)
+
+    # Callable passed to FlexValue.resolve() — returns HA state as a plain string.
+    def ha_getter(self, eid):
+        return self.get_state(eid).state
 
     def set_value(self, entity_id: str, value: Union[int, float, str]) -> StateList:
         try:
