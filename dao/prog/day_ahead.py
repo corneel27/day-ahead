@@ -5144,6 +5144,10 @@ def main():
                 da_calc.run_task_function("train_ml_predictions")
                 continue
     da_calc.db_da.log_pool_status()
+    import platform
+    machine = platform.machine()
+    if machine == "aarch64" or machine == "arm64":
+        os._exit(0)
 
 
 if __name__ == "__main__":
