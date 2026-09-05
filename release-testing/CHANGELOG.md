@@ -1,5 +1,9 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.9.1.rc1
+- removed us of pipe, let the child inherit the scheduler's stdout/stderr: (#812)
+- added git and nano to installed packages
+- corrected finish day_ahead.py on arm64 to prevent crash with error -4
 
 # 2026.9.0.rc2
 Fixed error when getting flex-value from HA (reported by $tomvandepoel3)
