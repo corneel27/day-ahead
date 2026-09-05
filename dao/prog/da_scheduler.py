@@ -15,7 +15,7 @@ class DaScheduler(DaBase):
 
     def run_task_process(self, key_task):
         run_task = self.tasks[key_task]
-        proc = Popen(run_task["cmd"], stdout=PIPE, stderr=STDOUT, text=True)
+        proc = Popen(run_task["cmd"])
         proc.wait()
         if proc.returncode != 0 and proc.returncode is not None:
             print(f"Task {key_task} crashed with exit code {proc.returncode}")
