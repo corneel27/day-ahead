@@ -1,6 +1,18 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
 
+# Unreleased
+- The api (`/api/report/<variable>/<period>`) now returns the periods within a day ("vandaag",
+  "morgen", "vandaag_en_morgen" and "gisteren") with the resolution the optimizer calculates with:
+  quarter-hourly values when `interval` is `15min` instead of hourly values.
+  Because Home Assistant only keeps hourly long term statistics, already realised hourly values are
+  spread evenly over the four quarters of the hour; the forecasts keep the full quarter-hourly
+  resolution as calculated.
+- The pv forecast that extends "vandaag_en_morgen" for `pv_ac`/`pv_dc` now follows the configured
+  interval as well, instead of always being calculated hourly.
+- Fixed the timestamp of the last calculated SoC: it was always stored one hour after the last
+  interval, also when the optimizer runs with a 15 minutes interval.
+
 # 2026.9.0
 - Moved the runs of scheduler-tasks to a separate process, SIGABRT in CBC killed the scheduler (reported by @tomvandepoel3)
 - Added wget to succeed a local build of miplib (reported by @stat)

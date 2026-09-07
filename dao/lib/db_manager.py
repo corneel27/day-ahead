@@ -11,6 +11,9 @@ from sqlalchemy import (
     func,
     and_,
     text,
+    cast,
+    Integer,
+    String,
     TIMESTAMP,
 )
 import sqlalchemy_utils
@@ -202,6 +205,38 @@ class DBmanagerObj(object):
             return func.to_char(func.to_timestamp(column), "YYYY-MM-DD")
         else:  # mysql/mariadb
             return func.date(func.from_unixtime(column))
+
+    def quarter_start(self, column) -> func:
+        """
+        Het begin van het kwartier waarin "column" (een unix-timestamp) valt,
+        als "YYYY-MM-DD HH:MM".
+        """
+        if self.db_dialect == "sqlite":
+            moment = func.datetime(column, "unixepoch", "localtime")
+            return func.printf(
+                "%s:%02d",
+                func.strftime("%Y-%m-%d %H", moment),
+                (cast(func.strftime("%M", moment), Integer) / 15) * 15,
+            )
+        elif self.db_dialect == "postgresql":
+            moment = func.to_timestamp(column)
+            return func.concat(
+                func.to_char(moment, "YYYY-MM-DD HH24:"),
+                func.lpad(
+                    cast(
+                        cast(func.floor(func.extract("minute", moment) / 15) * 15, Integer),
+                        String,
+                    ),
+                    2,
+                    "0",
+                ),
+            )
+        else:  # mysql/mariadb
+            moment = func.from_unixtime(column)
+            return func.concat(
+                func.date_format(moment, "%Y-%m-%d %H:"),
+                func.lpad(func.floor(func.minute(moment) / 15) * 15, 2, "0"),
+            )
 
     def hour(self, column) -> func:
         if self.db_dialect == "sqlite":

@@ -3613,7 +3613,7 @@ class DaCalc(DaBase):
         df_soc = pd.DataFrame(columns=["tijd", "soc"])
         df_soc.index = pd.to_datetime(df_soc["tijd"])
         tijd_soc = tijd.copy()
-        tijd_soc.append(tijd_soc[U - 1] + datetime.timedelta(hours=1))
+        tijd_soc.append(tijd_soc[U - 1] + dt.timedelta(seconds=self.interval_s))
         if B > 0:
             for b in range(B):
                 df_soc["soc_" + str(b)] = None
