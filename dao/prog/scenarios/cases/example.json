@@ -1,0 +1,39 @@
+[
+  {
+    "id": "s1-flat",
+    "description": "Flat prices, no PV, battery at 50% - the minimal solve",
+    "start": "2026-01-14 07:00",
+    "prices": {
+      "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+               0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30],
+      "prod": [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
+               0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+    },
+    "states": { "sensor.ess_battery_soc": "50" },
+    "expect": { "solved": true }
+  },
+  {
+    "id": "s1-arb",
+    "description": "Cheap overnight, expensive early evening - a price shape to arbitrage",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.12, 0.10, 0.09, 0.09, 0.10, 0.14, 0.22, 0.28, 0.26, 0.22, 0.20, 0.19,
+               0.18, 0.18, 0.19, 0.24, 0.33, 0.45, 0.44, 0.36, 0.26, 0.20, 0.16, 0.13]
+    },
+    "states": { "sensor.ess_battery_soc": "40" },
+    "expect": { "solved": true }
+  },
+  {
+    "id": "s1-sun",
+    "description": "Flat prices, a clear-day PV bell - exercises the solar injection patch",
+    "start": "2026-06-21 04:00",
+    "prices": {
+      "cons": [0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26,
+               0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26, 0.26]
+    },
+    "solar": [0.0, 0.0, 0.3, 1.1, 2.3, 3.6, 4.7, 5.4, 5.8, 5.9, 5.7, 5.1,
+              4.2, 3.1, 1.9, 0.9, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "states": { "sensor.ess_battery_soc": "35" },
+    "expect": { "solved": true }
+  }
+]

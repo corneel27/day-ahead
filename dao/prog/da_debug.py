@@ -3643,6 +3643,151 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
     return EXIT_OK if ok else EXIT_ASSERTION_FAILED
 
 
+# ---------------------------------------------------------------------------
+# scenario suite (dao_scenario_suite_plan.md) — S1: list / show / validate / run
+# ---------------------------------------------------------------------------
+#
+# The runner and the synthetic-snapshot builder live in dao/prog/scenarios/;
+# they are imported lazily here so `da_debug` keeps working (capture, replay,
+# dump, …) even where pandas / the solver is not installed.
+
+
+def _scenario_pkg():
+    from dao.prog import scenarios
+
+    return scenarios
+
+
+def cmd_scenario_list(args: argparse.Namespace, data_dir: Path) -> int:
+    scenarios = _scenario_pkg()
+    rows = [
+        {"id": s.id, "description": s.description, "source": s.source_file,
+         "horizon_h": s.horizon_hours, "skip": s.skip}
+        for s in scenarios.load_all()
+    ]
+
+    def render(d):
+        for r in d["rows"]:
+            flag = " (skip)" if r["skip"] else ""
+            print(f"{r['id']:<16} {r['horizon_h']:>3}h  {r['description']}{flag}")
+        print(f"\n{len(d['rows'])} scenario(s).")
+
+    _emit(args, {"rows": rows}, render)
+    return EXIT_OK
+
+
+def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
+    scenarios = _scenario_pkg()
+    from dataclasses import asdict
+
+    try:
+        (scenario,) = scenarios.load([args.id])
+    except KeyError as ex:
+        raise UsageError(str(ex)) from ex
+    d = asdict(scenario)
+
+    def render(dd):
+        print(f"{dd['id']}  —  {dd['description']}")
+        print(f"  source     {dd['source_file']}")
+        print(f"  start      {dd['start']}   horizon {len(dd['prices_cons'])} h")
+        print(f"  prices.cons {dd['prices_cons']}")
+        if dd["prices_prod"] is not None:
+            print(f"  prices.prod {dd['prices_prod']}")
+        print(f"  solar      {dd['solar'] if dd['solar'] is not None else '(none — all zero)'}")
+        if dd["states"]:
+            print("  states")
+            for k, v in dd["states"].items():
+                print(f"    {k} = {v}")
+        if dd["config_patch"]:
+            print("  config_patch")
+            for k, v in dd["config_patch"].items():
+                print(f"    {k} = {v}")
+        print(f"  expect     {dd['expect']}  (+ the Tier A invariants, always)")
+
+    _emit(args, d, render)
+    return EXIT_OK
+
+
+def cmd_scenario_validate(args: argparse.Namespace, data_dir: Path) -> int:
+    scenarios = _scenario_pkg()
+    problems: list[str] = []
+    try:
+        loaded = scenarios.load_all()
+    except Exception as ex:  # noqa: BLE001
+        raise UsageError(f"scenario corpus does not load: {ex}") from ex
+
+    # base_states.json must parse and the base config must be buildable
+    try:
+        from dao.prog.scenarios.build_snapshot import load_base_states
+        n_states = len(load_base_states())
+    except Exception as ex:  # noqa: BLE001
+        problems.append(f"base_states.json: {ex}")
+        n_states = 0
+    try:
+        from dao.prog.scenarios.base_config import base_config
+        base_config()
+    except Exception as ex:  # noqa: BLE001
+        problems.append(f"options_example config does not load: {ex}")
+
+    data = {
+        "scenarios": len(loaded),
+        "base_states": n_states,
+        "problems": problems,
+        "ok": not problems,
+    }
+
+    def render(d):
+        print(f"scenarios   {d['scenarios']}  (loaded, ids unique)")
+        print(f"base_states {d['base_states']} entities")
+        for p in d["problems"]:
+            print(f"  PROBLEM: {p}")
+        print("validate:", "PASS" if d["ok"] else "FAIL")
+
+    _emit(args, data, render)
+    return EXIT_OK if not problems else EXIT_ASSERTION_FAILED
+
+
+def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
+    scenarios = _scenario_pkg()
+    from dao.prog.scenarios.runner import run_scenario, STATUS_PASS, STATUS_SKIP
+
+    try:
+        selected = scenarios.load(args.ids) if args.ids else scenarios.load_all()
+    except KeyError as ex:
+        raise UsageError(str(ex)) from ex
+
+    results = []
+    for sc in selected:
+        r = run_scenario(sc)
+        results.append(r)
+        if not getattr(args, "json", False):
+            print(f"[{r.status}] {r.id}: {r.description}"
+                  + (f"   objective {r.objective:.6f}" if r.objective is not None else ""))
+            for f in r.failures:
+                print(f"        - {f}")
+
+    n_ok = sum(1 for r in results if r.status in (STATUS_PASS, STATUS_SKIP))
+    data = {
+        "results": [
+            {"id": r.id, "status": r.status, "objective": r.objective,
+             "failures": r.failures,
+             "checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.checks]}
+            for r in results
+        ],
+        "passed": n_ok,
+        "total": len(results),
+    }
+
+    def render(d):
+        print(f"\n{d['passed']}/{d['total']} passed.")
+        bad = [r["id"] for r in d["results"] if r["status"] not in (STATUS_PASS, STATUS_SKIP)]
+        if bad:
+            print("needs a look:", bad)
+
+    _emit(args, data, render)
+    return EXIT_OK if n_ok == len(results) else EXIT_ASSERTION_FAILED
+
+
 # -- argument parsing / entry point --------------------------------------
 
 
@@ -3813,6 +3958,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("selftest", parents=[common], help="Run da_debug's own offline checks.")
 
+    p = sub.add_parser("scenario-list", parents=[common],
+                       help="List the declarative scenarios in dao/prog/scenarios/cases/.")
+
+    p = sub.add_parser("scenario-show", parents=[common],
+                       help="Print one scenario's resolved deltas and expectations (no solve).")
+    p.add_argument("id", help="scenario id (see `scenario-list`)")
+
+    p = sub.add_parser("scenario-validate", parents=[common],
+                       help="Check the scenario corpus, base_states.json and the base config load. No solve.")
+
+    p = sub.add_parser("scenario-run", parents=[common],
+                       help="Build a synthetic snapshot per scenario, solve it hermetically, run the Tier A invariants.")
+    p.add_argument("ids", nargs="*", help="scenario ids to run (default: all)")
+
     return parser
 
 
@@ -3826,6 +3985,10 @@ _COMMANDS = {
     "dump": cmd_dump,
     "dangling": cmd_dangling,
     "selftest": cmd_selftest,
+    "scenario-list": cmd_scenario_list,
+    "scenario-show": cmd_scenario_show,
+    "scenario-validate": cmd_scenario_validate,
+    "scenario-run": cmd_scenario_run,
 }
 
 
