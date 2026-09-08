@@ -15,7 +15,7 @@ from subprocess import Popen, PIPE, run, STDOUT
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
-from dao.prog.config.loader import ConfigurationLoader
+from dao.prog.config.loader import config_cache
 from dao.prog.da_report import Report
 from dao.prog.version import __version__
 import json
@@ -35,8 +35,11 @@ active_view = "grafiek"
 def create_config():
     global config
     try:
-        loader = ConfigurationLoader(Path(app_datapath + "options.json"))
-        config = loader.load_and_validate()
+        # de configuratie kan buiten dit proces zijn gewijzigd (instellingen,
+        # migratie): laat de cache opnieuw van schijf lezen. Zo gebruiken de
+        # dashboard-pagina's en de rapportages dezelfde, actuele instellingen.
+        config_cache.invalidate()
+        config, _ = config_cache.get(Path(app_datapath + "options.json"))
     except (ValueError, RuntimeError) as ex:
         logging.error(app_datapath)
         logging.error(ex)
