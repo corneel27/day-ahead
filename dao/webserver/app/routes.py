@@ -35,10 +35,9 @@ active_view = "grafiek"
 def create_config():
     global config
     try:
-        # de configuratie kan buiten dit proces zijn gewijzigd (instellingen,
-        # migratie): laat de cache opnieuw van schijf lezen. Zo gebruiken de
-        # dashboard-pagina's en de rapportages dezelfde, actuele instellingen.
-        config_cache.invalidate()
+        # via de cache, zo gebruiken de dashboard-pagina's en de rapportages
+        # dezelfde configuratie; de cache leest opnieuw van schijf zodra
+        # options.json of secrets.json is gewijzigd, door welk proces dan ook
         config, _ = config_cache.get(Path(app_datapath + "options.json"))
     except (ValueError, RuntimeError) as ex:
         logging.error(app_datapath)
@@ -911,6 +910,10 @@ def settings():
                         with open(filename_ext, "w") as f:
                             f.write(updated_data)
                         message = "JSON data updated successfully"
+                        # de zojuist geschreven instellingen meteen gebruiken,
+                        # ook als het bestand net zo groot is en op dezelfde
+                        # tijd is gewijzigd als de gelezen versie
+                        config_cache.invalidate()
                         check_web_menu_items()
                     except Exception as err:
                         message = "Error: " + err.args[0]

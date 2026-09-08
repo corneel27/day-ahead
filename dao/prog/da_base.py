@@ -68,6 +68,7 @@ class NotificationHandler(Handler):
 class DaBase(hass.Hass):
     _config = None
     _loader = None
+    _config_path = None
     _init_lock = threading.Lock()
 
     def __init__(self, file_name: str = None):
@@ -97,16 +98,20 @@ class DaBase(hass.Hass):
         # DB singletons are managed separately in db_connections.py.
         config_path = (
             Path(self.file_name) if self.file_name else Path("../data/options.json")
-        )
+        ).resolve()
         with DaBase._init_lock:
             try:
                 DaBase._config, DaBase._loader = config_cache.get(config_path)
+                DaBase._config_path = config_path
             except FileNotFoundError as e:
                 logging.error(f"Configuratiebestand niet gevonden: {e}")
             except (ValueError, RuntimeError) as e:
                 logging.error(f"Configuratie kon niet worden geladen: {e}")
-            # na een leesfout blijft een eerder geladen configuratie in gebruik
-            if DaBase._config is None:
+            # na een leesfout blijft alleen een eerder geladen configuratie van
+            # hetzelfde bestand in gebruik, nooit die van een ander bestand
+            if DaBase._config is None or DaBase._config_path != config_path:
+                self.config = None
+                self.loader = None
                 return
 
         self.config = DaBase._config
