@@ -150,14 +150,25 @@ def run_and_log(cmd, state):
         text=True,
     )
 
+    cancelled = False
+
     while proc.poll() is None:
         updated_state = get_task_state()
 
         if updated_state.get("status") == "cancelled":
-            if state["logfile"] and os.path.exists(state["logfile"]):
+            # Alleen afbreken zolang de taak nog loopt. Is ze tussen de poll
+            # hierboven en dit punt uit zichzelf klaar gekomen, dan telt haar
+            # eigen resultaat en blijft haar log staan.
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+                # Een door een signaal gedood proces levert een negatieve
+                # returncode; iets anders betekent dat het net zelf stopte.
+                cancelled = proc.returncode is not None and proc.returncode < 0
+
+            if cancelled and state["logfile"] and os.path.exists(state["logfile"]):
                 os.remove(state["logfile"])
 
-            proc.kill()
             break
 
         if state["logfile"] is None:
@@ -199,7 +210,13 @@ def run_and_log(cmd, state):
     if updated_state["logfile"] == state["logfile"]:
         print("Task completed")
         print(proc.returncode)
-        state["status"] = "done" if proc.returncode == 0 else "error"
+        if cancelled:
+            # De taak is op verzoek afgebroken. De returncode van het gedode
+            # proces zegt niets over het resultaat, dus die mag "cancelled"
+            # niet overschrijven met "error".
+            state["status"] = "cancelled"
+        else:
+            state["status"] = "done" if proc.returncode == 0 else "error"
         state["returncode"] = proc.returncode
         save_task_state(state)
 
