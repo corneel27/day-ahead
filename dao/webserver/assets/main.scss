@@ -34,6 +34,14 @@ h1 {
   min-height: calc(80vh);
 }
 
+.dao-chart {
+  position: relative;
+  width: 100%;
+  height: 60vh;
+  min-height: 20rem;
+  margin-bottom: 1rem;
+}
+
 #tab-report-data {
   .spinner {
     display: none;

@@ -4,9 +4,26 @@ from dao.prog.da_report import Report
 from subprocess import run as subprocess_run
 from dao.prog.da_base import DaBase
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 api = Blueprint("api", __name__)
+
+DEFAULT_TIMEZONE = "Europe/Amsterdam"
+
+
+def get_request_timezone() -> ZoneInfo:
+    """
+    Read the timezone the browser reported, falling back to the default when it
+    is absent or not a known zone name.
+    """
+    name = request.args.get("timezone")
+    if not name:
+        return ZoneInfo(DEFAULT_TIMEZONE)
+
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return ZoneInfo(DEFAULT_TIMEZONE)
 
 @api.route("/data/")
 def data():
@@ -23,12 +40,12 @@ def data():
     if fields:
         fields = fields.split(",")
 
-    timezone_raw = request.args.get('timezone') if None else "Europe/Amsterdam"
+    timezone = get_request_timezone()
 
     try:
         data = data_report.get_data(
-            start=datetime.fromisoformat(start).replace(tzinfo=ZoneInfo(timezone_raw)),
-            end=datetime.fromisoformat(end).replace(tzinfo=ZoneInfo(timezone_raw)),
+            start=datetime.fromisoformat(start).replace(tzinfo=timezone),
+            end=datetime.fromisoformat(end).replace(tzinfo=timezone),
             aggregate=aggregate,
             var_codes=fields,
         )
@@ -80,11 +97,11 @@ def data_sql_ha():
     if fields:
         fields = fields.split(",")
 
-    timezone_raw = request.args.get("timezone") if None else "Europe/Amsterdam"
+    timezone = get_request_timezone()
 
     query = data_report.get_ha_data_query(
-            start=datetime.fromisoformat(start).replace(tzinfo=ZoneInfo(timezone_raw)),
-            end=datetime.fromisoformat(end).replace(tzinfo=ZoneInfo(timezone_raw)),
+            start=datetime.fromisoformat(start).replace(tzinfo=timezone),
+            end=datetime.fromisoformat(end).replace(tzinfo=timezone),
             var_codes=fields,
             step=timedelta(days=1)
         )

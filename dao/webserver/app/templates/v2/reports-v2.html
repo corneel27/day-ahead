@@ -685,8 +685,10 @@
             syncDatasets(dataChart, config);
         }
 
-        const columns = Object.keys(data[0]);
-        columns.splice(columns.indexOf('ts'), 1);
+        // Zonder data zijn er geen kolommen om af te leiden.
+        const columns = data.length > 0
+            ? Object.keys(data[0]).filter(column => column !== 'ts')
+            : [];
 
         updateVisibleAxes(dataChart);
         dataChart.update();
@@ -699,11 +701,7 @@
         const params = getFormParams();
         updateUrl(params);
 
-        if (e.target.id !== 'preset') {
-            updateDataThrottled(params);
-        } else {
-            dataChart.update("none");
-        }
+        updateDataThrottled(params);
     });
 
     window.addEventListener('load', () => {

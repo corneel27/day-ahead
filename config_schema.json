@@ -1262,7 +1262,7 @@
           "description": "Matplotlib style (e.g., 'dark_background', 'default')",
           "title": "Style",
           "type": "string",
-          "x-help": "Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'.",
+          "x-help": "Matplotlib visual style for the graphs that are rendered as an image: the chart of an optimization run and the reports of the legacy interface. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'. The reports of the V2 interface are drawn in the browser and follow the light or dark theme of the interface itself.",
           "x-ui-section": "Graphics"
         },
         "battery balance": {

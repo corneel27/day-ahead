@@ -62,9 +62,8 @@
 </form>
 
 {% if view == "grafiek" %}
-<div class="show graph mt-2" id="show_graph2">
-    <img src='data:image/png;base64,{{ report_data }}' alt="image" width="1000" height="auto"/>"
-</div>
+<div class="show graph mt-2" id="show_graph2"></div>
+<script id="chart-spec" type="application/json">{{ report_data|tojson }}</script>
 {% else %}
 <div class="show table mt-2">
     <style>
@@ -81,6 +80,14 @@
 
 <script>
     window.addEventListener('load', () => {
+        const specElement = document.getElementById('chart-spec');
+
+        if (specElement) {
+            window.renderChartSpec(
+                document.getElementById('show_graph2'),
+                JSON.parse(specElement.textContent)
+            );
+        }
 
         const tables = document.getElementsByTagName('table');
 

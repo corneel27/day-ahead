@@ -7,11 +7,11 @@
 
 <div class="row">
     <div class="btn-group col-8 col-sm-4 col-lg-3 col-xl-2">
-        <a class="btn btn-outline-secondary {{ 'disabled' if show_index <= 1 else '' }}"
+        <a class="btn btn-outline-secondary {{ 'disabled' if show_index == first_index else '' }}"
            href="{{url_for('v2.chart', i=first_index)}}">
             First
         </a>
-        <a class="btn btn-outline-secondary {{ 'disabled' if ffprev_index == 0 else '' }}"
+        <a class="btn btn-outline-secondary {{ 'disabled' if ffprev_index == show_index else '' }}"
            href="{{url_for('v2.chart', i=ffprev_index)}}">
             -6h
         </a>
@@ -36,11 +36,11 @@
            href="{{url_for('v2.chart', i=next_index)}}">
             Next
         </a>
-        <a class="btn btn-outline-secondary {{ 'disabled' if ffnext_index >= last_index - 1  else '' }}"
+        <a class="btn btn-outline-secondary {{ 'disabled' if ffnext_index == show_index else '' }}"
            href="{{url_for('v2.chart', i=ffnext_index)}}">
             +6h
         </a>
-        <a class="btn btn-outline-secondary {{ 'disabled' if show_index >= last_index - 1 else ''}}"
+        <a class="btn btn-outline-secondary {{ 'disabled' if show_index == last_index else ''}}"
            href="{{url_for('v2.chart')}}">
             Last
         </a>

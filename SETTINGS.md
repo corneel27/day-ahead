@@ -8,7 +8,7 @@
 > This documentation is auto-generated from Pydantic models.
 > To update, modify the model docstrings and Field descriptions, then run:
 > ```bash
-> python -m dao.prog.config.generate_docs
+> python scripts/generate_docs.py
 > ```
 
 ## 📑 Table of Contents
@@ -1439,7 +1439,7 @@ Graphs can show:
 
 **`style`**
 
-Matplotlib visual style for generated graphs. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'.
+Matplotlib visual style for the graphs that are rendered as an image: the chart of an optimization run and the reports of the legacy interface. 'dark_background' matches Home Assistant dark theme. Other options: 'default', 'seaborn', 'ggplot', 'bmh', 'fivethirtyeight'. The reports of the V2 interface are drawn in the browser and follow the light or dark theme of the interface itself.
 
 **`battery balance`**
 

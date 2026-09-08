@@ -6,6 +6,7 @@ from subprocess import Popen, PIPE, run, STDOUT, DEVNULL
 from pathlib import Path
 from dao.prog.da_report import Report
 from dao.prog.config.loader import ConfigurationLoader
+from dao.lib.da_chartjs import ChartSpecBuilder
 
 v2 = Blueprint("v2", __name__)
 
@@ -272,7 +273,7 @@ def get_solar_items_with_ml():
 def chart():
     kwargs = log_chart("images/", "*.png")
     if kwargs is None:
-        return render_template("v2/no-tasks.html", )
+        return render_template("v2/no-task.html")
 
     kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
     return render_template(
@@ -285,7 +286,7 @@ def chart():
 def log():
     kwargs = log_chart("log/", "*.log")
     if kwargs is None:
-        return render_template("v2/no-tasks.html", )
+        return render_template("v2/no-task.html")
 
     log_file = app_datapath + "log/" + kwargs["filename"]
     with open(log_file, "r") as f:
@@ -484,7 +485,7 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
     report_df.round(3)
 
     if view == "tabel":
-        report_data = [
+        return [
             report_df.to_html(
                 index=False,
                 justify="right",
@@ -494,36 +495,42 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
                 float_format="{:.3f}".format,
             )
         ]
-    else:
-        if subject == "grid":
-            report_data = report.make_graph(report_df, period)
-        elif subject == "balans":
-            report_data = report.make_graph(
-                report_df, period, report.balance_graph_options
-            )
-        # else:  # co2
-        #     report_data = report.make_graph(
-        #         report_df, period, report.co2_graph_options
-        #     )
-        elif subject == "save_cons":
-            report_data = report.make_graph(
-                report_df, period, report.saving_cons_graph_options
-            )
-        elif subject == "save_cost":
-            report_data = report.make_graph(
-                report_df, period, report.saving_cost_graph_options
-            )
-        elif subject == "solar":
-            report_data = report.make_graph(
-                report_df,
-                "vandaag",
-                _options=report.solar_graph_options,
-                _title=f"Solar production {date.strftime('%Y-%m-%d')}"
-            )
-        else:
-            raise Exception("Invalid subject")
 
-    return report_data
+    # The chart is drawn in the browser with Chart.js, so the graph options are
+    # turned into a specification instead of a rendered image.
+    if subject == "grid":
+        graph_options = report.grid_graph_options
+        graph_period = period
+        title = None
+    elif subject == "balans":
+        graph_options = report.balance_graph_options
+        graph_period = period
+        title = None
+    # elif subject == "co2":
+    #     graph_options = report.co2_graph_options
+    #     graph_period = period
+    #     title = None
+    elif subject == "save_cons":
+        graph_options = report.saving_cons_graph_options
+        graph_period = period
+        title = None
+    elif subject == "save_cost":
+        graph_options = report.saving_cost_graph_options
+        graph_period = period
+        title = None
+    elif subject == "solar":
+        graph_options = report.solar_graph_options
+        graph_period = "vandaag"
+        title = f"Solar production {date.strftime('%Y-%m-%d')}"
+    else:
+        raise Exception("Invalid subject")
+
+    return ChartSpecBuilder().build(
+        report_df,
+        report.prepare_graph_options(
+            report_df, graph_options, graph_period, _title=title
+        ),
+    )
 
 
 @v2.route("/reports", methods=["GET"])
@@ -671,9 +678,6 @@ def secrets():
             success = "Secrets updated successfully"
         except Exception as err:
             error = "Error: " + err.args[0]
-
-    with open(path, "r") as file:
-        content = file.read()
 
     with open(path, "r") as file:
         content = file.read()

@@ -20,9 +20,12 @@ import {
     PointElement,
     LinearScale,
     CategoryScale,
+    Title,
     Tooltip,
     Legend
 } from 'chart.js'
+
+import {renderChartSpec} from './dao-chart.js'
 
 Chart.register(
     LineController,
@@ -35,11 +38,29 @@ Chart.register(
     PointElement,
     LinearScale,
     CategoryScale,
+    Title,
     Tooltip,
     Legend
 )
 
 window.Chart = Chart
+
+// Laat Chart.js het actieve Bootstrap-thema volgen.
+function applyChartTheme() {
+    const styles = getComputedStyle(document.documentElement)
+
+    Chart.defaults.color = styles.getPropertyValue('--bs-body-color').trim()
+    Chart.defaults.borderColor = styles.getPropertyValue('--bs-border-color').trim()
+
+    Chart.instances && Object.values(Chart.instances).forEach(chart => chart.update())
+}
+
+new MutationObserver(applyChartTheme).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-bs-theme'],
+})
+
+window.renderChartSpec = renderChartSpec
 
 import Prism from 'prismjs'
 import 'prismjs/components/prism-json'
@@ -87,6 +108,7 @@ function fillCurrentTimezoneFields(root = document) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    applyChartTheme();
     fillCurrentTimezoneFields();
 
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')

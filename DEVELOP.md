@@ -126,30 +126,45 @@ The application requires configuration files in the `dao/data/` directory. Once 
 
 ```
 day-ahead/
-├── dao/                          # Main application directory
-│   ├── prog/                     # Core application logic
-│   │   ├── day_ahead.py          # Main entry point
-│   │   ├── da_config.py          # Configuration management
-│   │   ├── da_prices.py          # Price fetching logic
-│   │   ├── da_meteo.py           # Weather data integration
-│   │   ├── da_scheduler.py       # Optimization scheduler
-│   │   ├── da_report.py          # Reporting functionality
-│   │   ├── da_graph.py           # Graph generation
-│   │   ├── db_manager.py         # Database management
-│   │   └── utils.py              # Utility functions
-│   ├── webserver/                # Flask web application
-│   │   ├── da_server.py          # Flask server entry point
-│   │   ├── gunicorn_config.py    # Production server config
-│   │   └── app/                  # Flask application package
-│   │       ├── __init__.py       # Flask app initialization
-│   │       ├── routes.py         # Web routes/endpoints
-│   │       ├── static/           # Static assets (CSS, JS)
-│   │       └── templates/        # HTML templates
-│   ├── data/                     # Runtime data and configuration
-│   ├── tests/                    # Test files
-│   └── requirements.txt          # Python dependencies
-├── setup.py                      # Package setup configuration
-└── README.md                     # User documentation
+├── dao/                            # Main application directory
+│   ├── prog/                       # Core application logic
+│   │   ├── day_ahead.py            # Main entry point, MIP optimization
+│   │   ├── da_base.py              # Shared base class
+│   │   ├── da_scheduler.py         # Optimization scheduler
+│   │   ├── da_report.py            # Reporting, incl. the graph definitions
+│   │   ├── solar_predictor.py      # ML prediction of solar production
+│   │   ├── config/                 # Pydantic configuration models and loader
+│   │   └── utils.py                # Utility functions
+│   ├── lib/                        # Supporting libraries
+│   │   ├── da_prices.py            # Price fetching logic
+│   │   ├── da_meteo.py             # Weather data integration
+│   │   ├── da_graph.py             # Graph rendering with matplotlib
+│   │   ├── da_chartjs.py           # Graph rendering with Chart.js
+│   │   ├── db_manager.py           # Database management
+│   │   └── db_connections.py       # Database connections
+│   ├── webserver/                  # Flask web application
+│   │   ├── da_server.py            # Flask server entry point
+│   │   ├── gunicorn_config.py      # Production server config
+│   │   ├── package.json            # Frontend dependencies
+│   │   ├── vite.config.js          # Frontend build config
+│   │   ├── assets/                 # Frontend sources, bundled by Vite
+│   │   │   ├── main.js             # Bundle entry point
+│   │   │   ├── main.scss           # Stylesheet
+│   │   │   └── dao-chart.js        # Chart.js renderer for the V2 GUI
+│   │   └── app/                    # Flask application package
+│   │       ├── __init__.py         # Flask app initialization
+│   │       ├── routes.py           # Routes of the legacy GUI
+│   │       ├── v2/                 # V2 GUI
+│   │       │   ├── routes.py       # Routes of the V2 GUI
+│   │       │   └── api/routes.py   # JSON API used by the V2 GUI
+│   │       ├── static/             # Static assets, incl. the Vite build
+│   │       └── templates/          # HTML templates, V2 GUI under v2/
+│   ├── data/                       # Runtime data and configuration
+│   ├── tests/                      # Test files
+│   └── requirements.txt            # Python dependencies
+├── scripts/generate_docs.py        # Generates SETTINGS.md and config_schema.json
+├── setup.py                        # Package setup configuration
+└── README.md                       # User documentation
 ```
 
 ---
@@ -226,6 +241,24 @@ cd dao/webserver
 npm run build
 ```
 
+#### How the charts are rendered
+
+There are two renderers, and both read the same declarative graph definitions
+(the `*_graph_options` dicts in `dao/prog/da_report.py`):
+
+| Renderer | Used by | Output |
+| --- | --- | --- |
+| `dao/lib/da_graph.py` (`GraphBuilder`, matplotlib) | the legacy GUI, and the chart that an optimization run writes to `dao/data/images/` | a PNG |
+| `dao/lib/da_chartjs.py` (`ChartSpecBuilder`) | the V2 GUI pages Reports, Savings and Solar | a JSON specification, drawn in the browser by `dao/webserver/assets/dao-chart.js` |
+
+`Report.prepare_graph_options()` fills in the title and the horizontal axis for
+both. So when you add or change a serie, edit the graph definition in
+`da_report.py` and both renderers follow; only change a builder when the
+rendering itself has to differ.
+
+The V2 GUI page "Reports V2" is separate from this: it fetches JSON from
+`/v2/api/data/` and builds its Chart.js configuration in the template.
+
 #### Option 2: Run with Gunicorn (Production-like Environment)
 
 For testing in a production-like environment:
@@ -242,6 +275,37 @@ Once the server is running, open your browser and navigate to http://localhost:5
 
 ---
 
+## Testing
+
+### Unit Tests
+
+The tests live in `dao/tests/` and run with pytest, from the project root:
+
+```bash
+pip install pytest
+python -m pytest dao/tests
+```
+
+To run a single directory or file:
+
+```bash
+python -m pytest dao/tests/lib
+python -m pytest dao/tests/lib/test_da_chartjs.py
+```
+
+Note that `dao/tests` is listed in `.gitignore`, so a new test file has to be
+added explicitly with `git add -f`.
+
+### Configuration Documentation
+
+`SETTINGS.md` and `config_schema.json` are generated from the Pydantic models in
+`dao/prog/config/models/`. After changing a model, regenerate them and commit the
+result, otherwise the "Check Model Documentation" workflow fails:
+
+```bash
+python scripts/generate_docs.py
+```
+
 ### Manual Testing Checklist
 
 When testing changes, verify:
@@ -252,7 +316,8 @@ When testing changes, verify:
 4. **Optimization:** MIP solver runs without errors
 5. **Web Interface:** All pages load and forms submit correctly
 6. **Database Operations:** Data is stored and retrieved correctly
-7. **Graph Generation:** Visualizations are generated properly
+7. **Graph Generation:** The PNG of an optimization run is written, and the
+   charts of the V2 GUI are drawn in both the light and the dark theme
 
 ---
 
@@ -303,9 +368,8 @@ This project uses the following branching model:
    cd dao/webserver
    python da_server.py
    
-   # Run unit tests (from project root)
-   cd dao/tests/prog
-   python test_dao.py
+   # Run unit tests (from project root, see Testing above)
+   python -m pytest dao/tests
    ```
 
 5. **Commit Your Changes**

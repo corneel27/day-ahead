@@ -1,4 +1,5 @@
 import calendar
+import copy
 import datetime
 
 # from unittest.mock import inplace
@@ -602,6 +603,46 @@ class Report(DaBase):
         }
 
         _graphics_style = self.config.graphics.style
+        self.grid_graph_options = {
+            "title": "Verbruik en kosten",
+            "style": _graphics_style,
+            "graphs": [
+                {
+                    "vaxis": [{"title": "kWh"}, {"title": "euro"}],
+                    "align_zeros": "True",
+                    "series": [
+                        {
+                            "column": "Verbruik",
+                            "title": "Verbruik",
+                            "type": "stacked",
+                            "color": "#00bfff",
+                        },
+                        {
+                            "column": "Productie",
+                            "title": "Productie",
+                            "negativ": "true",
+                            "type": "stacked",
+                            "color": "green",
+                        },
+                        {
+                            "column": "Kosten",
+                            "title": "Kosten",
+                            "type": "stacked",
+                            "color": "red",
+                            "vaxis": "right",
+                        },
+                        {
+                            "column": "Opbrengst",
+                            "title": "Opbrengst",
+                            "negativ": "true",
+                            "type": "stacked",
+                            "color": "#ff8000",
+                            "vaxis": "right",
+                        },
+                    ],
+                }
+            ],
+        }
         self.balance_graph_options = {
             "title": "Energiebalans",
             "style": _graphics_style,
@@ -3363,61 +3404,42 @@ class Report(DaBase):
         result = '{ "message":"Success", "data": ' + data_json + " }"
         return result
 
-    def make_graph(self, df, period, _options=None, _title: str | None = None):
-        if _options:
-            options = _options
-        else:
-            _gs = self.config.graphics.style
-            options = {
-                "title": "Verbruik en kosten",
-                "style": _gs,
-                "graphs": [
-                    {
-                        "vaxis": [{"title": "kWh"}, {"title": "euro"}],
-                        "align_zeros": "True",
-                        "series": [
-                            {
-                                "column": "Verbruik",
-                                "title": "Verbruik",
-                                "type": "stacked",
-                                "color": "#00bfff",
-                            },
-                            {
-                                "column": "Productie",
-                                "title": "Productie",
-                                "negativ": "true",
-                                "type": "stacked",
-                                "color": "green",
-                            },
-                            {
-                                "column": "Kosten",
-                                "title": "Kosten",
-                                "type": "stacked",
-                                "color": "red",
-                                "vaxis": "right",
-                            },
-                            {
-                                "column": "Opbrengst",
-                                "title": "Opbrengst",
-                                "negativ": "true",
-                                "type": "stacked",
-                                "color": "#ff8000",
-                                "vaxis": "right",
-                            },
-                        ],
-                    }
-                ],
-            }
+    def prepare_graph_options(
+        self,
+        df,
+        options: dict,
+        period: str,
+        _title: str | None = None,
+    ) -> dict:
+        """
+        Complete a graph options dict with the title and the horizontal axis of
+        the given period. A copy is returned so the options stored on self stay
+        reusable.
+        :param df: dataframe with the data, needed to resolve the x-axis column
+        :param options: one of the *_graph_options dicts
+        :param period: the reporting period, e.g. "vandaag"
+        :param _title: overrules the title from the options
+        """
+        options = copy.deepcopy(options)
         if _title is None:
             options["title"] = options["title"] + " " + period
         else:
             options["title"] = _title
+
+        interval = self.periodes[period]["interval"]
         options["haxis"] = {
-            "values": self.periodes[period]["interval"]
-            if self.periodes[period]["interval"] in df
-            else self.periodes[period]["interval"].capitalize(),
-            "title": self.periodes[period]["interval"],
+            "values": interval if interval in df else interval.capitalize(),
+            "title": interval,
         }
+        return options
+
+    def make_graph(self, df, period, _options=None, _title: str | None = None):
+        options = self.prepare_graph_options(
+            df,
+            _options if _options else self.grid_graph_options,
+            period,
+            _title,
+        )
 
         gb = GraphBuilder()
         fig = gb.build(df, options, False)

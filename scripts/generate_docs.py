@@ -457,7 +457,7 @@ def main():
     lines.append("> This documentation is auto-generated from Pydantic models.")
     lines.append("> To update, modify the model docstrings and Field descriptions, then run:")
     lines.append("> ```bash")
-    lines.append("> python -m dao.prog.config.generate_docs")
+    lines.append("> python scripts/generate_docs.py")
     lines.append("> ```")
     lines.append("")
     
