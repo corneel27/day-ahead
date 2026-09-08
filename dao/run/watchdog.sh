@@ -36,7 +36,12 @@ start_gunicorn() {
 }
 
 start_inotify() {
-    inotifywait -q -e modify "${WATCH_FILES[@]}" &
+    # Ook op close_write/move_self/delete_self wachten: een editor of een
+    # kopieeractie schrijft het bestand vaak niet ter plaatse, maar vervangt
+    # het. Dan komt er geen modify-event en zou een wijziging gemist worden.
+    inotifywait -q \
+        -e modify -e close_write -e move_self -e delete_self \
+        "${WATCH_FILES[@]}" &
     INOTIFY_PID=$!
 }
 

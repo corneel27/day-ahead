@@ -20,7 +20,7 @@ from sqlalchemy import Table, select, func, and_
 from dao.prog.utils import get_tibber_data, error_handling
 from dao.prog.version import __version__
 from pathlib import Path
-from dao.prog.config.loader import ConfigurationLoader
+from dao.prog.config.loader import config_cache
 from dao.lib.db_connections import make_db_da, make_db_ha
 from dao.lib.da_meteo import Meteo
 from dao.lib.da_prices import DaPrices
@@ -88,24 +88,26 @@ class DaBase(hass.Hass):
             datefmt="%Y-%m-%d %H:%M:%S",
         )
         logging.getLogger().setLevel(self.log_level)
-        # Load config exactly once, even when multiple threads construct a
-        # DaBase subclass concurrently (e.g. gunicorn workers sharing a process).
+        # Load the config only when it is not yet loaded or when options.json
+        # (or secrets.json) has been changed since it was loaded: a long-running
+        # process (the dashboard) must not keep using the settings as they were
+        # when it was started. The cache is shared by every DaBase-object in the
+        # process; the lock keeps concurrent constructions (e.g. gunicorn threads
+        # sharing a process) from loading at the same time.
         # DB singletons are managed separately in db_connections.py.
+        config_path = (
+            Path(self.file_name) if self.file_name else Path("../data/options.json")
+        )
         with DaBase._init_lock:
+            try:
+                DaBase._config, DaBase._loader = config_cache.get(config_path)
+            except FileNotFoundError as e:
+                logging.error(f"Configuratiebestand niet gevonden: {e}")
+            except (ValueError, RuntimeError) as e:
+                logging.error(f"Configuratie kon niet worden geladen: {e}")
+            # na een leesfout blijft een eerder geladen configuratie in gebruik
             if DaBase._config is None:
-                try:
-                    DaBase._loader = ConfigurationLoader(
-                        Path(self.file_name)
-                        if self.file_name
-                        else Path("../data/options.json")
-                    )
-                    DaBase._config = DaBase._loader.load_and_validate()
-                except FileNotFoundError as e:
-                    logging.error(f"Configuratiebestand niet gevonden: {e}")
-                    return
-                except (ValueError, RuntimeError) as e:
-                    logging.error(f"Configuratie kon niet worden geladen: {e}")
-                    return
+                return
 
         self.config = DaBase._config
         self.loader = DaBase._loader
