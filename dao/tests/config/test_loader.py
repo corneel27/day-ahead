@@ -221,6 +221,23 @@ class TestConfigCache:
         assert config1.logging_level == "info"
         assert config2.logging_level == "debug"
 
+    def test_failed_load_does_not_keep_other_config_cached(self, temp_config_dir):
+        """A failing load never leaves the configuration of another file cached."""
+        config_path = temp_config_dir / "options.json"
+        broken_path = temp_config_dir / "broken_options.json"
+        self.write_config(config_path, "info")
+        broken_path.write_text("{ this is not json")
+
+        config1, _ = config_cache.get(config_path)
+
+        with pytest.raises(ValueError):
+            config_cache.get(broken_path)
+
+        # het eerste bestand wordt opnieuw gelezen, niet uit de cache geleverd
+        config2, _ = config_cache.get(config_path)
+        assert config2 is not config1
+        assert config2.logging_level == "info"
+
     def test_file_stamp_of_missing_file(self, temp_config_dir):
         """A missing file has no stamp."""
         assert file_stamp(temp_config_dir / "nonexistent.json") is None

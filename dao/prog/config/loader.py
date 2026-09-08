@@ -275,12 +275,16 @@ class ConfigCache:
             Tuple of (validated configuration, loader)
         """
         with self._lock:
-            path = Path(config_path)
+            path = Path(config_path).resolve()
             if self._config is not None and self._loader is not None:
-                if path.resolve() == self._path and (
+                if path == self._path and (
                     self._stamp_of(self._loader) == self._stamp
                 ):
                     return self._config, self._loader
+                # niets van het vorige bestand laten staan: als het lezen van
+                # dit bestand mislukt mag de vorige configuratie niet als die
+                # van dit bestand achterblijven
+                self._clear()
 
             loader = ConfigurationLoader(path)
             # Take the stamp before loading: a migration rewrites options.json,
@@ -289,17 +293,20 @@ class ConfigCache:
             config = loader.load_and_validate()
             self._config = config
             self._loader = loader
-            self._path = path.resolve()
+            self._path = path
             self._stamp = stamp
             return config, loader
 
     def invalidate(self) -> None:
         """Drops the cached configuration; the next get() reloads from disk."""
         with self._lock:
-            self._config = None
-            self._loader = None
-            self._path = None
-            self._stamp = None
+            self._clear()
+
+    def _clear(self) -> None:
+        self._config = None
+        self._loader = None
+        self._path = None
+        self._stamp = None
 
 
 # Process-wide cache, shared by every DaBase-object in the process
