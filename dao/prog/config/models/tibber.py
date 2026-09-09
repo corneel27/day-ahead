@@ -9,7 +9,7 @@ from .base import SecretStr
 
 class TibberConfig(BaseModel):
     """Tibber API integration configuration."""
-    
+
     api_token: SecretStr = Field(
         alias="api_token",
         description="Tibber API token (can use !secret)",
@@ -17,8 +17,8 @@ class TibberConfig(BaseModel):
             "x-help": "Tibber API access token. Get from Tibber app or developer portal. Use !secret for security. Required if using Tibber as price source.",
             "x-ui-section": "Tibber",
             "x-validation-hint": "Use !secret for API tokens",
-            "x-docs-url": "https://developer.tibber.com/"
-        }
+            "x-docs-url": "https://developer.tibber.com/",
+        },
     )
     api_url: Optional[str] = Field(
         default="https://api.tibber.com/v1-beta/gql",
@@ -26,18 +26,18 @@ class TibberConfig(BaseModel):
         description="Tibber API URL",
         json_schema_extra={
             "x-help": "Tibber GraphQL API endpoint URL. Default is official API. Change only for testing or custom endpoints.",
-            "x-ui-section": "Tibber"
-        }
+            "x-ui-section": "Tibber",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Integration',
-            'x-icon': 'lightning-bolt',
-            'x-order': 19,
-            'x-help': '''# Tibber Integration
+            "x-ui-group": "Integration",
+            "x-icon": "lightning-bolt",
+            "x-order": 19,
+            "x-help": """# Tibber Integration
 
 Connect to Tibber API for real-time prices and consumption data.
 
@@ -82,7 +82,7 @@ Tibber is an electricity supplier offering:
 - Set pricing source to 'tibber' if using
 - Tibber provides next-day prices after ~13:00 CET
 - Combine with Tibber HA integration for full experience
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Tibber-Integration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Tibber-Integration",
+        },
     )

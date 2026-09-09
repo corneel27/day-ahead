@@ -128,7 +128,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `reduced hours` | object (optional) | No | `null` | Hour -> max power mapping for reduced power hours _Keys are hour strings (0-23), values are watts_ |
 | `reduce_power_low_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for low SOC power reduction |
 | `reduce_power_high_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
-| `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
+| `minimum power` | integer (optional) | No | `0` | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
 | `dc_to_bat max power` | [FlexFloat](#flexfloat) (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
@@ -143,6 +143,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `entity from pv` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
 | `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
 | `entity calculated soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for saving calculated SOC (Unit: `%`) |
+| `entity battery next action` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the timestamp of this battery's next planned action |
 | `solar` | list[[SolarConfig](#solarconfig)] | No | `null` | DC-coupled solar panels attached to this battery |
 
 <details>
@@ -263,6 +264,10 @@ Optional: Home Assistant entity to save the calculated average grid power in wat
 **`entity calculated soc`**
 
 Optional: Home Assistant entity to save the calculated State of Charge at the end of the first interval. For battery systems that will stear at SoC-values
+
+**`entity battery next action`**
+
+Optional: Home Assistant input_datetime entity to save the timestamp of the next interval in which this battery is planned to do something. Used by automations that put the inverter into standby during confirmed-idle stretches.
 
 **`solar`**
 
@@ -470,6 +475,7 @@ Use `charge_scheduler` for time-based optimization:
 | `name` | string | Yes | — | EV name/identifier |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be > 0, typically 40-100 kWh_ |
 | `switch cost` | number (optional) | No | `0.0` | Switch cost in euro/switch to 'on' (Unit: `euro/switch to 'on'`) _Must be >= 0, typically 0.01- 0.10 euro/switch_ |
+| `low soc cost` | number (optional) | No | `0.0` | Los soc cost in euro/kWh.hour (Unit: `euro/kWh.hour`) _Must be >= 0, typically 0.001 - 0.01 euro/kWh.hour_ |
 | `entity position` | [EntityId](#entityid) | Yes | — | HA device tracker for vehicle position |
 | `charge three phase` | [FlexBool](#flexbool) | No | `true` | Whether vehicle charges on three phases |
 | `charge stages` | list[[EVChargeStage](#evchargestage)] | Yes | — | Charging amperage/efficiency curve _At least 1 stage required_ |
@@ -496,6 +502,10 @@ Usable battery capacity in kilowatt-hours. Check vehicle specifications (often l
 **`switch cost`**
 
 Virtual cost in euro per extra switch to 'on'.Every extra 'stop/start' will cause one switch_penalty to be accounted
+
+**`low soc cost`**
+
+Virtual cost in euro per kWh per hour when soc is lower then wish_level
 
 **`entity position`**
 
@@ -1270,7 +1280,7 @@ Configure electricity market prices and tariff components for accurate cost opti
 ## Price Components
 
 Total electricity cost consists of:
-1. **Market price**: Imported official day-ahead spot price (nordpool/entsoe/easyenergy/tibber)
+1. **Market price**: Imported official day-ahead spot price (nordpool/entsoe/tibber)
 2. **Energy taxes**: Government energy taxes
 3. **Supplier costs**: Your supplier's markup/fees
 4. **VAT**: Value-added tax on sum of above
@@ -1294,13 +1304,12 @@ System uses tariff active on optimization date.
 
 - **nordpool**: Nord Pool (Nordic/Baltic markets)
 - **entsoe**: ENTSO-E Transparency Platform (all European markets)
-- **easyenergy**: EasyEnergy tariff endpoint
 - **tibber**: Tibber API (if using Tibber as supplier)
 
 ## Optional Horizon Extension
 
 - **forecast extension provider**: Optional forecast provider for extending the imported official horizon
-- **forecast extension hours**: How many additional hours should be appended beyond the official horizon
+- **forecast extension hours**: Requested additional hours beyond the official horizon; provider access limits can shorten the actual extension
 - **energypriceforecast**: Provider-specific extension feed from Energy Price Forecast EU
 
 ## Tips
@@ -1317,7 +1326,7 @@ System uses tariff active on optimization date.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `easyenergy`, `tibber` |
+| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
 | `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
 | `forecast extension provider` | string | No | `"none"` | Optional provider for extending the day-ahead horizon with forecast data. Options: `none`, `energypriceforecast`, `dayaheadprediction` |
 | `forecast extension hours` | [FlexInt](#flexint) | No | `0` | How many additional hours should be appended beyond the official day-ahead horizon _Integer or HA entity, effective value between 0 and 168_ |
@@ -1341,7 +1350,7 @@ System uses tariff active on optimization date.
 
 **`source day ahead`**
 
-Data source for imported official day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'easyenergy' for the EasyEnergy public tariff feed, 'tibber' if using Tibber integration.
+Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.
 
 **`entsoe-api-key`**
 
@@ -1353,7 +1362,7 @@ Optional provider that extends the imported official day-ahead horizon with fore
 
 **`forecast extension hours`**
 
-Number of hours to extend beyond the imported official day-ahead horizon. Supports either a fixed integer or a Home Assistant entity. DAO translates the resolved value into the provider-specific URL parameter.
+Number of requested hours beyond the imported official day-ahead horizon. Supports either a fixed integer or a Home Assistant entity. The actual extension can be shorter because Energy Price Forecast access is limited to an absolute horizon from the current time: 48 hours anonymously and up to 120 hours with an eligible API key.
 
 **`energypriceforecast-extension-api-url`**
 
@@ -1365,7 +1374,7 @@ Optional API key for the Energy Price Forecast EU extension feed. If set, DAO se
 
 **`energypriceforecast-extension-country`**
 
-Optional explicit country/market code for the Energy Price Forecast EU extension feed, for example 'nl', 'de', 'dk1' or 'no3'. Leave empty to map from DAO country automatically.
+Optional explicit market code for the Energy Price Forecast EU extension feed, for example 'nl', 'de', 'dk1', 'no3' or 'se4'. Leave empty only for countries with an unambiguous market. Denmark, Italy, Norway and Sweden require an explicit price zone.
 
 **`day-ahead-prediction-extension-url`**
 
@@ -1711,7 +1720,10 @@ Define when automatic tasks run using time patterns.
   "active": true,
   "schedule": [
     {"time": "0435", "action": "get_day_ahead_prices"},
-    {"time": "xx20", "action": "get_day_ahead_price_forecast"},
+    {"time": "0020", "action": "get_day_ahead_price_forecast"},
+    {"time": "0620", "action": "get_day_ahead_price_forecast"},
+    {"time": "1220", "action": "get_day_ahead_price_forecast"},
+    {"time": "1820", "action": "get_day_ahead_price_forecast"},
     {"time": "0445", "action": "get_meteo_data"},
     {"time": "0500", "action": "calc_optimum"},
     {"time": "xx00", "action": "calc_baseloads"},
@@ -1723,7 +1735,7 @@ Define when automatic tasks run using time patterns.
 ## Typical Schedule
 
 1. **04:00-05:00**: Fetch official prices and weather
-2. **xx20 / every few hours**: Refresh optional forecast horizon extension
+2. **Every six hours**: Refresh optional forecast horizon extension
 3. **05:00**: Run optimization with fresh data
 4. **Hourly**: Update baseload calculations
 5. **03:00**: Clean old data (low activity time)
@@ -2029,7 +2041,7 @@ _A single scheduled task entry._
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
-| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `get_day_ahead_price_forecast`, `calc_optimum`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
+| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `get_day_ahead_price_forecast`, `calc_optimum`, `calc_optimum_met_debug`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>

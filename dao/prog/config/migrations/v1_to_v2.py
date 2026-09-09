@@ -36,40 +36,47 @@ def migrate_v1_to_v2(config: dict[str, Any]) -> dict[str, Any]:
     #             battery['efficiency'] = 0.95  # Migration default
     #             logger.info(f"Added efficiency=0.95 to battery '{battery.get('name', 'unknown')}'")
 
-
-    if not ('grid' in migrated):
-        migrated['grid'] = {}
-    if 'battery' in migrated and isinstance(migrated["battery"], list):
+    if not ("grid" in migrated):
+        migrated["grid"] = {}
+    if "battery" in migrated and isinstance(migrated["battery"], list):
         # entity_balance_switch
         value = None
-        for battery in migrated['battery']:
+        for battery in migrated["battery"]:
             if "entity_balance_switch" in battery:
                 if value is None:
                     value = battery["entity_balance_switch"]
                     migrated["grid"]["entity_balance_switch"] = value
-                    logger.info(f"Moved 'entity_balance_switch' from battery "
-                                f"{battery.get('name', 'unknown')} -> grid")
+                    logger.info(
+                        f"Moved 'entity_balance_switch' from battery "
+                        f"{battery.get('name', 'unknown')} -> grid"
+                    )
                 else:
-                    logger.info("Removed 'entity_balance_switch' from battery "
-                                f"{battery.get('name', 'unknown')}")
+                    logger.info(
+                        "Removed 'entity_balance_switch' from battery "
+                        f"{battery.get('name', 'unknown')}"
+                    )
                 del battery["entity_balance_switch"]
 
         # entity_grid_setpoint
         value = None
-        for battery in migrated['battery']:
+        for battery in migrated["battery"]:
             if "entity_grid_setpoint" in battery:
                 if value is None:
                     value = battery["entity_grid_setpoint"]
                     migrated["grid"]["entity_grid_setpoint"] = value
-                    logger.info(f"Moved 'entity_grid_setpoint' from battery "
-                                f"{battery.get('name', 'unknown')} -> grid")
+                    logger.info(
+                        f"Moved 'entity_grid_setpoint' from battery "
+                        f"{battery.get('name', 'unknown')} -> grid"
+                    )
                 else:
-                    logger.info("Removed 'entity_grid_setpoint' from battery "
-                                f"{battery.get('name', 'unknown')}")
+                    logger.info(
+                        "Removed 'entity_grid_setpoint' from battery "
+                        f"{battery.get('name', 'unknown')}"
+                    )
                 del battery["entity_grid_setpoint"]
 
-# Update version
-    migrated['config_version'] = 2
+    # Update version
+    migrated["config_version"] = 2
 
     logger.info("Migrated configuration from v1 to v2")
     return migrated

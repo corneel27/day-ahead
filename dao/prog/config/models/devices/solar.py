@@ -3,33 +3,42 @@ Solar configuration models.
 """
 
 from typing import Any, Optional
-from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict, PastDate
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+    ConfigDict,
+    PastDate,
+)
 from ..base import EntityId
 from datetime import date
 
 
 class SolarString(BaseModel):
     """Configuration for a single solar panel string."""
-    
+
     tilt: float = Field(
-        ge=0, le=90,
+        ge=0,
+        le=90,
         description="Panel tilt angle in degrees (0=horizontal, 90=vertical)",
         json_schema_extra={
             "x-help": "Angle of the solar panels relative to horizontal. 0° = flat/horizontal, 30-35° = optimal for Netherlands, 90° = vertical mounting.",
             "x-unit": "degrees",
             "x-ui-section": "Panel Orientation",
-            "x-validation-hint": "Must be between 0 and 90 degrees"
-        }
+            "x-validation-hint": "Must be between 0 and 90 degrees",
+        },
     )
     orientation: float = Field(
-        ge=-180, le=180,
+        ge=-180,
+        le=180,
         description="Panel orientation in degrees (0=south, 90=west, -90=east)",
         json_schema_extra={
             "x-help": "Compass direction panels are facing. 0° = south (optimal), 90° = west, -90° or 270° = east, 180° = north. South-facing panels produce most energy.",
             "x-unit": "degrees",
             "x-ui-section": "Panel Orientation",
-            "x-validation-hint": "Must be between -180 and 180 degrees"
-        }
+            "x-validation-hint": "Must be between -180 and 180 degrees",
+        },
     )
     capacity: float = Field(
         gt=0,
@@ -38,8 +47,8 @@ class SolarString(BaseModel):
             "x-help": "Peak power capacity of this panel string in kilowatt-peak (kWp). Check panel specifications and sum all panels in this string.",
             "x-unit": "kWp",
             "x-ui-section": "Panel Orientation",
-            "x-validation-hint": "Must be greater than 0"
-        }
+            "x-validation-hint": "Must be greater than 0",
+        },
     )
     max_power: Optional[float] = Field(
         default=None,
@@ -48,8 +57,8 @@ class SolarString(BaseModel):
         json_schema_extra={
             "x-help": "Optional. Limit the string output to this value in kW. Use when your MPPT maximum power is less than the total panel capacity.",
             "x-unit": "kW",
-            "x-ui-section": "Panel Orientation"
-        }
+            "x-ui-section": "Panel Orientation",
+        },
     )
     yield_factor: float = Field(
         alias="yield",
@@ -59,29 +68,29 @@ class SolarString(BaseModel):
             "x-help": "Efficiency factor for this string. Typically 0.8-0.9. Accounts for inverter losses, cable losses, shading, and dirt on panels.",
             "x-unit": "ratio",
             "x-ui-section": "Panel Orientation",
-            "x-validation-hint": "Must be greater than 0, typically 0.8-0.9"
-        }
+            "x-validation-hint": "Must be greater than 0, typically 0.8-0.9",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
             "x-help": "Configuration for a single string of solar panels with the same tilt and orientation. Use multiple strings for panels facing different directions.",
-            "x-ui-section": "Panel Orientation"
-        }
+            "x-ui-section": "Panel Orientation",
+        },
     )
 
 
 class SolarConfig(BaseModel):
     """Solar panel configuration."""
-    
+
     name: str = Field(
         description="Solar installation name/identifier",
         json_schema_extra={
             "x-help": "Unique name for this solar installation. Use descriptive names like 'Roof South' or 'Garage East' for multiple installations.",
-            "x-ui-section": "Panel Orientation"
-        }
+            "x-ui-section": "Panel Orientation",
+        },
     )
     entity_pv_switch: Optional[EntityId] = Field(
         default=None,
@@ -90,32 +99,34 @@ class SolarConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional Home Assistant entity to enable or disable this solar installation in the optimization. Useful for maintenance or testing.",
             "x-ui-section": "Panel Orientation",
-            "x-ui-widget-filter": "switch"
-        }
+            "x-ui-widget-filter": "switch",
+        },
     )
-    
+
     # Option 1: Single installation (flat config)
     tilt: Optional[float] = Field(
         default=None,
-        ge=0, le=90,
+        ge=0,
+        le=90,
         description="Panel tilt (for single installation)",
         json_schema_extra={
             "x-help": "Panel tilt angle for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
             "x-unit": "degrees",
             "x-ui-section": "Panel Orientation",
-            "x-validation-hint": "0-90 degrees, leave empty when using strings"
-        }
+            "x-validation-hint": "0-90 degrees, leave empty when using strings",
+        },
     )
     orientation: Optional[float] = Field(
         default=None,
-        ge=-180, le=180,
+        ge=-180,
+        le=180,
         description="Panel orientation (for single installation)",
         json_schema_extra={
             "x-help": "Panel orientation for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
             "x-unit": "degrees",
             "x-ui-section": "Panel Orientation",
-            "x-validation-hint": "-180 to 180 degrees, leave empty when using strings"
-        }
+            "x-validation-hint": "-180 to 180 degrees, leave empty when using strings",
+        },
     )
     capacity: Optional[float] = Field(
         default=None,
@@ -125,8 +136,8 @@ class SolarConfig(BaseModel):
             "x-help": "Total capacity for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
             "x-unit": "kWp",
             "x-ui-section": "Panel Orientation",
-            "x-validation-hint": "Greater than 0, leave empty when using strings"
-        }
+            "x-validation-hint": "Greater than 0, leave empty when using strings",
+        },
     )
     yield_factor: Optional[float] = Field(
         default=None,
@@ -137,18 +148,18 @@ class SolarConfig(BaseModel):
             "x-help": "Yield factor for simple configuration. Use this OR 'strings', not both. Leave empty if using strings configuration.",
             "x-unit": "ratio",
             "x-ui-section": "Panel Orientation",
-            "x-validation-hint": "Greater than 0, typically 0.8-0.9, leave empty when using strings"
-        }
+            "x-validation-hint": "Greater than 0, typically 0.8-0.9, leave empty when using strings",
+        },
     )
-    
+
     # Option 2: Multiple strings
     strings: list[SolarString] = Field(
         default_factory=list,
         description="Multiple panel strings with different configurations",
         json_schema_extra={
             "x-help": "Advanced: Configure multiple strings for panels with different orientations or tilts. Use this OR flat config (tilt/orientation/capacity/yield), not both.",
-            "x-ui-section": "Panel Orientation"
-        }
+            "x-ui-section": "Panel Orientation",
+        },
     )
 
     # ML prediction
@@ -157,16 +168,16 @@ class SolarConfig(BaseModel):
         description="Use ML model to predict solar production for this installation",
         json_schema_extra={
             "x-help": "Enable machine-learning-based solar production forecasting for this installation. Requires the predictor add-on to be set up and trained.",
-            "x-ui-section": "ML Prediction"
-        }
+            "x-ui-section": "ML Prediction",
+        },
     )
     ml_training_start_date: Optional[PastDate] = Field(
         default=date(2000, 1, 1),
         description="If configured the ml-traning of the solar model will be trained with the data since the start date",
         json_schema_extra={
             "x-help": "The ml-training will be restricted to the data since the start date with a maximum of three year",
-            "x-ui-section": "ML Prediction"
-        }
+            "x-ui-section": "ML Prediction",
+        },
     )
     entities_sensors: list[EntityId] = Field(
         default_factory=list,
@@ -175,8 +186,8 @@ class SolarConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor entity (or list of entities) measuring actual solar production. Used for reporting and ML model training.",
             "x-ui-section": "ML Prediction",
-            "x-ui-widget-filter": "sensor"
-        }
+            "x-ui-widget-filter": "sensor",
+        },
     )
     max_power: Optional[float] = Field(
         default=None,
@@ -185,18 +196,18 @@ class SolarConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional. Limit the installation output to this value in kW. Use when your inverter/MPPT maximum power is less than the total panel capacity.",
             "x-unit": "kW",
-            "x-ui-section": "Panel Orientation"
-        }
+            "x-ui-section": "Panel Orientation",
+        },
     )
 
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Energy',
-            'x-icon': 'solar-panel',
-            'x-order': 2,
-            'x-help': '''# Solar Panel Configuration
+            "x-ui-group": "Energy",
+            "x-icon": "solar-panel",
+            "x-order": 2,
+            "x-help": """# Solar Panel Configuration
 
 Configure your solar panel installations for accurate production forecasting.
 
@@ -219,12 +230,12 @@ For panels facing different directions, use the 'strings' configuration:
 - Use strings configuration for multi-directional installations
 - Include all inverter and cable losses in yield factor
 - Account for shading in yield factor
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Solar-Configuration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Solar-Configuration",
+        },
     )
-    
-    @field_validator('entities_sensors', mode='before')
+
+    @field_validator("entities_sensors", mode="before")
     @classmethod
     def coerce_entities_to_list(cls, v: Any) -> list[str]:
         """Allow a single entity ID string to be given without wrapping it in a list."""
@@ -234,36 +245,38 @@ For panels facing different directions, use the 'strings' configuration:
             return [v]
         return v
 
-    @model_validator(mode='after')
-    def validate_config_completeness(self) -> 'SolarConfig':
+    @model_validator(mode="after")
+    def validate_config_completeness(self) -> "SolarConfig":
         """Ensure either flat config or strings are provided."""
-        has_flat = all([
-            self.tilt is not None,
-            self.orientation is not None,
-            self.capacity is not None,
-            self.yield_factor is not None
-        ])
+        has_flat = all(
+            [
+                self.tilt is not None,
+                self.orientation is not None,
+                self.capacity is not None,
+                self.yield_factor is not None,
+            ]
+        )
         has_strings = bool(self.strings)
-        
+
         if not has_flat and not has_strings:
             raise ValueError(
                 "Solar configuration must provide either all flat fields "
                 "(tilt, orientation, capacity, yield) or strings list"
             )
-        
+
         if has_flat and has_strings:
             raise ValueError(
                 "Solar configuration cannot have both flat fields and strings. "
                 "Use either flat config OR strings, not both."
             )
-        
+
         return self
-    
+
     @property
     def is_multi_string(self) -> bool:
         """Check if this is a multi-string configuration."""
         return self.strings is not None and len(self.strings) > 0
-    
+
     @property
     def total_capacity(self) -> float:
         """Calculate total capacity across all strings."""

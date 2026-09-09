@@ -11,14 +11,14 @@ from datetime import date
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
 
-    source_day_ahead: Literal['nordpool', 'entsoe', 'easyenergy', 'tibber'] = Field(
-        default='nordpool',
+    source_day_ahead: Literal["nordpool", "entsoe", "tibber"] = Field(
+        default="nordpool",
         alias="source day ahead",
         description="Source for day-ahead prices",
         json_schema_extra={
-            "x-help": "Data source for imported official day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'easyenergy' for the EasyEnergy public tariff feed, 'tibber' if using Tibber integration.",
-            "x-ui-section": "Prices"
-        }
+            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+            "x-ui-section": "Prices",
+        },
     )
     entsoe_api_key: Optional[SecretStr] = Field(
         default=None,
@@ -33,31 +33,31 @@ class PricingConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/source_day_ahead",
-                    "schema": {
-                        "const": "entsoe"
-                    }
-                }
-            }
-        }
+                    "schema": {"const": "entsoe"},
+                },
+            },
+        },
     )
-    forecast_extension_provider: Literal['none', 'energypriceforecast', 'dayaheadprediction'] = Field(
-        default='none',
+    forecast_extension_provider: Literal[
+        "none", "energypriceforecast", "dayaheadprediction"
+    ] = Field(
+        default="none",
         alias="forecast extension provider",
         description="Optional provider for extending the day-ahead horizon with forecast data",
         json_schema_extra={
             "x-help": "Optional provider that extends the imported official day-ahead horizon with forecast prices. The extension never replaces already imported official prices.",
             "x-ui-section": "Prices",
-        }
+        },
     )
     forecast_extension_hours: FlexInt = Field(
         default=FlexInt(value=0),
         alias="forecast extension hours",
         description="How many additional hours should be appended beyond the official day-ahead horizon",
         json_schema_extra={
-            "x-help": "Number of hours to extend beyond the imported official day-ahead horizon. Supports either a fixed integer or a Home Assistant entity. DAO translates the resolved value into the provider-specific URL parameter.",
+            "x-help": "Number of requested hours beyond the imported official day-ahead horizon. Supports either a fixed integer or a Home Assistant entity. The actual extension can be shorter because Energy Price Forecast access is limited to an absolute horizon from the current time: 48 hours anonymously and up to 120 hours with an eligible API key.",
             "x-ui-section": "Prices",
-            "x-validation-hint": "Integer or HA entity, effective value between 0 and 168"
-        }
+            "x-validation-hint": "Integer or HA entity, effective value between 0 and 168",
+        },
     )
     energypriceforecast_extension_api_url: Optional[str] = Field(
         default="https://api.energypriceforecast.eu/api/v1/dao/prices",
@@ -70,12 +70,10 @@ class PricingConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/forecast_extension_provider",
-                    "schema": {
-                        "const": "energypriceforecast"
-                    }
-                }
-            }
-        }
+                    "schema": {"const": "energypriceforecast"},
+                },
+            },
+        },
     )
     energypriceforecast_extension_api_key: Optional[SecretStr] = Field(
         default=None,
@@ -89,30 +87,26 @@ class PricingConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/forecast_extension_provider",
-                    "schema": {
-                        "const": "energypriceforecast"
-                    }
-                }
-            }
-        }
+                    "schema": {"const": "energypriceforecast"},
+                },
+            },
+        },
     )
     energypriceforecast_extension_country: Optional[str] = Field(
         default=None,
         alias="energypriceforecast-extension-country",
         description="Override country code for Energy Price Forecast EU extension",
         json_schema_extra={
-            "x-help": "Optional explicit country/market code for the Energy Price Forecast EU extension feed, for example 'nl', 'de', 'dk1' or 'no3'. Leave empty to map from DAO country automatically.",
+            "x-help": "Optional explicit market code for the Energy Price Forecast EU extension feed, for example 'nl', 'de', 'dk1', 'no3' or 'se4'. Leave empty only for countries with an unambiguous market. Denmark, Italy, Norway and Sweden require an explicit price zone.",
             "x-ui-section": "Prices",
             "x-ui-rules": {
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/forecast_extension_provider",
-                    "schema": {
-                        "const": "energypriceforecast"
-                    }
-                }
-            }
-        }
+                    "schema": {"const": "energypriceforecast"},
+                },
+            },
+        },
     )
     day_ahead_prediction_extension_url: Optional[str] = Field(
         default="https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
@@ -125,14 +119,12 @@ class PricingConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/forecast_extension_provider",
-                    "schema": {
-                        "const": "dayaheadprediction"
-                    }
-                }
-            }
-        }
+                    "schema": {"const": "dayaheadprediction"},
+                },
+            },
+        },
     )
-    
+
     # Date-based tariff configurations (date string -> value)
     energy_taxes_consumption: dict[str, float] = Field(
         alias="energy taxes consumption",
@@ -141,8 +133,8 @@ class PricingConfig(BaseModel):
             "x-help": "Energy taxes on consumption (excluding VAT) indexed by effective date. Format: {'2024-01-01': 0.05}. Use date when tariff changes.",
             "x-unit": "€/kWh",
             "x-ui-section": "Taxes",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",
+        },
     )
     energy_taxes_production: dict[str, float] = Field(
         alias="energy taxes production",
@@ -151,8 +143,8 @@ class PricingConfig(BaseModel):
             "x-help": "Energy taxes on feed-in/production (excluding VAT) indexed by effective date. Often zero or negative. Format: {'2024-01-01': 0.0}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Taxes",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",
+        },
     )
     cost_supplier_consumption: dict[str, float] = Field(
         alias="cost supplier consumption",
@@ -161,8 +153,8 @@ class PricingConfig(BaseModel):
             "x-help": "Supplier markup/fees for consumption (excluding VAT) indexed by effective date. Fixed part of electricity cost. Format: {'2024-01-01': 0.02}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Cost",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",
+        },
     )
     cost_supplier_production: dict[str, float] = Field(
         alias="cost supplier production",
@@ -171,8 +163,8 @@ class PricingConfig(BaseModel):
             "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Cost",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",
+        },
     )
     vat_consumption: dict[str, float] = Field(
         alias="vat consumption",
@@ -181,8 +173,8 @@ class PricingConfig(BaseModel):
             "x-help": "VAT percentage on consumption indexed by effective date. Format: {'2024-01-01': 21}. Applied to market price + taxes + supplier costs.",
             "x-unit": "%",
             "x-ui-section": "Taxes",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values",
+        },
     )
     vat_production: dict[str, float] = Field(
         alias="vat production",
@@ -191,8 +183,8 @@ class PricingConfig(BaseModel):
             "x-help": "VAT percentage on feed-in/production indexed by effective date. Format: {'2024-01-01': 21}. Often same as consumption VAT.",
             "x-unit": "%",
             "x-ui-section": "Taxes",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values",
+        },
     )
     multiplier_consumption: Optional[dict[str, float]] = Field(
         default={"2000-01-01": 1.0},
@@ -202,8 +194,8 @@ class PricingConfig(BaseModel):
             "x-help": "Multiplier on consumption day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.",
             "x-unit": "-",
             "x-ui-section": "Cost",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values",
+        },
     )
     multiplier_production: Optional[dict[str, float]] = Field(
         default={"2000-01-01": 1.0},
@@ -213,8 +205,8 @@ class PricingConfig(BaseModel):
             "x-help": "Multiplier on feed-in/production day-ahead price indexed by effective date. Format: {'2024-01-01': 0.94}.",
             "x-unit": "-",
             "x-ui-section": "Cost",
-            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values"
-        }
+            "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values",
+        },
     )
     # Invoice settings
     last_invoice: date = Field(
@@ -223,8 +215,8 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Date of last electricity invoice. Used for calculating costs since last billing period. Format: YYYY-MM-DD. Update after receiving invoices.",
             "x-ui-section": "Prices",
-            "x-validation-hint": "Must be YYYY-MM-DD format"
-        }
+            "x-validation-hint": "Must be YYYY-MM-DD format",
+        },
     )
     tax_refund: bool = Field(
         default=True,
@@ -232,20 +224,22 @@ class PricingConfig(BaseModel):
         description="Whether tax refund applies",
         json_schema_extra={
             "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production.",
-            "x-ui-section": "Taxes"
-        }
+            "x-ui-section": "Taxes",
+        },
     )
-    
-    @field_validator('vat_consumption', 'vat_production')
+
+    @field_validator("vat_consumption", "vat_production")
     @classmethod
     def validate_vat_percentages(cls, v: dict[str, float]) -> dict[str, float]:
         """Validate VAT percentages are between 0 and 100."""
         for date, percentage in v.items():
             if not (0 <= percentage <= 100):
-                raise ValueError(f"VAT percentage must be between 0 and 100, got {percentage} for date {date}")
+                raise ValueError(
+                    f"VAT percentage must be between 0 and 100, got {percentage} for date {date}"
+                )
         return v
 
-    @field_validator('forecast_extension_hours')
+    @field_validator("forecast_extension_hours")
     @classmethod
     def validate_forecast_extension_hours(cls, v: FlexInt) -> FlexInt:
         if v is None:
@@ -257,22 +251,22 @@ class PricingConfig(BaseModel):
         if not (0 <= numeric_value <= 168):
             raise ValueError("forecast extension hours must be between 0 and 168")
         return FlexInt(value=numeric_value)
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Pricing',
-            'x-icon': 'currency-eur',
-            'x-order': 11,
-            'x-help': '''# Pricing & Tariff Configuration
+            "x-ui-group": "Pricing",
+            "x-icon": "currency-eur",
+            "x-order": 11,
+            "x-help": """# Pricing & Tariff Configuration
 
 Configure electricity market prices and tariff components for accurate cost optimization.
 
 ## Price Components
 
 Total electricity cost consists of:
-1. **Market price**: Imported official day-ahead spot price (nordpool/entsoe/easyenergy/tibber)
+1. **Market price**: Imported official day-ahead spot price (nordpool/entsoe/tibber)
 2. **Energy taxes**: Government energy taxes
 3. **Supplier costs**: Your supplier's markup/fees
 4. **VAT**: Value-added tax on sum of above
@@ -296,13 +290,12 @@ System uses tariff active on optimization date.
 
 - **nordpool**: Nord Pool (Nordic/Baltic markets)
 - **entsoe**: ENTSO-E Transparency Platform (all European markets)
-- **easyenergy**: EasyEnergy tariff endpoint
 - **tibber**: Tibber API (if using Tibber as supplier)
 
 ## Optional Horizon Extension
 
 - **forecast extension provider**: Optional forecast provider for extending the imported official horizon
-- **forecast extension hours**: How many additional hours should be appended beyond the official horizon
+- **forecast extension hours**: Requested additional hours beyond the official horizon; provider access limits can shorten the actual extension
 - **energypriceforecast**: Provider-specific extension feed from Energy Price Forecast EU
 
 ## Tips
@@ -313,7 +306,7 @@ System uses tariff active on optimization date.
 - Production costs often lower than consumption (or negative for feed-in credit)
 - Keep last_invoice updated for accurate cost tracking
 - Check your electricity bill for exact tariff components
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration",
+        },
     )

@@ -1,0 +1,21 @@
+{% extends "v2/base.html" %}
+
+{% block title %}Config - DAO{% endblock %}
+{% block content %}
+<h1>Config</h1>
+<p>For all options visit: <a href="https://github.com/corneel27/day-ahead/wiki/5.-Overzicht-alle-instellingen" target="_blank">https://github.com/corneel27/day-ahead/wiki/5.-Overzicht-alle-instellingen</a></p>
+<form method="POST" class="flex-grow-1 d-flex flex-column">
+    <code-input
+        template="syntax-highlighted"
+        language="json"
+        class="line-numbers flex-grow-1"
+        style="overflow:auto;"
+    >
+        <textarea name="config" data-code-input-fallback>{{ content }}</textarea>
+    </code-input>
+
+    <button class="btn btn-primary mt-2 col-2">
+        <i class="bi bi-floppy"></i> Save config
+    </button>
+</form>
+{% endblock %}

@@ -8,14 +8,15 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 # Valid scheduler actions
 SchedulerAction = Literal[
-    'get_meteo_data',
-    'get_tibber_data',
-    'get_day_ahead_prices',
-    'get_day_ahead_price_forecast',
-    'calc_optimum',
-    'clean_data',
-    'calc_baseloads',
-    'train_ml_predictions'
+    "get_meteo_data",
+    "get_tibber_data",
+    "get_day_ahead_prices",
+    "get_day_ahead_price_forecast",
+    "calc_optimum",
+    "calc_optimum_met_debug",
+    "clean_data",
+    "calc_baseloads",
+    "train_ml_predictions",
 ]
 
 
@@ -26,24 +27,24 @@ class ScheduleEntry(BaseModel):
         description="Time pattern in HHMM format",
         json_schema_extra={
             "x-help": "Time pattern: specific time like '0435' or wildcard like 'xx00' (every hour at :00)",
-            "x-validation-hint": "Format: HHMM (24-hour, e.g., '0435', 'xx15')"
-        }
+            "x-validation-hint": "Format: HHMM (24-hour, e.g., '0435', 'xx15')",
+        },
     )
     action: SchedulerAction = Field(
         description="Action to execute at this time",
         json_schema_extra={
             "x-help": "Task to run: data collection, optimization, or maintenance"
-        }
+        },
     )
 
-    @field_validator('time')
+    @field_validator("time")
     @classmethod
     def validate_time_pattern(cls, v: str) -> str:
         if not isinstance(v, str) or len(v) != 4:
             raise ValueError("Time pattern must be 4 characters (HHMM format)")
-        if not (v.isdigit() or (v[0:2] == 'xx' and v[2:4].isdigit())):
+        if not (v.isdigit() or (v[0:2] == "xx" and v[2:4].isdigit())):
             raise ValueError("Time must be HHMM digits or 'xx' wildcard for hours")
-        if v[0:2] != 'xx':
+        if v[0:2] != "xx":
             hour = int(v[0:2])
             if hour > 23:
                 raise ValueError("Hour must be between 00 and 23")
@@ -62,8 +63,8 @@ class SchedulerConfig(BaseModel):
         json_schema_extra={
             "x-help": "When enabled, scheduled tasks will run automatically at configured times. Disable to prevent all scheduled tasks from running.",
             "x-ui-section": "Scheduler",
-            "x-order": 1
-        }
+            "x-order": 1,
+        },
     )
     schedule: list[ScheduleEntry] = Field(
         default_factory=list,
@@ -71,15 +72,15 @@ class SchedulerConfig(BaseModel):
         json_schema_extra={
             "x-help": "Define when tasks should run. Add entries with time patterns (e.g., '0435', 'xx00') and actions.",
             "x-ui-section": "Scheduler",
-            "x-order": 2
-        }
+            "x-order": 2,
+        },
     )
     model_config = ConfigDict(
         json_schema_extra={
-            'x-ui-group': 'DAO',
-            'x-order': 18,
-            'x-icon': 'clock-outline',
-            'x-help': '''# Scheduler Configuration
+            "x-ui-group": "DAO",
+            "x-order": 18,
+            "x-icon": "clock-outline",
+            "x-help": """# Scheduler Configuration
 
 Define when automatic tasks run using time patterns.
 
@@ -111,7 +112,10 @@ Define when automatic tasks run using time patterns.
   "active": true,
   "schedule": [
     {"time": "0435", "action": "get_day_ahead_prices"},
-    {"time": "xx20", "action": "get_day_ahead_price_forecast"},
+    {"time": "0020", "action": "get_day_ahead_price_forecast"},
+    {"time": "0620", "action": "get_day_ahead_price_forecast"},
+    {"time": "1220", "action": "get_day_ahead_price_forecast"},
+    {"time": "1820", "action": "get_day_ahead_price_forecast"},
     {"time": "0445", "action": "get_meteo_data"},
     {"time": "0500", "action": "calc_optimum"},
     {"time": "xx00", "action": "calc_baseloads"},
@@ -123,7 +127,7 @@ Define when automatic tasks run using time patterns.
 ## Typical Schedule
 
 1. **04:00-05:00**: Fetch official prices and weather
-2. **xx20 / every few hours**: Refresh optional forecast horizon extension
+2. **Every six hours**: Refresh optional forecast horizon extension
 3. **05:00**: Run optimization with fresh data
 4. **Hourly**: Update baseload calculations
 5. **03:00**: Clean old data (low activity time)
@@ -135,7 +139,7 @@ Define when automatic tasks run using time patterns.
 - Hourly baseload updates improve accuracy
 - Clean data during low activity (night)
 - Avoid overlapping long-running tasks
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Scheduler'
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Scheduler",
         }
     )

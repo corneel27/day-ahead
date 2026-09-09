@@ -13,11 +13,11 @@
   "prices": {
     "source day ahead": "nordpool",
     "entsoe-api-key": "!secret entsoe-api-key",
-    "forecast extension provider": "energypriceforecast",
-    "forecast extension hours": 24,
+    "forecast extension provider": "none",
+    "forecast extension hours": 0,
     "energypriceforecast-extension-api-url": "https://api.energypriceforecast.eu/api/v1/dao/prices",
-    "energypriceforecast-extension-api-key": "!secret energypriceforecast_api_key",
-    "energypriceforecast-extension-country": "nl",
+    "energypriceforecast-extension-api-key": null,
+    "energypriceforecast-extension-country": null,
     "day-ahead-prediction-extension-url": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
     "regular high": 0.5,
     "regular low": 0.4,
@@ -59,7 +59,7 @@
       "2022-07-01": 9,
       "2023-01-01": 21
     },
-    "last invoice": "2024-09-01",
+    "last invoice": "2026-09-01",
     "tax refund": "True"
   },
   "logging level": "info",

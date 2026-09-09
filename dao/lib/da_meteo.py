@@ -15,8 +15,14 @@ from sqlalchemy import Table, select, func, and_
 
 # noinspection PyUnresolvedReferences
 class Meteo:
-    def __init__(self, config, db_da: DBmanagerObj,
-                 latitude: float, longitude: float, secrets: dict = None):
+    def __init__(
+        self,
+        config,
+        db_da: DBmanagerObj,
+        latitude: float,
+        longitude: float,
+        secrets: dict = None,
+    ):
         self.config = config
         self.db_da = db_da
         _secrets = secrets or {}

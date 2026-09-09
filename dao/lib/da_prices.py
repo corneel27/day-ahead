@@ -17,8 +17,40 @@ class DaPrices:
     EXTENSION_RECORD_ID = 25
     EXTENSION_RECORD_NAME = "Tarief forecast extension"
     EXTENSION_RECORD_DIM = "euro/kWh"
+    ENERGY_PRICE_FORECAST_MARKETS = {
+        "at",
+        "be",
+        "ch",
+        "cz",
+        "de",
+        "dk1",
+        "dk2",
+        "fi",
+        "fr",
+        "it_cala",
+        "it_cnor",
+        "it_csud",
+        "it_sard",
+        "it_sici",
+        "it_sud",
+        "itn",
+        "nl",
+        "no1",
+        "no2",
+        "no3",
+        "no4",
+        "no5",
+        "pl",
+        "se1",
+        "se2",
+        "se3",
+        "se4",
+    }
+    AMBIGUOUS_COUNTRIES = {"DK", "IT", "NO", "SE"}
 
-    def __init__(self, config, db_da: DBmanagerObj, country: str = None, secrets: dict = None):
+    def __init__(
+        self, config, db_da: DBmanagerObj, country: str = None, secrets: dict = None
+    ):
         self.config = config
         self.db_da = db_da
         self._secrets = secrets or {}
@@ -27,7 +59,14 @@ class DaPrices:
 
     def _resolve_market_country(self, configured):
         if configured:
-            return str(configured).strip().lower()
+            market = str(configured).strip().lower().replace("-", "_")
+            if market in self.ENERGY_PRICE_FORECAST_MARKETS:
+                return market
+            logging.warning(
+                "Forecast-extensie overgeslagen: marktcode '%s' wordt niet ondersteund.",
+                configured,
+            )
+            return None
         mapping = {
             "NL": "nl",
             "BE": "be",
@@ -35,6 +74,9 @@ class DaPrices:
             "FR": "fr",
             "AT": "at",
             "CZ": "cz",
+            "PL": "pl",
+            "FI": "fi",
+            "CH": "ch",
             "DK1": "dk1",
             "DK2": "dk2",
             "NO1": "no1",
@@ -43,7 +85,23 @@ class DaPrices:
             "NO4": "no4",
             "NO5": "no5",
         }
-        return mapping.get(str(self.country or "").upper(), "nl")
+        country = str(self.country or "").strip().upper()
+        market = mapping.get(country)
+        if market:
+            return market
+        if country in self.AMBIGUOUS_COUNTRIES:
+            logging.warning(
+                "Forecast-extensie overgeslagen: land '%s' heeft meerdere prijszones. "
+                "Stel energypriceforecast-extension-country expliciet in.",
+                country,
+            )
+        else:
+            logging.warning(
+                "Forecast-extensie overgeslagen: geen marktcode beschikbaar voor land '%s'. "
+                "Stel energypriceforecast-extension-country expliciet in.",
+                country or "onbekend",
+            )
+        return None
 
     def _forecast_extension_provider(self) -> str:
         provider = getattr(self.config.prices, "forecast_extension_provider", "none")
@@ -102,7 +160,11 @@ class DaPrices:
         )
         if not configured:
             return None
-        token = configured.resolve(self._secrets) if hasattr(configured, "resolve") else str(configured)
+        token = (
+            configured.resolve(self._secrets)
+            if hasattr(configured, "resolve")
+            else str(configured)
+        )
         token = str(token or "").strip()
         if not token:
             return None
@@ -151,11 +213,23 @@ class DaPrices:
         hours = hours_override if hours_override is not None else max(
             1, min(168, math.ceil((end_ts - now_ts) / 3600))
         )
-        mode_suffix = "&mode=forecast_only" if forecast_only else ""
-        url = f"{api_url}?country={country}&hours={hours}{mode_suffix}"
-        resp = get(url, timeout=15, headers=headers)
+        params = {
+            "country": country,
+            "hours": hours,
+            # DAO stores all tariff values as euro/kWh.
+            "currency": "EUR",
+        }
+        if forecast_only:
+            params["mode"] = "forecast_only"
+        resp = get(api_url, params=params, timeout=15, headers=headers)
         resp.raise_for_status()
         payload = json.loads(resp.text)
+        response_currency = str(payload.get("currency") or "").strip().upper()
+        if response_currency and response_currency != "EUR":
+            raise ValueError(
+                "Energy Price Forecast extensie retourneerde "
+                f"{response_currency}; DAO verwacht EUR/kWh."
+            )
         entries = payload.get("entries") or []
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         for entry in entries:
@@ -165,7 +239,9 @@ class DaPrices:
             if not start_raw:
                 continue
             try:
-                start_dt = datetime.datetime.fromisoformat(start_raw.replace("Z", "+00:00"))
+                start_dt = datetime.datetime.fromisoformat(
+                    start_raw.replace("Z", "+00:00")
+                )
                 end_dt = (
                     datetime.datetime.fromisoformat(end_raw.replace("Z", "+00:00"))
                     if end_raw
@@ -176,7 +252,9 @@ class DaPrices:
                 continue
             timestamps: list[int]
             if self.interval == "15min" and end_dt > start_dt:
-                quarter_count = max(1, int(round((end_dt - start_dt).total_seconds() / 900)))
+                quarter_count = max(
+                    1, int(round((end_dt - start_dt).total_seconds() / 900))
+                )
                 timestamps = [
                     int((start_dt + datetime.timedelta(minutes=15 * idx)).timestamp())
                     for idx in range(quarter_count)
@@ -189,7 +267,54 @@ class DaPrices:
                 if max_timestamp is not None and time_stamp >= max_timestamp:
                     continue
                 df_db.loc[df_db.shape[0]] = [str(time_stamp), code, value]
+        df_db.attrs["api_meta"] = payload.get("meta") or {}
         return df_db
+
+    @staticmethod
+    def _extension_horizon_hours(
+        df_db: pd.DataFrame, extension_start_ts: int, resolution_seconds: int
+    ) -> float:
+        timestamps = [int(float(value)) for value in df_db["time"].tolist()]
+        if not timestamps:
+            return 0.0
+        extension_end_ts = max(timestamps) + resolution_seconds
+        return max(0.0, (extension_end_ts - extension_start_ts) / 3600)
+
+    def _log_extension_result(
+        self,
+        *,
+        provider: str,
+        country: str | None,
+        df_db: pd.DataFrame,
+        extension_start_ts: int,
+        requested_extension_hours: int,
+        resolution_seconds: int,
+    ) -> None:
+        actual_hours = self._extension_horizon_hours(
+            df_db, extension_start_ts, resolution_seconds
+        )
+        api_meta = df_db.attrs.get("api_meta") or {}
+        api_used = api_meta.get("used_horizon_hours")
+        api_allowed = api_meta.get("allowed_horizon_hours")
+        suffix = ""
+        if api_used is not None or api_allowed is not None:
+            suffix = f" API-horizon gebruikt/toegestaan: {api_used}/{api_allowed} uur."
+        message = (
+            "%s extensie%s: %d slot(s) toegevoegd voorbij de officiele horizon, "
+            "aangevraagd +%d uur, werkelijk beschikbaar +%.2f uur.%s"
+        )
+        args = (
+            provider,
+            f" ({country})" if country else "",
+            len(df_db),
+            requested_extension_hours,
+            actual_hours,
+            suffix,
+        )
+        if actual_hours + (resolution_seconds / 3600) < requested_extension_hours:
+            logging.warning(message, *args)
+        else:
+            logging.info(message, *args)
 
     def _build_day_ahead_prediction_df(
         self,
@@ -236,7 +361,7 @@ class DaPrices:
             logging.info("Geen day-ahead forecast-extensie geconfigureerd.")
             return
         official_source = str(self.config.prices.source_day_ahead or "").strip().lower()
-        if official_source not in {"nordpool", "entsoe", "tibber", "easyenergy"}:
+        if official_source not in {"nordpool", "entsoe", "tibber"}:
             logging.warning(
                 "Forecast-extensie overgeslagen: source day ahead moet een officiele provider zijn."
             )
@@ -261,11 +386,11 @@ class DaPrices:
             1,
             min(168, math.ceil((target_end_ts - now_ts) / 3600)),
         )
-        self.db_da.delete_code_range(self.EXTENSION_CODE, start=extension_start_ts)
-
         if provider == "energypriceforecast":
             api_url = self._energypriceforecast_extension_api_url()
             country = self._energypriceforecast_extension_country()
+            if not country:
+                return
             headers = self._energypriceforecast_extension_headers()
             df_db = self._build_energypriceforecast_df(
                 start=datetime.datetime.fromtimestamp(extension_start_ts),
@@ -285,13 +410,16 @@ class DaPrices:
                     country,
                 )
                 return
-            logging.info(
-                "Energy Price Forecast extensie (%s): %d slot(s) toegevoegd voorbij officiele horizon, +%d uur.",
-                country,
-                len(df_db),
-                extension_hours,
-            )
+            self.db_da.delete_code_range(self.EXTENSION_CODE, start=now_ts)
             self.db_da.savedata(df_db)
+            self._log_extension_result(
+                provider="Energy Price Forecast",
+                country=country,
+                df_db=df_db,
+                extension_start_ts=extension_start_ts,
+                requested_extension_hours=extension_hours,
+                resolution_seconds=resolution_seconds,
+            )
             return
 
         if provider == "dayaheadprediction":
@@ -312,12 +440,16 @@ class DaPrices:
                     "day-ahead-prediction extensie: geen aanvullende slots beschikbaar."
                 )
                 return
-            logging.info(
-                "day-ahead-prediction extensie: %d slot(s) toegevoegd voorbij officiele horizon, +%d uur.",
-                len(df_db),
-                extension_hours,
-            )
+            self.db_da.delete_code_range(self.EXTENSION_CODE, start=now_ts)
             self.db_da.savedata(df_db)
+            self._log_extension_result(
+                provider="day-ahead-prediction",
+                country=None,
+                df_db=df_db,
+                extension_start_ts=extension_start_ts,
+                requested_extension_hours=extension_hours,
+                resolution_seconds=resolution_seconds,
+            )
             return
 
         logging.warning("Onbekende forecast-extensie provider: %s", provider)

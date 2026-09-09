@@ -1,0 +1,75 @@
+{% extends "v2/base.html" %}
+
+{% block title %}Logs - DAO{% endblock %}
+{% block content %}
+<h1>Logs</h1>
+
+<div class="row">
+    <div class="btn-group col-8 col-sm-4 col-lg-3 col-xl-2">
+        <a class="btn btn-outline-secondary {{ 'disabled' if show_index <= 1 else '' }}"
+           href="{{url_for('v2.log', i=first_index)}}">
+            First
+        </a>
+        <a class="btn btn-outline-secondary {{ 'disabled' if ffprev_index == 0 else '' }}"
+           href="{{url_for('v2.log', i=ffprev_index)}}">
+            -6h
+        </a>
+        <a class="btn btn-outline-secondary {{ 'disabled' if show_index == 0 else '' }}"
+           href="{{url_for('v2.log', i=prev_index)}}">
+            Prev
+        </a>
+    </div>
+    <div class="col-8 col-sm-7 col-md-4 col-lg-4 col-xl-3">
+        <form action="{{url_for('v2.log')}}" method="get">
+            <div class="input-group">
+                <input type="datetime-local" name="ts" value="{{show_ts}}" class="form-control m-0"
+                       aria-label="Timestamp for chart">
+                <button class="btn btn-outline-secondary" id="button-addon2" type="submit"><i class="bi bi-search"
+                                                                                              style="font-size:100%"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="btn-group col-8 col-sm-4 col-lg-3  col-xl-2">
+        <a class="btn btn-outline-secondary {{ 'disabled' if show_index == last_index  else '' }}"
+           href="{{url_for('v2.log', i=next_index)}}">
+            Next
+        </a>
+        <a class="btn btn-outline-secondary {{ 'disabled' if ffnext_index >= last_index - 1  else '' }}"
+           href="{{url_for('v2.log', i=ffnext_index)}}">
+            +6h
+        </a>
+        <a class="btn btn-outline-secondary {{ 'disabled' if show_index >= last_index - 1 else ''}}"
+           href="{{url_for('v2.log')}}">
+            Last
+        </a>
+    </div>
+    <div class="col-4 col-lg-2">
+        <a class="btn btn-outline-primary col" href="{{url_for('v2.chart', ts=show_ts)}}" title="try to find the chart of this run">
+            <i class="bi bi-bar-chart"></i>
+        </a>
+
+        <form method="POST" action="{{url_for('v2.delete_file')}}" class="d-inline col">
+            <input type="hidden" name="file" value="log/{{filename}}"/>
+            <input type="hidden" name="action" value="log"/>
+            <input type="hidden" name="show_index" value="{{show_index}}"/>
+            <input type="hidden" name="confirm" value="0"/>
+            <button
+                    type="submit" class="btn btn-outline-danger"
+                    onclick="if(window.confirm('Wil je dit verwijderen?')) { this.parentElement.querySelector('input[name=confirm]').value = 1; return true; } else { return false; }"
+                    title="delete this log"
+            ><i class="bi bi-trash"></i></button>
+        </form>
+    </div>
+</div>
+
+<code class="mt-3">{{filename}}</code>
+<code-input
+    template="syntax-highlighted"
+    class="line-numbers flex-grow-1"
+    style="overflow:auto;"
+>
+    <textarea name="config" data-code-input-fallback>{{ logdata }}</textarea>
+</code-input>
+
+{% endblock %}

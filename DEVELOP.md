@@ -21,8 +21,8 @@ Before you begin, ensure you have the following installed:
 - **Python 3.8+** (Python 3.9 or higher recommended)
 - **Git** for version control
 - **pip** (Python package installer)
+- **npm** (Node Package Manager)
 - A code editor (VS Code, PyCharm, etc.)
-
 ---
 
 ## Setting Up Development Environment
@@ -35,9 +35,28 @@ First, clone the repository and navigate to the project directory:
 git clone https://github.com/corneel27/day-ahead.git
 cd day-ahead
 ```
-Alternatively you can use a fork to your own account.
+Alternatively, you can use a fork to your own account.
 
-### 2. Create a Python Virtual Environment
+### 2.1. Quick setup and run (limited support)
+
+Supported on:
+- Ubuntu/Debian (apt based)
+- OpenSuse (zypper based)
+
+This command will start the dev environment in the recommended mode as described [here](#running-the-application-locally).
+Add the `--setup` argument to execute all steps below
+
+```bash
+chmod +x dao/run/run_dev.sh # Once
+./dao/run/run_dev.sh --setup # Add --setup to install/update, only once
+```
+
+Optionally, define the flask port using `--flask-port=5001`
+
+When error, see: [In case of error](#31-in-case-of-error)  
+When successful, continue reading: [Project Structure](#project-structure)  
+
+### 2.2. Create a Python Virtual Environment
 
 Creating a virtual environment isolates your project dependencies from your system Python installation.
 
@@ -49,7 +68,7 @@ source .venv/bin/activate
 
 **On Windows:**
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 .venv\Scripts\activate
 ```
 
@@ -62,9 +81,15 @@ Install all required packages from the requirements file:
 ```bash
 pip install --upgrade pip
 pip install -r dao/requirements.txt
+
+cd dao/webserver
+npm install 
 ```
 
 #### 3.1 In case of error
+In case you get an error like this: `This error typically indicates that MariaDB Connector/C, a dependency which must be preinstalled, is not found.`
+* **Ubuntu**: `sudo apt install -y build-essential pkg-config libmariadb-dev`
+
 In case you get an error like this: `ERROR: No matching distribution found for mip==1.16rc0` or equivalent you need to install manually.
 * Edit dao/requirements.txt and remove the line with mip
 * pip install -r dao/requirements.txt
@@ -158,12 +183,11 @@ export LD_LIBRARY_PATH=~/day-ahead/dao/prog/miplib/lib/
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 cd dao/webserver
 
-# Set Flask to development mode
-export FLASK_ENV=development
-export FLASK_DEBUG=1
+# If you want to use the assets from the Vite dev server:
+export VITE_DEV=1
 
 # Run the Flask development server
-python da_server.py
+python da_server.py --debug
 ```
 
 The development server will start on `http://localhost:5000` by default.
@@ -184,6 +208,23 @@ Then access the application at `http://localhost:5001/` instead of port 5000.
 - **Better error messages** - More informative error output
 
 **Warning:** Never run with `debug=True` in production as it exposes security risks.
+
+#### Build or serve the assets
+
+If you want to change or update the stylesheets or js dependencies, it is recommended to run 
+the Vite server. Mind setting the VITE_DEV env in the step when starting the Python server.
+
+```bash
+cd dao/webserver
+npm run vite-serve
+```
+
+If you just want to work on the Python codebase, you can build the assets:
+
+```bash
+cd dao/webserver
+npm run build
+```
 
 #### Option 2: Run with Gunicorn (Production-like Environment)
 

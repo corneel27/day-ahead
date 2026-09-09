@@ -1,0 +1,172 @@
+{% macro nav_item(endpoint, label, icon=None) %}
+<li class="nav-item">
+    <a class="nav-link {% if request.endpoint == endpoint %}active{% endif %}"
+       aria-current="page" href="{{ url_for(endpoint) }}">{{label}}</a>
+</li>
+{% endmacro %}
+
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}DAO{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="color-scheme" content="light dark">
+    <style>
+        /** Inline this script to prevent "flashing" in dark mode **/
+        html[data-bs-theme="dark"],
+        html[data-bs-theme="dark"] body {
+            background-color: #212529;
+            color: #dee2e6;
+        }
+
+        html[data-bs-theme="light"],
+        html[data-bs-theme="light"] body {
+            background-color: #fff;
+            color: #212529;
+        }
+    </style>
+    <script>
+        /** Inline this script to prevent "flashing" in dark mode **/
+        /*!
+         * Color mode toggler for Bootstrap's docs (https://getbootstrap.com/)
+         * Copyright 2011-2025 The Bootstrap Authors
+         * Licensed under the Creative Commons Attribution 3.0 Unported License.
+         */
+
+        (() => {
+            'use strict'
+
+            const getStoredTheme = () => localStorage.getItem('theme')
+            const setStoredTheme = theme => localStorage.setItem('theme', theme)
+
+            const getPreferredTheme = () => {
+                const storedTheme = getStoredTheme()
+                if (storedTheme) {
+                    return storedTheme
+                }
+
+                return 'auto'
+            }
+
+            const setTheme = theme => {
+                document.documentElement.setAttribute('data-bs-stored-theme', theme)
+                if (theme === 'auto') {
+                    document.documentElement.setAttribute('data-bs-theme', (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'))
+                } else {
+                    document.documentElement.setAttribute('data-bs-theme', theme)
+                }
+            }
+
+            setTheme(getPreferredTheme())
+
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                const storedTheme = getStoredTheme()
+                if (storedTheme !== 'light' && storedTheme !== 'dark') {
+                    setTheme(getPreferredTheme())
+                }
+            })
+
+            window.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('[data-bs-theme-value]')
+                    .forEach(toggle => {
+                        toggle.addEventListener('click', () => {
+                            const theme = toggle.getAttribute('data-bs-theme-value')
+                            console.log(theme)
+                            setStoredTheme(theme)
+                            setTheme(theme)
+                        })
+                    })
+            })
+        })()
+    </script>
+    {{ vite_tags|safe }}
+</head>
+<body class="d-flex flex-column min-vh-100">
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <div class="container">
+        <a class="navbar-brand text-center" href="{{ url_for('v2.chart') }}">DAO</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                {{ nav_item('v2.chart', 'Charts') }}
+                {{ nav_item('v2.log', 'Logs') }}
+                {{ nav_item('v2.tasks', 'Tasks') }}
+                {{ nav_item('v2.reports', 'Reports') }}
+                {{ nav_item('v2.savings', 'Savings') }}
+                {{ nav_item('v2.solar', 'Solar') }}
+                {{ nav_item('v2.reportsv2', 'Reports V2') }}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                        Admin
+                    </a>
+                    <ul class="dropdown-menu">
+                        {{ nav_item('v2.config', 'Config') }}
+                        {{ nav_item('v2.secrets', 'Secrets') }}
+                    </ul>
+                </li>
+            </ul>
+            <div class="align-items-center d-flex float-end">
+                <a href="#" data-bs-theme-value="dark"
+                   class="theme-stored-dark-hidden theme-stored-auto-hidden"
+                   title="Light mode active">
+                    <i class="bi bi-sun"></i>
+                </a>
+                <a href="#" data-bs-theme-value="auto" class="theme-stored-auto-hidden theme-stored-light-hidden"
+                   title="Dark mode active">
+                    <i class="bi bi-moon"></i>
+                </a>
+                <a href="#" data-bs-theme-value="light" class="theme-stored-dark-hidden theme-stored-light-hidden"
+                   title="Auto mode active">
+                    <i class="bi bi-circle-half"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+<main class="container my-2 flex-grow-1 d-flex flex-column">
+    <div
+            id="htmx-error"
+            class="alert alert-danger alert-dismissible fade show d-none"
+            role="alert"
+    >
+        <span id="htmx-error-message"></span>
+
+        <button
+                type="button"
+                class="btn-close"
+                aria-label="Sluiten"
+                onclick="this.parentElement.classList.add('d-none')"
+        ></button>
+    </div>
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+    {% if success %}
+    <div class="alert alert-success" role="alert">
+        {{ success }}
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="text-muted py-3">
+    <div class="container text-center">
+        <div class="row">
+            <div class="col">&copy; 2026: <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2.0</a></div>
+            <div class="col"><small>Version: {{version}}</small></div>
+            <div class="col"><a aria-current="page" href="{{ url_for('home') }}">legacy UI</a></div>
+            <div class="col"><a aria-current="page" href="https://github.com/corneel27/">Github</a></div>
+            <div class="col"><a aria-current="page" href="https://github.com/corneel27/day-ahead/wiki">Wiki</a></div>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -112,7 +112,9 @@ def get_tibber_data():
     loader = ConfigurationLoader(Path("../data/options.json"))
     config = loader.load_and_validate()
     tibber_options = config.tibber
-    url = (tibber_options.api_url if tibber_options else None) or "https://api.tibber.com/v1-beta/gql"
+    url = (
+        tibber_options.api_url if tibber_options else None
+    ) or "https://api.tibber.com/v1-beta/gql"
     db_da = make_db_da(config, loader.secrets)
     prices_options = config.prices
     api_token = tibber_options.api_token.resolve(loader.secrets)
@@ -137,7 +139,9 @@ def get_tibber_data():
     if (len(sys.argv) <= 2) or (start_ts is None):
         # search first missing
         last_invoice = prices_options.last_invoice
-        start_ts = datetime.datetime(last_invoice.year, last_invoice.month, last_invoice.day).timestamp()
+        start_ts = datetime.datetime(
+            last_invoice.year, last_invoice.month, last_invoice.day
+        ).timestamp()
         timestamps = generate_hourly_timestamps(start_ts, now_ts)
         values_table = Table("values", db_da.metadata, autoload_with=db_da.engine)
         variabel_table = Table("variabel", db_da.metadata, autoload_with=db_da.engine)
