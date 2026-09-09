@@ -12,6 +12,7 @@ This guide will help developers set up their development environment, test chang
 - [Project Structure](#project-structure)
 - [Running the Application Locally](#running-the-application-locally)
 - [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
 - [Making Contributions](#making-contributions)
 - [Code Style and Best Practices](#code-style-and-best-practices)
 - [Getting Help](#getting-help)
@@ -158,6 +159,24 @@ For manual Ruff-only installation, use the [Ruff setup instructions](#set-up-aut
 
 Do not mix those environments in one development session. Keep the legacy route for existing workflows until it can be migrated separately.
 
+Use `--migrate` to create or upgrade the Day Ahead database (runs `dao/prog/check_db.py`).
+This is required the first time you start with an empty `database da`:
+
+```bash
+./dao/run/run_dev.sh --setup --migrate
+```
+
+Note that the script:
+
+- copies `options_example.json` to `options.json` and `secrets_vb.json` to
+  `secrets.json` when those files do not exist yet. **The copied defaults do not
+  work outside the add-on**: you still have to edit them, see
+  [Set up the configuration files](#set-up-the-configuration-files).
+- starts the Vite dev server and exports `VITE_DEV=1`, so the frontend assets are
+  served by Vite on port 5173 instead of being read from a build. That port has to
+  be reachable from your browser; see
+  [Developing on a remote machine](#developing-on-a-remote-machine).
+
 ### Manual installation troubleshooting
 
 If MariaDB Connector/C or mysqlclient cannot build, check the compiler, pkg-config and MariaDB development libraries. Use the pinned `mip` and `cbcbox` from `dao/requirements.txt`; the old manual `mip==1.16rc0` workaround and custom solver-library overrides are obsolete for the supported setup.
@@ -261,6 +280,9 @@ cd dao/webserver
 npm run build
 ```
 
+Without either a build or `VITE_DEV=1` with a running Vite dev server, the v2
+pages raise `RuntimeError: Vite manifest not found`.
+
 #### Developing on a remote machine
 
 Running the code on a server, NAS or VM and opening the web interface from your
@@ -320,6 +342,101 @@ Python.
 The isolated preview and synthetic scenarios are the default development workflow. Live price/weather APIs, Home Assistant tasks, database operations and populated reports require a separately configured installation.
 
 Use [dao/DOCS.md](dao/DOCS.md) for application settings. Keep live credentials and data outside the disposable preview, select configuration paths deliberately, and use a dedicated test installation for changes that can write to Home Assistant or databases. The legacy `test_dao.py` and EV harness can access live data and are excluded from the isolated test commands below.
+
+A configured installation needs access to a running Home Assistant instance:
+
+- A **long-lived access token** (Profile -> Security -> Long-Lived Access Tokens).
+  Outside the add-on there is no `SUPERVISOR_TOKEN`, so the token must be configured
+  manually.
+- Read access to the **Home Assistant recorder database** (the SQLite file
+  `home-assistant_v2.db`, or the MariaDB/PostgreSQL server HA writes to).
+  Without it every page that reads history (reports, savings, solar) fails; see
+  [Troubleshooting](#troubleshooting).
+
+#### Set up the configuration files
+
+The application reads its configuration from the `dao/data/` directory.
+
+1. Copy the example configuration files:
+   ```bash
+   cp dao/data/options_example.json dao/data/options.json
+   cp dao/data/secrets_vb.json dao/data/secrets.json
+   ```
+
+2. Edit `dao/data/secrets.json`. Any string in `options.json` written as
+   `!secret <name>` is looked up here, for example the HA token and database
+   passwords.
+
+3. Edit the `homeassistant` section of `dao/data/options.json`. The defaults
+   (`supervisor` as host, token from `SUPERVISOR_TOKEN`) only work inside the
+   add-on container:
+
+   ```json
+   "homeassistant": {
+     "host": "192.168.1.10",
+     "ip port": 8123,
+     "protocol api": "http",
+     "token": "!secret ha_api_token"
+   }
+   ```
+
+4. Edit the `database ha` section so it points to the recorder database of your
+   Home Assistant instance.
+
+   **SQLite** - the default `"db_path": "/homeassistant"` refers to the directory
+   the add-on mounts (`homeassistant_config` in `dao/config.yaml`). That directory
+   does not exist on a development machine, so set the real path:
+
+   ```json
+   "database ha": {
+     "engine": "sqlite",
+     "database": "home-assistant_v2.db",
+     "db_path": "/absolute/path/to/homeassistant/config"
+   }
+   ```
+
+   **MariaDB/MySQL or PostgreSQL** - the default server name `core-mariadb` only
+   resolves inside the Home Assistant network. Use the address of the machine
+   running the database and make sure the port is reachable:
+
+   ```json
+   "database ha": {
+     "engine": "mysql",
+     "server": "192.168.1.10",
+     "port": 3306,
+     "database": "homeassistant",
+     "username": "homeassistant",
+     "password": "!secret db_ha_password"
+   }
+   ```
+
+5. Edit the `database da` section for the Day Ahead database itself. The default
+   is a SQLite file in `dao/data`.
+
+Points to be aware of:
+
+- **Use absolute paths for `db_path`.** Relative paths are resolved against the
+  current working directory, and that differs per entry point: the webserver runs
+  from `dao/webserver`, the scheduler and calculations from `dao/prog`.
+- **SQLite needs more than read access on the file.** Home Assistant runs its
+  database in WAL mode, so the process also needs write access to the `-wal` and
+  `-shm` files and to the directory containing them. For development a copy of
+  `home-assistant_v2.db` is often more convenient (and safer) than the live file.
+- **Restart the server after editing `options.json`.** The configuration is loaded
+  once per process; `--debug` reloads on Python changes only, not on JSON changes.
+
+#### Create the Day Ahead database
+
+The `database da` tables are created by a separate step. From the project root,
+with the virtual environment active:
+
+```bash
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+cd dao/prog
+python check_db.py
+```
+
+Or, when using the legacy launcher: `./dao/run/run_dev.sh --migrate`.
 
 ## Testing
 
@@ -381,6 +498,50 @@ Changes to `main` go through a pull request. The following GitHub Actions checks
 Formatting is not a required merge check. The current checks enforce the shared lint configuration and verify application behavior and developer setup.
 
 When changing branch protection, verify enforcement on a disposable PR branch: add an undefined-name lint violation, confirm `Ruff lint` fails and normal merging is blocked, then remove the violation and confirm all required checks pass. Record any maintainer bypass policy and the verification result; do not merge the violation.
+
+---
+
+## Troubleshooting
+
+### `RuntimeError: No database connection for Home Assistant`
+
+The `database ha` section of `options.json` does not point to a reachable database.
+The line logged just before the exception shows the path or server that was tried.
+Common causes:
+
+- `db_path` still contains the add-on default `/homeassistant`, which does not
+  exist outside the container.
+- A relative `db_path` resolved against an unexpected working directory.
+- `server` still contains `core-mariadb`, which only resolves inside the Home
+  Assistant network.
+- The database file exists but the process cannot write the WAL sidecar files.
+
+See [Set up the configuration files](#set-up-the-configuration-files). Restart the server
+after changing `options.json`.
+
+### `RuntimeError: No database connection for Day Ahead`
+
+Same cause for the `database da` section, or the database has not been created yet;
+see [Create the Day Ahead database](#create-the-day-ahead-database).
+
+### `RuntimeError: Vite manifest not found`
+
+The assets have not been built and `VITE_DEV` is not set. Run `npm run build` in
+`dao/webserver`, or start the Vite dev server and export `VITE_DEV=1`.
+
+### The v2 interface loads without any styling
+
+The browser cannot reach the Vite dev server on port 5173. Check the browser
+console: connection errors point to a firewall or a tunnel that does not forward
+the port, while `Blocked request. This host (...) is not allowed` means the
+hostname has to be added to `VITE_DEV_ALLOWED_HOSTS`. See
+[Developing on a remote machine](#developing-on-a-remote-machine).
+
+### The interface is styled but the icons are missing
+
+The page reaches the Vite dev server, but the address Vite advertises for its own
+asset URLs does not resolve for your browser. This happens when tunneling: set
+`VITE_DEV_HOST=localhost` before starting Vite.
 
 ---
 
