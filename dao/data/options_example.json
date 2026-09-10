@@ -1,4 +1,5 @@
 {
+  "config_version": 2,
   "homeassistant": {},
   "database ha": {
     "engine": "sqlite",
@@ -312,14 +313,10 @@
         {
           "name": "tuinkamer",
           "entity pv switch": "input_boolean.pv_tuinkamer_aan_uit",
-          "strings": [
-            {
-              "tilt": 45,
-              "orientation": 5,
-              "capacity": 1.8,
-              "yield": 0.01
-            }
-          ]
+          "tilt": 45,
+          "orientation": 5,
+          "capacity": 1.8,
+          "yield": 0.01
         }
       ]
     }
