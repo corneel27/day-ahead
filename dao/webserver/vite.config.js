@@ -55,6 +55,17 @@ export default defineConfig({
       }
     }
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Bootstrap 5.3 gebruikt intern nog @import en de verouderde
+        // globale Sass-functies. Die waarschuwingen kunnen we in onze eigen
+        // code niet oplossen, dus onderdrukken we ze voor node_modules.
+        // Deprecations in onze eigen .scss blijven wel zichtbaar.
+        quietDeps: true,
+      },
+    },
+  },
   server: {
     host: '0.0.0.0',
     port: port,
