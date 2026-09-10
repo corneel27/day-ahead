@@ -347,7 +347,8 @@ What you do have to arrange:
   interfaces, but the firewall of the development machine has to allow it.
 - **When you use a hostname** instead of an IP address, add it to
   `VITE_DEV_ALLOWED_HOSTS`. Vite rejects unknown `Host` headers to protect against
-  DNS rebinding; IP addresses and `localhost` are always accepted.
+  DNS rebinding, and only sends the CORS headers that let the page read the assets
+  to known origins. IP addresses and `localhost` are always accepted.
 
   ```bash
   export VITE_DEV_ALLOWED_HOSTS=dao.local
@@ -383,7 +384,7 @@ Python.
 | `VITE_DEV_PORT` | webserver, Vite | `5173` | Port of the Vite dev server. |
 | `VITE_DEV_SERVER` | webserver | derived from the request | Pin the base URL the browser uses for the assets, for example `http://127.0.0.1:5173` behind a proxy. |
 | `VITE_DEV_HOST` | Vite | first non-internal IPv4 | Address Vite advertises in the asset URLs it generates. |
-| `VITE_DEV_ALLOWED_HOSTS` | Vite | empty | Comma separated hostnames Vite accepts besides `localhost` and IP addresses. |
+| `VITE_DEV_ALLOWED_HOSTS` | Vite | empty | Comma separated hostnames Vite accepts, both as `Host` header and as the origin allowed to fetch the assets, besides `localhost` and IP addresses. |
 | `FLASK_PORT` | webserver | `5000` | Port of the Flask development server. |
 
 #### Option 2: Run with Gunicorn (Production-like Environment)
@@ -446,11 +447,26 @@ The assets have not been built and `VITE_DEV` is not set. Run `npm run build` in
 
 ### The v2 interface loads without any styling
 
-The browser cannot reach the Vite dev server on port 5173. Check the browser
-console: connection errors point to a firewall or a tunnel that does not forward
-the port, while `Blocked request. This host (...) is not allowed` means the
-hostname has to be added to `VITE_DEV_ALLOWED_HOSTS`. See
-[Developing on a remote machine](#developing-on-a-remote-machine).
+The browser did not load `assets/main.js` from the Vite dev server. All styling
+is imported by that module, so when it fails nothing is styled at all. Check the
+browser console:
+
+- **A CORS error** (`... has been blocked by CORS policy`, `Access-Control-Allow-Origin`)
+  means the origin you opened the application on is not allowed to read the
+  assets. The page is served by Flask on port 5000 and the assets come from Vite
+  on port 5173, so every asset request is cross origin. IP addresses and
+  `localhost` are accepted out of the box; when you use a hostname, add it to
+  `VITE_DEV_ALLOWED_HOSTS` and restart Vite.
+- **A connection error** points to a firewall on the development machine or a
+  tunnel that does not forward port 5173.
+- **`Blocked request. This host (...) is not allowed`** means the hostname has to
+  be added to `VITE_DEV_ALLOWED_HOSTS`.
+
+See [Developing on a remote machine](#developing-on-a-remote-machine).
+
+Note that Sass deprecation warnings about `red()`, `green()` and `blue()` in the
+terminal come from Bootstrap's own stylesheets. They are harmless and unrelated:
+the stylesheet is compiled and served regardless.
 
 ### The interface is styled but the icons are missing
 

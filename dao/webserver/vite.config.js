@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defaultAllowedOrigins, defineConfig } from 'vite'
 import os from 'node:os'
 
 // Host the browser uses to reach the dev server.  Defaults to the first
@@ -15,6 +15,30 @@ function devHost() {
   }
   return 'localhost'
 }
+
+// Origins allowed to fetch the assets.  The page itself is served by Flask on
+// another port, so every asset request is cross origin.  Vite only sends the
+// CORS headers to localhost by default, which makes the browser discard the
+// module and leaves the v2 pages completely unstyled as soon as the browser is
+// not on the development machine.  Mirror the allowedHosts rule instead: IP
+// addresses and localhost are always accepted, hostnames have to be listed in
+// VITE_DEV_ALLOWED_HOSTS.
+const ipOrigin = /^https?:\/\/(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-fA-F:.]+\])(?::\d+)?$/
+
+function hostOrigin(hostname) {
+  const escaped = hostname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^https?://${escaped}(?::\\d+)?$`)
+}
+
+const allowedHosts = (process.env.VITE_DEV_ALLOWED_HOSTS ?? '')
+  .split(',')
+  .filter(Boolean)
+
+const allowedOrigins = [
+  defaultAllowedOrigins,
+  ipOrigin,
+  ...allowedHosts.map(hostOrigin),
+]
 
 const host = devHost()
 const port = Number(process.env.VITE_DEV_PORT || 5173)
@@ -39,7 +63,11 @@ export default defineConfig({
     // Empty by default: localhost and IP addresses are always allowed.
     // Set VITE_DEV_ALLOWED_HOSTS=dao.local,dev.example.com when reaching the
     // server by name or through a reverse proxy.
-    allowedHosts: (process.env.VITE_DEV_ALLOWED_HOSTS ?? '')
-      .split(',')
-      .filter(Boolean),  },
+    allowedHosts: allowedHosts,
+    // Without this the browser refuses the assets whenever the application is
+    // opened on anything other than localhost; see allowedOrigins above.
+    cors: {
+      origin: allowedOrigins,
+    },
+  },
 })
