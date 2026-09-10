@@ -31,3 +31,4 @@ dao/webserver/app/static/build
 /dao/data/meta
 
 /.local/
+.DS_Store
