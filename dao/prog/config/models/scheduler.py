@@ -11,6 +11,7 @@ SchedulerAction = Literal[
     "get_meteo_data",
     "get_tibber_data",
     "get_day_ahead_prices",
+    "get_day_ahead_price_forecast",
     "calc_optimum",
     "calc_optimum_met_debug",
     "clean_data",
@@ -95,6 +96,7 @@ Define when automatic tasks run using time patterns.
 - **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)
 - **get_tibber_data**: Fetch Tibber prices (if using Tibber)
 - **get_day_ahead_prices**: Fetch day-ahead market prices
+- **get_day_ahead_price_forecast**: Refresh optional forecast-based horizon extension
 
 ### Optimization
 - **calc_optimum**: Run main optimization algorithm
@@ -110,6 +112,10 @@ Define when automatic tasks run using time patterns.
   "active": true,
   "schedule": [
     {"time": "0435", "action": "get_day_ahead_prices"},
+    {"time": "0020", "action": "get_day_ahead_price_forecast"},
+    {"time": "0620", "action": "get_day_ahead_price_forecast"},
+    {"time": "1220", "action": "get_day_ahead_price_forecast"},
+    {"time": "1820", "action": "get_day_ahead_price_forecast"},
     {"time": "0445", "action": "get_meteo_data"},
     {"time": "0500", "action": "calc_optimum"},
     {"time": "xx00", "action": "calc_baseloads"},
@@ -120,10 +126,11 @@ Define when automatic tasks run using time patterns.
 
 ## Typical Schedule
 
-1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)
-2. **05:00**: Run optimization with fresh data
-3. **Hourly**: Update baseload calculations
-4. **03:00**: Clean old data (low activity time)
+1. **04:00-05:00**: Fetch official prices and weather
+2. **Every six hours**: Refresh optional forecast horizon extension
+3. **05:00**: Run optimization with fresh data
+4. **Hourly**: Update baseload calculations
+5. **03:00**: Clean old data (low activity time)
 
 ## Tips
 

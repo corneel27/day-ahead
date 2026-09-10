@@ -13,6 +13,12 @@
   "prices": {
     "source day ahead": "nordpool",
     "entsoe-api-key": "!secret entsoe-api-key",
+    "forecast extension provider": "none",
+    "forecast extension hours": 0,
+    "energypriceforecast-extension-api-url": "https://api.energypriceforecast.eu/api/v1/dao/prices",
+    "energypriceforecast-extension-api-key": null,
+    "energypriceforecast-extension-country": null,
+    "day-ahead-prediction-extension-url": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
     "regular high": 0.5,
     "regular low": 0.4,
     "switch to low": 23,
