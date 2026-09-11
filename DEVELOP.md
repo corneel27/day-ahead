@@ -363,6 +363,26 @@ What you do have to arrange:
   export VITE_DEV_HOST=localhost   # for the Vite server
   ```
 
+- **When the machine has more than one address** (a second network card, a docker
+  or libvirt bridge, a hostname pointing at only one of them), Vite has to pick
+  one for the asset URLs it generates itself, and the address it picks may not be
+  the one your browser uses. It prints a warning listing the candidates on
+  startup; pin the right one with `VITE_DEV_HOST`. Setting a single hostname in
+  `VITE_DEV_ALLOWED_HOSTS` is enough as well, that name is then used.
+
+- **When Flask is served over HTTPS** the assets still come from the Vite dev
+  server over plain HTTP, which the browser blocks as mixed content. Put Vite
+  behind the same TLS entry point and point both sides at it:
+
+  ```bash
+  # a TLS proxy on vite.dao.example.com forwarding to port 5173
+  export VITE_DEV_SERVER=https://vite.dao.example.com   # for the webserver
+  export VITE_DEV_ORIGIN=https://vite.dao.example.com   # for the Vite server
+  export VITE_DEV_ALLOWED_HOSTS=vite.dao.example.com,dao.example.com
+  ```
+
+  Without such a proxy, develop over plain HTTP.
+
 If you only work on the Python code, skip the Vite server entirely: build the
 assets once and start the webserver without `VITE_DEV`.
 
@@ -382,8 +402,9 @@ Python.
 | --- | --- | --- | --- |
 | `VITE_DEV` | webserver | unset | When `1`, load the assets from the Vite dev server instead of from `app/static/build`. |
 | `VITE_DEV_PORT` | webserver, Vite | `5173` | Port of the Vite dev server. |
-| `VITE_DEV_SERVER` | webserver | derived from the request | Pin the base URL the browser uses for the assets, for example `http://127.0.0.1:5173` behind a proxy. |
-| `VITE_DEV_HOST` | Vite | first non-internal IPv4 | Address Vite advertises in the asset URLs it generates. |
+| `VITE_DEV_SERVER` | webserver | `http://<host of the page>:5173` | Pin the base URL the browser uses for the assets, for example `http://127.0.0.1:5173` behind a proxy. Required when Flask itself is served over HTTPS, see [Developing on a remote machine](#developing-on-a-remote-machine). |
+| `VITE_DEV_HOST` | Vite | see `VITE_DEV_ORIGIN` | Address Vite advertises in the asset URLs it generates. Shorthand for `VITE_DEV_ORIGIN=http://<host>:<port>`. |
+| `VITE_DEV_ORIGIN` | Vite | single entry of `VITE_DEV_ALLOWED_HOSTS`, else first non-internal IPv4 | Full origin (scheme, host and port) Vite advertises in the asset URLs it generates, for example `https://dao.example.com` behind a TLS proxy. |
 | `VITE_DEV_ALLOWED_HOSTS` | Vite | empty | Comma separated hostnames Vite accepts, both as `Host` header and as the origin allowed to fetch the assets, besides `localhost` and IP addresses. |
 | `FLASK_PORT` | webserver | `5000` | Port of the Flask development server. |
 
@@ -471,8 +492,11 @@ the stylesheet is compiled and served regardless.
 ### The interface is styled but the icons are missing
 
 The page reaches the Vite dev server, but the address Vite advertises for its own
-asset URLs does not resolve for your browser. This happens when tunneling: set
-`VITE_DEV_HOST=localhost` before starting Vite.
+asset URLs does not resolve for your browser. This happens when tunneling (set
+`VITE_DEV_HOST=localhost` before starting Vite) and on machines with several
+addresses, where Vite has to guess which one you use. Vite logs the address it
+picked on startup; set `VITE_DEV_HOST`, or `VITE_DEV_ORIGIN` when a scheme or
+port other than `http://...:5173` is involved.
 
 ---
 

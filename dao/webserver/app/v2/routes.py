@@ -33,6 +33,12 @@ def vite_dev_server() -> str:
     the host the page itself was requested on, so the assets are loaded from the
     same machine that serves the application instead of from a hardcoded
     "localhost", which would resolve to the browser's own machine.
+
+    The scheme is always http: the dev server speaks plain HTTP, so following the
+    scheme of the page would send the browser into a TLS handshake on port 5173
+    that nothing answers.  Serving this application over HTTPS in development
+    therefore needs VITE_DEV_SERVER pointing at an HTTPS entry point for Vite,
+    otherwise the browser blocks the assets as mixed content.
     """
     pinned = os.getenv("VITE_DEV_SERVER")
     if pinned:
@@ -44,8 +50,7 @@ def vite_dev_server() -> str:
             host = host[: host.index("]") + 1]
         elif ":" in host:
             host = host.rsplit(":", 1)[0]
-        # Protocol relative, so the scheme follows the page itself.
-        return f"//{host}:{VITE_DEV_PORT}"
+        return f"http://{host}:{VITE_DEV_PORT}"
     return f"http://localhost:{VITE_DEV_PORT}"
 
 
