@@ -17,7 +17,6 @@ from sklearn.metrics import r2_score
 from sqlalchemy import (
     BigInteger,
     String,
-    Table,
     and_,
     case,
     column,
@@ -860,12 +859,8 @@ class Report(DaBase):
         :return: datum en tijd van het laatst aanwezige record
         """
 
-        statistics = Table(
-            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
-        statistics_meta = Table(
-            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
+        statistics = self.db_ha.get_table("statistics")
+        statistics_meta = self.db_ha.get_table("statistics_meta")
         # Define aliases for the tables
         t1 = statistics.alias("t1")
         v1 = statistics_meta.alias("v1")
@@ -956,12 +951,8 @@ class Report(DaBase):
         # print(df_sensor)
         return df
         """
-        statistics = Table(
-            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
-        statistics_meta = Table(
-            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
+        statistics = self.db_ha.get_table("statistics")
+        statistics_meta = self.db_ha.get_table("statistics_meta")
 
         # Define aliases for the tables
         t1 = statistics.alias("t1")
@@ -1267,14 +1258,10 @@ class Report(DaBase):
                 LIMIT 1;"
         data = self.db_da.run_select_query(sql)
         """
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
         # Aliases for the values table
         t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        variabel_table = self.db_da.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
 
@@ -1609,14 +1596,10 @@ class Report(DaBase):
         )
         result = self.generate_df(vanaf, tot, periode_d["interval"], interval)
 
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
         # Aliases for the values table
         t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        variabel_table = self.db_da.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         groupby_str = interval
@@ -1792,9 +1775,7 @@ class Report(DaBase):
                           "AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
                 prog_result = self.db_da.run_select_query(sql)
                 """
-                prog_table = Table(
-                    "prognoses", self.db_da.metadata, autoload_with=self.db_da.engine
-                )
+                prog_table = self.db_da.get_table("prognoses")
                 p1 = prog_table.alias("p1")
                 # Build the SQLAlchemy query
                 """
@@ -1882,14 +1863,10 @@ class Report(DaBase):
         :param table: str name of database table: values (default) or prognoses
         :return:  resulting dataframe
         """
-        values_table = Table(
-            table, self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table(table)
         # Aliases for the values table
         t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        variabel_table = self.db_da.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         column = self.db_da.hour(t1.c.time).label("uur")
@@ -2044,14 +2021,10 @@ class Report(DaBase):
         :return: een dataframe met de gevraagde griddata
         """
 
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
         # Aliases for the values table
         t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        variabel_table = self.db_da.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         v2 = variabel_table.alias("v2")
@@ -2211,11 +2184,7 @@ class Report(DaBase):
 
             if (source == "all" or source == "da") and last_moment < tot:
                 # get prognose consumption and production:
-                prog_table = Table(
-                    "prognoses",
-                    self.db_da.metadata,
-                    autoload_with=self.db_da.engine,
-                )
+                prog_table = self.db_da.get_table("prognoses")
                 p1 = prog_table.alias("p1")
                 p2 = prog_table.alias("p2")
                 # Build the SQLAlchemy query
@@ -2736,12 +2705,8 @@ class Report(DaBase):
             ORDER BY t1.`start_ts`;"
         df = self.db_ha.run_select_query(sql)
         """
-        statistics = Table(
-            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
-        statistics_meta = Table(
-            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
+        statistics = self.db_ha.get_table("statistics")
+        statistics_meta = self.db_ha.get_table("statistics_meta")
 
         # Define aliases for the tables
         t1 = statistics.alias("t1")
@@ -3434,11 +3399,9 @@ class Report(DaBase):
         return report_data
 
     def get_vars(self):
-        metadata = self.db_da.metadata
-        engine = self.db_da.engine
-        variabel = Table("variabel", metadata, autoload_with=engine)
-        prognoses = Table("prognoses", metadata, autoload_with=engine)
-        values = Table("values", metadata, autoload_with=engine)
+        variabel = self.db_da.get_table("variabel")
+        prognoses = self.db_da.get_table("prognoses")
+        values = self.db_da.get_table("values")
 
         gebruikte_variabelen = union(
             select(prognoses.c.variabel),
@@ -3542,12 +3505,8 @@ class Report(DaBase):
             step: datetime.timedelta,
             var_codes: list = None
     ):
-        statistics = Table(
-            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
-        statistics_meta = Table(
-            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
+        statistics = self.db_ha.get_table("statistics")
+        statistics_meta = self.db_ha.get_table("statistics_meta")
 
         intervals_cte = self.create_interval_cte(
             start=start,
@@ -3650,12 +3609,9 @@ class Report(DaBase):
             step: datetime.timedelta,
             var_codes: list = None
     ):
-        metadata = self.db_da.metadata
-        engine = self.db_da.engine
-
-        variabel = Table("variabel", metadata, autoload_with=engine)
-        values_table = Table("values", metadata, autoload_with=engine)
-        prognoses = Table("prognoses", metadata, autoload_with=engine)
+        variabel = self.db_da.get_table("variabel")
+        values_table = self.db_da.get_table("values")
+        prognoses = self.db_da.get_table("prognoses")
 
         intervals_cte = self.create_interval_cte(
             start=start,

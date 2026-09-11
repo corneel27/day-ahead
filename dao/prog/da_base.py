@@ -19,7 +19,7 @@ import pandas as pd
 import pytz
 from hassapi.models import StateList
 from requests import get
-from sqlalchemy import Table, and_, func, select
+from sqlalchemy import and_, func, select
 
 from dao.lib.da_meteo import Meteo
 from dao.lib.da_prices import DaPrices
@@ -428,12 +428,8 @@ class DaBase(hass.Hass):
         )
         """
         # Reflect existing tables from the database
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
+        variabel_table = self.db_da.get_table("variabel")
 
         # Construct the inner query
         inner_query = (
