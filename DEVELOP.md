@@ -8,6 +8,7 @@ This guide will help developers set up their development environment, test chang
 - [Setting Up Development Environment](#setting-up-development-environment)
 - [Project Structure](#project-structure)
 - [Running the Application Locally](#running-the-application-locally)
+- [Troubleshooting](#troubleshooting)
 - [Testing](#testing)
 - [Making Contributions](#making-contributions)
 - [Code Style and Best Practices](#code-style-and-best-practices)
@@ -18,11 +19,22 @@ This guide will help developers set up their development environment, test chang
 
 Before you begin, ensure you have the following installed:
 
-- **Python 3.8+** (Python 3.9 or higher recommended)
+- **Python 3.10+** (the code uses PEP 604 union syntax, e.g. `int | None`)
 - **Git** for version control
 - **pip** (Python package installer)
 - **npm** (Node Package Manager)
 - A code editor (VS Code, PyCharm, etc.)
+
+You also need access to a running Home Assistant instance:
+
+- A **long-lived access token** (Profile -> Security -> Long-Lived Access Tokens).
+  Outside the add-on there is no `SUPERVISOR_TOKEN`, so the token must be configured
+  manually.
+- Read access to the **Home Assistant recorder database** (the SQLite file
+  `home-assistant_v2.db`, or the MariaDB/PostgreSQL server HA writes to).
+  Without it every page that reads history (reports, savings, solar) fails; see
+  [Troubleshooting](#troubleshooting).
+
 ---
 
 ## Setting Up Development Environment
@@ -52,6 +64,24 @@ chmod +x dao/run/run_dev.sh # Once
 ```
 
 Optionally, define the flask port using `--flask-port=5001`
+
+Use `--migrate` to create or upgrade the Day Ahead database (runs `dao/prog/check_db.py`).
+This is required the first time you start with an empty `database da`:
+
+```bash
+./dao/run/run_dev.sh --setup --migrate
+```
+
+Note that the script:
+
+- copies `options_example.json` to `options.json` and `secrets_vb.json` to
+  `secrets.json` when those files do not exist yet. **The copied defaults do not
+  work outside the add-on**: you still have to edit them, see
+  [Set Up Configuration Files](#4-set-up-configuration-files).
+- starts the Vite dev server and exports `VITE_DEV=1`, so the frontend assets are
+  served by Vite on port 5173 instead of being read from a build. That port has to
+  be reachable from your browser; see
+  [Developing on a remote machine](#developing-on-a-remote-machine).
 
 When error, see: [In case of error](#31-in-case-of-error)  
 When successful, continue reading: [Project Structure](#project-structure)  
@@ -114,11 +144,83 @@ The application requires configuration files in the `dao/data/` directory. Once 
 1. Copy the example configuration files:
    ```bash
    cp dao/data/options_example.json dao/data/options.json
+   cp dao/data/secrets_vb.json dao/data/secrets.json
    ```
 
-2. Edit `dao/data/options.json` to match your development environment settings.
+2. Edit `dao/data/secrets.json`. Any string in `options.json` written as
+   `!secret <name>` is looked up here, for example the HA token and database
+   passwords.
 
-3. If you need database credentials, create `dao/data/secrets.json` based on your database setup.
+3. Edit the `homeassistant` section of `dao/data/options.json`. The defaults
+   (`supervisor` as host, token from `SUPERVISOR_TOKEN`) only work inside the
+   add-on container:
+
+   ```json
+   "homeassistant": {
+     "host": "192.168.1.10",
+     "ip port": 8123,
+     "protocol api": "http",
+     "token": "!secret ha_api_token"
+   }
+   ```
+
+4. Edit the `database ha` section so it points to the recorder database of your
+   Home Assistant instance.
+
+   **SQLite** - the default `"db_path": "/homeassistant"` refers to the directory
+   the add-on mounts (`homeassistant_config` in `dao/config.yaml`). That directory
+   does not exist on a development machine, so set the real path:
+
+   ```json
+   "database ha": {
+     "engine": "sqlite",
+     "database": "home-assistant_v2.db",
+     "db_path": "/absolute/path/to/homeassistant/config"
+   }
+   ```
+
+   **MariaDB/MySQL or PostgreSQL** - the default server name `core-mariadb` only
+   resolves inside the Home Assistant network. Use the address of the machine
+   running the database and make sure the port is reachable:
+
+   ```json
+   "database ha": {
+     "engine": "mysql",
+     "server": "192.168.1.10",
+     "port": 3306,
+     "database": "homeassistant",
+     "username": "homeassistant",
+     "password": "!secret db_ha_password"
+   }
+   ```
+
+5. Edit the `database da` section for the Day Ahead database itself. The default
+   is a SQLite file in `dao/data`.
+
+Points to be aware of:
+
+- **Use absolute paths for `db_path`.** Relative paths are resolved against the
+  current working directory, and that differs per entry point: the webserver runs
+  from `dao/webserver`, the scheduler and calculations from `dao/prog`.
+- **SQLite needs more than read access on the file.** Home Assistant runs its
+  database in WAL mode, so the process also needs write access to the `-wal` and
+  `-shm` files and to the directory containing them. For development a copy of
+  `home-assistant_v2.db` is often more convenient (and safer) than the live file.
+- **Restart the server after editing `options.json`.** The configuration is loaded
+  once per process; `--debug` reloads on Python changes only, not on JSON changes.
+
+### 5. Create the Day Ahead Database
+
+The `database da` tables are created by a separate step. From the project root,
+with the virtual environment active:
+
+```bash
+export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+cd dao/prog
+python check_db.py
+```
+
+Or, when using the quick setup script: `./dao/run/run_dev.sh --migrate`.
 
 ---
 
@@ -190,7 +292,13 @@ export VITE_DEV=1
 python da_server.py --debug
 ```
 
-The development server will start on `http://localhost:5000` by default.
+The frontend assets have to come from somewhere: either set `VITE_DEV=1` and run
+the Vite dev server alongside it, or run `npm run build` once. Without either, the
+v2 pages raise `RuntimeError: Vite manifest not found`. See
+[Build or serve the assets](#build-or-serve-the-assets).
+
+The development server will start on `http://localhost:5000` by default. It binds
+to `0.0.0.0`, so it is also reachable from other machines on your network.
 
 **For macOS users:** Port 5000 is often used by the AirPlay Receiver service. To run on port 5001 instead, set the FLASK_PORT environment variable:
 
@@ -226,6 +334,80 @@ cd dao/webserver
 npm run build
 ```
 
+#### Developing on a remote machine
+
+Running the code on a server, NAS or VM and opening the web interface from your
+laptop works without extra configuration: the page requests the Vite assets from
+the same host you typed in the address bar, and Vite advertises its own address
+for anything it generates itself (the icon fonts, for instance).
+
+What you do have to arrange:
+
+- **Port 5173 must be reachable** from your browser. Vite listens on all
+  interfaces, but the firewall of the development machine has to allow it.
+- **When you use a hostname** instead of an IP address, add it to
+  `VITE_DEV_ALLOWED_HOSTS`. Vite rejects unknown `Host` headers to protect against
+  DNS rebinding, and only sends the CORS headers that let the page read the assets
+  to known origins. IP addresses and `localhost` are always accepted.
+
+  ```bash
+  export VITE_DEV_ALLOWED_HOSTS=dao.local
+  ```
+
+- **When you tunnel the port over SSH**, the page is served on `localhost` and the
+  auto-detected Vite address is the LAN address of the server, which the browser
+  may not be able to reach. Pin both sides to `localhost`:
+
+  ```bash
+  ssh -L 5000:localhost:5000 -L 5173:localhost:5173 user@dev-machine
+  export VITE_DEV_HOST=localhost   # for the Vite server
+  ```
+
+- **When the machine has more than one address** (a second network card, a docker
+  or libvirt bridge, a hostname pointing at only one of them), Vite has to pick
+  one for the asset URLs it generates itself, and the address it picks may not be
+  the one your browser uses. It prints a warning listing the candidates on
+  startup; pin the right one with `VITE_DEV_HOST`. Setting a single hostname in
+  `VITE_DEV_ALLOWED_HOSTS` is enough as well, that name is then used.
+
+- **When Flask is served over HTTPS** the assets still come from the Vite dev
+  server over plain HTTP, which the browser blocks as mixed content. Put Vite
+  behind the same TLS entry point and point both sides at it:
+
+  ```bash
+  # a TLS proxy on vite.dao.example.com forwarding to port 5173
+  export VITE_DEV_SERVER=https://vite.dao.example.com   # for the webserver
+  export VITE_DEV_ORIGIN=https://vite.dao.example.com   # for the Vite server
+  export VITE_DEV_ALLOWED_HOSTS=vite.dao.example.com,dao.example.com
+  ```
+
+  Without such a proxy, develop over plain HTTP.
+
+If you only work on the Python code, skip the Vite server entirely: build the
+assets once and start the webserver without `VITE_DEV`.
+
+```bash
+cd dao/webserver
+npm run build
+unset VITE_DEV        # note: run_dev.sh always sets it, so start da_server.py directly
+python da_server.py --debug
+```
+
+You lose hot reloading of stylesheets, which does not matter when only touching
+Python.
+
+#### Frontend environment variables
+
+| Variable | Used by | Default | Purpose |
+| --- | --- | --- | --- |
+| `VITE_DEV` | webserver | unset | When `1`, load the assets from the Vite dev server instead of from `app/static/build`. |
+| `VITE_DEV_PORT` | webserver, Vite | `5173` | Port of the Vite dev server. |
+| `VITE_DEV_SERVER` | webserver | `http://<host of the page>:5173` | Pin the base URL the browser uses for the assets, for example `http://127.0.0.1:5173` behind a proxy. Required when Flask itself is served over HTTPS, see [Developing on a remote machine](#developing-on-a-remote-machine). |
+| `VITE_DEV_HOST` | Vite | see `VITE_DEV_ORIGIN` | Address Vite advertises in the asset URLs it generates. Shorthand for `VITE_DEV_ORIGIN=http://<host>:<port>`. |
+| `VITE_DEV_ORIGIN` | Vite | single entry of `VITE_DEV_ALLOWED_HOSTS`, else first non-internal IPv4 | Full origin (scheme, host and port) Vite advertises in the asset URLs it generates, for example `https://dao.example.com` behind a TLS proxy. |
+| `VITE_DEV_ALLOWED_HOSTS` | Vite | empty | Comma separated hostnames Vite accepts, both as `Host` header and as the origin allowed to fetch the assets, besides `localhost` and IP addresses. |
+| `FLASK_PORT` | webserver | `5000` | Port of the Flask development server. |
+
 #### Option 2: Run with Gunicorn (Production-like Environment)
 
 For testing in a production-like environment:
@@ -253,6 +435,68 @@ When testing changes, verify:
 5. **Web Interface:** All pages load and forms submit correctly
 6. **Database Operations:** Data is stored and retrieved correctly
 7. **Graph Generation:** Visualizations are generated properly
+
+---
+
+## Troubleshooting
+
+### `RuntimeError: No database connection for Home Assistant`
+
+The `database ha` section of `options.json` does not point to a reachable database.
+The line logged just before the exception shows the path or server that was tried.
+Common causes:
+
+- `db_path` still contains the add-on default `/homeassistant`, which does not
+  exist outside the container.
+- A relative `db_path` resolved against an unexpected working directory.
+- `server` still contains `core-mariadb`, which only resolves inside the Home
+  Assistant network.
+- The database file exists but the process cannot write the WAL sidecar files.
+
+See [Set Up Configuration Files](#4-set-up-configuration-files). Restart the server
+after changing `options.json`.
+
+### `RuntimeError: No database connection for Day Ahead`
+
+Same cause for the `database da` section, or the database has not been created yet;
+see [Create the Day Ahead Database](#5-create-the-day-ahead-database).
+
+### `RuntimeError: Vite manifest not found`
+
+The assets have not been built and `VITE_DEV` is not set. Run `npm run build` in
+`dao/webserver`, or start the Vite dev server and export `VITE_DEV=1`.
+
+### The v2 interface loads without any styling
+
+The browser did not load `assets/main.js` from the Vite dev server. All styling
+is imported by that module, so when it fails nothing is styled at all. Check the
+browser console:
+
+- **A CORS error** (`... has been blocked by CORS policy`, `Access-Control-Allow-Origin`)
+  means the origin you opened the application on is not allowed to read the
+  assets. The page is served by Flask on port 5000 and the assets come from Vite
+  on port 5173, so every asset request is cross origin. IP addresses and
+  `localhost` are accepted out of the box; when you use a hostname, add it to
+  `VITE_DEV_ALLOWED_HOSTS` and restart Vite.
+- **A connection error** points to a firewall on the development machine or a
+  tunnel that does not forward port 5173.
+- **`Blocked request. This host (...) is not allowed`** means the hostname has to
+  be added to `VITE_DEV_ALLOWED_HOSTS`.
+
+See [Developing on a remote machine](#developing-on-a-remote-machine).
+
+Note that Sass deprecation warnings about `red()`, `green()` and `blue()` in the
+terminal come from Bootstrap's own stylesheets. They are harmless and unrelated:
+the stylesheet is compiled and served regardless.
+
+### The interface is styled but the icons are missing
+
+The page reaches the Vite dev server, but the address Vite advertises for its own
+asset URLs does not resolve for your browser. This happens when tunneling (set
+`VITE_DEV_HOST=localhost` before starting Vite) and on machines with several
+addresses, where Vite has to guess which one you use. Vite logs the address it
+picked on startup; set `VITE_DEV_HOST`, or `VITE_DEV_ORIGIN` when a scheme or
+port other than `http://...:5173` is involved.
 
 ---
 
