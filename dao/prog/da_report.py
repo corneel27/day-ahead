@@ -3117,8 +3117,17 @@ class Report(DaBase):
 
         # solar_predictor = SolarPredictor()
         # solar_prog = solar_predictor.predict_solar_device(device, start, end)
+        # dezelfde stralingsreeks als de dao-voorspelling hierboven: per uur de
+        # meting als die aanwezig is en anders de prognose. Zonder dit rekent de
+        # dao-kolom met de gemeten straling en de ml-kolom met de voorspelde,
+        # waardoor de R2 van beide kolommen niet vergelijkbaar is.
         solar_prog = self.calc_solar_predictions(
-            device, start, end, interval="1hour", _ml_prediction=True
+            device,
+            start,
+            end,
+            interval="1hour",
+            _ml_prediction=True,
+            prefer_measured=True,
         )
         if "date_time" in solar_prog.columns:
             solar_prog["tijd"] = solar_prog["date_time"].dt.tz_localize(None)
