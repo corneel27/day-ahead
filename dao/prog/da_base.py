@@ -557,6 +557,7 @@ class DaBase(hass.Hass):
         tot: datetime.datetime,
         interval: str = None,
         _ml_prediction: bool = None,
+        prefer_measured: bool = False,
     ) -> pd.DataFrame:
         """
         berekent de solar production
@@ -565,6 +566,10 @@ class DaBase(hass.Hass):
         :param tot: datetime tot
         :param interval: 15"min of 1 hour of None, als None wordt self.interval genomen
         :param _ml_prediction: boolean default None(= from config)
+        :param prefer_measured: boolean, alleen van toepassing op de
+            ml-voorspelling. True: per uur de gemeten straling gebruiken als
+            die aanwezig is en anders de prognose, zoals de dao-voorspelling
+            dat ook doet. Voor een dag in de toekomst maakt het geen verschil.
         :return:
         """
         if _ml_prediction is None:
@@ -585,7 +590,7 @@ class DaBase(hass.Hass):
             solar_predictor = SolarPredictor()
             try:
                 solar_prog = solar_predictor.predict_solar_device(
-                    solar_option, vanaf, tot
+                    solar_option, vanaf, tot, prefer_measured=prefer_measured
                 )
                 if solar_prog.isnull().any().any():
                     logging.warning(
