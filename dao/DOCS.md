@@ -1754,9 +1754,10 @@ Verder kun je nog de volgende variabelen opvragen:
 
 Bij **\<period>** kun je de periode opgeven waarover je de gevraagde gegevens wilt ontvangen. 
 Je kunt kiezen uit:
-- **vandaag** met interval uur
-- **vandaag_en_morgen** met interval uur
-- **morgen** met interval uur
+- **vandaag** met interval uur of kwartier
+- **vandaag_en_morgen** met interval uur of kwartier
+- **morgen** met interval uur of kwartier
+- **gisteren** met interval uur of kwartier
 - **deze_week** met interval dag
 - **vorige_week**  met interval dag
 - **deze_maand**  met interval dag
@@ -1764,6 +1765,13 @@ Je kunt kiezen uit:
 - **dit jaar** met interval maand
 - **vorig_jaar** met interval maand
 - **dit_contractjaar**  met interval maand
+
+De perioden binnen een dag volgen de resolutie waarmee de optimalisering rekent
+(de instelling **interval**): met `1hour` krijg je uurwaarden, met `15min` kwartierwaarden.
+Home Assistant bewaart zijn langetermijn-statistieken alleen per uur; bij een kwartier-interval
+worden de al gerealiseerde uurwaarden daarom gelijkmatig over de vier kwartieren van het uur
+verdeeld, zodat het totaal gelijk blijft. De prognoses komen wel met de volledige
+kwartier-resolutie terug zoals de optimalisering ze heeft berekend.
 
 Bij **pv_ac** en **pv_dc** wordt bij periode **vandaag_en_morgen** de voorspelling verlengd met een
 of twee dagen of tot zover stralingsgegevens bekend zijn.
