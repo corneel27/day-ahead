@@ -22,6 +22,8 @@ Before you begin, ensure you have the following installed:
 - **Python 3.10+** (the code uses PEP 604 union syntax, e.g. `int | None`)
 - **Git** for version control
 - **pip** (Python package installer)
+- **The `venv` module.** It is part of the standard library everywhere except on
+  Debian and Ubuntu, which ship it separately: `sudo apt install -y python3-venv`.
 - **npm** (Node Package Manager)
 - A code editor (VS Code, PyCharm, etc.)
 
@@ -74,6 +76,10 @@ This is required the first time you start with an empty `database da`:
 
 Note that the script:
 
+- creates its own virtual environment in `venv/day_ahead` (not the `.venv` used by the
+  manual instructions below) and reuses it on every later run. It is checked before use
+  and recreated when it is broken; the directory is git ignored and machine specific,
+  see [`python: command not found`](#python-command-not-found).
 - copies `options_example.json` to `options.json` and `secrets_vb.json` to
   `secrets.json` when those files do not exist yet. **The copied defaults do not
   work outside the add-on**: you still have to edit them, see
@@ -103,6 +109,9 @@ python3 -m venv .venv
 ```
 
 You should see `(.venv)` in your terminal prompt, indicating the virtual environment is active.
+
+This `.venv` is only used when you follow the manual steps. `run_dev.sh` manages its own
+environment in `venv/day_ahead` and ignores `.venv`, so the two never conflict.
 
 ### 3. Install Dependencies
 
@@ -341,6 +350,12 @@ laptop works without extra configuration: the page requests the Vite assets from
 the same host you typed in the address bar, and Vite advertises its own address
 for anything it generates itself (the icon fonts, for instance).
 
+Set the project up on that machine the same way as anywhere else: clone the repository
+there and run the setup. Do not copy or sync a working tree that already contains a
+virtual environment - a venv records absolute paths and the path of the interpreter it
+was built with, so it does not survive the move, see
+[`python: command not found`](#python-command-not-found).
+
 What you do have to arrange:
 
 - **Port 5173 must be reachable** from your browser. Vite listens on all
@@ -439,6 +454,47 @@ When testing changes, verify:
 ---
 
 ## Troubleshooting
+
+### `python: command not found`
+
+```
+./dao/run/run_dev.sh: line 116: python: command not found
+```
+
+The virtual environment was activated but its interpreter is gone. A venv does not
+contain a Python: `venv/day_ahead/bin/python` is a symlink to the interpreter the venv
+was created with, and `bin/activate` only puts that directory first on `PATH`. When the
+symlink no longer resolves, the shell finds no `python` at all - on Debian and Ubuntu
+there is no system-wide `python` either, only `python3`, which is why the same tree can
+keep working on one machine and fail on another.
+
+The usual causes:
+
+- the system Python was upgraded or removed after the venv was created (a distribution
+  upgrade, or removing a `deadsnakes`/`pyenv` version);
+- the project directory was copied, rsynced or restored from another machine, or lives
+  on a shared mount used by more than one machine - the venv came along, but its
+  absolute paths did not;
+- an earlier `--setup` run was interrupted and left the directory half finished.
+
+Recreating the environment is always safe, it holds no state of yours:
+
+```bash
+rm -rf venv/day_ahead
+./dao/run/run_dev.sh --setup
+```
+
+Current versions of the script detect this and recreate the environment themselves;
+the manual command above is the fix if you are on an older checkout. To confirm the
+diagnosis first:
+
+```bash
+ls -l venv/day_ahead/bin/python*   # a broken symlink shows a target that does not exist
+venv/day_ahead/bin/python -V       # "No such file or directory" when it is broken
+```
+
+If `python3 -m venv` then fails with a message about `ensurepip`, the `python3-venv`
+package is missing; see [Prerequisites](#prerequisites).
 
 ### `RuntimeError: No database connection for Home Assistant`
 
