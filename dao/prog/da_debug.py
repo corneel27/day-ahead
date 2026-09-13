@@ -671,8 +671,12 @@ class RecordingIO:
         original_predict_solar_device = SolarPredictor.predict_solar_device
 
         # Roept de echte ML-zonnevoorspelling aan en bewaart het resultaat per paneelnaam, niet per tijdvenster, want dat laatste kan meer drift geven dan bedoeld.
-        def _wrapped_predict_solar_device(instance, solar_option, start, end):
-            result = original_predict_solar_device(instance, solar_option, start, end)
+        def _wrapped_predict_solar_device(
+            instance, solar_option, start, end, prefer_measured=False
+        ):
+            result = original_predict_solar_device(
+                instance, solar_option, start, end, prefer_measured=prefer_measured
+            )
             # Keyed by device name only, not (start, end): those two are
             # themselves derived from calc_optimum()'s own internal
             # dt.datetime.now() call, which fires strictly later than (and
@@ -1086,7 +1090,9 @@ class ReplayIO:
         self._patches.set(Report, "get_heatpump_run_hours", _replay_hp_hours)
 
         # Levert de opgeslagen zonnevoorspelling terug op paneelnaam, ongevoelig voor een afwijkend tijdvenster.
-        def _replay_predict_solar_device(instance, solar_option, start, end):
+        def _replay_predict_solar_device(
+            instance, solar_option, start, end, prefer_measured=False
+        ):
             # Keyed by device name only — see the matching comment on the
             # RecordingIO side for why (start, end) is deliberately excluded.
             key = _call_key((getattr(solar_option, "name", None),), {})

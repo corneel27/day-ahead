@@ -883,19 +883,54 @@ class SolarPredictor(DaBase):
             self.get_and_save_knmi_data(latest_dt, end)
         return None
 
+    def _read_weather_column(
+        self,
+        table_name: str,
+        weather_item: str,
+        start: dt.datetime,
+        end: dt.datetime,
+    ) -> pd.Series:
+        """
+        Leest een weerkolom uit de opgegeven tabel.
+        :param table_name: naam van de tabel: "values" of "prognoses"
+        :param weather_item: de code van de variabele, bv. "gr"
+        :param start: eerste uur
+        :param end: tot, niet inclusief, dit uur
+        :return: serie met de waarden, geindexeerd op de utc-timestamp in seconden
+        """
+        df_item = self.db_da.get_column_data(
+            table_name, weather_item, start=start, end=end
+        )
+        if df_item is None or len(df_item) == 0:
+            return pd.Series(dtype="float64", name=weather_item)
+        series = pd.Series(
+            pd.to_numeric(df_item["value"], errors="coerce").values,
+            index=df_item["utc"].values,
+            name=weather_item,
+        )
+        # een uur kan meer dan een keer voorkomen als het is bijgewerkt,
+        # de laatst opgeslagen waarde is dan de geldige
+        series = series[~series.index.duplicated(keep="last")]
+        return series.sort_index()
+
     def get_weatherdata(
         self,
         start: dt.datetime,
         _end: dt.datetime | None = None,
         prognose: bool = False,
+        prefer_measured: bool = False,
     ) -> pd.DataFrame:
         """
         vult database aan met ontbrekende data
         load ned_nl_data from dao-database
         :param start: begindatum laden vanaf
-        :param end: einddatum if None: tot gisteren 00:00
+        :param _end: einddatum if None: tot gisteren 00:00
         :param prognose: boolean, False: meetdata ophalen
             True: prognoses ophalen
+        :param prefer_measured: boolean, alleen van toepassing als prognose True is.
+            True: per uur de meetwaarde nemen als die aanwezig is en anders de
+            prognose. Daarmee rekent de ml-voorspelling met dezelfde reeks als
+            de dao-voorspelling, die per uur dezelfde keuze maakt.
         :return: dataframe with weatherdata
         """
         # haal ontbrekende data op bij knmi
@@ -910,13 +945,13 @@ class SolarPredictor(DaBase):
 
         start = dt.datetime(start.year, start.month, start.day, start.hour)
         # get weather-dataframe from database
-        weather_data = pd.DataFrame(columns=["utc", "gr", "temp", "winds"])
-        for weather_item in weather_data.columns[1:]:
+        series_per_item = {}
+        for weather_item in ["gr", "temp", "winds"]:
             if prognose:
                 table_name = "prognoses"
             else:
                 latest_dt = self.db_da.get_time_border_record(weather_item, latest=True)
-                if latest_dt < end and _end is not None:
+                if latest_dt is not None and latest_dt < end and _end is not None:
                     table_name = "prognoses"
                     logging.warning(
                         f"Er zijn geen meetdata van {weather_item} op "
@@ -924,12 +959,20 @@ class SolarPredictor(DaBase):
                     )
                 else:
                     table_name = "values"
-            df_item = self.db_da.get_column_data(
-                table_name, weather_item, start=start, end=end
+            item_series = self._read_weather_column(
+                table_name, weather_item, start, end
             )
-            if len(weather_data) == 0:
-                weather_data["utc"] = df_item["utc"]
-            weather_data[weather_item] = df_item["value"]
+            if prognose and prefer_measured:
+                measured = self._read_weather_column("values", weather_item, start, end)
+                item_series = measured.combine_first(item_series)
+            series_per_item[weather_item] = item_series
+
+        # samenvoegen op de utc-timestamp: de reeksen kunnen verschillende uren
+        # missen en mogen dus niet op rijpositie aan elkaar geplakt worden
+        weather_data = pd.DataFrame(series_per_item).sort_index()
+        if len(weather_data) == 0:
+            weather_data.index = weather_data.index.astype("int64")
+        weather_data.insert(0, "utc", weather_data.index)
         weather_data["utc"] = pd.to_datetime(weather_data["utc"], unit="s", utc=True)
         weather_data = weather_data.set_index(weather_data["utc"])
         weather_data = weather_data.rename(
@@ -1018,13 +1061,20 @@ class SolarPredictor(DaBase):
                     self.train_solar_option(weather_data, solar_option, start)
 
     def predict_solar_device(
-        self, solar_option: SolarConfig, start: dt.datetime, end: dt.datetime
+        self,
+        solar_option: SolarConfig,
+        start: dt.datetime,
+        end: dt.datetime,
+        prefer_measured: bool = False,
     ) -> pd.DataFrame:
         """
         berekent de voorspelling voor een pv-installatie
         :param solar_option: de configuratie van de installatie
         :param start: start-tijdstip voorspelling
         :param end: eind-tijdstip voorspelling
+        :param prefer_measured: boolean, True: per uur de gemeten straling
+            gebruiken als die aanwezig is en anders de prognose. Zie
+            get_weatherdata.
         :return: dataframe met berekende voorspellingen per uur
         """
 
@@ -1052,7 +1102,9 @@ class SolarPredictor(DaBase):
             "gr", latest=True, table_name="prognoses"
         )
         prognose = True  # latest_dt < end
-        weather_data = self.get_weatherdata(start, end, prognose=prognose)
+        weather_data = self.get_weatherdata(
+            start, end, prognose=prognose, prefer_measured=prefer_measured
+        )
         prediction = self.predict(weather_data)
         weather_data.reset_index(inplace=True)
         """
