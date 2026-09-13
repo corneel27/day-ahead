@@ -10,6 +10,8 @@ from . import _env  # noqa: F401  -- pins TZ=UTC before day_ahead is imported
 
 import io
 import logging
+import os
+import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,6 +36,9 @@ class ScenarioResult:
     objective: float | None = None
     checks: list[CheckResult] = field(default_factory=list)
     failures: list[str] = field(default_factory=list)
+    threads: int = 1
+    log_path: str | None = None
+    png_path: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -96,10 +101,39 @@ def _capture_root_log():
     return stop
 
 
-def run_scenario(scenario: Scenario) -> ScenarioResult:
+def _expected_png_path(module_dir: Path, start) -> Path:
+    """Where day_ahead.py's unconditional ``plt.savefig(...)`` (L5080-5081)
+    lands: a path relative to cwd, which day_ahead.py assumes is its own
+    directory (``dao/prog``) — the same assumption ``da_debug``'s own
+    capture/replay commands make. ``run_scenario`` chdirs there for the
+    duration of the solve when ``keep_png=True`` so this resolves correctly
+    regardless of where the caller invoked it from."""
+    return (module_dir / ".." / "data" / "images" / f"calc_{start.strftime('%Y-%m-%d__%H-%M')}.png").resolve()
+
+
+def run_scenario(
+    scenario: Scenario,
+    *,
+    threads: int = 1,
+    keep_png: bool = False,
+    report_dir: Path | None = None,
+) -> ScenarioResult:
+    """Solve one scenario hermetically.
+
+    ``threads`` is forwarded to ``ReplayIO`` (mip.Model.threads semantics:
+    ``-1`` = all cores). Default ``1`` for reproducibility; pass a different
+    value and compare the objective / log against a ``threads=1`` run to see
+    whether the two agree.
+
+    ``keep_png=True`` keeps day_ahead.py's dispatch chart (suppressed by
+    default) and, if ``report_dir`` is given, moves it to
+    ``<report_dir>/<id>.png``. ``report_dir`` also controls where the
+    combined Python + CBC log is written when the caller asks for it via
+    ``write_log`` on the CLI — see ``da_debug.cmd_scenario_run``.
+    """
     if scenario.skip:
         return ScenarioResult(scenario.id, scenario.description, STATUS_SKIP,
-                              failures=[scenario.skip_reason or "skip: true"])
+                              failures=[scenario.skip_reason or "skip: true"], threads=threads)
 
     from dao.prog import da_debug
 
@@ -109,21 +143,42 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
         solar_quarter_series(scenario)  # validate the solar array length up front
     except Exception as ex:  # noqa: BLE001 - reported, not swallowed
         return ScenarioResult(scenario.id, scenario.description, STATUS_ERROR,
-                              failures=[f"snapshot build failed: {ex}"])
+                              failures=[f"snapshot build failed: {ex}"], threads=threads)
 
     start = parse_start(scenario.start)
     stop_log = _capture_root_log()
     model = registry = None
     num_solutions = 0
+    cbc_log = ""
+    module_dir: Path | None = None
+    prev_cwd = Path.cwd()
     exc: BaseException | None = None
     try:
+        # _ensure_day_ahead_importable() puts dao/prog on sys.path, which
+        # day_ahead.py needs for its own bare `from utils import (...)`.
+        # DaCalc itself must come in via the *dotted* path, matching every
+        # da_debug command and _import_targets()'s own patch targets — a
+        # bare `import day_ahead` creates a second module object under a
+        # different sys.modules key, and ReplayIO's CBC-log-capture patch
+        # (installed on dao.prog.day_ahead) would silently miss it.
         da_debug._ensure_day_ahead_importable()
-        from day_ahead import DaCalc
+        from dao.prog.day_ahead import DaCalc
+        import dao.prog.day_ahead as day_ahead_module
+
+        # day_ahead.py's dispatch chart is written to a path relative to cwd
+        # ("../data/images/..."), on the assumption that cwd is its own
+        # directory (dao/prog) — the same assumption da_debug's own
+        # capture/replay --png makes. Only relevant (and only done) when a
+        # chart is actually being kept; every other write ReplayIO patches
+        # away regardless of cwd.
+        module_dir = Path(day_ahead_module.__file__).resolve().parent
+        if keep_png:
+            os.chdir(module_dir)
 
         tmp_opts = Path(tempfile.mkdtemp(prefix="dao-scenario-")) / "options.json"
         tmp_opts.write_text("{}")
 
-        with da_debug.ReplayIO(snapshot, solver_threads=1) as replay:
+        with da_debug.ReplayIO(snapshot, solver_threads=threads, png=keep_png) as replay:
             from dao.prog.da_base import DaBase
 
             replay._patches.set(
@@ -134,28 +189,60 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
             try:
                 dacalc.calc_optimum(_start_dt=start)
             except da_debug.SnapshotMiss as miss:
-                log_text = stop_log()
                 return ScenarioResult(
                     scenario.id, scenario.description, STATUS_ERROR,
                     failures=[f"replay hit a gap in the synthetic snapshot: {miss}"],
+                    threads=threads,
                 )
             model = replay._model
             registry = getattr(dacalc, "_debug_vars", None)
             num_solutions = model.num_solutions if model is not None else 0
+            result_dict = replay.build_result()  # after calc_optimum() returns, per its own docstring
+            cbc_log = (result_dict or {}).get("cbc_log") or ""
     except BaseException as ex:  # noqa: BLE001
         exc = ex
     finally:
+        if keep_png:
+            os.chdir(prev_cwd)
         log_text = stop_log()
 
     if exc is not None:
         return ScenarioResult(
             scenario.id, scenario.description, STATUS_ERROR,
-            failures=[f"solve raised {type(exc).__name__}: {exc}"],
+            failures=[f"solve raised {type(exc).__name__}: {exc}"], threads=threads,
         )
 
     objective = None
     if model is not None and num_solutions > 0:
         objective = model.objective_value
+
+    png_path = None
+    if keep_png and model is not None and module_dir is not None:
+        candidate = _expected_png_path(module_dir, start)
+        if candidate.exists():
+            if report_dir is not None:
+                report_dir.mkdir(parents=True, exist_ok=True)
+                dest = report_dir / f"{scenario.id}.png"
+                shutil.move(str(candidate), str(dest))
+                png_path = str(dest)
+            else:
+                png_path = str(candidate)
+
+    log_path = None
+    if report_dir is not None and (log_text or cbc_log):
+        report_dir.mkdir(parents=True, exist_ok=True)
+        dest = report_dir / f"{scenario.id}.log"
+        header = (
+            f"scenario {scenario.id}  threads={threads}  objective={objective}\n"
+            f"{'=' * 72}\n"
+        )
+        body = (
+            header
+            + "-- python log " + "-" * 58 + "\n" + log_text
+            + "\n-- cbc log " + "-" * 61 + "\n" + (cbc_log or "(not captured)")
+        )
+        dest.write_text(body)
+        log_path = str(dest)
 
     rc = ResultContext(model=model, registry=registry, log_text=log_text,
                        num_solutions=num_solutions)
@@ -165,9 +252,11 @@ def run_scenario(scenario: Scenario) -> ScenarioResult:
     if not solved.ok:
         return ScenarioResult(scenario.id, scenario.description, STATUS_INFEASIBLE,
                               objective=objective, checks=checks,
-                              failures=[f"[Tier A] solved: {solved.detail}"])
+                              failures=[f"[Tier A] solved: {solved.detail}"],
+                              threads=threads, log_path=log_path, png_path=png_path)
 
     failures = [f"[Tier A] {c.name}: {c.detail}" for c in checks if not c.ok]
     status = STATUS_PASS if not failures else STATUS_FAIL
     return ScenarioResult(scenario.id, scenario.description, status,
-                          objective=objective, checks=checks, failures=failures)
+                          objective=objective, checks=checks, failures=failures,
+                          threads=threads, log_path=log_path, png_path=png_path)

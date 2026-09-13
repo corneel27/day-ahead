@@ -3756,20 +3756,28 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
     except KeyError as ex:
         raise UsageError(str(ex)) from ex
 
+    report_dir = (data_dir / "scenario_reports") if (args.log or args.png) else None
+
     results = []
     for sc in selected:
-        r = run_scenario(sc)
+        r = run_scenario(sc, threads=args.threads, keep_png=args.png, report_dir=report_dir)
         results.append(r)
         if not getattr(args, "json", False):
             print(f"[{r.status}] {r.id}: {r.description}"
-                  + (f"   objective {r.objective:.6f}" if r.objective is not None else ""))
+                  + (f"   objective {r.objective:.6f}" if r.objective is not None else "")
+                  + (f"   threads={r.threads}" if r.threads != 1 else ""))
             for f in r.failures:
                 print(f"        - {f}")
+            if r.log_path:
+                print(f"        log: {r.log_path}")
+            if r.png_path:
+                print(f"        png: {r.png_path}")
 
     n_ok = sum(1 for r in results if r.status in (STATUS_PASS, STATUS_SKIP))
     data = {
         "results": [
             {"id": r.id, "status": r.status, "objective": r.objective,
+             "threads": r.threads, "log_path": r.log_path, "png_path": r.png_path,
              "failures": r.failures,
              "checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.checks]}
             for r in results
@@ -3971,6 +3979,28 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("scenario-run", parents=[common],
                        help="Build a synthetic snapshot per scenario, solve it hermetically, run the Tier A invariants.")
     p.add_argument("ids", nargs="*", help="scenario ids to run (default: all)")
+    p.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        metavar="N",
+        help="CBC thread count (mip.Model.threads semantics: -1 = all cores). "
+        "Default 1, for reproducibility. Run the same scenario twice with "
+        "different --threads and compare the objective / --log output to "
+        "see whether they agree.",
+    )
+    p.add_argument(
+        "--log",
+        action="store_true",
+        help="Write the captured Python + CBC log to "
+        "<data-dir>/scenario_reports/<id>.log and print its path.",
+    )
+    p.add_argument(
+        "--png",
+        action="store_true",
+        help="Keep day_ahead.py's dispatch chart (suppressed by default) "
+        "and move it to <data-dir>/scenario_reports/<id>.png.",
+    )
 
     return parser
 
