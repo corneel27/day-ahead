@@ -62,7 +62,7 @@ except ImportError:  # pragma: no cover - mip is a hard project dependency,
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 SCHEMA_MIN_SUPPORTED = 1
 
 REDACTED_SECRET = "<redacted:SecretStr>"
@@ -213,6 +213,31 @@ def _call_key(args: tuple, kwargs: dict) -> str:
     legitimately be invoked more than once with different arguments
     (``get_calculated_baseload(weekday)``, ``get_heatpump_run_hours(entity)``)."""
     return json.dumps([list(args), sorted(kwargs.items())], default=str, sort_keys=True)
+
+
+def _solar_mode_conflict(
+    recorded: bool | None, requested: bool, device: str | None
+) -> str | None:
+    """Reports a clash over the weather source behind a cached solar prediction.
+
+    ``predict_solar_device()`` results are cached per device name alone, which
+    is deliberate (see the recording wrapper), but ``prefer_measured`` selects
+    a different weather source for that same device: the measured irradiance
+    where it exists instead of the forecast. Two calls for one device that
+    disagree on the flag would silently share one cached result, so the clash
+    is reported rather than quietly resolved. Returns None when there is
+    nothing to report, which includes a snapshot predating the flag being
+    stored at all.
+    """
+    if recorded is None or bool(recorded) == bool(requested):
+        return None
+    return (
+        f"solar prediction for {device!r} is held with "
+        f"prefer_measured={bool(recorded)} but was asked for with "
+        f"prefer_measured={bool(requested)}; those are different weather "
+        f"sources and predictions are keyed per device name only, so both "
+        f"modes cannot share one snapshot"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -539,6 +564,7 @@ class RecordingIO:
         self._baseload: dict[str, list] = {}
         self._heatpump_run_hours: dict[str, float] = {}
         self._solar_predictions: dict[str, pd.DataFrame] = {}
+        self._solar_prediction_modes: dict[str, bool] = {}
         self._captured_at = dt.datetime.now()
         self._model = None  # last mip.Model.optimize() was called on
         self._cbc_log_chunks: list[str] = []
@@ -674,9 +700,6 @@ class RecordingIO:
         def _wrapped_predict_solar_device(
             instance, solar_option, start, end, prefer_measured=False
         ):
-            result = original_predict_solar_device(
-                instance, solar_option, start, end, prefer_measured=prefer_measured
-            )
             # Keyed by device name only, not (start, end): those two are
             # themselves derived from calc_optimum()'s own internal
             # dt.datetime.now() call, which fires strictly later than (and
@@ -687,7 +710,24 @@ class RecordingIO:
             # per snapshot anyway, so the name alone is both sufficient
             # and immune to that drift. Found by an actual capture/replay
             # round trip against a live config, not by reasoning about it.
-            key = _call_key((getattr(solar_option, "name", None),), {})
+            #
+            # prefer_measured is left out of that key as well, but unlike
+            # (start, end) it changes the answer, so a second call that
+            # disagrees with the first is refused instead of overwriting it.
+            # Only calc_optimum() is ever captured today and it leaves the
+            # flag False throughout, so this fires if the report path, the
+            # one caller passing True, is ever brought under capture.
+            device_name = getattr(solar_option, "name", None)
+            key = _call_key((device_name,), {})
+            conflict = _solar_mode_conflict(
+                self._solar_prediction_modes.get(key), prefer_measured, device_name
+            )
+            if conflict is not None:
+                raise RuntimeError(f"RecordingIO: {conflict}")
+            result = original_predict_solar_device(
+                instance, solar_option, start, end, prefer_measured=prefer_measured
+            )
+            self._solar_prediction_modes[key] = bool(prefer_measured)
             self._solar_predictions[key] = result
             return result
 
@@ -782,6 +822,7 @@ class RecordingIO:
             "solar_predictions": {
                 key: _dataframe_to_payload(df) for key, df in self._solar_predictions.items()
             },
+            "solar_prediction_modes": self._solar_prediction_modes,
             "config": sanitized_config,
         }
 
@@ -938,6 +979,11 @@ class ReplayIO:
             key: _dataframe_from_payload(payload)
             for key, payload in self._snapshot.get("solar_predictions", {}).items()
         }
+        # absent in snapshots captured before the mode was recorded; the
+        # guard below treats a missing entry as nothing to check
+        self._solar_prediction_modes: dict[str, bool] = self._snapshot.get(
+            "solar_prediction_modes", {}
+        )
         self._ha_context = self._snapshot.get("ha_context")
         self._config_dict = self._snapshot.get("config")
 
@@ -1094,14 +1140,22 @@ class ReplayIO:
             instance, solar_option, start, end, prefer_measured=False
         ):
             # Keyed by device name only — see the matching comment on the
-            # RecordingIO side for why (start, end) is deliberately excluded.
-            key = _call_key((getattr(solar_option, "name", None),), {})
+            # RecordingIO side for why (start, end) is deliberately excluded,
+            # and why a disagreement over prefer_measured is refused instead
+            # of being served from the single cached result.
+            device_name = getattr(solar_option, "name", None)
+            key = _call_key((device_name,), {})
             if key not in self._solar_predictions:
                 raise SnapshotMiss(
                     f"ReplayIO ({self._source}): predict_solar_device for "
-                    f"{getattr(solar_option, 'name', '?')!r} is not present "
-                    f"in the snapshot (looked up as key {key})."
+                    f"{device_name or '?'!r} is not present in the snapshot "
+                    f"(looked up as key {key})."
                 )
+            conflict = _solar_mode_conflict(
+                self._solar_prediction_modes.get(key), prefer_measured, device_name
+            )
+            if conflict is not None:
+                raise SnapshotMiss(f"ReplayIO ({self._source}): {conflict}")
             return self._solar_predictions[key].copy()
 
         self._patches.set(SolarPredictor, "predict_solar_device", _replay_predict_solar_device)
@@ -3616,8 +3670,20 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         if any(e["label"] == "used_bin" for e in dangling["B"]):
             raise AssertionError("false positive: used_bin is referenced in a constraint")
 
+    # Controleert dat de guard op prefer_measured afgaat bij een botsing en
+    # zwijgt bij een gelijke of nog onbekende modus.
+    def _solar_mode_conflict_guard():
+        if _solar_mode_conflict(None, True, "Zuid") is not None:
+            raise AssertionError("an unrecorded mode must not be reported")
+        if _solar_mode_conflict(False, False, "Zuid") is not None:
+            raise AssertionError("an equal mode must not be reported")
+        message = _solar_mode_conflict(False, True, "Zuid")
+        if message is None or "Zuid" not in message:
+            raise AssertionError("a differing mode must be reported, naming the device")
+
     for name, fn in [
         ("dataframe_roundtrip", _dataframe_roundtrip),
+        ("solar_mode_conflict_guard", _solar_mode_conflict_guard),
         ("call_key_stability", _call_key_stability),
         ("config_hash_determinism", _config_hash_determinism),
         ("secret_leak_gate", _secret_leak_gate),
