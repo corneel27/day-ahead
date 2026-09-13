@@ -19,6 +19,7 @@ dao/data/*.csv
 /.ruff.toml-*.tmp
 .ruff_cache/
 .pytest_cache/
+venv/
 dao/data/options_unversioned.json
 dao/pred/data/da_prediction.pkl
 dao/data/options_new.json
