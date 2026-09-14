@@ -40,6 +40,11 @@ on:
 permissions:
   contents: read
 
+# Never prepare two releases of the same branch at the same time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
 
   bump:
@@ -94,10 +99,27 @@ jobs:
             APP_DIR="release-testing"
           fi
 
-          if gh release view "${VERSION}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-            echo "::error::A release '${VERSION}' already exists"
-            exit 1
-          fi
+          # Only a confirmed 404 means the version is still free: a failed
+          # lookup must not be read as "no such release"
+          HTTP_CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --retry 3 --retry-all-errors \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/releases/tags/${VERSION}" || true)
+
+          case "${HTTP_CODE}" in
+            404)
+              ;;
+            200)
+              echo "::error::A release '${VERSION}' already exists"
+              exit 1
+              ;;
+            *)
+              echo "::error::Could not check whether a release '${VERSION}' already exists (HTTP ${HTTP_CODE:-none})"
+              exit 1
+              ;;
+          esac
 
           echo "Version: ${VERSION}"
           echo "Channel: ${CHANNEL} (${APP_DIR})"
@@ -186,13 +208,24 @@ jobs:
           else
             git commit -m "${VERSION}"
             for DELAY in 2 4 8 16 0; do
-              git push origin "HEAD:${GITHUB_REF_NAME}" && break
+              if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                break
+              fi
               if [[ "${DELAY}" == "0" ]]; then
                 echo "::error::Could not push the version bump"
                 exit 1
               fi
               echo "Push failed, retrying in ${DELAY}s"
               sleep "${DELAY}"
+
+              # The branch may have moved on meanwhile, in which case every
+              # retry would be rejected again: replay the bump on top of it
+              git fetch origin "${GITHUB_REF_NAME}"
+              if ! git rebase FETCH_HEAD; then
+                git rebase --abort || true
+                echo "::error::${GITHUB_REF_NAME} changed and the version bump does not apply on top of it"
+                exit 1
+              fi
             done
           fi
 
