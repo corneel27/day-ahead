@@ -23,6 +23,7 @@ from utils import (
     calc_uur_index,
     error_handling,
     calc_adjustment_heatcurve,
+    power_weighted_efficiency,
 )
 import logging
 from dao.prog.da_base import DaBase
@@ -614,10 +615,16 @@ class DaCalc(DaBase):
 
             # DS is aantal discharge stages
             DS.append(len(discharge_stages[b]))
-            sum_eff = 0
-            for ds in range(DS[b])[1:]:
-                sum_eff += discharge_stages[b][ds]["efficiency"]
-            avg_eff_dc_to_ac.append(sum_eff / (DS[b] - 1))
+            # Used only to value the energy still stored at the end of the
+            # optimization horizon; within the horizon every discharge is costed
+            # at the efficiency of the stage actually selected. Weighted over the
+            # power axis so that adding or removing rows from "discharge stages"
+            # does not change the valuation of a battery that has not changed.
+            avg_eff_dc_to_ac.append(power_weighted_efficiency(discharge_stages[b]))
+            logging.debug(
+                f"average dc->ac efficiency: {avg_eff_dc_to_ac[b]:.4f} "
+                f"(power weighted over {DS[b] - 1} discharge stages)"
+            )
 
             ac = float(self.battery_options[b].capacity)
             one_soc.append(ac / 100)  # 1% van 28 kWh = 0,28 kWh
