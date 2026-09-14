@@ -1,0 +1,225 @@
+name: Prepare release
+
+# Single place where a version number is typed. It writes the version into the
+# add-on's config.yaml, opens a new CHANGELOG.md section for it, commits that to
+# the branch it was started from and hands the version to the workflow that
+# creates the (draft) release. Publishing that release triggers "Build and
+# publish", which reads the version back from config.yaml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 2026.9.2 or 2026.9.2.rc1"
+        required: true
+        type: string
+      channel:
+        description: "Add-on to bump (auto: testing for an rc version, stable otherwise)"
+        required: false
+        default: auto
+        type: choice
+        options:
+          - auto
+          - stable
+          - testing
+      changelog:
+        description: "Changelog entries, one per line ('- ' is added when missing)"
+        required: false
+        type: string
+      update_changelog:
+        description: "Open a section for this version in CHANGELOG.md"
+        required: false
+        default: true
+        type: boolean
+      create_release:
+        description: "Create the draft release once the version bump is committed"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+
+  bump:
+    name: Bump version
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      channel: ${{ steps.resolve.outputs.channel }}
+      commit: ${{ steps.commit.outputs.commit }}
+
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Resolve version and channel
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
+        run: |
+          VERSION="${INPUT_VERSION#v}"
+          VERSION="${VERSION// /}"
+
+          if [[ ! "${VERSION}" =~ ^[0-9]{4}\.[0-9]{1,2}\.[0-9]+(\.rc[0-9]*)?$ ]]; then
+            echo "::error::'${VERSION}' is not a valid version (expected 2026.9.2 or 2026.9.2.rc1)"
+            exit 1
+          fi
+
+          CHANNEL="${INPUT_CHANNEL:-auto}"
+          if [[ "${CHANNEL}" == "auto" ]]; then
+            if [[ "${VERSION}" == *rc* ]]; then
+              CHANNEL="testing"
+            else
+              CHANNEL="stable"
+            fi
+          fi
+
+          if [[ "${CHANNEL}" == "stable" ]]; then
+            APP_DIR="dao"
+            if [[ "${VERSION}" == *rc* ]]; then
+              echo "::error::'${VERSION}' is a release candidate, it cannot be released as stable"
+              exit 1
+            fi
+          else
+            APP_DIR="release-testing"
+          fi
+
+          if gh release view "${VERSION}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "::error::A release '${VERSION}' already exists"
+            exit 1
+          fi
+
+          echo "Version: ${VERSION}"
+          echo "Channel: ${CHANNEL} (${APP_DIR})"
+
+          {
+            echo "version=${VERSION}"
+            echo "channel=${CHANNEL}"
+            echo "app_dir=${APP_DIR}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Write version into config.yaml
+        shell: bash
+        env:
+          APP_DIR: ${{ steps.resolve.outputs.app_dir }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          CURRENT=$(grep '^version:' "${APP_DIR}/config.yaml" | awk '{print $2}')
+          if [[ "${CURRENT}" == "${VERSION}" ]]; then
+            echo "${APP_DIR}/config.yaml is already at ${VERSION}"
+          else
+            sed -i -E "s|^version:.*|version: ${VERSION}|" "${APP_DIR}/config.yaml"
+            echo "${APP_DIR}/config.yaml: ${CURRENT} -> ${VERSION}"
+          fi
+
+      - name: Open CHANGELOG.md section
+        if: inputs.update_changelog
+        shell: bash
+        env:
+          APP_DIR: ${{ steps.resolve.outputs.app_dir }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+          ENTRIES: ${{ inputs.changelog }}
+        run: |
+          CHANGELOG="${APP_DIR}/CHANGELOG.md"
+
+          if grep -qx "# ${VERSION}" "${CHANGELOG}"; then
+            echo "${CHANGELOG} already has a section for ${VERSION}"
+            exit 0
+          fi
+
+          SECTION="$(mktemp)"
+          {
+            echo "# ${VERSION}"
+            while IFS= read -r LINE; do
+              LINE="${LINE%$'\r'}"
+              [[ -z "${LINE//[[:space:]]/}" ]] && continue
+              if [[ "${LINE}" == -* || "${LINE}" == \#* ]]; then
+                echo "${LINE}"
+              else
+                echo "- ${LINE}"
+              fi
+            done <<< "${ENTRIES}"
+          } > "${SECTION}"
+
+          # Insert above the section of the previous version, keeping the
+          # "# Changelog ..." header lines on top.
+          INSERT_AT=$(grep -n -m1 '^# [0-9]' "${CHANGELOG}" | cut -d: -f1)
+          if [[ -z "${INSERT_AT}" ]]; then
+            INSERT_AT=$(( $(wc -l < "${CHANGELOG}") + 1 ))
+          fi
+
+          {
+            head -n "$(( INSERT_AT - 1 ))" "${CHANGELOG}"
+            cat "${SECTION}"
+            echo ""
+            tail -n "+${INSERT_AT}" "${CHANGELOG}"
+          } > "${CHANGELOG}.new"
+
+          mv "${CHANGELOG}.new" "${CHANGELOG}"
+          echo "Added to ${CHANGELOG}:"
+          cat "${SECTION}"
+
+      - name: Commit and push
+        id: commit
+        shell: bash
+        env:
+          APP_DIR: ${{ steps.resolve.outputs.app_dir }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add "${APP_DIR}/config.yaml" "${APP_DIR}/CHANGELOG.md"
+
+          if git diff --cached --quiet; then
+            echo "Nothing to commit, ${VERSION} is already in place"
+          else
+            git commit -m "${VERSION}"
+            for DELAY in 2 4 8 16 0; do
+              git push origin "HEAD:${GITHUB_REF_NAME}" && break
+              if [[ "${DELAY}" == "0" ]]; then
+                echo "::error::Could not push the version bump"
+                exit 1
+              fi
+              echo "Push failed, retrying in ${DELAY}s"
+              sleep "${DELAY}"
+            done
+          fi
+
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  stable-release:
+    name: Create stable release
+    needs: bump
+    if: inputs.create_release && needs.bump.outputs.channel == 'stable'
+
+    permissions:
+      contents: write
+
+    uses: ./.github/workflows/create_new_stable.yaml
+    with:
+      version: ${{ needs.bump.outputs.version }}
+      target: ${{ needs.bump.outputs.commit }}
+
+  testing-release:
+    name: Create testing release
+    needs: bump
+    if: inputs.create_release && needs.bump.outputs.channel == 'testing'
+
+    permissions:
+      contents: write
+
+    uses: ./.github/workflows/create_new_testing.yaml
+    with:
+      version: ${{ needs.bump.outputs.version }}
+      target: ${{ needs.bump.outputs.commit }}
