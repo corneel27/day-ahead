@@ -88,6 +88,12 @@ class ConfigurationLoader:
         logger.info(f"Loaded {len(self._secrets)} secrets from {self.secrets_path}")
         return self._secrets
 
+    @staticmethod
+    def _needs_migration(config_data: dict[str, Any]) -> bool:
+        """True when this configuration is older than CURRENT_VERSION."""
+        config_version = config_data.get("config_version")
+        return config_version is None or config_version < CURRENT_VERSION
+
     def _load_and_migrate(self) -> dict[str, Any]:
         """
         Load configuration and apply migrations if needed.
@@ -95,55 +101,81 @@ class ConfigurationLoader:
         Returns:
             Migrated configuration (not yet validated with Pydantic)
         """
-        with open(self.config_path, "r+") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        # Alleen-lezen openen. Openen om te schrijven meldt inotify namelijk als
+        # IN_CLOSE_WRITE zodra het bestand wordt gesloten, ook als er niets is
+        # geschreven. watchdog.sh bewaakt options.json en zou dan na iedere
+        # *lezing* van de configuratie de scheduler herstarten en gunicorn
+        # herladen, waarna die de configuratie weer lezen: een eindeloze lus.
+        # Alleen een migratie schrijft echt en opent het bestand daarvoor apart.
+        with open(self.config_path, "r", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
 
             # Load raw config
             config_data = json.load(f)
 
-            # Store original for unknown key preservation
+        # Store original for unknown key preservation
+        self._raw_options = config_data.copy()
+
+        if not self._needs_migration(config_data):
+            logger.debug("Configuration is up to date, no migration needed")
+            return config_data
+
+        return self._migrate_on_disk()
+
+    def _migrate_on_disk(self) -> dict[str, Any]:
+        """
+        Migrate the configuration file to CURRENT_VERSION and write it back.
+
+        The file is reopened for writing under an exclusive lock and read once
+        more under that lock: another process may have migrated it in the
+        meantime, and migrating an already migrated configuration would
+        overwrite it with a backup of the wrong version.
+
+        Returns:
+            Migrated configuration (not yet validated with Pydantic)
+        """
+        with open(self.config_path, "r+", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+
+            config_data = json.load(f)
             self._raw_options = config_data.copy()
 
-            # Check if migration needed
+            if not self._needs_migration(config_data):
+                logger.debug("Configuration was already migrated by another process")
+                return config_data
+
             config_version = config_data.get("config_version")
+            from_ver = (
+                "unversioned" if config_version is None else f"v{config_version}"
+            )
+            logger.info(
+                f"Configuration needs migration from {from_ver} to v{CURRENT_VERSION}"
+            )
 
-            if config_version is None or config_version < CURRENT_VERSION:
-                from_ver = (
-                    "unversioned" if config_version is None else f"v{config_version}"
-                )
-                logger.info(
-                    f"Configuration needs migration from {from_ver} to v{CURRENT_VERSION}"
-                )
+            # Save backup before migration
+            backup_path = self.config_path.parent / f"options_{from_ver}.json"
+            shutil.copy2(self.config_path, backup_path)
+            logger.info(f"Saved backup configuration to {backup_path}")
 
-                # Save backup before migration
-                backup_path = self.config_path.parent / f"options_{from_ver}.json"
-                shutil.copy2(self.config_path, backup_path)
-                logger.info(f"Saved backup configuration to {backup_path}")
+            migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
 
-                migrated_data = migrate_config(
-                    config_data, target_version=CURRENT_VERSION
-                )
+            # Get the model class for current version
+            version = migrated_data.get("config_version", CURRENT_VERSION)
+            model_class = VERSION_MODELS[version]
 
-                # Get the model class for current version
-                version = migrated_data.get("config_version", CURRENT_VERSION)
-                model_class = VERSION_MODELS[version]
+            # Create model instance and dump to dict for saving
+            model = model_class(**migrated_data)
+            save_data = model.model_dump(mode="json", exclude_none=True)
 
-                # Create model instance and dump to dict for saving
-                model = model_class(**migrated_data)
-                save_data = model.model_dump(mode="json", exclude_none=True)
+            # Update raw options with dumped version
+            self._raw_options = save_data.copy()
 
-                # Update raw options with dumped version
-                self._raw_options = save_data.copy()
-
-                # Save migrated config back to disk
-                f.seek(0)
-                f.truncate(0)
-                json.dump(save_data, f, indent=2, ensure_ascii=False)
-                f.flush()
-                logger.info(f"Saved migrated configuration to {self.config_path}")
-            else:
-                logger.debug("Configuration is up to date, no migration needed")
-                migrated_data = config_data
+            # Save migrated config back to disk
+            f.seek(0)
+            f.truncate(0)
+            json.dump(save_data, f, indent=2, ensure_ascii=False)
+            f.flush()
+            logger.info(f"Saved migrated configuration to {self.config_path}")
 
             return migrated_data
 
