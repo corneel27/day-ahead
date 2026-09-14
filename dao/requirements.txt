@@ -25,7 +25,7 @@ cryptography~=50.0.1
 tzlocal~=5.4.4
 cbcbox==2.929
 mip==1.17.6
-scikit-learn~=1.9.0
+scikit-learn~=1.9.1
 xgboost~=3.4.1
 scipy~=1.18.1
 joblib~=1.6.0
