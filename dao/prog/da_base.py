@@ -8,8 +8,10 @@ import pytz
 import warnings
 from dataclasses import dataclass
 from requests import get
+from requests.exceptions import RequestException
 import json
 import hassapi as hass
+from hassapi.exceptions import HassapiBaseException
 import pandas as pd
 from subprocess import PIPE, run
 import logging
@@ -29,6 +31,57 @@ from dao.prog.utils import interpolate
 # from db_manager import DBmanagerObj
 from typing import Union
 from hassapi.models import StateList
+
+
+# Home Assistant is not always available when a run is started: right after a
+# reboot of the host the supervisor answers every call to /core/api/ with
+# "502 Bad Gateway" until Home Assistant Core has finished starting.  Because
+# hassapi checks that the API is alive from its constructor, a single hiccup
+# used to abort the whole run with a bare traceback.  Retry for a few minutes
+# instead, and fail with a message that says what is actually wrong.
+HA_API_MAX_ATTEMPTS = 10
+HA_API_RETRY_BACKOFF_S = 5
+HA_API_RETRY_MAX_WAIT_S = 30
+HA_API_TIMEOUT_S = 10
+
+
+class HomeAssistantUnavailable(Exception):
+    """Raised when the Home Assistant API cannot be reached (yet)."""
+
+
+def retry_ha_api(description: str, func):
+    """Call ``func``, retrying while the Home Assistant API is unreachable.
+
+    Returns whatever ``func`` returns.  Raises RuntimeError when Home
+    Assistant stays unreachable for all attempts.
+    """
+    last_error = None
+    for attempt in range(1, HA_API_MAX_ATTEMPTS + 1):
+        try:
+            return func()
+        except (
+            HassapiBaseException,
+            RequestException,
+            HomeAssistantUnavailable,
+        ) as err:
+            last_error = err
+            if attempt == HA_API_MAX_ATTEMPTS:
+                break
+            wait = min(HA_API_RETRY_BACKOFF_S * attempt, HA_API_RETRY_MAX_WAIT_S)
+            logging.warning(
+                f"Could not {description}: {err}. "
+                f"Retrying in {wait} s "
+                f"(attempt {attempt + 1} of {HA_API_MAX_ATTEMPTS})."
+            )
+            time.sleep(wait)
+    raise RuntimeError(
+        f"Could not {description} after {HA_API_MAX_ATTEMPTS} attempts: "
+        f"{last_error}. Home Assistant is not reachable. A 502 is returned by "
+        f"the Home Assistant supervisor, not by this add-on: it means the "
+        f"supervisor cannot reach Home Assistant Core. Check that Home "
+        f"Assistant Core is running and look for "
+        f"'supervisor.api.proxy' errors in the supervisor log."
+    ) from last_error
 
 
 @dataclass
@@ -149,19 +202,65 @@ class DaBase(hass.Hass):
         else:
             self.hasstoken = _tok.resolve(self.loader.secrets)
 
-        super().__init__(hassurl=self.hassurl, token=self.hasstoken, timeout=10)
+        if not self.hasstoken:
+            raise RuntimeError(
+                "No Home Assistant token available: set 'token' in the "
+                "homeassistant section of options.json, or run as an add-on so "
+                "that SUPERVISOR_TOKEN is provided."
+            )
+
+        def connect_ha():
+            super(DaBase, self).__init__(
+                hassurl=self.hassurl,
+                token=self.hasstoken,
+                timeout=HA_API_TIMEOUT_S,
+            )
+
+        retry_ha_api(f"connect to the Home Assistant API at {self.hassurl}", connect_ha)
+
         headers = {
             "Authorization": "Bearer " + self.hasstoken,
             "content-type": "application/json",
         }
-        resp = get(self.hassurl + "api/config", headers=headers)
-        resp_dict = json.loads(resp.text)
-        logging.debug(f"hass/api/config: {resp.text}")
+
+        def fetch_ha_config():
+            resp = get(
+                self.hassurl + "api/config",
+                headers=headers,
+                timeout=HA_API_TIMEOUT_S,
+            )
+            if not resp.ok:
+                raise HomeAssistantUnavailable(
+                    f"{resp.status_code} status code returned from {resp.url}"
+                )
+            try:
+                config = resp.json()
+            except json.JSONDecodeError as err:
+                raise HomeAssistantUnavailable(
+                    f"no JSON returned from {resp.url}: {resp.text[:200]}"
+                ) from err
+            missing = [
+                key
+                for key in ("latitude", "longitude", "time_zone")
+                if config.get(key) is None
+            ]
+            if missing:
+                raise HomeAssistantUnavailable(
+                    f"incomplete configuration returned from {resp.url}, "
+                    f"missing: {', '.join(missing)}"
+                )
+            return config
+
+        resp_dict = retry_ha_api(
+            f"read the Home Assistant configuration from {self.hassurl}api/config",
+            fetch_ha_config,
+        )
+        logging.debug(f"hass/api/config: {resp_dict}")
         self.ha_context = HAContext(
             latitude=resp_dict["latitude"],
             longitude=resp_dict["longitude"],
             time_zone=resp_dict["time_zone"],
-            country=resp_dict["country"] or "NL",
+            country=resp_dict.get("country") or "NL",
         )
         self.time_zone = self.ha_context.time_zone
         self.meteo = Meteo(
