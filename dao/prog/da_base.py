@@ -11,7 +11,15 @@ from requests import get
 from requests.exceptions import RequestException
 import json
 import hassapi as hass
-from hassapi.exceptions import HassapiBaseException
+from hassapi.exceptions import (
+    BadRequest,
+    Forbidden,
+    HassapiBaseException,
+    MethodNotAllowed,
+    NotFound,
+    Unauthorised,
+    get_error,
+)
 import pandas as pd
 from subprocess import PIPE, run
 import logging
@@ -44,21 +52,52 @@ HA_API_RETRY_BACKOFF_S = 5
 HA_API_RETRY_MAX_WAIT_S = 30
 HA_API_TIMEOUT_S = 10
 
+# hassapi maps every HTTP status onto one of its own exception classes.  Only
+# availability problems are worth retrying: the supervisor answers 401 when it
+# rejects the add-on token or homeassistant_api is not granted, and 403/404 for
+# a denied or unknown path.  Waiting does not heal any of those, so they fail
+# immediately with a message pointing at the token instead of at Core.  Note
+# that hassapi also raises the *base* ClientError (not one of these subclasses)
+# when it cannot connect at all, which is retried.
+HA_API_PERMANENT_ERRORS = (
+    BadRequest,
+    Unauthorised,
+    Forbidden,
+    NotFound,
+    MethodNotAllowed,
+)
+
 
 class HomeAssistantUnavailable(Exception):
-    """Raised when the Home Assistant API cannot be reached (yet)."""
+    """Raised when Home Assistant returns a response that cannot be used.
+
+    Covers a malformed or incomplete body.  An HTTP error status is reported
+    through the matching hassapi exception instead, so that permanent and
+    temporary failures stay distinguishable.
+    """
 
 
 def retry_ha_api(description: str, func):
-    """Call ``func``, retrying while the Home Assistant API is unreachable.
+    """Call ``func``, retrying while the Home Assistant API is unavailable.
 
     Returns whatever ``func`` returns.  Raises RuntimeError when Home
-    Assistant stays unreachable for all attempts.
+    Assistant stays unavailable for all attempts, and immediately - without
+    retrying - for a failure that waiting cannot fix, see
+    HA_API_PERMANENT_ERRORS.
     """
     last_error = None
     for attempt in range(1, HA_API_MAX_ATTEMPTS + 1):
         try:
             return func()
+        except HA_API_PERMANENT_ERRORS as err:
+            raise RuntimeError(
+                f"Could not {description}: {err}. This does not get better by "
+                f"waiting, so no retries were made. Running as an add-on, this "
+                f"status comes from the Home Assistant supervisor: check that "
+                f"'homeassistant_api: true' is present in config.yaml. When a "
+                f"token is set in the homeassistant section of options.json, "
+                f"check that it is valid for the host that is configured."
+            ) from err
         except (
             HassapiBaseException,
             RequestException,
@@ -230,7 +269,9 @@ class DaBase(hass.Hass):
                 timeout=HA_API_TIMEOUT_S,
             )
             if not resp.ok:
-                raise HomeAssistantUnavailable(
+                # Raise the same class hassapi would, so that retry_ha_api
+                # applies one classification to both calls.
+                raise get_error(resp.status_code)(
                     f"{resp.status_code} status code returned from {resp.url}"
                 )
             try:
@@ -239,6 +280,11 @@ class DaBase(hass.Hass):
                 raise HomeAssistantUnavailable(
                     f"no JSON returned from {resp.url}: {resp.text[:200]}"
                 ) from err
+            if not isinstance(config, dict):
+                raise HomeAssistantUnavailable(
+                    f"no JSON object returned from {resp.url}, "
+                    f"got {type(config).__name__}: {resp.text[:200]}"
+                )
             missing = [
                 key
                 for key in ("latitude", "longitude", "time_zone")
