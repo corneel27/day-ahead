@@ -11,10 +11,23 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-# S1 supports only these expectation keys. The runner rejects anything else
-# so a typo (or an assertion that belongs to a later session) fails loudly
-# at load time instead of being silently ignored.
-KNOWN_EXPECT_KEYS_S1 = {"solved"}
+# The full set of supported expectation keys. The loader rejects anything
+# else so a typo fails loudly at load time instead of being silently ignored.
+KNOWN_EXPECT_KEYS = {
+    "solved",
+    "objective_within_baseline",
+    "scheduled",
+    "other_scheduled",
+    "reason_contains",
+    "partial_at_least",
+    "min_duty_guard",
+    "wished_level_clipped",
+    "battery_charges_during",
+    "battery_discharges_during",
+    "battery_flat_during",
+    "heatpump_runs",
+    "machine_runs_in_window",
+}
 
 
 @dataclass
@@ -45,6 +58,15 @@ class Scenario:
     states: dict[str, Any] = field(default_factory=dict)
     # dotted config path -> value (applied to the sanitised options_example config)
     config_patch: dict[str, Any] = field(default_factory=dict)
+
+    # which committed base config to build on: "options_example" (default,
+    # one EV) or "options_2ev" (adds a second EV, two-car cases only). See
+    # base_config.py.
+    options: str | None = None
+    # EV sugar: target/other car HA-state overrides + ready-time,
+    # expanded by scenarios/ev.py into `states` + `config_patch` at build
+    # time. None when the scenario has no EV of interest.
+    ev: dict[str, Any] | None = None
 
     expect: dict[str, Any] = field(default_factory=dict)
 

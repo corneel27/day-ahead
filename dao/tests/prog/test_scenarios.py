@@ -92,7 +92,7 @@ def test_loader_accepts_a_minimal_scenario():
 @pytest.mark.parametrize("bad, needle", [
     ({"id": "x", "description": "d", "start": "2026-01-14 07:00"}, "prices"),
     ({"id": "x", "description": "d", "start": "2026-01-14 07:00",
-      "prices": {"cons": [0.3, 0.3]}, "expect": {"scheduled": True}}, "expect key"),
+      "prices": {"cons": [0.3, 0.3]}, "expect": {"bogus_key": True}}, "expect key"),
     ({"id": "x", "description": "d", "start": "2026-01-14 07:07",
       "prices": {"cons": [0.3, 0.3]}}, "15-minute"),
     ({"id": "x", "description": "d", "start": "2026-01-14 07:00",

@@ -3644,7 +3644,8 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 # ---------------------------------------------------------------------------
-# scenario suite (dao_scenario_suite_plan.md) — S1: list / show / validate / run
+# scenario suite: list / show / validate / run / bless the declarative
+# scenario corpus in dao/prog/scenarios/cases/.
 # ---------------------------------------------------------------------------
 #
 # The runner and the synthetic-snapshot builder live in dao/prog/scenarios/;
@@ -3694,6 +3695,7 @@ def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
         if dd["prices_prod"] is not None:
             print(f"  prices.prod {dd['prices_prod']}")
         print(f"  solar      {dd['solar'] if dd['solar'] is not None else '(none — all zero)'}")
+        print(f"  options    {dd['options'] or 'options_example (default)'}")
         if dd["states"]:
             print("  states")
             for k, v in dd["states"].items():
@@ -3702,6 +3704,8 @@ def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
             print("  config_patch")
             for k, v in dd["config_patch"].items():
                 print(f"    {k} = {v}")
+        if dd["ev"]:
+            print(f"  ev         {dd['ev']}")
         print(f"  expect     {dd['expect']}  (+ the Tier A invariants, always)")
 
     _emit(args, d, render)
@@ -3725,9 +3729,15 @@ def cmd_scenario_validate(args: argparse.Namespace, data_dir: Path) -> int:
         n_states = 0
     try:
         from dao.prog.scenarios.base_config import base_config
-        base_config()
+        base_config("options_example")
     except Exception as ex:  # noqa: BLE001
         problems.append(f"options_example config does not load: {ex}")
+    if any(sc.options == "options_2ev" for sc in loaded):
+        try:
+            from dao.prog.scenarios.base_config import base_config
+            base_config("options_2ev")
+        except Exception as ex:  # noqa: BLE001
+            problems.append(f"options_2ev config does not load: {ex}")
 
     data = {
         "scenarios": len(loaded),
@@ -3756,7 +3766,7 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
     except KeyError as ex:
         raise UsageError(str(ex)) from ex
 
-    report_dir = (data_dir / "scenario_reports") if (args.log or args.png) else None
+    report_dir = (data_dir / "scenario_reports") if (args.log or args.png or args.report) else None
 
     results = []
     for sc in selected:
@@ -3774,6 +3784,16 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
                 print(f"        png: {r.png_path}")
 
     n_ok = sum(1 for r in results if r.status in (STATUS_PASS, STATUS_SKIP))
+
+    report_paths = None
+    if args.report:
+        from dao.prog.scenarios.reporting import write_reports
+
+        md_path, csv_path = write_reports(results, report_dir)
+        report_paths = {"md": str(md_path), "csv": str(csv_path)}
+        if not getattr(args, "json", False):
+            print(f"\nreport: {md_path}\nreport: {csv_path}")
+
     data = {
         "results": [
             {"id": r.id, "status": r.status, "objective": r.objective,
@@ -3784,6 +3804,7 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
         ],
         "passed": n_ok,
         "total": len(results),
+        "report_paths": report_paths,
     }
 
     def render(d):
@@ -3794,6 +3815,46 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
 
     _emit(args, data, render)
     return EXIT_OK if n_ok == len(results) else EXIT_ASSERTION_FAILED
+
+
+def cmd_scenario_bless(args: argparse.Namespace, data_dir: Path) -> int:
+    """Write (or overwrite) the Tier B baseline for each given scenario id —
+    explicit, and never done implicitly by a plain `scenario-run`. Refuses
+    to bless a scenario that doesn't currently PASS, so a broken baseline
+    can't be committed by accident."""
+    scenarios = _scenario_pkg()
+    from dao.prog.scenarios import baseline
+    from dao.prog.scenarios.runner import STATUS_PASS, run_scenario
+
+    try:
+        selected = scenarios.load(args.ids)
+    except KeyError as ex:
+        raise UsageError(str(ex)) from ex
+
+    rows = []
+    for sc in selected:
+        r = run_scenario(sc, threads=args.threads)
+        if r.status != STATUS_PASS:
+            rows.append({"id": sc.id, "blessed": False, "objective": r.objective,
+                         "reason": f"{r.status}: not blessing a non-passing scenario"})
+            continue
+        if r.objective is None:
+            rows.append({"id": sc.id, "blessed": False, "objective": None,
+                         "reason": "solve produced no objective"})
+            continue
+        path = baseline.write_baseline(sc.id, r.objective)
+        rows.append({"id": sc.id, "blessed": True, "objective": r.objective, "path": str(path)})
+
+    def render(d):
+        for row in d["rows"]:
+            if row["blessed"]:
+                print(f"blessed {row['id']}: objective {row['objective']:.6f} -> {row['path']}")
+            else:
+                print(f"NOT blessed {row['id']}: {row['reason']}")
+
+    n_ok = sum(1 for row in rows if row["blessed"])
+    _emit(args, {"rows": rows}, render)
+    return EXIT_OK if n_ok == len(rows) else EXIT_ASSERTION_FAILED
 
 
 # -- argument parsing / entry point --------------------------------------
@@ -4001,6 +4062,24 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Keep day_ahead.py's dispatch chart (suppressed by default) "
         "and move it to <data-dir>/scenario_reports/<id>.png.",
     )
+    p.add_argument(
+        "--report",
+        action="store_true",
+        help="Write a combined Markdown + CSV report of this run to "
+        "<data-dir>/scenario_reports/.",
+    )
+
+    p = sub.add_parser("scenario-bless", parents=[common],
+                       help="Solve the given scenario(s) and, if they PASS, write/overwrite their Tier B baseline. "
+                            "Never done implicitly by scenario-run.")
+    p.add_argument("ids", nargs="+", help="scenario ids to bless")
+    p.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        metavar="N",
+        help="CBC thread count for the solve backing the new baseline (mip.Model.threads semantics). Default 1.",
+    )
 
     return parser
 
@@ -4019,6 +4098,7 @@ _COMMANDS = {
     "scenario-show": cmd_scenario_show,
     "scenario-validate": cmd_scenario_validate,
     "scenario-run": cmd_scenario_run,
+    "scenario-bless": cmd_scenario_bless,
 }
 
 

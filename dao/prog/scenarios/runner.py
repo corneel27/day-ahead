@@ -1,7 +1,11 @@
-"""Run one scenario: synthetic snapshot -> hermetic solve -> Tier A.
+"""Run one scenario: synthetic snapshot -> hermetic solve -> Tier A -> case
+checks -> Tier B.
 
-S1 scope. The per-scenario ``expect`` checks, Tier B baselines and Tier C
-metrics land in S2.
+Builds the synthetic snapshot (including ``ev`` block expansion via
+``build_snapshot.resolve_ev``), solves it hermetically, runs the Tier A
+structural invariants, then the per-scenario ``expect`` case checks and the
+always-on EV mismatch/sliver checks (``expectations.run_case_checks``),
+and finally the Tier B baseline comparison.
 """
 
 from __future__ import annotations
@@ -16,8 +20,8 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .build_snapshot import build_config, build_snapshot, solar_quarter_series
-from .expectations import CheckResult, ResultContext, run_tier_a
+from .build_snapshot import build_config, build_snapshot, resolve_ev, solar_quarter_series
+from .expectations import CaseContext, CheckResult, ResultContext, run_case_checks, run_tier_a
 from .model import Scenario
 from .vocabulary import interval_grid, parse_start
 
@@ -39,6 +43,11 @@ class ScenarioResult:
     threads: int = 1
     log_path: str | None = None
     png_path: str | None = None
+    # EV reporting detail (None for non-EV scenarios) — populated after Tier
+    # A passes, consumed by reporting.write_reports.
+    parsed_target: object | None = None
+    parsed_other: object | None = None
+    stats: object | None = None
 
     @property
     def ok(self) -> bool:
@@ -139,17 +148,26 @@ def run_scenario(
 
     try:
         config = build_config(scenario)
-        snapshot = build_snapshot(scenario, config=config)
+        expanded_ev = resolve_ev(scenario, config)  # may patch `config` in place (remove_stop_entity)
+        snapshot = build_snapshot(scenario, config=config,
+                                  ev_states=(expanded_ev.states if expanded_ev else None))
         solar_quarter_series(scenario)  # validate the solar array length up front
     except Exception as ex:  # noqa: BLE001 - reported, not swallowed
         return ScenarioResult(scenario.id, scenario.description, STATUS_ERROR,
                               failures=[f"snapshot build failed: {ex}"], threads=threads)
+
+    max_gap_raw = (config.get("max_gap") or {}).get("value", 0.005)
+    try:
+        max_gap = float(max_gap_raw)
+    except (TypeError, ValueError):
+        max_gap = 0.005
 
     start = parse_start(scenario.start)
     stop_log = _capture_root_log()
     model = registry = None
     num_solutions = 0
     cbc_log = ""
+    reads: set[str] = set()
     module_dir: Path | None = None
     prev_cwd = Path.cwd()
     exc: BaseException | None = None
@@ -199,6 +217,7 @@ def run_scenario(
             num_solutions = model.num_solutions if model is not None else 0
             result_dict = replay.build_result()  # after calc_optimum() returns, per its own docstring
             cbc_log = (result_dict or {}).get("cbc_log") or ""
+            reads = set(replay.reads)
     except BaseException as ex:  # noqa: BLE001
         exc = ex
     finally:
@@ -246,17 +265,45 @@ def run_scenario(
 
     rc = ResultContext(model=model, registry=registry, log_text=log_text,
                        num_solutions=num_solutions)
-    checks = run_tier_a(rc)
+    tier_a_checks = run_tier_a(rc)
 
-    solved = next(c for c in checks if c.name == "solved")
+    solved = next(c for c in tier_a_checks if c.name == "solved")
     if not solved.ok:
         return ScenarioResult(scenario.id, scenario.description, STATUS_INFEASIBLE,
-                              objective=objective, checks=checks,
+                              objective=objective, checks=tier_a_checks,
                               failures=[f"[Tier A] solved: {solved.detail}"],
                               threads=threads, log_path=log_path, png_path=png_path)
 
-    failures = [f"[Tier A] {c.name}: {c.detail}" for c in checks if not c.ok]
+    parsed_target = parsed_other = None
+    if expanded_ev is not None:
+        from .parsing import NOMINAL_MIN_DUTY, parse_ev_log
+
+        parsed_target = parse_ev_log(log_text, expanded_ev.target_name, NOMINAL_MIN_DUTY)
+        if expanded_ev.other_name:
+            parsed_other = parse_ev_log(log_text, expanded_ev.other_name, NOMINAL_MIN_DUTY)
+
+    requested_states = dict(scenario.states)
+    if expanded_ev is not None:
+        requested_states.update(expanded_ev.states)
+
+    case_ctx = CaseContext(
+        mv=rc.mv, scenario_id=scenario.id, start=start, horizon_hours=scenario.horizon_hours,
+        objective=objective, max_gap=max_gap, reads=reads, requested_states=requested_states,
+        expanded_ev=expanded_ev, parsed_target=parsed_target, parsed_other=parsed_other,
+    )
+    case_checks = run_case_checks(scenario.expect, case_ctx)
+    checks = tier_a_checks + case_checks
+
+    failures = (
+        [f"[Tier A] {c.name}: {c.detail}" for c in tier_a_checks if not c.ok]
+        + [f"[case] {c.name}: {c.detail}" for c in case_checks if not c.ok]
+    )
     status = STATUS_PASS if not failures else STATUS_FAIL
+
+    from .parsing import parse_solve_stats
+
+    stats = parse_solve_stats(log_text + "\n" + cbc_log)
     return ScenarioResult(scenario.id, scenario.description, status,
                           objective=objective, checks=checks, failures=failures,
-                          threads=threads, log_path=log_path, png_path=png_path)
+                          threads=threads, log_path=log_path, png_path=png_path,
+                          parsed_target=parsed_target, parsed_other=parsed_other, stats=stats)

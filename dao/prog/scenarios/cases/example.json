@@ -10,7 +10,7 @@
                0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
     },
     "states": { "sensor.ess_battery_soc": "50" },
-    "expect": { "solved": true }
+    "expect": { "solved": true, "objective_within_baseline": true }
   },
   {
     "id": "s1-arb",
@@ -21,7 +21,7 @@
                0.18, 0.18, 0.19, 0.24, 0.33, 0.45, 0.44, 0.36, 0.26, 0.20, 0.16, 0.13]
     },
     "states": { "sensor.ess_battery_soc": "40" },
-    "expect": { "solved": true }
+    "expect": { "solved": true, "objective_within_baseline": true }
   },
   {
     "id": "s1-sun",
@@ -34,6 +34,6 @@
     "solar": [0.0, 0.0, 0.3, 1.1, 2.3, 3.6, 4.7, 5.4, 5.8, 5.9, 5.7, 5.1,
               4.2, 3.1, 1.9, 0.9, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
     "states": { "sensor.ess_battery_soc": "35" },
-    "expect": { "solved": true }
+    "expect": { "solved": true, "objective_within_baseline": true }
   }
 ]

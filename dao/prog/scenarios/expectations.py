@@ -1,18 +1,24 @@
 """Assertions run against a solved scenario.
 
-S1 ships the **Tier A structural invariants** only — properties that hold
-for *any* optimal solution, so they survive solver-version and CPU changes
-and tie-breaking. They read the model through ``ModelView`` (the variable
-registry), never through log text. Hard fail.
+The **Tier A structural invariants** are properties that hold for *any*
+optimal solution, so they survive solver-version/CPU/tie-breaking changes.
+They read the model through ``ModelView`` (the variable registry), never
+through log text. Hard fail, always run, never listed in ``expect``.
 
-The per-scenario ``expect`` vocabulary (``scheduled``, ``battery_charges_during``,
-…) and Tier B/C arrive in S2. Salvaged and trimmed from the untracked
-``test_scenarios.py``.
+The rest of the ``expect`` vocabulary is handled as **case checks** — one
+function per ``expect`` key, dispatched by ``run_case_checks`` below. Most
+read ``ModelView`` too; the EV-specific ones (``scheduled``,
+``reason_contains``, …) read the parsed EV log instead, since
+day_ahead.py's scheduling *decision* (and its Dutch reason string) isn't a
+model variable. Also here: Tier B (``objective_within_baseline``) and the
+always-on SETUP_MISMATCH / echo checks for EV scenarios.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import datetime as dt
+from dataclasses import dataclass, field
+from typing import Any, Callable, Optional
 
 SUCCESS_LINE = "Het programma heeft een optimale oplossing gevonden."
 
@@ -252,3 +258,270 @@ TIER_A_INVARIANTS: list[Invariant] = [
 
 def run_tier_a(rc: ResultContext) -> list[CheckResult]:
     return [inv.check(rc) for inv in TIER_A_INVARIANTS]
+
+
+# --- Case checks -------------------------------------------------------
+
+
+@dataclass
+class CaseContext:
+    """What a case check sees, built once per solved scenario by
+    ``runner.run_scenario`` and handed to every ``expect`` key's handler."""
+
+    mv: Any  # ModelView | None, reused from the Tier A ResultContext
+    scenario_id: str
+    start: dt.datetime
+    horizon_hours: int
+    objective: Optional[float]
+    max_gap: float
+    reads: set[str]
+    requested_states: dict[str, Any]
+    expanded_ev: Optional[Any] = None  # ev.ExpandedEv
+    parsed_target: Optional[Any] = None  # parsing.ParsedEvRun
+    parsed_other: Optional[Any] = None  # parsing.ParsedEvRun
+
+
+_CASE_CHECKS: dict[str, Callable[[Any, CaseContext], CheckResult]] = {}
+
+
+def case_check(key: str) -> Callable[[Callable], Callable]:
+    def register(fn: Callable) -> Callable:
+        _CASE_CHECKS[key] = fn
+        return fn
+
+    return register
+
+
+def _ev_check(name: str, got, expected, extra: str = "") -> CheckResult:
+    ok = got == expected
+    detail = f"expected {expected!r}, got {got!r}" + (f" — {extra}" if extra else "")
+    return CheckResult(name, ok, "" if ok else detail)
+
+
+@case_check("scheduled")
+def _check_scheduled(value: bool, ctx: CaseContext) -> CheckResult:
+    got = ctx.parsed_target.scheduled if ctx.parsed_target else None
+    return _ev_check("scheduled", got, value)
+
+
+@case_check("other_scheduled")
+def _check_other_scheduled(value: bool, ctx: CaseContext) -> CheckResult:
+    got = ctx.parsed_other.scheduled if ctx.parsed_other else None
+    return _ev_check("other_scheduled", got, value)
+
+
+@case_check("reason_contains")
+def _check_reason_contains(value: str, ctx: CaseContext) -> CheckResult:
+    reason = ctx.parsed_target.reason if ctx.parsed_target else None
+    ok = bool(reason) and value in reason
+    detail = "" if ok else f"expected reason containing {value!r}, got {reason!r}"
+    return CheckResult("reason_contains", ok, detail)
+
+
+@case_check("partial_at_least")
+def _check_partial_at_least(value: int, ctx: CaseContext) -> CheckResult:
+    got = ctx.parsed_target.partial_stops if ctx.parsed_target else None
+    ok = got is not None and got >= value
+    detail = "" if ok else (
+        f"expected at least {value} partial interval(s), got {got} — this is a "
+        f"NEGATIVE test (asserts no duty slivers), so without a partial "
+        f"interval it passes while testing nothing"
+    )
+    return CheckResult("partial_at_least", ok, detail)
+
+
+@case_check("min_duty_guard")
+def _check_min_duty_guard(value: bool, ctx: CaseContext) -> CheckResult:
+    got = ctx.parsed_target.min_duty_guard_fired if ctx.parsed_target else None
+    return _ev_check("min_duty_guard", got, value)
+
+
+@case_check("wished_level_clipped")
+def _check_wished_level_clipped(value: bool, ctx: CaseContext) -> CheckResult:
+    got = ctx.parsed_target.wished_level_clipped if ctx.parsed_target else None
+    return _ev_check("wished_level_clipped", got, value)
+
+
+_INTERVAL_H = 0.25  # the fixed 15-minute model grid every scenario solves on
+
+
+def _window_range(ctx: CaseContext, params: dict) -> range:
+    from .vocabulary import window_indices
+
+    return window_indices(ctx.start, ctx.horizon_hours, params["start"], params["end"])
+
+
+def _battery_flow_kwh(mv, container: str, window: range) -> float:
+    if mv is None or not mv.has(container):
+        return 0.0
+    return sum(v * _INTERVAL_H for (_b, u), v in mv.items(container) if u in window)
+
+
+@case_check("battery_charges_during")
+def _check_battery_charges_during(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = _battery_flow_kwh(ctx.mv, "dc_to_bat", window)
+    ok = kwh >= value["min_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh charged in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    return CheckResult("battery_charges_during", ok, detail)
+
+
+@case_check("battery_discharges_during")
+def _check_battery_discharges_during(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = _battery_flow_kwh(ctx.mv, "dc_from_bat", window)
+    ok = kwh >= value["min_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh discharged in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    return CheckResult("battery_discharges_during", ok, detail)
+
+
+@case_check("battery_flat_during")
+def _check_battery_flat_during(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = (_battery_flow_kwh(ctx.mv, "dc_to_bat", window)
+           + _battery_flow_kwh(ctx.mv, "dc_from_bat", window))
+    ok = kwh <= value["max_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh of battery activity in {value['start']}-{value['end']}, wanted <= {value['max_kwh']}"
+    return CheckResult("battery_flat_during", ok, detail)
+
+
+@case_check("heatpump_runs")
+def _check_heatpump_runs(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    mv = ctx.mv
+    if mv is None or not mv.has("p_hp"):
+        ok = not value.get("min_kwh", 1) and not value.get("runs", True)
+        return CheckResult("heatpump_runs", ok, "" if ok else "no heat pump in this model")
+    watts = sum(v for (_s, u), v in mv.items("p_hp") if u in window)
+    ran = watts > 1.0
+    expected = bool(value.get("runs", True))
+    ok = ran == expected
+    detail = "" if ok else f"heat pump power in {value['start']}-{value['end']} sums to {watts:.1f} W, expected runs={expected}"
+    return CheckResult("heatpump_runs", ok, detail)
+
+
+@case_check("machine_runs_in_window")
+def _check_machine_runs_in_window(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    mv = ctx.mv
+    if mv is None or not mv.has("c_ma_u"):
+        return CheckResult("machine_runs_in_window", False, "no machine in this model")
+    machine = str(value["machine"]).lower()
+    indices = {m for (m, _u) in mv.by_container["c_ma_u"]}
+    # Resolving the machine name -> index needs the (already-patched)
+    # config, which isn't available here: accept a numeric index directly,
+    # otherwise fall back to matching every configured machine's
+    # consumption in-window (best-effort until name resolution is added).
+    try:
+        m_idx = int(value["machine"])
+        m_set = {m_idx} if m_idx in indices else set()
+    except (TypeError, ValueError):
+        m_set = indices
+    ran = any(
+        v > 1e-6 for (m, u), v in mv.items("c_ma_u") if m in m_set and u in window
+    )
+    ok = ran == bool(value.get("runs", True))
+    detail = "" if ok else f"machine {machine!r} runs in {value['start']}-{value['end']}: {ran}, expected {value.get('runs', True)}"
+    return CheckResult("machine_runs_in_window", ok, detail)
+
+
+@case_check("objective_within_baseline")
+def _check_objective_within_baseline(value: bool, ctx: CaseContext) -> CheckResult:
+    from . import baseline
+
+    if not value:
+        return CheckResult("objective_within_baseline", True, "explicitly unchecked")
+    status, detail = baseline.check_tier_b(ctx.scenario_id, ctx.objective, tolerance=ctx.max_gap)
+    ok = status != baseline.STATUS_FAIL
+    return CheckResult("objective_within_baseline", ok, f"{status}: {detail}")
+
+
+def _check_overrides_were_read(ctx: CaseContext) -> Optional[CheckResult]:
+    """Always-on (not an ``expect`` key): fails a scenario whose ``states``
+    (literal or EV-derived) name an entity the solve never read via
+    ``get_state`` — the SETUP_MISMATCH class of bug, e.g. an override
+    aimed at an entity that's unconfigured for this EV (case 5.1's shape)."""
+    names = set(ctx.requested_states)
+    if not names:
+        return None
+    unread = sorted(names - ctx.reads)
+    if unread:
+        return CheckResult(
+            "overrides_were_read", False,
+            f"override(s) named an entity the solve never read (SETUP_MISMATCH): {unread}",
+        )
+    return CheckResult("overrides_were_read", True)
+
+
+def _check_setup_echo(ctx: CaseContext) -> Optional[CheckResult]:
+    """Always-on when the scenario has an ``ev`` block: diff the log's own
+    setup echo against what was requested, plus each car's capacity sanity
+    check — both ported from ``test_ev_harness_v6``'s SETUP_MISMATCH path."""
+    if ctx.expanded_ev is None or ctx.parsed_target is None:
+        return None
+    from .parsing import check_capacity, verify_setup_echo
+
+    mismatches = verify_setup_echo(ctx.expanded_ev.resolved_target, ctx.parsed_target.setup_echo)
+    note = check_capacity(ctx.expanded_ev.target_capacity_kwh, ctx.parsed_target.setup_echo,
+                           label=ctx.expanded_ev.target_name)
+    if note:
+        mismatches.append(note)
+    if ctx.parsed_other is not None and ctx.expanded_ev.other_name:
+        note2 = check_capacity(ctx.expanded_ev.other_capacity_kwh, ctx.parsed_other.setup_echo,
+                                label=ctx.expanded_ev.other_name)
+        if note2:
+            mismatches.append(note2)
+    if mismatches:
+        return CheckResult("setup_echo_matches", False, "; ".join(mismatches))
+    return CheckResult("setup_echo_matches", True)
+
+
+def _check_duty_slivers(ctx: CaseContext) -> list[CheckResult]:
+    """Always-on when the scenario has an ``ev`` block: no real charge
+    stage, on either car, runs below the minimum duty cycle — mirrors
+    ``test_ev_harness_v6.run_case``'s unconditional per-case sliver check,
+    with one correction: when day_ahead.py's own min-duty *feasibility
+    guard* fired for that car (``minimale schakelduur ... niet
+    toegepast`` — energy_needed is below one switching action, so the
+    constraint was never added to the model), a sub-minimum factor is the
+    legitimate cheapest dispatch, not a violation of a constraint that
+    isn't there. v6's blanket check never had to draw this distinction
+    because its own tuning happened not to produce a sliver on the one
+    case (7.5) where the guard fires; this config's smaller EV battery
+    does produce one, which is what surfaced the gap."""
+    out: list[CheckResult] = []
+    from .parsing import EV_MIN_DUTY_S, NOMINAL_MIN_DUTY
+
+    for label, parsed in (("target", ctx.parsed_target), ("other", ctx.parsed_other)):
+        if parsed is None or not parsed.duty_slivers or parsed.min_duty_guard_fired:
+            continue
+        detail = ", ".join(f"{uur} stage {k} factor {f:.4f}" for uur, k, f in parsed.duty_slivers)
+        out.append(CheckResult(
+            f"no_duty_slivers[{label}]", False,
+            f"DUTY SLIVER below minimum duty {NOMINAL_MIN_DUTY:.4f} ({EV_MIN_DUTY_S:.0f}s) at: {detail}",
+        ))
+    return out
+
+
+def run_case_checks(expect: dict[str, Any], ctx: CaseContext) -> list[CheckResult]:
+    """Every non-``solved`` key in ``expect``, dispatched by name, plus the
+    always-on EV mismatch/sliver checks when the scenario has an ``ev``
+    block or any ``states`` override."""
+    results: list[CheckResult] = []
+    for key, value in expect.items():
+        if key == "solved":
+            continue
+        handler = _CASE_CHECKS.get(key)
+        if handler is None:
+            results.append(CheckResult(key, False, f"no case check registered for {key!r}"))
+            continue
+        results.append(handler(value, ctx))
+
+    overrides_check = _check_overrides_were_read(ctx)
+    if overrides_check is not None:
+        results.append(overrides_check)
+    echo_check = _check_setup_echo(ctx)
+    if echo_check is not None:
+        results.append(echo_check)
+    results.extend(_check_duty_slivers(ctx))
+    return results

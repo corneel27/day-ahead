@@ -9,13 +9,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .model import KNOWN_EXPECT_KEYS_S1, Scenario
+from .model import KNOWN_EXPECT_KEYS, Scenario
 from .vocabulary import VocabularyError, parse_start
 
 _TOP_KEYS = {
     "id", "description", "start",
     "prices", "solar", "baseload", "temp", "heatpump_hours",
-    "states", "config_patch", "expect",
+    "states", "config_patch", "options", "ev", "expect",
     "skip", "skip_reason",
 }
 
@@ -68,12 +68,32 @@ def parse_scenario(obj: dict, *, source_file: str = "") -> Scenario:
     config_patch = obj.get("config_patch", {})
     _require(isinstance(config_patch, dict), f"[{sid}] config_patch must be an object")
 
+    options = obj.get("options")
+    _require(options is None or isinstance(options, str), f"[{sid}] options must be a string")
+
+    ev = obj.get("ev")
+    if ev is not None:
+        _require(isinstance(ev, dict), f"[{sid}] ev must be an object")
+        _require("target" in ev and isinstance(ev["target"], str) and ev["target"],
+                  f"[{sid}] ev.target is required (e.g. 'golf', 'tesla')")
+        other = ev.get("other")
+        _require(other is None or isinstance(other, dict), f"[{sid}] ev.other must be an object")
+        soc_plugin = ev.get("soc_plugin")
+        _require(soc_plugin is None or (isinstance(soc_plugin, dict) and "name" in soc_plugin),
+                  f"[{sid}] ev.soc_plugin must be an object with a 'name'")
+        ready = ev.get("ready")
+        _require(ready is None or isinstance(ready, (str, dict)),
+                  f"[{sid}] ev.ready must be a string offset or a plugin object")
+        other_ready = (other or {}).get("ready")
+        _require(other_ready is None or isinstance(other_ready, (str, dict)),
+                  f"[{sid}] ev.other.ready must be a string offset or a plugin object")
+
     expect = obj.get("expect", {})
     _require(isinstance(expect, dict), f"[{sid}] expect must be an object")
-    unknown_expect = set(expect) - KNOWN_EXPECT_KEYS_S1
+    unknown_expect = set(expect) - KNOWN_EXPECT_KEYS
     _require(not unknown_expect,
              f"[{sid}] unsupported expect key(s) {sorted(unknown_expect)}; "
-             f"S1 supports {sorted(KNOWN_EXPECT_KEYS_S1)} (the Tier A "
+             f"supported: {sorted(KNOWN_EXPECT_KEYS)} (the Tier A "
              f"invariants always run and are not listed here)")
 
     return Scenario(
@@ -88,6 +108,8 @@ def parse_scenario(obj: dict, *, source_file: str = "") -> Scenario:
         heatpump_hours=float(hph),
         states={str(k): v for k, v in states.items()},
         config_patch=dict(config_patch),
+        options=options,
+        ev=dict(ev) if ev is not None else None,
         expect=dict(expect),
         skip=bool(obj.get("skip", False)),
         skip_reason=str(obj.get("skip_reason", "")),

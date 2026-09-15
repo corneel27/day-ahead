@@ -23,7 +23,7 @@ from . import BASE_STATES_PATH
 from .base_config import base_config
 from .loader import set_dotted
 from .model import Scenario
-from .vocabulary import STEPS_PER_HOUR, interval_grid, parse_start, upsample
+from .vocabulary import INTERVAL_S, STEPS_PER_HOUR, interval_grid, parse_start, upsample
 
 # A fixed NL location so solar geometry (used by the DAO predictor when a
 # scenario *doesn't* inject a solar array) is realistic. de Bilt-ish.
@@ -46,10 +46,28 @@ def load_base_states() -> dict[str, str]:
 
 
 def build_config(scenario: Scenario) -> dict:
-    cfg = base_config()
+    cfg = base_config(scenario.options or "options_example")
     for path, value in scenario.config_patch.items():
         set_dotted(cfg, path, value)
     return cfg
+
+
+def resolve_ev(scenario: Scenario, config: dict):
+    """If the scenario has an ``ev`` block, expand it against
+    ``config`` — mutating ``config`` in place for ``ev.remove_stop_entity``
+    — and return the ``ev.ExpandedEv`` (``None`` otherwise). Called once by
+    the runner, before ``build_snapshot``, so both the synthetic states and
+    the post-solve case checks (echo verification, capacity sanity) share
+    the same resolved input."""
+    if scenario.ev is None:
+        return None
+    from . import ev as ev_mod
+
+    start = parse_start(scenario.start)
+    expanded = ev_mod.expand_ev_block(scenario.ev, config=config, start=start, interval_s=INTERVAL_S)
+    for path, value in expanded.config_patch.items():
+        set_dotted(config, path, value)
+    return expanded
 
 
 def _price_frame(pd, grid: list[dt.datetime], cons_q: list[float], prod_q: list[float]):
@@ -77,7 +95,7 @@ def _prog_frame(pd, grid: list[dt.datetime], temp_q: list[float]):
     return df
 
 
-def build_snapshot(scenario: Scenario, *, config: dict | None = None) -> dict:
+def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states: dict | None = None) -> dict:
     import pandas as pd
 
     from dao.prog import da_debug
@@ -105,6 +123,9 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None) -> dict:
     states = load_base_states()
     for eid, value in scenario.states.items():
         states[eid] = _statestr(value)
+    if ev_states:
+        for eid, value in ev_states.items():
+            states[eid] = _statestr(value)
 
     price_df = _price_frame(pd, grid, cons_q, prod_q)
     prog_df = _prog_frame(pd, grid, temp_q)
