@@ -85,7 +85,21 @@ jobs:
           TZ: UTC
         run: python -m dao.prog.da_debug scenario-run --report
 
+      - name: Publish report to the job summary
+        # write_reports() runs before scenario-run's own exit code check, so
+        # the report already reflects any failures even when this job goes
+        # red - always() so a failing run is still readable without opening
+        # the artifact.
+        if: always()
+        run: |
+          if [ -f dao/data/scenario_reports/scenario_report_latest.md ]; then
+            cat dao/data/scenario_reports/scenario_report_latest.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No scenario report was generated (the solve step likely crashed before producing one)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload scenario report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: scenario-reports

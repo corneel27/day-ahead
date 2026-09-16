@@ -3773,9 +3773,13 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
         r = run_scenario(sc, threads=args.threads, keep_png=args.png, report_dir=report_dir)
         results.append(r)
         if not getattr(args, "json", False):
+            st = r.stats
             print(f"[{r.status}] {r.id}: {r.description}"
                   + (f"   objective {r.objective:.6f}" if r.objective is not None else "")
-                  + (f"   threads={r.threads}" if r.threads != 1 else ""))
+                  + (f"   threads={r.threads}" if r.threads != 1 else "")
+                  + (f"   solve {st.wall_time_sec or '—'}s / {st.nodes or '—'} nodes"
+                     f" / gap {st.gap if st.gap is not None else '—'}"
+                     if st is not None else ""))
             for f in r.failures:
                 print(f"        - {f}")
             if r.log_path:
@@ -3799,6 +3803,9 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
             {"id": r.id, "status": r.status, "objective": r.objective,
              "threads": r.threads, "log_path": r.log_path, "png_path": r.png_path,
              "failures": r.failures,
+             "wall_time_sec": r.stats.wall_time_sec if r.stats else None,
+             "nodes": r.stats.nodes if r.stats else None,
+             "gap": r.stats.gap if r.stats else None,
              "checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.checks]}
             for r in results
         ],
