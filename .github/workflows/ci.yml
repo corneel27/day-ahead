@@ -1,0 +1,92 @@
+name: Scenario suite
+
+on: [push, pull_request]
+
+env:
+  PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/dao/prog
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  unit:
+    name: Scenario suite (unit)
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        # numpy's pin in dao/requirements.txt only publishes wheels for
+        # Python >= 3.12; pip can't resolve it on 3.11.
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        # da_debug.py imports pandas unconditionally at module level, so it's
+        # needed here even though scenario-validate itself never touches it.
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pydantic pydantic-settings pandas
+
+      - name: Validate scenario corpus
+        run: python -m dao.prog.da_debug scenario-validate
+
+      - name: Run solver-free unit tests
+        run: pytest dao/tests/prog/test_scenarios.py -q
+
+  scenarios:
+    name: Scenario suite (solve)
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        # numpy's pin in dao/requirements.txt only publishes wheels for
+        # Python >= 3.12; pip can't resolve it on 3.11.
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install system dependencies
+        # The mariadb connector in dao/requirements.txt has no prebuilt
+        # wheel and needs MariaDB Connector/C to build; mysqlclient probes
+        # for the same lib via pkg-config. The scenario suite never touches
+        # either driver at runtime (ReplayIO patches out all DB access) but
+        # still needs the full requirements.txt to install for this job.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmariadb-dev pkg-config
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r dao/requirements.txt
+
+      - name: Solve every scenario and build the report
+        # scenario-run asserts the same thing pytest's test_scenario would
+        # (same run_scenario() call, same PASS/SKIP gate) and exits non-zero
+        # on any failure, so running it once here is the gate, not just a
+        # report step. timeout-minutes guards a wedged solve, since there's
+        # no pytest-timeout wrapping this call.
+        timeout-minutes: 15
+        env:
+          TZ: UTC
+        run: python -m dao.prog.da_debug scenario-run --report
+
+      - name: Upload scenario report
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-reports
+          path: dao/data/scenario_reports/
