@@ -1590,7 +1590,7 @@ All entity fields accept lists of HA sensors:
 | `entities battery consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for battery consumption (Unit: `kWh`) |
 | `entities battery production` | list[[EntityId](#entityid)] | No | `null` | HA entities for battery production (Unit: `kWh`) |
 | `entities machine consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for machine consumption (Unit: `kWh`) |
-| `co2 intensity sensor` | [EntityId](#entityid) (optional) | No | `null` | HA entity for CO2 intensity (Unit: `gCO2/kWh`) |
+| `entity co2-intensity` | list[[EntityId](#entityid)] or [EntityId](#entityid) (optional) | No | `[]` | HA entity for CO2 intensity (Unit: `gCO2/kWh`) |
 | `sensors` | object (optional) | No | `null` | Additional sensors configuration |
 
 <details>
@@ -1636,7 +1636,7 @@ List of Home Assistant sensor entities measuring battery discharging (production
 
 List of Home Assistant sensor entities measuring appliance/machine consumption (washing machine, dishwasher, etc.). Used for machine-specific reporting.
 
-**`co2 intensity sensor`**
+**`entity co2-intensity`**
 
 Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.
 

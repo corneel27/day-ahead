@@ -2455,8 +2455,14 @@
           "x-ui-widget-filter": "sensor",
           "x-unit": "kWh"
         },
-        "co2 intensity sensor": {
+        "entity co2-intensity": {
           "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/EntityId"
+              },
+              "type": "array"
+            },
             {
               "$ref": "#/$defs/EntityId"
             },
@@ -2464,13 +2470,13 @@
               "type": "null"
             }
           ],
-          "default": null,
+          "default": [],
           "description": "HA entity for CO2 intensity",
+          "title": "Entity Co2-Intensity",
           "x-help": "Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.",
           "x-ui-section": "General",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "gCO2/kWh",
-          "title": "Co2 Intensity Sensor"
+          "x-unit": "gCO2/kWh"
         },
         "sensors": {
           "anyOf": [
