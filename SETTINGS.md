@@ -1330,7 +1330,7 @@ System uses tariff active on optimization date.
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `cost supplier consumption` | object | Yes | — | Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
-| `cost supplier production` | object | Yes | — | Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
+| `cost supplier production` | object | Yes | — | Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `vat consumption` | object | Yes | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `vat production` | object | Yes | — | VAT percentage for production by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `multiplier consumption` | object (optional) | No | `{'2000-01-01': 1.0}` | Multiplier for consumption by date (YYYY-MM-DD -> x.xx) (Unit: `-`) _Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values_ |
@@ -1363,7 +1363,7 @@ Supplier markup/fees for consumption (excluding VAT) indexed by effective date. 
 
 **`cost supplier production`**
 
-Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.
+Supplier fees for feed-in/production (excluding VAT) indexed by effective date. Negative if you must pay for feed-in, positive if you get extra reward foor feed-in. Format: {'2024-01-01': -0.02}.
 
 **`vat consumption`**
 

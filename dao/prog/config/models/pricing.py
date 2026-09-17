@@ -72,9 +72,11 @@ class PricingConfig(BaseModel):
     )
     cost_supplier_production: dict[str, float] = Field(
         alias="cost supplier production",
-        description="Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+        description="Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT)",
         json_schema_extra={
-            "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
+            "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. "
+                      "Negative if you must pay for feed-in, positive if you get extra reward foor feed-in. "
+                      "Format: {'2024-01-01': -0.02}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Cost",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",

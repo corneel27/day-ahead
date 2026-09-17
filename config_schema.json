@@ -2220,10 +2220,10 @@
           "additionalProperties": {
             "type": "number"
           },
-          "description": "Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+          "description": "Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT)",
           "title": "Cost Supplier Production",
           "type": "object",
-          "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
+          "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. Negative if you must pay for feed-in, positive if you get extra reward foor feed-in. Format: {'2024-01-01': -0.02}.",
           "x-ui-section": "Cost",
           "x-unit": "€/kWh",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
