@@ -2,6 +2,16 @@ name: Test Builder
 
 on:
   workflow_dispatch:
+    inputs:
+      architectures:
+        description: "Architecture(s) to test build"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - amd64
+          - aarch64
   pull_request:
     branches:
       - main
@@ -21,21 +31,49 @@ jobs:
 
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      version: ${{ steps.version.outputs.version }}
 
     steps:
 
       - name: Check out repository
         uses: actions/checkout@v7
 
+      # before the dao files are copied over release-testing/config.yaml
+      - name: Get version number
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(grep '^version:' release-testing/config.yaml | awk '{print $2}')
+          echo "Version: ${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Prepare testing build context
         run: |
           cp -a dao/* release-testing/
+
+      - name: Select architectures
+        id: arch
+        shell: bash
+        env:
+          ALL_ARCHITECTURES: ${{ env.ARCHITECTURES }}
+          ARCHITECTURES_INPUT: ${{ inputs.architectures }}
+        run: |
+          SELECTION="${ARCHITECTURES_INPUT:-all}"
+
+          if [[ "${SELECTION}" == "all" ]]; then
+            ARCHITECTURES="${ALL_ARCHITECTURES}"
+          else
+            ARCHITECTURES="[\"${SELECTION}\"]"
+          fi
+
+          echo "Building: ${ARCHITECTURES}"
+          echo "architectures=${ARCHITECTURES}" >> "$GITHUB_OUTPUT"
 
       - name: Prepare multi-architecture matrix
         id: matrix
         uses: home-assistant/builder/actions/prepare-multi-arch-matrix@4de35182ce1e329181bffcbcc84d33db5e2c7e10 # 2026.06.0
         with:
-          architectures: ${{ env.ARCHITECTURES }}
+          architectures: ${{ steps.arch.outputs.architectures }}
           image-name: ${{ env.IMAGE_NAME }}
 
 
@@ -73,7 +111,7 @@ jobs:
           image-tags: |
             test
 
-          version: test
+          version: ${{ needs.init.outputs.version }}
 
           push: "false"
 

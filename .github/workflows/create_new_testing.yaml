@@ -2,6 +2,16 @@ name: Create new testing release
 
 on:
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to release (default: the version in release-testing/config.yaml)"
+        required: false
+        type: string
+      target:
+        description: "Commit or branch the release tag points at (default: the default branch)"
+        required: false
+        type: string
   push:
     branches:
       - main
@@ -17,23 +27,36 @@ jobs:
     name: Create new testing release
     runs-on: ubuntu-latest
     steps:
-      # checkout the repo
+      # checkout the repo, at the commit that is being released
       - name: Checkout the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.target }}
 
-      # extract version from release-testing/config.yaml
+      # take the version from the caller, or extract it from release-testing/config.yaml
       - name: Get version number
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          VERSION=$(grep 'version: ' release-testing/config.yaml | sed -e 's/^version: //')
+          VERSION="${INPUT_VERSION}"
+          if [[ -z "${VERSION}" ]]; then
+            VERSION=$(grep 'version: ' release-testing/config.yaml | sed -e 's/^version: //')
+          fi
+          echo "Version: ${VERSION}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       # create a new release for $VERSION
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET: ${{ inputs.target }}
         run: |
+          TARGET_ARG=()
+          if [[ -n "${TARGET}" ]]; then
+            TARGET_ARG=(--target "${TARGET}")
+          fi
           gh release create "${VERSION}" \
               --repo="${GITHUB_REPOSITORY}" \
               --title="${VERSION}" \
+              "${TARGET_ARG[@]}" \
               -d -p --generate-notes --latest=false
-

@@ -3,10 +3,32 @@ name: Build and publish
 on:
   workflow_dispatch:
     inputs:
+      channel:
+        description: "Add-on to build when no release tag is given"
+        required: false
+        default: stable
+        type: choice
+        options:
+          - stable
+          - testing
       release_tag:
-        description: "Release tag to build"
-        required: true
+        description: "Release tag to build (leave empty to use the version from config.yaml)"
+        required: false
         type: string
+      architectures:
+        description: "Architecture(s) to build"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - amd64
+          - aarch64
+      publish_manifest:
+        description: "Publish the multi-architecture manifest after a single-architecture build (the other architecture must already be published for this tag)"
+        required: false
+        default: false
+        type: boolean
 
   release:
     types: [published]
@@ -29,6 +51,7 @@ jobs:
       app_dir: ${{ steps.detect.outputs.app_dir }}
       version: ${{ steps.detect.outputs.version }}
       image_tags: ${{ steps.detect.outputs.image_tags }}
+      publish_manifest: ${{ steps.arch.outputs.publish_manifest }}
 
     steps:
 
@@ -38,12 +61,27 @@ jobs:
       - name: Detect release type
         id: detect
         shell: bash
+        env:
+          RELEASE_TAG_EVENT: ${{ github.event.release.tag_name }}
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+          CHANNEL_INPUT: ${{ inputs.channel }}
         run: |
           DAO_VERSION=$(grep '^version:' dao/config.yaml | awk '{print $2}')
           TEST_VERSION=$(grep '^version:' release-testing/config.yaml | awk '{print $2}')
-          RELEASE_TAG="${{ github.event.release.tag_name }}"
+
+          RELEASE_TAG="${RELEASE_TAG_EVENT}"
           if [[ -z "$RELEASE_TAG" ]]; then
-            RELEASE_TAG="${{ inputs.release_tag }}"
+            RELEASE_TAG="${RELEASE_TAG_INPUT}"
+          fi
+          if [[ -z "$RELEASE_TAG" ]]; then
+            # No tag given: take the version straight from config.yaml
+            CHANNEL="${CHANNEL_INPUT:-stable}"
+            if [[ "${CHANNEL}" == "testing" ]]; then
+              RELEASE_TAG="${TEST_VERSION}"
+            else
+              RELEASE_TAG="${DAO_VERSION}"
+            fi
+            echo "No release tag given, building the ${CHANNEL} version from config.yaml"
           fi
 
           echo "Release tag:     ${RELEASE_TAG}"
@@ -84,11 +122,40 @@ jobs:
             exit 1
           fi
 
+      - name: Select architectures
+        id: arch
+        shell: bash
+        env:
+          ALL_ARCHITECTURES: ${{ env.ARCHITECTURES }}
+          ARCHITECTURES_INPUT: ${{ inputs.architectures }}
+          PUBLISH_MANIFEST_INPUT: ${{ inputs.publish_manifest }}
+        run: |
+          SELECTION="${ARCHITECTURES_INPUT:-all}"
+
+          if [[ "${SELECTION}" == "all" ]]; then
+            ARCHITECTURES="${ALL_ARCHITECTURES}"
+            # A complete build always gets its manifest
+            PUBLISH_MANIFEST="true"
+          else
+            ARCHITECTURES="[\"${SELECTION}\"]"
+            # A partial build only publishes the arch image, unless asked
+            # explicitly: the manifest needs every architecture of this tag
+            PUBLISH_MANIFEST="${PUBLISH_MANIFEST_INPUT:-false}"
+          fi
+
+          echo "Building:         ${ARCHITECTURES}"
+          echo "Publish manifest: ${PUBLISH_MANIFEST}"
+
+          {
+            echo "architectures=${ARCHITECTURES}"
+            echo "publish_manifest=${PUBLISH_MANIFEST}"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Prepare multi-architecture matrix
         id: matrix
         uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.06.0
         with:
-          architectures: ${{ env.ARCHITECTURES }}
+          architectures: ${{ steps.arch.outputs.architectures }}
           image-name: ${{ env.IMAGE_NAME }}
 
 
@@ -146,6 +213,8 @@ jobs:
       - init
       - build
 
+    if: needs.init.outputs.publish_manifest == 'true'
+
     runs-on: ubuntu-latest
 
     permissions:
@@ -154,6 +223,8 @@ jobs:
 
     steps:
 
+      # Always the complete set of architectures: the manifest describes the
+      # image as a whole, also when only one architecture was rebuilt
       - name: Publish multi-architecture manifest
         uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.06.0
         with:
