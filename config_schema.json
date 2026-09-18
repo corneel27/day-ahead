@@ -2220,10 +2220,10 @@
           "additionalProperties": {
             "type": "number"
           },
-          "description": "Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+          "description": "Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT) negative if you must pay for feed-in, positive if you get income for feed-in ",
           "title": "Cost Supplier Production",
           "type": "object",
-          "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. Negative if you must pay for feed-in, positive if you get extra reward foor feed-in. Format: {'2024-01-01': -0.02}.",
+          "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. Negative if you must pay for feed-in, positive if you get income for feed-in. Format: {'2024-01-01': -0.02}.",
           "x-ui-section": "Cost",
           "x-unit": "€/kWh",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
@@ -2548,6 +2548,24 @@
           "x-help": "When enabled, scheduled tasks will run automatically at configured times. Disable to prevent all scheduled tasks from running.",
           "x-order": 1,
           "x-ui-section": "Scheduler"
+        },
+        "offset": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 10,
+          "description": "Number of seconds the task is started before schedule-time (due to time in task start overhead)",
+          "title": "Offset",
+          "x-help": "Number of seconds the task is scheduled before schedule-time (due to time in task start overhead)",
+          "x-ui-section": "Scheduler",
+          "x-unit": "s",
+          "x-validation-hint": "Must be >= 0, typically 10 seconds"
         },
         "schedule": {
           "description": "Scheduled task entries",

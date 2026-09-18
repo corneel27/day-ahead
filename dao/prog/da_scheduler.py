@@ -1,6 +1,10 @@
 import datetime
+import logging
 import sys
 import time
+
+from PIL.ImageChops import offset
+
 from da_base import DaBase
 from subprocess import Popen, PIPE, STDOUT
 
@@ -9,6 +13,8 @@ class DaScheduler(DaBase):
     def __init__(self, file_name: str = None):
         super().__init__(file_name)
         self.active = self.config.scheduler.active
+        self.offset_start = self.config.scheduler.offset
+        logging.info(f"Offset tasks {self.offset_start} sec")
         self.scheduler_tasks = {
             entry.time: entry.action for entry in self.config.scheduler.schedule
         }
@@ -26,16 +32,22 @@ class DaScheduler(DaBase):
         # if not (self.notification_entity is None) and self.notification_opstarten:
         #     self.set_value(self.notification_entity, "DAO scheduler gestart " +
         #                    datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
-
+        last_minute = -1
         while True:
             t = datetime.datetime.now()
-            next_min = t - datetime.timedelta(
-                minutes=-1, seconds=t.second, microseconds=t.microsecond
-            )
-            # wacht tot hele minuut 0% cpu
-            time.sleep((next_min - t).total_seconds())
+            logging.debug(f"Entry loop at {t}")
+            next_min = t.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
+            if next_min.minute == last_minute:
+                time.sleep(max(0, (next_min - t).total_seconds()))
+                continue
+            last_minute = next_min.minute
+            logging.debug(f"Next minute {next_min}")
+            start_at = next_min - datetime.timedelta(seconds=self.offset_start)
+            logging.debug(f"Geplande start at {start_at}")
+            time.sleep(max(0, (start_at - t).total_seconds()))
             if not self.active:
                 continue
+            logging.debug(f"Gestart op {datetime.datetime.now()}")
             hour = next_min.hour
             minute = next_min.minute
             key0 = str(hour).zfill(2) + str(minute).zfill(2)
