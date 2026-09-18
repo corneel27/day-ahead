@@ -31,5 +31,5 @@ scipy~=1.18.1
 joblib~=1.6.0
 knmi-py~=0.2.0
 asteval~=1.0.10
-tzdata~=2026.3
+tzdata~=2026.4
 freezegun~=1.5.5
