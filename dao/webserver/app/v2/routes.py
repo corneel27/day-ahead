@@ -1,5 +1,6 @@
 import time, os, fnmatch, re, datetime, time, threading, json
 from flask import Blueprint, render_template, request, redirect, url_for
+from flask import has_request_context
 
 from dao.prog.version import __version__
 from subprocess import Popen, PIPE, run, STDOUT, DEVNULL
@@ -19,13 +20,45 @@ def inject_data():
 # globals
 app_datapath = "app/static/data/"
 
-VITE_DEV_SERVER = "http://localhost:5173"
+VITE_DEV_PORT = os.getenv("VITE_DEV_PORT", "5173")
 VITE_MANIFEST = Path("app/static/build/.vite/manifest.json")
+
+
+def vite_dev_server() -> str:
+    """
+    Base URL of the Vite dev server as seen by the browser.
+
+    Set VITE_DEV_SERVER to pin it explicitly (for example when the dev server sits
+    behind a proxy or a tunnel on a different port).  Otherwise it is derived from
+    the host the page itself was requested on, so the assets are loaded from the
+    same machine that serves the application instead of from a hardcoded
+    "localhost", which would resolve to the browser's own machine.
+
+    The scheme is always http: the dev server speaks plain HTTP, so following the
+    scheme of the page would send the browser into a TLS handshake on port 5173
+    that nothing answers.  Serving this application over HTTPS in development
+    therefore needs VITE_DEV_SERVER pointing at an HTTPS entry point for Vite,
+    otherwise the browser blocks the assets as mixed content.
+    """
+    pinned = os.getenv("VITE_DEV_SERVER")
+    if pinned:
+        return pinned.rstrip("/")
+    if has_request_context():
+        # request.host includes the port; strip it, keep the (possibly IPv6) host.
+        host = request.host
+        if host.startswith("["):  # [::1]:5000
+            host = host[: host.index("]") + 1]
+        elif ":" in host:
+            host = host.rsplit(":", 1)[0]
+        return f"http://{host}:{VITE_DEV_PORT}"
+    return f"http://localhost:{VITE_DEV_PORT}"
+
 
 def vite_tags(entry: str) -> str:
     if os.getenv("VITE_DEV") == "1":
-        return f'<script type="module" src="{VITE_DEV_SERVER}/@vite/client"></script>' \
-               f'<script type="module" src="{VITE_DEV_SERVER}/{entry}"></script>'
+        dev_server = vite_dev_server()
+        return f'<script type="module" src="{dev_server}/@vite/client"></script>' \
+               f'<script type="module" src="{dev_server}/{entry}"></script>'
 
     if not VITE_MANIFEST.exists():
         raise RuntimeError("Vite manifest not found. Run 'npm run build' in the Vite server directory.")
@@ -150,14 +183,25 @@ def run_and_log(cmd, state):
         text=True,
     )
 
+    cancelled = False
+
     while proc.poll() is None:
         updated_state = get_task_state()
 
         if updated_state.get("status") == "cancelled":
-            if state["logfile"] and os.path.exists(state["logfile"]):
+            # Alleen afbreken zolang de taak nog loopt. Is ze tussen de poll
+            # hierboven en dit punt uit zichzelf klaar gekomen, dan telt haar
+            # eigen resultaat en blijft haar log staan.
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+                # Een door een signaal gedood proces levert een negatieve
+                # returncode; iets anders betekent dat het net zelf stopte.
+                cancelled = proc.returncode is not None and proc.returncode < 0
+
+            if cancelled and state["logfile"] and os.path.exists(state["logfile"]):
                 os.remove(state["logfile"])
 
-            proc.kill()
             break
 
         if state["logfile"] is None:
@@ -199,7 +243,13 @@ def run_and_log(cmd, state):
     if updated_state["logfile"] == state["logfile"]:
         print("Task completed")
         print(proc.returncode)
-        state["status"] = "done" if proc.returncode == 0 else "error"
+        if cancelled:
+            # De taak is op verzoek afgebroken. De returncode van het gedode
+            # proces zegt niets over het resultaat, dus die mag "cancelled"
+            # niet overschrijven met "error".
+            state["status"] = "cancelled"
+        else:
+            state["status"] = "done" if proc.returncode == 0 else "error"
         state["returncode"] = proc.returncode
         save_task_state(state)
 
@@ -272,7 +322,7 @@ def get_solar_items_with_ml():
 def chart():
     kwargs = log_chart("images/", "*.png")
     if kwargs is None:
-        return render_template("v2/no-tasks.html", )
+        return render_template("v2/no-task.html")
 
     kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
     return render_template(
@@ -285,7 +335,7 @@ def chart():
 def log():
     kwargs = log_chart("log/", "*.log")
     if kwargs is None:
-        return render_template("v2/no-tasks.html", )
+        return render_template("v2/no-task.html")
 
     log_file = app_datapath + "log/" + kwargs["filename"]
     with open(log_file, "r") as f:

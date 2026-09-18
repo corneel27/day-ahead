@@ -5,6 +5,7 @@ Configuration loader with support for versioning, migration, and unknown key pre
 import shutil
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Any, Optional, Type
 from pydantic import BaseModel, ValidationError
@@ -218,3 +219,95 @@ class ConfigurationLoader:
         if self._secrets is None:
             self._load_secrets()
         return self._secrets
+
+
+def file_stamp(path: Path) -> Optional[tuple[int, int]]:
+    """
+    Returns a change-stamp of a file: (modification time in ns, size in bytes).
+
+    Returns None when the file does not exist (or cannot be stat-ed), so a
+    missing file compares equal to a missing file and unequal to an existing one.
+    """
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return stat.st_mtime_ns, stat.st_size
+
+
+class ConfigCache:
+    """
+    Process-wide cache of the validated configuration.
+
+    Loading and validating options.json on every use is wasteful: the dashboard
+    creates a new Report (and thus a new DaBase) for every request. Caching the
+    result forever is wrong as well: a long-running process (the flask/gunicorn
+    dashboard) would keep serving the settings as they were when the process was
+    started, while short-living processes (calculation, prices, meteo, started by
+    the scheduler) do use the changed settings. That gives inconsistent results
+    between for instance the graphs and the rest-api.
+
+    So the cached configuration is reused only as long as options.json (and
+    secrets.json) are unchanged; the cache is refreshed as soon as one of them
+    is written, whichever process did the writing.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self._config: Optional[BaseModel] = None
+        self._loader: Optional[ConfigurationLoader] = None
+        self._path: Optional[Path] = None
+        self._stamp: Optional[tuple] = None
+
+    @staticmethod
+    def _stamp_of(loader: "ConfigurationLoader") -> tuple:
+        return file_stamp(loader.config_path), file_stamp(loader.secrets_path)
+
+    def get(self, config_path: Path) -> tuple[BaseModel, "ConfigurationLoader"]:
+        """
+        Returns the validated configuration and the loader that produced it,
+        loading them from disk when there is no valid cached version.
+
+        Args:
+            config_path: Path to options.json
+
+        Returns:
+            Tuple of (validated configuration, loader)
+        """
+        with self._lock:
+            path = Path(config_path).resolve()
+            if self._config is not None and self._loader is not None:
+                if path == self._path and (
+                    self._stamp_of(self._loader) == self._stamp
+                ):
+                    return self._config, self._loader
+                # niets van het vorige bestand laten staan: als het lezen van
+                # dit bestand mislukt mag de vorige configuratie niet als die
+                # van dit bestand achterblijven
+                self._clear()
+
+            loader = ConfigurationLoader(path)
+            # Take the stamp before loading: a migration rewrites options.json,
+            # which then correctly invalidates this (pre-migration) stamp.
+            stamp = self._stamp_of(loader)
+            config = loader.load_and_validate()
+            self._config = config
+            self._loader = loader
+            self._path = path
+            self._stamp = stamp
+            return config, loader
+
+    def invalidate(self) -> None:
+        """Drops the cached configuration; the next get() reloads from disk."""
+        with self._lock:
+            self._clear()
+
+    def _clear(self) -> None:
+        self._config = None
+        self._loader = None
+        self._path = None
+        self._stamp = None
+
+
+# Process-wide cache, shared by every DaBase-object in the process
+config_cache = ConfigCache()
