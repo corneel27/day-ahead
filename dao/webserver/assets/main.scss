@@ -1,6 +1,5 @@
-@import "bootstrap/scss/bootstrap";
-@import "bootstrap-icons/font/bootstrap-icons.css";
-@import "prismjs/themes/prism.css";
+// Bootstrap-icons en het Prism-thema worden in main.js geimporteerd.
+@use "bootstrap/scss/bootstrap" as *;
 
 .icon-nav {
   .bi {
