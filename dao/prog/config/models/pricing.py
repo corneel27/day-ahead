@@ -4,7 +4,7 @@ Pricing configuration models.
 
 from typing import Optional, Literal
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from .base import SecretStr
+from .base import SecretStr, FlexInt
 from datetime import date
 
 
@@ -34,6 +34,92 @@ class PricingConfig(BaseModel):
                 "condition": {
                     "scope": "#/properties/source_day_ahead",
                     "schema": {"const": "entsoe"},
+                },
+            },
+        },
+    )
+    forecast_extension_provider: Literal[
+        "none", "energypriceforecast", "dayaheadprediction"
+    ] = Field(
+        default="none",
+        alias="forecast extension provider",
+        description="Optional provider for extending the day-ahead horizon with forecast data",
+        json_schema_extra={
+            "x-help": "Optional provider that extends the imported official day-ahead horizon with forecast prices. The extension never replaces already imported official prices.",
+            "x-ui-section": "Prices",
+        },
+    )
+    forecast_extension_hours: FlexInt = Field(
+        default=FlexInt(value=0),
+        alias="forecast extension hours",
+        description="How many additional hours should be appended beyond the official day-ahead horizon",
+        json_schema_extra={
+            "x-help": "Number of requested hours beyond the imported official day-ahead horizon. Supports either a fixed integer or a Home Assistant entity. The actual extension can be shorter because Energy Price Forecast access is limited to an absolute horizon from the current time: 48 hours anonymously and up to 120 hours with an eligible API key.",
+            "x-ui-section": "Prices",
+            "x-validation-hint": "Integer or HA entity, effective value between 0 and 168",
+        },
+    )
+    energypriceforecast_extension_api_url: Optional[str] = Field(
+        default="https://api.energypriceforecast.eu/api/v1/dao/prices",
+        alias="energypriceforecast-extension-api-url",
+        description="Energy Price Forecast EU extension API URL",
+        json_schema_extra={
+            "x-help": "Provider-specific URL for the Energy Price Forecast EU horizon extension feed. Expected response: format=dao-prices with entries[].",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {"const": "energypriceforecast"},
+                },
+            },
+        },
+    )
+    energypriceforecast_extension_api_key: Optional[SecretStr] = Field(
+        default=None,
+        alias="energypriceforecast-extension-api-key",
+        description="Energy Price Forecast EU extension API key (can use !secret)",
+        json_schema_extra={
+            "x-help": "Optional API key for the Energy Price Forecast EU extension feed. If set, DAO sends it as an Authorization Bearer token. Use !secret for security.",
+            "x-ui-section": "Prices",
+            "x-validation-hint": "Use !secret for API tokens",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {"const": "energypriceforecast"},
+                },
+            },
+        },
+    )
+    energypriceforecast_extension_country: Optional[str] = Field(
+        default=None,
+        alias="energypriceforecast-extension-country",
+        description="Override country code for Energy Price Forecast EU extension",
+        json_schema_extra={
+            "x-help": "Optional explicit market code for the Energy Price Forecast EU extension feed, for example 'nl', 'de', 'dk1', 'no3' or 'se4'. Leave empty only for countries with an unambiguous market. Denmark, Italy, Norway and Sweden require an explicit price zone.",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {"const": "energypriceforecast"},
+                },
+            },
+        },
+    )
+    day_ahead_prediction_extension_url: Optional[str] = Field(
+        default="https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+        alias="day-ahead-prediction-extension-url",
+        description="day-ahead-prediction extension URL",
+        json_schema_extra={
+            "x-help": "Provider-specific URL for the corneel27/day-ahead-prediction extension feed. Expected response: JSON array with fields like time_ts and prediction. This provider currently only fits the NL market.",
+            "x-ui-section": "Prices",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/forecast_extension_provider",
+                    "schema": {"const": "dayaheadprediction"},
                 },
             },
         },
@@ -153,6 +239,19 @@ class PricingConfig(BaseModel):
                 )
         return v
 
+    @field_validator("forecast_extension_hours")
+    @classmethod
+    def validate_forecast_extension_hours(cls, v: FlexInt) -> FlexInt:
+        if v is None:
+            return FlexInt(value=0)
+        raw_value = v.value
+        if isinstance(raw_value, str) and FlexInt.is_entity_id(raw_value):
+            return v
+        numeric_value = int(float(raw_value))
+        if not (0 <= numeric_value <= 168):
+            raise ValueError("forecast extension hours must be between 0 and 168")
+        return FlexInt(value=numeric_value)
+
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -167,7 +266,7 @@ Configure electricity market prices and tariff components for accurate cost opti
 ## Price Components
 
 Total electricity cost consists of:
-1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)
+1. **Market price**: Imported official day-ahead spot price (nordpool/entsoe/tibber)
 2. **Energy taxes**: Government energy taxes
 3. **Supplier costs**: Your supplier's markup/fees
 4. **VAT**: Value-added tax on sum of above
@@ -192,6 +291,12 @@ System uses tariff active on optimization date.
 - **nordpool**: Nord Pool (Nordic/Baltic markets)
 - **entsoe**: ENTSO-E Transparency Platform (all European markets)
 - **tibber**: Tibber API (if using Tibber as supplier)
+
+## Optional Horizon Extension
+
+- **forecast extension provider**: Optional forecast provider for extending the imported official horizon
+- **forecast extension hours**: Requested additional hours beyond the official horizon; provider access limits can shorten the actual extension
+- **energypriceforecast**: Provider-specific extension feed from Energy Price Forecast EU
 
 ## Tips
 
