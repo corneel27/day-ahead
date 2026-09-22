@@ -18,11 +18,11 @@ class PricePrediction(BaseModel):
             "x-ui-section": "Prices",
         },
     )
-    source: Optional[Literal["epexpredictor", "energypriceforecast_eu"]] = Field (
+    source: Optional[Literal["epexpredictor", "energypriceforecast_eu", "dap"]] = Field (
         default=None,
-        description="The name of the supplier of prediction data, now there is support for EpexPredictor and energypriceforecast_eu",
+        description="The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
         json_schema_extra={
-            "x-help": "The name of the supplier of prediction data, now there is support for EpexPredictor and energypriceforecast_eu",
+            "x-help": "The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
             "x-ui-section": "Prices",
         },
     )
@@ -32,7 +32,8 @@ class PricePrediction(BaseModel):
         json_schema_extra={
             "x-help": "The url of the supplier to get the prediction data"
                       "for Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"
-                      "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>",
+                      "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>"
+                      "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
             "x-ui-section": "Prices",
         },
     )

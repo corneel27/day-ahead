@@ -361,6 +361,40 @@ class DaPrices:
                 df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
         return df_db
 
+    def extract_data_dap(self,
+                         data:dict,
+                         know_at:datetime.datetime,
+                         new_horizon:datetime.datetime
+                         )->pd.DataFrame:
+        """
+        :param data:
+        [
+          {
+            "time": "2026-09-22 00:00:00+02:00",
+            "time_ts": 1790028000,
+            "prediction": 0.1701457947
+          },
+          {
+            "time": "2026-09-22 01:00:00+02:00",
+            "time_ts": 1790031600,
+            "prediction": 0.1664741486
+          },
+          {
+            "time": "2026-09-22 02:00:00+02:00",
+            "time_ts": 1790035200,
+            "prediction": 0.1623867005
+          },
+        ....
+        """
+        df = pd.DataFrame.from_records(data)
+        df["time"] = pd.to_datetime(df["time"])
+        df = df.loc[df['time'] > know_at]
+        df = df.loc[df['time'] <= new_horizon]
+        df.rename(columns={"time":"time_dt", "time_ts":"time", "prediction":"value"}, inplace=True)
+        df["code"] = "da"
+        return df
+
+
     def get_predicted_prices(self):
         source = self.config.prices.prediction.source
         api_url = self.config.prices.prediction.api
@@ -382,3 +416,16 @@ class DaPrices:
         )
         self.db_da.savedata(df_db, tablename="prognoses")
         return
+
+    def get_price_prediction(self, source:str="dap"):
+        if source.lower() == "dap":
+            url = (f"https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json")
+            resp = get(url)
+            logging.debug(resp.text)
+            json_object = json.loads(resp.text)
+            df = pd.DataFrame.from_records(json_object)
+            df.rename(columns={"time":"time_dt", "time_ts":"time", "prediction":"value"}, inplace=True)
+            df["code"] = "da"
+            # save
+            print(df.to_string(index=False))
+            self.db_da.savedata(df, "prognoses")
