@@ -52,6 +52,7 @@
   - [FlexInt](#flexint)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
+  - [PricePrediction](#priceprediction)
   - [ScheduleEntry](#scheduleentry)
   - [SecretStr](#secretstr)
   - [SocPowerLimit](#socpowerlimit)
@@ -1326,6 +1327,7 @@ System uses tariff active on optimization date.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
+| `prediction` | [PricePrediction](#priceprediction) (optional) | No | `null` | Configuration of getting and using priceprediction beyond the day ahead spotprices of epex. |
 | `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
@@ -1343,7 +1345,11 @@ System uses tariff active on optimization date.
 
 **`source day ahead`**
 
-Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.
+Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.
+
+**`prediction`**
+
+Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.
 
 **`entsoe-api-key`**
 
@@ -1998,6 +2004,32 @@ Descriptive name for this program. Examples: 'eco', 'quick wash', 'intensive', '
 **`power`**
 
 Power profile as list of watts per time interval. Length defines program duration. Example: [2000, 2000, 500, 500, 100] for 5-hour wash cycle.
+
+</details>
+
+
+### PricePrediction
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `extension` | integer (optional) | No | `0` | The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices (Unit: `h`) |
+| `source` | string (optional) | No | `null` | The name of the supplier of prediction data, now there is support for EpexPredictor and energypriceforecast_eu |
+| `api` | string (optional) | No | `"https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"` | The url of the supplier of prediction data, with which DAO can get the prediction data  |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`extension`**
+
+The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices
+
+**`source`**
+
+The name of the supplier of prediction data, now there is support for EpexPredictor and energypriceforecast_eu
+
+**`api`**
+
+The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>
 
 </details>
 

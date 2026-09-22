@@ -7,6 +7,35 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 from .base import SecretStr
 from datetime import date
 
+class PricePrediction(BaseModel):
+    extension: Optional[int] = Field (
+        default=0,
+        ge=0,
+        description="The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices",
+        json_schema_extra={
+            "x-help": "The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices",
+            "x-unit": "h",
+            "x-ui-section": "Prices",
+        },
+    )
+    source: Optional[Literal["epexpredictor", "energypriceforecast_eu"]] = Field (
+        default=None,
+        description="The name of the supplier of prediction data, now there is support for EpexPredictor and energypriceforecast_eu",
+        json_schema_extra={
+            "x-help": "The name of the supplier of prediction data, now there is support for EpexPredictor and energypriceforecast_eu",
+            "x-ui-section": "Prices",
+        },
+    )
+    api: Optional[str] = Field (
+        default="https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>",
+        description="The url of the supplier of prediction data, with which DAO can get the prediction data ",
+        json_schema_extra={
+            "x-help": "The url of the supplier to get the prediction data"
+                      "for Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"
+                      "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>",
+            "x-ui-section": "Prices",
+        },
+    )
 
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
@@ -16,7 +45,15 @@ class PricingConfig(BaseModel):
         alias="source day ahead",
         description="Source for day-ahead prices",
         json_schema_extra={
-            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+            "x-ui-section": "Prices",
+        },
+    )
+    prediction: Optional[PricePrediction] = Field(
+        default= None,
+        description="Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
+        json_schema_extra={
+            "x-help": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
             "x-ui-section": "Prices",
         },
     )
@@ -72,10 +109,11 @@ class PricingConfig(BaseModel):
     )
     cost_supplier_production: dict[str, float] = Field(
         alias="cost supplier production",
-        description="Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+        description="Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT) "
+                    "negative if you must pay for feed-in, positive if you get income for feed-in ",
         json_schema_extra={
             "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. "
-                      "Negative if you must pay for feed-in, positive if you get extra reward foor feed-in. "
+                      "Negative if you must pay for feed-in, positive if you get income for feed-in. "
                       "Format: {'2024-01-01': -0.02}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Cost",

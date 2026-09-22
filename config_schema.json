@@ -2137,6 +2137,63 @@
       "x-order": 14,
       "x-ui-group": "Integration"
     },
+    "PricePrediction": {
+      "properties": {
+        "extension": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0,
+          "description": "The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices",
+          "title": "Extension",
+          "x-help": "The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices",
+          "x-ui-section": "Prices",
+          "x-unit": "h"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "enum": [
+                "epexpredictor",
+                "energypriceforecast_eu"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The name of the supplier of prediction data, now there is support for EpexPredictor and energypriceforecast_eu",
+          "title": "Source",
+          "x-help": "The name of the supplier of prediction data, now there is support for EpexPredictor and energypriceforecast_eu",
+          "x-ui-section": "Prices"
+        },
+        "api": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>",
+          "description": "The url of the supplier of prediction data, with which DAO can get the prediction data ",
+          "title": "Api",
+          "x-help": "The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>",
+          "x-ui-section": "Prices"
+        }
+      },
+      "title": "PricePrediction",
+      "type": "object"
+    },
     "PricingConfig": {
       "additionalProperties": true,
       "description": "Day-ahead pricing and tariff configuration.",
@@ -2151,8 +2208,23 @@
           ],
           "title": "Source Day Ahead",
           "type": "string",
-          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
           "x-ui-section": "Prices"
+        },
+        "prediction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PricePrediction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
+          "x-help": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
+          "x-ui-section": "Prices",
+          "title": "Prediction"
         },
         "entsoe-api-key": {
           "anyOf": [

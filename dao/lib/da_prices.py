@@ -14,13 +14,18 @@ import logging
 
 class DaPrices:
     def __init__(
-        self, config, db_da: DBmanagerObj, country: str = None, secrets: dict = None
+        self, config,
+            db_da: DBmanagerObj,
+            country: str = None,
+            secrets: dict = None,
+            time_zone: str = "CET"
     ):
         self.config = config
         self.db_da = db_da
         self._secrets = secrets or {}
         self.interval = str(config.interval or "1hour").lower()
         self.country = country if country is not None else "NL"
+        self.time_zone = time_zone if time_zone is not None else "CET"
 
     def get_prices(
         self, source, _start: datetime.datetime = None, _end: datetime.datetime = None
@@ -278,3 +283,102 @@ class DaPrices:
                 f"{df_db.to_string(index=False)}"
             )
             self.db_da.savedata(df_db)
+
+    def extract_data_epexpredictor(self,
+                                   data:dict,
+                                   know_at:datetime.datetime,
+                                   new_horizon:datetime.datetime
+                                   )->pd.DataFrame:
+        """
+        :param data:
+        {
+        "knownUntil":"2026-09-21T23:45:00+02:00",
+        "prices": [
+            {
+              "startsAt": "2026-09-16T23:45:00+02:00",
+              "total": 16.851
+            },
+            {
+              "startsAt": "2026-09-17T00:00:00+02:00",
+              "total": 19.944
+            },
+            {
+              "startsAt": "2026-09-17T00:15:00+02:00",
+              "total": 18.678
+            },
+            ....
+        ]
+        :param know_at: laatste record met day ahead prijzen
+        :param new_horizon: ophalen tot en met new horizon
+        :return: dataframe with code, time, value
+        """
+        rows = data.get("prices")
+        df_db = pd.DataFrame(columns=["time", "tijd", "code", "value"])
+        for row in rows:
+            dt = datetime.datetime.strptime(row["startsAt"], "%Y-%m-%dT%H:%M:%S%f%z")
+            if dt > know_at and dt <= new_horizon:
+                time_stamp = int(dt.timestamp())
+                value = float(row["total"])/100
+                logging.info(f"{row} {dt} {time_stamp} {value}")
+                df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
+        return df_db
+
+    def extract_data_energypriceforecast_eu(self,
+                                            data:dict,
+                                            know_at:datetime.datetime,
+                                            new_horizon:datetime.datetime
+                                            )->pd.DataFrame:
+        """
+        {
+          "api_version": "v1",
+          "country": "NL",
+          "currency": "EUR",
+          "entries": [
+            {
+              "end": "2026-09-21T21:15:00Z",
+              "source": "day_ahead",
+              "start": "2026-09-21T21:00:00Z",
+              "value": 0.19836
+            },
+            {
+              "end": "2026-09-21T21:30:00Z",
+              "source": "day_ahead",
+              "start": "2026-09-21T21:15:00Z",
+              "value": 0.18462
+            },
+
+        """
+        rows = data.get('entries')
+        df_db = pd.DataFrame(columns=["time", "tijd", "code", "value"])
+        tz = pytz.timezone(self.time_zone)
+        for row in rows:
+            dt = datetime.datetime.strptime(row["start"], "%Y-%m-%dT%H:%M:%SZ")
+            dt = tz.localize(dt)
+            if dt > know_at and dt <= new_horizon:
+                time_stamp = int(dt.timestamp())
+                value = float(row["value"])
+                logging.info(f"{row} {dt} {time_stamp} {value}")
+                df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
+        return df_db
+
+    def get_predicted_prices(self):
+        source = self.config.prices.prediction.source
+        api_url = self.config.prices.prediction.api
+        extension = self.config.prices.prediction.extension
+        known_at = self.db_da.get_time_border_record("da").astimezone()
+        new_horizon = known_at + datetime.timedelta(hours=extension)
+        now = datetime.datetime.now().astimezone()
+        fetch_hours = math.ceil((new_horizon - now).total_seconds()/3600)
+        api_url= api_url.replace("<hours>", str(fetch_hours))
+        api_url= api_url.replace("<region>", self.country)
+        resp = get(api_url)
+        logging.debug(resp.text)
+        json_object = json.loads(resp.text)
+        extract_data_f = "extract_data_"+source
+        df_db = getattr(self, extract_data_f)(json_object, known_at, new_horizon)
+        logging.info(
+            f"Day ahead prediction prijzen (source: {source}, db-records): \n "
+            f"{df_db.to_string(index=False)}"
+        )
+        self.db_da.savedata(df_db, tablename="prognoses")
+        return

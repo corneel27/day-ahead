@@ -267,6 +267,12 @@ bewerkingen = {
         "parameters": ["prijzen_start", "prijzen_tot"],
         "file_name": "prices",
     },
+    "predicted_prices": {
+        "name": "Day ahead prijsvoorspelling ophalen",
+        "cmd": ["python3", "../prog/day_ahead.py", "predicted_prices"],
+        "task": "get_day_ahead_predicted_prices",
+        "file_name": "pred_prices",
+    },
     "calc_baseloads": {
         "name": "Bereken de baseloads",
         "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],

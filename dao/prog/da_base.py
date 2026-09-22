@@ -182,6 +182,7 @@ class DaBase(hass.Hass):
             self.db_da,
             country=self.ha_context.country,
             secrets=self.loader.secrets,
+            time_zone=self.ha_context.time_zone
         )
         self.prices_options = self.config.prices
         # eb + ode levering
@@ -289,6 +290,12 @@ class DaBase(hass.Hass):
                 "function": "get_day_ahead_prices",
                 "file_name": "prices",
             },
+            "predicted_prices": {
+                "name": "Day ahead prijsvoorspelling ophalen",
+                "cmd": ["python3", "../prog/day_ahead.py", "predicted_prices"],
+                "function": "get_day_ahead_predicted_prices",
+                "file_name": "pred_prices",
+            },
             "calc_baseloads": {
                 "name": "Bereken de baseloads",
                 "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],
@@ -372,6 +379,9 @@ class DaBase(hass.Hass):
             self.prices_options.source_day_ahead if self.prices_options else "nordpool"
         )
         self.prices.get_prices(source)
+
+    def get_day_ahead_predicted_prices(self):
+        self.prices.get_predicted_prices()
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """
