@@ -544,7 +544,7 @@ Home Assistant datetime entity specifying when to stop charging. Provides manual
 
 **`entity charging schedule`**
 
-Optional Home Assistant text entity where DAO writes all planned EV charging periods after each optimization.
+Optional Home Assistant text entity where DAO writes all planned EV charging periods, including their amperage and partial-interval end times, after each optimization.
 
 </details>
 

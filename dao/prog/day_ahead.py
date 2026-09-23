@@ -3748,10 +3748,24 @@ class DaCalc(DaBase):
                 logging.info(f"Totale switch kosten: {switch_cost[e].x:4.2f}")
                 entity_charging_schedule = self.ev_options[e].entity_charging_schedule
                 if entity_charging_schedule is not None:
+                    schedule_intervals = (
+                        ready_u[e] + 1 if ready_u[e] < U else 0
+                    )
                     charging_schedule = format_ev_charge_schedule(
-                        tijd,
-                        [c_ev[e][u].x for u in range(U)],
-                        self.interval_s,
+                        timestamps=tijd[:schedule_intervals],
+                        stage_energy=[
+                            [stage_consumption[e][cs][u].x for cs in range(ECS[e])]
+                            for u in range(schedule_intervals)
+                        ],
+                        stage_powers=[
+                            ev_charge_stages[e][cs]["power"]
+                            for cs in range(ECS[e])
+                        ],
+                        stage_amperes=[
+                            ev_charge_stages[e][cs]["ampere"]
+                            for cs in range(ECS[e])
+                        ],
+                        calculation_start=start_dt,
                     )
                     logging.info(
                         f"Laadschema {self.ev_options[e].name}: {charging_schedule}"

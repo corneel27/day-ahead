@@ -229,7 +229,7 @@ class EVConfig(BaseModel):
         alias="entity charging schedule",
         description="HA text entity for the calculated charging schedule",
         json_schema_extra={
-            "x-help": "Optional Home Assistant text entity where DAO writes all planned EV charging periods after each optimization.",
+            "x-help": "Optional Home Assistant text entity where DAO writes all planned EV charging periods, including their amperage and partial-interval end times, after each optimization.",
             "x-ui-section": "General",
             "x-ui-widget-filter": "input_text,text"
         }
