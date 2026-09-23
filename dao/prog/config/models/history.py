@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class HistoryConfig(BaseModel):
     """History and data retention settings."""
-    
+
     save_days: int = Field(
         alias="save days",
         default=7,
@@ -17,18 +17,18 @@ class HistoryConfig(BaseModel):
             "x-help": "Number of days to retain optimization history in database. Older data is automatically cleaned up. Longer retention enables better trend analysis but increases database size. Minimum 1 day.",
             "x-unit": "days",
             "x-ui-section": "History",
-            "x-validation-hint": "Must be >= 1, typical 7-30 days"
-        }
+            "x-validation-hint": "Must be >= 1, typical 7-30 days",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Reporting',
-            'x-icon': 'database-clock',
-            'x-order': 15,
-            'x-help': '''# History & Data Retention
+            "x-ui-group": "Reporting",
+            "x-icon": "database-clock",
+            "x-order": 15,
+            "x-help": """# History & Data Retention
 
 Control how long optimization history is retained in the database.
 
@@ -60,7 +60,7 @@ Control how long optimization history is retained in the database.
 - Check database size regularly
 - Old data cleaned up automatically
 - Increase for detailed cost analysis
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/History-Configuration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/History-Configuration",
+        },
     )

@@ -17,17 +17,17 @@ class BoilerDisabled(BaseModel):
         json_schema_extra={
             "x-help": "Set to false to disable boiler optimization entirely. No other fields are required.",
             "x-ui-section": "General",
-        }
+        },
     )
 
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Heating',
-            'x-icon': 'water-boiler',
-            'x-order': 5
-        }
+            "x-ui-group": "Heating",
+            "x-icon": "water-boiler",
+            "x-order": 5,
+        },
     )
 
 
@@ -41,7 +41,7 @@ class BoilerEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Enable hot water boiler optimization. Set to true to include boiler in optimization, false to disable.",
             "x-ui-section": "General",
-        }
+        },
     )
     entity_actual_temp: EntityId = Field(
         alias="entity actual temp.",
@@ -50,8 +50,8 @@ class BoilerEnabled(BaseModel):
             "x-help": "Home Assistant sensor showing current hot water temperature in °C. Required for thermal state tracking and heating decisions.",
             "x-unit": "°C",
             "x-ui-section": "Sensors",
-            "x-ui-widget-filter": "sensor"
-        }
+            "x-ui-widget-filter": "sensor",
+        },
     )
     entity_setpoint: EntityId = Field(
         alias="entity setpoint",
@@ -60,8 +60,8 @@ class BoilerEnabled(BaseModel):
             "x-help": "Home Assistant entity for target water temperature. System will heat water to this temperature. Typical: 55-65°C for domestic hot water.",
             "x-unit": "°C",
             "x-ui-section": "Configuration",
-            "x-ui-widget-filter": "input_number,number,sensor"
-        }
+            "x-ui-widget-filter": "input_number,number,sensor",
+        },
     )
     entity_hysterese: EntityId = Field(
         alias="entity hysterese",
@@ -70,8 +70,8 @@ class BoilerEnabled(BaseModel):
             "x-help": "Home Assistant entity for temperature hysteresis in °C. Prevents excessive cycling. If setpoint=60°C and hysteresis=5°C, heating starts at 55°C.",
             "x-unit": "°C",
             "x-ui-section": "Configuration",
-            "x-ui-widget-filter": "input_number,number,sensor"
-        }
+            "x-ui-widget-filter": "input_number,number,sensor",
+        },
     )
     entity_enabled: Optional[EntityId] = Field(
         default=None,
@@ -80,8 +80,8 @@ class BoilerEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant binary sensor indicating if boiler is enabled. System will only optimize when boiler is enabled.",
             "x-ui-section": "Sensors",
-            "x-ui-widget-filter": "binary_sensor"
-        }
+            "x-ui-widget-filter": "binary_sensor",
+        },
     )
     entity_instant_start: Optional[EntityId] = Field(
         default=None,
@@ -90,8 +90,8 @@ class BoilerEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to trigger immediate boiler heating. Overrides optimized schedule for on-demand hot water.",
             "x-ui-section": "Controls",
-            "x-ui-widget-filter": "switch,input_boolean,button"
-        }
+            "x-ui-widget-filter": "switch,input_boolean,button",
+        },
     )
     cop: FlexFloat = Field(
         default=3.0,
@@ -100,19 +100,18 @@ class BoilerEnabled(BaseModel):
             "x-help": "Coefficient of Performance if using heat pump water heater. For resistive heating element, use 1.0. For heat pump water heater, typically 2.5-4.0.",
             "x-unit": "ratio",
             "x-ui-section": "Physical Properties",
-            "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump"
-        }
+            "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump",
+        },
     )
     cooling_rate: FlexFloat = Field(
         alias="cooling rate",
-             
         description="Cooling rate in degrees per hour",
         json_schema_extra={
             "x-help": "Rate at which water temperature drops when not heating, in °C per hour. Depends on insulation quality. Typical: 0.5-2.0°C/h for well-insulated boilers.",
             "x-unit": "°C/h",
             "x-ui-section": "Physical Properties",
-            "x-validation-hint": "Must be >= 0, typically 0.5-2.0°C/h"
-        }
+            "x-validation-hint": "Must be >= 0, typically 0.5-2.0°C/h",
+        },
     )
     volume: float = Field(
         default=200.0,
@@ -122,8 +121,8 @@ class BoilerEnabled(BaseModel):
             "x-help": "Hot water tank volume in liters. Affects thermal inertia and heating time. Typical residential: 100-300 liters.",
             "x-unit": "L",
             "x-ui-section": "Physical Properties",
-            "x-validation-hint": "Must be > 0, typically 100-300L"
-        }
+            "x-validation-hint": "Must be > 0, typically 100-300L",
+        },
     )
     heating_allowed_below: FlexFloat = Field(
         alias="heating allowed below",
@@ -132,8 +131,8 @@ class BoilerEnabled(BaseModel):
             "x-help": "Maximum temperature for starting heating cycle. Heating only occurs when water is below this temperature. Typically same as or slightly above setpoint.",
             "x-unit": "°C",
             "x-ui-section": "Configuration",
-            "x-validation-hint": "Should be >= setpoint"
-        }
+            "x-validation-hint": "Should be >= setpoint",
+        },
     )
     elec_power: float = Field(
         default=1000.0,
@@ -144,8 +143,8 @@ class BoilerEnabled(BaseModel):
             "x-help": "Electrical power consumption of heating element or heat pump compressor in watts. Typical: 1000-3000W for resistive, 400-800W for heat pump water heater.",
             "x-unit": "W",
             "x-ui-section": "Physical Properties",
-            "x-validation-hint": "Must be > 0, typically 1000-3000W"
-        }
+            "x-validation-hint": "Must be > 0, typically 1000-3000W",
+        },
     )
     activate_service: Optional[str] = Field(
         default=None,
@@ -153,8 +152,8 @@ class BoilerEnabled(BaseModel):
         description="Service type to activate boiler (e.g., 'press', 'switch')",
         json_schema_extra={
             "x-help": "Home Assistant service type to trigger boiler heating. Use 'press' for button entities, 'switch' for switch entities, or custom service names.",
-            "x-ui-section": "Controls"
-        }
+            "x-ui-section": "Controls",
+        },
     )
     activate_entity: Optional[EntityId] = Field(
         default=None,
@@ -163,8 +162,8 @@ class BoilerEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant entity used to activate boiler heating. System will trigger this entity using activate_service when heating is needed.",
             "x-ui-section": "Controls",
-            "x-ui-widget-filter": "button,switch"
-        }
+            "x-ui-widget-filter": "button,switch",
+        },
     )
     boiler_heated_by_heatpump: bool = Field(
         default=True,
@@ -172,8 +171,8 @@ class BoilerEnabled(BaseModel):
         description="Whether the boiler is heated by a heat pump",
         json_schema_extra={
             "x-help": "Set to true if the boiler is heated by a heat pump (COP > 1). Set to false for direct electric resistive heating. Affects optimization calculations.",
-            "x-ui-section": "Configuration"
-        }
+            "x-ui-section": "Configuration",
+        },
     )
     switch_entity: Optional[EntityId] = Field(
         default=None,
@@ -182,12 +181,12 @@ class BoilerEnabled(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant switch entity to directly control boiler power. Alternative to activate_entity for simple on/off control.",
             "x-ui-section": "Controls",
-            "x-ui-widget-filter": "switch"
-        }
+            "x-ui-widget-filter": "switch",
+        },
     )
-    
-    @model_validator(mode='after')
-    def validate_activate_config(self) -> 'BoilerEnabled':
+
+    @model_validator(mode="after")
+    def validate_activate_config(self) -> "BoilerEnabled":
         """
         Ensure that if activate_entity is provided, activate_service must also be provided.
         Ensure that activate_entity or switch_entity is provided
@@ -201,17 +200,17 @@ class BoilerEnabled(BaseModel):
                 'Boiler must have "activate entity" or "switch entity" to be configured'
             )
         return self
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'title': 'BoilerConfig',
-            'x-ui-group': 'Heating',
-            'x-ui-section': 'Boiler',
-            'x-icon': 'water-boiler',
-            'x-order': 5,
-            'x-help': '''# Hot Water Boiler Configuration
+            "title": "BoilerConfig",
+            "x-ui-group": "Heating",
+            "x-ui-section": "Boiler",
+            "x-icon": "water-boiler",
+            "x-order": 5,
+            "x-help": """# Hot Water Boiler Configuration
 
 Optimize hot water heating based on electricity prices, usage patterns, and thermal characteristics.
 
@@ -246,9 +245,9 @@ The system models boiler as a thermal battery:
 - Heat pump water heaters (COP > 1.0) much more efficient than resistive
 - Schedule heating during solar production or cheap grid periods
 - Instant start available for emergency hot water needs
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Boiler-Configuration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Boiler-Configuration",
+        },
     )
 
 
@@ -256,5 +255,5 @@ The system models boiler as a thermal battery:
 # Literal[False] → BoilerDisabled). Pydantic generates oneOf + const in JSON Schema.
 BoilerConfig = Annotated[
     Union[BoilerEnabled, BoilerDisabled],
-    Field(discriminator='boiler_present'),
+    Field(discriminator="boiler_present"),
 ]

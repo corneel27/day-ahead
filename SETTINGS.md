@@ -128,7 +128,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `reduced hours` | object (optional) | No | `null` | Hour -> max power mapping for reduced power hours _Keys are hour strings (0-23), values are watts_ |
 | `reduce_power_low_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for low SOC power reduction |
 | `reduce_power_high_soc` | list[[SocPowerLimit](#socpowerlimit)] | No | `null` | SOC thresholds and power limits for high SOC power reduction |
-| `minimum power` | integer | Yes | — | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
+| `minimum power` | integer (optional) | No | `0` | Minimum power in watts (Unit: `W`) _Must be >= 0, typically 50-200W_ |
 | `dc_to_bat efficiency` | number | Yes | — | DC to battery efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
 | `dc_to_bat max power` | [FlexFloat](#flexfloat) (optional) | No | `null` | DC to battery max power in watts (Unit: `W`) _Must be > 0_ |
 | `bat_to_dc efficiency` | number | Yes | — | Battery to DC efficiency (Unit: `ratio`) _0.0-1.0, typically 0.95-0.98_ |
@@ -143,6 +143,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `entity from pv` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
 | `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
 | `entity calculated soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for saving calculated SOC (Unit: `%`) |
+| `entity battery next action` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the timestamp of this battery's next planned action |
 | `solar` | list[[SolarConfig](#solarconfig)] | No | `null` | DC-coupled solar panels attached to this battery |
 
 <details>
@@ -263,6 +264,10 @@ Optional: Home Assistant entity to save the calculated average grid power in wat
 **`entity calculated soc`**
 
 Optional: Home Assistant entity to save the calculated State of Charge at the end of the first interval. For battery systems that will stear at SoC-values
+
+**`entity battery next action`**
+
+Optional: Home Assistant input_datetime entity to save the timestamp of the next interval in which this battery is planned to do something. Used by automations that put the inverter into standby during confirmed-idle stretches.
 
 **`solar`**
 
@@ -470,6 +475,7 @@ Use `charge_scheduler` for time-based optimization:
 | `name` | string | Yes | — | EV name/identifier |
 | `capacity` | number | Yes | — | Battery capacity in kWh (Unit: `kWh`) _Must be > 0, typically 40-100 kWh_ |
 | `switch cost` | number (optional) | No | `0.0` | Switch cost in euro/switch to 'on' (Unit: `euro/switch to 'on'`) _Must be >= 0, typically 0.01- 0.10 euro/switch_ |
+| `low soc cost` | number (optional) | No | `0.0` | Los soc cost in euro/kWh.hour (Unit: `euro/kWh.hour`) _Must be >= 0, typically 0.001 - 0.01 euro/kWh.hour_ |
 | `entity position` | [EntityId](#entityid) | Yes | — | HA device tracker for vehicle position |
 | `charge three phase` | [FlexBool](#flexbool) | No | `true` | Whether vehicle charges on three phases |
 | `charge stages` | list[[EVChargeStage](#evchargestage)] | Yes | — | Charging amperage/efficiency curve _At least 1 stage required_ |
@@ -497,6 +503,10 @@ Usable battery capacity in kilowatt-hours. Check vehicle specifications (often l
 **`switch cost`**
 
 Virtual cost in euro per extra switch to 'on'.Every extra 'stop/start' will cause one switch_penalty to be accounted
+
+**`low soc cost`**
+
+Virtual cost in euro per kWh per hour when soc is lower then wish_level
 
 **`entity position`**
 
@@ -1994,7 +2004,7 @@ _A single scheduled task entry._
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
-| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `calc_optimum`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
+| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `calc_optimum`, `calc_optimum_met_debug`, `clean_data`, `calc_baseloads`, `train_ml_predictions` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>

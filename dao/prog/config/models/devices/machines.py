@@ -9,13 +9,13 @@ from ..base import EntityId
 
 class MachineProgram(BaseModel):
     """Single machine program with power profile."""
-    
+
     name: str = Field(
         description="Program name (e.g., 'eco', 'quick wash', 'off')",
         json_schema_extra={
             "x-help": "Descriptive name for this program. Examples: 'eco', 'quick wash', 'intensive', 'off'. Must include an 'off' program with zero power.",
-            "x-ui-section": "Machine Specifications"
-        }
+            "x-ui-section": "Machine Specifications",
+        },
     )
     power: list[float] = Field(
         description="Power consumption in watts for each time interval",
@@ -23,28 +23,28 @@ class MachineProgram(BaseModel):
             "x-help": "Power profile as list of watts per time interval. Length defines program duration. Example: [2000, 2000, 500, 500, 100] for 5-hour wash cycle.",
             "x-unit": "W",
             "x-ui-section": "Machine Specifications",
-            "x-validation-hint": "List of power values, one per interval (typically 1h each)"
-        }
+            "x-validation-hint": "List of power values, one per interval (typically 1h each)",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         json_schema_extra={
             "x-help": "Define power profile for a machine program. Each program has a name and power consumption pattern over time.",
-            "x-ui-section": "Machine Specifications"
-        }
+            "x-ui-section": "Machine Specifications",
+        },
     )
 
 
 class MachineConfig(BaseModel):
     """Appliance/machine configuration (washing machine, dishwasher, etc.)."""
-    
+
     name: str = Field(
         description="Machine name/identifier",
         json_schema_extra={
             "x-help": "Unique name for this appliance. Use descriptive names like 'Washing Machine', 'Dishwasher', or 'Dryer' for multiple machines.",
-            "x-ui-section": "Machine Specifications"
-        }
+            "x-ui-section": "Machine Specifications",
+        },
     )
     programs: list[MachineProgram] = Field(
         min_length=1,
@@ -52,8 +52,8 @@ class MachineConfig(BaseModel):
         json_schema_extra={
             "x-help": "List of available programs with their power profiles. Must include at least one program. Always include an 'off' program with zero power consumption.",
             "x-ui-section": "Machine Specifications",
-            "x-validation-hint": "At least 1 program required, include 'off' program"
-        }
+            "x-validation-hint": "At least 1 program required, include 'off' program",
+        },
     )
     entity_start_window: EntityId = Field(
         alias="entity start window",
@@ -61,8 +61,8 @@ class MachineConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant datetime entity for earliest allowed start time. Machine can start any time after this. Example: 'Now' or '18:00 today'.",
             "x-ui-section": "Machine Specifications",
-            "x-ui-widget-filter": "input_datetime,datetime"
-        }
+            "x-ui-widget-filter": "input_datetime,datetime",
+        },
     )
     entity_end_window: EntityId = Field(
         alias="entity end window",
@@ -70,8 +70,8 @@ class MachineConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant datetime entity for latest allowed completion time. Machine must finish before this deadline. Example: '08:00 tomorrow'.",
             "x-ui-section": "Machine Specifications",
-            "x-ui-widget-filter": "input_datetime,datetime"
-        }
+            "x-ui-widget-filter": "input_datetime,datetime",
+        },
     )
     entity_selected_program: EntityId = Field(
         alias="entity selected program",
@@ -79,8 +79,8 @@ class MachineConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant entity to select which program to run. Must match program names defined in 'programs' list.",
             "x-ui-section": "Machine Specifications",
-            "x-ui-widget-filter": "input_select,select"
-        }
+            "x-ui-widget-filter": "input_select,select",
+        },
     )
     entity_calculated_start: EntityId = Field(
         alias="entity calculated start",
@@ -88,8 +88,8 @@ class MachineConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant entity where system writes the calculated optimal start time. User/automation can use this to trigger machine.",
             "x-ui-section": "Machine Specifications",
-            "x-ui-widget-filter": "input_datetime,datetime"
-        }
+            "x-ui-widget-filter": "input_datetime,datetime",
+        },
     )
     entity_calculated_end: EntityId = Field(
         alias="entity calculated end",
@@ -97,8 +97,8 @@ class MachineConfig(BaseModel):
         json_schema_extra={
             "x-help": "Home Assistant entity where system writes the calculated program end time. Useful for notifications and planning.",
             "x-ui-section": "Machine Specifications",
-            "x-ui-widget-filter": "input_datetime,datetime"
-        }
+            "x-ui-widget-filter": "input_datetime,datetime",
+        },
     )
     entity_instant_start: Optional[EntityId] = Field(
         default=None,
@@ -107,18 +107,18 @@ class MachineConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to force immediate start, bypassing optimization. Useful for urgent wash cycles.",
             "x-ui-section": "Machine Specifications",
-            "x-ui-widget-filter": "input_boolean,switch,button"
-        }
+            "x-ui-widget-filter": "input_boolean,switch,button",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Devices',
-            'x-icon': 'washing-machine',
-            'x-order': 6,
-            'x-help': '''# Appliance / Machine Configuration
+            "x-ui-group": "Devices",
+            "x-icon": "washing-machine",
+            "x-order": 6,
+            "x-help": """# Appliance / Machine Configuration
 
 Optimize operation of flexible load appliances (washing machines, dishwashers, dryers, etc.) based on electricity prices and constraints.
 
@@ -158,7 +158,7 @@ Examples:
 - Combine with solar production forecasts
 - Use instant start for urgent loads
 - Multiple machines can be optimized together
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Machine-Configuration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Machine-Configuration",
+        },
     )

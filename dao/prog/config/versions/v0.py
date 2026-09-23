@@ -33,49 +33,43 @@ from ..models.xgboost import XGBoostConfig
 class ConfigurationV0(DAOConfigBaseModel):
     """
     Day Ahead Optimizer Configuration - Version 0.
-    
+
     This is the root configuration model that encompasses all settings.
     """
-    
+
     # Version
     config_version: Literal[0] = 0
-    
+
     # Connection
     homeassistant: HomeAssistantConfig = Field(
         default_factory=lambda: HomeAssistantConfig(),
-        description="Home Assistant connection settings"
+        description="Home Assistant connection settings",
     )
-    
+
     # Databases
     database_ha: HADatabaseConfig = Field(
         default_factory=HADatabaseConfig,
         alias="database ha",
-        description="Home Assistant database connection"
+        description="Home Assistant database connection",
     )
     database_da: DatabaseConfig = Field(
         default_factory=DatabaseConfig,
         alias="database da",
-        description="Day Ahead optimization database connection"
+        description="Day Ahead optimization database connection",
     )
-    
+
     time_zone: Optional[str] = Field(
         default=None,
         alias="time_zone",
         description="Timezone (auto-fetched from HA if not set)",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Your home"
-        }
+        json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Your home"},
     )
     country: Optional[str] = Field(
         default=None,
         description="Country code (auto-fetched from HA if not set)",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Your home"
-        }
+        json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Your home"},
     )
-    
+
     # Meteoserver
     meteoserver_key: SecretStr = Field(
         alias="meteoserver-key",
@@ -84,17 +78,14 @@ class ConfigurationV0(DAOConfigBaseModel):
             "x-ui-group": "DAO",
             "x-ui-section": "Weather",
             "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. Use !secret for security. Required for weather forecasts.",
-            "x-validation-hint": "Use !secret for API keys"
-        }
+            "x-validation-hint": "Use !secret for API keys",
+        },
     )
-    meteoserver_model: Literal['harmonie', 'gfs'] = Field(
+    meteoserver_model: Literal["harmonie", "gfs"] = Field(
         default="harmonie",
         alias="meteoserver-model",
         description="Meteoserver model",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Weather"
-        }
+        json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Weather"},
     )
 
     meteoserver_attemps: Optional[int] = Field(
@@ -102,38 +93,28 @@ class ConfigurationV0(DAOConfigBaseModel):
         alias="meteoserver-attemps",
         ge=1,
         description="Number of meteoserver fetch attempts",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Weather"
-        }
+        json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Weather"},
     )
-    
+
     # Pricing
     prices: Optional[PricingConfig] = Field(
-        default=None,
-        description="Day-ahead pricing and tariff configuration"
+        default=None, description="Day-ahead pricing and tariff configuration"
     )
-    
+
     # General settings
-    logging_level: Literal['debug', 'info', 'warning', 'error'] = Field(
+    logging_level: Literal["debug", "info", "warning", "error"] = Field(
         default="info",
         alias="logging level",
         description="Logging level",
-        json_schema_extra={
-            "x-ui-group": "DAO",
-            "x-ui-section": "Main"
-        }
+        json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Main"},
     )
-    protocol_api: Optional[Literal['http', 'https']] = Field(
+    protocol_api: Optional[Literal["http", "https"]] = Field(
         default=None,
         alias="protocol api",
         description="API protocol",
-        json_schema_extra={
-            "x-ui-group": "Integration",
-            "x-ui-section": "Dashboard"
-        }
+        json_schema_extra={"x-ui-group": "Integration", "x-ui-section": "Dashboard"},
     )
-    
+
     # Baseload
     use_calc_baseload: bool = Field(
         default=False,
@@ -142,8 +123,8 @@ class ConfigurationV0(DAOConfigBaseModel):
         json_schema_extra={
             "x-ui-group": "DAO",
             "x-ui-section": "Baseload",
-            "x-order": 101
-        }
+            "x-order": 101,
+        },
     )
     baseload_calc_periode: int = Field(
         default=56,
@@ -158,10 +139,10 @@ class ConfigurationV0(DAOConfigBaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/use_calc_baseload",
-                    "schema": {"enum": [True]}
-                }
-            }
-        }
+                    "schema": {"enum": [True]},
+                },
+            },
+        },
     )
     baseload: Optional[list[float]] = Field(
         default=None,
@@ -177,12 +158,12 @@ class ConfigurationV0(DAOConfigBaseModel):
                 "effect": "HIDE",
                 "condition": {
                     "scope": "#/properties/use_calc_baseload",
-                    "schema": {"enum": [True]}
-                }
-            }
-        }
+                    "schema": {"enum": [True]},
+                },
+            },
+        },
     )
-    
+
     # Graphics
     graphical_backend: str = Field(
         default="",
@@ -191,30 +172,29 @@ class ConfigurationV0(DAOConfigBaseModel):
         json_schema_extra={
             "x-ui-group": "Reporting",
             "x-ui-section": "Graphics",
-            "x-validation-hint": "Leave empty for auto-detect, use 'Agg' for headless"
-        }
+            "x-validation-hint": "Leave empty for auto-detect, use 'Agg' for headless",
+        },
     )
     graphics: GraphicsConfig = Field(
         default_factory=GraphicsConfig,
-        description="Graphics and visualization settings"
+        description="Graphics and visualization settings",
     )
-    
+
     # Optimization
-    interval: Literal['1hour', '15min'] = Field(
-        default='1hour',
+    interval: Literal["1hour", "15min"] = Field(
+        default="1hour",
         description="Optimization interval in minutes",
         json_schema_extra={
             "x-ui-group": "DAO",
             "x-ui-section": "Optimization",
             "x-help": "Time interval for optimization calculations. '1hour' for hourly optimization, '15min' for quarter-hourly optimization (more detailed, higher computation).",
             "x-docs-url": "https://github.com/corneel72/day-ahead/wiki/Optimization",
-            "x-order": 1
-        }
+            "x-order": 1,
+        },
     )
     strategy: FlexEnum = Field(
         default=FlexEnum(
-            value="minimize cost",
-            enum_values=["minimize cost", "minimize consumption"]
+            value="minimize cost", enum_values=["minimize cost", "minimize consumption"]
         ),
         description="Optimization strategy (or HA entity ID returning the strategy string)",
         json_schema_extra={
@@ -222,8 +202,8 @@ class ConfigurationV0(DAOConfigBaseModel):
             "x-ui-section": "Optimization",
             "x-order": 2,
             "x-validation-hint": "'minimize cost' or 'minimize consumption', or HA entity ID",
-            "x-ui-widget-filter": "input_select,select,sensor"
-        }
+            "x-ui-widget-filter": "input_select,select,sensor",
+        },
     )
     max_gap: FlexFloat = Field(
         default=FlexFloat(value=0.005),
@@ -235,95 +215,77 @@ class ConfigurationV0(DAOConfigBaseModel):
             "x-validation-hint": "Must be > 0",
             "x-ui-group": "DAO",
             "x-ui-section": "Optimization",
-            "x-order": 3
-        }
+            "x-order": 3,
+        },
     )
-    
+
     # User Interface
     notifications: NotificationsConfig = Field(
-        default_factory=NotificationsConfig,
-        description="Notification settings"
+        default_factory=NotificationsConfig, description="Notification settings"
     )
-    
+
     # Infrastructure
     grid: GridConfig = Field(
         default_factory=GridConfig,
         description="Grid connection settings",
-        json_schema_extra={
-            "x-ui-section": "Grid"
-        }
+        json_schema_extra={"x-ui-section": "Grid"},
     )
     history: HistoryConfig = Field(
-        default_factory=HistoryConfig,
-        description="History retention settings"
+        default_factory=HistoryConfig, description="History retention settings"
     )
     dashboard: DashboardConfig = Field(
-        default_factory=DashboardConfig,
-        description="Dashboard web UI settings"
+        default_factory=DashboardConfig, description="Dashboard web UI settings"
     )
-    
+
     # Devices (required arrays)
     battery: list[BatteryConfig] = Field(
         default_factory=list,
         description="Battery configurations",
-        json_schema_extra={
-            "x-ui-section": "Batteries"
-        }
+        json_schema_extra={"x-ui-section": "Batteries"},
     )
     solar: list[SolarConfig] = Field(
         default_factory=list,
         description="Solar panel configurations",
-        json_schema_extra={
-            "x-ui-section": "Solar Panels"
-        }
+        json_schema_extra={"x-ui-section": "Solar Panels"},
     )
     electric_vehicle: list[EVConfig] = Field(
         default_factory=list,
         alias="electric vehicle",
         description="Electric vehicle configurations",
-        json_schema_extra={
-            "x-ui-section": "Vehicles"
-        }
+        json_schema_extra={"x-ui-section": "Vehicles"},
     )
     machines: list[MachineConfig] = Field(
         default_factory=list,
         description="Appliance/machine configurations",
-        json_schema_extra={
-            "x-ui-section": "Machines"
-        }
+        json_schema_extra={"x-ui-section": "Machines"},
     )
-    
+
     # Optional devices
     boiler: Optional[BoilerConfig] = Field(
-        default=None,
-        description="Hot water boiler configuration"
+        default=None, description="Hot water boiler configuration"
     )
     heating: Optional[HeatingConfig] = Field(
-        default=None,
-        description="Heating system / heat pump configuration"
+        default=None, description="Heating system / heat pump configuration"
     )
-    
+
     # Optional integrations
     tibber: Optional[TibberConfig] = Field(
-        default=None,
-        description="Tibber API integration"
+        default=None, description="Tibber API integration"
     )
     xgboost: XGBoostConfig = Field(
         default_factory=XGBoostConfig,
-        description="XGBoost solar-production predictor settings"
+        description="XGBoost solar-production predictor settings",
     )
-    
+
     # Reporting & Scheduling
     report: ReportConfig = Field(
-        default_factory=ReportConfig,
-        description="Reporting entity configuration"
+        default_factory=ReportConfig, description="Reporting entity configuration"
     )
     scheduler: SchedulerConfig = Field(
-        default_factory=SchedulerConfig,
-        description="Task scheduler configuration"
+        default_factory=SchedulerConfig, description="Task scheduler configuration"
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',  # Preserve unknown keys
-        populate_by_name=True  # Allow both snake_case and aliases
+        extra="allow",  # Preserve unknown keys
+        populate_by_name=True,  # Allow both snake_case and aliases
     )

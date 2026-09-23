@@ -10,12 +10,20 @@ This module provides:
 
 import re
 from typing import Any, ClassVar, Optional, Union
-from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_serializer, model_validator, ConfigDict
+from pydantic import (
+    BaseModel,
+    Field,
+    TypeAdapter,
+    field_validator,
+    model_serializer,
+    model_validator,
+    ConfigDict,
+)
 from pydantic_core import core_schema as _core_schema
 
 # Matches Home Assistant entity IDs: "domain.object_id"
 # domain must start with a letter (rules out numeric strings like "0.45")
-_HA_ENTITY_ID_RE = re.compile(r'^[a-z_][a-z0-9_]*\.[a-zA-Z0-9_]+$')
+_HA_ENTITY_ID_RE = re.compile(r"^[a-z_][a-z0-9_]*\.[a-zA-Z0-9_]+$")
 
 # Re-use a single TypeAdapter for bool coercion — Pydantic's lax bool validator
 # accepts "true"/"false", "1"/"0", "on"/"off", "yes"/"no", integers, etc.
@@ -47,11 +55,11 @@ class EntityId(str):
         return _core_schema.no_info_after_validator_function(
             cls._validate,
             _core_schema.str_schema(),
-            ref='EntityId',
+            ref="EntityId",
         )
 
     @classmethod
-    def _validate(cls, v: str) -> 'EntityId':
+    def _validate(cls, v: str) -> "EntityId":
         if not _HA_ENTITY_ID_RE.match(v):
             raise ValueError(
                 f"Invalid Home Assistant entity ID: {v!r}. "
@@ -62,9 +70,9 @@ class EntityId(str):
     @classmethod
     def __get_pydantic_json_schema__(cls, core_schema, handler):
         return {
-            'type': 'string',
-            'x-help': 'Home Assistant entity ID in the format "domain.object_id" '
-                      '(e.g. "sensor.battery_soc").',
+            "type": "string",
+            "x-help": 'Home Assistant entity ID in the format "domain.object_id" '
+            '(e.g. "sensor.battery_soc").',
         }
 
 
@@ -100,9 +108,7 @@ class FlexValue(BaseModel):
 
     value: Union[int, float, str, bool] = Field()
 
-    model_config = ConfigDict(
-        extra='forbid'
-    )
+    model_config = ConfigDict(extra="forbid")
 
     @model_serializer
     def serialize_flex_value(self) -> Any:
@@ -113,22 +119,18 @@ class FlexValue(BaseModel):
     def __get_pydantic_json_schema__(cls, core_schema, handler):
         """Return the JSON schema for the union type."""
         return {
-            'anyOf': [
-                {'type': 'number'},
-                {'type': 'string'},
-                {'type': 'boolean'}
-            ],
-            'x-help': 'FlexValue enables dynamic configuration using Home Assistant entities. '
-                      'Instead of hardcoding values, reference HA entities that can change at '
-                      'runtime. System automatically detects and resolves entity IDs.',
+            "anyOf": [{"type": "number"}, {"type": "string"}, {"type": "boolean"}],
+            "x-help": "FlexValue enables dynamic configuration using Home Assistant entities. "
+            "Instead of hardcoding values, reference HA entities that can change at "
+            "runtime. System automatically detects and resolves entity IDs.",
         }
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def parse_from_literal(cls, v: Any) -> Any:
         """Wrap a bare literal (int/float/str/bool) into dict form accepted by the model."""
         if not isinstance(v, dict):
-            return {'value': v}
+            return {"value": v}
         return v
 
     @staticmethod
@@ -237,10 +239,10 @@ class FlexStr(FlexValue):
 
 class FlexEnum(FlexValue):
     """FlexValue that resolves to ``str`` with enum constraints.
-    
+
     Like FlexStr, but validates that non-entity values match allowed enum options.
     Use for fields with predefined choices OR entity IDs.
-    
+
     Usage:
         strategy: FlexEnum = Field(
             default=FlexEnum(
@@ -248,53 +250,55 @@ class FlexEnum(FlexValue):
                 enum_values=["minimize cost", "minimize consumption"]
             )
         )
-    
+
     Examples:
         FlexEnum(value="minimize cost", enum_values=[...])      # Valid if in list
         FlexEnum(value="sensor.strategy_mode", enum_values=[...])  # Valid entity ID
     """
-    
+
     _resolve_type: ClassVar[type] = str
     enum_values: Optional[list[str]] = Field(default=None, exclude=True)
-    
-    @model_validator(mode='after')
+
+    @model_validator(mode="after")
     def validate_enum_value(self):
         """Validate that value is either an entity ID or in the allowed enum values."""
         # Always allow entity IDs
         if self.is_entity_id(self.value):
             return self
-        
+
         # If enum_values specified, validate against them
         if self.enum_values is not None and self.value not in self.enum_values:
-            allowed = ', '.join(f"'{val}'" for val in self.enum_values)
+            allowed = ", ".join(f"'{val}'" for val in self.enum_values)
             raise ValueError(
                 f"Value '{self.value}' is not valid. Must be one of: {allowed}, "
                 f"or a Home Assistant entity ID (e.g., 'input_select.strategy')"
             )
-        
+
         return self
-    
+
     @classmethod
     def __get_pydantic_json_schema__(cls, core_schema, handler):
         # Note: This generates the base schema. Enum values are added via
         # json_schema_extra at the Field level, not here at class level.
         return {
-            'anyOf': [{'type': 'string'}],  # Accept any string (enum values added by Field)
-            'x-help': 'Select from predefined values or use Home Assistant entity ID. '
-                      'Entity IDs are always valid.',
+            "anyOf": [
+                {"type": "string"}
+            ],  # Accept any string (enum values added by Field)
+            "x-help": "Select from predefined values or use Home Assistant entity ID. "
+            "Entity IDs are always valid.",
         }
 
 
 class DAOConfigBaseModel(BaseModel):
     """Base model for Day Ahead Optimizer configuration classes.
-    
+
     Provides common validation and preprocessing logic for all DAO configuration models:
     - Automatic enum_values injection for FlexEnum fields from field defaults
     - Automatic x-enum-values addition to JSON schema for UISchema generation
     - Future: additional DAO-specific validation and processing logic
-    
+
     All DAO configuration models should inherit from this instead of BaseModel directly.
-    
+
     Example:
         class MyConfig(DAOConfigBaseModel):
             strategy: FlexEnum = Field(
@@ -305,75 +309,81 @@ class DAOConfigBaseModel(BaseModel):
             )
             # No need to duplicate enum_values in json_schema_extra!
     """
-    
-    @model_validator(mode='before')
+
+    @model_validator(mode="before")
     @classmethod
     def inject_flex_enum_values(cls, data):
         """Automatically inject enum_values for all FlexEnum fields from their metadata or defaults."""
         if not isinstance(data, dict):
             return data
-        
+
         # Iterate through all fields in the model
         for field_name, field_info in cls.model_fields.items():
             # Check if this field is annotated as FlexEnum
             if field_info.annotation == FlexEnum and field_name in data:
                 value = data[field_name]
-                
+
                 # Try to get enum_values from field metadata first (legacy)
                 enum_values = None
                 if field_info.json_schema_extra:
-                    enum_values = field_info.json_schema_extra.get('x-enum-values')
-                
+                    enum_values = field_info.json_schema_extra.get("x-enum-values")
+
                 # If not in metadata, try to extract from field default
-                if not enum_values and hasattr(field_info, 'default'):
+                if not enum_values and hasattr(field_info, "default"):
                     default = field_info.default
                     if isinstance(default, FlexEnum) and default.enum_values:
                         enum_values = default.enum_values
-                
+
                 if enum_values:
                     # Inject enum_values into the data
                     if isinstance(value, str):
-                        data[field_name] = {'value': value, 'enum_values': enum_values}
-                    elif isinstance(value, dict) and 'enum_values' not in value:
-                        value['enum_values'] = enum_values
-        
+                        data[field_name] = {"value": value, "enum_values": enum_values}
+                    elif isinstance(value, dict) and "enum_values" not in value:
+                        value["enum_values"] = enum_values
+
         return data
-    
+
     @classmethod
     def model_json_schema(cls, **kwargs):
         """Customize JSON schema generation to add x-enum-values from FlexEnum defaults."""
         schema = super().model_json_schema(**kwargs)
-        
+
         # Process properties to add x-enum-values for FlexEnum fields
-        if 'properties' in schema:
+        if "properties" in schema:
             for field_name, field_info in cls.model_fields.items():
-                if field_info.annotation == FlexEnum and field_name in schema['properties']:
-                    prop_schema = schema['properties'][field_name]
-                    
+                if (
+                    field_info.annotation == FlexEnum
+                    and field_name in schema["properties"]
+                ):
+                    prop_schema = schema["properties"][field_name]
+
                     # Check if x-enum-values already set in json_schema_extra
-                    has_x_enum = field_info.json_schema_extra and 'x-enum-values' in field_info.json_schema_extra
-                    
+                    has_x_enum = (
+                        field_info.json_schema_extra
+                        and "x-enum-values" in field_info.json_schema_extra
+                    )
+
                     # If not, extract from field default
-                    if not has_x_enum and hasattr(field_info, 'default'):
+                    if not has_x_enum and hasattr(field_info, "default"):
                         default = field_info.default
                         if isinstance(default, FlexEnum) and default.enum_values:
                             # Add x-enum-values to the property schema
-                            prop_schema['x-enum-values'] = default.enum_values
-        
+                            prop_schema["x-enum-values"] = default.enum_values
+
         return schema
 
 
 class SecretStr(str):
     """
     A secret string reference that gets resolved from secrets.json.
-    
+
     Subclasses ``str`` so it is usable everywhere a plain string is expected.
     Stores the value as-is: either "!secret key_name" for secret references,
     or a plain string value for non-secrets.
-    
+
     Example in options.json:
         {"db_password": "!secret db_password"}
-        
+
     Gets resolved to actual value from secrets.json:
         {"db_password": "my_actual_password_123"}
     """
@@ -383,11 +393,11 @@ class SecretStr(str):
         return _core_schema.no_info_after_validator_function(
             cls._validate,
             _core_schema.str_schema(),
-            ref='SecretStr',
+            ref="SecretStr",
         )
 
     @classmethod
-    def _validate(cls, v: str) -> 'SecretStr':
+    def _validate(cls, v: str) -> "SecretStr":
         """Accept any string value."""
         if not isinstance(v, str):
             raise ValueError(f"SecretStr must be a string, got {type(v)}")
@@ -396,19 +406,19 @@ class SecretStr(str):
     @classmethod
     def __get_pydantic_json_schema__(cls, core_schema, handler):
         return {
-            'type': 'string',
-            'x-help': 'Secret reference or plain string. Use "!secret key_name" format to '
-                      'reference secrets from secrets.json. Plain strings are also accepted.',
+            "type": "string",
+            "x-help": 'Secret reference or plain string. Use "!secret key_name" format to '
+            "reference secrets from secrets.json. Plain strings are also accepted.",
         }
 
     def is_secret_reference(self) -> bool:
         """Return True if this is a secret reference (starts with !secret)."""
-        return self.startswith('!secret ')
+        return self.startswith("!secret ")
 
     def get_secret_key(self) -> str:
         """Extract the secret key name if this is a secret reference, otherwise return self."""
         if self.is_secret_reference():
-            return self.replace('!secret ', '', 1).strip()
+            return self.replace("!secret ", "", 1).strip()
         return str(self)
 
     def resolve(self, secrets: dict[str, str]) -> str:
@@ -418,21 +428,21 @@ class SecretStr(str):
         If the value starts with ``!secret``, extracts the key and looks it up
         in *secrets*. If the key exists, returns the corresponding value.
         Otherwise treats the key as a literal plain-text value and returns it.
-        
+
         For non-secret values (plain strings), returns the value as-is.
-        
+
         Args:
             secrets: Dictionary of secrets loaded from secrets.json
-            
+
         Returns:
             The resolved secret value, or the raw value if not a secret reference.
         """
         if not self.is_secret_reference():
             # Plain string value - return as-is
             return str(self)
-        
+
         # Extract the key from "!secret key_name"
         key = self.get_secret_key()
-        
+
         # Look up in secrets dict, fallback to the key itself if not found
         return secrets.get(key, key)

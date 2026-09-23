@@ -44,10 +44,10 @@ class DBmanagerObj(object):
         Args:
             db_dialect   :Dialect: mysql(=mariadb), sqlite, postgresql
             db_name      :Name of the DB
-            db_server    :Server (mysql only)
-            db_user      :User (mysql only)
-            db_password  :Password (mysql only)
-            db_port      :port(mysql via TCP only) Necessary if not 3306
+            db_server    :Server/host (mysql, postgresql)
+            db_user      :User (mysql, postgresql)
+            db_password  :Password (mysql, postgresql)
+            db_port      :port(mysql and postgresql via TCP only) Necessary if not default
             db_path      :path if sqlite db (sqlite only)
             db_time_zone :time_zone (postgresql only)
         """
@@ -60,35 +60,25 @@ class DBmanagerObj(object):
         self.port = db_port
         self.db_path = db_path
         self.TARGET_TIMEZONE = db_time_zone
-        if self.db_dialect == "mysql":
-            self.engine = create_engine(
-                f"mysql+pymysql://{self.user}:{self.password}@"
-                f"{self.server}/{self.db_name}",
-                pool_recycle=3600,
-                pool_pre_ping=True,
-            )
-        elif self.db_dialect == "postgresql":
-            self.engine = create_engine(
-                f"postgresql+psycopg2://{self.user}:{self.password}@"
-                f"{self.server}/{self.db_name}"
-            )
-        #             with self.engine.connect() as connection:
-        #                connection.execute(text(f"SET timezone = '{self.TARGET_TIMEZONE}';"))
-        else:  # sqlite3
-            if self.db_path is None:
-                self.db_path = "../data"
-            # abs_db_path = os.path.abspath(self.db_path) # ../data
-            # self.dbname = "home-assistant_v2.db"
-            # self.engine = create_engine(f'sqlite:////{abs_db_path}/{self.db_name}')
-            self.engine = create_engine(f"sqlite:///{self.db_path}/{self.db_name}")
-        if self.db_dialect == "sqlite":
-            logging.debug(
-                f"Dialect: {self.db_dialect}, database: {self.db_name}, db_path: {self.db_path}"
-            )
-        else:
-            logging.debug(
-                f"Dialect: {self.db_dialect}, database: {self.db_name}, server: {self.server}"
-            )
+
+        self.engine = create_engine(
+            self.db_url(
+                db_dialect=self.db_dialect,
+                db_name=self.db_name,
+                db_server=self.server,
+                db_user=self.user,
+                db_password=self.password,
+                db_port=self.port,
+                db_path=self.db_path,
+            ),
+            pool_recycle=3600,
+            pool_pre_ping=True,
+        )
+
+        # Postgres: set timezone
+        # with self.engine.connect() as connection:
+        # connection.execute(text(f"SET timezone = '{self.TARGET_TIMEZONE}';"))
+
         # Probe the connection once at construction to fail fast with a clear
         # error message.  Using a context manager returns the connection to the
         # pool on exit regardless of success or failure — the engine stays valid.

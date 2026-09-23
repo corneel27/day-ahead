@@ -9,7 +9,7 @@ from .base import EntityId
 
 class NotificationsConfig(BaseModel):
     """Notification settings for Home Assistant."""
-    
+
     notification_entity: Optional[EntityId] = Field(
         default=None,
         alias="notification entity",
@@ -17,24 +17,24 @@ class NotificationsConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant notification service entity. Used to send notifications about optimization events. Example: 'notify.mobile_app' or 'notify.persistent_notification'.",
             "x-ui-section": "Notification Settings",
-            "x-ui-widget-filter": "notify"
-        }
+            "x-ui-widget-filter": "notify",
+        },
     )
     opstarten: bool = Field(
         default=False,
         description="Send notification on startup",
         json_schema_extra={
             "x-help": "Send notification when Day Ahead Optimizer starts up. Useful for monitoring add-on status.",
-            "x-ui-section": "Notification Settings"
-        }
+            "x-ui-section": "Notification Settings",
+        },
     )
     berekening: bool = Field(
         default=False,
         description="Send notification on calculation completion",
         json_schema_extra={
             "x-help": "Send notification when optimization calculation completes. Includes summary of results (costs, battery schedule, etc.).",
-            "x-ui-section": "Notification Settings"
-        }
+            "x-ui-section": "Notification Settings",
+        },
     )
     last_activity_entity: Optional[EntityId] = Field(
         default=None,
@@ -43,18 +43,18 @@ class NotificationsConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity to update with last activity timestamp. Useful for monitoring and automations. Example: 'input_datetime.dao_last_run'.",
             "x-ui-section": "Notification Settings",
-            "x-ui-widget-filter": "input_datetime,datetime,sensor"
-        }
+            "x-ui-widget-filter": "input_datetime,datetime,sensor",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Integration',
-            'x-icon': 'bell',
-            'x-order': 14,
-            'x-help': '''# Notifications Configuration
+            "x-ui-group": "Integration",
+            "x-icon": "bell",
+            "x-order": 14,
+            "x-help": """# Notifications Configuration
 
 Configure Home Assistant notifications for optimization events.
 
@@ -86,7 +86,7 @@ Configure Home Assistant notifications for optimization events.
 - Use persistent notifications for detailed results
 - Disable during testing to avoid notification spam
 - Consider automations based on last_activity_entity
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Notifications'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Notifications",
+        },
     )

@@ -9,14 +9,14 @@ from .base import SecretStr
 
 class HADatabaseConfig(BaseModel):
     """Home Assistant database connection configuration."""
-    
+
     engine: Literal["mysql", "sqlite", "postgresql"] = Field(
         default="sqlite",
         description="Database engine type",
         json_schema_extra={
             "x-help": "Database engine where Home Assistant stores history data. Most HA installations use SQLite, but MySQL/MariaDB and PostgreSQL are also supported.",
-            "x-ui-section": "Homeassistant DB"
-        }
+            "x-ui-section": "Homeassistant DB",
+        },
     )
     server: Optional[str] = Field(
         default=None,
@@ -29,14 +29,15 @@ class HADatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
     port: Optional[int] = Field(
         default=None,
-        ge=1, le=65535,
+        ge=1,
+        le=65535,
         description="Database port",
         json_schema_extra={
             "x-help": "Database server port. If not specified, defaults to 3306 for MySQL or 5432 for PostgreSQL. Not used for SQLite.",
@@ -47,10 +48,10 @@ class HADatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
     db_path: Optional[str] = Field(
         default=None,
@@ -62,18 +63,18 @@ class HADatabaseConfig(BaseModel):
                 "effect": "HIDE",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
     database: Optional[str] = Field(
         default=None,
         description="Database name",
         json_schema_extra={
             "x-help": "Name of the Home Assistant database. Default 'homeassistant' matches standard HA installation.",
-            "x-ui-section": "Homeassistant DB"
-        }
+            "x-ui-section": "Homeassistant DB",
+        },
     )
     username: Optional[str] = Field(
         default=None,
@@ -85,10 +86,10 @@ class HADatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
     password: Optional[SecretStr] = Field(
         default=None,
@@ -101,14 +102,14 @@ class HADatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',  # Preserve unknown keys
+        extra="allow",  # Preserve unknown keys
         populate_by_name=True,
         json_schema_extra={
             "x-help": "Home Assistant database connection for reading historical sensor data (prices, solar, baseload).",
@@ -116,40 +117,44 @@ class HADatabaseConfig(BaseModel):
             "title": "Home Assistant Database",
             "if": {
                 "required": ["engine"],
-                "properties": {
-                    "engine": {"enum": ["mysql", "postgresql"]}
-                }
+                "properties": {"engine": {"enum": ["mysql", "postgresql"]}},
             },
-            "then": {
-                "required": ["server", "port", "username"]
-            }
-        }
+            "then": {"required": ["server", "port", "username"]},
+        },
     )
-    
-    @model_validator(mode='after')
-    def validate_engine_requirements(self) -> 'HADatabaseConfig':
+
+    @model_validator(mode="after")
+    def validate_engine_requirements(self) -> "HADatabaseConfig":
         """Validate engine-specific requirements and set defaults."""
-        if self.engine in ('mysql', 'postgresql'):
+        if self.engine in ("mysql", "postgresql"):
             if self.server is None:
-                if self.engine == 'mysql':
-                    self.server = 'core-mariadb'
+                if self.engine == "mysql":
+                    self.server = "core-mariadb"
                 else:
-                    raise ValueError(f"'server' is required when engine is '{self.engine}'")
+                    raise ValueError(
+                        f"'server' is required when engine is '{self.engine}'"
+                    )
             if self.username is None:
-                if self.engine == 'mysql':
-                    self.username = 'homeassistant'
+                if self.engine == "mysql":
+                    self.username = "homeassistant"
                 else:
-                    raise ValueError(f"'username' is required when engine is '{self.engine}'")
+                    raise ValueError(
+                        f"'username' is required when engine is '{self.engine}'"
+                    )
             if self.password is None:
-                raise ValueError(f"'password' is required when engine is '{self.engine}'")
+                raise ValueError(
+                    f"'password' is required when engine is '{self.engine}'"
+                )
             if self.port is None:
-                self.port = 3306 if self.engine == 'mysql' else 5432
-        elif self.engine == 'sqlite':
+                self.port = 3306 if self.engine == "mysql" else 5432
+        elif self.engine == "sqlite":
             if self.db_path is None:
                 self.db_path = "/homeassistant"
 
         if self.database is None:
-            self.database = "home-assistant_v2.db" if self.engine == "sqlite" else "homeassistant"
+            self.database = (
+                "home-assistant_v2.db" if self.engine == "sqlite" else "homeassistant"
+            )
 
         return self
 
@@ -157,19 +162,19 @@ class HADatabaseConfig(BaseModel):
 class DatabaseConfig(BaseModel):
     """
     Day Ahead database configuration (database da).
-    
+
     Can be either SQLite, MySQL/MariaDB, or PostgreSQL.
     """
-    
-    engine: Literal['sqlite', 'mysql', 'postgresql'] = Field(
+
+    engine: Literal["sqlite", "mysql", "postgresql"] = Field(
         default="sqlite",
         description="Database engine type",
         json_schema_extra={
             "x-help": "Database engine for Day Ahead optimizer data. SQLite is simplest (no server needed), MySQL/PostgreSQL for advanced setups or shared databases.",
-            "x-ui-section": "DAO Database"
-        }
+            "x-ui-section": "DAO Database",
+        },
     )
-    
+
     # SQLite fields
     db_path: Optional[str] = Field(
         default=None,
@@ -182,10 +187,10 @@ class DatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["sqlite"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["sqlite"]},
+                },
+            },
+        },
     )
     database: Optional[str] = Field(
         default=None,
@@ -193,10 +198,10 @@ class DatabaseConfig(BaseModel):
         json_schema_extra={
             "x-help": "For SQLite: filename (e.g., 'day_ahead.db'). For MySQL/PostgreSQL: database name. At least one of db_path or database required for SQLite.",
             "x-ui-section": "DAO Database",
-            "x-validation-hint": "Filename for SQLite, database name for MySQL/PostgreSQL"
-        }
+            "x-validation-hint": "Filename for SQLite, database name for MySQL/PostgreSQL",
+        },
     )
-    
+
     # MySQL fields
     server: Optional[str] = Field(
         default=None,
@@ -209,14 +214,15 @@ class DatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
     port: Optional[int] = Field(
         default=None,
-        ge=1, le=65535,
+        ge=1,
+        le=65535,
         description="MySQL/PostgreSQL server port (required for mysql/postgresql)",
         json_schema_extra={
             "x-help": "Database server port. Required for MySQL/PostgreSQL. Standard ports: 3306 (MySQL), 5432 (PostgreSQL).",
@@ -226,10 +232,10 @@ class DatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
     username: Optional[str] = Field(
         default=None,
@@ -242,10 +248,10 @@ class DatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
     password: Optional[SecretStr] = Field(
         default=None,
@@ -258,10 +264,10 @@ class DatabaseConfig(BaseModel):
                 "effect": "SHOW",
                 "condition": {
                     "scope": "#/properties/engine",
-                    "schema": {"enum": ["mysql", "postgresql"]}
-                }
-            }
-        }
+                    "schema": {"enum": ["mysql", "postgresql"]},
+                },
+            },
+        },
     )
     time_zone: Optional[str] = Field(
         default=None,
@@ -269,18 +275,18 @@ class DatabaseConfig(BaseModel):
         description="Database timezone",
         json_schema_extra={
             "x-help": "Optional: Timezone for database timestamps. Examples: 'Europe/Amsterdam', 'UTC'. Usually not needed if database and system timezones match.",
-            "x-ui-section": "DAO Database"
-        }
+            "x-ui-section": "DAO Database",
+        },
     )
-    
+
     model_config = ConfigDict(
-        extra='allow',
+        extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            'x-ui-group': 'Integration',
-            'x-icon': 'database',
-            'x-order': 10,
-            'x-help': '''# Day Ahead Database Configuration
+            "x-ui-group": "Integration",
+            "x-icon": "database",
+            "x-order": 10,
+            "x-help": """# Day Ahead Database Configuration
 
 Database for storing Day Ahead optimizer calculations, schedules, and results.
 
@@ -324,31 +330,37 @@ Then in options.json:
 - Use strong passwords for server-based databases
 - Ensure database is backed up (contains optimization history)
 - Check database size periodically (can grow with history)
-''',
-            'x-docs-url': 'https://github.com/corneel27/day-ahead/wiki/Database-Configuration'
-        }
+""",
+            "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Database-Configuration",
+        },
     )
-    
-    @model_validator(mode='after')
-    def validate_engine_requirements(self) -> 'DatabaseConfig':
-        """Validate engine-specific requirements and set defaults."""
-        if self.engine in ('mysql', 'postgresql'):
-            if self.server is None:
-                if self.engine == 'mysql':
-                    self.server = 'core-mariadb'
-                else:
-                    raise ValueError(f"'server' is required when engine is '{self.engine}'")
-            if self.username is None:
-                if self.engine == 'mysql':
-                    self.username = 'day_ahead'
-                else:  
-                    raise ValueError(f"'username' is required when engine is '{self.engine}'")
-            if self.password is None:
-                raise ValueError(f"'password' is required when engine is '{self.engine}'")
-            if self.port is None:
-                self.port = 3306 if self.engine == 'mysql' else 5432
 
-        elif self.engine == 'sqlite':
+    @model_validator(mode="after")
+    def validate_engine_requirements(self) -> "DatabaseConfig":
+        """Validate engine-specific requirements and set defaults."""
+        if self.engine in ("mysql", "postgresql"):
+            if self.server is None:
+                if self.engine == "mysql":
+                    self.server = "core-mariadb"
+                else:
+                    raise ValueError(
+                        f"'server' is required when engine is '{self.engine}'"
+                    )
+            if self.username is None:
+                if self.engine == "mysql":
+                    self.username = "day_ahead"
+                else:
+                    raise ValueError(
+                        f"'username' is required when engine is '{self.engine}'"
+                    )
+            if self.password is None:
+                raise ValueError(
+                    f"'password' is required when engine is '{self.engine}'"
+                )
+            if self.port is None:
+                self.port = 3306 if self.engine == "mysql" else 5432
+
+        elif self.engine == "sqlite":
             if self.db_path is None and self.database is None:
                 self.db_path = "../data"
 

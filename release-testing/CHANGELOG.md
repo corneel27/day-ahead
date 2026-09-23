@@ -1,5 +1,71 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.9.1.rc1
+- removed us of pipe, let the child inherit the scheduler's stdout/stderr: (#812)
+- added git and nano to installed packages
+- corrected finish day_ahead.py on arm64 to prevent crash with error -4
+
+# 2026.9.0.rc2
+Fixed error when getting flex-value from HA (reported by $tomvandepoel3)
+
+# 2026.9.0.rc1
+- Moved the runs of scheduler-tasks to a separate process, SIGABRT in CBC killed the scheduler (reported by @tomvandepoel3)
+- Added wget to succeed a local build of miplib (reported by @stat)
+- Corrected the "internal server error" when api called with period "vandaag", "morgen" or "vandaag_en_morgen"
+
+# 2026.8.0.rc8
+## Breaking change
+Users with a seperate container (no HA app/addon)change your pull command:
+`docker pull ghcr.io/corneel27/dao:testing`
+
+Changes:
+- update workflows for (test)build images, packages are now oci-compliant
+- update several python modules
+- Add `battery_next_action` output for standby/sleep automation
+- Route CBC's native solver output into the logger
+
+
+# 2026.8.0.rc4
+
+- rc4: Fixed error in app/docker entry
+- rc3: Fixed 2e error in watchdog
+- rc2: Fixed error in watchdog 
+Fixes rc1:
+- Reload changed config for reports (changed watchdog.sh to restart scheduler and reload workers webserver)
+- fixed error if boiler setting gives no optimization room to DAO (setpoint - hysterese <= heating_allowed_below)
+- Fix: UI flickering in dark mode (UI V2)
+- Fix: exception on Reports V2 with no ha-sensors to get data from
+- Fix: icon font on relative path
+- Updated several python modules
+
+# 2026.7.0.rc2
+
+A number of found issues in rc1 are fixed:
+- the combination of Instant start and a very tiny window from entity_ready_datetime 
+from home assistant could let the CBC solver crash.
+- Also the entity_ready_datetime still influenced the amount to charge at instant charge. Now it's behaving like described in the wiki.
+- support light/dark mode
+- fix legacy topnav on mobile
+- rename run to tasks
+- added date-picker on savings
+- fix error reduce_power_low_soc/reduce_power_high_soc "SocPowerLimit"
+
+# 2026.7.0.rc1
+
+This release contains two big changes/improvements:
+1. @storeman is started with the rewriting of the user-interface. 
+You can find his proceedings with the menu-option "UI V2". It is mostly written in javascript.
+2. @Dogooder has investigated and improved the mip-calculation of the ev-model of DAO. He also have build a test-suite
+for the ev-module under certain stress-circumstances.
+I thank both contributors for their great efforts!! <br>
+
+The other changes in this release:
+- when "stop_inverter" is not configured the calculated bat-power is now spread out over the hole interval.
+- correct stop_omvormer when feedin > 0.0 (suggested by @Dogooder) 
+- correct index error with reduce_power_low_soc and reduce_power_high_soc
+- added multithread so it uses all available cores during mip-calculation (thanks @Dogooder)
+- correct baseload calculation for machine usage (thanks @gijsstat)
+- updates of several used python modules
 
 # 2026.6.0.rc1
 - Changed watchdog.sh: also restart scheduler when it crashes

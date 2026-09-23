@@ -34,7 +34,7 @@ class XGBoostConfig(BaseModel):
         json_schema_extra={
             "x-help": (
                 "Free-form dict passed directly to sklearn GridSearchCV. "
-                "Example: {\"n_estimators\": [100, 200], \"max_depth\": [3, 6]}. "
+                'Example: {"n_estimators": [100, 200], "max_depth": [3, 6]}. '
                 "Leave empty to use the built-in defaults."
             )
         },
@@ -49,8 +49,8 @@ class XGBoostConfig(BaseModel):
             "x-help": (
                 "Free-form dict of XGBoost parameters used when "
                 "tune_hyperparameters is disabled. "
-                "Example: {\"n_estimators\": 200, \"max_depth\": 6, "
-                "\"learning_rate\": 0.1}. "
+                'Example: {"n_estimators": 200, "max_depth": 6, '
+                '"learning_rate": 0.1}. '
                 "Leave empty to use the built-in defaults."
             )
         },
