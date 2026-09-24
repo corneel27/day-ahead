@@ -357,9 +357,10 @@ def _import_targets():
     from dao.prog.da_report import Report
     from dao.lib.db_manager import DBmanagerObj
     from dao.prog.solar_predictor import SolarPredictor
+    from dao.lib.da_meteo import Meteo
     import dao.prog.da_base as da_base_module
 
-    return DaBase, Report, DBmanagerObj, SolarPredictor, da_base_module
+    return DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, da_base_module
 
 
 # ---------------------------------------------------------------------------
@@ -538,6 +539,7 @@ class RecordingIO:
         self._ha_states: dict[str, str] = {}
         self._baseload: dict[str, list] = {}
         self._heatpump_run_hours: dict[str, float] = {}
+        self._avg_temperature: dict[str, float] = {}
         self._solar_predictions: dict[str, pd.DataFrame] = {}
         self._captured_at = dt.datetime.now()
         self._model = None  # last mip.Model.optimize() was called on
@@ -568,7 +570,7 @@ class RecordingIO:
 
     # Zet alle class- en module-patches voor deze opnamesessie neer; dekt samen alle kanalen uit sectie 1 van het ontwerp.
     def _install_patches(self) -> None:
-        DaBase, Report, DBmanagerObj, SolarPredictor, _da_base_module = _import_targets()
+        DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, _da_base_module = _import_targets()
 
         original_init = DaBase.__init__
 
@@ -648,6 +650,26 @@ class RecordingIO:
             return result
 
         self._patches.set(Report, "get_heatpump_run_hours", _wrapped_hp_hours)
+
+        # A channel found the same way predict_solar_device was (see the
+        # comment below): calc_optimum()'s heating block calls
+        # self.meteo.calc_graaddagen(weighted=True) unconditionally once the
+        # heat pump is enabled, which falls through to
+        # Meteo.get_avg_temperature() — a live SQLAlchemy query DBmanagerObj's
+        # patch above never sees, because it only runs inside this method.
+        # Patched wholesale, same principle as get_price_data/
+        # get_heatpump_run_hours; keyed by call args since calc_graaddagen
+        # calls it once for "today" (date=None) and, on a horizon longer
+        # than a day, again for "tomorrow" (an explicit date).
+        original_avg_temperature = Meteo.get_avg_temperature
+
+        # Roept de echte temperatuurquery aan en onthoudt het resultaat per argumentcombinatie (vandaag/morgen).
+        def _wrapped_avg_temperature(instance, *args, **kwargs):
+            result = original_avg_temperature(instance, *args, **kwargs)
+            self._avg_temperature[_call_key(args, kwargs)] = result
+            return result
+
+        self._patches.set(Meteo, "get_avg_temperature", _wrapped_avg_temperature)
 
         original_get_prognose_data = DBmanagerObj.get_prognose_data
 
@@ -775,6 +797,7 @@ class RecordingIO:
             "ha_states": self._ha_states,
             "baseload": self._baseload,
             "heatpump_run_hours": self._heatpump_run_hours,
+            "avg_temperature": self._avg_temperature,
             "solar_predictions": {
                 key: _dataframe_to_payload(df) for key, df in self._solar_predictions.items()
             },
@@ -930,6 +953,9 @@ class ReplayIO:
         self._heatpump_run_hours: dict[str, float] = self._snapshot.get(
             "heatpump_run_hours", {}
         )
+        self._avg_temperature: dict[str, float] = self._snapshot.get(
+            "avg_temperature", {}
+        )
         self._solar_predictions: dict[str, pd.DataFrame] = {
             key: _dataframe_from_payload(payload)
             for key, payload in self._snapshot.get("solar_predictions", {}).items()
@@ -994,7 +1020,7 @@ class ReplayIO:
 
     # Zet alle class- en module-patches voor deze replaysessie neer: config, reads, writes en de klok.
     def _install_patches(self) -> None:
-        DaBase, Report, DBmanagerObj, SolarPredictor, da_base_module = _import_targets()
+        DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, da_base_module = _import_targets()
 
         if self._config_dict is None:
             raise SnapshotMiss(
@@ -1084,6 +1110,21 @@ class ReplayIO:
             return self._heatpump_run_hours[key]
 
         self._patches.set(Report, "get_heatpump_run_hours", _replay_hp_hours)
+
+        # Levert de opgeslagen gemiddelde temperatuur terug per argumentcombinatie en faalt hard als die ontbreekt.
+        def _replay_avg_temperature(instance, *args, **kwargs):
+            key = _call_key(args, kwargs)
+            if key not in self._avg_temperature:
+                raise SnapshotMiss(
+                    f"ReplayIO ({self._source}): get_avg_temperature"
+                    f"{tuple(args)} is not present in the snapshot "
+                    f"(looked up as key {key}) — either the fixture predates "
+                    f"the heat pump being enabled, or this is a heating "
+                    f"config the capture never exercised."
+                )
+            return self._avg_temperature[key]
+
+        self._patches.set(Meteo, "get_avg_temperature", _replay_avg_temperature)
 
         # Levert de opgeslagen zonnevoorspelling terug op paneelnaam, ongevoelig voor een afwijkend tijdvenster.
         def _replay_predict_solar_device(instance, solar_option, start, end):
@@ -2698,6 +2739,7 @@ def cmd_inspect(args: argparse.Namespace, data_dir: Path) -> int:
         "prog_data_shape": _df_payload_shape(snapshot.get("prog_data")),
         "baseload_days": len(snapshot.get("baseload", {})),
         "heatpump_run_hours_count": len(snapshot.get("heatpump_run_hours", {})),
+        "avg_temperature_count": len(snapshot.get("avg_temperature", {})),
         "secrets_redacted": _count_redacted(snapshot.get("config") or {}),
         "result": result,
     }
@@ -2712,7 +2754,8 @@ def cmd_inspect(args: argparse.Namespace, data_dir: Path) -> int:
             f"price_data {d['price_data_shape']} | "
             f"prog_data {d['prog_data_shape']} | "
             f"baseload {d['baseload_days']} day(s) | "
-            f"hp_run_hours {d['heatpump_run_hours_count']}"
+            f"hp_run_hours {d['heatpump_run_hours_count']} | "
+            f"avg_temperature {d['avg_temperature_count']}"
         )
         print(f"config    secrets: {d['secrets_redacted']} redacted")
         if d["result"]:
@@ -3680,12 +3723,25 @@ def cmd_scenario_list(args: argparse.Namespace, data_dir: Path) -> int:
 def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
     scenarios = _scenario_pkg()
     from dataclasses import asdict
+    from dao.prog.scenarios import baseline
 
     try:
         (scenario,) = scenarios.load([args.id])
     except KeyError as ex:
         raise UsageError(str(ex)) from ex
     d = asdict(scenario)
+
+    # Only present when the scenario actually opts into Tier C (most of the
+    # 24 EV cases don't) — mirrors the "only print non-empty sections" rule
+    # `states`/`config_patch`/`ev` already follow below.
+    d["baseline"] = None
+    if "objective_within_baseline" in scenario.expect:
+        existing = baseline.load_baseline(scenario.id)
+        d["baseline"] = {
+            "checked": bool(scenario.expect["objective_within_baseline"]),
+            "objective": existing["objective"] if existing else None,
+            "path": str(baseline.baseline_path(scenario.id)) if existing else None,
+        }
 
     def render(dd):
         print(f"{dd['id']}  —  {dd['description']}")
@@ -3707,6 +3763,13 @@ def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
         if dd["ev"]:
             print(f"  ev         {dd['ev']}")
         print(f"  expect     {dd['expect']}  (+ the Tier A invariants, always)")
+        if dd["baseline"] is not None:
+            b = dd["baseline"]
+            note = "" if b["checked"] else "  (objective_within_baseline: false — not checked)"
+            if b["objective"] is not None:
+                print(f"  baseline   {b['objective']:.6f}  ({b['path']}){note}")
+            else:
+                print(f"  baseline   none yet — reports PENDING until `scenario-bless {dd['id']}`{note}")
 
     _emit(args, d, render)
     return EXIT_OK
@@ -3806,7 +3869,8 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
              "wall_time_sec": r.stats.wall_time_sec if r.stats else None,
              "nodes": r.stats.nodes if r.stats else None,
              "gap": r.stats.gap if r.stats else None,
-             "checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.checks]}
+             "checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.checks],
+             "setup_checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.setup_checks]}
             for r in results
         ],
         "passed": n_ok,
@@ -3825,7 +3889,7 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
 
 
 def cmd_scenario_bless(args: argparse.Namespace, data_dir: Path) -> int:
-    """Write (or overwrite) the Tier B baseline for each given scenario id —
+    """Write (or overwrite) the Tier C baseline for each given scenario id —
     explicit, and never done implicitly by a plain `scenario-run`. Refuses
     to bless a scenario that doesn't currently PASS, so a broken baseline
     can't be committed by accident."""
@@ -4077,7 +4141,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
 
     p = sub.add_parser("scenario-bless", parents=[common],
-                       help="Solve the given scenario(s) and, if they PASS, write/overwrite their Tier B baseline. "
+                       help="Solve the given scenario(s) and, if they PASS, write/overwrite their Tier C baseline. "
                             "Never done implicitly by scenario-run.")
     p.add_argument("ids", nargs="+", help="scenario ids to bless")
     p.add_argument(

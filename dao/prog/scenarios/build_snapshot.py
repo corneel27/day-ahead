@@ -149,6 +149,7 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states:
         "ha_states": states,
         "baseload": {str(d): list(baseload_hourly) for d in range(7)},
         "heatpump_run_hours": _heatpump_hours_channel(scenario),
+        "avg_temperature": _avg_temperature_channel(scenario),
         "solar_predictions": {},
         "config": cfg,
     }
@@ -177,6 +178,38 @@ def _heatpump_hours_channel(scenario: Scenario) -> dict:
     from dao.prog.da_debug import _call_key
 
     return {_call_key((), {}): float(scenario.heatpump_hours)}
+
+
+def _avg_temperature_channel(scenario: Scenario) -> dict:
+    """Feeds ``Meteo.get_avg_temperature()`` — called by day_ahead.py's
+    heating block (via ``calc_graaddagen()``) once the heat pump is
+    enabled: once for "today" and, on a horizon longer than a day, again
+    for "tomorrow". Both calls pass an already-resolved midnight
+    ``datetime``, never ``None`` — ``calc_graaddagen`` resolves its own
+    ``date=None`` default to ``datetime.combine(datetime.today(),
+    time.min)`` *before* calling ``get_avg_temperature(date)`` — so the
+    call-key here must match that resolved value, not the unresolved
+    default (found by an actual replay: the first cut of this used
+    ``None`` and every heat-pump scenario raised a clean ``SnapshotMiss``
+    naming the real ``FakeDatetime(...)`` key it wanted instead).
+
+    A synthetic scenario has no live database to answer that query from,
+    so this feeds it the mean of the scenario's own ``temp`` array instead
+    — the same value ``prog_data.temp`` carries. See
+    ``da_debug.RecordingIO``'s matching capture-side wrap
+    (``_wrapped_avg_temperature``) for how a *real* installation's capture
+    populates this same channel."""
+    from dao.prog.da_debug import _call_key
+
+    hourly = scenario.temp if scenario.temp is not None else [DEFAULT_TEMP_C] * scenario.horizon_hours
+    avg_temp = sum(hourly) / len(hourly)
+    start = parse_start(scenario.start)
+    today_midnight = dt.datetime.combine(start.date(), dt.time())
+    channel = {_call_key((today_midnight,), {}): avg_temp}
+    if scenario.horizon_hours > 24:
+        tomorrow_midnight = dt.datetime.combine(start.date() + dt.timedelta(days=1), dt.time())
+        channel[_call_key((tomorrow_midnight,), {})] = avg_temp
+    return channel
 
 
 def _statestr(value: Any) -> str:

@@ -18,6 +18,7 @@
   "input_number.max_soc_einde_opt": "100",
   "input_number.min_soc_einde_opt": "20",
   "input_number.set_car_charging_ampere": "16",
+  "input_number.stooklijn_verschuiving_day_ahead": "0",
   "input_select.program_vaatwasser": "eco",
   "input_select.program_wasmachine": "kleur 30 graden",
   "sensor.boiler_gemeten": "45",

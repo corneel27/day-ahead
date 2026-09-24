@@ -1,8 +1,8 @@
-"""Tier B: per-scenario objective-value baselines.
+"""Tier C: per-scenario objective-value baselines.
 
 One ``<scenario_id>.json`` per scenario in ``scenarios/baselines/``, written
 **only** by ``python -m dao.prog.da_debug scenario-bless``, never by a plain
-``scenario-run``. A scenario with no baseline reports Tier B as ``PENDING``
+``scenario-run``. A scenario with no baseline reports Tier C as ``PENDING``
 (not a failure) so first-time setup isn't all-red; a scenario whose baseline
 exists reports PASS/FAIL against it, with old/new/delta in the detail.
 """
@@ -37,7 +37,7 @@ def write_baseline(scenario_id: str, objective: float, *, baselines_dir: Path | 
     return p
 
 
-def check_tier_b(
+def check_tier_c(
     scenario_id: str,
     objective: float | None,
     *,
