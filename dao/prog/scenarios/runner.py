@@ -1,11 +1,12 @@
-"""Run one scenario: synthetic snapshot -> hermetic solve -> Tier A -> case
-checks -> Tier B.
+"""Run one scenario: synthetic snapshot -> hermetic solve -> Tier A ->
+setup checks -> Tier B case checks -> Tier C.
 
 Builds the synthetic snapshot (including ``ev`` block expansion via
 ``build_snapshot.resolve_ev``), solves it hermetically, runs the Tier A
-structural invariants, then the per-scenario ``expect`` case checks and the
-always-on EV mismatch/sliver checks (``expectations.run_case_checks``),
-and finally the Tier B baseline comparison.
+structural invariants, then the always-on setup checks
+(``expectations.run_setup_checks``), then the per-scenario ``expect`` case
+checks (``expectations.run_case_checks``) — which also dispatches the
+Tier C objective-baseline comparison as one of its ``expect`` keys.
 """
 
 from __future__ import annotations
@@ -21,7 +22,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .build_snapshot import build_config, build_snapshot, resolve_ev, solar_quarter_series
-from .expectations import CaseContext, CheckResult, ResultContext, run_case_checks, run_tier_a
+from .expectations import (
+    CaseContext,
+    CheckResult,
+    ResultContext,
+    run_case_checks,
+    run_setup_checks,
+    run_tier_a,
+)
 from .model import Scenario
 from .vocabulary import interval_grid, parse_start
 
@@ -39,6 +47,7 @@ class ScenarioResult:
     status: str
     objective: float | None = None
     checks: list[CheckResult] = field(default_factory=list)
+    setup_checks: list[CheckResult] = field(default_factory=list)
     failures: list[str] = field(default_factory=list)
     threads: int = 1
     log_path: str | None = None
@@ -289,14 +298,22 @@ def run_scenario(
     case_ctx = CaseContext(
         mv=rc.mv, scenario_id=scenario.id, start=start, horizon_hours=scenario.horizon_hours,
         objective=objective, max_gap=max_gap, reads=reads, requested_states=requested_states,
-        expanded_ev=expanded_ev, parsed_target=parsed_target, parsed_other=parsed_other,
+        config=config, expanded_ev=expanded_ev, parsed_target=parsed_target, parsed_other=parsed_other,
     )
+    setup_checks = run_setup_checks(case_ctx)
     case_checks = run_case_checks(scenario.expect, case_ctx)
-    checks = tier_a_checks + case_checks
+    checks = tier_a_checks + setup_checks + case_checks
+
+    def _case_tag(name: str) -> str:
+        # objective_within_baseline dispatches through the case-check
+        # registry as an implementation detail — it's Tier C, not Tier B
+        # (arch doc §6).
+        return "[Tier C]" if name == "objective_within_baseline" else "[Tier B]"
 
     failures = (
         [f"[Tier A] {c.name}: {c.detail}" for c in tier_a_checks if not c.ok]
-        + [f"[case] {c.name}: {c.detail}" for c in case_checks if not c.ok]
+        + [f"[setup] {c.name}: {c.detail}" for c in setup_checks if not c.ok]
+        + [f"{_case_tag(c.name)} {c.name}: {c.detail}" for c in case_checks if not c.ok]
     )
     status = STATUS_PASS if not failures else STATUS_FAIL
 
@@ -304,6 +321,6 @@ def run_scenario(
 
     stats = parse_solve_stats(log_text + "\n" + cbc_log)
     return ScenarioResult(scenario.id, scenario.description, status,
-                          objective=objective, checks=checks, failures=failures,
-                          threads=threads, log_path=log_path, png_path=png_path,
+                          objective=objective, checks=checks, setup_checks=setup_checks,
+                          failures=failures, threads=threads, log_path=log_path, png_path=png_path,
                           parsed_target=parsed_target, parsed_other=parsed_other, stats=stats)

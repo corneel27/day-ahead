@@ -1,0 +1,34 @@
+[
+  {
+    "id": "battery-flat-no-incentive",
+    "description": "Flat prices all day, no PV - nothing to arbitrage, the battery stays put",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22,
+               0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
+    },
+    "states": { "sensor.ess_battery_soc": "50" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_flat_during": { "start": "00:00", "end": "00:00", "max_kwh": 0.5 }
+    }
+  },
+  {
+    "id": "battery-small-capacity-charges",
+    "description": "Same negative-price window as price-negative-window, but config_patch shrinks the battery to 6 kWh",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20,
+               -0.01, -0.03, -0.03, -0.01,
+               0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
+    },
+    "states": { "sensor.ess_battery_soc": "30" },
+    "config_patch": { "battery[0].capacity": 6.0 },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_charges_during": { "start": "11:00", "end": "15:00", "min_kwh": 3.5 }
+    }
+  }
+]

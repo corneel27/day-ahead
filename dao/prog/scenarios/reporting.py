@@ -1,7 +1,8 @@
 """Markdown + CSV test reports, absorbed from
 ``test_ev_harness_v6.write_reports`` and adapted to ``runner.ScenarioResult``
-(the failures list already carries both Tier A and case-check failures,
-tagged ``[Tier A]``/``[case]`` — see ``runner.run_scenario``)."""
+(the failures list already carries the Tier A, setup-check and Tier B/C
+failures, tagged ``[Tier A]``/``[setup]``/``[Tier B]``/``[Tier C]`` — see
+``runner.run_scenario``)."""
 
 from __future__ import annotations
 
@@ -51,6 +52,9 @@ def write_reports(results: list[ScenarioResult], out_dir: Path) -> tuple[Path, P
         lines.append("")
         for r in detail_needed:
             lines.append(f"### {r.id} — {r.description} ({r.status})")
+            if r.setup_checks:
+                setup_bad = [c for c in r.setup_checks if not c.ok]
+                lines.append(f"Setup checks: {'FAIL' if setup_bad else 'OK'}")
             if r.failures:
                 lines.append("Failures:")
                 for f in r.failures:
