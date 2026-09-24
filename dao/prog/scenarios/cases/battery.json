@@ -30,5 +30,92 @@
       "objective_within_baseline": true,
       "battery_charges_during": { "start": "11:00", "end": "15:00", "min_kwh": 3.5 }
     }
+  },
+  {
+    "id": "battery-no-cross-charge-discharge",
+    "description": "Three batteries, midday dip then evening spike - no battery should charge while another discharges in the same interval",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20,
+               -0.01, -0.05, -0.03, -0.02,
+               0.20, 0.21, 0.19,
+               0.60, 0.70, 0.55,
+               0.20, 0.19, 0.20]
+    },
+    "states": {
+      "sensor.ess_battery_soc": "50",
+      "sensor.accu2_soc": "40",
+      "sensor.accu3_soc": "60"
+    },
+    "config_patch": {
+      "battery": [
+        {
+          "name": "Accu1",
+          "entity_actual_level": "sensor.ess_battery_soc",
+          "capacity": 28.0,
+          "minimum_power": 1000,
+          "dc_to_bat_efficiency": 0.93,
+          "bat_to_dc_efficiency": 0.93,
+          "cycle_cost": 0.01,
+          "charge_stages": [
+            { "power": 0.0, "efficiency": 1.0 },
+            { "power": 1500.0, "efficiency": 0.94 },
+            { "power": 4000.0, "efficiency": 0.93 },
+            { "power": 7500.0, "efficiency": 0.90 }
+          ],
+          "discharge_stages": [
+            { "power": 0.0, "efficiency": 1.0 },
+            { "power": 1500.0, "efficiency": 0.94 },
+            { "power": 4000.0, "efficiency": 0.93 },
+            { "power": 7500.0, "efficiency": 0.90 }
+          ]
+        },
+        {
+          "name": "Accu2",
+          "entity_actual_level": "sensor.accu2_soc",
+          "capacity": 10.0,
+          "minimum_power": 500,
+          "dc_to_bat_efficiency": 0.93,
+          "bat_to_dc_efficiency": 0.93,
+          "cycle_cost": 0.02,
+          "charge_stages": [
+            { "power": 0.0, "efficiency": 1.0 },
+            { "power": 800.0, "efficiency": 0.94 },
+            { "power": 3000.0, "efficiency": 0.90 }
+          ],
+          "discharge_stages": [
+            { "power": 0.0, "efficiency": 1.0 },
+            { "power": 800.0, "efficiency": 0.94 },
+            { "power": 3000.0, "efficiency": 0.90 }
+          ]
+        },
+        {
+          "name": "Accu3",
+          "entity_actual_level": "sensor.accu3_soc",
+          "capacity": 6.0,
+          "minimum_power": 300,
+          "dc_to_bat_efficiency": 0.93,
+          "bat_to_dc_efficiency": 0.93,
+          "cycle_cost": 0.05,
+          "charge_stages": [
+            { "power": 0.0, "efficiency": 1.0 },
+            { "power": 500.0, "efficiency": 0.93 },
+            { "power": 2000.0, "efficiency": 0.88 }
+          ],
+          "discharge_stages": [
+            { "power": 0.0, "efficiency": 1.0 },
+            { "power": 500.0, "efficiency": 0.93 },
+            { "power": 2000.0, "efficiency": 0.88 }
+          ]
+        }
+      ]
+    },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "no_cross_battery_charge_discharge": true,
+      "battery_charges_during": { "start": "11:00", "end": "15:00", "min_kwh": 25.0 },
+      "battery_discharges_during": { "start": "18:00", "end": "21:00", "min_kwh": 20.0 }
+    }
   }
 ]

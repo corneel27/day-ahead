@@ -495,6 +495,41 @@ def _check_battery_flat_during(value: dict, ctx: CaseContext) -> CheckResult:
     return CheckResult("battery_flat_during", ok, detail)
 
 
+@case_check("no_cross_battery_charge_discharge")
+def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> CheckResult:
+    """No interval has one battery charging on the AC side while a
+    *different* battery discharges on the AC side. Unlike
+    ``NoSimultaneousChargeDischarge`` (Tier A, per-battery, backed by the
+    real ``ac_to_dc_on[b][u] + ac_from_dc_on[b][u] <= 1`` MILP constraint),
+    nothing in the model forbids this across batteries — round-tripping one
+    battery's charge into another's discharge is only ever sub-optimal
+    (AC/DC conversion losses, cycle cost), never infeasible. So this is a
+    Tier B case check, opt-in per multi-battery scenario, not a structural
+    invariant."""
+    name = "no_cross_battery_charge_discharge"
+    if not value:
+        return CheckResult(name, True, "explicitly unchecked")
+    mv = ctx.mv
+    if mv is None or not (mv.has("ac_to_dc_on") and mv.has("ac_from_dc_on")):
+        return CheckResult(name, True, "no AC-coupled battery in this model")
+    charging: dict[int, set[int]] = {}
+    for (b, u), on in mv.items("ac_to_dc_on"):
+        if on > 0.5:
+            charging.setdefault(u, set()).add(b)
+    discharging: dict[int, set[int]] = {}
+    for (b, u), on in mv.items("ac_from_dc_on"):
+        if on > 0.5:
+            discharging.setdefault(u, set()).add(b)
+    bad = [
+        f"u{u}: charging b{sorted(charging[u])}, discharging b{sorted(discharging[u])}"
+        for u in sorted(charging)
+        if u in discharging
+    ]
+    if bad:
+        return CheckResult(name, False, f"cross-battery charge/discharge at: {'; '.join(bad[:6])}")
+    return CheckResult(name, True)
+
+
 @case_check("heatpump_runs")
 def _check_heatpump_runs(value: dict, ctx: CaseContext) -> CheckResult:
     window = _window_range(ctx, value)
