@@ -426,7 +426,7 @@ def interpolate_prognose_data():
     print(prognose_data.to_string())
 
 
-def interpolate(df: pd.DataFrame, field: str, quantity: bool = False) -> pd.DataFrame:
+def interpolate(df: pd.DataFrame, field: str, quantity: bool = False, time_field:str="tijd") -> pd.DataFrame:
     """
     Interpoleert uurwaarden (gegeven op hele uren, feitelijk H:30) naar kwartierwaarden.
     Voor elk uurblok worden 4 kwartierwaarden berekend, zodanig dat het gemiddelde
@@ -439,6 +439,7 @@ def interpolate(df: pd.DataFrame, field: str, quantity: bool = False) -> pd.Data
         - "tijd": datetime (op hele uren, bv. 09:00 betekent waarde voor 09:30)
         - field: float/int, uurwaarden
     field: str, name of the column
+    time_field: str: name of time-column, default "tijd"
     quantity: bool, is it a quantity
 
     Returns
@@ -450,7 +451,7 @@ def interpolate(df: pd.DataFrame, field: str, quantity: bool = False) -> pd.Data
     result = []
 
     for i in range(len(df)):
-        t_curr = df.loc[i, "tijd"]
+        t_curr = df.loc[i, time_field]
         v_curr = df.loc[i, field]
 
         if i == 0:
@@ -507,12 +508,12 @@ def interpolate(df: pd.DataFrame, field: str, quantity: bool = False) -> pd.Data
         for k in range(4):
             result.append(
                 {
-                    "tijd": t_curr + datetime.timedelta(minutes=15 * k),
+                    time_field: t_curr + datetime.timedelta(minutes=15 * k),
                     field: float(quarters[k]),
                 }
             )
     result_df = pd.DataFrame(result)
-    result_df.index = pd.to_datetime(result_df["tijd"])
+    result_df.index = pd.to_datetime(result_df[time_field])
     return result_df
 
 

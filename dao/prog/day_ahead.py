@@ -140,8 +140,10 @@ class DaCalc(DaBase):
 
         report = Report(self.file_name)
         start = dt.datetime.fromtimestamp(start_hour)
+        horizon_externsion = self.config.prices.prediction.extension
         price_data = report.get_price_data(
-            dt.datetime.fromtimestamp(start_hour), end=None, interval=self.interval
+            dt.datetime.fromtimestamp(start_hour), end=None, interval=self.interval,
+            extension=horizon_externsion
         )
 
         if len(price_data) <= 5:
@@ -164,8 +166,9 @@ class DaCalc(DaBase):
         while price_data.iloc[0]["time"] < start_interval_dt:
             price_data = price_data.iloc[1:]
         price_data.index = pd.to_datetime(price_data["time"])
+        end_ts = (price_data.iloc[-1]["time"] + dt.timedelta(seconds=self.interval_s)).timestamp()
         prog_data = self.db_da.get_prognose_data(
-            start=start_hour, end=None, interval=self.interval
+            start=start_hour, end=end_ts, interval=self.interval
         )
         if prog_data is None or len(prog_data) == 0:
             logging.error(f"Er ontbreken meteo waarden, de berekening wordt afgebroken")
