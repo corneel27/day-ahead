@@ -1,13 +1,12 @@
-"""EV scenario sugar: the ``ev`` JSON block -> ``states`` +
-``config_patch`` a solve can run against, plus enough resolved detail for
-the post-solve case checks (echo verification, capacity sanity) in
-``expectations.py``.
+"""EV scenario sugar: the ev JSON block -> states and config_patch a solve
+can run against, plus enough resolved detail for the post-solve case
+checks (echo verification, capacity sanity) in expectations.py.
 
-Absorbed from ``test_ev_harness_v6.py``'s ``build_overrides``/``_resolve``/
-``_top_stage_accu_kw``, adapted to read the *sanitised config dict*
-(``base_config.py``'s output) instead of a live ``DaCalc.ev_options``
-object — the whole point of the synthetic-snapshot architecture is that
-nothing here touches a real ``DaCalc``.
+Ported from test_ev_harness_v6.py's build_overrides, _resolve, and
+_top_stage_accu_kw, adapted to read the sanitised config dict
+(base_config.py's output) instead of a live DaCalc.ev_options object. The
+whole point of the synthetic-snapshot architecture is that nothing here
+touches a real DaCalc.
 """
 
 from __future__ import annotations
@@ -22,9 +21,8 @@ from .vocabulary import VocabularyError, parse_offset
 
 
 def find_ev_index(config: dict, target: str) -> int:
-    """The index into ``config["electric_vehicle"]`` whose name contains
-    ``target`` (case-insensitive) — mirrors
-    ``test_ev_harness_v6._find_ev_index``."""
+    """The index into config["electric_vehicle"] whose name contains
+    target (case-insensitive). Mirrors test_ev_harness_v6._find_ev_index."""
     for i, ev in enumerate(config.get("electric_vehicle", []) or []):
         if target.lower() in str(ev.get("name", "")).lower():
             return i
@@ -39,11 +37,11 @@ def _three_phase(cfg_ev: dict) -> bool:
 
 
 def top_stage_accu_kw(config: dict, ev_index: int) -> float:
-    """Accu-side kW of the EV's highest charge stage — mirrors
+    """Accu-side kW of the EV's highest charge stage. Mirrors
     day_ahead.py's own derivation (ampere x phases x 230 / 1000 x
     efficiency), read from the sanitised config instead of a live
-    ``FlexBool.resolve()`` call (no HA/entity resolution happens here;
-    ``charge_three_phase`` is always a literal in this corpus)."""
+    FlexBool.resolve() call. No HA or entity resolution happens here;
+    charge_three_phase is always a literal in this corpus."""
     cfg_ev = config["electric_vehicle"][ev_index]
     stages = cfg_ev["charge_stages"]
     top = stages[-1]
@@ -55,10 +53,10 @@ def top_stage_accu_kw(config: dict, ev_index: int) -> float:
 
 @dataclass
 class ResolvedEvInput:
-    """Same shape as the scenario JSON's per-car ``ev``/``ev.other`` block,
-    but with ``ready`` fully resolved to a concrete datetime (and/or a raw
-    override string) — reused both to build HA-state overrides and to
-    verify the solve's own setup echo against what was actually asked for."""
+    """Same shape as the scenario JSON's per-car ev/ev.other block, but
+    with ready fully resolved to a concrete datetime and/or a raw override
+    string. Reused both to build HA-state overrides and to verify the
+    solve's own setup echo against what was actually asked for."""
 
     plugged_in: Optional[bool] = None
     position: Optional[str] = None
@@ -98,21 +96,21 @@ def _resolve_input(car: dict, *, ctx: PluginContext) -> ResolvedEvInput:
 
 
 def build_overrides(config: dict, ev_index: int, resolved: ResolvedEvInput) -> dict:
-    """Port of ``test_ev_harness_v6.build_overrides``: the resolved input ->
-    ``entity_id -> HA-state-string`` overrides, reading entity ids from the
-    sanitised config. An unconfigured entity (e.g. ``entity_instant_start``
-    is ``None`` for the Golf) is silently skipped here, same as the
-    original — that's what the SETUP_MISMATCH / reads check downstream is
-    for (case 5.1's shape)."""
+    """Port of test_ev_harness_v6.build_overrides: the resolved input to
+    entity_id -> HA-state-string overrides, reading entity ids from the
+    sanitised config. An unconfigured entity (for example
+    entity_instant_start is None for the Golf) is silently skipped here,
+    same as the original. That's what the SETUP_MISMATCH / reads check
+    downstream is for; see case 5.1."""
     cfg_ev = config["electric_vehicle"][ev_index]
     overrides: dict[str, Any] = {}
     # day_ahead.py unconditionally reads a couple of EV entities purely for
-    # logging/deciding whether to toggle/adjust them (all real writes are
-    # gated by debug=True under ReplayIO, so these never affect the
-    # optimisation) — but an unconditional read still needs a value in
-    # `ha_states`. base_states.json already covers the Golf's; a second EV
-    # (e.g. Tesla, options_2ev) has no such default, so every EV gets one
-    # here.
+    # logging and for deciding whether to toggle or adjust them. All real
+    # writes are gated by debug=True under ReplayIO, so these never affect
+    # the optimisation, but an unconditional read still needs a value in
+    # ha_states. base_states.json already covers the Golf's; a second EV
+    # (for example Tesla, options_2ev) has no such default, so every EV
+    # gets one here.
     if cfg_ev.get("charge_switch"):
         overrides[cfg_ev["charge_switch"]] = "off"
     if cfg_ev.get("entity_set_charging_ampere"):
@@ -153,10 +151,10 @@ class ExpandedEv:
 
 
 def expand_ev_block(ev_block: dict, *, config: dict, start: dt.datetime, interval_s: int) -> ExpandedEv:
-    """The scenario's ``ev`` block -> HA-state overrides + config patch for
-    both the target car and (if present) ``ev.other``. Called once per
-    scenario, on the already ``scenario.config_patch``-applied config, so
-    ``ev.remove_stop_entity`` composes with any other config_patch."""
+    """The scenario's ev block to HA-state overrides and a config patch
+    for both the target car and, if present, ev.other. Called once per
+    scenario, on the already scenario.config_patch-applied config, so
+    ev.remove_stop_entity composes with any other config_patch."""
     target = ev_block["target"]
     target_index = find_ev_index(config, target)
     target_name = config["electric_vehicle"][target_index]["name"]

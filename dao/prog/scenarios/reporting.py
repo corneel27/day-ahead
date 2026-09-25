@@ -1,8 +1,9 @@
-"""Markdown + CSV test reports, absorbed from
-``test_ev_harness_v6.write_reports`` and adapted to ``runner.ScenarioResult``
-(the failures list already carries the Tier A, setup-check and Tier B/C
-failures, tagged ``[Tier A]``/``[setup]``/``[Tier B]``/``[Tier C]`` — see
-``runner.run_scenario``)."""
+"""Markdown and CSV test reports built from runner.ScenarioResult.
+
+The failures list already carries the Tier A, setup-check, and Tier B/C
+failures, each tagged [Tier A], [setup], [Tier B], or [Tier C]; see
+runner.run_scenario.
+"""
 
 from __future__ import annotations
 

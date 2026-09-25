@@ -1,9 +1,8 @@
 """In-memory form of a scenario JSON object.
 
-The JSON shape (``dao_scenario_suite_plan.md`` §2/§4) maps onto ``Scenario``
-one-to-one. ``expect`` stays a plain dict here — ``expectations.py`` turns
-its keys into check objects at run time, so a new assertion is one entry
-there and needs no change to this file.
+The JSON shape maps onto Scenario one-to-one. expect stays a plain dict
+here; expectations.py turns its keys into check objects at run time, so a
+new assertion is one entry there and needs no change to this file.
 """
 
 from __future__ import annotations
@@ -36,12 +35,12 @@ class Scenario:
     id: str
     description: str
 
-    # solve anchor — "YYYY-MM-DD HH:MM" (naive, on the hour). The frozen
+    # solve anchor: "YYYY-MM-DD HH:MM" (naive, on the hour). The frozen
     # clock is pinned here and every hourly array starts here.
     start: str
 
-    # hourly €/kWh. `cons` length defines the horizon in hours. `prod`
-    # defaults to `cons`.
+    # hourly €/kWh. cons length defines the horizon in hours. prod
+    # defaults to cons.
     prices_cons: list[float] = field(default_factory=list)
     prices_prod: list[float] | None = None
 
@@ -65,7 +64,7 @@ class Scenario:
     # base_config.py.
     options: str | None = None
     # EV sugar: target/other car HA-state overrides + ready-time,
-    # expanded by scenarios/ev.py into `states` + `config_patch` at build
+    # expanded by scenarios/ev.py into states + config_patch at build
     # time. None when the scenario has no EV of interest.
     ev: dict[str, Any] | None = None
 

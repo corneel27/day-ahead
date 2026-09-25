@@ -1,10 +1,10 @@
 """Tier C: per-scenario objective-value baselines.
 
-One ``<scenario_id>.json`` per scenario in ``scenarios/baselines/``, written
-**only** by ``python -m dao.prog.da_debug scenario-bless``, never by a plain
-``scenario-run``. A scenario with no baseline reports Tier C as ``PENDING``
-(not a failure) so first-time setup isn't all-red; a scenario whose baseline
-exists reports PASS/FAIL against it, with old/new/delta in the detail.
+One <scenario_id>.json per scenario in scenarios/baselines/, written only by
+python -m dao.prog.da_debug scenario-bless, never by a plain scenario-run. A
+scenario with no baseline reports Tier C as PENDING, not a failure, so
+first-time setup isn't all-red. A scenario with a baseline reports PASS or
+FAIL against it, with old, new, and delta in the detail.
 """
 
 from __future__ import annotations
@@ -44,7 +44,7 @@ def check_tier_c(
     tolerance: float,
     baselines_dir: Path | None = None,
 ) -> tuple[str, str]:
-    """Returns ``(status, detail)`` — status is PASS/FAIL/PENDING."""
+    """Returns (status, detail); status is PASS, FAIL, or PENDING."""
     baseline = load_baseline(scenario_id, baselines_dir)
     if baseline is None:
         return STATUS_PENDING, "no baseline committed yet — review then `scenario-bless`"

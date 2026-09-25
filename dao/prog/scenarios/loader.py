@@ -1,6 +1,7 @@
-"""JSON ``cases/*.json`` -> ``Scenario`` objects, with hand-rolled
-validation (no ``jsonschema`` dependency — the shape is small and
-``scenario validate`` in CI is the real gate).
+"""JSON cases/*.json -> Scenario objects, with hand-rolled validation.
+
+No jsonschema dependency: the shape is small, and scenario-validate in CI
+is the real gate.
 """
 
 from __future__ import annotations
@@ -141,11 +142,11 @@ def load_cases_dir(cases_dir: Path) -> list[Scenario]:
     return scenarios
 
 
-# --- dotted-path config patching (salvaged from the untracked test_scenarios.py) ---
+# --- dotted-path config patching ---
 
 def set_dotted(tree: dict, path: str, value: Any) -> None:
-    """Set ``a.b.c`` or ``a.b[0].c`` inside a nested dict/list structure —
-    the sanitised-config shape. ``name[i]`` indexes a list."""
+    """Set a.b.c or a.b[0].c inside a nested dict/list structure, the
+    sanitised-config shape. name[i] indexes a list."""
     parts: list = []
     for seg in path.split("."):
         while "[" in seg:

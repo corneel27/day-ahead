@@ -1,11 +1,11 @@
 """The small declarative vocabulary a scenario JSON uses.
 
-Parses the ``start`` anchor and expands the hourly ``prices`` / ``solar`` /
-``baseload`` / ``temp`` arrays to the 15-minute model grid. Also provides
-two primitives needed by the EV port: a relative time *offset*
-(``"+8h"``, ``"+3h20m"``, ``"-24h"``) resolved against ``start``, and a
-same-day ``"HH:MM"``-``"HH:MM"`` window resolved to a pair of interval
-indices, used by the ``battery_charges_during`` family of case checks.
+Parses the start anchor and expands the hourly prices, solar, baseload, and
+temp arrays to the 15-minute model grid. Also provides two primitives
+needed by the EV port: a relative time offset ('+8h', '+3h20m', '-24h')
+resolved against start, and a same-day 'HH:MM'-'HH:MM' window resolved to a
+pair of interval indices, used by the battery_charges_during family of
+case checks.
 """
 
 from __future__ import annotations
@@ -23,9 +23,9 @@ class VocabularyError(ValueError):
 
 
 def parse_start(value: str) -> dt.datetime:
-    """``"YYYY-MM-DD HH:MM"`` (or with seconds) -> naive datetime on a
+    """'YYYY-MM-DD HH:MM' (or with seconds) -> naive datetime on a
     15-minute boundary. Anything off the grid is a hard error rather than a
-    silent round, because the price/solar arrays are indexed from here."""
+    silent round, because the price and solar arrays are indexed from here."""
     if not isinstance(value, str):
         raise VocabularyError(f"start must be a string, got {value!r}")
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
@@ -44,7 +44,7 @@ def parse_start(value: str) -> dt.datetime:
 
 
 def upsample(hourly: list[float], horizon_hours: int, *, label: str) -> list[float]:
-    """Repeat each hourly value ``STEPS_PER_HOUR`` times to reach the model
+    """Repeat each hourly value STEPS_PER_HOUR times to reach the model
     grid. Shorter than the horizon is an error naming the shortfall; longer
     is truncated."""
     if not isinstance(hourly, (list, tuple)) or not hourly:
@@ -83,9 +83,9 @@ _OFFSET_RE = re.compile(
 
 
 def parse_offset(spec: str, start: dt.datetime) -> dt.datetime:
-    """``"+8h"`` / ``"+3h20m"`` / ``"-24h"`` resolved against ``start`` —
-    the EV port's ``ready`` shorthand. At least one of ``h``/``m`` must
-    be present; sign applies to both."""
+    """'+8h', '+3h20m', '-24h' resolved against start: the EV port's ready
+    shorthand. At least one of h or m must be present; sign applies to
+    both."""
     if not isinstance(spec, str):
         raise VocabularyError(f"offset must be a string like '+8h', got {spec!r}")
     m = _OFFSET_RE.match(spec.strip())
@@ -98,10 +98,10 @@ def parse_offset(spec: str, start: dt.datetime) -> dt.datetime:
 
 
 def parse_time_of_day(hhmm: str, *, on_or_after: dt.datetime) -> dt.datetime:
-    """``"HH:MM"`` resolved to the first datetime at/after ``on_or_after``
-    carrying that time of day — same day if it's still ahead, tomorrow
-    otherwise. Used by the ``*_during``/``*_in_window`` case checks,
-    whose ``start``/``end`` are clock times, not full datetimes."""
+    """'HH:MM' resolved to the first datetime at or after on_or_after
+    carrying that time of day: same day if it's still ahead, tomorrow
+    otherwise. Used by the *_during and *_in_window case checks, whose
+    start and end are clock times, not full datetimes."""
     try:
         t = dt.datetime.strptime(hhmm.strip(), "%H:%M")
     except (ValueError, AttributeError) as ex:
@@ -113,9 +113,9 @@ def parse_time_of_day(hhmm: str, *, on_or_after: dt.datetime) -> dt.datetime:
 
 
 def window_indices(start: dt.datetime, horizon_hours: int, window_start: str, window_end: str) -> range:
-    """The half-open range of interval indices ``u`` covering clock times
-    ``[window_start, window_end)`` on the scenario's own grid. ``end`` at or
-    before ``start`` rolls to the next day, mirroring ``parse_time_of_day``."""
+    """The half-open range of interval indices u covering clock times
+    [window_start, window_end) on the scenario's own grid. end at or
+    before start rolls to the next day, mirroring parse_time_of_day."""
     w_start = parse_time_of_day(window_start, on_or_after=start)
     w_end = parse_time_of_day(window_end, on_or_after=w_start + dt.timedelta(minutes=INTERVAL_MIN))
     n = horizon_hours * STEPS_PER_HOUR

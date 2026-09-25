@@ -1,25 +1,24 @@
 """The sanitised base config every scenario builds on.
 
-``dao/data/options_example.json`` (name ``"options_example"``, the default)
-is the source of truth for the single-EV corpus — it is kept current as
-features land, carries ``"config_version": 2"``, and validates as a
-``ConfigurationV2`` on its own (no migration). ``options_2ev.json`` (name
-``"options_2ev"``), a sibling of this file, is the same config plus a
-second EV (Tesla) — only the two-car / Tesla-targeting EV cases ask for it
-via the scenario's ``"options"`` field. Either way the runner loads
-it through the real ``ConfigurationLoader`` on a disposable temp copy
-(defensive: ``ConfigurationLoader`` opens the file ``r+`` and would rewrite
-it if a future version ever needed migrating).
+dao/data/options_example.json (name "options_example", the default) is the
+source of truth for the single-EV corpus. It is kept current as features
+land, carries "config_version": 2, and validates as a ConfigurationV2 on its
+own, with no migration needed. options_2ev.json (name "options_2ev"), a
+sibling of this file, is the same config plus a second EV, a Tesla, for the
+two-car and Tesla-targeting EV cases that ask for it through the scenario's
+"options" field. Either way the runner loads it through the real
+ConfigurationLoader on a disposable temp copy, since ConfigurationLoader
+opens the file r+ and would rewrite it in place if a future version ever
+needed migrating.
 
-Two run-time-only adjustments, applied to the sanitised dict, never to the
-file on disk:
-
-* ``homeassistant.hasstoken`` gets a dummy string — it is ``None`` in the
-  example, which makes ``hassapi``'s constructor raise
-  ``KeyError('HASS_TOKEN')``; replay never calls Home Assistant;
-* ``solar[*].ml_prediction`` is forced ``False`` so solar production comes
-  from the scenario's own array (via the ``calc_solar_predictions`` patch
-  in ``runner.py``) rather than a trained model file.
+Two run-time-only adjustments apply to the sanitised dict, never to the
+file on disk. homeassistant.hasstoken gets a dummy string, because it is
+None in the example and would make hassapi's constructor raise
+KeyError('HASS_TOKEN'); replay never calls Home Assistant, so the dummy
+value is never used for anything real. solar[*].ml_prediction is forced
+False so solar production comes from the scenario's own array, through the
+calc_solar_predictions patch in runner.py, rather than from a trained model
+file.
 """
 
 from __future__ import annotations
@@ -74,6 +73,6 @@ def _sanitised_options(name: str) -> dict:
 
 def base_config(name: str = "options_example") -> dict:
     """A fresh deep copy of the sanitised named config, ready for
-    per-scenario ``config_patch`` mutation. ``name`` is a scenario's
-    ``"options"`` field (default ``"options_example"``)."""
+    per-scenario config_patch mutation. name is a scenario's own "options"
+    field (default "options_example")."""
     return copy.deepcopy(_sanitised_options(name))

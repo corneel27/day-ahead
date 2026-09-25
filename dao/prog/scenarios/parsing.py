@@ -1,10 +1,10 @@
-"""Log parsers absorbed from ``test_ev_harness_v6.py``: read the same
-Dutch log lines day_ahead.py's EV dispatch block already produces (the
-setup echo, the "Inzet-factor laden ... per stop" table, the summary
-lines, and CBC's own solve-stats lines) and turn them into structured
-per-run data. Pure text parsing — no ``DaCalc`` dependency, so these work
-identically whether the log came from a live run or (as here) a synthetic
-``ReplayIO`` solve.
+"""Log parsers ported from test_ev_harness_v6.py: read the same Dutch log
+lines day_ahead.py's EV dispatch block already produces (the setup echo,
+the "Inzet-factor laden ... per stop" table, the summary lines, and CBC's
+own solve-stats lines) and turn them into structured per-run data. Pure
+text parsing, with no DaCalc dependency, so these work identically
+whether the log came from a live run or, as here, a synthetic ReplayIO
+solve.
 """
 
 from __future__ import annotations
@@ -89,12 +89,12 @@ def parse_setup_echo(block_lines: list[str]) -> SetupEcho:
 
 
 def check_capacity(expected_kwh: Optional[float], echo: SetupEcho, *, label: str) -> Optional[str]:
-    """Cheap cross-EV-leak sanity check: does this car's log block show ITS
-    OWN configured capacity? A mismatch means the wrong EV's config got
-    read into this block. Unlike the v6 original (a hardcoded
-    ``{"tesla": 55.0, "golf": 36.3}`` table), ``expected_kwh`` is read from
-    this environment's own config, so it stays correct if the corpus
-    config ever changes."""
+    """Cheap cross-EV-leak sanity check: does this car's log block show its
+    own configured capacity? A mismatch means the wrong EV's config got
+    read into this block. Unlike the v6 original, a hardcoded
+    {"tesla": 55.0, "golf": 36.3} table, expected_kwh is read from this
+    environment's own config, so it stays correct if the corpus config
+    ever changes."""
     if expected_kwh is None or echo.capacity_kwh is None:
         return None
     if abs(expected_kwh - echo.capacity_kwh) > 0.05:
@@ -107,11 +107,11 @@ def check_capacity(expected_kwh: Optional[float], echo: SetupEcho, *, label: str
 
 
 def verify_setup_echo(resolved, echo: SetupEcho) -> list[str]:
-    """Compare what was asked for (a ``ev.ResolvedEvInput``) against what
-    the log says actually got read. Only checks fields that were
-    explicitly set. A mismatch means an override silently didn't take
-    effect — usually because the entity_id it should have targeted is
-    None/unconfigured for this EV (case 5.1's shape)."""
+    """Compare what was asked for (an ev.ResolvedEvInput) against what the
+    log says actually got read. Only checks fields that were explicitly
+    set. A mismatch means an override silently didn't take effect, usually
+    because the entity_id it should have targeted is None or unconfigured
+    for this EV; see case 5.1."""
     mismatches = []
     if resolved.plugged_in is not None and echo.plugged_in is not None:
         if resolved.plugged_in != echo.plugged_in:
@@ -285,7 +285,7 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
                         result.multi_stage_intervals.append(uur)
                     # Minimum duty cycle: a real stage is either off or runs
                     # for at least min_duty of the interval. Stage 0 is
-                    # deliberately exempt — its weight absorbs the idle
+                    # deliberately exempt: its weight absorbs the idle
                     # remainder, which is what makes partial duty possible.
                     for k, f in enumerate(row["stage_factors"]):
                         if k < 1 or f <= DUTY_ZERO_TOL:

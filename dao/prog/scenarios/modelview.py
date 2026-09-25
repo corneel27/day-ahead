@@ -1,12 +1,10 @@
-"""Registry-indexed read access to a solved ``mip`` model.
+"""Registry-indexed read access to a solved mip model.
 
-``day_ahead.py`` never names its variables; the ``_debug_capture_vars`` hook
-builds a registry (``da_debug.build_var_registry``) mapping ``var.idx`` to
-``(container_name, index_tuple)``. Every Tier A invariant reads the model
+day_ahead.py never names its variables. The _debug_capture_vars hook builds
+a registry (da_debug.build_var_registry) mapping var.idx to
+(container_name, index_tuple). Every Tier A invariant reads the model
 through this view rather than parsing Dutch log lines, so a model that grows
 a new variable family is visible here instead of silently missing.
-
-Salvaged from the untracked ``test_scenarios.py``.
 """
 
 from __future__ import annotations

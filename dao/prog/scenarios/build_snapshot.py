@@ -1,13 +1,13 @@
-"""Turn a ``Scenario`` into the dict ``da_debug.ReplayIO`` replays.
+"""Turn a Scenario into the dict da_debug.ReplayIO replays.
 
-``ReplayIO`` serves ``price_data`` / ``prog_data`` / ``baseload`` /
-``ha_states`` / ``config`` / ``ha_context`` straight from this dict and
-patches away every DB / HA / network call, so nothing here needs a capture.
+ReplayIO serves price_data, prog_data, baseload, ha_states, config, and
+ha_context straight from this dict and patches away every DB, HA, and
+network call, so nothing here needs a capture.
 
 Everything the scenario expresses hourly is expanded to the 15-minute model
-grid. ``price_data`` and ``prog_data`` are built on the *same* grid and the
-same length because ``day_ahead.py`` copies price columns onto ``prog_data``
-positionally (``day_ahead.py:202``).
+grid. price_data and prog_data are built on the same grid and the same
+length, because day_ahead.py copies price columns onto prog_data
+positionally (day_ahead.py:202).
 """
 
 from __future__ import annotations
@@ -26,10 +26,11 @@ from .model import Scenario
 from .vocabulary import INTERVAL_S, STEPS_PER_HOUR, interval_grid, parse_start, upsample
 
 # A fixed NL location so solar geometry (used by the DAO predictor when a
-# scenario *doesn't* inject a solar array) is realistic. de Bilt-ish.
-# time_zone is UTC to match the pinned process TZ (see _env.py) — S1 injects
-# solar directly so geometry/tz don't bite yet; revisit when a heat-pump /
-# solar-geometry scenario needs local solar noon (S5+).
+# scenario doesn't inject a solar array) is realistic. De Bilt-ish.
+# time_zone is UTC to match the pinned process TZ (see _env.py). Every
+# scenario today injects solar directly, so geometry and local solar noon
+# don't matter yet; revisit if a scenario ever needs to exercise the real
+# geometry instead.
 HA_CONTEXT = {
     "latitude": 52.10,
     "longitude": 5.18,
@@ -53,12 +54,12 @@ def build_config(scenario: Scenario) -> dict:
 
 
 def resolve_ev(scenario: Scenario, config: dict):
-    """If the scenario has an ``ev`` block, expand it against
-    ``config`` — mutating ``config`` in place for ``ev.remove_stop_entity``
-    — and return the ``ev.ExpandedEv`` (``None`` otherwise). Called once by
-    the runner, before ``build_snapshot``, so both the synthetic states and
-    the post-solve case checks (echo verification, capacity sanity) share
-    the same resolved input."""
+    """If the scenario has an ev block, expand it against config, mutating
+    config in place for ev.remove_stop_entity, and return the
+    ev.ExpandedEv (None otherwise). Called once by the runner, before
+    build_snapshot, so both the synthetic states and the post-solve case
+    checks (echo verification, capacity sanity) share the same resolved
+    input."""
     if scenario.ev is None:
         return None
     from . import ev as ev_mod
@@ -156,9 +157,9 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states:
 
 
 def solar_quarter_series(scenario: Scenario) -> list[float]:
-    """The scenario's total-house PV in kW on the 15-minute grid (all zero
-    when the scenario gives no ``solar`` array). ``runner.py`` splits this
-    across the configured PV arrays by capacity share."""
+    """The scenario's total-house PV in kW on the 15-minute grid, all zero
+    when the scenario gives no solar array. runner.py splits this across
+    the configured PV arrays by capacity share."""
     horizon_h = scenario.horizon_hours
     if scenario.solar is None:
         return [0.0] * (horizon_h * STEPS_PER_HOUR)
@@ -168,11 +169,12 @@ def solar_quarter_series(scenario: Scenario) -> list[float]:
 def _heatpump_hours_channel(scenario: Scenario) -> dict:
     # get_heatpump_run_hours is keyed by da_debug._call_key(args, kwargs);
     # day_ahead calls it positionally. An empty dict makes ReplayIO raise a
-    # SnapshotMiss naming the exact key it wanted — but options_example's
-    # heat pump path does not reach it in the S1 base scenario, so {} is
-    # fine until a heat-pump scenario needs it (S5). When heatpump_hours is
-    # set we still cannot know the key ahead of time; store it under the
-    # value 0-arg key and the 1-arg (entity) key is filled lazily on miss.
+    # SnapshotMiss naming the exact key it wanted, but options_example's
+    # heat pump path never reaches it: entity_heat_produced isn't
+    # configured, so day_ahead.py short-circuits first. {} stays correct
+    # until a scenario configures that entity. When heatpump_hours is set
+    # we still cannot know the key ahead of time, so store it under the
+    # 0-arg key; the 1-arg (entity) key gets filled lazily on miss.
     if not scenario.heatpump_hours:
         return {}
     from dao.prog.da_debug import _call_key
@@ -181,24 +183,23 @@ def _heatpump_hours_channel(scenario: Scenario) -> dict:
 
 
 def _avg_temperature_channel(scenario: Scenario) -> dict:
-    """Feeds ``Meteo.get_avg_temperature()`` — called by day_ahead.py's
-    heating block (via ``calc_graaddagen()``) once the heat pump is
-    enabled: once for "today" and, on a horizon longer than a day, again
-    for "tomorrow". Both calls pass an already-resolved midnight
-    ``datetime``, never ``None`` — ``calc_graaddagen`` resolves its own
-    ``date=None`` default to ``datetime.combine(datetime.today(),
-    time.min)`` *before* calling ``get_avg_temperature(date)`` — so the
-    call-key here must match that resolved value, not the unresolved
-    default (found by an actual replay: the first cut of this used
-    ``None`` and every heat-pump scenario raised a clean ``SnapshotMiss``
-    naming the real ``FakeDatetime(...)`` key it wanted instead).
+    """Feeds Meteo.get_avg_temperature(), called by day_ahead.py's heating
+    block through calc_graaddagen() once the heat pump is enabled: once
+    for "today" and, on a horizon longer than a day, again for "tomorrow".
+    Both calls pass an already-resolved midnight datetime, never None.
+    calc_graaddagen resolves its own date=None default to
+    datetime.combine(datetime.today(), time.min) before calling
+    get_avg_temperature(date), so the call key here must match that
+    resolved value, not the unresolved default. Found by an actual replay:
+    the first cut of this used None, and every heat-pump scenario raised a
+    clean SnapshotMiss naming the real FakeDatetime(...) key it wanted
+    instead.
 
     A synthetic scenario has no live database to answer that query from,
-    so this feeds it the mean of the scenario's own ``temp`` array instead
-    — the same value ``prog_data.temp`` carries. See
-    ``da_debug.RecordingIO``'s matching capture-side wrap
-    (``_wrapped_avg_temperature``) for how a *real* installation's capture
-    populates this same channel."""
+    so this feeds it the mean of the scenario's own temp array instead,
+    the same value prog_data.temp carries. See da_debug.RecordingIO's
+    matching capture-side wrap (_wrapped_avg_temperature) for how a real
+    installation's capture populates this same channel."""
     from dao.prog.da_debug import _call_key
 
     hourly = scenario.temp if scenario.temp is not None else [DEFAULT_TEMP_C] * scenario.horizon_hours

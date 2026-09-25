@@ -1,12 +1,12 @@
 """Run one scenario: synthetic snapshot -> hermetic solve -> Tier A ->
 setup checks -> Tier B case checks -> Tier C.
 
-Builds the synthetic snapshot (including ``ev`` block expansion via
-``build_snapshot.resolve_ev``), solves it hermetically, runs the Tier A
+Builds the synthetic snapshot, including ev block expansion through
+build_snapshot.resolve_ev, solves it hermetically, runs the Tier A
 structural invariants, then the always-on setup checks
-(``expectations.run_setup_checks``), then the per-scenario ``expect`` case
-checks (``expectations.run_case_checks``) — which also dispatches the
-Tier C objective-baseline comparison as one of its ``expect`` keys.
+(expectations.run_setup_checks), then the per-scenario expect case checks
+(expectations.run_case_checks). The case-check pass also dispatches the
+Tier C objective-baseline comparison as one of its expect keys.
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ class ScenarioResult:
     threads: int = 1
     log_path: str | None = None
     png_path: str | None = None
-    # EV reporting detail (None for non-EV scenarios) — populated after Tier
+    # EV reporting detail (None for non-EV scenarios), populated after Tier
     # A passes, consumed by reporting.write_reports.
     parsed_target: object | None = None
     parsed_other: object | None = None
@@ -71,7 +71,7 @@ def _capacity_of(solar_option) -> float:
 
 
 def _solar_patch(scenario: Scenario):
-    """Return a replacement ``DaBase.calc_solar_predictions`` that serves the
+    """Return a replacement DaBase.calc_solar_predictions that serves the
     scenario's own PV series, split across the configured arrays by
     installed capacity. Layered on top of ReplayIO's patches by the runner.
     """
@@ -79,7 +79,7 @@ def _solar_patch(scenario: Scenario):
 
     start = parse_start(scenario.start)
     grid = interval_grid(start, scenario.horizon_hours)
-    total_kw = solar_quarter_series(scenario)  # len == horizon*4, on `grid`
+    total_kw = solar_quarter_series(scenario)  # len == horizon*4, on grid
 
     def calc_solar_predictions(self, solar_option, vanaf, tot, interval=None, _ml_prediction=None):
         caps = []
@@ -120,12 +120,12 @@ def _capture_root_log():
 
 
 def _expected_png_path(module_dir: Path, start) -> Path:
-    """Where day_ahead.py's unconditional ``plt.savefig(...)`` (L5080-5081)
+    """Where day_ahead.py's unconditional plt.savefig(...) (L5080-5081)
     lands: a path relative to cwd, which day_ahead.py assumes is its own
-    directory (``dao/prog``) — the same assumption ``da_debug``'s own
-    capture/replay commands make. ``run_scenario`` chdirs there for the
-    duration of the solve when ``keep_png=True`` so this resolves correctly
-    regardless of where the caller invoked it from."""
+    directory (dao/prog), the same assumption da_debug's own capture and
+    replay commands make. run_scenario chdirs there for the duration of
+    the solve when keep_png=True, so this resolves correctly regardless of
+    where the caller invoked it from."""
     return (module_dir / ".." / "data" / "images" / f"calc_{start.strftime('%Y-%m-%d__%H-%M')}.png").resolve()
 
 
@@ -138,16 +138,16 @@ def run_scenario(
 ) -> ScenarioResult:
     """Solve one scenario hermetically.
 
-    ``threads`` is forwarded to ``ReplayIO`` (mip.Model.threads semantics:
-    ``-1`` = all cores). Default ``1`` for reproducibility; pass a different
-    value and compare the objective / log against a ``threads=1`` run to see
+    threads is forwarded to ReplayIO (mip.Model.threads semantics: -1
+    means all cores). Default 1 for reproducibility; pass a different
+    value and compare the objective and log against a threads=1 run to see
     whether the two agree.
 
-    ``keep_png=True`` keeps day_ahead.py's dispatch chart (suppressed by
-    default) and, if ``report_dir`` is given, moves it to
-    ``<report_dir>/<id>.png``. ``report_dir`` also controls where the
-    combined Python + CBC log is written when the caller asks for it via
-    ``write_log`` on the CLI — see ``da_debug.cmd_scenario_run``.
+    keep_png=True keeps day_ahead.py's dispatch chart, suppressed by
+    default, and, if report_dir is given, moves it to
+    <report_dir>/<id>.png. report_dir also controls where the combined
+    Python and CBC log is written when the caller asks for it through
+    write_log on the CLI; see da_debug.cmd_scenario_run.
     """
     if scenario.skip:
         return ScenarioResult(scenario.id, scenario.description, STATUS_SKIP,
@@ -157,7 +157,7 @@ def run_scenario(
 
     try:
         config = build_config(scenario)
-        expanded_ev = resolve_ev(scenario, config)  # may patch `config` in place (remove_stop_entity)
+        expanded_ev = resolve_ev(scenario, config)  # may patch config in place (remove_stop_entity)
         snapshot = build_snapshot(scenario, config=config,
                                   ev_states=(expanded_ev.states if expanded_ev else None))
         solar_quarter_series(scenario)  # validate the solar array length up front
@@ -182,10 +182,10 @@ def run_scenario(
     exc: BaseException | None = None
     try:
         # _ensure_day_ahead_importable() puts dao/prog on sys.path, which
-        # day_ahead.py needs for its own bare `from utils import (...)`.
-        # DaCalc itself must come in via the *dotted* path, matching every
-        # da_debug command and _import_targets()'s own patch targets — a
-        # bare `import day_ahead` creates a second module object under a
+        # day_ahead.py needs for its own bare "from utils import (...)".
+        # DaCalc itself must come in via the dotted path, matching every
+        # da_debug command and _import_targets()'s own patch targets. A
+        # bare "import day_ahead" creates a second module object under a
         # different sys.modules key, and ReplayIO's CBC-log-capture patch
         # (installed on dao.prog.day_ahead) would silently miss it.
         da_debug._ensure_day_ahead_importable()
@@ -194,8 +194,8 @@ def run_scenario(
 
         # day_ahead.py's dispatch chart is written to a path relative to cwd
         # ("../data/images/..."), on the assumption that cwd is its own
-        # directory (dao/prog) — the same assumption da_debug's own
-        # capture/replay --png makes. Only relevant (and only done) when a
+        # directory (dao/prog), the same assumption da_debug's own
+        # capture/replay --png makes. Only relevant, and only done, when a
         # chart is actually being kept; every other write ReplayIO patches
         # away regardless of cwd.
         module_dir = Path(day_ahead_module.__file__).resolve().parent
@@ -306,8 +306,8 @@ def run_scenario(
 
     def _case_tag(name: str) -> str:
         # objective_within_baseline dispatches through the case-check
-        # registry as an implementation detail — it's Tier C, not Tier B
-        # (arch doc §6).
+        # registry as an implementation detail. It's Tier C, not Tier B;
+        # see docs/scenario-suite-architecture.md §6.
         return "[Tier C]" if name == "objective_within_baseline" else "[Tier B]"
 
     failures = (

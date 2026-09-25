@@ -1,26 +1,25 @@
 """Assertions run against a solved scenario.
 
-The **Tier A structural invariants** are properties that hold for *any*
-optimal solution, so they survive solver-version/CPU/tie-breaking changes.
-They read the model through ``ModelView`` (the variable registry), never
-through log text. Hard fail, always run, never listed in ``expect``.
+The Tier A structural invariants are properties that hold for any optimal
+solution, so they survive solver-version, CPU, and tie-breaking changes.
+They read the model through ModelView, the variable registry, never
+through log text. Hard fail, always run, never listed in expect.
 
-The **setup checks** are the always-on SETUP_MISMATCH / echo / duty-sliver
-checks on a scenario's own overrides. Their own registry (``@setup_check``,
-dispatched by ``run_setup_checks`` below) keeps them apart from Tier A and
-from the case checks: a failure here says the scenario tests nothing, which
-is a different claim from "the model is broken" or "the behaviour is
-wrong".
+The setup checks are the always-on SETUP_MISMATCH, echo, and duty-sliver
+checks on a scenario's own overrides. Their own registry (@setup_check,
+dispatched by run_setup_checks below) keeps them apart from Tier A and
+from the case checks: a failure here says the scenario tests nothing,
+which is a different claim from "the model is broken" or "the behaviour
+is wrong".
 
-The rest of the ``expect`` vocabulary is handled as **Tier B, case
-checks** — one function per ``expect`` key, dispatched by
-``run_case_checks`` below. Most read ``ModelView`` too; the EV-specific
-ones (``scheduled``, ``reason_contains``, …) read the parsed EV log
-instead, since day_ahead.py's scheduling *decision* (and its Dutch reason
-string) isn't a model variable. Also here: **Tier C, the objective
-baseline** (``objective_within_baseline``) — dispatched through the same
-registry as an implementation detail, not a statement about which group it
-belongs to.
+The rest of the expect vocabulary is handled as Tier B, case checks: one
+function per expect key, dispatched by run_case_checks below. Most read
+ModelView too; the EV-specific ones (scheduled, reason_contains, and so
+on) read the parsed EV log instead, since day_ahead.py's scheduling
+decision, and its Dutch reason string, isn't a model variable. Also here:
+Tier C, the objective baseline (objective_within_baseline), dispatched
+through the same registry as an implementation detail, not a statement
+about which group it belongs to.
 """
 
 from __future__ import annotations
@@ -32,7 +31,7 @@ from typing import Any, Callable, Optional
 SUCCESS_LINE = "Het programma heeft een optimale oplossing gevonden."
 
 # stage_factor is [e][ecs][u] (stage-before-interval), unlike every other
-# per-EV container — a transposed read produces plausible wrong numbers.
+# per-EV container. A transposed read produces plausible wrong numbers.
 _DUTY_ZERO_TOL = 1e-4
 
 
@@ -79,9 +78,9 @@ class Invariant:
 
 
 class Solved(Invariant):
-    """Fail-closed: the exact Dutch success line was logged *and* the model
-    carries a solution. Not "no failure seen" — a fully infeasible solve
-    returns ``None`` before any dispatch logging."""
+    """Fail-closed: the exact Dutch success line was logged and the model
+    carries a solution. Not "no failure seen": a fully infeasible solve
+    returns None before any dispatch logging."""
 
     name = "solved"
 
@@ -100,9 +99,9 @@ class Solved(Invariant):
 
 class NoSimultaneousChargeDischarge(Invariant):
     """No interval charges and discharges the same battery on the AC side.
-    The DC-side ``dc_to_bat``/``dc_from_bat`` pair is deliberately not
-    checked — it is not exclusivity-constrained in the current formulation
-    (arch doc §7); Tier D counts it instead (S2)."""
+    The DC-side dc_to_bat/dc_from_bat pair is deliberately not checked: it
+    is not exclusivity-constrained in the current formulation (see
+    docs/scenario-suite-architecture.md §7); Tier D counts it instead."""
 
     name = "no_simultaneous_charge_discharge"
 
@@ -123,10 +122,11 @@ class NoSimultaneousChargeDischarge(Invariant):
 
 class Sos2Adjacent(Invariant):
     """Every active SOS2 weight pair is a single stage or two adjacent
-    stages, on every interval, for every curve (battery charge/discharge +
-    heat pump). A non-adjacent pair is a solver-correctness signal and,
-    given the mip 1.17.6 SOS2 crash class (arch doc §3), worth watching on
-    every case."""
+    stages, on every interval, for every curve (battery charge and
+    discharge, plus heat pump). A non-adjacent pair is a solver-correctness
+    signal and, given the mip 1.17.6 SOS2 crash class (see
+    docs/scenario-suite-architecture.md §3), worth watching on every
+    case."""
 
     name = "sos2_adjacent"
 
@@ -151,7 +151,7 @@ class Sos2Adjacent(Invariant):
 
 
 class VarBoundsRespected(Invariant):
-    """Every variable sits within its own declared ``[lb, ub]``. CBC
+    """Every variable sits within its own declared [lb, ub]. CBC
     guarantees this for a returned solution; checking it catches
     serialization corruption and feasibility-tolerance blow-ups that would
     otherwise surface only as a weird dispatch."""
@@ -181,8 +181,8 @@ class VarBoundsRespected(Invariant):
 
 
 class SocWithinLimits(Invariant):
-    """State of charge stays within each battery's ``soc`` variable bounds
-    across the whole horizon — needs no config parsing, holds for any
+    """State of charge stays within each battery's soc variable bounds
+    across the whole horizon. Needs no config parsing, holds for any
     optimal solution."""
 
     name = "soc_within_limits"
@@ -209,8 +209,8 @@ def _ev_indices(mv) -> list[int]:
 
 
 class EvSingleRealStagePerInterval(Invariant):
-    """At most one real charge stage (ecs >= 1) active per interval, per EV
-    — multi-stage exclusivity, read from ``stage_factor[e][ecs][u]``."""
+    """At most one real charge stage (ecs >= 1) active per interval, per
+    EV: multi-stage exclusivity, read from stage_factor[e][ecs][u]."""
 
     name = "ev_single_real_stage_per_interval"
 
@@ -234,9 +234,9 @@ class EvSingleRealStagePerInterval(Invariant):
 
 
 class EvChargeNonNegative(Invariant):
-    """Every EV charge quantity is >= 0 and no stage factor exceeds 1 — the
+    """Every EV charge quantity is >= 0 and no stage factor exceeds 1: the
     cheap "the EV block isn't producing nonsense" check that needs no
-    per-case duty tolerance (that lands with the EV port in S2)."""
+    per-case duty tolerance."""
 
     name = "ev_charge_non_negative"
 
@@ -284,10 +284,11 @@ def setup_check(name: str) -> Callable[[Callable], Callable]:
 
 @setup_check("overrides_were_read")
 def _check_overrides_were_read(ctx: "CaseContext") -> Optional[CheckResult]:
-    """Runs when the scenario's ``states`` (literal or EV-derived) is not
-    empty: fails if an override names an entity the solve never read via
-    ``get_state`` — the SETUP_MISMATCH class of bug, e.g. an override
-    aimed at an entity that's unconfigured for this EV (case 5.1's shape)."""
+    """Runs when the scenario's states (literal or EV-derived) is not
+    empty: fails if an override names an entity the solve never read
+    through get_state. This is the SETUP_MISMATCH class of bug, for
+    example an override aimed at an entity that's unconfigured for this
+    EV; see case 5.1."""
     names = set(ctx.requested_states)
     if not names:
         return None
@@ -302,9 +303,10 @@ def _check_overrides_were_read(ctx: "CaseContext") -> Optional[CheckResult]:
 
 @setup_check("setup_echo_matches")
 def _check_setup_echo(ctx: "CaseContext") -> Optional[CheckResult]:
-    """Runs when the scenario has an ``ev`` block: diff the log's own setup
-    echo against what was requested, plus each car's capacity sanity check
-    — both ported from ``test_ev_harness_v6``'s SETUP_MISMATCH path."""
+    """Runs when the scenario has an ev block: diff the log's own setup
+    echo against what was requested, plus each car's capacity sanity
+    check. Both are ported from test_ev_harness_v6's SETUP_MISMATCH
+    path."""
     if ctx.expanded_ev is None or ctx.parsed_target is None:
         return None
     from .parsing import check_capacity, verify_setup_echo
@@ -326,18 +328,18 @@ def _check_setup_echo(ctx: "CaseContext") -> Optional[CheckResult]:
 
 @setup_check("no_duty_slivers")
 def _check_duty_slivers(ctx: "CaseContext") -> list[CheckResult]:
-    """Runs when the scenario has an ``ev`` block: no real charge stage, on
-    either car, runs below the minimum duty cycle — mirrors
-    ``test_ev_harness_v6.run_case``'s unconditional per-case sliver check,
-    with one correction: when day_ahead.py's own min-duty *feasibility
-    guard* fired for that car (``minimale schakelduur ... niet
-    toegepast`` — energy_needed is below one switching action, so the
-    constraint was never added to the model), a sub-minimum factor is the
-    legitimate cheapest dispatch, not a violation of a constraint that
-    isn't there. v6's blanket check never had to draw this distinction
-    because its own tuning happened not to produce a sliver on the one
-    case (7.5) where the guard fires; this config's smaller EV battery
-    does produce one, which is what surfaced the gap."""
+    """Runs when the scenario has an ev block: no real charge stage, on
+    either car, runs below the minimum duty cycle. Mirrors
+    test_ev_harness_v6.run_case's unconditional per-case sliver check,
+    with one correction: when day_ahead.py's own min-duty feasibility
+    guard fired for that car ("minimale schakelduur ... niet toegepast":
+    energy_needed is below one switching action, so the constraint was
+    never added to the model), a sub-minimum factor is the legitimate
+    cheapest dispatch, not a violation of a constraint that isn't there.
+    v6's blanket check never had to draw this distinction, because its own
+    tuning happened not to produce a sliver on the one case (7.5) where
+    the guard fires. This config's smaller EV battery does produce one,
+    which is what surfaced the gap."""
     out: list[CheckResult] = []
     from .parsing import EV_MIN_DUTY_S, NOMINAL_MIN_DUTY
 
@@ -355,7 +357,7 @@ def _check_duty_slivers(ctx: "CaseContext") -> list[CheckResult]:
 def run_setup_checks(ctx: "CaseContext") -> list[CheckResult]:
     """Every registered setup check whose precondition holds, in
     registration order. An author cannot skip one by leaving a key out of
-    ``expect`` — they take no ``expect`` key at all."""
+    expect: they take no expect key at all."""
     results: list[CheckResult] = []
     for fn in _SETUP_CHECKS.values():
         out = fn(ctx)
@@ -374,8 +376,8 @@ def run_setup_checks(ctx: "CaseContext") -> list[CheckResult]:
 @dataclass
 class CaseContext:
     """What a setup check or a case check sees, built once per solved
-    scenario by ``runner.run_scenario`` and handed to every setup check and
-    every ``expect`` key's handler."""
+    scenario by runner.run_scenario and handed to every setup check and
+    every expect key's handler."""
 
     mv: Any  # ModelView | None, reused from the Tier A ResultContext
     scenario_id: str
@@ -498,10 +500,10 @@ def _check_battery_flat_during(value: dict, ctx: CaseContext) -> CheckResult:
 @case_check("no_cross_battery_charge_discharge")
 def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> CheckResult:
     """No interval has one battery charging on the AC side while a
-    *different* battery discharges on the AC side. Unlike
-    ``NoSimultaneousChargeDischarge`` (Tier A, per-battery, backed by the
-    real ``ac_to_dc_on[b][u] + ac_from_dc_on[b][u] <= 1`` MILP constraint),
-    nothing in the model forbids this across batteries — round-tripping one
+    different battery discharges on the AC side. Unlike
+    NoSimultaneousChargeDischarge (Tier A, per-battery, backed by the real
+    ac_to_dc_on[b][u] + ac_from_dc_on[b][u] <= 1 MILP constraint), nothing
+    in the model forbids this across batteries. Round-tripping one
     battery's charge into another's discharge is only ever sub-optimal
     (AC/DC conversion losses, cycle cost), never infeasible. So this is a
     Tier B case check, opt-in per multi-battery scenario, not a structural
@@ -536,7 +538,7 @@ def _check_heatpump_runs(value: dict, ctx: CaseContext) -> CheckResult:
     mv = ctx.mv
     if mv is None or not mv.has("p_hp"):
         # No heat demand at all (heat_needed <= 0, day_ahead.py:2229) means
-        # the model never allocates p_hp — a legitimate "didn't run", not a
+        # the model never allocates p_hp: a legitimate "didn't run", not a
         # missing-model error. Only fail this branch when the scenario
         # actually expected it to run.
         ok = not value.get("runs", True)
@@ -550,10 +552,10 @@ def _check_heatpump_runs(value: dict, ctx: CaseContext) -> CheckResult:
 
 
 def _resolve_machine_index(spec: Any, config: dict[str, Any]) -> tuple[Optional[int], list[str]]:
-    """``spec`` is the scenario's ``expect.machine_runs_in_window.machine`` —
-    normally a name matching ``config["machines"][*]["name"]`` (e.g.
-    ``"wasmachine"``), case-insensitively; a numeric index is also accepted
-    as an escape hatch. Returns ``(index_or_None, configured_names)``."""
+    """spec is the scenario's expect.machine_runs_in_window.machine,
+    normally a name matching config["machines"][*]["name"] (for example
+    "wasmachine"), case-insensitively. A numeric index is also accepted as
+    an escape hatch. Returns (index_or_None, configured_names)."""
     machines = config.get("machines") or []
     names = [str(m.get("name", "")) for m in machines]
     spec_str = str(spec)
@@ -602,7 +604,7 @@ def _check_objective_within_baseline(value: bool, ctx: CaseContext) -> CheckResu
 
 
 def run_case_checks(expect: dict[str, Any], ctx: CaseContext) -> list[CheckResult]:
-    """Every non-``solved`` key in ``expect``, dispatched by name."""
+    """Every non-solved key in expect, dispatched by name."""
     results: list[CheckResult] = []
     for key, value in expect.items():
         if key == "solved":
