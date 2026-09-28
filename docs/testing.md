@@ -35,7 +35,11 @@ container and run the commands below as they are:
 sudo docker exec -it dao bash
 python -m dao.prog.da_debug scenario-run
 ```
-In this case the scenario suite runs from the container, make sure all the container is up to date with the latest changes to test.
+The suite then runs the code in the container, so make sure the container is up to
+date with the changes you want to test. The scenarios read `options_example.json`
+from `/config/dao_data`, which the add-on copies only on first install. If Tier C
+fails unexpectedly, copy in the current version with
+`cp /tmp/daodata/options_example.json /config/dao_data/`.
 
 Every command below assumes:
 

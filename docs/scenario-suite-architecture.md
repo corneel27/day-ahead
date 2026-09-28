@@ -37,9 +37,11 @@ Section 7 lists what the suite does not do.
 
 At the moment of writing this document the scenario suite covers the following tests:
 
-* Tier A: runs always 38/38 scenarios
-* Tier B: tests 47 *check instances* across 34 scenarios.
-* Tier C: Measures 14/38 scenarios
+The suite has 40 scenarios, checked at three levels:
+
+- Tier A (model invariants): runs on all 40 scenarios.
+- Tier B (scenario-specific checks): 51 checks across 36 scenarios.
+- Tier C (objective baseline): 16 of 40 scenarios.
 
 This results in the following tests:
 
@@ -50,6 +52,7 @@ This results in the following tests:
 * 2 solar
 * 3 machines
 * 2 heatpump
+* 1 strategy (minimize consumption)
 
 Use python da_debug.py scenario-list to get an overview of all implemented scenarios.
 
