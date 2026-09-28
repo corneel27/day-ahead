@@ -27,6 +27,16 @@ are the same, so the `cbcbox` patch version alone causes it.
 `dao/requirements.txt` already pins `2.929`. If you see
 `ERROR while running Cbc. Signal SIGABRT caught`, run `pip show cbcbox` first.
 
+**Or use the add-on container.** The DAO image already has this stack in its
+venv, and its `.bashrc` sets `PYTHONPATH`. Open a shell in the running
+container and run the commands below as they are:
+
+```bash
+sudo docker exec -it dao bash
+python -m dao.prog.da_debug scenario-run
+```
+In this case the scenario suite runs from the container, make sure all the container is up to date with the latest changes to test.
+
 Every command below assumes:
 
 ```bash
@@ -198,7 +208,7 @@ $ python -m dao.prog.da_debug scenario-bless price-negative-window
 blessed price-negative-window: objective -3.283599 -> dao/prog/scenarios/baselines/price-negative-window.json
 ```
 
-## 3. The assertion groups
+## 3. The verification groups
 
 Five groups of check run against a solved scenario, in this order: Tier A,
 the setup checks, Tier B, Tier C, Tier D. Each means something different
@@ -331,7 +341,7 @@ pip install -r dao/requirements.txt
 TZ=UTC python -m dao.prog.da_debug scenario-run --report
 ```
 
-## 6. Adding a scenario to the corpus
+## 6. Adding a scenario
 
 1. Write the JSON (see [`writing-scenarios.md`](writing-scenarios.md)) in the
    matching `cases/*.json` file, or in a new file. The suite picks up any

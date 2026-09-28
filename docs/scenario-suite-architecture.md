@@ -19,7 +19,7 @@ calculates, and it can show the calculation.
 
 The scenario suite came out of that. If I can capture and replay, I can also write
 a scenario and replay it. Building a snapshot by hand turned out to be a lot of
-work, and the machinery that grew out of it is what this page describes.
+work, and the machinery that grew out of it is what this document describes.
 
 `dao/prog/scenarios/` is a declarative test suite for `DaCalc.calc_optimum()`, the
 MIP solve at the core of `day_ahead.py`. Each scenario is a small JSON file: a
@@ -249,7 +249,7 @@ with da_debug.ReplayIO(snapshot, solver_threads=threads, png=keep_png) as replay
     dacalc.calc_optimum(_start_dt=start)
 ```
 
-### Where the line falls
+### Choosing between da_debug.py and runner.py
 
 Add a channel to `da_debug.py` when a real capture could contain the value. Patch
 in `runner.py` when the scenario invents data that a real installation could never
@@ -257,7 +257,7 @@ record. If a future scenario reaches a channel that `ReplayIO` does not serve, i
 fails as the heat-pump gap did: a `SnapshotMiss` that names the missing call, never
 a silent wrong answer. §8 describes how to close such a gap.
 
-## 6. The assertion model
+## 6. Verification tiers
 
 Five groups of check run against a solved scenario. They are kept apart because a
 failure in each means something different:
