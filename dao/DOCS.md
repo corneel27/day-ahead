@@ -18,6 +18,12 @@ https://github.com/corneel27/day-ahead/blob/main/dao/DOCS.md
 
 *****************************************
 
+## Documentatie 
+Let op!! In de loop van 2025 is begonnen met het verhuizen en actualiseren van de documentatie vanaf DOCS.md
+naar de wiki-pagina's op github: https://github.com/corneel27/day-ahead/wiki
+Gebruik de Wiki voor de meest actuele informatie
+
+
 ## Installatie
 De add-on wordt geinstalleerd als een community add-on voor Home Assistant.
 Je installeert de add-on als volgt:
