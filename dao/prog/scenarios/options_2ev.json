@@ -394,6 +394,35 @@
       "charge switch": "switch.wvwzzzauz_charging",
       "entity set charging ampere": "input_number.set_car_charging_ampere",
       "entity stop charging": "input_datetime.stop_laden_ev"
+    },
+    {
+      "name": "Tesla Model 3",
+      "capacity": 55.0,
+      "entity position": "device_tracker.tesla_position",
+      "entity max amperage": "sensor.tesla_charger_max_ampere",
+      "charge three phase": "True",
+      "charge stages": [
+        {
+          "ampere": 0,
+          "efficiency": 1
+        },
+        {
+          "ampere": 16,
+          "efficiency": 0.95
+        }
+      ],
+      "entity actual level": "sensor.tesla_battery_level",
+      "entity plugged in": "binary_sensor.tesla_external_power",
+      "charge scheduler": {
+        "entity set level": "input_number.tesla_gewenst_laad_niveau",
+        "level margin": 1,
+        "entity ready datetime": "input_datetime.tesla_tijdstip_klaar_met_laden"
+      },
+      "charge switch": "switch.tesla_charging",
+      "entity set charging ampere": "input_number.tesla_set_car_charging_ampere",
+      "entity stop charging": "input_datetime.tesla_stop_laden_ev",
+      "entity instant start": "switch.tesla_instant_charge",
+      "entity instant level": "input_number.tesla_instant_level"
     }
   ],
   "machines": [

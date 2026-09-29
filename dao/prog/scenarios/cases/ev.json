@@ -1,0 +1,308 @@
+[
+  {
+    "id": "1.1",
+    "description": "Golf blend trap: 30->63%, ready +4h, ~3.00 kW avg",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+4h"
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "1.2",
+    "description": "Golf near 16A ceiling: 30->67%, ready +4h",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 67.0, "instant_charge": false, "ready": "+4h"
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "1.3",
+    "description": "Golf below 10A capacity: 30->63%, ready +8h",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+8h"
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "1.4",
+    "description": "Golf small job, lots of slack: 30->40%, ready +2h",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 40.0, "instant_charge": false, "ready": "+2h"
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "1.5",
+    "description": "Golf above max power: 30->63%, ready +3h20m -> auto-adjusted",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+3h20m"
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "1.6",
+    "description": "Zero-slack energy_needed infeasibility regression: Golf 30->90%, ready +1h50m",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 90.0, "instant_charge": false, "ready": "+1h50m"
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "2.1",
+    "description": "Already at target level",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 80.0, "wished_level": 80.0, "instant_charge": false, "ready": "+2h"
+    },
+    "expect": { "solved": true, "scheduled": false, "reason_contains": "hoger is of gelijk aan" }
+  },
+  {
+    "id": "2.2",
+    "description": "Car away",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "away",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+4h"
+    },
+    "expect": { "solved": true, "scheduled": false, "reason_contains": "auto is niet huis" }
+  },
+  {
+    "id": "2.3",
+    "description": "Not plugged in",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": false, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+4h"
+    },
+    "expect": { "solved": true, "scheduled": false, "reason_contains": "auto is niet ingeplugd" }
+  },
+  {
+    "id": "2.4",
+    "description": "Ready time in the past",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "-24h"
+    },
+    "expect": { "solved": true, "scheduled": false, "reason_contains": "is verouderd" }
+  },
+  {
+    "id": "2.5",
+    "description": "Ready beyond horizon",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+30h"
+    },
+    "expect": { "solved": true, "scheduled": false, "reason_contains": "ligt voorbij de planningshorizon" }
+  },
+  {
+    "id": "2.6",
+    "description": "Combine away + unplugged + stale ready",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": false, "position": "away",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "-24h"
+    },
+    "expect": { "solved": true, "scheduled": false }
+  },
+  {
+    "id": "3.3",
+    "description": "Day rollover: short HH:MM:SS ready time, earlier than start -> next day",
+    "start": "2026-01-14 23:15",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false,
+      "ready": { "plugin": "day_rollover", "hour": 1, "minute": 0 }
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "4.3",
+    "description": "Ready near end of current interval -> ready_u == 0",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 60.0, "wished_level": 63.0, "instant_charge": false,
+      "ready": { "plugin": "ready_u_zero", "buffer_s": 45 }
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "4.4",
+    "description": "No stop entity, blend-trap case -> interval 0 must be 0/1",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+4h",
+      "remove_stop_entity": true
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "5.1",
+    "description": "Instant charge on, Tesla 30%, generous deadline (baseline). Targets the Tesla, not the Golf — entity_instant_start/level are unconfigured for the Golf in options_example.json.",
+    "start": "2026-01-14 07:00",
+    "options": "options_2ev",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "tesla", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 100.0, "instant_charge": true, "ready": "+8h"
+    },
+    "expect": { "solved": true, "scheduled": true, "wished_level_clipped": false }
+  },
+  {
+    "id": "5.2",
+    "description": "Bug 7 regression: instant charge on, Tesla 30%, entity_ready_datetime deliberately short (+15 min) — instant charge must ignore it, no wished_level clip",
+    "start": "2026-01-14 07:00",
+    "options": "options_2ev",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "tesla", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 100.0, "instant_charge": true, "ready": "+15m"
+    },
+    "expect": { "solved": true, "scheduled": true, "wished_level_clipped": false }
+  },
+  {
+    "id": "6.7",
+    "description": "Two EVs simultaneously: Golf 30->63% + Tesla 35->80%, both ready +4h",
+    "start": "2026-01-14 07:00",
+    "options": "options_2ev",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+4h",
+      "other": {
+        "plugged_in": true, "position": "home",
+        "actual_soc": 35.0, "wished_level": 80.0, "instant_charge": false, "ready": "+4h"
+      }
+    },
+    "expect": { "solved": true, "scheduled": true, "other_scheduled": true }
+  },
+  {
+    "id": "1.T",
+    "description": "Tesla control: monotone curve, should single-stage trivially",
+    "start": "2026-01-14 07:00",
+    "options": "options_2ev",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "tesla", "plugged_in": true, "position": "home",
+      "actual_soc": 35.0, "wished_level": 80.0, "instant_charge": false, "ready": "+3h"
+    },
+    "expect": { "solved": true, "scheduled": true }
+  },
+  {
+    "id": "7.1",
+    "description": "Golf duty sliver, slack window: 2 full intervals + 0.10 kWh, ready +6h",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "instant_charge": false, "ready": "+6h",
+      "soc_plugin": { "name": "remainder_soc", "full_intervals": 2, "remainder_kwh": 0.10, "base_soc": 30.0 }
+    },
+    "expect": { "solved": true, "scheduled": true, "partial_at_least": 1 }
+  },
+  {
+    "id": "7.2",
+    "description": "Golf duty sliver, near-saturated window: 4 full intervals + 0.08 kWh, ready +3h",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "instant_charge": false, "ready": "+3h",
+      "soc_plugin": { "name": "remainder_soc", "full_intervals": 4, "remainder_kwh": 0.08, "base_soc": 30.0 }
+    },
+    "expect": { "solved": true, "scheduled": true, "partial_at_least": 1 }
+  },
+  {
+    "id": "7.3",
+    "description": "Tesla duty sliver (monotone curve control): 6 full intervals + 0.02 kWh, ready +5h",
+    "start": "2026-01-14 07:00",
+    "options": "options_2ev",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "tesla", "plugged_in": true, "position": "home",
+      "instant_charge": false, "ready": "+5h",
+      "soc_plugin": { "name": "remainder_soc", "full_intervals": 6, "remainder_kwh": 0.02, "base_soc": 35.0 }
+    },
+    "expect": { "solved": true, "scheduled": true, "partial_at_least": 1 }
+  },
+  {
+    "id": "7.4",
+    "description": "Golf duty sliver with no stop entity: 2 full intervals + 0.09 kWh, ready +4h",
+    "start": "2026-01-14 07:00",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "golf", "plugged_in": true, "position": "home",
+      "instant_charge": false, "ready": "+4h",
+      "soc_plugin": { "name": "remainder_soc", "full_intervals": 2, "remainder_kwh": 0.09, "base_soc": 30.0 },
+      "remove_stop_entity": true
+    },
+    "expect": { "solved": true, "scheduled": true, "partial_at_least": 1 }
+  },
+  {
+    "id": "7.5",
+    "description": "Tesla small top-up near the min-duty feasibility guard: 60->61.2%",
+    "start": "2026-01-14 07:00",
+    "options": "options_2ev",
+    "prices": { "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+                         0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30] },
+    "ev": {
+      "target": "tesla", "plugged_in": true, "position": "home",
+      "actual_soc": 60.0, "wished_level": 61.2, "instant_charge": false, "ready": "+2h"
+    },
+    "expect": { "solved": true }
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "solar-bell-flat-prices",
+    "description": "Sunny-day PV bell, flat consumption price but a low flat feed-in price - storing beats exporting, so the battery charges off the bell",
+    "start": "2026-06-21 00:00",
+    "prices": {
+      "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+               0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30],
+      "prod": [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
+               0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+    },
+    "solar": [0.0, 0.0, 0.3, 1.1, 2.3, 3.6, 4.7, 5.4, 5.8, 5.9, 5.7, 5.1,
+              4.2, 3.1, 1.9, 0.9, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "states": { "sensor.ess_battery_soc": "20" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_charges_during": { "start": "10:00", "end": "14:00", "min_kwh": 6.0 }
+    }
+  },
+  {
+    "id": "solar-bell-evening-spike",
+    "description": "Sunny-day PV bell plus an evening price spike - the battery charges off the bell at midday, then discharges into the spike",
+    "start": "2026-06-21 00:00",
+    "prices": {
+      "cons": [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
+               0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.90, 0.90, 0.90, 0.25, 0.25, 0.25],
+      "prod": [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
+               0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+    },
+    "solar": [0.0, 0.0, 0.3, 1.1, 2.3, 3.6, 4.7, 5.4, 5.8, 5.9, 5.7, 5.1,
+              4.2, 3.1, 1.9, 0.9, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "baseload": [0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3,
+                 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 1.2, 1.2, 1.2, 0.3, 0.3, 0.3],
+    "states": { "sensor.ess_battery_soc": "50" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_charges_during": { "start": "10:00", "end": "14:00", "min_kwh": 6.0 },
+      "battery_discharges_during": { "start": "18:00", "end": "21:00", "min_kwh": 2.5 }
+    }
+  }
+]
