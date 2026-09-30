@@ -487,6 +487,7 @@ Use `charge_scheduler` for time-based optimization:
 | `charge switch` | [EntityId](#entityid) | Yes | — | HA switch entity to control charging |
 | `entity set charging ampere` | [EntityId](#entityid) | Yes | — | HA entity to set charging amperage (Unit: `A`) |
 | `entity stop charging` | [EntityId](#entityid) (optional) | No | `null` | HA entity for stop charging datetime |
+| `entity charging schedule` | [EntityId](#entityid) (optional) | No | `null` | HA text entity for the calculated charging schedule |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -550,6 +551,10 @@ Home Assistant entity to control charging current in amperes. System will adjust
 **`entity stop charging`**
 
 Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.
+
+**`entity charging schedule`**
+
+Optional Home Assistant text entity where DAO writes all planned EV charging periods, including their amperage and partial-interval end times, after each optimization.
 
 </details>
 
