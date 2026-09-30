@@ -12,6 +12,12 @@
   "meteoserver-key": "!secret meteoserver-key",
   "prices": {
     "source day ahead": "nordpool",
+    "forecast extension provider": "none",
+    "forecast extension hours": 0,
+    "energypriceforecast-extension-api-url": "https://api.energypriceforecast.eu/api/v1/dao/prices",
+    "energypriceforecast-extension-api-key": null,
+    "energypriceforecast-extension-country": null,
+    "day-ahead-prediction-extension-url": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
     "regular high": 0.50,
     "regular low": 0.40,
     "switch to low": 23,
