@@ -19,7 +19,7 @@ class PricePrediction(BaseModel):
         },
     )
     source: Optional[Literal["epexpredictor", "energypriceforecast_eu", "dap"]] = Field (
-        default=None,
+        default="dap",
         description="The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
         json_schema_extra={
             "x-help": "The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
@@ -27,7 +27,7 @@ class PricePrediction(BaseModel):
         },
     )
     api: Optional[str] = Field (
-        default="https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>",
+        default="https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
         description="The url of the supplier of prediction data, with which DAO can get the prediction data ",
         json_schema_extra={
             "x-help": "The url of the supplier to get the prediction data"
@@ -51,7 +51,7 @@ class PricingConfig(BaseModel):
         },
     )
     prediction: Optional[PricePrediction] = Field(
-        default= None,
+        default_factory = PricePrediction,
         description="Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
         json_schema_extra={
             "x-help": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
