@@ -3056,8 +3056,9 @@ class Report(DaBase):
             "values", "da", start=start, end=end, agg_func=agg_func
         )
         if extension > 0:
-            last_moment = pd.to_datetime(df_da["time"].iloc[-1])
-            start = last_moment + datetime.timedelta(minutes=60 if interval == "1hour" else 15)
+            if len(df_da) > 0:
+                last_moment = pd.to_datetime(df_da["time"].iloc[-1])
+                start = last_moment + datetime.timedelta(minutes=60 if interval == "1hour" else 15)
             end = start + datetime.timedelta(hours=extension)
             df_prediction = self.db_da.get_column_data(
                 "prognoses", "da", start=start, end=end, agg_func=agg_func
