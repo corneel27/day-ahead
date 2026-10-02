@@ -134,7 +134,7 @@ fi
 
 copy_config_if_missing
 
-export PYTHONPATH="${PYTHONPATH}:${PROJECT_ROOT}:${PROJECT_ROOT}/lib:${PROJECT_ROOT}/prog"
+export PYTHONPATH="${PYTHONPATH}:${PROJECT_ROOT}"
 
 if [ "$MIGRATE" = true ]; then
   echo "Migrating db"

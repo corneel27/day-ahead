@@ -1,11 +1,15 @@
-import time, os, fnmatch, re, datetime, time, threading, json
-from flask import Blueprint, render_template, request, redirect, url_for
+import os, fnmatch, re, datetime, time, threading, json
+from flask import Blueprint, render_template, request, redirect, url_for, has_request_context
 
 from dao.prog.version import __version__
-from subprocess import Popen, PIPE, run, STDOUT, DEVNULL
+from subprocess import Popen, DEVNULL
 from pathlib import Path
 from dao.prog.da_report import Report
 from dao.prog.config.loader import ConfigurationLoader
+
+from sqlalchemy import (
+    Table
+)
 
 v2 = Blueprint("v2", __name__)
 
@@ -19,13 +23,38 @@ def inject_data():
 # globals
 app_datapath = "app/static/data/"
 
-VITE_DEV_SERVER = "http://localhost:5173"
+VITE_DEV_PORT = os.getenv("VITE_DEV_PORT", "5173")
 VITE_MANIFEST = Path("app/static/build/.vite/manifest.json")
+
+def vite_dev_server() -> str:
+    """
+    Base URL of the Vite dev server as seen by the browser.
+
+    Set VITE_DEV_SERVER to pin it explicitly (for example, when the dev server sits
+    behind a proxy or a tunnel on a different port).  Otherwise, it is derived from
+    the host the page itself was requested on, so the assets are loaded from the
+    same machine that serves the application instead of from a hardcoded
+    "localhost", which would resolve to the browser's own machine.
+    """
+    pinned = os.getenv("VITE_DEV_SERVER")
+    if pinned:
+        return pinned.rstrip("/")
+    if has_request_context():
+        # request.host includes the port; strip it, keep the (possibly IPv6) host.
+        host = request.host
+        if host.startswith("["):  # [::1]:5000
+            host = host[: host.index("]") + 1]
+        elif ":" in host:
+            host = host.rsplit(":", 1)[0]
+        # Protocol relative, so the scheme follows the page itself.
+        return f"//{host}:{VITE_DEV_PORT}"
+    return f"http://localhost:{VITE_DEV_PORT}"
 
 def vite_tags(entry: str) -> str:
     if os.getenv("VITE_DEV") == "1":
-        return f'<script type="module" src="{VITE_DEV_SERVER}/@vite/client"></script>' \
-               f'<script type="module" src="{VITE_DEV_SERVER}/{entry}"></script>'
+        dev_server = vite_dev_server()
+        return f'<script type="module" src="{dev_server}/@vite/client"></script>' \
+               f'<script type="module" src="{dev_server}/{entry}"></script>'
 
     if not VITE_MANIFEST.exists():
         raise RuntimeError("Vite manifest not found. Run 'npm run build' in the Vite server directory.")
@@ -269,10 +298,10 @@ def get_solar_items_with_ml():
 
 @v2.route("/")
 @v2.route("/chart")
-def chart():
+def home():
     kwargs = log_chart("images/", "*.png")
     if kwargs is None:
-        return render_template("v2/no-tasks.html", )
+        return render_template("v2/no-task.html", )
 
     kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
     return render_template(
@@ -285,7 +314,7 @@ def chart():
 def log():
     kwargs = log_chart("log/", "*.log")
     if kwargs is None:
-        return render_template("v2/no-tasks.html", )
+        return render_template("v2/no-task.html", )
 
     log_file = app_datapath + "log/" + kwargs["filename"]
     with open(log_file, "r") as f:
@@ -624,6 +653,7 @@ def reportsv2():
         aggregate=aggregate,
         vars=vars,
         fields=fields,
+        datasets_config=_datasets_config(),
     )
 
 
@@ -684,3 +714,63 @@ def secrets():
         success=success,
         error=error,
     )
+
+@v2.route("/view-file", methods=["GET", "POST"])
+def view_file():
+    file =  request.args.get("file")
+
+    log_file = app_datapath + "log/" + file
+    with open(log_file, "r") as f:
+        content = f.read()
+
+    return render_template(
+        "v2/view-file.html",
+        content=content,
+        filename=log_file,
+    )
+
+def _alter_hex(hex_color, factor):
+    """
+    factor < 1 = darker
+    """
+    hex_color = hex_color.lstrip("#")
+
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+
+    r = max(0, min(255, int(r * factor)))
+    g = max(0, min(255, int(g * factor)))
+    b = max(0, min(255, int(b * factor)))
+
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+def _datasets_config():
+    report = Report(app_datapath + "/options.json")
+    metadata = report.db_da.metadata
+    engine = report.db_da.engine
+
+    variabel = Table("variabel", metadata, autoload_with=engine)
+
+    with engine.connect() as conn:
+        vars = conn.execute(
+            variabel.select()
+        ).fetchall()
+
+    datasets = []
+
+    for row in vars:
+        color = "#ffffff"
+
+        datasets.append({
+            "label": row.name,
+            "code": row.code,
+            "borderColor": _alter_hex(color, 0.8),
+            "backgroundColor": color,
+            "type": "bar" if row.dim == "kWh" else "line",
+            "stepped": True if row.dim == "euro/kWh" else False,
+            "yAxisID": f"y_{row.dim}",
+            "unit": row.dim,
+        })
+
+    return datasets

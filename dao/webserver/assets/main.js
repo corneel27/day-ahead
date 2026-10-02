@@ -1,5 +1,5 @@
 // Bootstrap
-import * as bootstrap from 'bootstrap'
+import * as bootstrap from '@anvme/bootstrap'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
 // HTMX
@@ -91,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+
 });
 
 document.body.addEventListener("htmx:responseError", function (event) {
@@ -117,7 +118,7 @@ document.body.addEventListener("htmx:sendError", function () {
 });
 
 import TomSelect from "tom-select";
-import "tom-select/dist/css/tom-select.bootstrap5.css";
+import "./tom-select.bootstrap6.css";
 
 document.querySelectorAll('.tom-select').forEach((el) => {
     let settings = {plugins: ['change_listener'],};

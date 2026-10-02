@@ -5,48 +5,48 @@
 
 <h1>Charts</h1>
 
-<div class="row">
-    <div class="btn-group col-8 col-sm-4 col-lg-3 col-xl-2">
-        <a class="btn btn-outline-secondary {{ 'disabled' if show_index <= 1 else '' }}"
-           href="{{url_for('v2.chart', i=first_index)}}">
-            First
-        </a>
-        <a class="btn btn-outline-secondary {{ 'disabled' if ffprev_index == 0 else '' }}"
-           href="{{url_for('v2.chart', i=ffprev_index)}}">
-            -6h
-        </a>
-        <a class="btn btn-outline-secondary {{ 'disabled' if show_index == 0 else '' }}"
-           href="{{url_for('v2.chart', i=prev_index)}}">
-            Prev
-        </a>
+<div class="row ">
+    <div class="overflow-x-auto col-12 lg:col-8 xl:col-7 2xl:col-6">
+        <div class="col-8 sm:col-7 md:col-4 lg:col-4 xl:col-3" style="min-width:590px;">
+            <form action="{{url_for('v2.home')}}" method="get">
+                <div class="input-group">
+                    <a class="btn-subtle theme-secondary {{ 'disabled' if show_index <= 0 else '' }}"
+                       href="{{url_for('v2.home', i=first_index)}}">
+                        First
+                    </a>
+                    <a class="btn-subtle theme-secondary {{ 'disabled' if ffprev_index == 0 or ffprev_index == show_index else '' }}"
+                       href="{{url_for('v2.home', i=ffprev_index)}}">
+                        -6h
+                    </a>
+                    <a class="btn-subtle theme-secondary {{ 'disabled' if show_index == 0 else '' }}"
+                       href="{{url_for('v2.home', i=prev_index)}}">
+                        Prev
+                    </a>
+                    <input type="datetime-local" name="ts" value="{{show_ts}}"
+                           class="form-control m-0 col-3"
+                           aria-label="Timestamp for chart">
+                    <button class="btn-subtle theme-secondary" id="button-addon2" type="submit"><i class="bi bi-search"
+                                                                                                   style="font-size:100%"></i>
+                    </button>
+                    <a class="btn-subtle theme-secondary {{ 'disabled' if show_index == last_index  else '' }}"
+                       href="{{url_for('v2.home', i=next_index)}}">
+                        Next
+                    </a>
+                    <a class="btn-subtle theme-secondary {{ 'disabled' if ffnext_index >= last_index - 1 or ffnext_index == show_index  else '' }}"
+                       href="{{url_for('v2.home', i=ffnext_index)}}">
+                        +6h
+                    </a>
+                    <a class="btn-subtle theme-secondary {{ 'disabled' if show_index >= last_index else ''}}"
+                       href="{{url_for('v2.home')}}">
+                        Last
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-    <div class="col-8 col-sm-7 col-md-4 col-lg-4 col-xl-3">
-        <form action="{{url_for('v2.chart')}}" method="get">
-            <div class="input-group">
-                <input type="datetime-local" name="ts" value="{{show_ts}}" class="form-control m-0"
-                       aria-label="Timestamp for chart">
-                <button class="btn btn-outline-secondary" id="button-addon2" type="submit"><i class="bi bi-search"
-                                                                                              style="font-size:100%"></i>
-                </button>
-            </div>
-        </form>
-    </div>
-    <div class="btn-group col-8 col-sm-4 col-lg-3  col-xl-2">
-        <a class="btn btn-outline-secondary {{ 'disabled' if show_index == last_index  else '' }}"
-           href="{{url_for('v2.chart', i=next_index)}}">
-            Next
-        </a>
-        <a class="btn btn-outline-secondary {{ 'disabled' if ffnext_index >= last_index - 1  else '' }}"
-           href="{{url_for('v2.chart', i=ffnext_index)}}">
-            +6h
-        </a>
-        <a class="btn btn-outline-secondary {{ 'disabled' if show_index >= last_index - 1 else ''}}"
-           href="{{url_for('v2.chart')}}">
-            Last
-        </a>
-    </div>
-    <div class="col-4 col-lg-2">
-        <a class="btn btn-outline-primary col" href="{{url_for('v2.log', ts=show_ts)}}" title="try to find the log of this run">
+    <div class="col-4 lg:col-2">
+        <a class="btn-subtle theme-primary col" href="{{url_for('v2.log', ts=show_ts)}}"
+           title="try to find the log of this run">
             <i class="bi bi-journal-text"></i>
         </a>
 
@@ -56,7 +56,7 @@
             <input type="hidden" name="show_index" value="{{show_index}}"/>
             <input type="hidden" name="confirm" value="0"/>
             <button
-                    type="submit" class="btn btn-outline-danger"
+                    type="submit" class="btn-subtle theme-danger"
                     onclick="if(window.confirm('Wil je dit verwijderen?')) { this.parentElement.querySelector('input[name=confirm]').value = 1; return true; } else { return false; }"
                     title="delete this image"
             ><i class="bi bi-trash"></i></button>

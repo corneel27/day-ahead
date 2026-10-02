@@ -112,20 +112,15 @@ class DaPrices:
         if source.lower() == "nordpool":
             # ophalen bij Nordpool
             prices_spot = Prices()
-            if len(sys.argv) <= 2:
-                end_date = None
-            else:
-                end_date = start
+            end_date = start
+
             try:
                 act_spot_prices = prices_spot.fetch(
                     areas=[self.country], end_date=end_date, resolution=resolution
                 )
-            except ConnectionError:
-                logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
-                return
             except Exception as ex:
                 logging.exception(ex)
-                logging.error(f"Geen data van Nordpool: tussen {start} en {end}")
+                logging.error(f"Fout bij ophalen data van Nordpool: tussen {start} en {end}")
                 return
             if act_spot_prices is None:
                 logging.error(f"Geen data van Nordpool: tussen {start} en {end}")

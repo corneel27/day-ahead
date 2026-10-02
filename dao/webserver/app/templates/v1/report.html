@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "v1/base.html" %}
 
 {% block selectie %}
 <form method="post" id="content_form">
@@ -25,12 +25,12 @@
     {% for view in views %}
       {% if active_view == view %}
         <button name="view" class="btn chosen btn_mid" value="{{ view }}">
-          <img src="static/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1em; width:auto;" />
+          <img src="/static/v1/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1em; width:auto;" />
           {{ view }}
         </button>
       {% else %}
         <button name="view" class="btn btn_mid" value="{{view}}">
-          <img src="static/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1em; width:auto;" />
+          <img src="/static/v1/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1em; width:auto;" />
         </button>
       {% endif %}
     {% endfor %}
@@ -55,10 +55,10 @@
         <label for="id_met_prognose">Met prognose </label>
       {% endif %}
       <button name="action" class="btn btn_mid" value="previous">
-        <img src="static/prev.png" alt="prev" border="0" style="display:inline-block; height:1em; width:auto;" />
+        <img src="/static/v1/prev.png" alt="prev" border="0" style="display:inline-block; height:1em; width:auto;" />
       </button>
       <button name="action" class="btn btn_mid" value="next">
-        <img src="static/next.png" alt="next" border="0" style="display:inline-block; height:1em; width:auto;" />
+        <img src="/static/v1/next.png" alt="next" border="0" style="display:inline-block; height:1em; width:auto;" />
       </button>
     </div>
   </div>

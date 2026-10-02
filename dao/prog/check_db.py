@@ -330,35 +330,22 @@ class CheckDB:
             print('Table "variabel" geupdated.')
         """
 
-        # Maak de kolom "aggregate" als deze niet bestaat
-        inspector = inspect(self.engine)
-        columns = [column["name"] for column in inspector.get_columns("variabel")]
-        has_aggregate = "aggregate" in columns
-
-        if not has_aggregate:
+        # Create aggregate column if it does not exist
+        if self.ensure_column('variabel', 'aggregate', 'VARCHAR(3) NOT NULL', 'avg'):
             with self.engine.begin() as connection:
-                quoted_aggregate = self.engine.dialect.identifier_preparer.quote("aggregate")
-
-                connection.execute(
-                    text(
-                        f'ALTER TABLE variabel '
-                        f'ADD COLUMN {quoted_aggregate} VARCHAR(3) NOT NULL DEFAULT "avg"'
-                    )
-                )
-
+                qagg = self.engine.dialect.identifier_preparer.quote('aggregate')
                 connection.execute(
                     text(
                         f"""
                         UPDATE variabel
-                        SET {quoted_aggregate} = CASE
+                        SET {qagg} = CASE
                             WHEN dim IN ('kWh', 'euro', 'mm') THEN 'sum'
                             ELSE 'avg'
                         END
                         """
                     )
                 )
-
-            print('Kolom "aggregate" toegevoegd aan tabel "variabel"    ')
+                print('Defaults for "aggregate" set on table "variabel"')
 
         # Voeg indexen toe op kolom `time` in de values en prognoses tabel, indien niet bestaand
         self.ensure_time_indexes()
@@ -388,7 +375,6 @@ class CheckDB:
             with self.engine.connect() as connection:
                 connection.execute(insert_query)
                 connection.commit()
-
 
     def ensure_time_indexes(self) -> None:
         indexes = (
@@ -427,6 +413,35 @@ class CheckDB:
                     print(
                         f"Index '{index_name}' toegevoegd aan tabel '{table_name}'."
                     )
+
+    def ensure_column(self, table_name: str, column_name: str, type: String, default: String = None) -> bool:
+        """
+        Create a column on a table if it does not exist
+        :return: Boolean indicating whether the column was created
+        """
+        inspector = inspect(self.engine)
+        columns = [column["name"] for column in inspector.get_columns(table_name)]
+        has_column = column_name in columns
+
+        if not has_column:
+            with self.engine.begin() as connection:
+                quoted_table = self.engine.dialect.identifier_preparer.quote(table_name)
+                quoted_column = self.engine.dialect.identifier_preparer.quote(column_name)
+                default_expr = f'DEFAULT "{default}"' if default else ''
+
+                connection.execute(
+                    text(
+                        f'ALTER TABLE {quoted_table} '
+                        f'ADD COLUMN {quoted_column} {type} {default_expr}'
+                    )
+                )
+
+            print(f'Kolom "{column_name}" toegevoegd aan tabel "{table_name}"    ')
+
+            return True
+
+        return False
+
 
 def main():
     checkdb = CheckDB("../data/options.json")

@@ -8,16 +8,16 @@
   },
   "devDependencies": {
     "@popperjs/core": "^2.11.8",
-    "@webcoder49/code-input": "^2.8.3",
-    "bootstrap": "^5.3.8",
+    "@webcoder49/code-input": "^2.9.0",
+    "@anvme/bootstrap": "6.0.0-alpha1",
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.5.1",
     "htmx.org": "^2.0.10",
     "prismjs": "^1.30.0",
-    "sass": "^1.101.0",
-    "vite": "^8.1.3"
+    "sass": "^1.104.0",
+    "vite": "^8.3.0"
   },
   "allowScripts": {
-    "@parcel/watcher@2.5.6": true
+    "@parcel/watcher@2.6.0": true
   }
 }

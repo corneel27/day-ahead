@@ -3,22 +3,21 @@
 <head>
 
     <!-- code-input https://cdn.jsdelivr.net/gh/WebCoder49/code-input@1.2/code-input.js -->
-    <script src="static/code-input.js"></script>
+    <script src="/static/v1/code-input.js"></script>
     <!-- https://cdn.jsdelivr.net/gh/WebCoder49/code-input@1.2/code-input-min.css -->
-    <link rel="stylesheet" href="static/code-input.min.css">
+    <link rel="stylesheet" href="/static/v1/code-input.min.css">
     <!-- https://cdn.jsdelivr.net/gh/WebCoder49/code-input@1.2/plugins/prism-line-numbers.min.css -->
-    <link rel="stylesheet" href="static/prism-line-numbers.min.css">
+    <link rel="stylesheet" href="/static/v1/prism-line-numbers.min.css">
 
     <!-- https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js -->
-    <script src="static/jquery.min.js"></script>
+    <script src="/static/v1/jquery.min.js"></script>
     <!-- https://fonts.googleapis.com/icon?family=Material+Icons -->
-    <link href="static/icon.css" rel="stylesheet">
-    <script src="static/prism.js"></script>
-    <link rel="stylesheet" href="static/prism.css"/>
-    <link rel="stylesheet" href='static/base.css'/>
-    <link rel="stylesheet" href='static/base.css'/>
-    <link rel="stylesheet" media="screen and (min-width: 1100px)" href="static/widescreen.css">
-    <link rel="stylesheet" media="screen and (max-width: 1100px)" href="static/smallscreen.css">
+    <link href="/static/v1/icon.css" rel="stylesheet">
+    <script src="/static/v1/prism.js"></script>
+    <link rel="stylesheet" href="/static/v1/prism.css"/>
+    <link rel="stylesheet" href="/static/v1/base.css"/>
+    <link rel="stylesheet" media="screen and (min-width: 1100px)" href="/static/v1/widescreen.css">
+    <link rel="stylesheet" media="screen and (max-width: 1100px)" href="/static/v1/smallscreen.css">
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <meta charset="UTF-8">
     <title>{{ title }} - Day Ahead Optimization</title>
@@ -42,14 +41,14 @@
                     >{{value}}
                     </button>
                     {% endfor %}
-                    <a href="{{url_for('v2.chart')}}" class="menubtn menubtn_left" style="color:black; padding-top: 12px;">UI V2</a>
+                    <a href="{{url_for('v2.home')}}" class="menubtn menubtn_left" style="color:black; padding-top: 12px;">UI V2</a>
                 </div>
             </div>
                 </div>
         </form>
         <!---
         <ul>
-            <li><a href="/home"><img src="static/home_white.png" alt="home" border="0" style="display:inline-block; height:1em; width:auto;" /></a></li>
+            <li><a href="/home"><img src="/static/v1/home_white.png" alt="home" border="0" style="display:inline-block; height:1em; width:auto;" /></a></li>
             <li><a href="/run">Run</a></li>
             <li><a href="/reports">Reports</a></li>
             <li><a href="#">Settings</a>

@@ -1,6 +1,20 @@
-@import "bootstrap/scss/bootstrap";
+@use "@anvme/bootstrap/scss/bootstrap";
 @import "bootstrap-icons/font/bootstrap-icons.css";
 @import "prismjs/themes/prism.css";
+
+@layer components {
+
+  .navbar-toggler-icon {
+    mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath stroke='black' stroke-linecap='round' stroke-width='1' d='M1 3.5h14M1 8h14M1 12.5h14'/%3e%3c/svg%3e");
+    height: 1.25rem;
+    width: 1.25rem;
+    background-color: currentColor;
+    display: inline-block;
+    mask-position: 50%;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+  }
+}
 
 .icon-nav {
   .bi {
@@ -74,13 +88,14 @@ code-input {
   width: 100%;
   min-height: 15rem;
 
-  font-family: var(--bs-font-monospace);
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   line-height: 1.5;
+  color: var(--fg-body);
 
-  background-color: var(--bs-body-bg);
-  border: var(--bs-border-width) solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
+  background-color: var(--body-bg);
+  border: var(--border-width) solid var(--border-color);
+  border-radius: var(--border-radius);
   overflow: hidden;
 
   --code-comment: #6c757d;
@@ -109,15 +124,15 @@ code-input code[class*="language-"] {
   margin: 0;
   font: inherit;
   line-height: inherit;
-  color: var(--bs-body-color);
-  background: var(--bs-body-bg);
+  color: var(--fg-body);
+  background: var(--body-bg);
   text-shadow: none;
 }
 
 code-input textarea {
   font: inherit;
   line-height: inherit;
-  caret-color: var(--bs-body-color);
+  caret-color: var(--fg-body);
 }
 
 code-input:has(textarea:focus) {
@@ -128,7 +143,7 @@ code-input:has(textarea:focus) {
 
 code-input:has(textarea:disabled),
 code-input:has(textarea:disabled) pre[class*="language-"] {
-  background-color: var(--bs-secondary-bg);
+  background-color: var(--bg-3);
 }
 
 code-input .token.comment,
@@ -201,11 +216,11 @@ code-input.line-numbers pre {
 }
 
 code-input .line-numbers-rows {
-  border-right-color: var(--bs-border-color);
+  border-right-color: var(--border-color);
 }
 
 code-input .line-numbers-rows > span::before {
-  color: var(--bs-secondary-color);
+  color: var(--secondary-fg);
 }
 
 [data-bs-theme="dark"] .theme-dark-hidden,

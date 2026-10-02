@@ -1,0 +1,16 @@
+{% extends "v2/base.html" %}
+
+{% block title %}Logs - DAO{% endblock %}
+{% block content %}
+<h1>{{filename}}</h1>
+
+<code class="mt-3">{{filename}}</code>
+<code-input
+    template="syntax-highlighted"
+    class="line-numbers flex-grow-1"
+    style="overflow:auto;"
+>
+    <textarea name="file" data-code-input-fallback>{{ content }}</textarea>
+</code-input>
+
+{% endblock %}
