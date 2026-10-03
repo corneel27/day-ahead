@@ -24,6 +24,7 @@ from dao.prog.config.loader import ConfigurationLoader
 from dao.lib.db_connections import make_db_da, make_db_ha
 from dao.lib.da_meteo import Meteo
 from dao.lib.da_prices import DaPrices
+from dao.prog.production_bonus import ProductionBonus
 from dao.prog.utils import interpolate
 
 # from db_manager import DBmanagerObj
@@ -220,6 +221,18 @@ class DaBase(hass.Hass):
             self.prices_options.multiplier_production if self.prices_options else None
         )
         self.salderen = self.prices_options.tax_refund if self.prices_options else True
+        bonus_options = (
+            self.prices_options.production_bonus if self.prices_options else None
+        )
+        self.production_bonus = (
+            ProductionBonus(
+                bonus_options,
+                latitude=self.ha_context.latitude,
+                longitude=self.ha_context.longitude,
+            )
+            if bonus_options
+            else None
+        )
 
         self.history_options = self.config.history
         self.strategy = self.config.strategy.resolve(self.ha_getter)
