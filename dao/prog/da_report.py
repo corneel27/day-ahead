@@ -17,7 +17,6 @@ import json
 import itertools
 import logging
 from sqlalchemy import (
-    Table,
     select,
     func,
     literal,
@@ -34,6 +33,26 @@ from sqlalchemy import (
 )
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
+
+
+# Rapportage-intervallen die een deel van een dag beschrijven.
+# "kwartier" wordt gebruikt als de optimalisering met een resolutie van 15 minuten draait.
+INTRADAY_INTERVALS = ("uur", "kwartier")
+
+# De lengte van zo'n interval; wordt o.a. gebruikt om te bepalen vanaf welk moment
+# er geen gerealiseerde data meer is en de prognoses beginnen.
+INTERVAL_DELTA = {
+    "uur": datetime.timedelta(hours=1),
+    "kwartier": datetime.timedelta(minutes=15),
+}
+
+
+def interval_delta(interval: str) -> datetime.timedelta:
+    """
+    De lengte van een rapportage-interval binnen een dag,
+    voor "dag" en "maand" (die per uur worden opgehaald) is dat een uur.
+    """
+    return INTERVAL_DELTA.get(interval, datetime.timedelta(hours=1))
 
 
 def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
@@ -55,6 +74,8 @@ class Report(DaBase):
         self.report_options = self.config.report
         if self.report_options is None:
             logging.error(f"Er zijn geen report-instellingen gevonden")
+        # het kleinste rapportage-interval volgt de resolutie van de optimalisering
+        self.report_interval = "kwartier" if self.interval == "15min" else "uur"
         self.make_periodes(_now=_now)
         _r = self.report_options
         self.grid_consumption_sensors = _r.entities_grid_consumption if _r else []
@@ -863,12 +884,8 @@ class Report(DaBase):
         :return: datum en tijd van het laatst aanwezige record
         """
 
-        statistics = Table(
-            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
-        statistics_meta = Table(
-            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
+        statistics = self.db_ha.get_table("statistics")
+        statistics_meta = self.db_ha.get_table("statistics_meta")
         # Define aliases for the tables
         t1 = statistics.alias("t1")
         v1 = statistics_meta.alias("v1")
@@ -907,10 +924,16 @@ class Report(DaBase):
         :param vanaf: begin date/time
         :param tot: end date/time
         :param col_name: name off the column in the df
-        :param agg: "maand", "dag" or "uur"
+        :param agg: "maand", "dag", "uur" of "kwartier"
         :param sensor_type: "quantity" of "factor"
         :return: dataframe with the data
         """
+        # Home Assistant bewaart zijn langetermijn-statistieken alleen per uur.
+        # Bij een kwartier-rapportage worden de opgehaalde uurwaarden achteraf
+        # over de vier kwartieren van het uur verdeeld.
+        to_quarters = agg == "kwartier"
+        if to_quarters:
+            agg = "uur"
         """
         if agg == "uur":
             sql = "SELECT FROM_UNIXTIME(t2.`start_ts`) 'tijd', " \
@@ -959,12 +982,8 @@ class Report(DaBase):
         # print(df_sensor)
         return df
         """
-        statistics = Table(
-            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
-        statistics_meta = Table(
-            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
+        statistics = self.db_ha.get_table("statistics")
+        statistics_meta = self.db_ha.get_table("statistics_meta")
 
         # Define aliases for the tables
         t1 = statistics.alias("t1")
@@ -1131,6 +1150,10 @@ class Report(DaBase):
                 df_insert.index = df_insert["tijd"]
                 df_raw = pd.concat([df_raw, df_insert])
                 df_raw.sort_index(inplace=True)
+        if to_quarters:
+            df_raw = self.spread_over_quarters(
+                df_raw, [col_name], quantity=sensor_type == "quantity"
+            )
         logging.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
         return df_raw
 
@@ -1256,6 +1279,61 @@ class Report(DaBase):
                     )
         return add_to
 
+    @staticmethod
+    def spread_over_quarters(
+            df: pd.DataFrame,
+            value_columns: list,
+            quantity: bool = True,
+            time_column: str = "tijd",
+            label_column: str | None = None,
+    ) -> pd.DataFrame:
+        """
+        Zet uurwaarden om in kwartierwaarden.
+        Home Assistant bewaart zijn langetermijn-statistieken (en dus ook de
+        gerealiseerde waarden in de da-database) alleen per uur. Als er per kwartier
+        gerapporteerd wordt, worden die uurwaarden gelijkmatig over de vier kwartieren
+        van het uur verdeeld, zodat de reeks een vaste stapgrootte houdt en het totaal
+        gelijk blijft.
+        :param df: dataframe met uurwaarden
+        :param value_columns: de kolommen met de te verdelen waarden
+        :param quantity: True bij hoeveelheden (worden gedeeld door 4),
+            False bij een gemiddelde/tarief (wordt overgenomen)
+        :param time_column: de kolom met het begintijdstip
+        :param label_column: als != None de kolom met het interval-label
+        :return: dataframe met kwartierwaarden
+        """
+        if df is None or len(df) == 0:
+            return df
+        moments = pd.to_datetime(df[time_column])
+        if len(moments) > 1:
+            spacing = moments.diff().dropna().min()
+            if pd.notnull(spacing) and spacing < datetime.timedelta(hours=1):
+                # de data heeft al een fijnere resolutie dan een uur
+                return df
+        rows = []
+        for row in df.to_dict("records"):
+            start = pd.to_datetime(row[time_column])
+            if pd.isnull(start):
+                continue
+            for quarter in range(4):
+                moment = start + datetime.timedelta(minutes=15 * quarter)
+                new_row = dict(row)
+                for col in (time_column, "tijd", "vanaf", "tot"):
+                    if col in new_row:
+                        new_row[col] = moment
+                if "utc" in new_row:
+                    new_row["utc"] = moment.timestamp()
+                if label_column is not None and label_column in new_row:
+                    new_row[label_column] = moment.strftime("%Y-%m-%d %H:%M")
+                if quantity:
+                    for col in value_columns:
+                        if col in new_row and is_number(new_row[col]):
+                            new_row[col] = new_row[col] / 4
+                rows.append(new_row)
+        result = pd.DataFrame(rows, columns=df.columns)
+        result.index = pd.to_datetime(result[time_column])
+        return result
+
     def get_latest_present(self, code: str) -> datetime.datetime:
         """
         :param code: de code van de variabele
@@ -1270,14 +1348,10 @@ class Report(DaBase):
                 LIMIT 1;"
         data = self.db_da.run_select_query(sql)
         """
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
         # Aliases for the values table
         t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        variabel_table = self.db_da.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
 
@@ -1412,7 +1486,9 @@ class Report(DaBase):
                 continue
             if not isinstance(row.tijd, datetime.datetime):
                 print(row)
-            if interval == "uur":
+            if interval == "kwartier":
+                tijd_str = str(row.tijd)[0:14] + f"{(row.tijd.minute // 15) * 15:02d}"
+            elif interval == "uur":
                 tijd_str = str(row.tijd)[0:14] + "00"
             elif interval == "dag":
                 tijd_str = str(row.tijd)[0:10]
@@ -1432,7 +1508,7 @@ class Report(DaBase):
             fi_df.loc[fi_df.shape[0]] = [
                 tijd_str,
                 row.tijd,
-                row.tijd + datetime.timedelta(hours=1),
+                row.tijd + interval_delta(interval),
                 col_1,
                 col_2,
                 col_3,
@@ -1563,14 +1639,14 @@ class Report(DaBase):
             else:
                 old_moment = moment
             moment_str = str(moment)
-            if rep_interval == "uur":
+            if rep_interval in INTRADAY_INTERVALS:
                 tijd_str = moment_str[10:16]
             elif rep_interval == "dag":
                 tijd_str = moment_str[0:10]
             else:  # maand
                 tijd_str = moment_str[0:7]  # jaar maand
-            if step_interval == "uur":
-                moment = moment + datetime.timedelta(hours=1)
+            if step_interval in INTRADAY_INTERVALS:
+                moment = moment + interval_delta(step_interval)
             elif step_interval == "dag":
                 moment = moment + datetime.timedelta(days=1)
             else:  # "maand":
@@ -1613,14 +1689,10 @@ class Report(DaBase):
         )
         result = self.generate_df(vanaf, tot, periode_d["interval"], interval)
 
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
         # Aliases for the values table
         t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        variabel_table = self.db_da.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         groupby_str = interval
@@ -1628,6 +1700,8 @@ class Report(DaBase):
             column = self.db_da.month(t1.c.time).label("maand")
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
+        elif interval == "kwartier":
+            column = self.db_da.quarter_start(t1.c.time).label("kwartier")
         else:  # interval == "uur"
             if interval == periode_d["interval"]:
                 column = self.db_da.hour(t1.c.time).label("uur")
@@ -1714,8 +1788,12 @@ class Report(DaBase):
                 # datetime.datetime.combine(vanaf, datetime.time(0,0)) - datetime.timedelta(hours=1)
                 last_moment = vanaf
             else:
+                if interval == "kwartier":
+                    code_result = self.spread_over_quarters(
+                        code_result, [key], label_column="kwartier"
+                    )
                 self.add_col_df(code_result, result, key)
-                last_moment = code_result["tot"].iloc[-1] + datetime.timedelta(hours=1)
+                last_moment = code_result["tot"].iloc[-1] + interval_delta(interval)
             if last_moment < tot:
                 ha_result = None
                 if categorie["sensors"] == "calc":
@@ -1748,8 +1826,8 @@ class Report(DaBase):
                             vanaf,
                         )
                     else:
-                        last_moment = ha_result["tot"].iloc[-1] + datetime.timedelta(
-                            hours=1
+                        last_moment = ha_result["tot"].iloc[-1] + interval_delta(
+                            interval
                         )
                 else:
                     last_moment = vanaf
@@ -1796,9 +1874,7 @@ class Report(DaBase):
                           "AND t1.`time` < UNIX_TIMESTAMP('" + str(tot) + "');"
                 prog_result = self.db_da.run_select_query(sql)
                 """
-                prog_table = Table(
-                    "prognoses", self.db_da.metadata, autoload_with=self.db_da.engine
-                )
+                prog_table = self.db_da.get_table("prognoses")
                 p1 = prog_table.alias("p1")
                 # Build the SQLAlchemy query
                 """
@@ -1824,9 +1900,13 @@ class Report(DaBase):
                 .group_by(groupby_str)
             )
                 """
+                if interval == "kwartier":
+                    prog_column = self.db_da.quarter_start(p1.c.time).label("kwartier")
+                else:
+                    prog_column = self.db_da.hour_start(p1.c.time).label("uur")
                 query = (
                     select(
-                        self.db_da.hour_start(p1.c.time).label("uur"),
+                        prog_column,
                         func.min(self.db_da.from_unixtime(p1.c.time)).label("tijd"),
                         func.sum(p1.c.value).label(key),
                     )
@@ -1844,7 +1924,7 @@ class Report(DaBase):
                             ),
                         )
                     )
-                    .group_by("uur")
+                    .group_by(prog_column.name)
                 )
 
                 with self.db_da.engine.connect() as connection:
@@ -1859,9 +1939,7 @@ class Report(DaBase):
                 prog_result.index = pd.to_datetime(prog_result["tijd"])
                 if len(prog_result) > 0:
                     self.add_col_df(prog_result, result, key)
-                    last_moment = prog_result["tot"].iloc[-1] + datetime.timedelta(
-                        hours=1
-                    )
+                    last_moment = prog_result["tot"].iloc[-1] + interval_delta(interval)
             if categorie["sensors"] == "calc":
                 function = categorie["function"]
                 result = getattr(self, function)(result)
@@ -1886,14 +1964,10 @@ class Report(DaBase):
         :param table: str name of database table: values (default) or prognoses
         :return:  resulting dataframe
         """
-        values_table = Table(
-            table, self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table(table)
         # Aliases for the values table
         t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        variabel_table = self.db_da.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         column = self.db_da.hour(t1.c.time).label("uur")
@@ -2048,14 +2122,10 @@ class Report(DaBase):
         :return: een dataframe met de gevraagde griddata
         """
 
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
         # Aliases for the values table
         t1 = values_table.alias("t1")
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        variabel_table = self.db_da.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         v2 = variabel_table.alias("v2")
@@ -2071,10 +2141,16 @@ class Report(DaBase):
             interval = _interval if _interval else periode_d["interval"]
 
         source = _source
+        # Home Assistant levert alleen uurwaarden; get_sensor_data verdeelt die
+        # zonodig over de kwartieren van het uur.
+        ha_interval = interval if interval in INTRADAY_INTERVALS else "uur"
+        price_interval = "15min" if interval == "kwartier" else "1hour"
         if interval == "maand":
             column = self.db_da.month(t1.c.time).label("maand")
         elif interval == "dag":
             column = self.db_da.day(t1.c.time).label("dag")
+        elif interval == "kwartier":
+            column = self.db_da.quarter_start(t1.c.time).label("kwartier")
         else:  # interval == "uur"
             column = self.db_da.hour(t1.c.time).label("uur")
         result = None
@@ -2123,7 +2199,7 @@ class Report(DaBase):
         else:
             result = pd.DataFrame(
                 columns=[
-                    "uur",
+                    interval,
                     "vanaf",
                     "tot",
                     "consumption",
@@ -2132,7 +2208,7 @@ class Report(DaBase):
                     "profit",
                 ]
             )
-            result.index = result["uur"]  # vanaf
+            result.index = result[interval]  # vanaf
 
         result["datasoort"] = "recorded"
         # aanvullende prijzen ophalen
@@ -2142,7 +2218,14 @@ class Report(DaBase):
         else:
             result["vanaf"] = pd.to_datetime(result["vanaf"])
             result["tot"] = pd.to_datetime(result["tot"])
-            last_moment = result["tot"].iloc[-1] + datetime.timedelta(hours=1)
+            if interval == "kwartier":
+                result = self.spread_over_quarters(
+                    result,
+                    ["consumption", "production", "cost", "profit"],
+                    time_column="vanaf",
+                    label_column="kwartier",
+                )
+            last_moment = result["tot"].iloc[-1] + interval_delta(interval)
         if last_moment < tot:
             """
             # get the prices:
@@ -2181,13 +2264,13 @@ class Report(DaBase):
                 for sensor in self.grid_consumption_sensors:
                     if count == 0:
                         df_ha = self.get_sensor_data(
-                            sensor, last_moment, tot, "consumption", "uur"
+                            sensor, last_moment, tot, "consumption", ha_interval
                         )
                         df_ha.index = pd.to_datetime(df_ha["tijd"])
                         df_ha["tijd"] = pd.to_datetime(df_ha["tijd"])
                     else:
                         df_2 = self.get_sensor_data(
-                            sensor, last_moment, tot, "consumption", "uur"
+                            sensor, last_moment, tot, "consumption", ha_interval
                         )
                         df_2.index = pd.to_datetime(df_2["tijd"])
                         df_ha = self.add_col_df(df_2, df_ha, "consumption")
@@ -2198,7 +2281,7 @@ class Report(DaBase):
                 count = 0
                 for sensor in self.grid_production_sensors:
                     df_p = self.get_sensor_data(
-                        sensor, last_moment, tot, "production", "uur"
+                        sensor, last_moment, tot, "production", ha_interval
                     )
                     df_p.index = pd.to_datetime(df_p["tijd"])
                     if count == 0:
@@ -2207,20 +2290,27 @@ class Report(DaBase):
                         df_ha = self.add_col_df(df_p, df_ha, "production")
                     count = +1
                 if len(df_ha) > 0:
-                    last_moment = df_ha["tijd"].iloc[-1] + datetime.timedelta(hours=1)
+                    last_moment = df_ha["tijd"].iloc[-1] + interval_delta(interval)
                     df_ha["datasoort"] = "recorded"
                 else:
                     last_moment = vanaf
-                df_prices = self.get_price_data(vanaf, last_moment, interval="1hour")
+                df_prices = self.get_price_data(
+                    vanaf, last_moment, interval=price_interval
+                )
+                if interval == "kwartier":
+                    # een tarief is geen hoeveelheid: een uurtarief geldt
+                    # onverdeeld voor elk kwartier van dat uur
+                    df_prices = self.spread_over_quarters(
+                        df_prices,
+                        ["da_ex", "da_cons", "da_prod"],
+                        quantity=False,
+                        time_column="time",
+                    )
 
             if source == "all" or source == "da":
                 if last_moment < tot:
                     # get prognose consumption and production:
-                    prog_table = Table(
-                        "prognoses",
-                        self.db_da.metadata,
-                        autoload_with=self.db_da.engine,
-                    )
+                    prog_table = self.db_da.get_table("prognoses")
                     p1 = prog_table.alias("p1")
                     p2 = prog_table.alias("p2")
                     # Build the SQLAlchemy query
@@ -2744,12 +2834,8 @@ class Report(DaBase):
             ORDER BY t1.`start_ts`;"
         df = self.db_ha.run_select_query(sql)
         """
-        statistics = Table(
-            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
-        statistics_meta = Table(
-            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
+        statistics = self.db_ha.get_table("statistics")
+        statistics_meta = self.db_ha.get_table("statistics_meta")
 
         # Define aliases for the tables
         t1 = statistics.alias("t1")
@@ -3152,8 +3238,17 @@ class Report(DaBase):
 
         # solar_predictor = SolarPredictor()
         # solar_prog = solar_predictor.predict_solar_device(device, start, end)
+        # dezelfde stralingsreeks als de dao-voorspelling hierboven: per uur de
+        # meting als die aanwezig is en anders de prognose. Zonder dit rekent de
+        # dao-kolom met de gemeten straling en de ml-kolom met de voorspelde,
+        # waardoor de R2 van beide kolommen niet vergelijkbaar is.
         solar_prog = self.calc_solar_predictions(
-            device, start, end, interval="1hour", _ml_prediction=True
+            device,
+            start,
+            end,
+            interval="1hour",
+            _ml_prediction=True,
+            prefer_measured=True,
         )
         if "date_time" in solar_prog.columns:
             solar_prog["tijd"] = solar_prog["date_time"].dt.tz_localize(None)
@@ -3243,9 +3338,7 @@ class Report(DaBase):
             solar_num = len(self.solar)
             for s in range(solar_num):
                 solar_option = self.solar[s]
-                df_data = self.calc_solar_predictions(
-                    solar_option, vanaf, tot, interval="1hour"
-                )
+                df_data = self.calc_solar_predictions(solar_option, vanaf, tot)
                 if s == 0:
                     df_result = df_data
                 else:
@@ -3264,9 +3357,7 @@ class Report(DaBase):
                 solar_num = len(solar_options)
                 for s in range(solar_num):
                     solar_option = solar_options[s]
-                    df_data = self.calc_solar_predictions(
-                        solar_option, vanaf, tot, interval="1hour"
-                    )
+                    df_data = self.calc_solar_predictions(solar_option, vanaf, tot)
                     if count == 0:
                         df_result = df_data
                     else:
@@ -3300,9 +3391,17 @@ class Report(DaBase):
             "netto_cost",
         ]
         tot = self.periodes[periode]["tot"]
+        # De api rapporteert met de resolutie waarmee de optimalisering rekent:
+        # per kwartier als het interval "15min" is, anders per uur.
+        # Bij de langere perioden (dag/maand) blijft de aggregatie ongewijzigd.
+        interval = (
+            self.report_interval
+            if self.periodes[periode]["interval"] in INTRADAY_INTERVALS
+            else None
+        )
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
-            df_grid = self.get_grid_data(periode, _tot=tot)
+            df_grid = self.get_grid_data(periode, _tot=tot, _interval=interval)
             df_grid["time"] = df_grid["vanaf"].apply(
                 lambda x: pd.to_datetime(x).strftime("%Y-%m-%d %H:%M")
             )
@@ -3333,7 +3432,7 @@ class Report(DaBase):
             else:
                 dict = self.energy_balance_dict
             df_balance, last_moment = self.get_energy_balance_data(
-                periode, field=field, _tot=tot, col_dict=dict
+                periode, field=field, _tot=tot, col_dict=dict, _interval=interval
             )
             df_balance["time"] = df_balance["tijd"]
             df = df_balance[["time", field, "datasoort"]].copy()
@@ -3429,11 +3528,9 @@ class Report(DaBase):
         return report_data
 
     def get_vars(self):
-        metadata = self.db_da.metadata
-        engine = self.db_da.engine
-        variabel = Table("variabel", metadata, autoload_with=engine)
-        prognoses = Table("prognoses", metadata, autoload_with=engine)
-        values = Table("values", metadata, autoload_with=engine)
+        variabel = self.db_da.get_table("variabel")
+        prognoses = self.db_da.get_table("prognoses")
+        values = self.db_da.get_table("values")
 
         gebruikte_variabelen = union(
             select(prognoses.c.variabel),
@@ -3537,12 +3634,8 @@ class Report(DaBase):
             step: datetime.timedelta,
             var_codes: list = None
     ):
-        statistics = Table(
-            "statistics", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
-        statistics_meta = Table(
-            "statistics_meta", self.db_ha.metadata, autoload_with=self.db_ha.engine
-        )
+        statistics = self.db_ha.get_table("statistics")
+        statistics_meta = self.db_ha.get_table("statistics_meta")
 
         intervals_cte = self.create_interval_cte(
             start=start,
@@ -3617,12 +3710,9 @@ class Report(DaBase):
             step: datetime.timedelta,
             var_codes: list = None
     ):
-        metadata = self.db_da.metadata
-        engine = self.db_da.engine
-
-        variabel = Table("variabel", metadata, autoload_with=engine)
-        values_table = Table("values", metadata, autoload_with=engine)
-        prognoses = Table("prognoses", metadata, autoload_with=engine)
+        variabel = self.db_da.get_table("variabel")
+        values_table = self.db_da.get_table("values")
+        prognoses = self.db_da.get_table("prognoses")
 
         intervals_cte = self.create_interval_cte(
             start=start,

@@ -11,11 +11,15 @@ from sqlalchemy import (
     func,
     and_,
     text,
+    cast,
+    Integer,
+    String,
     TIMESTAMP,
 )
 import sqlalchemy_utils
 import os
 import logging
+import threading
 
 from dao.prog.utils import interpolate
 
@@ -85,6 +89,13 @@ class DBmanagerObj(object):
         with self.engine.connect():
             pass
         self.metadata = MetaData()
+        # ``self.metadata`` is shared by every caller of this object, and this
+        # object itself is a per process singleton (see dao.lib.db_connections).
+        # SQLAlchemy registers a Table in the MetaData before reflection has
+        # filled in its columns, so two threads reflecting the same table at the
+        # same time can hand one of them a table without columns.  All
+        # reflection goes through ``get_table`` under this lock.
+        self._metadata_lock = threading.RLock()
 
     @staticmethod
     def db_url(
@@ -118,6 +129,36 @@ class DBmanagerObj(object):
             result = f"sqlite:////{abs_db_path}/{db_name}"
         logging.debug(f"db_url: {result}")
         return result
+
+    def get_table(self, table_name: str, bind=None) -> Table:
+        """
+        Return the reflected Table ``table_name``, reflecting it once.
+
+        Reflection is serialised on ``self._metadata_lock`` and the result is
+        cached in ``self.metadata``.  Reflecting straight into the shared
+        MetaData is not thread safe: SQLAlchemy adds the Table to the MetaData
+        before it queries the database for its columns, so a second thread
+        asking for the same table gets an empty Table back.  That surfaces later
+        as ``AttributeError`` on a column that does exist, or as
+        ``NoReferencedColumnError`` when a foreign key points at the table that
+        is still being reflected.
+
+        Args:
+            table_name: name of the table to reflect
+            bind: connection or engine to reflect with, defaults to self.engine
+
+        Returns:
+            The reflected Table object
+        """
+        with self._metadata_lock:
+            table = self.metadata.tables.get(table_name)
+            if table is not None:
+                if len(table.columns) > 0:
+                    return table
+                # An earlier reflection left an unusable table behind; drop it
+                # so the reflection below can replace it.
+                self.metadata.remove(table)
+            return Table(table_name, self.metadata, autoload_with=bind or self.engine)
 
     def log_pool_status(self):
         from inspect import currentframe, getframeinfo
@@ -203,6 +244,38 @@ class DBmanagerObj(object):
         else:  # mysql/mariadb
             return func.date(func.from_unixtime(column))
 
+    def quarter_start(self, column) -> func:
+        """
+        Het begin van het kwartier waarin "column" (een unix-timestamp) valt,
+        als "YYYY-MM-DD HH:MM".
+        """
+        if self.db_dialect == "sqlite":
+            moment = func.datetime(column, "unixepoch", "localtime")
+            return func.printf(
+                "%s:%02d",
+                func.strftime("%Y-%m-%d %H", moment),
+                (cast(func.strftime("%M", moment), Integer) / 15) * 15,
+            )
+        elif self.db_dialect == "postgresql":
+            moment = func.to_timestamp(column)
+            return func.concat(
+                func.to_char(moment, "YYYY-MM-DD HH24:"),
+                func.lpad(
+                    cast(
+                        cast(func.floor(func.extract("minute", moment) / 15) * 15, Integer),
+                        String,
+                    ),
+                    2,
+                    "0",
+                ),
+            )
+        else:  # mysql/mariadb
+            moment = func.from_unixtime(column)
+            return func.concat(
+                func.date_format(moment, "%Y-%m-%d %H:"),
+                func.lpad(func.floor(func.minute(moment) / 15) * 15, 2, "0"),
+            )
+
     def hour(self, column) -> func:
         if self.db_dialect == "sqlite":
             return func.strftime(
@@ -243,8 +316,8 @@ class DBmanagerObj(object):
         try:
             self.log_pool_status()
             # Reflect existing tables from the database
-            values_table = Table(tablename, self.metadata, autoload_with=self.engine)
-            variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
+            values_table = self.get_table(tablename)
+            variabel_table = self.get_table("variabel")
             df = df.reset_index()  # make sure indexes pair with number of rows
             df["tijd"] = df["time"].apply(
                 lambda x: datetime.datetime.fromtimestamp(int(float(x))).strftime(
@@ -322,8 +395,8 @@ class DBmanagerObj(object):
         """
         # Reflect existing tables from the database
         with self.engine.connect() as connection:
-            values_table = Table(table_name, self.metadata, autoload_with=connection)
-            variabel_table = Table("variabel", self.metadata, autoload_with=connection)
+            values_table = self.get_table(table_name, bind=connection)
+            variabel_table = self.get_table("variabel", bind=connection)
 
         # Construct the query
         query = select(
@@ -350,9 +423,9 @@ class DBmanagerObj(object):
         return result
 
     def get_prognose_field(self, field: str, start, end=None, interval="1hour"):
-        values_table = Table("prognoses", self.metadata, autoload_with=self.engine)
+        values_table = self.get_table("prognoses")
         t1 = values_table.alias("t1")
-        variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
+        variabel_table = self.get_table("variabel")
         v1 = variabel_table.alias("v1")
         # Build the SQLAlchemy query
         query = select(
@@ -396,8 +469,8 @@ class DBmanagerObj(object):
         return df
 
     def get_prognose_data(self, start, end=None, interval="1hour"):
-        values_table = Table("prognoses", self.metadata, autoload_with=self.engine)
-        variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
+        values_table = self.get_table("prognoses")
+        variabel_table = self.get_table("variabel")
         if interval == "1hour":
             # Aliases for the values table
             t1 = values_table.alias("t1")
@@ -503,8 +576,8 @@ class DBmanagerObj(object):
         sqlQuery += "ORDER BY `time`;"
         # print (sqlQuery)
         """
-        variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
-        values_table = Table(tablename, self.metadata, autoload_with=self.engine)
+        variabel_table = self.get_table("variabel")
+        values_table = self.get_table(tablename)
         hour_column = self.hour_start(values_table.c.time).label("uur")
         if agg_func is None:
             time_column = values_table.c.time.label("time")
@@ -567,12 +640,12 @@ class DBmanagerObj(object):
         :param end: eindmoment , default nu
         :return: dataframe
         """
-        values_table = Table("values", self.metadata, autoload_with=self.engine)
+        values_table = self.get_table("values")
         # Aliases for the values table
         t1 = values_table.alias("t1")
         t2 = values_table.alias("t2")
 
-        variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
+        variabel_table = self.get_table("variabel")
         # Aliases for the variabel table
         v1 = variabel_table.alias("v1")
         v2 = variabel_table.alias("v2")

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import knmi
 from dao.lib.da_graph import GraphBuilder
 from dao.lib.db_manager import DBmanagerObj
-from sqlalchemy import Table, select, func, and_
+from sqlalchemy import select, func, and_
 
 
 # noinspection PyUnresolvedReferences
@@ -605,12 +605,8 @@ class Meteo:
         date_utc = int(date.timestamp())
 
         # Reflect existing tables from the database
-        values_table = Table(
-            "prognoses", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("prognoses")
+        variabel_table = self.db_da.get_table("variabel")
 
         # Construct the inner query
         inner_query = (
