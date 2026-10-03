@@ -1089,7 +1089,7 @@ class ReplayIO:
         self._patches.set(DaBase, "get_calculated_baseload", _replay_baseload)
 
         # Levert de opgeslagen prijsdata terug in plaats van een databasequery uit te voeren.
-        def _replay_get_price_data(instance, start, end=None, interval="1hour"):
+        def _replay_get_price_data(instance, start, end=None, interval="1hour", extension:int=0):
             if self._price_data is None:
                 raise SnapshotMiss(
                     f"ReplayIO ({self._source}): snapshot has no price_data."
