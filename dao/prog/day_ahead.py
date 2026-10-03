@@ -3901,6 +3901,37 @@ class DaCalc(DaBase):
             # cols = "    ".join(str(value) for value in some_list)
             # logging.info(f"{some_label}   {cols}")            
             """
+            # pv-overschot in het eerste interval (kWh) dat beschikbaar is voor
+            # de auto's: ac-pv plus dc-pv dat via de omvormer(s) naar ac gaat,
+            # min basislast, boiler, warmtepomp en apparaten. ontlading van de
+            # batterij telt niet als zonne-energie: die wordt eerst aan de
+            # ac-uitvoer van de omvormer toegerekend.
+            ev_solar_tol = 0.001  # kWh
+            pv_ac_kwh = sum(pv_ac[s][0].x for s in range(solar_num))
+            pv_surplus_kwh = pv_ac_kwh
+            for b in range(B):
+                dc_out = dc_to_ac[b][0].x
+                if dc_out > 0:
+                    pv_dc_to_ac = max(
+                        0.0,
+                        min(
+                            pv_prod_dc_sum[b][0].x,
+                            dc_out - dc_from_bat[b][0].x - dc_from_ac[b][0].x,
+                        ),
+                    )
+                    pv_surplus_kwh += (
+                        pv_dc_to_ac * ac_from_dc[b][0].x / dc_out * hour_fraction[0]
+                    )
+            pv_surplus_kwh -= (
+                b_l[0] * interval_fraction[0]
+                + c_b[0].x
+                + c_hp[0].x
+                + sum(c_ma_u[m][0].x for m in range(M))
+            )
+            logging.debug(
+                f"Pv-overschot voor laden EV in eerste interval: "
+                f"{pv_surplus_kwh:.3f} kWh (pv ac: {pv_ac_kwh:.3f} kWh)"
+            )
             for e in range(EV):
                 if ready_u[e] < U:
                     if self.log_level <= logging.INFO:
@@ -4097,6 +4128,27 @@ class DaCalc(DaBase):
                 logging.info(
                     f"- aantal ampere: {self.get_state(entity_charging_ampere).state}"
                 )
+
+                # laden op zonne-overschot: het ingeplande laden in het eerste
+                # interval wordt volledig gedekt door het resterende pv-overschot.
+                # bij meerdere auto's wordt het overschot in volgorde van de
+                # configuratie toegewezen.
+                ev_kwh = c_ev[e][0].x
+                solar_charging = (
+                    ev_kwh > ev_solar_tol and ev_kwh <= pv_surplus_kwh + ev_solar_tol
+                )
+                if solar_charging:
+                    pv_surplus_kwh -= ev_kwh
+                solar_state = "on" if solar_charging else "off"
+                if self.debug:
+                    logging.info(
+                        f"Laden {ev_name} op zonne-overschot zou zijn: {solar_state}"
+                    )
+                else:
+                    self.set_entity_state(
+                        "entity solar charging", self.ev_options[e], solar_state
+                    )
+                    logging.info(f"Laden {ev_name} op zonne-overschot: {solar_state}")
 
             #######################################
             # solar

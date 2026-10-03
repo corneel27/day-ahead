@@ -487,6 +487,7 @@ Use `charge_scheduler` for time-based optimization:
 | `charge switch` | [EntityId](#entityid) | Yes | — | HA switch entity to control charging |
 | `entity set charging ampere` | [EntityId](#entityid) | Yes | — | HA entity to set charging amperage (Unit: `A`) |
 | `entity stop charging` | [EntityId](#entityid) (optional) | No | `null` | HA entity for stop charging datetime |
+| `entity solar charging` | [EntityId](#entityid) (optional) | No | `null` | HA entity set on/off when DAO plans to charge on solar surplus |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -550,6 +551,10 @@ Home Assistant entity to control charging current in amperes. System will adjust
 **`entity stop charging`**
 
 Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.
+
+**`entity solar charging`**
+
+Optional: Home Assistant entity that DAO sets to 'on' when the planned EV charging in the current interval is fully covered by the forecast solar surplus (PV production minus base load, boiler, heat pump and machines; home battery discharge does not count), and 'off' otherwise. Updated after every calculation. Based on the solar forecast, so actual production may differ. Use it to trigger your own automations or show it on a dashboard.
 
 </details>
 
