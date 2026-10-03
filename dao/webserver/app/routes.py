@@ -220,9 +220,9 @@ if config is not None:
         config.report.co2_intensity_sensor if config and config.report else None
     )
 else:
-    sensor_co2_intensity = None
+    sensor_co2_intensity = []
 
-if sensor_co2_intensity is None:
+if sensor_co2_intensity == []:
     del web_menu["reports"]["submenu"]["co2"]
     del web_menu["savings"]["submenu"]["co2"]
 else:
@@ -266,6 +266,12 @@ bewerkingen = {
         "task": "get_day_ahead_prices",
         "parameters": ["prijzen_start", "prijzen_tot"],
         "file_name": "prices",
+    },
+    "predicted_prices": {
+        "name": "Day ahead prijsvoorspelling ophalen",
+        "cmd": ["python3", "../prog/day_ahead.py", "predicted_prices"],
+        "task": "get_day_ahead_predicted_prices",
+        "file_name": "pred_prices",
     },
     "calc_baseloads": {
         "name": "Bereken de baseloads",

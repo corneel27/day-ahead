@@ -427,7 +427,8 @@ class Meteo:
 
         df = pd.DataFrame.from_records(data)
         df1 = df[["tijd", "tijd_nl", "gr", "temp", "winds", "neersl"]]
-        df1 = df1[:96]
+        df1["tijd"] = df1["tijd"].astype(int)
+        df1 = df1[df1["tijd"].diff().fillna(0) <= 3600]
         logging.info(f"Meteodata model {model}")
         logging.info(
             f"Aantal uitgevoerde ophaalpogingen: {count + 1} van maximaal: {self.meteoserver_attempts}"

@@ -52,6 +52,7 @@
   - [FlexInt](#flexint)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
+  - [PricePrediction](#priceprediction)
   - [ScheduleEntry](#scheduleentry)
   - [SecretStr](#secretstr)
   - [SocPowerLimit](#socpowerlimit)
@@ -487,6 +488,7 @@ Use `charge_scheduler` for time-based optimization:
 | `charge switch` | [EntityId](#entityid) | Yes | — | HA switch entity to control charging |
 | `entity set charging ampere` | [EntityId](#entityid) | Yes | — | HA entity to set charging amperage (Unit: `A`) |
 | `entity stop charging` | [EntityId](#entityid) (optional) | No | `null` | HA entity for stop charging datetime |
+| `entity charging schedule` | [EntityId](#entityid) (optional) | No | `null` | HA text entity for the calculated charging schedule |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -550,6 +552,10 @@ Home Assistant entity to control charging current in amperes. System will adjust
 **`entity stop charging`**
 
 Home Assistant datetime entity specifying when to stop charging. Provides manual override of optimized schedule.
+
+**`entity charging schedule`**
+
+Optional Home Assistant text entity where DAO writes all planned EV charging periods, including their amperage and partial-interval end times, after each optimization.
 
 </details>
 
@@ -1321,11 +1327,12 @@ System uses tariff active on optimization date.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
+| `prediction` | [PricePrediction](#priceprediction) (optional) | No | `null` | Configuration of getting and using priceprediction beyond the day ahead spotprices of epex. |
 | `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `energy taxes production` | object | Yes | — | Energy taxes for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `cost supplier consumption` | object | Yes | — | Supplier costs for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
-| `cost supplier production` | object | Yes | — | Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
+| `cost supplier production` | object | Yes | — | Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT) negative if you must pay for feed-in, positive if you get income for feed-in  (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
 | `vat consumption` | object | Yes | — | VAT percentage for consumption by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `vat production` | object | Yes | — | VAT percentage for production by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, integer 0-100 values_ |
 | `multiplier consumption` | object (optional) | No | `{'2000-01-01': 1.0}` | Multiplier for consumption by date (YYYY-MM-DD -> x.xx) (Unit: `-`) _Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values_ |
@@ -1338,7 +1345,11 @@ System uses tariff active on optimization date.
 
 **`source day ahead`**
 
-Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.
+Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.
+
+**`prediction`**
+
+Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.
 
 **`entsoe-api-key`**
 
@@ -1358,7 +1369,7 @@ Supplier markup/fees for consumption (excluding VAT) indexed by effective date. 
 
 **`cost supplier production`**
 
-Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.
+Supplier fees for feed-in/production (excluding VAT) indexed by effective date. Negative if you must pay for feed-in, positive if you get income for feed-in. Format: {'2024-01-01': -0.02}.
 
 **`vat consumption`**
 
@@ -1585,7 +1596,7 @@ All entity fields accept lists of HA sensors:
 | `entities battery consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for battery consumption (Unit: `kWh`) |
 | `entities battery production` | list[[EntityId](#entityid)] | No | `null` | HA entities for battery production (Unit: `kWh`) |
 | `entities machine consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for machine consumption (Unit: `kWh`) |
-| `co2 intensity sensor` | [EntityId](#entityid) (optional) | No | `null` | HA entity for CO2 intensity (Unit: `gCO2/kWh`) |
+| `entity co2-intensity` | list[[EntityId](#entityid)] or [EntityId](#entityid) (optional) | No | `[]` | HA entity for CO2 intensity (Unit: `gCO2/kWh`) |
 | `sensors` | object (optional) | No | `null` | Additional sensors configuration |
 
 <details>
@@ -1631,7 +1642,7 @@ List of Home Assistant sensor entities measuring battery discharging (production
 
 List of Home Assistant sensor entities measuring appliance/machine consumption (washing machine, dishwasher, etc.). Used for machine-specific reporting.
 
-**`co2 intensity sensor`**
+**`entity co2-intensity`**
 
 Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.
 
@@ -1712,6 +1723,7 @@ Define when automatic tasks run using time patterns.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `active` | boolean | No | `true` | Enable or disable the scheduler |
+| `offset` | integer (optional) | No | `10` | Number of seconds the task is started before schedule-time (due to time in task start overhead) (Unit: `s`) _Must be >= 0, typically 10 seconds_ |
 | `schedule` | list[[ScheduleEntry](#scheduleentry)] | No | `null` | Scheduled task entries |
 
 <details>
@@ -1720,6 +1732,10 @@ Define when automatic tasks run using time patterns.
 **`active`**
 
 When enabled, scheduled tasks will run automatically at configured times. Disable to prevent all scheduled tasks from running.
+
+**`offset`**
+
+Number of seconds the task is scheduled before schedule-time (due to time in task start overhead)
 
 **`schedule`**
 
@@ -1988,6 +2004,32 @@ Descriptive name for this program. Examples: 'eco', 'quick wash', 'intensive', '
 **`power`**
 
 Power profile as list of watts per time interval. Length defines program duration. Example: [2000, 2000, 500, 500, 100] for 5-hour wash cycle.
+
+</details>
+
+
+### PricePrediction
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `extension` | integer (optional) | No | `0` | The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices (Unit: `h`) |
+| `source` | string (optional) | No | `"dap"` | The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu |
+| `api` | string (optional) | No | `"https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"` | The url of the supplier of prediction data, with which DAO can get the prediction data  |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`extension`**
+
+The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices
+
+**`source`**
+
+The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu
+
+**`api`**
+
+The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json
 
 </details>
 

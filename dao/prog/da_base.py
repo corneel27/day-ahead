@@ -110,13 +110,6 @@ class DaBase(hass.Hass):
         self.config = DaBase._config
         self.loader = DaBase._loader
 
-        self.db_da = make_db_da(self.config, self.loader.secrets)
-        if self.db_da is None:
-            raise RuntimeError('No database connection for Day Ahead')
-        self.db_ha = make_db_ha(self.config, self.loader.secrets)
-        if self.db_ha is None:
-            raise RuntimeError('No database connection for Home Assistant')
-
         log_level_str = self.config.logging_level or "info"
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
@@ -164,6 +157,15 @@ class DaBase(hass.Hass):
             country=resp_dict["country"] or "NL",
         )
         self.time_zone = self.ha_context.time_zone
+        self.config.time_zone = self.ha_context.time_zone
+
+        self.db_da = make_db_da(self.config, self.loader.secrets)
+        if self.db_da is None:
+            raise RuntimeError('No database connection for Day Ahead')
+        self.db_ha = make_db_ha(self.config, self.loader.secrets)
+        if self.db_ha is None:
+            raise RuntimeError('No database connection for Home Assistant')
+
         self.meteo = Meteo(
             self.config,
             self.db_da,
@@ -182,6 +184,7 @@ class DaBase(hass.Hass):
             self.db_da,
             country=self.ha_context.country,
             secrets=self.loader.secrets,
+            time_zone=self.ha_context.time_zone
         )
         self.prices_options = self.config.prices
         # eb + ode levering
@@ -289,6 +292,12 @@ class DaBase(hass.Hass):
                 "function": "get_day_ahead_prices",
                 "file_name": "prices",
             },
+            "predicted_prices": {
+                "name": "Day ahead prijsvoorspelling ophalen",
+                "cmd": ["python3", "../prog/day_ahead.py", "predicted_prices"],
+                "function": "get_day_ahead_predicted_prices",
+                "file_name": "pred_prices",
+            },
             "calc_baseloads": {
                 "name": "Bereken de baseloads",
                 "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],
@@ -372,6 +381,9 @@ class DaBase(hass.Hass):
             self.prices_options.source_day_ahead if self.prices_options else "nordpool"
         )
         self.prices.get_prices(source)
+
+    def get_day_ahead_predicted_prices(self):
+        self.prices.get_predicted_prices()
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
         """

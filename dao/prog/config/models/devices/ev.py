@@ -237,6 +237,16 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "input_datetime,datetime",
         },
     )
+    entity_charging_schedule: Optional[EntityId] = Field(
+        default=None,
+        alias="entity charging schedule",
+        description="HA text entity for the calculated charging schedule",
+        json_schema_extra={
+            "x-help": "Optional Home Assistant text entity where DAO writes all planned EV charging periods, including their amperage and partial-interval end times, after each optimization.",
+            "x-ui-section": "General",
+            "x-ui-widget-filter": "input_text,text"
+        }
+    )
 
     @model_validator(mode="after")
     def validate_charging_method(self) -> "EVConfig":
