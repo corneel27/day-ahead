@@ -1,3 +1,4 @@
+import bisect
 import calendar
 import datetime
 
@@ -12,6 +13,11 @@ from pandas.core.dtypes.inference import is_number
 from dao.lib.da_graph import GraphBuilder
 from dao.prog.da_base import DaBase
 from dao.prog.utils import get_value_from_dict
+from dao.prog.production_bonus import (
+    AnnualCapUsage,
+    interval_durations,
+    split_quarters,
+)
 import math
 import json
 import itertools
@@ -44,6 +50,8 @@ def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
 
 class Report(DaBase):
     periodes = {}
+    # per jaar: (berekend op, AnnualCapUsage)
+    _bonus_usage_cache: dict = {}
 
     def __init__(
             self, file_name: str = "../data/options.json", _now: datetime.datetime = None
@@ -3048,9 +3056,11 @@ class Report(DaBase):
         return df, last_moment
 
     def get_price_data(self, start, end, interval: str = "1hour", extension=0):
-        if interval == "1hour":
+        bonus = self.production_bonus
+        if interval == "1hour" and bonus is None:
             agg_func = "avg"
         else:
+            # de bonus wordt per (kwartier)interval bepaald en daarna gemiddeld
             agg_func = None
         df_da = self.db_da.get_column_data(
             "values", "da", start=start, end=end, agg_func=agg_func
@@ -3058,7 +3068,7 @@ class Report(DaBase):
         if extension > 0:
             if len(df_da) > 0:
                 last_moment = pd.to_datetime(df_da["time"].iloc[-1])
-                start = last_moment + datetime.timedelta(minutes=60 if interval == "1hour" else 15)
+                start = last_moment + datetime.timedelta(minutes=60 if agg_func == "avg" else 15)
             end = start + datetime.timedelta(hours=extension)
             df_prediction = self.db_da.get_column_data(
                 "prognoses", "da", start=start, end=end, agg_func=agg_func
@@ -3081,7 +3091,15 @@ class Report(DaBase):
         columns = ["time", "da_ex", "da_cons", "da_prod", "datasoort"]
         df = pd.DataFrame(columns=columns)
         salderen = self.prices_options.tax_refund if self.prices_options else True
-        for row in df_da.itertuples():
+        if bonus is not None:
+            df_da = df_da[df_da["time"].notnull()].reset_index(drop=True)
+            # tijdstempels uit "time": voorspelde (geinterpoleerde) rijen hebben geen "utc"
+            row_ts = [
+                datetime.datetime.strptime(t, "%Y-%m-%d %H:%M").timestamp()
+                for t in df_da["time"]
+            ]
+            durations = interval_durations(row_ts)
+        for index, row in enumerate(df_da.itertuples()):
             if pd.isnull(row.time):
                 continue
             dag_str = row.time[:10]
@@ -3102,6 +3120,10 @@ class Report(DaBase):
                 )
             else:
                 da_prod = (row.value + ol_t) * (1 + btw_t / 100)
+            if bonus is not None:
+                da_prod += self._production_bonus_price(
+                    row_ts[index], durations[index], row.value, ol_t
+                )
             df.loc[df.shape[0]] = [
                 datetime.datetime.strptime(row.time, "%Y-%m-%d %H:%M"),
                 row.value,
@@ -3109,7 +3131,101 @@ class Report(DaBase):
                 da_prod,
                 "expected",
             ]
+        if bonus is not None and interval == "1hour" and len(df) > 0:
+            df["time"] = pd.to_datetime(df["time"])
+            df = (
+                df.groupby(df["time"].dt.floor("h"), sort=False)
+                .agg(
+                    time=("time", "min"),
+                    da_ex=("da_ex", "mean"),
+                    da_cons=("da_cons", "mean"),
+                    da_prod=("da_prod", "mean"),
+                    datasoort=("datasoort", "first"),
+                )
+                .reset_index(drop=True)
+            )
         return df
+
+    def _production_bonus_price(
+        self, start_ts, duration_s, market_price, supplier_cost
+    ) -> float:
+        """
+        Bonus op teruglevering (euro/kWh) voor een interval, rekening houdend met
+        het jaarlijkse maximum
+        """
+        bonus = self.production_bonus
+        cap = bonus.config.annual_cap
+        if cap is not None:
+            year = datetime.datetime.fromtimestamp(start_ts).year
+            now_ts = datetime.datetime.now().timestamp()
+            cached = self._bonus_usage_cache.get(year)
+            # het lopende jaar elk kwartier opnieuw berekenen
+            if cached is None or (
+                cached[0] < now_ts - 900
+                and year >= datetime.datetime.now().year
+            ):
+                cached = (now_ts, self._production_bonus_usage(year))
+                self._bonus_usage_cache[year] = cached
+            if cached[1].used_before(start_ts) >= cap:
+                return 0.0
+        return bonus.bonus(start_ts, duration_s, market_price, supplier_cost)
+
+    def _production_bonus_usage(self, year: int) -> AnnualCapUsage:
+        """
+        Berekent uit de geregistreerde teruglevering (prod) hoeveel kWh in het
+        kalenderjaar al bonus heeft gekregen
+        """
+        bonus = self.production_bonus
+        start = datetime.datetime(year, 1, 1)
+        end = min(datetime.datetime(year + 1, 1, 1), datetime.datetime.now())
+        if end <= start:
+            return AnnualCapUsage([], [])
+        if len(self.grid_production_sensors) > 0:
+            # uurwaarden uit de statistieken van ha
+            df_prod = self.get_sensor_sum(
+                self.grid_production_sensors, start, end, "prod"
+            )
+            prod_ts = [
+                pd.Timestamp(tijd).to_pydatetime().timestamp()
+                for tijd in df_prod["tijd"]
+            ]
+            prod_values = df_prod["prod"].tolist()
+        else:
+            # teruglevering in de dao-database (bijv. geimporteerd uit Tibber)
+            df_prod = self.db_da.get_column_data(
+                "values", "prod", start=start, end=end
+            )
+            prod_ts = df_prod["utc"].tolist()
+            prod_values = df_prod["value"].tolist()
+        df_prices = self.db_da.get_column_data("values", "da", start=start, end=end)
+        price_ts = df_prices["utc"].tolist()
+        price_values = df_prices["value"].tolist()
+        durations = interval_durations(prod_ts)
+        ends = []
+        eligible = []
+        for row_ts, row_kwh, row_duration in zip(prod_ts, prod_values, durations):
+            # uurwaarden gelijkmatig over de kwartieren verdelen, zodat
+            # prijs en tijdvenster per kwartier worden beoordeeld
+            for ts, duration, kwh in split_quarters(
+                row_ts, row_duration, float(row_kwh)
+            ):
+                price_index = bisect.bisect_right(price_ts, ts) - 1
+                if price_index < 0:
+                    continue
+                dag_str = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
+                ol_t = get_value_from_dict(dag_str, self.ol_t_def)
+                ends.append(ts + duration)
+                eligible.append(
+                    bonus.eligible_kwh(
+                        ts, duration, kwh, price_values[price_index], ol_t
+                    )
+                )
+        usage = AnnualCapUsage(ends, eligible)
+        logging.info(
+            f"Teruglevering met bonus in {year}: {usage.used_before(end.timestamp()):.0f} kWh "
+            f"(maximum {bonus.config.annual_cap:.0f} kWh)"
+        )
+        return usage
 
     def calc_solar_data(self, device, day: datetime.date, active_view: str):
         result = pd.DataFrame(columns=["uur", "tijd"])
