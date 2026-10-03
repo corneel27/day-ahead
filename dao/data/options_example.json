@@ -13,11 +13,6 @@
   "meteoserver-key": "!secret meteoserver-key",
   "prices": {
     "source day ahead": "nordpool",
-    "prediction_extension": 24,
-    "prediction_source": "EpexPredictor",
-    "keuze uit 'energypriceforecast.eu', 'EpexPredictor'" : "",
-    "prediction_api": "https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>",
-    "//prediction_api energypriceforecast.eu": ""
     "entsoe-api-key": "!secret entsoe-api-key",
     "regular high": 0.5,
     "regular low": 0.4,
