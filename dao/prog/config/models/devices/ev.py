@@ -237,6 +237,20 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "input_datetime,datetime",
         },
     )
+    entity_solar_charging: Optional[EntityId] = Field(
+        default=None,
+        alias="entity solar charging",
+        description="HA entity set on/off when DAO plans to charge on solar surplus",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that DAO sets to 'on' when the planned EV charging in the "
+            "current interval is fully covered by the forecast solar surplus (PV production minus base load, boiler, "
+            "heat pump and machines; home battery discharge does not count), and 'off' otherwise. "
+            "Updated after every calculation. Based on the solar forecast, so actual production may differ. "
+            "Use it to trigger your own automations or show it on a dashboard.",
+            "x-ui-section": "General",
+            "x-ui-widget-filter": "input_boolean,binary_sensor",
+        },
+    )
 
     @model_validator(mode="after")
     def validate_charging_method(self) -> "EVConfig":
