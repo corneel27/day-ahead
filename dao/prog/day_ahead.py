@@ -15,7 +15,7 @@ import time
 from contextlib import contextmanager
 
 import pandas as pd
-from mip import BINARY, CONTINUOUS, INTEGER, Model, minimize, xsum
+from mip import BINARY, CBC, CONTINUOUS, INTEGER, Model, minimize, xsum
 from pandas.core.dtypes.inference import is_number
 from utils import (
     calc_adjustment_heatcurve,
@@ -489,7 +489,10 @@ class DaCalc(DaBase):
             logging.info(f"pv_ac: {len(pv_org_ac)}")
             logging.info(f"pv_dc: {len(pv_org_dc)}")
 
-        model = Model()
+        # Name the solver explicitly: Model() without a name first probes for
+        # Gurobi, which runs ctypes.util.find_library (ldconfig/gcc
+        # subprocesses) and costs ~0.8 s on every calculation.
+        model = Model(solver_name=CBC)
 
         ##############################################################
         #                          pv ac
@@ -5284,7 +5287,9 @@ class DaCalc(DaBase):
 
         plt.subplots_adjust(right=0.75)
         fig.tight_layout()
-        plt.savefig(
+        # fig.savefig, not plt.savefig: pyplot's wrapper redraws the whole
+        # figure (thousands of bar patches) after saving, for nothing.
+        fig.savefig(
             "../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png"
         )
         plt.close("all")
