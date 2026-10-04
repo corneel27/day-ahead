@@ -33,12 +33,15 @@ from sqlalchemy import (
     union,
 )
 import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score
 
 
 def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
     if serie_x.count() < 24 or serie_y.count() < 24:
         return pd.NA
+    # imported here: sklearn adds ~1 s to every process that imports
+    # da_report (including each optimisation run) and only this needs it
+    from sklearn.metrics import r2_score
+
     return r2_score(serie_x, serie_y)
 
 

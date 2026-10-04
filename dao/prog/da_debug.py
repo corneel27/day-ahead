@@ -598,9 +598,13 @@ class RecordingIO:
         # doesn't need debug mode too.
         if not self._png:
             import matplotlib.pyplot as plt
+            from matplotlib.figure import Figure
 
             self._patches.set(
                 plt, "savefig", _make_noop_savefig(f"RecordingIO({self.out_dir})")
+            )
+            self._patches.set(
+                Figure, "savefig", _make_noop_savefig(f"RecordingIO({self.out_dir})")
             )
 
         original_get_state = DaBase.get_state
@@ -1182,8 +1186,10 @@ class ReplayIO:
         # __init__.
         if not self._png:
             import matplotlib.pyplot as plt
+            from matplotlib.figure import Figure
 
             self._patches.set(plt, "savefig", _make_noop_savefig(label))
+            self._patches.set(Figure, "savefig", _make_noop_savefig(label))
 
         try:
             import freezegun
