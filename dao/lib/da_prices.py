@@ -399,6 +399,9 @@ class DaPrices:
         source = self.config.prices.prediction.source
         api_url = self.config.prices.prediction.api
         extension = self.config.prices.prediction.extension
+        if extension == 0:
+            logging.warning("predicted horizon extension is 0, no predicted prices are returned")
+            return
         known_at = self.db_da.get_time_border_record("da").astimezone()
         new_horizon = known_at + datetime.timedelta(hours=extension)
         now = datetime.datetime.now().astimezone()
