@@ -5198,15 +5198,38 @@ class DaCalc(DaBase):
 
         if str((_g.prices_spot if _g else True) or "true").lower() == "true":
             p_spot.append(p_spot[-1])
-            ln5 = axis22.step(
-                tijd,
-                np.array(p_spot),
-                label="Spot prijzen",
-                color="orange",
-                where="post",
-            )
+            if horizon_extension > 0 :
+                tijd_fixed = [value for value in tijd if value <= start_prediction_dt]
+                p_spot_fixed = p_spot[:len(tijd_fixed)]
+                ln5 = axis22.step(
+                    tijd_fixed,
+                    np.array(p_spot_fixed),
+                    label="Spot prices",
+                    color="orange",
+                    where="post"
+                )
+                tijd_pred = [value for value in tijd if value >= start_prediction_dt]
+                p_spot_pred = p_spot[-len(tijd_pred):]
+                ln6 = axis22.step(
+                    tijd_pred,
+                    np.array(p_spot_pred),
+                    label="Pred.spot",
+                    color="orange",
+                    where="post",
+                    linestyle="dashed"
+                )
+            else:
+                ln5 = axis22.step(
+                    tijd,
+                    np.array(p_spot),
+                    label="Spot prijzen",
+                    color="orange",
+                    where="post",
+                )
+                ln6 = None
         else:
             ln5 = None
+            ln6 = None
 
         if _g and _g.average_consumption is not None and "average delivery" not in _gx:
             average_consumption_str = str(_g.average_consumption)
@@ -5244,6 +5267,8 @@ class DaCalc(DaBase):
             lns += ln4
         if ln5:
             lns += ln5
+        if ln6:
+            lns += ln6
         labels = [line.get_label() for line in lns]
         axis22.legend(lns, labels, loc="best", bbox_to_anchor=(1.40, 1.00))
 
