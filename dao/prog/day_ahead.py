@@ -5018,6 +5018,12 @@ class DaCalc(DaBase):
         )
         axis[1].sharex(axis[0])
 
+        # extra tijdstip voor sync aantal uur met laatste soc-waarde
+        # eenmalig, de grafieken hieronder verwachten U+1 tijdstippen
+        span = tijd[U-1] - tijd[U-2]
+        tijd.append(tijd[U-1] + span)
+        breedte.append(breedte[-1])
+
         gr_no = 1
         if show_battery_balance:
             for b in range(B):
@@ -5045,9 +5051,6 @@ class DaCalc(DaBase):
                 pv_p.append(0)
                 bat_p.append(0)
                 bat_n.append(0)
-                span = tijd[U-1] - tijd[U-2]
-                tijd.append(tijd[U-1] + span)
-                breedte.append(breedte[-1])
                 leg1 = axis[gr_no].bar(
                     tijd, np.array(ac_p), width=breedte, label="AC<->", color="red", align="edge"
                 )
