@@ -156,6 +156,7 @@ class DaBase(hass.Hass):
             time_zone=resp_dict["time_zone"],
             country=resp_dict["country"] or "NL",
         )
+
         self.time_zone = self.ha_context.time_zone
         self.config.time_zone = self.ha_context.time_zone
 
@@ -377,10 +378,21 @@ class DaBase(hass.Hass):
         report.consolidate_data(start_dt)
 
     def get_day_ahead_prices(self):
+        start = None
+        end = None
+
+        if len(sys.argv) > 2:
+            arg_s = sys.argv[2]
+            start = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
+
+        if len(sys.argv) > 3:
+            arg_s = sys.argv[3]
+            end = datetime.datetime.strptime(arg_s, "%Y-%m-%d")
+
         source = (
             self.prices_options.source_day_ahead if self.prices_options else "nordpool"
         )
-        self.prices.get_prices(source)
+        self.prices.get_prices(source, start, end)
 
     def get_day_ahead_predicted_prices(self):
         self.prices.get_predicted_prices()
