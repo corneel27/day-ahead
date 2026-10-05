@@ -88,7 +88,9 @@ class ProductionBonusConfig(BaseModel):
         json_schema_extra={
             "x-help": "The bonus stops for the rest of the calendar year once this much feed-in "
             "has received the bonus, counted from the 'entities grid production' sensors in the "
-            "report settings. Leave empty for no cap. Zonneplan: 7500.",
+            "report settings. Feed-in planned in the optimization horizon is not counted, so "
+            "future intervals keep the full bonus until the cap is reached by recorded feed-in. "
+            "Leave empty for no cap. Zonneplan: 7500.",
             "x-unit": "kWh",
             "x-ui-section": "Production bonus",
         },
@@ -99,13 +101,15 @@ class ProductionBonusConfig(BaseModel):
     def validate_percentage(cls, v: dict[str, float]) -> dict[str, float]:
         if not v:
             raise ValueError("percentage needs at least one date entry")
+        result = {}
         for day, percentage in v.items():
-            datetime.strptime(day, "%Y-%m-%d")
             if not (0 <= percentage <= 100):
                 raise ValueError(
                     f"Bonus percentage must be between 0 and 100, got {percentage} for date {day}"
                 )
-        return v
+            # normalise to YYYY-MM-DD so the keys sort chronologically ("2025-1-1")
+            result[datetime.strptime(day, "%Y-%m-%d").date().isoformat()] = percentage
+        return result
 
     @field_validator("start", "end")
     @classmethod
@@ -117,7 +121,8 @@ class ProductionBonusConfig(BaseModel):
     @classmethod
     def validate_end_after_start(cls, v: str, info) -> str:
         start = info.data.get("start")
-        if start is not None and v <= start:
+        fmt = "%H:%M"
+        if start is not None and datetime.strptime(v, fmt) <= datetime.strptime(start, fmt):
             raise ValueError(f"end ({v}) must be later than start ({start})")
         return v
 
@@ -386,7 +391,9 @@ Intervals that are only partly inside the window get a proportional share of the
 The annual cap is counted from the recorded grid feed-in: the `entities grid production`
 sensors in the report settings, or else the `prod` values in the DAO database.
 Only feed-in inside the window with a positive bonus base counts; hourly values are
-spread evenly over their quarters before that check.
+spread evenly over their quarters before that check. Planned (future) feed-in is not
+counted, so all intervals in the planning horizon get the full bonus as long as the
+recorded feed-in is below the cap.
 
 ## Data Sources
 

@@ -1336,7 +1336,9 @@ Intervals that are only partly inside the window get a proportional share of the
 The annual cap is counted from the recorded grid feed-in: the `entities grid production`
 sensors in the report settings, or else the `prod` values in the DAO database.
 Only feed-in inside the window with a positive bonus base counts; hourly values are
-spread evenly over their quarters before that check.
+spread evenly over their quarters before that check. Planned (future) feed-in is not
+counted, so all intervals in the planning horizon get the full bonus as long as the
+recorded feed-in is below the cap.
 
 ## Data Sources
 
@@ -2119,7 +2121,7 @@ When true no bonus is given in intervals where the bonus base price is zero or n
 
 **`annual cap`**
 
-The bonus stops for the rest of the calendar year once this much feed-in has received the bonus, counted from the 'entities grid production' sensors in the report settings. Leave empty for no cap. Zonneplan: 7500.
+The bonus stops for the rest of the calendar year once this much feed-in has received the bonus, counted from the 'entities grid production' sensors in the report settings. Feed-in planned in the optimization horizon is not counted, so future intervals keep the full bonus until the cap is reached by recorded feed-in. Leave empty for no cap. Zonneplan: 7500.
 
 </details>
 

@@ -3089,14 +3089,16 @@ class Report(DaBase):
         multiplier_l = 1
         multiplier_t = 1
         columns = ["time", "da_ex", "da_cons", "da_prod", "datasoort"]
-        df = pd.DataFrame(columns=columns)
+        rows = []
         salderen = self.prices_options.tax_refund if self.prices_options else True
         if bonus is not None:
             df_da = df_da[df_da["time"].notnull()].reset_index(drop=True)
-            # tijdstempels uit "time": voorspelde (geinterpoleerde) rijen hebben geen "utc"
+            # "utc" is eenduidig, ook bij de wintertijdovergang; alleen voorspelde
+            # (geinterpoleerde) rijen hebben geen "utc", dan uit "time"
             row_ts = [
-                datetime.datetime.strptime(t, "%Y-%m-%d %H:%M").timestamp()
-                for t in df_da["time"]
+                u if pd.notnull(u)
+                else datetime.datetime.strptime(t, "%Y-%m-%d %H:%M").timestamp()
+                for u, t in zip(df_da["utc"], df_da["time"])
             ]
             durations = interval_durations(row_ts)
         for index, row in enumerate(df_da.itertuples()):
@@ -3124,17 +3126,23 @@ class Report(DaBase):
                 da_prod += self._production_bonus_price(
                     row_ts[index], durations[index], row.value, ol_t
                 )
-            df.loc[df.shape[0]] = [
+            new_row = [
                 datetime.datetime.strptime(row.time, "%Y-%m-%d %H:%M"),
                 row.value,
                 da_cons,
                 da_prod,
                 "expected",
             ]
-        if bonus is not None and interval == "1hour" and len(df) > 0:
-            df["time"] = pd.to_datetime(df["time"])
+            if bonus is not None:
+                new_row.append(row_ts[index])
+            rows.append(new_row)
+        if bonus is None:
+            return pd.DataFrame(rows, columns=columns)
+        df = pd.DataFrame(rows, columns=columns + ["utc"])
+        if interval == "1hour" and len(df) > 0:
+            # per uur in utc groeperen: bij de wintertijdovergang zijn er twee uren 02:00
             df = (
-                df.groupby(df["time"].dt.floor("h"), sort=False)
+                df.groupby(df["utc"] // 3600, sort=False)
                 .agg(
                     time=("time", "min"),
                     da_ex=("da_ex", "mean"),
@@ -3144,7 +3152,7 @@ class Report(DaBase):
                 )
                 .reset_index(drop=True)
             )
-        return df
+        return df[columns]
 
     def _production_bonus_price(
         self, start_ts, duration_s, market_price, supplier_cost

@@ -73,6 +73,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r dao/requirements.txt
+          pip install pytest
+
+      - name: Run production bonus tests
+        # Here rather than in the unit job: test_production_bonus_prices.py
+        # imports da_report, which needs the full requirements.txt. The tests
+        # set TZ=Europe/Amsterdam themselves for the DST cases.
+        run: >
+          pytest -q
+          dao/tests/config/test_production_bonus.py
+          dao/tests/prog/test_production_bonus_prices.py
 
       - name: Solve every scenario and build the report
         # scenario-run asserts the same thing pytest's test_scenario would

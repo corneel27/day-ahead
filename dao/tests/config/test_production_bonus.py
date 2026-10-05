@@ -87,6 +87,16 @@ class TestProductionBonusConfig:
                 percentage={"2025-01-01": 10}, start="22:00", end="06:00"
             )
 
+    def test_end_compared_as_time(self):
+        c = ProductionBonusConfig(percentage={"2025-01-01": 10}, start="6:00", end="22:00")
+        assert c.end == "22:00"
+        with pytest.raises(ValidationError):
+            ProductionBonusConfig(percentage={"2025-01-01": 10}, start="9:00", end="8:30")
+
+    def test_percentage_keys_normalised(self):
+        c = ProductionBonusConfig(percentage={"2025-1-1": 10, "2025-06-01": 0})
+        assert c.percentage == {"2025-01-01": 10, "2025-06-01": 0}
+
     def test_negative_cap(self):
         with pytest.raises(ValidationError):
             ProductionBonusConfig(
@@ -118,6 +128,11 @@ class TestPercentage:
         bonus = zonneplan(percentage={"2025-01-01": 10, "2026-07-01": 15})
         assert bonus.percentage(datetime.date(2026, 6, 30)) == 10
         assert bonus.percentage(datetime.date(2026, 7, 1)) == 15
+
+    def test_unpadded_date_key(self):
+        bonus = zonneplan(percentage={"2025-1-1": 10, "2025-10-1": 0})
+        assert bonus.percentage(datetime.date(2025, 3, 1)) == 10
+        assert bonus.percentage(datetime.date(2025, 10, 1)) == 0
 
 
 class TestSunWindow:
