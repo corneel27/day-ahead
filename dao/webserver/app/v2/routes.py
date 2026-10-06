@@ -370,6 +370,8 @@ def task_exec():
             cmd = ["meteo"]
         case "update_prices":
             cmd = ["prices"]
+        case "predicted_prices":
+            cmd = ["predicted_prices"]
         case "train_ml":
             cmd = ["train"]
 
@@ -709,3 +711,63 @@ def secrets():
         success=success,
         error=error,
     )
+
+@v2.route("/view-file", methods=["GET", "POST"])
+def view_file():
+    file =  request.args.get("file")
+
+    log_file = app_datapath + "log/" + file
+    with open(log_file, "r") as f:
+        content = f.read()
+
+    return render_template(
+        "v2/view-file.html",
+        content=content,
+        filename=log_file,
+    )
+
+def _alter_hex(hex_color, factor):
+    """
+    factor < 1 = darker
+    """
+    hex_color = hex_color.lstrip("#")
+
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+
+    r = max(0, min(255, int(r * factor)))
+    g = max(0, min(255, int(g * factor)))
+    b = max(0, min(255, int(b * factor)))
+
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+def _datasets_config():
+    report = Report(app_datapath + "/options.json")
+    metadata = report.db_da.metadata
+    engine = report.db_da.engine
+
+    variabel = Table("variabel", metadata, autoload_with=engine)
+
+    with engine.connect() as conn:
+        vars = conn.execute(
+            variabel.select()
+        ).fetchall()
+
+    datasets = []
+
+    for row in vars:
+        color = "#ffffff"
+
+        datasets.append({
+            "label": row.name,
+            "code": row.code,
+            "borderColor": _alter_hex(color, 0.8),
+            "backgroundColor": color,
+            "type": "bar" if row.dim == "kWh" else "line",
+            "stepped": True if row.dim == "euro/kWh" else False,
+            "yAxisID": f"y_{row.dim}",
+            "unit": row.dim,
+        })
+
+    return datasets
