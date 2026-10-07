@@ -391,8 +391,9 @@ class DaPrices:
         df_db = pd.DataFrame(columns=["time", "tijd", "code", "value"])
         tz = pytz.timezone(self.time_zone)
         for row in rows:
-            dt = datetime.datetime.strptime(row["start"], "%Y-%m-%dT%H:%M:%SZ")
-            dt = tz.localize(dt)
+            utc_dt_str = row["start"].replace("Z", "+00:00")
+            utc_dt = datetime.datetime.fromisoformat(utc_dt_str)
+            dt = utc_dt.astimezone(tz)   # tz.localize(dt)
             if dt > know_at and dt <= new_horizon:
                 time_stamp = int(dt.timestamp())
                 value = float(row["value"])
@@ -448,6 +449,11 @@ class DaPrices:
         api_url= api_url.replace("<hours>", str(fetch_hours))
         api_url= api_url.replace("<region>", self.country)
         resp = get(api_url)
+        if resp.status_code != 200:
+            logging.error(f"No data from {source} off predict prices, "
+                          f"statuscode: {resp.status_code},"
+                          f"message: {resp.text}")
+            return resp.status_code
         logging.debug(resp.text)
         json_object = json.loads(resp.text)
         extract_data_f = "extract_data_"+source
@@ -457,7 +463,7 @@ class DaPrices:
             f"{df_db.to_string(index=False)}"
         )
         self.db_da.savedata(df_db, tablename="prognoses")
-        return
+        return 0
 
     def get_price_prediction(self, source:str="dap"):
         if source.lower() == "dap":
