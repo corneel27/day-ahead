@@ -5,9 +5,8 @@ ha_context straight from this dict and patches away every DB, HA, and
 network call, so nothing here needs a capture.
 
 Everything the scenario expresses hourly is expanded to the 15-minute model
-grid. price_data and prog_data are built on the same grid and the same
-length, because day_ahead.py copies price columns onto prog_data
-positionally (day_ahead.py:202).
+grid. price_data and prog_data are built on the same grid so day_ahead.py
+can align their intervals by timestamp.
 """
 
 from __future__ import annotations
