@@ -67,7 +67,7 @@ class SchedulerConfig(BaseModel):
     )
     offset: Optional[int] = Field(
         default = 10,
-        gt=0,
+        ge=0,
         description="Number of seconds the task is started before schedule-time (due to time in task start overhead)",
         json_schema_extra={
             "x-help": "Number of seconds the task is scheduled before schedule-time (due to time in task start overhead)",
