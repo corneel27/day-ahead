@@ -144,9 +144,12 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states:
             "scenario_id": scenario.id,
         },
         "ha_context": dict(HA_CONTEXT),
-        "price_data": da_debug._dataframe_to_payload(price_df),
-        "price_data_args": None,
-        "prog_data": da_debug._dataframe_to_payload(prog_df),
+        "price_data_calls": [da_debug._sequence_record(
+            {"start": start, "end": None, "interval": "15min", "extension": 0}, price_df
+        )],
+        "prog_data_calls": [da_debug._sequence_record(
+            {"start": start, "end": None, "interval": "15min"}, prog_df
+        )],
         "ha_states": states,
         "baseload": {str(d): list(baseload_hourly) for d in range(7)},
         "heatpump_run_hours": _heatpump_hours_channel(scenario),
