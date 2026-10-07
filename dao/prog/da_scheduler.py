@@ -3,8 +3,6 @@ import logging
 import sys
 import time
 
-from PIL.ImageChops import offset
-
 from da_base import DaBase
 from subprocess import Popen, PIPE, STDOUT
 
@@ -13,7 +11,7 @@ class DaScheduler(DaBase):
     def __init__(self, file_name: str = None):
         super().__init__(file_name)
         self.active = self.config.scheduler.active
-        self.offset_start = self.config.scheduler.offset
+        self.offset_start = self.config.scheduler.offset or 0
         logging.info(f"Offset tasks {self.offset_start} sec")
         self.scheduler_tasks = {
             entry.time: entry.action for entry in self.config.scheduler.schedule
