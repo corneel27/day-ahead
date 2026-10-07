@@ -2595,7 +2595,8 @@
             "calc_optimum_met_debug",
             "clean_data",
             "calc_baseloads",
-            "train_ml_predictions"
+            "train_ml_predictions",
+            "predicted_prices"
           ],
           "title": "Action",
           "type": "string",

@@ -16,6 +16,7 @@ SchedulerAction = Literal[
     "clean_data",
     "calc_baseloads",
     "train_ml_predictions",
+    "predicted_prices"
 ]
 
 
