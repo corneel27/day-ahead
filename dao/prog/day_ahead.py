@@ -488,9 +488,7 @@ class DaCalc(DaBase):
             logging.info(f"pv_ac: {len(pv_org_ac)}")
             logging.info(f"pv_dc: {len(pv_org_dc)}")
 
-        # Name the solver explicitly: Model() without a name first probes for
-        # Gurobi, which runs ctypes.util.find_library (ldconfig/gcc
-        # subprocesses) and costs ~0.8 s on every calculation.
+        # Name the solver explicitly to avoid trying Gurobi first
         model = Model(solver_name=CBC)
 
         ##############################################################
@@ -5277,8 +5275,6 @@ class DaCalc(DaBase):
 
         plt.subplots_adjust(right=0.75)
         fig.tight_layout()
-        # fig.savefig, not plt.savefig: pyplot's wrapper redraws the whole
-        # figure (thousands of bar patches) after saving, for nothing.
         fig.savefig(
             "../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png"
         )
