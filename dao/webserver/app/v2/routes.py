@@ -1,9 +1,10 @@
 import time, os, fnmatch, re, datetime, time, threading, json
-from flask import Blueprint, render_template, request, redirect, url_for, has_request_context
+from flask import Blueprint, render_template, request, redirect, url_for, has_request_context, abort
 
 from dao.prog.version import __version__
 from subprocess import Popen, DEVNULL
 from pathlib import Path
+from werkzeug.security import safe_join
 from dao.prog.da_report import Report
 from dao.prog.config.loader import ConfigurationLoader
 
@@ -714,11 +715,28 @@ def secrets():
 
 @v2.route("/view-file", methods=["GET", "POST"])
 def view_file():
-    file =  request.args.get("file")
-
-    log_file = app_datapath + "log/" + file
-    with open(log_file, "r") as f:
-        content = f.read()
+    filename = request.args.get("file")
+    if (
+        not filename
+        or "/" in filename
+        or "\\" in filename
+        or "\x00" in filename
+        or not filename.endswith(".log")
+    ):
+        abort(400)
+    log_dir = (Path(app_datapath) / "log").resolve()
+    safe_path = safe_join(str(log_dir), filename)
+    if safe_path is None:
+        abort(400)
+    try:
+        log_file = Path(safe_path).resolve()
+        if log_file.parent != log_dir:
+            abort(400)
+        content = log_file.read_text()
+    except (FileNotFoundError, IsADirectoryError):
+        abort(404)
+    except (OSError, RuntimeError):
+        abort(400)
 
     return render_template(
         "v2/view-file.html",

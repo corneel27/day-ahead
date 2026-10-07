@@ -1,10 +1,10 @@
 from datetime import datetime
-from flask import Blueprint, request
+from flask import Blueprint, current_app, request
 from subprocess import run as subprocess_run
 from dao.prog.da_report import Report
 from markupsafe import escape
 from dao.prog.da_const import tasks
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pathlib import Path
 
 api = Blueprint("api", __name__)
@@ -72,7 +72,11 @@ def run_api(task: str):
         }
         return log_content, headers
     else:
-        return "Onbekende bewerking: " + task, 400
+        return (
+            "Onbekende bewerking: " + str(escape(task)),
+            400,
+            {"Content-Type": "text/plain; charset=utf-8"},
+        )
 
 
 @api.route("/data/")
@@ -81,11 +85,13 @@ def data():
     Retourneert in json de data
     :return: de gevraagde data in json formaat
     """
-    data_report = Report()
     start = request.args.get('start', )
     end = request.args.get('end')
     aggregate = request.args.get('aggregate')
     fields = request.args.get('fields')
+
+    if aggregate not in {"15min", "hour", "day", "week", "month"}:
+        return {"error": "Ongeldig aggregate interval"}, 400
 
     if fields:
         fields = fields.split(",")
@@ -93,15 +99,34 @@ def data():
     timezone_raw = request.args.get('timezone', 'Europe/Amsterdam')
 
     try:
+        timezone = ZoneInfo(timezone_raw)
+        start_dt = datetime.fromisoformat(start)
+        end_dt = datetime.fromisoformat(end)
+        start_dt = (
+            start_dt.replace(tzinfo=timezone)
+            if start_dt.tzinfo is None else start_dt.astimezone(timezone)
+        )
+        end_dt = (
+            end_dt.replace(tzinfo=timezone)
+            if end_dt.tzinfo is None else end_dt.astimezone(timezone)
+        )
+        if end_dt <= start_dt:
+            raise ValueError("End must follow start")
+    except (TypeError, ValueError, ZoneInfoNotFoundError):
+        return {"error": "Ongeldige start, end of timezone"}, 400
+
+    try:
+        data_report = Report()
         data = data_report.get_data(
-            start=datetime.fromisoformat(start).replace(tzinfo=ZoneInfo(timezone_raw)),
-            end=datetime.fromisoformat(end).replace(tzinfo=ZoneInfo(timezone_raw)),
+            start=start_dt,
+            end=end_dt,
             aggregate=aggregate,
             var_codes=fields,
         )
 
-    except Exception as e:
-        return {"error": str(e)}, 500
+    except Exception:
+        current_app.logger.exception("Failed to retrieve API data")
+        return {"error": "Gegevens konden niet worden opgehaald"}, 500
 
     def format_ts(dt, aggregate: str) -> str:
         if aggregate == "15min":
