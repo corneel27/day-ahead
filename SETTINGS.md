@@ -1723,7 +1723,7 @@ Define when automatic tasks run using time patterns.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `active` | boolean | No | `true` | Enable or disable the scheduler |
-| `offset` | integer (optional) | No | `10` | Number of seconds the task is started before schedule-time (due to time in task start overhead) (Unit: `s`) _Must be >= 0, typically 10 seconds_ |
+| `offset` | integer (optional) | No | `10` | Number of seconds the task is started before schedule-time (due to time in task start overhead) (Unit: `s`) _Must be >= 0 and <=60, typically 10 seconds_ |
 | `schedule` | list[[ScheduleEntry](#scheduleentry)] | No | `null` | Scheduled task entries |
 
 <details>

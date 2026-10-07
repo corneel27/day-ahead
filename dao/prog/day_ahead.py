@@ -115,7 +115,7 @@ class DaCalc(DaBase):
         # start_dt = dt.datetime(2025, 9, 16, 13, minute=30)
         start_ts = int(start_dt.timestamp())
         modulo = start_ts % self.interval_s
-        if modulo > (self.interval_s - 10):
+        if modulo >= (self.interval_s - 60):
             start_ts = start_ts + self.interval_s - modulo
         start_dt = dt.datetime.fromtimestamp(start_ts)
         start_hour = int(3600 * math.floor(start_ts / 3600))

@@ -2625,6 +2625,7 @@
         "offset": {
           "anyOf": [
             {
+              "maximum": 60,
               "minimum": 0,
               "type": "integer"
             },
@@ -2638,7 +2639,7 @@
           "x-help": "Number of seconds the task is scheduled before schedule-time (due to time in task start overhead)",
           "x-ui-section": "Scheduler",
           "x-unit": "s",
-          "x-validation-hint": "Must be >= 0, typically 10 seconds"
+          "x-validation-hint": "Must be >= 0 and <=60, typically 10 seconds"
         },
         "schedule": {
           "description": "Scheduled task entries",

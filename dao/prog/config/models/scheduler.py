@@ -69,12 +69,13 @@ class SchedulerConfig(BaseModel):
     offset: Optional[int] = Field(
         default = 10,
         ge=0,
+        le=60,
         description="Number of seconds the task is started before schedule-time (due to time in task start overhead)",
         json_schema_extra={
             "x-help": "Number of seconds the task is scheduled before schedule-time (due to time in task start overhead)",
             "x-unit": "s",
             "x-ui-section": "Scheduler",
-            "x-validation-hint": "Must be >= 0, typically 10 seconds",
+            "x-validation-hint": "Must be >= 0 and <=60, typically 10 seconds",
         },
     )
     schedule: list[ScheduleEntry] = Field(
