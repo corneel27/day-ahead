@@ -35,7 +35,7 @@ from .expectations import (
     run_tier_a,
 )
 from .model import Scenario
-from .vocabulary import interval_grid, parse_start
+from .vocabulary import model_grid, model_row_hours, parse_start
 
 STATUS_PASS = "PASS"
 STATUS_FAIL = "FAIL"
@@ -82,8 +82,8 @@ def _solar_patch(scenario: Scenario):
     import pandas as pd
 
     start = parse_start(scenario.start)
-    grid = interval_grid(start, scenario.horizon_hours)
-    total_kw = solar_quarter_series(scenario)  # len == horizon*4, on grid
+    grid = model_grid(start, scenario.fixed_hours, scenario.predicted_hours)
+    total_kw = solar_quarter_series(scenario)  # one value per model interval, on grid
 
     def calc_solar_predictions(self, solar_option, vanaf, tot, interval=None, _ml_prediction=None):
         caps = []
@@ -301,6 +301,8 @@ def run_scenario(
 
     case_ctx = CaseContext(
         mv=rc.mv, scenario_id=scenario.id, start=start, horizon_hours=scenario.horizon_hours,
+        grid=model_grid(start, scenario.fixed_hours, scenario.predicted_hours),
+        row_hours=model_row_hours(scenario.fixed_hours, scenario.predicted_hours),
         objective=objective, max_gap=max_gap, reads=reads, requested_states=requested_states,
         config=config, expanded_ev=expanded_ev, parsed_target=parsed_target, parsed_other=parsed_other,
     )
