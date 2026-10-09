@@ -14,7 +14,7 @@ import pandas as pd
 from subprocess import PIPE, run
 import logging
 from logging import Handler
-from sqlalchemy import Table, select, func, and_
+from sqlalchemy import select, func, and_
 
 # from dao.prog.solar_predictor import SolarPredictor
 from dao.prog.utils import get_tibber_data, error_handling
@@ -460,12 +460,8 @@ class DaBase(hass.Hass):
         )
         """
         # Reflect existing tables from the database
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
+        variabel_table = self.db_da.get_table("variabel")
 
         # Construct the inner query
         inner_query = (
