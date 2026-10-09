@@ -670,7 +670,7 @@ def config():
                 f.write(content)
             success = "Config updated successfully"
         except Exception as err:
-            error = "Error: " + err.args[0]
+            error = f"Error: {err}"
     else:
         with open(path, "r") as file:
             content = file.read()
@@ -698,7 +698,7 @@ def secrets():
                 f.write(content)
             success = "Secrets updated successfully"
         except Exception as err:
-            error = "Error: " + err.args[0]
+            error = f"Error: {err}"
     else:
         with open(path, "r") as file:
             content = file.read()
