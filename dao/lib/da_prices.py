@@ -53,27 +53,28 @@ class DaPrices:
         else:
             end = _end
 
-        present = self.db_da.get_time_border_record("da")
-        if not (present is None):
-            tz = pytz.timezone("CET")
-            if start.tzinfo is None:
-                start = tz.normalize(tz.localize(start))
+        tz = pytz.timezone("CET")
+        if start.tzinfo is None:
+            start = tz.normalize(tz.localize(start))
 
+        if end.tzinfo is None:
+            end = tz.normalize(tz.localize(end))
+
+        present = self.db_da.get_time_border_record("da")
+        if not (present is None) and _start is None:
             present = tz.normalize(tz.localize(present))
             present = present + datetime.timedelta(minutes=resolution)
             start = max(present, start)
-            if end.tzinfo is None:
-                end = tz.normalize(tz.localize(end))
+
+            if present >= (end - datetime.timedelta(hours=1)):
+                logging.info(f"Spot prices already present")
+                return
 
         logging.debug(f"Day ahead tarieven ophalen voor {start} tot {end}")
 
-        if present >= (end - datetime.timedelta(hours=1)):
-            logging.info(f"Spot prices already present")
-            return
-
         # For providers that only return data for one date, we need to check
         # what dates are already present and fetch only missing ones
-        if source.lower() in ["nordpool", "tibber"]:
+        if source.lower() == "nordpool":
             df_db = None
 
             # Process each day in the range separately
@@ -86,10 +87,6 @@ class DaPrices:
                     # Fetch data for this specific day
                     if source.lower() == "nordpool":
                         daily_df = self._get_prices_nordpool(resolution, current_date)
-
-                    if source.lower() == "tibber":
-                        daily_df = self._get_prices_tibber(current_date)
-
 
                     if daily_df is not None and len(daily_df) > 0:
                         if df_db is None:
@@ -107,7 +104,7 @@ class DaPrices:
                 self.db_da.savedata(df_db)
 
         else:
-            # For other sources that support range queries (nordpool, tibber)
+            # For other sources that support range queries
             df_db = None
             # day-ahead market prices (€/MWh)
             if source.lower() == "entsoe":
@@ -115,6 +112,9 @@ class DaPrices:
 
             if source.lower() == "easyenergy":
                 df_db = self._get_prices_easyenergy(start, end)
+
+            if source.lower() == "tibber":
+                df_db = self._get_prices_tibber(start)
 
             if df_db is not None:
                 self.db_da.savedata(df_db)
@@ -276,6 +276,8 @@ class DaPrices:
             )
             df_db.loc[df_db.shape[0]] = [dtime, "da", row.TariffReturn]
 
+        return df_db
+
     def _get_prices_nordpool(self, resolution, date):
 
         # ophalen bij Nordpool
@@ -311,11 +313,7 @@ class DaPrices:
             f"{date.strftime('%Y-%m-%d') if date else 'tomorrow'}"
             f" (source: nordpool, db-records): \n {df_db.to_string(index=False)}"
         )
-        if len(df_db) < 24 and datetime.datetime.fromtimestamp(
-                time_ts
-        ) < datetime.datetime(
-            date.year, date.month, date.day, date.hour
-        ):
+        if df_db.empty:
             logging.warning(
                 f"Retrieve of day ahead prices for "
                 f"{date.strftime('%Y-%m-%d') if date else 'tomorrow'} "
