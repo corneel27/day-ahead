@@ -436,7 +436,7 @@ class DaPrices:
     def get_predicted_prices(self):
         source = self.config.prices.prediction.source
         api_url = self.config.prices.prediction.api
-        extension = self.config.prices.prediction.extension
+        extension = 96
         if extension == 0:
             logging.warning("predicted horizon extension is 0, no predicted prices are returned")
             return
