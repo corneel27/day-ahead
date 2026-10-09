@@ -662,18 +662,18 @@ def config():
     success = None
 
     if request.method == "POST" and request.form.to_dict()["config"] is not None:
+        content = request.form.to_dict()["config"]
         try:
-            newconfig = request.form.to_dict()["config"]
             # try loading json
-            json.loads(newconfig)
+            json.loads(content)
             with open(path, "w") as f:
-                f.write(newconfig)
+                f.write(content)
             success = "Config updated successfully"
         except Exception as err:
-            error = "Error: " + err.args[0]
-
-    with open(path, "r") as file:
-        content = file.read()
+            error = f"Error: {err}"
+    else:
+        with open(path, "r") as file:
+            content = file.read()
 
     return render_template(
         "v2/config.html",
@@ -690,21 +690,18 @@ def secrets():
     success = None
 
     if request.method == "POST" and request.form.to_dict()["secrets"] is not None:
+        content = request.form.to_dict()["secrets"]
         try:
-            newsecrets = request.form.to_dict()["secrets"]
             # try loading json
-            json.loads(newsecrets)
+            json.loads(content)
             with open(path, "w") as f:
-                f.write(newsecrets)
+                f.write(content)
             success = "Secrets updated successfully"
         except Exception as err:
-            error = "Error: " + err.args[0]
-
-    with open(path, "r") as file:
-        content = file.read()
-
-    with open(path, "r") as file:
-        content = file.read()
+            error = f"Error: {err}"
+    else:
+        with open(path, "r") as file:
+            content = file.read()
 
     return render_template(
         "v2/secrets.html",
