@@ -39,10 +39,11 @@ done
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 VENV_DIR="${PROJECT_ROOT}/venv/day_ahead"
+VENV_PYTHON="${VENV_DIR}/bin/python"
 DAO_DIR="${PROJECT_ROOT}/dao"
 WEBSERVER_DIR="${DAO_DIR}/webserver"
 DATA_DIR="${DAO_DIR}/data"
-APT_PACKAGES="build-essential pkg-config libmariadb-dev pip python3 python3-venv npm"
+APT_PACKAGES="build-essential pkg-config libmariadb-dev python3-pip python3 python3-venv npm"
 ZYPPER_PACKAGES="pkg-config libmariadb-devel python3-pip python3 npm python3-devel gcc make"
 
 copy_config_if_missing() {
@@ -101,32 +102,85 @@ install_system_dependencies_if_available() {
   fi
 }
 
+# A venv holds absolute paths: its bin/python is a symlink to the interpreter it was
+# created with. The directory therefore outlives the interpreter, and existing is not
+# the same as working. Check that it actually runs before relying on it.
+venv_is_usable() {
+  [ -f "${VENV_DIR}/bin/activate" ] &&
+    [ -x "$VENV_PYTHON" ] &&
+    "$VENV_PYTHON" -c "" >/dev/null 2>&1
+}
+
+create_venv() {
+  echo "Create Virtual environment in ${VENV_DIR}"
+  if ! python3 -m venv "$VENV_DIR"; then
+    echo "Creating the virtual environment failed."
+    echo "On Debian/Ubuntu this needs the python3-venv package: sudo apt install -y python3-venv"
+    exit 1
+  fi
+}
+
+explain_broken_venv() {
+  echo "The virtual environment in ${VENV_DIR} is not usable:"
+  echo "its interpreter ${VENV_PYTHON} is missing or does not run."
+  echo "Common causes: the system python3 was upgraded or removed, a previous setup was"
+  echo "interrupted, or the project directory was copied from another machine (a venv"
+  echo "contains absolute paths and cannot be moved). Recreating it is always safe."
+}
+
+# $1: "setup" to create or repair the venv, "run" to only report what is wrong.
+ensure_venv() {
+  if venv_is_usable; then
+    return
+  fi
+
+  if [ ! -d "$VENV_DIR" ]; then
+    if [ "$1" != "setup" ]; then
+      echo "No venv found. Run: $0 --setup"
+      exit 1
+    fi
+    create_venv
+  elif [ ! -f "${VENV_DIR}/pyvenv.cfg" ]; then
+    echo "${VENV_DIR} exists but is not a virtual environment."
+    echo "Remove or rename it, then run: $0 --setup"
+    exit 1
+  else
+    explain_broken_venv
+    if [ "$1" != "setup" ]; then
+      echo "Run: rm -rf '${VENV_DIR}' && $0 --setup"
+      exit 1
+    fi
+    echo "Recreating it."
+    rm -rf "$VENV_DIR"
+    create_venv
+  fi
+
+  if ! venv_is_usable; then
+    echo "The virtual environment in ${VENV_DIR} is still not usable; giving up."
+    exit 1
+  fi
+}
+
 if [ "$SETUP" = true ]; then
   install_system_dependencies_if_available
 
-  if [ ! -d "$VENV_DIR" ]; then
-    echo "Create Virtual environment in ${VENV_DIR}"
-    python3 -m venv "$VENV_DIR"
-  fi
+  ensure_venv setup
 
   # shellcheck source=/dev/null
   source "${VENV_DIR}/bin/activate"
 
   echo "pip upgraden"
-  python -m pip install --upgrade pip
+  "$VENV_PYTHON" -m pip install --upgrade pip
 
   echo "Install python dependencies"
   cd "$DAO_DIR"
-  python -m pip install -r requirements.txt
+  "$VENV_PYTHON" -m pip install -r requirements.txt
 
   echo "Install node dependencies"
   cd "$WEBSERVER_DIR"
   npm install
 else
-  if [ ! -d "$VENV_DIR" ]; then
-    echo "No venv found. Run: $0 --setup"
-    exit 1
-  fi
+  ensure_venv run
 
   # shellcheck source=/dev/null
   source "${VENV_DIR}/bin/activate"
@@ -139,7 +193,7 @@ export PYTHONPATH="${PYTHONPATH}:${PROJECT_ROOT}:${PROJECT_ROOT}/lib:${PROJECT_R
 if [ "$MIGRATE" = true ]; then
   echo "Migrating db"
   cd "${PROJECT_ROOT}/dao/prog"
-  python3 check_db.py
+  "$VENV_PYTHON" check_db.py
   cd "${PROJECT_ROOT}"
 fi
 
@@ -197,7 +251,7 @@ sleep 1
 echo "Flask development server starten"
 setsid bash -c "
   cd '$WEBSERVER_DIR'
-  python da_server.py --debug
+  '$VENV_PYTHON' da_server.py --debug
 " &
 FLASK_PID=$!
 
