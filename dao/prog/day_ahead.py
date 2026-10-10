@@ -3347,11 +3347,12 @@ class DaCalc(DaBase):
             model.objective = minimize(cost)
             start_calc = time.perf_counter()
             with _capture_native_stdout() as native:
-                model.optimize()
+                status = model.optimize()
             if self.debug or self.log_level <= logging.DEBUG:
                 _log_native_output(native["cbc_log"])
             end_calc = time.perf_counter()
             logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
+            logging.info(f"Model status: {status}")
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
                 return None
@@ -3360,7 +3361,7 @@ class DaCalc(DaBase):
             logging.info(f"Strategie: {strategie}")
             model.objective = minimize(delivery)
             with _capture_native_stdout() as native:
-                model.optimize()
+                status = model.optimize()
             if self.debug or self.log_level <= logging.DEBUG:
                 _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
@@ -3373,13 +3374,13 @@ class DaCalc(DaBase):
             model += delivery <= min_delivery
             model.objective = minimize(cost)
             with _capture_native_stdout() as native:
-                model.optimize()
+                status = model.optimize()
             if self.debug or self.log_level <= logging.DEBUG:
                 _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
                 model.objective = minimize(delivery)
                 with _capture_native_stdout() as native:
-                    model.optimize()
+                    status = model.optimize()
                 if self.debug or self.log_level <= logging.DEBUG:
                     _log_native_output(native["cbc_log"])
                 if model.num_solutions == 0:
@@ -3387,6 +3388,7 @@ class DaCalc(DaBase):
                         f"Geen oplossing in na herberekening voor: {self.strategy}"
                     )
                     return None
+            logging.info(f"Model status: {status}")
             logging.info("Herberekening")
             logging.info(f"Kosten (euro): {cost.x:<6.2f}")
             logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
