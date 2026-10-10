@@ -2384,6 +2384,21 @@
           "type": "boolean",
           "x-help": "Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production.",
           "x-ui-section": "Taxes"
+        },
+        "production bonus": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProductionBonusConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Supplier bonus on feed-in during a daily time window",
+          "x-help": "Bonus some suppliers pay on feed-in during part of the day, e.g. the Zonneplan Zonnebonus: 10% over (market price + 0.02) from sunrise to sunset, only when that sum is positive, up to 7500 kWh per year. The bonus is added to the production price per interval, so the optimizer and the reports take it into account. Leave empty when not applicable.",
+          "x-ui-section": "Production bonus",
+          "title": "Production Bonus"
         }
       },
       "required": [
@@ -2398,10 +2413,108 @@
       "title": "PricingConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Pricing-Configuration",
-      "x-help": "# Pricing & Tariff Configuration\n\nConfigure electricity market prices and tariff components for accurate cost optimization.\n\n## Price Components\n\nTotal electricity cost consists of:\n1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)\n2. **Energy taxes**: Government energy taxes\n3. **Supplier costs**: Your supplier's markup/fees\n4. **VAT**: Value-added tax on sum of above\n5. **Multiplier**: For calculation of productionprice in Belgium \n\nPrice = (market*multiplier + taxes + supplier) × (1 + VAT)\n\n## Date-Based Tariffs\n\nAll tariff fields use date-indexed dictionaries:\n```json\n{\n  \"2024-01-01\": 0.05,\n  \"2024-07-01\": 0.06\n}\n```\n\nSystem uses tariff active on optimization date.\n\n## Data Sources\n\n- **nordpool**: Nord Pool (Nordic/Baltic markets)\n- **entsoe**: ENTSO-E Transparency Platform (all European markets)\n- **tibber**: Tibber API (if using Tibber as supplier)\n\n## Tips\n\n- All prices are EXCLUDING VAT (VAT applied separately)\n- Update tariffs when your supplier changes prices\n- Use !secret for API keys\n- Production costs often lower than consumption (or negative for feed-in credit)\n- Keep last_invoice updated for accurate cost tracking\n- Check your electricity bill for exact tariff components\n",
+      "x-help": "# Pricing & Tariff Configuration\n\nConfigure electricity market prices and tariff components for accurate cost optimization.\n\n## Price Components\n\nTotal electricity cost consists of:\n1. **Market price**: Day-ahead spot price (nordpool/entsoe/tibber)\n2. **Energy taxes**: Government energy taxes\n3. **Supplier costs**: Your supplier's markup/fees\n4. **VAT**: Value-added tax on sum of above\n5. **Multiplier**: For calculation of productionprice in Belgium \n\nPrice = (market*multiplier + taxes + supplier) × (1 + VAT)\n\n## Date-Based Tariffs\n\nAll tariff fields use date-indexed dictionaries:\n```json\n{\n  \"2024-01-01\": 0.05,\n  \"2024-07-01\": 0.06\n}\n```\n\nSystem uses tariff active on optimization date.\n\n## Production Bonus\n\nSome suppliers pay a bonus on feed-in during part of the day. Per interval:\n\nbonus = percentage × (market + supplier production cost), added to the production price\n(excluding taxes and VAT), only inside the window and when the base is positive.\n\nZonneplan Zonnebonus (10% from sunrise to sunset, max 7500 kWh per year):\n```json\n\"production bonus\": {\n  \"percentage\": {\"2025-01-01\": 10},\n  \"window\": \"sun\",\n  \"annual cap\": 7500\n}\n```\n\nNextEnergy (50% over the market price, 06:00-22:00):\n```json\n\"production bonus\": {\n  \"percentage\": {\"2025-01-01\": 50},\n  \"window\": \"fixed\", \"start\": \"06:00\", \"end\": \"22:00\",\n  \"include supplier cost\": false\n}\n```\n\nIntervals that are only partly inside the window get a proportional share of the bonus.\nThe annual cap is counted from the recorded grid feed-in: the `entities grid production`\nsensors in the report settings, or else the `prod` values in the DAO database.\nOnly feed-in inside the window with a positive bonus base counts; hourly values are\nspread evenly over their quarters before that check. Planned (future) feed-in is not\ncounted, so all intervals in the planning horizon get the full bonus as long as the\nrecorded feed-in is below the cap.\n\n## Data Sources\n\n- **nordpool**: Nord Pool (Nordic/Baltic markets)\n- **entsoe**: ENTSO-E Transparency Platform (all European markets)\n- **tibber**: Tibber API (if using Tibber as supplier)\n\n## Tips\n\n- All prices are EXCLUDING VAT (VAT applied separately)\n- Update tariffs when your supplier changes prices\n- Use !secret for API keys\n- Production costs often lower than consumption (or negative for feed-in credit)\n- Keep last_invoice updated for accurate cost tracking\n- Check your electricity bill for exact tariff components\n",
       "x-icon": "currency-eur",
       "x-order": 11,
       "x-ui-group": "Pricing"
+    },
+    "ProductionBonusConfig": {
+      "additionalProperties": true,
+      "description": "Supplier bonus on feed-in during a daily time window (e.g. Zonneplan Zonnebonus).",
+      "properties": {
+        "percentage": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "description": "Bonus percentage by date (YYYY-MM-DD -> %)",
+          "title": "Percentage",
+          "type": "object",
+          "x-help": "Bonus percentage on the feed-in base price, indexed by effective date. Before the first date no bonus applies; use 0 to end the bonus. Format: {'2025-01-01': 10}.",
+          "x-ui-section": "Production bonus",
+          "x-unit": "%",
+          "x-validation-hint": "Dict with YYYY-MM-DD keys, values 0-100"
+        },
+        "window": {
+          "default": "sun",
+          "description": "Time window in which the bonus applies",
+          "enum": [
+            "sun",
+            "fixed"
+          ],
+          "title": "Window",
+          "type": "string",
+          "x-help": "'sun': from sunrise to sunset (Zonneplan, Frank Energie). 'fixed': between 'start' and 'end' local time every day (NextEnergy: 06:00-22:00).",
+          "x-ui-section": "Production bonus"
+        },
+        "start": {
+          "default": "06:00",
+          "description": "Start of the fixed window (HH:MM local time)",
+          "title": "Start",
+          "type": "string",
+          "x-help": "Only used when window is 'fixed'.",
+          "x-ui-section": "Production bonus",
+          "x-validation-hint": "Format: HH:MM (24-hour)"
+        },
+        "end": {
+          "default": "22:00",
+          "description": "End of the fixed window (HH:MM local time)",
+          "title": "End",
+          "type": "string",
+          "x-help": "Only used when window is 'fixed'. Must be later than 'start'.",
+          "x-ui-section": "Production bonus",
+          "x-validation-hint": "Format: HH:MM (24-hour)"
+        },
+        "sun location": {
+          "default": "home",
+          "description": "Location used to calculate sunrise and sunset",
+          "enum": [
+            "home",
+            "nl_center"
+          ],
+          "title": "Sun Location",
+          "type": "string",
+          "x-help": "'home': the latitude/longitude of your Home Assistant installation. 'nl_center': KNMI De Bilt, as reference for the Netherlands. Only used when window is 'sun'.",
+          "x-ui-section": "Production bonus"
+        },
+        "include supplier cost": {
+          "default": true,
+          "description": "Include the supplier production cost in the bonus base",
+          "title": "Include Supplier Cost",
+          "type": "boolean",
+          "x-help": "When true the bonus is calculated over (market price + cost supplier production), as Zonneplan does ((market + 0.02) x 10%). When false only over the market price (NextEnergy: market x 50%). The bonus is added excluding taxes and VAT.",
+          "x-ui-section": "Production bonus"
+        },
+        "only positive price": {
+          "default": true,
+          "description": "Only grant the bonus when the bonus base is positive",
+          "title": "Only Positive Price",
+          "type": "boolean",
+          "x-help": "When true no bonus is given in intervals where the bonus base price is zero or negative.",
+          "x-ui-section": "Production bonus"
+        },
+        "annual cap": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum feed-in per calendar year that receives the bonus (kWh)",
+          "title": "Annual Cap",
+          "x-help": "The bonus stops for the rest of the calendar year once this much feed-in has received the bonus, counted from the 'entities grid production' sensors in the report settings. Feed-in planned in the optimization horizon is not counted, so future intervals keep the full bonus until the cap is reached by recorded feed-in. Leave empty for no cap. Zonneplan: 7500.",
+          "x-ui-section": "Production bonus",
+          "x-unit": "kWh"
+        }
+      },
+      "required": [
+        "percentage"
+      ],
+      "title": "ProductionBonusConfig",
+      "type": "object"
     },
     "ReportConfig": {
       "additionalProperties": true,

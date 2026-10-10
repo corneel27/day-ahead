@@ -53,6 +53,7 @@
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
   - [PricePrediction](#priceprediction)
+  - [ProductionBonusConfig](#productionbonusconfig)
   - [ScheduleEntry](#scheduleentry)
   - [SecretStr](#secretstr)
   - [SocPowerLimit](#socpowerlimit)
@@ -1306,6 +1307,39 @@ All tariff fields use date-indexed dictionaries:
 
 System uses tariff active on optimization date.
 
+## Production Bonus
+
+Some suppliers pay a bonus on feed-in during part of the day. Per interval:
+
+bonus = percentage × (market + supplier production cost), added to the production price
+(excluding taxes and VAT), only inside the window and when the base is positive.
+
+Zonneplan Zonnebonus (10% from sunrise to sunset, max 7500 kWh per year):
+```json
+"production bonus": {
+  "percentage": {"2025-01-01": 10},
+  "window": "sun",
+  "annual cap": 7500
+}
+```
+
+NextEnergy (50% over the market price, 06:00-22:00):
+```json
+"production bonus": {
+  "percentage": {"2025-01-01": 50},
+  "window": "fixed", "start": "06:00", "end": "22:00",
+  "include supplier cost": false
+}
+```
+
+Intervals that are only partly inside the window get a proportional share of the bonus.
+The annual cap is counted from the recorded grid feed-in: the `entities grid production`
+sensors in the report settings, or else the `prod` values in the DAO database.
+Only feed-in inside the window with a positive bonus base counts; hourly values are
+spread evenly over their quarters before that check. Planned (future) feed-in is not
+counted, so all intervals in the planning horizon get the full bonus as long as the
+recorded feed-in is below the cap.
+
 ## Data Sources
 
 - **nordpool**: Nord Pool (Nordic/Baltic markets)
@@ -1339,6 +1373,7 @@ System uses tariff active on optimization date.
 | `multiplier production` | object (optional) | No | `{'2000-01-01': 1.0}` | Multiplier for production by date (YYYY-MM-DD -> x.xx) (Unit: `-`) _Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values_ |
 | `last invoice` | string | Yes | — | Date of last invoice (YYYY-MM-DD) _Must be YYYY-MM-DD format_ |
 | `tax refund` | boolean | No | `true` | Whether tax refund applies |
+| `production bonus` | [ProductionBonusConfig](#productionbonusconfig) (optional) | No | `null` | Supplier bonus on feed-in during a daily time window |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1394,6 +1429,10 @@ Date of last electricity invoice. Used for calculating costs since last billing 
 **`tax refund`**
 
 Enable tax refund calculation if eligible. Some regions/users get energy tax refunds for solar production.
+
+**`production bonus`**
+
+Bonus some suppliers pay on feed-in during part of the day, e.g. the Zonneplan Zonnebonus: 10% over (market price + 0.02) from sunrise to sunset, only when that sum is positive, up to 7500 kWh per year. The bonus is added to the production price per interval, so the optimizer and the reports take it into account. Leave empty when not applicable.
 
 </details>
 
@@ -2030,6 +2069,59 @@ The name of the supplier of prediction data, now there is support for epexpredic
 **`api`**
 
 The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json
+
+</details>
+
+
+### ProductionBonusConfig
+
+_Supplier bonus on feed-in during a daily time window (e.g. Zonneplan Zonnebonus)._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `percentage` | object | Yes | — | Bonus percentage by date (YYYY-MM-DD -> %) (Unit: `%`) _Dict with YYYY-MM-DD keys, values 0-100_ |
+| `window` | string | No | `"sun"` | Time window in which the bonus applies. Options: `sun`, `fixed` |
+| `start` | string | No | `"06:00"` | Start of the fixed window (HH:MM local time) _Format: HH:MM (24-hour)_ |
+| `end` | string | No | `"22:00"` | End of the fixed window (HH:MM local time) _Format: HH:MM (24-hour)_ |
+| `sun location` | string | No | `"home"` | Location used to calculate sunrise and sunset. Options: `home`, `nl_center` |
+| `include supplier cost` | boolean | No | `true` | Include the supplier production cost in the bonus base |
+| `only positive price` | boolean | No | `true` | Only grant the bonus when the bonus base is positive |
+| `annual cap` | number (optional) | No | `null` | Maximum feed-in per calendar year that receives the bonus (kWh) (Unit: `kWh`) |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`percentage`**
+
+Bonus percentage on the feed-in base price, indexed by effective date. Before the first date no bonus applies; use 0 to end the bonus. Format: {'2025-01-01': 10}.
+
+**`window`**
+
+'sun': from sunrise to sunset (Zonneplan, Frank Energie). 'fixed': between 'start' and 'end' local time every day (NextEnergy: 06:00-22:00).
+
+**`start`**
+
+Only used when window is 'fixed'.
+
+**`end`**
+
+Only used when window is 'fixed'. Must be later than 'start'.
+
+**`sun location`**
+
+'home': the latitude/longitude of your Home Assistant installation. 'nl_center': KNMI De Bilt, as reference for the Netherlands. Only used when window is 'sun'.
+
+**`include supplier cost`**
+
+When true the bonus is calculated over (market price + cost supplier production), as Zonneplan does ((market + 0.02) x 10%). When false only over the market price (NextEnergy: market x 50%). The bonus is added excluding taxes and VAT.
+
+**`only positive price`**
+
+When true no bonus is given in intervals where the bonus base price is zero or negative.
+
+**`annual cap`**
+
+The bonus stops for the rest of the calendar year once this much feed-in has received the bonus, counted from the 'entities grid production' sensors in the report settings. Feed-in planned in the optimization horizon is not counted, so future intervals keep the full bonus until the cap is reached by recorded feed-in. Leave empty for no cap. Zonneplan: 7500.
 
 </details>
 
