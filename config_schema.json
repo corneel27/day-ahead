@@ -246,14 +246,14 @@
           "title": "Bat To Dc Max Power"
         },
         "cycle cost": {
-          "description": "Cost per battery cycle in euros",
+          "description": "Battery wear cost per kWh moved, charged on charging and on discharging",
           "minimum": 0,
           "title": "Cycle Cost",
           "type": "number",
-          "x-help": "Degradation cost per full charge-discharge cycle in euros. Used to factor battery wear into optimization. Calculate as: (battery_cost / warranted_cycles). Example: €5000 battery with 6000 cycles = €0.83/cycle.",
+          "x-help": "Degradation cost in euros per kWh moved in or out of the battery, measured on the DC side. It is charged twice per cycle: once on the charge leg and once on the discharge leg (half cycles). One full charge-discharge of E kWh therefore costs about 2 × cycle cost × E. Convert a per-cycle figure with: cycle cost = battery_cost / (warranted_cycles × capacity × 2). Example: a €5000, 10 kWh battery warranted for 6000 cycles is €0.83 per full cycle, so enter 5000 / (6000 × 10 × 2) = 0.042 €/kWh.",
           "x-ui-section": "Power Configuration",
-          "x-unit": "€",
-          "x-validation-hint": "Must be >= 0, typically €0.50-€1.50 per cycle"
+          "x-unit": "€/kWh",
+          "x-validation-hint": "Must be >= 0, typically €0.01-€0.05 per kWh"
         },
         "entity set power feedin": {
           "anyOf": [
@@ -1179,6 +1179,22 @@
           "x-ui-section": "General",
           "x-ui-widget-filter": "input_datetime,datetime",
           "title": "Entity Stop Charging"
+        },
+        "entity charging schedule": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA text entity for the calculated charging schedule",
+          "x-help": "Optional Home Assistant text entity where DAO writes all planned EV charging periods, including their amperage and partial-interval end times, after each optimization.",
+          "x-ui-section": "General",
+          "x-ui-widget-filter": "input_text,text",
+          "title": "Entity Charging Schedule"
         }
       },
       "required": [
@@ -2121,6 +2137,64 @@
       "x-order": 14,
       "x-ui-group": "Integration"
     },
+    "PricePrediction": {
+      "properties": {
+        "extension": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 0,
+          "description": "The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices",
+          "title": "Extension",
+          "x-help": "The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices",
+          "x-ui-section": "Prices",
+          "x-unit": "h"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "enum": [
+                "epexpredictor",
+                "energypriceforecast_eu",
+                "dap"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "dap",
+          "description": "The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
+          "title": "Source",
+          "x-help": "The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
+          "x-ui-section": "Prices"
+        },
+        "api": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+          "description": "The url of the supplier of prediction data, with which DAO can get the prediction data ",
+          "title": "Api",
+          "x-help": "The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+          "x-ui-section": "Prices"
+        }
+      },
+      "title": "PricePrediction",
+      "type": "object"
+    },
     "PricingConfig": {
       "additionalProperties": true,
       "description": "Day-ahead pricing and tariff configuration.",
@@ -2135,8 +2209,22 @@
           ],
           "title": "Source Day Ahead",
           "type": "string",
-          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' for Nordic/Baltic, 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
           "x-ui-section": "Prices"
+        },
+        "prediction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PricePrediction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
+          "x-help": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
+          "x-ui-section": "Prices",
+          "title": "Prediction"
         },
         "entsoe-api-key": {
           "anyOf": [
@@ -2204,10 +2292,10 @@
           "additionalProperties": {
             "type": "number"
           },
-          "description": "Supplier costs for production by date (YYYY-MM-DD -> euro/kWh ex VAT)",
+          "description": "Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT) negative if you must pay for feed-in, positive if you get income for feed-in ",
           "title": "Cost Supplier Production",
           "type": "object",
-          "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. May be negative (credit). Format: {'2024-01-01': -0.02}.",
+          "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. Negative if you must pay for feed-in, positive if you get income for feed-in. Format: {'2024-01-01': -0.02}.",
           "x-ui-section": "Cost",
           "x-unit": "€/kWh",
           "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)"
@@ -2439,8 +2527,14 @@
           "x-ui-widget-filter": "sensor",
           "x-unit": "kWh"
         },
-        "co2 intensity sensor": {
+        "entity co2-intensity": {
           "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/EntityId"
+              },
+              "type": "array"
+            },
             {
               "$ref": "#/$defs/EntityId"
             },
@@ -2448,13 +2542,13 @@
               "type": "null"
             }
           ],
-          "default": null,
+          "default": [],
           "description": "HA entity for CO2 intensity",
+          "title": "Entity Co2-Intensity",
           "x-help": "Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.",
           "x-ui-section": "General",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "gCO2/kWh",
-          "title": "Co2 Intensity Sensor"
+          "x-unit": "gCO2/kWh"
         },
         "sensors": {
           "anyOf": [
@@ -2501,7 +2595,8 @@
             "calc_optimum_met_debug",
             "clean_data",
             "calc_baseloads",
-            "train_ml_predictions"
+            "train_ml_predictions",
+            "predicted_prices"
           ],
           "title": "Action",
           "type": "string",
@@ -2526,6 +2621,25 @@
           "x-help": "When enabled, scheduled tasks will run automatically at configured times. Disable to prevent all scheduled tasks from running.",
           "x-order": 1,
           "x-ui-section": "Scheduler"
+        },
+        "offset": {
+          "anyOf": [
+            {
+              "maximum": 60,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 10,
+          "description": "Number of seconds the task is started before schedule-time (due to time in task start overhead)",
+          "title": "Offset",
+          "x-help": "Number of seconds the task is scheduled before schedule-time (due to time in task start overhead)",
+          "x-ui-section": "Scheduler",
+          "x-unit": "s",
+          "x-validation-hint": "Must be >= 0 and <=60, typically 10 seconds"
         },
         "schedule": {
           "description": "Scheduled task entries",

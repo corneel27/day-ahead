@@ -1,5 +1,37 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.10.0.rc1
+## Changes
+- The new V2 UI from @storeman is now the default user interface
+- @Dogooder has build new CI-testsuite which runs on GitHub. This prevents that during the development old errors return or most of new introduced errors are detected and repaired.
+- We started with the expansing of the calculation horizon.
+In this release we make a first step in the realization of that. 
+In this version you can:
+  - retrieve predicted prices up to 96 hours beyound the epex-spot horizon
+  - retrieve the needed meteo-data from meteoserver (model gfs)
+  - perform a calculation up to 96 hours beyound the epx-spot horizon<br>
+
+  Be aware that in this release the following parts are not adjusted yet and don't give the expected results:
+  - the planning of the boiler: only one heating session is planned in. We are working on a new boiler-model with more heating-sessions in the planning period.
+  - the planning of the ev: still "old style".  This will become more sofisticated with the possibility to configure a minimum SoC (with datetime) and planning will be allowed when "away" or "unplugged"
+  - the planning of the hp: there wil become a rolling window (the length will be configurable, depending on the cooling rate and your comfort demands)
+  - there is the possibility to encounter errors in the calculation results. We encourage you to find and report these errors.
+
+  There is seperate configuration topic about this new feature available in the Wiki: https://github.com/corneel27/day-ahead/wiki/2.-Installatie-en-basis-configuratie#berekeningshorizon-uitbreiden
+
+- Added option to config an offset (in seconds, default 10) to start tasks in the scheduler earlier (because of the timeoverhead of starting tasks)
+- You can get the EV planning as text in ha (thanks @jeroenribbink)
+
+## Fixes
+
+- Improve MariaDB HA statistics query performance with portable filtering (thanks @)
+- Fix/keep changes on saving configuration with json format errors
+- Get day-ahead prices from nordpool/tibber through loop and moved arguments to correct place
+- Fix battery graph crash with more than one battery
+- Extra clearification of the use of "cost_supplier_production" (reported by @dingo35)
+- Fixed error in config of CO2-intensity sensor and the calculations with it (reported by @steynovich)
+- update of several python-modules
+
 # 2026.9.1.rc1
 - removed us of pipe, let the child inherit the scheduler's stdout/stderr: (#812)
 - added git and nano to installed packages

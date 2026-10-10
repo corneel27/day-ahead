@@ -1,7 +1,7 @@
-{% macro nav_item(endpoint, label, icon=None) %}
+{% macro nav_item(endpoint, label, icon=None, url=None) %}
 <li class="nav-item">
     <a class="nav-link {% if request.endpoint == endpoint %}active{% endif %}"
-       aria-current="page" href="{{ url_for(endpoint) }}">{{label}}</a>
+       aria-current="page" href="{% if url %}{{url}}{% else %}{{ url_for(endpoint) }}{% endif %}">{{label}}</a>
 </li>
 {% endmacro %}
 
@@ -109,6 +109,17 @@
                         {{ nav_item('v2.secrets', 'Secrets') }}
                     </ul>
                 </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                       aria-expanded="false">
+                        About
+                    </a>
+                    <ul class="dropdown-menu">
+                        {{ nav_item('', 'Github', url='https://github.com/corneel27/day-ahead/') }}
+                        {{ nav_item('', 'Wiki', url='https://github.com/corneel27/day-ahead/wiki') }}
+                        {{ nav_item('v1.home', 'legacy UI') }}
+                    </ul>
+                </li>
             </ul>
             <div class="align-items-center d-flex float-end">
                 <a href="#" data-bs-theme-value="dark"
@@ -157,13 +168,10 @@
 </main>
 
 <footer class="text-muted py-3">
-    <div class="container text-center">
+    <div class="container text-center text-xs">
         <div class="row">
             <div class="col">&copy; 2026: <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2.0</a></div>
             <div class="col"><small>Version: {{version}}</small></div>
-            <div class="col"><a aria-current="page" href="{{ url_for('home') }}">legacy UI</a></div>
-            <div class="col"><a aria-current="page" href="https://github.com/corneel27/">Github</a></div>
-            <div class="col"><a aria-current="page" href="https://github.com/corneel27/day-ahead/wiki">Wiki</a></div>
         </div>
     </div>
 </footer>
