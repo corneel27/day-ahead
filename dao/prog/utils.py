@@ -320,6 +320,49 @@ def prnt_xy(x: list, y: list):
     print()
 
 
+def power_weighted_efficiency(stages: list[dict]) -> float:
+    """
+    Average efficiency of a battery power/efficiency curve.
+
+    The efficiency is integrated over the power axis with the trapezoidal rule
+    and divided by the width of the covered range, so the result describes the
+    curve itself rather than how densely it happens to be tabulated. A plain
+    mean over the rows would instead depend on the number of rows per power
+    decade, which is a property of the configuration file and not of the
+    hardware.
+
+    The zero-power sentinel is skipped: its efficiency is a placeholder for an
+    idle battery, not a measured operating point. The range integrated over is
+    therefore bounded by the lowest and the highest tabulated operating point;
+    subdividing it further leaves the result unchanged, while widening it with a
+    genuinely new operating point moves it, as it should.
+
+    :param stages: charge or discharge stages, each a dict with a "power" (W)
+        and an "efficiency" key, sorted by ascending power
+        (see BatteryStage.validate_stages_sorted)
+    :return: the power-weighted average efficiency; 1.0 when no stage above
+        0 W is defined, i.e. when the battery cannot move energy at all
+    """
+    points = [
+        (float(stage["power"]), float(stage["efficiency"]))
+        for stage in stages
+        if float(stage["power"]) > 0
+    ]
+    if not points:
+        return 1.0
+    if len(points) == 1:
+        return points[0][1]
+
+    span = points[-1][0] - points[0][0]
+    if span <= 0:  # every stage tabulated at the same power
+        return sum(efficiency for _, efficiency in points) / len(points)
+
+    area = 0.0
+    for (power_low, eff_low), (power_high, eff_high) in zip(points, points[1:]):
+        area += (eff_low + eff_high) / 2 * (power_high - power_low)
+    return area / span
+
+
 def interpol_rows(
     row, new_row, old_val, field, interval, quantity, result_df
 ) -> pd.DataFrame:
