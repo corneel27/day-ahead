@@ -3569,6 +3569,36 @@ class Report(DaBase):
         if sensors_cte is None:
             return None
 
+        # Resolve metadata IDs before the statistics query so both database
+        # engines can use a range scan on (metadata_id, start_ts).
+        with self.db_ha.engine.connect() as connection:
+            metadata_ids = list(connection.execute(
+                select(statistics_meta.c.id).where(
+                    statistics_meta.c.statistic_id.in_(
+                        select(sensors_cte.c.sensor)
+                    )
+                )
+            ).scalars())
+
+        # DISTINCT prevents derived-table merging in MariaDB and flattening
+        # in SQLite. Including the primary key preserves every source row.
+        # Keep the inclusive end boundary used by the existing interval joins.
+        filtered_statistics = (
+            select(
+                statistics.c.id,
+                statistics.c.metadata_id,
+                statistics.c.start_ts,
+                statistics.c.sum,
+            )
+            .where(
+                statistics.c.metadata_id.in_(metadata_ids),
+                statistics.c.start_ts >= int(start.timestamp()),
+                statistics.c.start_ts <= int(end.timestamp()),
+            )
+            .distinct()
+            .cte("filtered_statistics")
+        )
+
         sensor_values_cte = (
             select(
                 intervals_cte.c.ts_start.label("ts"),
@@ -3576,23 +3606,23 @@ class Report(DaBase):
                 sensors_cte.c.sensor.label("sensor"),
                 (
                         (
-                                func.max(statistics.c.sum)
-                                - func.min(statistics.c.sum)
+                                func.max(filtered_statistics.c.sum)
+                                - func.min(filtered_statistics.c.sum)
                         )
                 ).label("sensor_value"),
             )
             .select_from(
                 intervals_cte
                 .join(
-                    statistics,
+                    filtered_statistics,
                     and_(
-                        statistics.c.start_ts >= intervals_cte.c.ts_start,
-                        statistics.c.start_ts <= intervals_cte.c.ts_end,
+                        filtered_statistics.c.start_ts >= intervals_cte.c.ts_start,
+                        filtered_statistics.c.start_ts <= intervals_cte.c.ts_end,
                     ),
                 )
                 .join(
                     statistics_meta,
-                    statistics_meta.c.id == statistics.c.metadata_id,
+                    statistics_meta.c.id == filtered_statistics.c.metadata_id,
                 )
                 .join(
                     sensors_cte,
