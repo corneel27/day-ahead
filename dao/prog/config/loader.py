@@ -5,6 +5,7 @@ Configuration loader with support for versioning, migration, and unknown key pre
 import shutil
 import json
 import logging
+import threading
 from pathlib import Path
 from typing import Any, Optional, Type
 from pydantic import BaseModel, ValidationError
@@ -87,6 +88,12 @@ class ConfigurationLoader:
         logger.info(f"Loaded {len(self._secrets)} secrets from {self.secrets_path}")
         return self._secrets
 
+    @staticmethod
+    def _needs_migration(config_data: dict[str, Any]) -> bool:
+        """True when this configuration is older than CURRENT_VERSION."""
+        config_version = config_data.get("config_version")
+        return config_version is None or config_version < CURRENT_VERSION
+
     def _load_and_migrate(self) -> dict[str, Any]:
         """
         Load configuration and apply migrations if needed.
@@ -94,55 +101,81 @@ class ConfigurationLoader:
         Returns:
             Migrated configuration (not yet validated with Pydantic)
         """
-        with open(self.config_path, "r+") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+        # Alleen-lezen openen. Openen om te schrijven meldt inotify namelijk als
+        # IN_CLOSE_WRITE zodra het bestand wordt gesloten, ook als er niets is
+        # geschreven. watchdog.sh bewaakt options.json en zou dan na iedere
+        # *lezing* van de configuratie de scheduler herstarten en gunicorn
+        # herladen, waarna die de configuratie weer lezen: een eindeloze lus.
+        # Alleen een migratie schrijft echt en opent het bestand daarvoor apart.
+        with open(self.config_path, "r", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
 
             # Load raw config
             config_data = json.load(f)
 
-            # Store original for unknown key preservation
+        # Store original for unknown key preservation
+        self._raw_options = config_data.copy()
+
+        if not self._needs_migration(config_data):
+            logger.debug("Configuration is up to date, no migration needed")
+            return config_data
+
+        return self._migrate_on_disk()
+
+    def _migrate_on_disk(self) -> dict[str, Any]:
+        """
+        Migrate the configuration file to CURRENT_VERSION and write it back.
+
+        The file is reopened for writing under an exclusive lock and read once
+        more under that lock: another process may have migrated it in the
+        meantime, and migrating an already migrated configuration would
+        overwrite it with a backup of the wrong version.
+
+        Returns:
+            Migrated configuration (not yet validated with Pydantic)
+        """
+        with open(self.config_path, "r+", encoding="utf-8") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+
+            config_data = json.load(f)
             self._raw_options = config_data.copy()
 
-            # Check if migration needed
+            if not self._needs_migration(config_data):
+                logger.debug("Configuration was already migrated by another process")
+                return config_data
+
             config_version = config_data.get("config_version")
+            from_ver = (
+                "unversioned" if config_version is None else f"v{config_version}"
+            )
+            logger.info(
+                f"Configuration needs migration from {from_ver} to v{CURRENT_VERSION}"
+            )
 
-            if config_version is None or config_version < CURRENT_VERSION:
-                from_ver = (
-                    "unversioned" if config_version is None else f"v{config_version}"
-                )
-                logger.info(
-                    f"Configuration needs migration from {from_ver} to v{CURRENT_VERSION}"
-                )
+            # Save backup before migration
+            backup_path = self.config_path.parent / f"options_{from_ver}.json"
+            shutil.copy2(self.config_path, backup_path)
+            logger.info(f"Saved backup configuration to {backup_path}")
 
-                # Save backup before migration
-                backup_path = self.config_path.parent / f"options_{from_ver}.json"
-                shutil.copy2(self.config_path, backup_path)
-                logger.info(f"Saved backup configuration to {backup_path}")
+            migrated_data = migrate_config(config_data, target_version=CURRENT_VERSION)
 
-                migrated_data = migrate_config(
-                    config_data, target_version=CURRENT_VERSION
-                )
+            # Get the model class for current version
+            version = migrated_data.get("config_version", CURRENT_VERSION)
+            model_class = VERSION_MODELS[version]
 
-                # Get the model class for current version
-                version = migrated_data.get("config_version", CURRENT_VERSION)
-                model_class = VERSION_MODELS[version]
+            # Create model instance and dump to dict for saving
+            model = model_class(**migrated_data)
+            save_data = model.model_dump(mode="json", exclude_none=True)
 
-                # Create model instance and dump to dict for saving
-                model = model_class(**migrated_data)
-                save_data = model.model_dump(mode="json", exclude_none=True)
+            # Update raw options with dumped version
+            self._raw_options = save_data.copy()
 
-                # Update raw options with dumped version
-                self._raw_options = save_data.copy()
-
-                # Save migrated config back to disk
-                f.seek(0)
-                f.truncate(0)
-                json.dump(save_data, f, indent=2, ensure_ascii=False)
-                f.flush()
-                logger.info(f"Saved migrated configuration to {self.config_path}")
-            else:
-                logger.debug("Configuration is up to date, no migration needed")
-                migrated_data = config_data
+            # Save migrated config back to disk
+            f.seek(0)
+            f.truncate(0)
+            json.dump(save_data, f, indent=2, ensure_ascii=False)
+            f.flush()
+            logger.info(f"Saved migrated configuration to {self.config_path}")
 
             return migrated_data
 
@@ -218,3 +251,95 @@ class ConfigurationLoader:
         if self._secrets is None:
             self._load_secrets()
         return self._secrets
+
+
+def file_stamp(path: Path) -> Optional[tuple[int, int]]:
+    """
+    Returns a change-stamp of a file: (modification time in ns, size in bytes).
+
+    Returns None when the file does not exist (or cannot be stat-ed), so a
+    missing file compares equal to a missing file and unequal to an existing one.
+    """
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return stat.st_mtime_ns, stat.st_size
+
+
+class ConfigCache:
+    """
+    Process-wide cache of the validated configuration.
+
+    Loading and validating options.json on every use is wasteful: the dashboard
+    creates a new Report (and thus a new DaBase) for every request. Caching the
+    result forever is wrong as well: a long-running process (the flask/gunicorn
+    dashboard) would keep serving the settings as they were when the process was
+    started, while short-living processes (calculation, prices, meteo, started by
+    the scheduler) do use the changed settings. That gives inconsistent results
+    between for instance the graphs and the rest-api.
+
+    So the cached configuration is reused only as long as options.json (and
+    secrets.json) are unchanged; the cache is refreshed as soon as one of them
+    is written, whichever process did the writing.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self._config: Optional[BaseModel] = None
+        self._loader: Optional[ConfigurationLoader] = None
+        self._path: Optional[Path] = None
+        self._stamp: Optional[tuple] = None
+
+    @staticmethod
+    def _stamp_of(loader: "ConfigurationLoader") -> tuple:
+        return file_stamp(loader.config_path), file_stamp(loader.secrets_path)
+
+    def get(self, config_path: Path) -> tuple[BaseModel, "ConfigurationLoader"]:
+        """
+        Returns the validated configuration and the loader that produced it,
+        loading them from disk when there is no valid cached version.
+
+        Args:
+            config_path: Path to options.json
+
+        Returns:
+            Tuple of (validated configuration, loader)
+        """
+        with self._lock:
+            path = Path(config_path).resolve()
+            if self._config is not None and self._loader is not None:
+                if path == self._path and (
+                    self._stamp_of(self._loader) == self._stamp
+                ):
+                    return self._config, self._loader
+                # niets van het vorige bestand laten staan: als het lezen van
+                # dit bestand mislukt mag de vorige configuratie niet als die
+                # van dit bestand achterblijven
+                self._clear()
+
+            loader = ConfigurationLoader(path)
+            # Take the stamp before loading: a migration rewrites options.json,
+            # which then correctly invalidates this (pre-migration) stamp.
+            stamp = self._stamp_of(loader)
+            config = loader.load_and_validate()
+            self._config = config
+            self._loader = loader
+            self._path = path
+            self._stamp = stamp
+            return config, loader
+
+    def invalidate(self) -> None:
+        """Drops the cached configuration; the next get() reloads from disk."""
+        with self._lock:
+            self._clear()
+
+    def _clear(self) -> None:
+        self._config = None
+        self._loader = None
+        self._path = None
+        self._stamp = None
+
+
+# Process-wide cache, shared by every DaBase-object in the process
+config_cache = ConfigCache()

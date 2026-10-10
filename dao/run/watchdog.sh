@@ -36,7 +36,19 @@ start_gunicorn() {
 }
 
 start_inotify() {
-    inotifywait -q -e modify "${WATCH_FILES[@]}" &
+    # Ook op move_self/delete_self wachten: een editor of een kopieeractie
+    # schrijft het bestand vaak niet ter plaatse, maar vervangt het. Dan komt
+    # er geen modify-event en zou een wijziging gemist worden.
+    #
+    # NIET op close_write wachten: dat event komt zodra een bestand dat om te
+    # schrijven is geopend weer wordt gesloten, ook als er niets is geschreven.
+    # Een proces dat de configuratie alleen leest zou zo een wijziging melden,
+    # waarna de scheduler en gunicorn opnieuw beginnen, die de configuratie
+    # weer lezen: een eindeloze herstartlus. Iedere echte wijziging van de
+    # inhoud geeft sowieso een modify-event.
+    inotifywait -q \
+        -e modify -e move_self -e delete_self \
+        "${WATCH_FILES[@]}" &
     INOTIFY_PID=$!
 }
 
