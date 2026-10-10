@@ -1003,6 +1003,7 @@ class ReplayIO:
         self._patches = _PatchList()
         self._primary = None
         self._reads: set[str] = set()
+        self._post_solve_misses: set[str] = set()
         self._freeze = None  # freezegun handle, set in _install_patches
         self._model = None  # last mip.Model.optimize() was called on
         self._cbc_log_chunks: list[str] = []
@@ -1060,6 +1061,13 @@ class ReplayIO:
         run — lets a caller detect a scenario override that nothing
         actually consulted (e.g. an entity_id typo in a test fixture)."""
         return set(self._reads)
+
+    @property
+    # Geeft de entity's terug die pas na de solve werden opgevraagd en niet in de snapshot zaten.
+    def post_solve_misses(self) -> set[str]:
+        """Entity ids read after ``optimize()`` that the snapshot lacks and
+        that got a placeholder state instead of a ``SnapshotMiss``."""
+        return set(self._post_solve_misses)
 
     @property
     # Geeft de meta-sectie van de snapshot terug.
@@ -1167,10 +1175,28 @@ class ReplayIO:
 
         self._patches.set(DaBase, "__init__", _wrapped_init)
 
-        # Levert de opgeslagen state terug en faalt hard als de gevraagde entity niet in de snapshot zit.
+        # Levert de opgeslagen state terug en faalt hard als de gevraagde entity niet in de snapshot zit,
+        # behalve na de solve: dan krijgt de entity een placeholder.
         def _replay_get_state(instance, entity_id, *args, **kwargs):
             self._reads.add(entity_id)
             if entity_id not in self._ha_states:
+                # Na optimize() leest calc_optimum() alleen nog states om
+                # te loggen en om HA-schrijfacties te kiezen, en die zijn in
+                # replay al no-ops. Een capture zonder oplossing komt nooit
+                # in die fase, dus zulke entity's ontbreken in de snapshot.
+                # "0" werkt zowel voor de on/off-vergelijkingen als voor de
+                # float() op de stooklijnaanpassing.
+                if self._model is not None:
+                    if entity_id not in self._post_solve_misses:
+                        logger.warning(
+                            "ReplayIO (%s): entity '%s' ontbreekt in de "
+                            "snapshot en wordt pas na de solve gelezen; "
+                            "placeholder '0' gebruikt",
+                            self._source,
+                            entity_id,
+                        )
+                    self._post_solve_misses.add(entity_id)
+                    return _FakeState("0")
                 raise SnapshotMiss(
                     f"ReplayIO ({self._source}): entity '{entity_id}' is not "
                     f"present in the snapshot's ha_states — either the "
@@ -2799,6 +2825,7 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
             # from failure below.
             dacalc.calc_optimum()
         reads = sorted(replay.reads)
+        post_solve_misses = sorted(replay.post_solve_misses)
         result_dict = replay.build_result()
         solved = replay._model is not None and replay._model.num_solutions > 0
     finally:
@@ -2821,6 +2848,7 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
         "snapshot": str(snapshot_path),
         "result": str(result_path) if result_path else None,
         "reads": reads,
+        "post_solve_misses": post_solve_misses,
         "offline": bool(args.offline),
         "threads": args.threads,
         "png": bool(args.png),
@@ -2833,6 +2861,11 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
         print(f"threads:  {d['threads']}" + (" (all cores — pass --threads 1 for reproducibility)" if d["threads"] == -1 else ""))
         print(f"png:      {d['png']}" + ("" if d["png"] else " (pass --png to keep the chart)"))
         print(f"entities read: {len(d['reads'])}")
+        if d["post_solve_misses"]:
+            print(
+                "not in snapshot, read after the solve (placeholder '0'): "
+                + ", ".join(d["post_solve_misses"])
+            )
         print(f"result:   {d['result']}" if d["result"] else "result:   not written (solve never reached model.optimize())")
 
     _emit(args, data, render)
