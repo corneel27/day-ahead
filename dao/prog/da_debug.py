@@ -42,6 +42,7 @@ snapshot to get a solved model plus its registry.
 from __future__ import annotations
 
 import argparse
+import copy
 import datetime as dt
 import hashlib
 import io
@@ -1122,7 +1123,15 @@ class ReplayIO:
                 f"ReplayIO ({self._source}): snapshot has no 'config' field; "
                 f"cannot replay without a config to construct DaBase from."
             )
-        rehydrated_config = _rehydrate_config(self._config_dict)
+        # A capture made inside the add-on has hasstoken=None (DaBase then
+        # falls back to $SUPERVISOR_TOKEN); outside the add-on that env var
+        # is absent and hassapi dies on a missing HASS_TOKEN. Replay never
+        # talks to HA, so the redaction marker is a sufficient token.
+        config_dict = copy.deepcopy(self._config_dict)
+        ha_cfg = config_dict.setdefault("homeassistant", {})
+        if ha_cfg.get("hasstoken") is None:
+            ha_cfg["hasstoken"] = REDACTED_SECRET
+        rehydrated_config = _rehydrate_config(config_dict)
         self._patches.set(DaBase, "_config", rehydrated_config)
         self._patches.set(DaBase, "_loader", _FakeLoader())
 
