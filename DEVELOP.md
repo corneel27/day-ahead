@@ -11,6 +11,7 @@ This guide will help developers set up their development environment, test chang
 - [Testing](#testing)
 - [Making Contributions](#making-contributions)
 - [Code Style and Best Practices](#code-style-and-best-practices)
+- [Releasing](#releasing)
 
 ---
 
@@ -463,6 +464,60 @@ logger.exception("Exception with traceback")
 - Use configuration files (JSON) for settings
 - Keep example configurations in the repository
 - Document all configuration options
+
+---
+
+## Releasing
+
+Version numbers are typed in one place only: the **Prepare release** workflow.
+Everything downstream reads the version back from `config.yaml`.
+
+### Creating a release
+
+1. Run the **Prepare release** workflow (Actions -> Prepare release -> Run
+   workflow) and fill in:
+   - `version`: e.g. `2026.9.2` for a stable release, `2026.9.2.rc1` for a
+     testing release
+   - `channel`: leave at `auto`, which picks `release-testing` for an `rc`
+     version and `dao` for any other version
+   - `changelog`: the entries for this version, one per line (a leading `- ` is
+     added when missing)
+
+   The workflow writes the version into the matching `config.yaml`, opens a
+   section for it in that `CHANGELOG.md`, commits that, and creates a **draft**
+   release for the new version.
+
+2. Check the draft release notes on GitHub and publish the release.
+
+3. Publishing triggers **Build and publish**, which reads the version from
+   `config.yaml` again and pushes the images to ghcr.io:
+   - stable: tagged `<version>`, `stable` and `latest`
+   - testing: tagged `<version>` and `testing`
+
+Editing the version in `dao/config.yaml` or `release-testing/config.yaml` by
+hand still works: a push to `main` that touches one of those files creates the
+draft release as before.
+
+### Rebuilding images by hand
+
+**Build and publish** can also be started manually:
+
+- `release_tag`: leave empty to build the version that is in `config.yaml`;
+  fill it in only to assert which version you expect to build (the run fails
+  when it does not match either `config.yaml`)
+- `channel`: which of the two add-ons to build when no tag is given
+- `architectures`: `all`, or a single `amd64` / `aarch64` to rebuild just that
+  architecture
+- `publish_manifest`: only relevant for a single-architecture build. A partial
+  build normally stops after pushing its own `<arch>-dao` image, because the
+  multi-architecture manifest of `ghcr.io/corneel27/dao:<tag>` needs every
+  architecture. Tick this box when the other architecture is already published
+  for this tag (for example when you are re-running one failed build) and the
+  manifest should be (re)published.
+
+**Test Builder** builds the same images without pushing them; it runs on every
+pull request for all architectures and can be started by hand for a single
+architecture.
 
 ---
 
