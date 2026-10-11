@@ -24,7 +24,7 @@ In this version you can:
 
 ## Fixes
 
-- Improve MariaDB HA statistics query performance with portable filtering (thanks @)
+- Improve MariaDB HA statistics query performance with portable filtering (thanks @lasoul)
 - Fix/keep changes on saving configuration with json format errors
 - Get day-ahead prices from nordpool/tibber through loop and moved arguments to correct place
 - Fix battery graph crash with more than one battery
