@@ -20,6 +20,9 @@
         <button type="submit" name="task" value="update_prices" class="btn btn-outline-secondary">Update day ahead
             prices
         </button>
+        <button type="submit" name="task" value="predicted_prices" class="btn btn-outline-secondary">Update predicted
+            prices
+        </button>
         <button type="submit" name="task" value="train_ml" class="btn btn-outline-secondary">Train ML models
         </button>
         <a href="{{url_for('v2.task_cancel')}}" hx-boost="false" hx-get="{{url_for('v2.task_cancel')}}" hx-target="#status-target" class="btn btn-outline-danger disabled" id="run-cancel">Cancel</a>

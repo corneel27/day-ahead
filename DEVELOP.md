@@ -226,6 +226,60 @@ cd dao/webserver
 npm run build
 ```
 
+#### Developing on a remote machine
+
+Running the code on a server, NAS or VM and opening the web interface from your
+laptop works without extra configuration: the page requests the Vite assets from
+the same host you typed in the address bar, and Vite advertises its own address
+for anything it generates itself (the icon fonts, for instance).
+
+What you do have to arrange:
+
+- **Port 5173 must be reachable** from your browser. Vite listens on all
+  interfaces, but the firewall of the development machine has to allow it.
+- **When you use a hostname** instead of an IP address, add it to
+  `VITE_DEV_ALLOWED_HOSTS`. Vite rejects unknown `Host` headers to protect against
+  DNS rebinding, and only sends the CORS headers that let the page read the assets
+  to known origins. IP addresses and `localhost` are always accepted.
+
+  ```bash
+  export VITE_DEV_ALLOWED_HOSTS=dao.local
+  ```
+
+- **When you tunnel the port over SSH**, the page is served on `localhost` and the
+  auto-detected Vite address is the LAN address of the server, which the browser
+  may not be able to reach. Pin both sides to `localhost`:
+
+  ```bash
+  ssh -L 5000:localhost:5000 -L 5173:localhost:5173 user@dev-machine
+  export VITE_DEV_HOST=localhost   # for the Vite server
+  ```
+
+If you only work on the Python code, skip the Vite server entirely: build the
+assets once and start the webserver without `VITE_DEV`.
+
+```bash
+cd dao/webserver
+npm run build
+unset VITE_DEV        # note: run_dev.sh always sets it, so start da_server.py directly
+python da_server.py --debug
+```
+
+You lose hot reloading of stylesheets, which does not matter when only touching
+Python.
+
+#### Frontend environment variables
+
+| Variable | Used by | Default | Purpose |
+| --- | --- | --- | --- |
+| `VITE_DEV` | webserver | unset | When `1`, load the assets from the Vite dev server instead of from `app/static/build`. |
+| `VITE_DEV_PORT` | webserver, Vite | `5173` | Port of the Vite dev server. |
+| `VITE_DEV_SERVER` | webserver | derived from the request | Pin the base URL the browser uses for the assets, for example `http://127.0.0.1:5173` behind a proxy. |
+| `VITE_DEV_HOST` | Vite | first non-internal IPv4 | Address Vite advertises in the asset URLs it generates. |
+| `VITE_DEV_ALLOWED_HOSTS` | Vite | empty | Comma separated hostnames Vite accepts, both as `Host` header and as the origin allowed to fetch the assets, besides `localhost` and IP addresses. |
+| `FLASK_PORT` | webserver | `5000` | Port of the Flask development server. |
+
+
 #### Option 2: Run with Gunicorn (Production-like Environment)
 
 For testing in a production-like environment:

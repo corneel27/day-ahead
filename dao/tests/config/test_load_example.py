@@ -66,6 +66,15 @@ def test_battery_has_all_fields(options_example_data):
     print(f"✅ Battery has {len(battery.solar)} DC-coupled solar installation(s)")
 
 
+def test_ev_has_charging_schedule_entity(options_example_data):
+    """The optional EV schedule text entity is accepted and exposed by the model."""
+    options_example_data["config_version"] = 0
+    config = ConfigurationV0(**options_example_data)
+
+    ev = config.electric_vehicle[0]
+    assert ev.entity_charging_schedule == "input_text.ev_laadplanning"
+
+
 def test_pricing_date_based_fields(options_example_data):
     """Test that pricing date-based fields are loaded correctly."""
     options_example_data["config_version"] = 0
