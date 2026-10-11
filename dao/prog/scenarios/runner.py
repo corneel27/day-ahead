@@ -84,6 +84,8 @@ def _solar_patch(scenario: Scenario):
     start = parse_start(scenario.start)
     grid = model_grid(start, scenario.fixed_hours, scenario.predicted_hours)
     total_kw = solar_quarter_series(scenario)  # one value per model interval, on grid
+    # day_ahead reads "prediction" as kWh per interval, not kW.
+    row_hours = model_row_hours(scenario.fixed_hours, scenario.predicted_hours)
 
     def calc_solar_predictions(self, solar_option, vanaf, tot, interval=None, _ml_prediction=None):
         caps = []
@@ -96,11 +98,11 @@ def _solar_patch(scenario: Scenario):
         share = _capacity_of(solar_option) / total_cap
 
         rows_tijd, rows_pred = [], []
-        for t, kw in zip(grid, total_kw, strict=False):
+        for t, kw, hours in zip(grid, total_kw, row_hours):
             if t < vanaf or t >= tot:
                 continue
             rows_tijd.append(t)
-            rows_pred.append(round(kw * share, 6))
+            rows_pred.append(round(kw * hours * share, 6))
         return pd.DataFrame({"tijd": rows_tijd, "prediction": rows_pred})
 
     return calc_solar_predictions
