@@ -89,10 +89,8 @@ class CheckDB:
         :return:
         """
 
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.engine
-        )
-        values_table = Table(tablename, self.db_da.metadata, autoload_with=self.engine)
+        variabel_table = self.db_da.get_table("variabel")
+        values_table = self.db_da.get_table(tablename)
         query = select(
             values_table.c.time.label("time"),
             literal_column("'" + column_name + "'").label("code"),
@@ -114,7 +112,7 @@ class CheckDB:
         tablename: str,
         variabel_id: int,
     ):
-        values_table = Table(tablename, self.db_da.metadata, autoload_with=self.engine)
+        values_table = self.db_da.get_table(tablename)
         delete_stmt = delete(values_table).where(
             values_table.c.variabel == variabel_id,
         )
