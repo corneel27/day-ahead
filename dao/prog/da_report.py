@@ -3602,10 +3602,8 @@ class Report(DaBase):
                 sensors_cte.c.code.label("code"),
                 sensors_cte.c.sensor.label("sensor"),
                 (
-                        
-                                func.max(filtered_statistics.c.sum)
-                                - func.min(filtered_statistics.c.sum)
-                        
+                    func.max(filtered_statistics.c.sum)
+                    - func.min(filtered_statistics.c.sum)
                 ).label("sensor_value"),
             )
             .select_from(
