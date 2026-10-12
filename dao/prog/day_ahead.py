@@ -162,7 +162,7 @@ class DaCalc(DaBase):
                 "Er ontbreken kwartier- of uurwaarden van de day-ahead tarieven, "
                 "de berekening wordt afgebroken"
             )
-            return None
+            return False
 
         end_prog = price_data["time"].iloc[-1]
         if self.interval == "15min" and horizon_extension == 0:
@@ -172,7 +172,7 @@ class DaCalc(DaBase):
                     "Er ontbreken kwartierwaarden van de day-ahead tarieven, "
                     "de berekening wordt afgebroken"
                 )
-                return None
+                return False
 
         while price_data.iloc[0]["time"] < start_interval_dt:
             price_data = price_data.iloc[1:]
@@ -185,7 +185,7 @@ class DaCalc(DaBase):
         )
         if fixed_prog_data is None or len(fixed_prog_data) == 0:
             logging.error("Er ontbreken meteo waarden, de berekening wordt afgebroken")
-            return None
+            return False
         if horizon_extension > 0:
             end_prediction_dt = (pred_price_data.iloc[-1]["time"] + dt.timedelta(seconds=3600)).to_pydatetime()
             end_prediction_ts = end_prediction_dt.timestamp()
@@ -212,7 +212,7 @@ class DaCalc(DaBase):
             self.notify(
                 "Er ontbreken voor een aantal uur gegevens; er kan niet worden gerekend"
             )
-            return None
+            return False
         if u_data <= 8 or u_prices <= 8:
             logging.warning(
                 "Er ontbreken voor een aantal uur meteogegevens "
@@ -1135,7 +1135,7 @@ class DaCalc(DaBase):
                     f"'min soc end opt' ({min_soc_end_opt}); "
                     f"het programma kan nu geen optimale oplossing berekenem"
                 )
-                return None
+                return False
 
             model += soc[b][U] >= max(opt_low_level[b] / 2, min_soc_end_opt)
             model += soc[b][U] <= max_soc_end_opt
@@ -3356,7 +3356,7 @@ class DaCalc(DaBase):
             logging.info(f"Model status: {status}")
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
-                return None
+                return False
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
             logging.info(f"Strategie: {strategie}")
@@ -3367,7 +3367,7 @@ class DaCalc(DaBase):
                 _log_native_output(native["cbc_log"])
             if model.num_solutions == 0:
                 logging.warning(f"Geen oplossing voor: {self.strategy}")
-                return None
+                return False
             min_delivery = max(0.0, delivery.x)
             logging.info("Eerste berekening")
             logging.info(f"Kosten (euro): {cost.x:<6.2f}")
@@ -3388,7 +3388,7 @@ class DaCalc(DaBase):
                     logging.warning(
                         f"Geen oplossing in na herberekening voor: {self.strategy}"
                     )
-                    return None
+                    return False
             logging.info(f"Model status: {status}")
             logging.info("Herberekening")
             logging.info(f"Kosten (euro): {cost.x:<6.2f}")
@@ -3396,7 +3396,7 @@ class DaCalc(DaBase):
         else:
             logging.error("Kies een strategie in options")
             # strategie = 'niet gekozen'
-            return None
+            return False
 
         # Suppress FutureWarning messages
         # import warnings
@@ -3407,7 +3407,7 @@ class DaCalc(DaBase):
             logging.error(
                 "Er is helaas geen oplossing gevonden, kijk naar je instellingen."
             )
-            return None
+            return False
 
         # er is een oplossing
         # afdrukken van de resultaten
@@ -5277,7 +5277,7 @@ class DaCalc(DaBase):
         )
         plt.close("all")
         self.notify("DAO calc afgerond", self.notification_berekening)
-        return None
+        return True
 
     def calc_optimum_debug(self):
         self.debug = True
@@ -5305,6 +5305,8 @@ def main():
     da_calc = DaCalc("../data/options.json")
     if da_calc.config is None:
         return
+
+    exit_code = 0
     if len(sys.argv) > 1:
         args = sys.argv[1:]
         for arg in args:
@@ -5313,40 +5315,44 @@ def main():
                 continue
             if arg.lower() == "calc":
                 if da_calc.debug:
-                    da_calc.run_task_function("calc_optimum_met_debug")
+                    exit_code = da_calc.run_task_function("calc_optimum_met_debug")
                 else:
-                    da_calc.run_task_function("calc_optimum")
+                    exit_code = da_calc.run_task_function("calc_optimum")
                 continue
             if arg.lower() == "meteo":
-                da_calc.run_task_function("meteo")
+                exit_code = da_calc.run_task_function("get_meteo_data")
                 continue
             if arg.lower() == "prices":
-                da_calc.run_task_function("prices")
+                exit_code = da_calc.run_task_function("get_day_ahead_prices")
                 continue
             if arg.lower() == "predicted_prices":
-                da_calc.run_task_function("predicted_prices")
+                exit_code = da_calc.run_task_function("predicted_prices")
                 continue
             if arg.lower() == "tibber":
-                da_calc.run_task_function("tibber")
+                exit_code = da_calc.run_task_function("get_tibber_data")
                 continue
             if arg.lower() == "clean":
-                da_calc.run_task_function("clean")
+                exit_code = da_calc.run_task_function("clean_data")
                 continue
             if arg.lower() == "consolidate":
-                da_calc.run_task_function("consolidate")
+                exit_code = da_calc.run_task_function("consolidate")
                 continue
             if arg.lower() == "calc_baseloads":
-                da_calc.run_task_function("calc_baseloads")
+                exit_code = da_calc.run_task_function("calc_baseloads")
                 continue
             if arg.lower() == "train":
-                da_calc.run_task_function("train_ml_predictions")
+                exit_code = da_calc.run_task_function("train_ml_predictions")
                 continue
-    da_calc.db_da.log_pool_status()
-    import platform
-    machine = platform.machine()
-    if machine == "aarch64" or machine == "arm64":
-        os._exit(0)
 
+            if exit_code is False:
+                exit_code = 1
+
+            if exit_code > 0:
+                break
+
+    da_calc.db_da.log_pool_status()
+
+    os._exit(exit_code)
 
 if __name__ == "__main__":
     main()
