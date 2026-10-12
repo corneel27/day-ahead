@@ -1,85 +1,170 @@
-# Ruff introduction plan
+# Plan for full Ruff support
 
-## Objective and scope
+## Goal
 
-Introduce a reproducible Python lint gate on `chore/introduce-ruff`, based on
-`main` at `9be7c2fea7bd923f12e4d0420d2a0f367cc126ad`. Keep changes reviewable
-in separate commits. Do not change solver objectives, scenario baselines,
-release versions, dependencies used by the add-on, or live Home Assistant data.
+We want Python quality checks to be part of our normal development workflow:
+feedback while editing, consistent local fixes, and the same checks on every
+pull request. Lint and formatting failures should be resolved before merging,
+and upgrades should follow a repeatable review process.
 
-The initial gate covers all repository Python sources, including the tracked
-tests that are currently matched by `.gitignore`. Select `E4`, `E7`, `E9`, `F`,
-`I`, `UP`, and `B` explicitly, target Python 3.12, and pin Ruff to 0.16.10.
-Avoid changing the rule set automatically when Ruff defaults change.
+For this repository, full Ruff support means a shared pinned configuration,
+linting and formatting of all maintained Python sources and tests, documented
+editor and pre-commit integration, required CI checks, and an actively maintained
+rule set supported by behavioral tests.
 
-## Steps and acceptance criteria
+We will introduce this in stages to keep review and upstream updates manageable.
+The lint foundation is implemented on `chore/introduce-ruff` in
+[PR #1](https://github.com/patrickvorgers/day-ahead/pull/1). It is ready for review;
+adoption on the default branch still requires merging.
 
-1. **Record the plan and baseline.** Inspect repository instructions, workflows,
-   supported Python version, and test isolation. Baseline: 94 Python files,
-   511 diagnostics under the selected rules, 452 diagnostics with a fix that
-   Ruff classifies as safe. These are lint findings, not a count of runtime bugs.
-2. **Configure and perform mechanical cleanup.** Add `ruff.toml` and a separate
-   pinned lint requirements file. Apply safe fixes only, inspect the diff for
-   import side effects and runtime annotation changes, and keep this separate
-   from manual behavior fixes. Do not use `--unsafe-fixes`.
-3. **Review remaining findings and verify behavior.** Fix actual defects with
-   targeted regression coverage. Make intentional behavior explicit (for example
-   truncating `zip`), and use narrowly scoped, explained suppressions for required
-   startup imports and framework patterns. Do not add a blanket legacy baseline
-   or weaken the rules to hide remaining findings. Run configuration, scenario,
-   query, EV schedule/harness, and isolated web route tests where supported.
-   Compare failures against the unchanged base before attributing them to Ruff.
-4. **Enable the gate and document contributor commands.** Add an independent
-   GitHub Actions lint workflow for pushes and pull requests; it must not need
-   the solver/database dependencies. Verify `ruff check .` exits successfully,
-   confirm tracked test discovery, publish the branch and a draft pull request,
-   and inspect the GitHub lint and existing scenario checks on the final commit.
+## Current status
 
-## Follow-up: formatter
+| Area | Implemented now | Remaining work | Developer benefit |
+| --- | --- | --- | --- |
+| Shared configuration | Ruff 0.16.10, Python 3.12 target, explicit rules, separate lint requirements | Maintain the version pins together | Local and CI results are reproducible |
+| Lint coverage | All 96 tracked Python files included; zero findings under the selected rules | Merge the introduction and maintain the clean baseline | Common mistakes are detected before they accumulate |
+| CI | Independent **Ruff lint** job on pushes and pull requests | Require lint before merging | Automated feedback becomes merge protection |
+| Formatting | Ruff is available; repository-wide formatting is not yet adopted | Agree on settings, format the code, add a CI check | Consistent layout and less style-review effort |
+| Developer tools | Installation and lint commands documented in `DEVELOP.md` | Add editor guidance and pinned pre-commit hooks | Earlier feedback and fewer avoidable CI failures |
+| Behavioral verification | Scenario and isolated regression checks are green for the foundation | Keep them green during later stages | Cleanup is checked against application behavior |
+| Maintenance | Version and rule selection are explicit | Define upgrade cadence, ownership and rule review | Tooling improvements remain predictable |
 
-Full `ruff format` enforcement is deliberately a separate follow-up. The initial
-measurement would reformat 87 of 94 files; keeping that churn out of the lint
-introduction makes upstream merges and review easier. If adopted later, use one
-mechanical formatting commit, rerun the behavioral tests, and then enable
-`ruff format --check .`. Do not enable a knowingly failing formatter gate now.
+## Stage 1 — Establish the lint foundation
 
-## Verification record
+**Status: implemented on the introduction branch; review and merge remain.**
 
-- The configuration and cleanup are committed separately from reviewed fixes
-  and CI wiring. The branch is available as [draft PR #1](https://github.com/patrickvorgers/day-ahead/pull/1).
-- Ruff 0.16.10 passes with zero diagnostics. Discovery includes all 96 tracked
-  Python files (the 94 original files plus two new regression modules); the
-  additional discovered TOML file is not counted as Python. An undefined-name
-  probe under the test path is rejected with `F821` and exit 1.
-- Eight database-consumption and charging-schedule tests pass locally. The new
-  per-call end-time test fails against the unchanged base method while the
-  explicit-end test passes, demonstrating that it detects the original defect.
-- GitHub checked the initial implementation at `10bbf50`: scenario validation
-  passed, 12 solver-free tests passed (40 solve cases skipped in that unit job),
-  and the separate solver job passed all 40 cases. The expanded regression gate
-  found two pre-existing boiler round-trip failures, with 115 passes and 18
-  optional MariaDB skips. Lint, model documentation and CodeQL were green.
-- Both boiler failures reproduce in the unchanged base with the same Pydantic
-  2.13.5 version: the default COP bypasses validation and remains a raw float,
-  which the FlexFloat serializer cannot serialize. A separate fix enables
-  validation of that single field's existing `3.0` default. Existing round-trip
-  tests and an added default-value test now pass (77 model tests locally).
-  The Windows model-only comparison bypassed the package initializer that
-  eagerly imports the POSIX loader; model validation and serialization were
-  real. It does not verify file locking, loader I/O or the full Linux stack.
-- Final-head Linux results, including the rerun after the COP fix, are available
-  in the PR's checks. Those checks run the real package initialization without
-  the Windows comparison workaround. Optional MariaDB cases require a dedicated
-  disposable database and remain skipped when it is not configured.
+We have added `ruff.toml` and pinned Ruff to 0.16.10 in both
+`requirements-lint.txt` and `required-version`. The configuration targets Python
+3.12. Ruff is a development dependency, separate from the add-on runtime.
 
-No live installation was used. The legacy live-data test script and EV harness
-were not executed; the 40 hermetic scenarios cover EV planning instead. Loader
-and example-file legacy tests are not newly gated by this rollout; configuration
-coverage comes from scenario validation and the model/migration/round-trip tests.
-Full formatting and making **Ruff lint** a required branch-protection check are
-follow-ups; adding the workflow itself does not change repository protection.
+| Rules | Purpose |
+| --- | --- |
+| `E4`, `E7`, `E9` | Import conventions, problematic statements and syntax errors |
+| `F` | Undefined names, unused imports and other Pyflakes findings |
+| `I` | Consistent import ordering |
+| `UP` | Modern Python constructs for the supported version |
+| `B` | Common mistakes and risky patterns detected by Bugbear |
+
+We applied safe fixes and reviewed the remaining findings manually. Required
+Flask startup imports retain their execution order with explained exceptions.
+Existing truncating `zip` calls preserve their behavior; validated equal-length
+inputs use `strict=True`.
+
+The review fixed an undefined SQLAlchemy `Table` import, defaults that leaked
+state or captured the time at import, and a pre-existing boiler COP serialization
+defect exposed by the expanded tests. These fixes have regression coverage.
+
+**Completion criteria:** merge the reviewed branch with green lint and behavioral
+checks. The default branch then becomes our clean baseline.
+
+**What this adds:** automated detection of common Python mistakes, cleaner
+imports and a reproducible starting point for the next stages.
+
+## Stage 2 — Adopt the Ruff formatter
+
+**Status: pending.**
+
+1. Agree on line length, quote style and other shared formatting settings; record
+   them in `ruff.toml`.
+2. Measure the formatting diff on the current code. The initial assessment would
+   change 87 of 94 Python files; remeasure before applying it.
+3. Run `ruff format .` and commit the formatting as one separate mechanical change.
+4. Review the diff and rerun lint, scenario and isolated regression checks.
+5. Add `ruff format --check .` to CI with a clear, stable check name.
+
+**Completion criteria:** `ruff check .` and `ruff format --check .` pass for all
+maintained Python files, with behavioral tests still green.
+
+**What this adds:** consistent layout, fewer formatting discussions and automatic
+detection of formatting drift. One formatting commit keeps review and upstream
+merges manageable.
+
+## Stage 3 — Integrate local developer tools
+
+**Status: lint commands are documented; editor guidance and hooks are pending.**
+
+1. Document editor setup for lint feedback and formatting using the repository
+   configuration and pinned version.
+2. Add `.pre-commit-config.yaml` with pinned Ruff lint and formatter hooks.
+3. Document hook installation and full-repository local checks.
+4. Verify that editor, hook and CI results agree on representative files.
+
+Safe fixes can be applied locally, followed by diff review and relevant tests.
+Behavioral changes require explicit review and regression coverage.
+
+**Completion criteria:** a new contributor can follow the developer guide to
+install the tools, receive editor feedback and reproduce CI results.
+
+**What this adds:** developers catch and fix issues before pushing, reducing
+avoidable CI failures and review turnaround.
+
+## Stage 4 — Require checks before merging
+
+**Status: lint runs automatically; required merge checks are pending.**
+
+1. After the lint introduction is merged, configure the repository ruleset or
+   branch protection to require **Ruff lint** for pull requests.
+2. After formatter adoption, require its formatting check as well.
+3. Verify the settings with a temporary pull request containing a deliberate
+   violation, then correct it and confirm the checks pass.
+4. Document the check names and any intentional maintainer bypass policy.
+
+**Completion criteria:** a failing required Ruff check prevents merging through
+the normal contributor workflow.
+
+**What this adds:** the clean baseline becomes an enforced convention with the
+same protection for every contributor.
+
+## Stage 5 — Maintain and refine the rule set
+
+**Status: version pinning is implemented; the maintenance process is pending.**
+
+1. Review release notes when proposing an upgrade. Update both version pins and,
+   once available, hook pins in the same pull request.
+2. Run lint and formatting with the proposed version, review changed diagnostics
+   and fixes, and rerun relevant behavioral checks.
+3. Evaluate additional rule groups in small changes based on useful findings in
+   this codebase. Prioritize correctness and maintainability.
+4. Keep exceptions narrow, explained and periodically reviewed.
+5. Document upgrade cadence and ownership in the developer guide.
+
+**Completion criteria:** upgrades and rule additions have a clear review path,
+consistent versions across tools, and green lint, formatting and behavioral checks.
+
+**What this adds:** code quality keeps improving while development-tool changes
+remain predictable for contributors.
+
+## Evidence for the completed foundation
+
+The initial assessment found 511 diagnostics across 94 Python files under the
+selected rules. Those findings included style and modernization suggestions as
+well as actual defects; the number is not a count of runtime bugs.
+
+The foundation at commit `b56c020` was verified with:
+
+- Zero Ruff findings across all 96 tracked Python files.
+- An undefined-name probe correctly rejected with `F821` and exit 1.
+- Scenario validation and 12 solver-free unit tests passing.
+- All 40 solver scenarios passing against the existing baselines.
+- 118 isolated Linux regression tests passing; 18 optional MariaDB cases skipped
+  because a disposable test database was not configured.
+- Successful model-documentation, CodeQL, amd64 and aarch64 build checks.
+
+The end-time regression failed against the original method and passed after
+the fix. Boiler serialization failures also reproduced on the unchanged base
+with Pydantic 2.13.5 before their separate fix.
+
+Later stages must be verified on their own commits. Our CI uses isolated data
+and synthetic scenarios; live-installation scripts and the live EV harness are
+outside this verification. Scenario and regression tests remain responsible for
+verifying planning, queries and configuration behavior alongside Ruff.
 
 ## References
 
+- [Developer guide](../DEVELOP.md)
+- [Scenario testing guide](testing.md)
+- [Introduction pull request](https://github.com/patrickvorgers/day-ahead/pull/1)
 - [Ruff configuration](https://docs.astral.sh/ruff/configuration/)
-- [Rule selection and safe fixes](https://docs.astral.sh/ruff/linter/)
+- [Ruff linting and fix safety](https://docs.astral.sh/ruff/linter/)
+- [Ruff formatter](https://docs.astral.sh/ruff/formatter/)
+- [Ruff integrations](https://docs.astral.sh/ruff/integrations/)
