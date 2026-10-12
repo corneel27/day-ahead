@@ -97,6 +97,7 @@ class BoilerEnabled(BaseModel):
     )
     cop: FlexFloat = Field(
         default=3.0,
+        validate_default=True,
         description="Coefficient of Performance",
         json_schema_extra={
             "x-help": "Coefficient of Performance if using heat pump water heater. For resistive heating element, use 1.0. For heat pump water heater, typically 2.5-4.0.",
