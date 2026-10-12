@@ -26,9 +26,11 @@ We will introduce this in stages to keep review and upstream updates manageable.
 The lint foundation is implemented. The remaining stages align it with Ruff's
 standard defaults and add formatting, local tooling and required merge checks.
 
+Formatting and lint adoption are separate tracks with separate commits and completion criteria. Formatting can be completed while lint findings are still being resolved. Group lint changes by their review and verification needs: import cleanup, code modernization and behavioral fixes each get their own batches.
+
 ## Definition of complete adoption
 
-Ruff adoption is complete when all four stages are delivered on the target repository's default branch and:
+Ruff adoption is complete when all five stages are delivered on the target repository's default branch and:
 
 - All maintained Python sources and tests pass `ruff check .` and `ruff format --check .` using Ruff's standard stable rules and default formatter settings.
 - Local tools, pre-commit hooks and CI use the same pinned version and shared configuration, with documented reasons for necessary repository-specific settings.
@@ -59,7 +61,7 @@ development dependency, separate from the add-on runtime. See these files for
 the current version and settings.
 
 The following custom rule selection describes the implemented baseline. It will
-be replaced by Ruff's standard stable selection in Stage 2.
+be replaced by Ruff's standard stable selection in Stage 3.
 
 | Rules | Purpose |
 | --- | --- |
@@ -81,35 +83,60 @@ These criteria are met for the lint foundation.
 **What this adds:** automated detection of common Python mistakes, cleaner
 imports and a reproducible starting point for the next stages.
 
-## Stage 2 — Adopt standard Ruff rules, settings and formatting
+## Stage 2 — Adopt default formatting
 
 **Status: pending.**
 
-1. Compare the current configuration with the standard stable defaults of the
-   pinned Ruff version. Remove the custom `lint.select` and unnecessary overrides;
-   retain only the version pin and justified repository-specific settings.
-2. Run the standard lint rules, review any new findings, resolve them with safe
-   fixes or reviewed changes, and rerun the relevant behavioral tests.
-3. Use the default formatter settings: an 88-character line length, double quotes
-   and four-space indentation. Let Ruff provide these values rather than
-   duplicating them as custom overrides.
-4. Measure the formatting diff on the current code to assess review and upstream
-   merge impact before applying it.
-5. Run `ruff format .` and commit the formatting as one separate mechanical change.
-6. Review the diff and rerun lint, scenario and isolated regression checks.
-7. Add `ruff format --check .` to CI with a clear, stable check name.
+### 2.1 — Assess the formatting diff
 
-**Completion criteria:** the standard stable rules and default formatter settings
-are in use; `ruff check .` and `ruff format --check .` pass for all maintained
-Python files, with behavioral tests still green. Any remaining repository-specific
-configuration has a documented reason.
+Use Ruff's default formatter settings and measure the diff on the current code. Review the scope and upstream merge impact. This step uses the formatter only; it does not apply lint fixes or rewrite application logic.
 
-**What this adds:** a standard configuration that contributors recognize, less
-custom configuration to maintain, consistent layout and automatic detection of
-lint and formatting drift. One formatting commit keeps review and upstream
-merges manageable.
+**Completion criteria:** the formatting scope is understood and the settings match the pinned version's defaults.
 
-## Stage 3 — Integrate local developer tools
+### 2.2 — Apply and verify formatting
+
+Run `ruff format .` and commit the formatting as one separate mechanical change. Inspect the diff and run the existing lint gate and relevant scenario and regression checks. Keep import cleanup, modernization and behavioral fixes in separate commits.
+
+**Completion criteria:** `ruff format --check .` passes across all maintained Python files, the existing lint gate passes, and verification finds no behavior changes.
+
+### 2.3 — Enforce formatting in CI
+
+Add `ruff format --check .` as a separate CI check with a clear, stable name. Verify that a formatting violation fails the check and that formatted code passes.
+
+**Completion criteria:** CI reports formatting independently of lint and checks all maintained Python files.
+
+**What this adds:** consistent layout and automatic detection of formatting drift, with a mechanical diff that can be reviewed independently of code changes.
+
+## Stage 3 — Adopt standard stable lint rules
+
+**Status: pending. This track can progress independently of formatting.**
+
+### 3.1 — Assess standard-rule findings
+
+Compare the current configuration with the standard stable defaults of the pinned Ruff version using a temporary assessment configuration. Keep the existing CI gate while collecting and classifying findings. Identify import cleanup, code modernization, possible behavioral defects and justified exceptions.
+
+**Completion criteria:** findings are grouped into reviewable batches, with the required verification identified for each batch.
+
+### 3.2 — Resolve findings in reviewable batches
+
+- Review import cleanup for side effects and required initialization order before committing it.
+- Keep code modernization separate from import cleanup and formatting; check supported Python versions and runtime uses of annotations or APIs.
+- Address behavioral fixes individually with relevant regression coverage. Preserve scenario baselines unless a behavior change is explicitly reviewed.
+- Keep exceptions narrow and explain the behavior they preserve. Treat any intermediate rule selection as temporary.
+
+Apply safe fixes selectively and inspect their diffs. Run the existing lint gate after each batch and the tests appropriate to the affected behavior. Any adopted formatter check must continue to pass.
+
+**Completion criteria:** each batch is independently reviewed and verified, and all findings under the standard rules are resolved or narrowly justified.
+
+### 3.3 — Activate the standard lint rules
+
+Remove the custom `lint.select` and unnecessary lint overrides once the standard checks pass across the repository. Retain version pinning, the supported Python target, source-discovery settings and justified exceptions. Verify that local and CI checks use the same standard stable selection.
+
+**Completion criteria:** `ruff check .` passes under the pinned version's standard stable rules for all maintained Python files, with relevant behavioral checks passing and necessary overrides explained.
+
+**What this adds:** adoption of Ruff's supported defaults through manageable changes, with code rewrites and behavior fixes visible to reviewers.
+
+## Stage 4 — Integrate local developer tools
 
 **Status: lint commands are documented; editor guidance and hooks are pending.**
 
@@ -128,7 +155,7 @@ install the tools, receive editor feedback and reproduce CI results.
 **What this adds:** developers catch and fix issues before pushing, reducing
 avoidable CI failures and review turnaround.
 
-## Stage 4 — Require checks before merging
+## Stage 5 — Require checks before merging
 
 **Status: lint runs automatically; required merge checks are pending.**
 
