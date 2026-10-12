@@ -2,9 +2,11 @@
 Hot water boiler configuration models.
 """
 
-from typing import Annotated, Literal, Optional, Union
-from ..base import EntityId, FlexValue, FlexFloat
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from ..base import EntityId, FlexFloat
 
 
 class BoilerDisabled(BaseModel):
@@ -73,7 +75,7 @@ class BoilerEnabled(BaseModel):
             "x-ui-widget-filter": "input_number,number,sensor",
         },
     )
-    entity_enabled: Optional[EntityId] = Field(
+    entity_enabled: EntityId | None = Field(
         default=None,
         alias="entity boiler enabled",
         description="HA entity for boiler enabled status",
@@ -83,7 +85,7 @@ class BoilerEnabled(BaseModel):
             "x-ui-widget-filter": "binary_sensor",
         },
     )
-    entity_instant_start: Optional[EntityId] = Field(
+    entity_instant_start: EntityId | None = Field(
         default=None,
         alias="entity instant start",
         description="HA entity for instant start",
@@ -95,6 +97,7 @@ class BoilerEnabled(BaseModel):
     )
     cop: FlexFloat = Field(
         default=3.0,
+        validate_default=True,
         description="Coefficient of Performance",
         json_schema_extra={
             "x-help": "Coefficient of Performance if using heat pump water heater. For resistive heating element, use 1.0. For heat pump water heater, typically 2.5-4.0.",
@@ -146,7 +149,7 @@ class BoilerEnabled(BaseModel):
             "x-validation-hint": "Must be > 0, typically 1000-3000W",
         },
     )
-    activate_service: Optional[str] = Field(
+    activate_service: str | None = Field(
         default=None,
         alias="activate service",
         description="Service type to activate boiler (e.g., 'press', 'switch')",
@@ -155,7 +158,7 @@ class BoilerEnabled(BaseModel):
             "x-ui-section": "Controls",
         },
     )
-    activate_entity: Optional[EntityId] = Field(
+    activate_entity: EntityId | None = Field(
         default=None,
         alias="activate entity",
         description="HA entity to activate boiler",
@@ -174,7 +177,7 @@ class BoilerEnabled(BaseModel):
             "x-ui-section": "Configuration",
         },
     )
-    switch_entity: Optional[EntityId] = Field(
+    switch_entity: EntityId | None = Field(
         default=None,
         alias="switch entity",
         description="HA entity to switch boiler on/off",
@@ -254,6 +257,6 @@ The system models boiler as a thermal battery:
 # Discriminated union: routes on boiler_present (Literal[True] → BoilerEnabled,
 # Literal[False] → BoilerDisabled). Pydantic generates oneOf + const in JSON Schema.
 BoilerConfig = Annotated[
-    Union[BoilerEnabled, BoilerDisabled],
+    BoilerEnabled | BoilerDisabled,
     Field(discriminator="boiler_present"),
 ]

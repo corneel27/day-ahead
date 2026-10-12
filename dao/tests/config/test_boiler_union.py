@@ -7,7 +7,12 @@ Verifies BoilerEnabled / BoilerDisabled routing with Literal[True] / Literal[Fal
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from dao.prog.config.models.devices.boiler import BoilerConfig, BoilerEnabled, BoilerDisabled
+from dao.prog.config.models.base import FlexFloat
+from dao.prog.config.models.devices.boiler import (
+    BoilerConfig,
+    BoilerDisabled,
+    BoilerEnabled,
+)
 
 
 def parse_boiler(data: dict):
@@ -40,6 +45,12 @@ class TestBoilerUnion:
         result = parse_boiler(ENABLED_PYTHON)
         assert isinstance(result, BoilerEnabled)
         assert result.entity_actual_temp == "sensor.boiler_temp"
+
+    def test_default_cop_is_validated_and_serializable(self):
+        result = parse_boiler(ENABLED_PYTHON)
+        assert isinstance(result.cop, FlexFloat)
+        assert result.cop.resolve(lambda _: pytest.fail("Literal COP must not query HA")) == 3.0
+        assert result.model_dump()["cop"] == 3.0
 
     def test_enabled_missing_required_field_raises(self):
         with pytest.raises(ValidationError):

@@ -6,27 +6,28 @@ Version 0 represents the initial Pydantic migration - unversioned configs
 get migrated to this version with no format changes.
 """
 
-from typing import Optional, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Literal
 
-from ..models.base import FlexFloat, FlexEnum, SecretStr, DAOConfigBaseModel
-from ..models.database import HADatabaseConfig, DatabaseConfig
-from ..models.pricing import PricingConfig
-from ..models.graphics import GraphicsConfig
-from ..models.notifications import NotificationsConfig
-from ..models.grid import GridConfig
-from ..models.history import HistoryConfig
+from pydantic import ConfigDict, Field
+
+from ..models.base import DAOConfigBaseModel, FlexEnum, FlexFloat, SecretStr
 from ..models.dashboard import DashboardConfig
-from ..models.tibber import TibberConfig
-from ..models.report import ReportConfig
-from ..models.scheduler import SchedulerConfig
-from ..models.homeassistant import HomeAssistantConfig
+from ..models.database import DatabaseConfig, HADatabaseConfig
 from ..models.devices.battery import BatteryConfig
-from ..models.devices.solar import SolarConfig
-from ..models.devices.ev import EVConfig
 from ..models.devices.boiler import BoilerConfig
+from ..models.devices.ev import EVConfig
 from ..models.devices.heating import HeatingConfig
 from ..models.devices.machines import MachineConfig
+from ..models.devices.solar import SolarConfig
+from ..models.graphics import GraphicsConfig
+from ..models.grid import GridConfig
+from ..models.history import HistoryConfig
+from ..models.homeassistant import HomeAssistantConfig
+from ..models.notifications import NotificationsConfig
+from ..models.pricing import PricingConfig
+from ..models.report import ReportConfig
+from ..models.scheduler import SchedulerConfig
+from ..models.tibber import TibberConfig
 from ..models.xgboost import XGBoostConfig
 
 
@@ -58,13 +59,13 @@ class ConfigurationV0(DAOConfigBaseModel):
         description="Day Ahead optimization database connection",
     )
 
-    time_zone: Optional[str] = Field(
+    time_zone: str | None = Field(
         default=None,
         alias="time_zone",
         description="Timezone (auto-fetched from HA if not set)",
         json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Your home"},
     )
-    country: Optional[str] = Field(
+    country: str | None = Field(
         default=None,
         description="Country code (auto-fetched from HA if not set)",
         json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Your home"},
@@ -88,7 +89,7 @@ class ConfigurationV0(DAOConfigBaseModel):
         json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Weather"},
     )
 
-    meteoserver_attemps: Optional[int] = Field(
+    meteoserver_attemps: int | None = Field(
         default=2,
         alias="meteoserver-attemps",
         ge=1,
@@ -97,7 +98,7 @@ class ConfigurationV0(DAOConfigBaseModel):
     )
 
     # Pricing
-    prices: Optional[PricingConfig] = Field(
+    prices: PricingConfig | None = Field(
         default=None, description="Day-ahead pricing and tariff configuration"
     )
 
@@ -108,7 +109,7 @@ class ConfigurationV0(DAOConfigBaseModel):
         description="Logging level",
         json_schema_extra={"x-ui-group": "DAO", "x-ui-section": "Main"},
     )
-    protocol_api: Optional[Literal["http", "https"]] = Field(
+    protocol_api: Literal["http", "https"] | None = Field(
         default=None,
         alias="protocol api",
         description="API protocol",
@@ -144,7 +145,7 @@ class ConfigurationV0(DAOConfigBaseModel):
             },
         },
     )
-    baseload: Optional[list[float]] = Field(
+    baseload: list[float] | None = Field(
         default=None,
         min_length=24,
         max_length=24,
@@ -261,15 +262,15 @@ class ConfigurationV0(DAOConfigBaseModel):
     )
 
     # Optional devices
-    boiler: Optional[BoilerConfig] = Field(
+    boiler: BoilerConfig | None = Field(
         default=None, description="Hot water boiler configuration"
     )
-    heating: Optional[HeatingConfig] = Field(
+    heating: HeatingConfig | None = Field(
         default=None, description="Heating system / heat pump configuration"
     )
 
     # Optional integrations
-    tibber: Optional[TibberConfig] = Field(
+    tibber: TibberConfig | None = Field(
         default=None, description="Tibber API integration"
     )
     xgboost: XGBoostConfig = Field(

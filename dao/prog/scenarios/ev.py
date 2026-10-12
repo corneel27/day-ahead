@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from . import plugins
 from .plugins import PluginContext
@@ -58,16 +58,16 @@ class ResolvedEvInput:
     string. Reused both to build HA-state overrides and to verify the
     solve's own setup echo against what was actually asked for."""
 
-    plugged_in: Optional[bool] = None
-    position: Optional[str] = None
-    actual_soc: Optional[float] = None
-    instant_charge: Optional[bool] = None
-    wished_level: Optional[float] = None
-    ready_dt: Optional[dt.datetime] = None
-    ready_override_str: Optional[str] = None
+    plugged_in: bool | None = None
+    position: str | None = None
+    actual_soc: float | None = None
+    instant_charge: bool | None = None
+    wished_level: float | None = None
+    ready_dt: dt.datetime | None = None
+    ready_override_str: str | None = None
 
 
-def _resolve_ready(spec: Any, *, ctx: PluginContext) -> tuple[Optional[dt.datetime], Optional[str]]:
+def _resolve_ready(spec: Any, *, ctx: PluginContext) -> tuple[dt.datetime | None, str | None]:
     if spec is None:
         return None, None
     if isinstance(spec, str):
@@ -144,10 +144,10 @@ class ExpandedEv:
     target_name: str
     target_capacity_kwh: float
     resolved_target: ResolvedEvInput
-    other_index: Optional[int] = None
-    other_name: Optional[str] = None
-    other_capacity_kwh: Optional[float] = None
-    resolved_other: Optional[ResolvedEvInput] = None
+    other_index: int | None = None
+    other_name: str | None = None
+    other_capacity_kwh: float | None = None
+    resolved_other: ResolvedEvInput | None = None
 
 
 def expand_ev_block(ev_block: dict, *, config: dict, start: dt.datetime, interval_s: int) -> ExpandedEv:

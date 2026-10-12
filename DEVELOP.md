@@ -18,7 +18,7 @@ This guide will help developers set up their development environment, test chang
 
 Before you begin, ensure you have the following installed:
 
-- **Python 3.8+** (Python 3.9 or higher recommended)
+- **Python 3.12+** (the scenario CI uses Python 3.12)
 - **Git** for version control
 - **pip** (Python package installer)
 - **npm** (Node Package Manager)
@@ -446,6 +446,43 @@ Before submitting your PR, ensure:
 ---
 
 ## Code Style and Best Practices
+
+### Python lint checks
+
+From the repository root, install the pinned development-only linter and run:
+
+```bash
+python -m pip install -r requirements-lint.txt
+ruff check .
+```
+
+`ruff.toml` explicitly enables syntax/import checks, Pyflakes, import ordering,
+Python upgrades and Bugbear (`E4`, `E7`, `E9`, `F`, `I`, `UP`, `B`). It targets
+Python 3.12 and includes the tracked tests despite the legacy `.gitignore`.
+The **Ruff lint** GitHub Actions job runs independently of the solver stack on
+every push and pull request. It reports failures rather than modifying code.
+
+To apply safe fixes locally, use `ruff check --fix .`, inspect the diff, then
+rerun relevant tests. Do not use `--unsafe-fixes` for routine cleanup. Intentional
+startup imports need a narrow suppression with an explanation; do not suppress
+whole files or rule families to make the check pass. `zip(..., strict=False)`
+preserves existing truncation; use `strict=True` when equal lengths are validated.
+
+When upgrading Ruff, review its release notes, update the pins in
+`requirements-lint.txt` and `ruff.toml` (`required-version`) together, and update
+hook pins once hooks are adopted. Review changes to standard defaults and new
+diagnostics, then run lint, formatting once adopted, and relevant behavioral tests
+before merging the upgrade. Ruff is not an add-on runtime dependency.
+Full-repository `ruff format` enforcement is a separate
+follow-up to avoid a large formatting diff during this rollout; see
+[`docs/ruff-rollout.md`](docs/ruff-rollout.md).
+
+For behavioral verification on Linux, follow [`docs/testing.md`](docs/testing.md).
+The scenario workflow also runs isolated configuration-model, SQLite query,
+charging-schedule, KNMI-default and web route regression tests. Optional MariaDB
+cases skip unless a dedicated disposable test database is configured. The legacy
+`test_dao.py` and EV harness can access a live installation and are not part of
+this isolated CI command.
 
 ### Python Style Guide
 

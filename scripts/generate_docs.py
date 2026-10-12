@@ -14,15 +14,14 @@ Exit codes:
 
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
-from collections import defaultdict
 
 # Ensure the repo root is on sys.path so `dao` package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dao.prog.config.versions.v0 import ConfigurationV0
-
 
 # Icon mapping for x-icon values
 ICON_MAP = {
@@ -480,7 +479,7 @@ def main():
         group_anchor = group_name.lower().replace(' ', '-').replace('&', 'and')
         lines.append(f"- [{group_name}](#{group_anchor})")
         
-        for order, model_name, model_schema in models:
+        for _order, model_name, model_schema in models:
             model_anchor = model_name.lower().replace(' ', '-')
             icon = ICON_MAP.get(model_schema.get('x-icon', ''), '')
             icon_str = f"{icon} " if icon else ""
@@ -531,7 +530,7 @@ def main():
         lines.append("")
         
         # Generate docs for each model in this group
-        for order, model_name, model_schema in models:
+        for _order, model_name, model_schema in models:
             doc, errors = generate_markdown_from_schema(
                 model_schema,
                 title_prefix="### ",

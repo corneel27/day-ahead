@@ -25,8 +25,9 @@ about which group it belongs to.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any
 
 SUCCESS_LINE = "Het programma heeft een optimale oplossing gevonden."
 
@@ -271,7 +272,7 @@ def run_tier_a(rc: ResultContext) -> list[CheckResult]:
 
 # --- Setup checks --------------------------------------------------------
 
-_SETUP_CHECKS: dict[str, Callable[["CaseContext"], Optional[CheckResult] | list[CheckResult]]] = {}
+_SETUP_CHECKS: dict[str, Callable[[CaseContext], CheckResult | None | list[CheckResult]]] = {}
 
 
 def setup_check(name: str) -> Callable[[Callable], Callable]:
@@ -283,7 +284,7 @@ def setup_check(name: str) -> Callable[[Callable], Callable]:
 
 
 @setup_check("overrides_were_read")
-def _check_overrides_were_read(ctx: "CaseContext") -> Optional[CheckResult]:
+def _check_overrides_were_read(ctx: CaseContext) -> CheckResult | None:
     """Runs when the scenario's states (literal or EV-derived) is not
     empty: fails if an override names an entity the solve never read
     through get_state. This is the SETUP_MISMATCH class of bug, for
@@ -302,7 +303,7 @@ def _check_overrides_were_read(ctx: "CaseContext") -> Optional[CheckResult]:
 
 
 @setup_check("setup_echo_matches")
-def _check_setup_echo(ctx: "CaseContext") -> Optional[CheckResult]:
+def _check_setup_echo(ctx: CaseContext) -> CheckResult | None:
     """Runs when the scenario has an ev block: diff the log's own setup
     echo against what was requested, plus each car's capacity sanity
     check. Both are ported from test_ev_harness_v6's SETUP_MISMATCH
@@ -327,7 +328,7 @@ def _check_setup_echo(ctx: "CaseContext") -> Optional[CheckResult]:
 
 
 @setup_check("no_duty_slivers")
-def _check_duty_slivers(ctx: "CaseContext") -> list[CheckResult]:
+def _check_duty_slivers(ctx: CaseContext) -> list[CheckResult]:
     """Runs when the scenario has an ev block: no real charge stage, on
     either car, runs below the minimum duty cycle. Mirrors
     test_ev_harness_v6.run_case's unconditional per-case sliver check,
@@ -354,7 +355,7 @@ def _check_duty_slivers(ctx: "CaseContext") -> list[CheckResult]:
     return out
 
 
-def run_setup_checks(ctx: "CaseContext") -> list[CheckResult]:
+def run_setup_checks(ctx: CaseContext) -> list[CheckResult]:
     """Every registered setup check whose precondition holds, in
     registration order. An author cannot skip one by leaving a key out of
     expect: they take no expect key at all."""
@@ -383,14 +384,14 @@ class CaseContext:
     scenario_id: str
     start: dt.datetime
     horizon_hours: int
-    objective: Optional[float]
+    objective: float | None
     max_gap: float
     reads: set[str]
     requested_states: dict[str, Any]
     config: dict[str, Any] = field(default_factory=dict)
-    expanded_ev: Optional[Any] = None  # ev.ExpandedEv
-    parsed_target: Optional[Any] = None  # parsing.ParsedEvRun
-    parsed_other: Optional[Any] = None  # parsing.ParsedEvRun
+    expanded_ev: Any | None = None  # ev.ExpandedEv
+    parsed_target: Any | None = None  # parsing.ParsedEvRun
+    parsed_other: Any | None = None  # parsing.ParsedEvRun
 
 
 _CASE_CHECKS: dict[str, Callable[[Any, CaseContext], CheckResult]] = {}
@@ -551,7 +552,7 @@ def _check_heatpump_runs(value: dict, ctx: CaseContext) -> CheckResult:
     return CheckResult("heatpump_runs", ok, detail)
 
 
-def _resolve_machine_index(spec: Any, config: dict[str, Any]) -> tuple[Optional[int], list[str]]:
+def _resolve_machine_index(spec: Any, config: dict[str, Any]) -> tuple[int | None, list[str]]:
     """spec is the scenario's expect.machine_runs_in_window.machine,
     normally a name matching config["machines"][*]["name"] (for example
     "wasmachine"), case-insensitively. A numeric index is also accepted as

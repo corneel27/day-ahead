@@ -7,8 +7,16 @@ ensuring serialisation and re-parsing are stable for both enabled and disabled b
 
 from pydantic import TypeAdapter
 
-from dao.prog.config.models.devices.boiler import BoilerConfig, BoilerEnabled, BoilerDisabled
-from dao.prog.config.models.devices.heating import HeatingConfig, HeatingEnabled, HeatingDisabled
+from dao.prog.config.models.devices.boiler import (
+    BoilerConfig,
+    BoilerDisabled,
+    BoilerEnabled,
+)
+from dao.prog.config.models.devices.heating import (
+    HeatingConfig,
+    HeatingDisabled,
+    HeatingEnabled,
+)
 
 
 def parse_boiler(data: dict):

@@ -20,10 +20,13 @@ app = Flask(__name__)
 app.secret_key = "secret_cookie_key"
 app.wsgi_app = IngressMiddleware(app.wsgi_app)
 
-from . import routes
-from .v1.routes import app as v1
-from .v2.routes import v2
-from .api.routes import api
+# Initialize the app before importing modules that register routes.
+# isort: off
+from . import routes as routes  # noqa: E402
+from .v1.routes import app as v1  # noqa: E402
+from .v2.routes import v2  # noqa: E402
+from .api.routes import api  # noqa: E402
+# isort: on
 
 app.register_blueprint(v1, name="v1", url_prefix="/v1")
 app.register_blueprint(v2, name="v2", url_prefix="/v2")

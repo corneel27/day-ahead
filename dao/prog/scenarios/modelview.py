@@ -9,7 +9,7 @@ a new variable family is visible here instead of silently missing.
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
 
 class ModelView:

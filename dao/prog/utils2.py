@@ -1,7 +1,8 @@
-from dao.prog.config.loader import ConfigurationLoader
-from dao.lib.db_connections import make_db_da
-from pathlib import Path
 import datetime
+from pathlib import Path
+
+from dao.lib.db_connections import make_db_da
+from dao.prog.config.loader import ConfigurationLoader
 
 
 def get_weather_data():

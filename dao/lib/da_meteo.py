@@ -1,16 +1,18 @@
 import datetime
 import json
-import math
 import logging
+import math
+
+import ephem
+import knmi
+import matplotlib.pyplot as plt
 import pandas as pd
 import pytz
-import ephem
 from requests import get
-import matplotlib.pyplot as plt
-import knmi
+from sqlalchemy import Table, and_, func, select
+
 from dao.lib.da_graph import GraphBuilder
 from dao.lib.db_manager import DBmanagerObj
-from sqlalchemy import Table, select, func, and_
 
 
 # noinspection PyUnresolvedReferences

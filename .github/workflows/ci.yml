@@ -73,6 +73,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r dao/requirements.txt
+          pip install pytest
 
       - name: Solve every scenario and build the report
         # scenario-run asserts the same thing pytest's test_scenario would
@@ -84,6 +85,24 @@ jobs:
         env:
           TZ: UTC
         run: python -m dao.prog.da_debug scenario-run --report
+
+      - name: Run isolated regression tests
+        timeout-minutes: 5
+        env:
+          TZ: UTC
+        # The legacy test_dao.py and EV harness require a user's live setup.
+        # The scenario corpus above exercises EV planning hermetically instead.
+        run: |
+          pytest -q \
+            dao/tests/config/test_models.py \
+            dao/tests/config/test_boiler_union.py \
+            dao/tests/config/test_migrations.py \
+            dao/tests/config/test_roundtrip.py \
+            dao/tests/prog/test_db_consumption.py \
+            dao/tests/prog/test_ev_schedule.py \
+            dao/tests/prog/test_ha_data_query.py \
+            dao/tests/prog/test_solar_defaults.py \
+            dao/tests/webserver/test_route_security.py
 
       - name: Publish report to the job summary
         # write_reports() runs before scenario-run's own exit code check, so

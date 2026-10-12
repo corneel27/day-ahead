@@ -1,29 +1,26 @@
-import pandas as pd
-import numpy as np
 import datetime
-from sqlalchemy import (
-    create_engine,
-    Table,
-    MetaData,
-    select,
-    insert,
-    update,
-    func,
-    and_,
-    text,
-    TIMESTAMP,
-)
-import sqlalchemy_utils
-import os
 import logging
+import os
+
+import numpy as np
+import pandas as pd
+from sqlalchemy import (
+    MetaData,
+    Table,
+    and_,
+    create_engine,
+    func,
+    insert,
+    select,
+    update,
+)
 
 from dao.prog.utils import interpolate
-
 
 # import utils as utils
 
 
-class DBmanagerObj(object):
+class DBmanagerObj:
     """
     Database manager class.
     """
@@ -251,7 +248,7 @@ class DBmanagerObj(object):
                     "%Y-%m-%d %H:%M"
                 )
             )
-            for index, dfrow in df.iterrows():
+            for _index, dfrow in df.iterrows():
                 logging.debug(
                     f"Save record: {dfrow['tijd']} {dfrow['code']} "
                     f"{dfrow['time']} {dfrow['value']}"
@@ -379,7 +376,6 @@ class DBmanagerObj(object):
                 num_days = 2
             end_dt = start_dt + datetime.timedelta(days=num_days)
             end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
-            end_ts = end_dt.timestamp()
             query = query.where(
                 t1.c.time < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
             )
@@ -436,7 +432,6 @@ class DBmanagerObj(object):
                     num_days = 2
                 end_dt = start_dt + datetime.timedelta(days=num_days)
                 end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
-                end_ts = end_dt.timestamp()
                 query = query.where(
                     t1.c.time
                     < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
@@ -559,13 +554,17 @@ class DBmanagerObj(object):
         )
         return df
 
-    def get_consumption(self, start: datetime.datetime, end=datetime.datetime.now()):
+    def get_consumption(
+        self, start: datetime.datetime, end: datetime.datetime | None = None
+    ):
         """
         retourneert een dataframe met consumption en production in periode vanaf start tot until
         :param start: start moment
         :param end: eindmoment , default nu
         :return: dataframe
         """
+        if end is None:
+            end = datetime.datetime.now()
         values_table = Table("values", self.metadata, autoload_with=self.engine)
         # Aliases for the values table
         t1 = values_table.alias("t1")

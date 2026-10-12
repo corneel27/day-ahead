@@ -2,13 +2,13 @@
 Tests for configuration migrations.
 """
 
-import pytest
 from dao.prog.config.migrations.migrator import migrate_config
 from dao.prog.config.migrations.unversioned_to_v0 import migrate_unversioned_to_v0
-from dao.prog.config.models.pricing import PricingConfig
-from dao.prog.config.models.database import HADatabaseConfig, DatabaseConfig
-from dao.prog.config.models.scheduler import SchedulerConfig
 from dao.prog.config.migrations.v1_to_v2 import migrate_v1_to_v2
+from dao.prog.config.models.database import DatabaseConfig, HADatabaseConfig
+from dao.prog.config.models.pricing import PricingConfig
+from dao.prog.config.models.scheduler import SchedulerConfig
+
 
 def test_migrate_unversioned_to_v0():
     """Test migration from unversioned config to v0."""

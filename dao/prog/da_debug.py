@@ -51,7 +51,7 @@ import math
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -90,9 +90,11 @@ def _sanitize_config_value(value: Any) -> Any:
     have coerced it to a plain ``str`` and lost the type identity needed to
     tell a secret field apart from an ordinary one.
     """
-    from dao.prog.config.models.base import SecretStr
-    from pydantic import BaseModel
     from enum import Enum
+
+    from pydantic import BaseModel
+
+    from dao.prog.config.models.base import SecretStr
 
     if isinstance(value, SecretStr):
         return REDACTED_SECRET
@@ -133,7 +135,7 @@ def _rehydrate_config(sanitized: dict):
     as a plain literal and returns it as-is; nothing that needs a *working*
     secret is reachable during a patched replay (price/HP-hours lookups are
     replaced wholesale before they would ever call out with one)."""
-    from dao.prog.config.loader import VERSION_MODELS, CURRENT_VERSION
+    from dao.prog.config.loader import CURRENT_VERSION, VERSION_MODELS
 
     version = sanitized.get("config_version", CURRENT_VERSION)
     model_class = VERSION_MODELS.get(version, VERSION_MODELS[CURRENT_VERSION])
@@ -270,7 +272,7 @@ class _FakeDbManager:
     doesn't patch yet, and needs a real patch added."""
 
     # Onthoudt de opgeslagen prognosedata en een label voor duidelijke foutmeldingen.
-    def __init__(self, prog_data: Optional[pd.DataFrame], label: str):
+    def __init__(self, prog_data: pd.DataFrame | None, label: str):
         self._prog_data = prog_data
         self._label = label
 
@@ -353,12 +355,12 @@ def _import_targets():
     object under a different ``sys.modules`` key, with its own distinct
     ``Report`` class — patching that copy would silently do nothing to the
     class day_ahead.py actually constructs."""
+    import dao.prog.da_base as da_base_module
+    from dao.lib.da_meteo import Meteo
+    from dao.lib.db_manager import DBmanagerObj
     from dao.prog.da_base import DaBase
     from dao.prog.da_report import Report
-    from dao.lib.db_manager import DBmanagerObj
     from dao.prog.solar_predictor import SolarPredictor
-    from dao.lib.da_meteo import Meteo
-    import dao.prog.da_base as da_base_module
 
     return DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, da_base_module
 
@@ -411,7 +413,7 @@ def _make_noop_savefig(label: str):
 
 # Omwikkelt day_ahead.py's fd-omleiding zodat de CBC-solverlog altijd wordt vastgelegd, 
 # ook als self.debug uit staat.
-def _install_cbc_log_capture(patches: "_PatchList", day_ahead_module, target) -> None:
+def _install_cbc_log_capture(patches: _PatchList, day_ahead_module, target) -> None:
     """Wraps day_ahead.py's fd-redirecting ``_capture_native_stdout()`` so
     the CBC solve text lands in ``target._cbc_log_chunks`` unconditionally —
     day_ahead.py only *logs* it when ``self.debug or log_level <= DEBUG``,
@@ -434,7 +436,7 @@ def _install_cbc_log_capture(patches: "_PatchList", day_ahead_module, target) ->
 
 
 # Onthoudt een referentie naar het opgeloste mip.Model na elke optimize()-aanroep, want buiten calc_optimum() is dat model anders nergens meer te zien.
-def _install_model_capture(patches: "_PatchList", target) -> None:
+def _install_model_capture(patches: _PatchList, target) -> None:
     """Records a reference to the ``mip.Model`` instance after each
     ``optimize()`` call, so objective/status/gap are readable afterward —
     without this, nothing outside ``calc_optimum()`` can see the solved
@@ -453,7 +455,7 @@ def _install_model_capture(patches: "_PatchList", target) -> None:
 
 
 # Zet een opgelost model om naar een result-dict, gedeeld door RecordingIO en ReplayIO zodat beide dezelfde vorm opleveren om te diffen.
-def _build_result_dict(model, cbc_log_chunks: list[str], extra_meta: dict) -> Optional[dict]:
+def _build_result_dict(model, cbc_log_chunks: list[str], extra_meta: dict) -> dict | None:
     if model is None:
         return None
     try:
@@ -533,9 +535,9 @@ class RecordingIO:
         self._png = png
         self._patches = _PatchList()
         self._primary = None  # first DaBase-family instance constructed
-        self._price_data: Optional[pd.DataFrame] = None
-        self._price_data_args: Optional[dict] = None
-        self._prog_data: Optional[pd.DataFrame] = None
+        self._price_data: pd.DataFrame | None = None
+        self._price_data_args: dict | None = None
+        self._prog_data: pd.DataFrame | None = None
         self._ha_states: dict[str, str] = {}
         self._baseload: dict[str, list] = {}
         self._heatpump_run_hours: dict[str, float] = {}
@@ -544,13 +546,13 @@ class RecordingIO:
         self._captured_at = dt.datetime.now()
         self._model = None  # last mip.Model.optimize() was called on
         self._cbc_log_chunks: list[str] = []
-        self.snapshot_path: Optional[Path] = None
-        self.result_path: Optional[Path] = None
+        self.snapshot_path: Path | None = None
+        self.result_path: Path | None = None
 
     # -- context manager -----------------------------------------------
 
     # Installeert de patches bij het binnengaan van de with-blok.
-    def __enter__(self) -> "RecordingIO":
+    def __enter__(self) -> RecordingIO:
         self._install_patches()
         return self
 
@@ -721,8 +723,8 @@ class RecordingIO:
         # returns a few lines into the real method. This patch narrows that
         # gap to essentially the wrapper call overhead.
         try:
-            from dao.prog.day_ahead import DaCalc
             import dao.prog.day_ahead as day_ahead_module
+            from dao.prog.day_ahead import DaCalc
 
             original_calc_optimum = DaCalc.calc_optimum
 
@@ -745,7 +747,7 @@ class RecordingIO:
     # -- snapshot writing --------------------------------------------------
 
     # Bouwt en schrijft het snapshot-bestand met alle vastgelegde kanalen, inclusief de geheimencontrole vlak vóór het schrijven.
-    def _write_snapshot(self, exc: Optional[BaseException]) -> None:
+    def _write_snapshot(self, exc: BaseException | None) -> None:
         if self._primary is None:
             logger.warning(
                 "RecordingIO: geen DaBase-instantie geconstrueerd binnen de "
@@ -834,7 +836,7 @@ class RecordingIO:
 
 
 # Leest de addon-versie uit dao/prog/version.py, nodig om een snapshot te kunnen koppelen aan de code die hem produceerde.
-def _dao_version() -> Optional[str]:
+def _dao_version() -> str | None:
     try:
         from dao.prog.version import __version__
 
@@ -844,7 +846,7 @@ def _dao_version() -> Optional[str]:
 
 
 # Leest de huidige git-commit als optioneel extra herkenningspunt voor ontwikkelbuilds.
-def _git_sha() -> Optional[str]:
+def _git_sha() -> str | None:
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
@@ -881,7 +883,7 @@ class ReplayIO:
         self,
         snapshot: str | Path | dict,
         *,
-        solver_threads: Optional[int] = None,
+        solver_threads: int | None = None,
         png: bool = False,
     ):
         """``solver_threads=None`` (the default) replays with the same
@@ -910,7 +912,7 @@ class ReplayIO:
         if isinstance(snapshot, dict):
             self._snapshot = snapshot
         else:
-            with open(snapshot, "r", encoding="utf-8") as f:
+            with open(snapshot, encoding="utf-8") as f:
                 self._snapshot = json.load(f)
         self._patches = _PatchList()
         self._primary = None
@@ -977,7 +979,7 @@ class ReplayIO:
         return dict(self._snapshot.get("meta", {}))
 
     # Zet het opgeloste replaymodel om naar dezelfde vorm als een capture-resultaat, zodat replay-uitkomsten te diffen zijn tegen een capture of een andere replay.
-    def build_result(self) -> Optional[dict]:
+    def build_result(self) -> dict | None:
         """The replayed run's own objective/status/gap/cbc_log, in the same
         shape as a capture's ``*.result.json`` — so it can be compared
         against one with ``diff``, or against another replay run at a
@@ -1004,7 +1006,7 @@ class ReplayIO:
     # -- context manager -----------------------------------------------
 
     # Installeert de patches bij het binnengaan van de with-blok.
-    def __enter__(self) -> "ReplayIO":
+    def __enter__(self) -> ReplayIO:
         self._install_patches()
         return self
 
@@ -1555,7 +1557,7 @@ def _group_by_container(registry_by_idx: dict) -> dict[str, list[tuple[tuple, in
 # Zoekt de interval-as van een assen-tuple op: positie plus of het de
 # U+1-grensvariant (soc-achtig) is. Geeft None als de container geen
 # interval-as heeft (bv. cycle_cost, alleen per batterij).
-def _interval_axis(dims: tuple[str, ...]) -> Optional[tuple[int, bool]]:
+def _interval_axis(dims: tuple[str, ...]) -> tuple[int, bool] | None:
     if "u_boundary" in dims:
         return dims.index("u_boundary"), True
     if "u" in dims:
@@ -1769,7 +1771,7 @@ def _section_key(name: str, dims: tuple[str, ...], idx_or_rest: tuple) -> str:
 # Vindt de var.idx van een kaal geregistreerde Var (leeg indexpad) onder de
 # gegeven containernaam — gebruikt om "cost" te lokaliseren voor de
 # objective-attributie.
-def _find_scalar_idx(registry_by_idx: dict, name: str) -> Optional[int]:
+def _find_scalar_idx(registry_by_idx: dict, name: str) -> int | None:
     for idx, (n, path) in registry_by_idx.items():
         if n == name and path == ():
             return idx
@@ -1896,7 +1898,7 @@ def _objective_attribution(model, registry_by_idx: dict, u: int) -> tuple[list[d
 # lang, die *alle* termen van de constraint dekt. Geeft None als dat niet
 # lukt (gemengde containers/coëfficiënten, een korte of niet-aaneengesloten
 # reeks); de aanroeper valt dan terug op een andere weergave — nooit falen.
-def _try_sigma_collapse(c, registry_by_idx: dict) -> Optional[str]:
+def _try_sigma_collapse(c, registry_by_idx: dict) -> str | None:
     groups: dict[tuple, dict[int, float]] = {}
     for v, coef in c.expr.expr.items():
         entry = registry_by_idx.get(v.idx)
@@ -1930,7 +1932,7 @@ def _try_sigma_collapse(c, registry_by_idx: dict) -> Optional[str]:
     dim_names = _dims(name)
     axis_pos = _interval_axis(dim_names)[0]
     rest_dims = [d for pos, d in enumerate(dim_names) if pos != axis_pos]
-    label = name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest)) + "[u]"
+    label = name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest, strict=False)) + "[u]"
     rhs = -c.expr.const + 0.0
     sense = _SENSE_SYMBOLS.get(c.expr.sense, c.expr.sense)
     return (
@@ -1985,14 +1987,14 @@ def _constraint_signature(c, registry_by_idx: dict) -> frozenset:
     return frozenset(names)
 
 
-def _match_pattern(c, registry_by_idx: dict) -> Optional[str]:
+def _match_pattern(c, registry_by_idx: dict) -> str | None:
     return _CONSTRAINT_PATTERNS.get(_constraint_signature(c, registry_by_idx))
 
 
 # Geeft de interval-index van één losse Var terug (via zijn eigen
 # interval-as), of None als de Var niet geregistreerd is of geen
 # interval-as heeft (bv. cycle_cost[b]).
-def _term_interval(var, registry_by_idx: dict) -> Optional[int]:
+def _term_interval(var, registry_by_idx: dict) -> int | None:
     entry = registry_by_idx.get(var.idx)
     if entry is None:
         return None
@@ -2027,7 +2029,7 @@ def _is_local(c, registry_by_idx: dict, u: int) -> bool:
 # Een lokale constraint van de vorm "één variabele == 0" — een
 # inactieve asset die voor dit interval op nul is vastgezet. Wordt apart
 # gegroepeerd in plaats van los afgedrukt.
-def _pinned_zero_label(c, registry_by_idx: dict) -> Optional[str]:
+def _pinned_zero_label(c, registry_by_idx: dict) -> str | None:
     if c.expr.sense != "=":
         return None
     terms = list(c.expr.expr.items())
@@ -2052,8 +2054,8 @@ def dump_interval(
     registry: VarRegistry,
     u: int,
     *,
-    header: Optional[dict] = None,
-    battery_capacity: Optional[list] = None,
+    header: dict | None = None,
+    battery_capacity: list | None = None,
 ) -> dict:
     """Everything the solved model knew about interval ``u``. Raises
     ``VarRegistryError`` if the registry contains a container ``SHAPES``
@@ -2103,7 +2105,7 @@ def dump_interval(
                 delta = (value_out - value_in) if value_out is not None else None
                 row = {
                     "kind": "boundary",
-                    "label": name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest)),
+                    "label": name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest, strict=False)),
                     "container": name,
                     "unit": unit,
                     "value_in": value_in,
@@ -2130,7 +2132,7 @@ def dump_interval(
                     {
                         "kind": "scalar",
                         "label": name + "".join(
-                            f"[{d}={v}]" for d, v in zip(dims, idx_tuple)
+                            f"[{d}={v}]" for d, v in zip(dims, idx_tuple, strict=False)
                         ),
                         "container": name,
                         "unit": unit,
@@ -2238,7 +2240,7 @@ def dump_interval(
                 neighbour_sections.setdefault(section_key, []).append(
                     {
                         "label": name + "".join(
-                            f"[{d}={v}]" for d, v in zip(dims, idx_tuple)
+                            f"[{d}={v}]" for d, v in zip(dims, idx_tuple, strict=False)
                         ),
                         "unit": _unit(name),
                         "value": model.vars[var_idx].x,
@@ -2272,7 +2274,7 @@ def dump_interval(
 def _format_dump_text(data: dict, show_all: bool = False) -> str:
     lines: list[str] = []
     header_bits = [f"interval {data['interval']}"]
-    for k, v in data.get("header", {}).items():
+    for _k, v in data.get("header", {}).items():
         if v is not None:
             header_bits.append(str(v))
     lines.append("  ".join(header_bits))
@@ -2455,7 +2457,7 @@ def _resolve_snapshot_arg(data_dir: Path, given: str) -> Path:
 def _load_snapshot_file(path: Path) -> dict:
     if not path.exists():
         raise UsageError(f"Snapshot not found: {path}")
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -2468,7 +2470,7 @@ def _emit(args: argparse.Namespace, data: dict, render) -> None:
 
 
 # Geeft een korte 'rijenxkolommen'-samenvatting van een DataFrame-payload, voor gebruik in inspect.
-def _df_payload_shape(payload: Optional[dict]) -> str:
+def _df_payload_shape(payload: dict | None) -> str:
     if not payload:
         return "none"
     try:
@@ -2497,8 +2499,9 @@ def _find_unredacted_secrets(value: Any, path: str = "") -> list[str]:
     and report the dotted path of every SecretStr field that is not exactly
     REDACTED_SECRET — i.e. a real or planted credential. Mirrors
     ``_sanitize_config_value``'s traversal but checks rather than redacts."""
-    from dao.prog.config.models.base import SecretStr
     from pydantic import BaseModel
+
+    from dao.prog.config.models.base import SecretStr
 
     found: list[str] = []
     if isinstance(value, SecretStr):
@@ -2523,7 +2526,7 @@ def _find_unredacted_secrets(value: Any, path: str = "") -> list[str]:
 
 
 # Laadt een live options.json via een wegwerpkopie (nooit het origineel) en vergelijkt de confighash met die van de snapshot.
-def _check_config_drift(config_path_str: str, stored_hash: Optional[str]) -> dict:
+def _check_config_drift(config_path_str: str, stored_hash: str | None) -> dict:
     """Copy-then-load: never opens the real config file for writing,
     and asserts (not just assumes) that it comes out byte-identical."""
     import shutil
@@ -2728,7 +2731,7 @@ def cmd_inspect(args: argparse.Namespace, data_dir: Path) -> int:
     result_path = snapshot_path.parent / (snapshot_path.stem + ".result.json")
     result = None
     if result_path.exists():
-        with open(result_path, "r", encoding="utf-8") as f:
+        with open(result_path, encoding="utf-8") as f:
             result = json.load(f)
 
     data = {
@@ -2822,7 +2825,7 @@ def cmd_verify(args: argparse.Namespace, data_dir: Path) -> int:
         secrets_path = Path(args.secrets).resolve()
         if not secrets_path.exists():
             raise UsageError(f"Secrets file not found: {secrets_path}")
-        with open(secrets_path, "r", encoding="utf-8") as f:
+        with open(secrets_path, encoding="utf-8") as f:
             secret_values = list(json.load(f).values())
         blob = json.dumps(snapshot, default=str)
         leaked_values = [v for v in secret_values if v and v in blob]
@@ -2967,8 +2970,8 @@ def cmd_set(args: argparse.Namespace, data_dir: Path) -> int:
 # tijdens calc_optimum() zelf, dus de opgenomen kopie heeft die kolommen
 # nog niet).
 def _lookup_price_at_interval(
-    replay: "ReplayIO", meta: dict, u: int
-) -> tuple[Optional[dt.datetime], Optional[float], Optional[float]]:
+    replay: ReplayIO, meta: dict, u: int
+) -> tuple[dt.datetime | None, float | None, float | None]:
     try:
         captured_at = meta.get("captured_at")
         interval_str = meta.get("interval")
@@ -3281,7 +3284,7 @@ def _patch_list_restore_check() -> None:
 # A3-zelftests zodat die niet elk hun eigen kopie van de modelopbouw nodig
 # hebben.
 def _build_synthetic_sos2_model():
-    from mip import Model, xsum, BINARY, CONTINUOUS, maximize
+    from mip import BINARY, CONTINUOUS, Model, maximize, xsum
 
     B, U, CS, DS = 1, 2, 2, 2
     ac_to_dc_samples = [[0.0, 5.0]]
@@ -3543,7 +3546,7 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
     def _scalar_vars_labelled_by_name():
         if mip is None:
             return
-        from mip import Model, CONTINUOUS
+        from mip import CONTINUOUS, Model
 
         model = Model()
         cost = model.add_var(var_type=CONTINUOUS, lb=-1000, ub=1000)
@@ -3565,7 +3568,7 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
     def _sigma_collapse_contiguity():
         if mip is None:
             return
-        from mip import Model, BINARY, xsum
+        from mip import BINARY, Model, xsum
 
         model = Model()
         U = 121
@@ -3596,7 +3599,7 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
             model = mip.Model()
             fake_registry: dict = {}
             terms = []
-            for i, name in enumerate(sorted(signature)):
+            for _i, name in enumerate(sorted(signature)):
                 v = model.add_var(var_type=mip.CONTINUOUS)
                 fake_registry[v.idx] = (name, (0,))
                 terms.append(v)
@@ -3635,7 +3638,7 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
     def _dangling_int_column_detection():
         if mip is None:
             return
-        from mip import Model, CONTINUOUS, INTEGER, BINARY
+        from mip import BINARY, CONTINUOUS, INTEGER, Model
 
         model = Model()
         used_int = model.add_var(var_type=INTEGER, lb=0, ub=5)
@@ -3723,6 +3726,7 @@ def cmd_scenario_list(args: argparse.Namespace, data_dir: Path) -> int:
 def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
     scenarios = _scenario_pkg()
     from dataclasses import asdict
+
     from dao.prog.scenarios import baseline
 
     try:
@@ -3822,7 +3826,7 @@ def cmd_scenario_validate(args: argparse.Namespace, data_dir: Path) -> int:
 
 def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
     scenarios = _scenario_pkg()
-    from dao.prog.scenarios.runner import run_scenario, STATUS_PASS, STATUS_SKIP
+    from dao.prog.scenarios.runner import STATUS_PASS, STATUS_SKIP, run_scenario
 
     try:
         selected = scenarios.load(args.ids) if args.ids else scenarios.load_all()
@@ -4185,7 +4189,7 @@ def _print_error(args: argparse.Namespace, kind: str, ex: Exception) -> None:
 
 
 # Entry point: parseert de argumenten, kiest het commando en vertaalt uitzonderingen naar de juiste exitcode.
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
     data_dir = _resolve_data_dir(args)

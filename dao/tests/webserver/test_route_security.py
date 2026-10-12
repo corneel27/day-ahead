@@ -4,6 +4,7 @@ import logging
 from unittest.mock import Mock, patch
 
 import pytest
+from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
 
 # V1 reads configuration and opens a log at import time. Keep those startup
 # effects isolated from the route tests and the user's actual data.
@@ -18,6 +19,30 @@ v2_routes = importlib.import_module("dao.webserver.app.v2.routes")
 @pytest.fixture
 def client():
     return app.test_client()
+
+
+def test_datasets_config_reflects_variable_table(monkeypatch):
+    engine = create_engine("sqlite:///:memory:")
+    metadata = MetaData()
+    variables = Table(
+        "variabel", metadata,
+        Column("id", Integer, primary_key=True),
+        Column("name", String), Column("code", String), Column("dim", String),
+    )
+    metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.execute(variables.insert(), {"id": 1, "name": "Consumption", "code": "cons", "dim": "kWh"})
+    report = Mock()
+    report.db_da.metadata = MetaData()
+    report.db_da.engine = engine
+    monkeypatch.setattr(v2_routes, "Report", Mock(return_value=report))
+    try:
+        datasets = v2_routes._datasets_config()
+        assert len(datasets) == 1
+        assert datasets[0]["label"] == "Consumption"
+        assert datasets[0]["code"] == "cons"
+    finally:
+        engine.dispose()
 
 
 def test_unknown_task_is_escaped_plain_text(client):

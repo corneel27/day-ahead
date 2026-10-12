@@ -5,28 +5,29 @@ This module provides functionality to train XGBoost models for predicting
 hourly solar production based on weather data and historical solar output.
 """
 
-import pandas as pd
-import numpy as np
-import joblib
+import copy
+import datetime as dt
+import logging
+import math
 import os
 import sys
 import warnings
-from typing import Optional, Union, Dict, Any
-import datetime as dt
-import logging
-import knmi
-import copy
-import math
+from typing import Any
 
-from pip._internal.utils import datetime
+import joblib
+import knmi
+import numpy as np
+import pandas as pd
+from scipy import stats
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import GridSearchCV
 
 # ML imports
 from xgboost import XGBRegressor
-from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
-from scipy import stats
-from dao.prog.da_base import DaBase
+
 from dao.prog.config.models.devices.solar import SolarConfig
+from dao.prog.da_base import DaBase
+
 # import pvlib
 
 warnings.filterwarnings("ignore")
@@ -184,7 +185,7 @@ class SolarPredictor(DaBase):
         system_capacity_kw: float,
         system_efficiency: float = 0.8,
         conservative_factor: float = 1.2,
-    ) -> Dict[int, float]:
+    ) -> dict[int, float]:
         """
         Create physics-based maximum hourly production constraints based on solar system capacity.
 
@@ -269,7 +270,7 @@ class SolarPredictor(DaBase):
         return
 
     def _load_and_process_weather_data(
-        self, weather_data: Union[str, pd.DataFrame]
+        self, weather_data: str | pd.DataFrame
     ) -> pd.DataFrame:
         """
         Load and process weather data.
@@ -306,7 +307,7 @@ class SolarPredictor(DaBase):
         return self.create_features(weather_df)
 
     def _load_and_process_solar_data(
-        self, solar_data: Union[str, pd.DataFrame]
+        self, solar_data: str | pd.DataFrame
     ) -> pd.DataFrame:
         """
         Load and process solar production data.
@@ -469,13 +470,13 @@ class SolarPredictor(DaBase):
 
     def train(
         self,
-        weather_data: Union[str, pd.DataFrame],
-        solar_data: Union[str, pd.DataFrame],
+        weather_data: str | pd.DataFrame,
+        solar_data: str | pd.DataFrame,
         model_save_path: str,
         test_size: float = 0.2,
         remove_outliers: bool = True,
         tune_hyperparameters: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Train the solar prediction model.
 
@@ -622,7 +623,7 @@ class SolarPredictor(DaBase):
             "training_samples": len(X_train),
             "testing_samples": len(X_test),
             "feature_importance": dict(
-                zip(self.feature_columns, self.model.feature_importances_)
+                zip(self.feature_columns, self.model.feature_importances_, strict=False)
             ),
             "mean_target": y.mean(),
             "std_target": y.std(),
@@ -653,8 +654,8 @@ class SolarPredictor(DaBase):
         return self.training_stats
 
     def predict(
-        self, weather_data: Union[Dict[str, float], pd.DataFrame]
-    ) -> Union[float, np.ndarray]:
+        self, weather_data: dict[str, float] | pd.DataFrame
+    ) -> float | np.ndarray:
         """
         Make predictions using the trained model.
 
@@ -729,7 +730,7 @@ class SolarPredictor(DaBase):
 
         return None
 
-    def get_feature_importance(self) -> Dict[str, float]:
+    def get_feature_importance(self) -> dict[str, float]:
         """
         Get feature importance from the trained model.
 
@@ -739,7 +740,7 @@ class SolarPredictor(DaBase):
         if not self.is_trained or self.model is None:
             raise ValueError("Model must be trained before getting feature importance")
 
-        return dict(zip(self.feature_columns, self.model.feature_importances_))
+        return dict(zip(self.feature_columns, self.model.feature_importances_, strict=False))
 
     def import_weatherdata(self, filename: str):
         """
@@ -774,7 +775,7 @@ class SolarPredictor(DaBase):
             month = int(str(row.YYYYMMDD)[4:6])
             day = int(str(row.YYYYMMDD)[6:8])
             hour = row.HH - 1
-            dati = dt.datetime(year, month, day, hour, tzinfo=dt.timezone.utc)
+            dati = dt.datetime(year, month, day, hour, tzinfo=dt.UTC)
             utc = int(dati.timestamp())
             save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
             save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
@@ -784,7 +785,7 @@ class SolarPredictor(DaBase):
         return
 
     def get_and_save_knmi_data(
-        self, start: dt.datetime, end: dt.datetime, variables: list = ["FH", "T", "Q"]
+        self, start: dt.datetime, end: dt.datetime, variables: list[str] | None = None
     ):
         """
         haalt data op en bewaart ze in dao-db
@@ -792,6 +793,8 @@ class SolarPredictor(DaBase):
         :param end: datetime
         :return: None
         """
+        if variables is None:
+            variables = ["FH", "T", "Q"]
         knmi_df = knmi.get_hour_data_dataframe(
             [self.knmi_station],
             start=start - dt.timedelta(days=1),
@@ -868,14 +871,14 @@ class SolarPredictor(DaBase):
         first_dt = self.db_da.get_time_border_record("gr", latest=False)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         if latest_dt is None:  # er zijn nog geen data
-            logging.info(f"Er zijn nog geen knmi-data aanwezig")
+            logging.info("Er zijn nog geen knmi-data aanwezig")
             self.get_and_save_knmi_data(start, end)
             first_dt = self.db_da.get_time_border_record("gr", latest=False)
             latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         else:
             logging.info(f"Er zijn knmi-data aanwezig vanaf {first_dt} tot {latest_dt}")
         if first_dt <= start and latest_dt >= end:
-            logging.info(f"Er worden geen knmi-data opgehaald")
+            logging.info("Er worden geen knmi-data opgehaald")
             return None
         if first_dt > start:
             self.get_and_save_knmi_data(start, first_dt)
@@ -963,9 +966,9 @@ class SolarPredictor(DaBase):
                 df_solar = df_sensor
             else:
                 df_sensor["overlap"] = df_sensor["tijd"].isin(df_solar["tijd"])
-                df_sensor_overlap = df_sensor[df_sensor["overlap"] == True]
+                df_sensor_overlap = df_sensor[df_sensor["overlap"]]
                 report.add_col_df(df_sensor_overlap, df_solar, "solar_kwh")
-                df_sensor_new = df_sensor[df_sensor["overlap"] == False]
+                df_sensor_new = df_sensor[~df_sensor["overlap"]]
                 df_solar = pd.concat([df_solar, df_sensor_new])
             count += 1
         df_solar["utc"] = pd.to_datetime(df_solar["utc"], unit="s", utc=True)
@@ -1048,7 +1051,7 @@ class SolarPredictor(DaBase):
             raise FileNotFoundError(
                 f"Er is geen model aanwezig voor {self.solar_name},svp eerst trainen."
             )
-        latest_dt = self.db_da.get_time_border_record(
+        self.db_da.get_time_border_record(
             "gr", latest=True, table_name="prognoses"
         )
         prognose = True  # latest_dt < end

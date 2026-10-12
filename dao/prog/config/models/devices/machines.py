@@ -2,8 +2,9 @@
 Appliance/machine configuration models (washing machine, dishwasher, etc.).
 """
 
-from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
+
 from ..base import EntityId
 
 
@@ -100,7 +101,7 @@ class MachineConfig(BaseModel):
             "x-ui-widget-filter": "input_datetime,datetime",
         },
     )
-    entity_instant_start: Optional[EntityId] = Field(
+    entity_instant_start: EntityId | None = Field(
         default=None,
         alias="entity instant start",
         description="HA entity for instant start",

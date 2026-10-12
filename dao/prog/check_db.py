@@ -1,38 +1,39 @@
 import datetime
 import logging
-import tzlocal
+import sys
+from pathlib import Path
 
+import pandas as pd
+import tzlocal
 from sqlalchemy import (
-    Table,
-    Column,
-    Integer,
-    DateTime,
-    String,
     BigInteger,
+    Column,
+    DateTime,
     Float,
     ForeignKey,
+    Index,
+    Integer,
+    String,
+    Table,
     UniqueConstraint,
-    select,
-    desc,
-    insert,
-    update,
-    text,
     and_,
     delete,
-    literal_column,
+    desc,
+    insert,
     inspect,
-    Index,
     literal,
+    literal_column,
+    select,
+    text,
+    update,
 )
-import pandas as pd
-import sys
+from utils import version_number
+from version import __version__
+
+from dao.lib.db_connections import make_db_da
 
 #  sys.path.append("../")
 from dao.prog.config.loader import ConfigurationLoader
-from dao.lib.db_connections import make_db_da
-from pathlib import Path
-from version import __version__
-from utils import version_number
 
 
 class CheckDB:
@@ -273,7 +274,7 @@ class CheckDB:
             record_2025_12_2 = [24, "neersl", "Neerslag", "mm"]
             self.upsert_variabel(variabel_tabel, record_2025_12_2)
             print('Table "variabel" geupdated met neerslag.')
-            print(f'Meteo-data verhuizen van "values" naar "prognoses"')
+            print('Meteo-data verhuizen van "values" naar "prognoses"')
             self.move_meteodata_to_prognoses()
 
         """

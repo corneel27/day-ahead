@@ -13,7 +13,6 @@ import datetime as dt
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .vocabulary import INTERVAL_S
 
@@ -43,13 +42,13 @@ NOMINAL_MIN_DUTY = min(1.0, EV_MIN_DUTY_S / INTERVAL_S)
 
 @dataclass
 class SetupEcho:
-    instant_charge: Optional[bool] = None
-    ready_dt: Optional[dt.datetime] = None
-    actual_soc: Optional[float] = None
-    wished_level: Optional[float] = None
-    position: Optional[str] = None
-    plugged_in: Optional[bool] = None
-    capacity_kwh: Optional[float] = None
+    instant_charge: bool | None = None
+    ready_dt: dt.datetime | None = None
+    actual_soc: float | None = None
+    wished_level: float | None = None
+    position: str | None = None
+    plugged_in: bool | None = None
+    capacity_kwh: float | None = None
 
 
 _ECHO_INSTANT_RE = re.compile(r"Direct laden is (aan|uit)")
@@ -88,7 +87,7 @@ def parse_setup_echo(block_lines: list[str]) -> SetupEcho:
     return echo
 
 
-def check_capacity(expected_kwh: Optional[float], echo: SetupEcho, *, label: str) -> Optional[str]:
+def check_capacity(expected_kwh: float | None, echo: SetupEcho, *, label: str) -> str | None:
     """Cheap cross-EV-leak sanity check: does this car's log block show its
     own configured capacity? A mismatch means the wrong EV's config got
     read into this block. Unlike the v6 original, a hardcoded
@@ -153,13 +152,13 @@ def verify_setup_echo(resolved, echo: SetupEcho) -> list[str]:
 
 @dataclass
 class SolveStats:
-    wall_time_sec: Optional[float] = None
-    nodes: Optional[int] = None
-    gap: Optional[float] = None
-    objective: Optional[float] = None
-    cost_after_optimize: Optional[float] = None
+    wall_time_sec: float | None = None
+    nodes: int | None = None
+    gap: float | None = None
+    objective: float | None = None
+    cost_after_optimize: float | None = None
     solved: bool = False
-    failure_reason: Optional[str] = None
+    failure_reason: str | None = None
 
 
 _STATS_TIME_RE = re.compile(r"Rekentijd:\s*([\d.]+)\s*sec")
@@ -201,18 +200,18 @@ def parse_solve_stats(log_text: str) -> SolveStats:
 
 @dataclass
 class ParsedEvRun:
-    scheduled: Optional[bool] = None
-    reason: Optional[str] = None
-    energy_needed_kwh: Optional[float] = None
+    scheduled: bool | None = None
+    reason: str | None = None
+    energy_needed_kwh: float | None = None
     rows: list[dict] = field(default_factory=list)
-    partial_stops: Optional[int] = None
-    boundary_stops: Optional[int] = None
-    start_stops: Optional[int] = None
+    partial_stops: int | None = None
+    boundary_stops: int | None = None
+    start_stops: int | None = None
     multi_stage_intervals: list[str] = field(default_factory=list)
     # (uur, stage_index, factor) for every real stage running below the
     # minimum duty cycle but above zero. Empty list is the passing state.
     duty_slivers: list[tuple[str, int, float]] = field(default_factory=list)
-    min_nonzero_factor: Optional[float] = None
+    min_nonzero_factor: float | None = None
     min_duty_guard_fired: bool = False
     wished_level_clipped: bool = False
     setup_echo: SetupEcho = field(default_factory=SetupEcho)

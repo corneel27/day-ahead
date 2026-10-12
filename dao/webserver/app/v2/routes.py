@@ -1,12 +1,28 @@
-import time, os, fnmatch, re, datetime, time, threading, json
-from flask import Blueprint, render_template, request, redirect, url_for, has_request_context, abort
-
-from dao.prog.version import __version__
-from subprocess import Popen, DEVNULL
+import datetime
+import fnmatch
+import json
+import os
+import re
+import threading
+import time
 from pathlib import Path
+from subprocess import DEVNULL, Popen
+
+from flask import (
+    Blueprint,
+    abort,
+    has_request_context,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from sqlalchemy import Table
 from werkzeug.security import safe_join
-from dao.prog.da_report import Report
+
 from dao.prog.config.loader import ConfigurationLoader
+from dao.prog.da_report import Report
+from dao.prog.version import __version__
 
 v2 = Blueprint("v2", __name__)
 
@@ -144,7 +160,7 @@ def get_task_state() -> dict:
     }
 
     try:
-        with open(STATEFILE, "r", encoding="utf-8") as f:
+        with open(STATEFILE, encoding="utf-8") as f:
             state = json.load(f)
     except FileNotFoundError:
         return no_state
@@ -314,7 +330,7 @@ def log():
         return render_template("v2/no-task.html", )
 
     log_file = app_datapath + "log/" + kwargs["filename"]
-    with open(log_file, "r") as f:
+    with open(log_file) as f:
         kwargs["logdata"] = f.read()
 
     return render_template(
@@ -432,9 +448,9 @@ def task_state():
             content = "No log data available yet"
         else:
             try:
-                with open(current_state["logfile"], "r") as f:
+                with open(current_state["logfile"]) as f:
                     content = f.read()
-            except:
+            except (OSError, UnicodeError):
                 content = "Could not read logfile"
 
     headers = {
@@ -672,7 +688,7 @@ def config():
         except Exception as err:
             error = f"Error: {err}"
     else:
-        with open(path, "r") as file:
+        with open(path) as file:
             content = file.read()
 
     return render_template(
@@ -700,7 +716,7 @@ def secrets():
         except Exception as err:
             error = f"Error: {err}"
     else:
-        with open(path, "r") as file:
+        with open(path) as file:
             content = file.read()
 
     return render_template(

@@ -1,11 +1,12 @@
+import logging
+import math
+
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from matplotlib.patches import Patch
-import pandas as pd
 import numpy as np
-import math
-import logging
+import pandas as pd
+from matplotlib.patches import Patch
 
 
 class GraphBuilder:
@@ -75,7 +76,7 @@ class GraphBuilder:
         old_total = 0
         old_amount = None
         for i, (total, bottom, amount) in enumerate(
-            zip(df["Running_Total"], df["Shifted_Total"], df[y])
+            zip(df["Running_Total"], df["Shifted_Total"], df[y], strict=False)
         ):
             total = old_total if i == (len(df["Running_Total"]) - 1) else total
             old_total = total

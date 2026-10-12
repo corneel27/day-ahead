@@ -1,34 +1,33 @@
 import datetime
-import sys
-import os
 import fnmatch
-import time
+import json
+import logging
+import os
+import sys
 import threading
-import pytz
+import time
 import warnings
 from dataclasses import dataclass
-from requests import get
-import json
-import hassapi as hass
-import pandas as pd
-from subprocess import PIPE, run
-import logging
 from logging import Handler
-from sqlalchemy import Table, select, func, and_
-
-# from dao.prog.solar_predictor import SolarPredictor
-from dao.prog.utils import get_tibber_data, error_handling
-from dao.prog.version import __version__
 from pathlib import Path
-from dao.prog.config.loader import ConfigurationLoader
-from dao.lib.db_connections import make_db_da, make_db_ha
-from dao.lib.da_meteo import Meteo
-from dao.lib.da_prices import DaPrices
-from dao.prog.utils import interpolate
+from subprocess import run
 
 # from db_manager import DBmanagerObj
-from typing import Union
+import hassapi as hass
+import pandas as pd
+import pytz
 from hassapi.models import StateList
+from requests import get
+from sqlalchemy import Table, and_, func, select
+
+from dao.lib.da_meteo import Meteo
+from dao.lib.da_prices import DaPrices
+from dao.lib.db_connections import make_db_da, make_db_ha
+from dao.prog.config.loader import ConfigurationLoader
+
+# from dao.prog.solar_predictor import SolarPredictor
+from dao.prog.utils import error_handling, get_tibber_data, interpolate
+from dao.prog.version import __version__
 
 
 @dataclass
@@ -113,7 +112,7 @@ class DaBase(hass.Hass):
         log_level_str = self.config.logging_level or "info"
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
-            raise ValueError("Invalid log level: %s" % _log_level)
+            raise ValueError(f"Invalid log level: {_log_level}")
         self.log_level = _log_level
         logging.addLevelName(logging.DEBUG, "debug")
         logging.addLevelName(logging.INFO, "info")
@@ -242,7 +241,7 @@ class DaBase(hass.Hass):
     def ha_getter(self, eid):
         return self.get_state(eid).state
 
-    def set_value(self, entity_id: str, value: Union[int, float, str]) -> StateList:
+    def set_value(self, entity_id: str, value: int | float | str) -> StateList:
         try:
             result = super().set_value(entity_id, value)
             state = self.get_state(entity_id).state
@@ -416,7 +415,7 @@ class DaBase(hass.Hass):
             for c in columns:
                 db_row = [str(utc), c, float(df.loc[index, c])]
                 df_db.loc[df_db.shape[0]] = db_row
-        logging.debug("Save calculated data:\n{}".format(df_db.to_string()))
+        logging.debug(f"Save calculated data:\n{df_db.to_string()}")
         self.db_da.savedata(df_db, tablename=tablename)
         return
 
@@ -428,7 +427,7 @@ class DaBase(hass.Hass):
         :return: een lijst van eerder berekende baseload van 24uurvoor de betreffende dag
         """
         in_file = "../data/baseload/baseload_" + str(weekday) + ".json"
-        with open(in_file, "r") as f:
+        with open(in_file) as f:
             result = json.load(f)
         return result
 
@@ -683,7 +682,6 @@ class DaBase(hass.Hass):
             prog_data.index = pd.to_datetime(prog_data["tijd"])
             while len(prog_data) > 0 and prog_data.iloc[0]["tijd"] < vanaf:
                 prog_data = prog_data.iloc[1:]
-            index = 0
             for row in prog_data.itertuples():
                 h_frac = interval_s / 3600
                 prod = self.calc_prod_solar(
@@ -767,7 +765,7 @@ class DaBase(hass.Hass):
             return
         run_task = self.tasks[task]
         cmd = run_task["cmd"]
-        proc = run(cmd, stdout=PIPE, stderr=PIPE)
+        proc = run(cmd, capture_output=True)
         data = proc.stdout.decode()
         err = proc.stderr.decode()
         log_content = data + err
