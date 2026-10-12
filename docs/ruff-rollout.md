@@ -31,21 +31,23 @@ a maintenance process.
 
 | Area | Implemented now | Remaining work | Developer benefit |
 | --- | --- | --- | --- |
-| Shared configuration | Ruff 0.16.10, Python 3.12 target, custom explicit rules, separate lint requirements | Adopt standard stable rules/settings while retaining necessary repository details | Reproducible checks with less custom configuration |
-| Lint coverage | All tracked Python files included; zero findings under the current custom rules | Resolve findings under Ruff's standard rules and maintain the clean baseline | Common mistakes are detected using Ruff's supported defaults |
+| Shared configuration | Pinned Ruff version, Python target, custom explicit rules, separate lint requirements | Adopt standard stable rules/settings while retaining necessary repository details | Reproducible checks with less custom configuration |
+| Lint coverage | All tracked Python files included in the existing lint gate | Resolve findings under Ruff's standard rules and maintain coverage | Common mistakes are detected using Ruff's supported defaults |
 | CI | Independent **Ruff lint** job on pushes and pull requests | Require lint before merging | Automated feedback becomes merge protection |
 | Formatting | Ruff is available; repository-wide formatting is not yet adopted | Apply the default formatter settings, format the code, add a CI check | Consistent layout and less style-review effort |
 | Developer tools | Installation and lint commands documented in `DEVELOP.md` | Add editor guidance and pinned pre-commit hooks | Earlier feedback and fewer avoidable CI failures |
-| Behavioral verification | Scenario and isolated regression checks are green for the foundation | Keep them green during later stages | Cleanup is checked against application behavior |
+| Behavioral verification | Scenario and isolated regression checks accompany lint in CI | Keep these checks passing during later stages | Cleanup is checked against application behavior |
 | Maintenance | Version and current rule selection are explicit | Define upgrade cadence, ownership and review of changes to standard defaults | Tooling improvements remain predictable |
 
 ## Stage 1 — Establish the lint foundation
 
 **Status: completed.**
 
-We have added `ruff.toml` and pinned Ruff to 0.16.10 in both
-`requirements-lint.txt` and `required-version`. The configuration targets Python
-3.12. Ruff is a development dependency, separate from the add-on runtime.
+`ruff.toml` holds our shared configuration. The version is pinned in
+`requirements-lint.txt` and `required-version`; both must be updated together.
+The Python target must match the supported application version. Ruff is a
+development dependency, separate from the add-on runtime. See these files for
+the current version and settings.
 
 The following custom rule selection describes the implemented baseline. It will
 be replaced by Ruff's standard stable selection in Stage 2.
@@ -58,14 +60,10 @@ be replaced by Ruff's standard stable selection in Stage 2.
 | `UP` | Modern Python constructs for the supported version |
 | `B` | Common mistakes and risky patterns detected by Bugbear |
 
-We applied safe fixes and reviewed the remaining findings manually. Required
-Flask startup imports retain their execution order with explained exceptions.
-Existing truncating `zip` calls preserve their behavior; validated equal-length
-inputs use `strict=True`.
-
-The review fixed an undefined SQLAlchemy `Table` import, defaults that leaked
-state or captured the time at import, and a pre-existing boiler COP serialization
-defect exposed by the expanded tests. These fixes have regression coverage.
+We review lint findings for behavioral defects and add regression coverage when
+fixes change application behavior. Safe automatic fixes still require diff
+review. Exceptions must explain the behavior they preserve; for example, Flask
+route-registration imports must run after the application is initialized.
 
 **Completion criteria:** all maintained Python files are covered, the selected
 lint rules pass, and the cleanup is verified by green behavioral checks.
@@ -86,8 +84,8 @@ imports and a reproducible starting point for the next stages.
 3. Use the default formatter settings: an 88-character line length, double quotes
    and four-space indentation. Let Ruff provide these values rather than
    duplicating them as custom overrides.
-4. Measure the formatting diff on the current code. The initial assessment would
-   change 87 of 94 Python files; remeasure before applying it.
+4. Measure the formatting diff on the current code to assess review and upstream
+   merge impact before applying it.
 5. Run `ruff format .` and commit the formatting as one separate mechanical change.
 6. Review the diff and rerun lint, scenario and isolated regression checks.
 7. Add `ruff format --check .` to CI with a clear, stable check name.
@@ -158,30 +156,26 @@ consistent versions across tools, and green lint, formatting and behavioral chec
 **What this adds:** code quality keeps improving while development-tool changes
 remain predictable for contributors.
 
-## Evidence for the completed foundation
+## Verification and ownership
 
-The initial assessment found 511 diagnostics across 94 Python files under the
-selected rules. Those findings included style and modernization suggestions as
-well as actual defects; the number is not a count of runtime bugs.
+Verify each stage on its own commits. Confirm that source discovery includes all
+maintained Python files, run the applicable Ruff checks, and run the scenario and
+isolated regression checks relevant to the changes. Preserve existing scenario
+baselines unless an intentional behavior change has been separately reviewed.
 
-The initial lint foundation was verified with:
+Use isolated data and synthetic scenarios for routine CI. Optional database tests
+need a disposable test database; live-installation scripts require a separate,
+explicitly planned verification procedure. Ruff complements the tests that
+verify planning, queries and configuration behavior.
 
-- Zero Ruff findings across all 96 tracked Python files.
-- An undefined-name probe correctly rejected with `F821` and exit 1.
-- Scenario validation and 12 solver-free unit tests passing.
-- All 40 solver scenarios passing against the existing baselines.
-- 118 isolated Linux regression tests passing; 18 optional MariaDB cases skipped
-  because a disposable test database was not configured.
-- Successful model-documentation, CodeQL, amd64 and aarch64 build checks.
+Keep commands, editor setup, hook installation, check names and upgrade
+instructions in [the developer guide](../DEVELOP.md). This roadmap records the
+adoption target, remaining work and completion criteria. Put individual bug fixes,
+finding counts and test-run results in the relevant pull request description.
 
-The end-time regression failed against the original method and passed after
-the fix. Boiler serialization failures also reproduced on the unchanged base
-with Pydantic 2.13.5 before their separate fix.
-
-Later stages must be verified on their own commits. Our CI uses isolated data
-and synthetic scenarios; live-installation scripts and the live EV harness are
-outside this verification. Scenario and regression tests remain responsible for
-verifying planning, queries and configuration behavior alongside Ruff.
+The developer completing a stage must update its status, the current-status table
+and any affected developer instructions in the same change. Maintainers review
+those updates and own repository protection and the agreed upgrade policy.
 
 ## References
 
