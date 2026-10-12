@@ -153,7 +153,7 @@ jobs:
 
       - name: Prepare multi-architecture matrix
         id: matrix
-        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.06.0
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.09.0
         with:
           architectures: ${{ steps.arch.outputs.architectures }}
           image-name: ${{ env.IMAGE_NAME }}
@@ -185,7 +185,7 @@ jobs:
           cp -a dao/* release-testing/
 
       - name: Build and publish image
-        uses: home-assistant/builder/actions/build-image@2026.06.0
+        uses: home-assistant/builder/actions/build-image@2026.09.0
         with:
           arch: ${{ matrix.arch }}
 
@@ -226,7 +226,7 @@ jobs:
       # Always the complete set of architectures: the manifest describes the
       # image as a whole, also when only one architecture was rebuilt
       - name: Publish multi-architecture manifest
-        uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.06.0
+        uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.09.0
         with:
           architectures: ${{ env.ARCHITECTURES }}
 

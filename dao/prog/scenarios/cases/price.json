@@ -1,0 +1,35 @@
+[
+  {
+    "id": "price-negative-window",
+    "description": "Negative midday prices, no PV - battery hoards the free energy",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20,
+               -0.01, -0.03, -0.03, -0.01,
+               0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
+    },
+    "states": { "sensor.ess_battery_soc": "30" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_charges_during": { "start": "11:00", "end": "15:00", "min_kwh": 15.0 }
+    }
+  },
+  {
+    "id": "price-evening-spike",
+    "description": "Mild prices with a sharp evening spike, battery starts high - it discharges into the spike",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18,
+               0.18, 0.18, 0.18, 0.18, 0.18, 0.18, 0.18,
+               0.85, 0.85, 0.85,
+               0.18, 0.18, 0.18]
+    },
+    "states": { "sensor.ess_battery_soc": "80" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_discharges_during": { "start": "18:00", "end": "21:00", "min_kwh": 8.0 }
+    }
+  }
+]

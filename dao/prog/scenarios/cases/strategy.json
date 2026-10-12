@@ -1,0 +1,19 @@
+[
+  {
+    "id": "strategy-minimize-consumption-skips-free-charging",
+    "description": "Same negative-price window as price-negative-window, but strategy is 'minimize consumption' - the battery does not hoard the free energy because cycling it only adds delivery, it never reduces it",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20,
+               -0.01, -0.03, -0.03, -0.01,
+               0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
+    },
+    "states": { "sensor.ess_battery_soc": "30" },
+    "config_patch": { "strategy.value": "minimize consumption" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_flat_during": { "start": "11:00", "end": "15:00", "max_kwh": 0.1 }
+    }
+  }
+]

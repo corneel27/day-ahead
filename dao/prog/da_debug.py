@@ -357,9 +357,10 @@ def _import_targets():
     from dao.prog.da_report import Report
     from dao.lib.db_manager import DBmanagerObj
     from dao.prog.solar_predictor import SolarPredictor
+    from dao.lib.da_meteo import Meteo
     import dao.prog.da_base as da_base_module
 
-    return DaBase, Report, DBmanagerObj, SolarPredictor, da_base_module
+    return DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, da_base_module
 
 
 # ---------------------------------------------------------------------------
@@ -538,6 +539,7 @@ class RecordingIO:
         self._ha_states: dict[str, str] = {}
         self._baseload: dict[str, list] = {}
         self._heatpump_run_hours: dict[str, float] = {}
+        self._avg_temperature: dict[str, float] = {}
         self._solar_predictions: dict[str, pd.DataFrame] = {}
         self._captured_at = dt.datetime.now()
         self._model = None  # last mip.Model.optimize() was called on
@@ -568,7 +570,7 @@ class RecordingIO:
 
     # Zet alle class- en module-patches voor deze opnamesessie neer; dekt samen alle kanalen uit sectie 1 van het ontwerp.
     def _install_patches(self) -> None:
-        DaBase, Report, DBmanagerObj, SolarPredictor, _da_base_module = _import_targets()
+        DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, _da_base_module = _import_targets()
 
         original_init = DaBase.__init__
 
@@ -648,6 +650,26 @@ class RecordingIO:
             return result
 
         self._patches.set(Report, "get_heatpump_run_hours", _wrapped_hp_hours)
+
+        # A channel found the same way predict_solar_device was (see the
+        # comment below): calc_optimum()'s heating block calls
+        # self.meteo.calc_graaddagen(weighted=True) unconditionally once the
+        # heat pump is enabled, which falls through to
+        # Meteo.get_avg_temperature() — a live SQLAlchemy query DBmanagerObj's
+        # patch above never sees, because it only runs inside this method.
+        # Patched wholesale, same principle as get_price_data/
+        # get_heatpump_run_hours; keyed by call args since calc_graaddagen
+        # calls it once for "today" (date=None) and, on a horizon longer
+        # than a day, again for "tomorrow" (an explicit date).
+        original_avg_temperature = Meteo.get_avg_temperature
+
+        # Roept de echte temperatuurquery aan en onthoudt het resultaat per argumentcombinatie (vandaag/morgen).
+        def _wrapped_avg_temperature(instance, *args, **kwargs):
+            result = original_avg_temperature(instance, *args, **kwargs)
+            self._avg_temperature[_call_key(args, kwargs)] = result
+            return result
+
+        self._patches.set(Meteo, "get_avg_temperature", _wrapped_avg_temperature)
 
         original_get_prognose_data = DBmanagerObj.get_prognose_data
 
@@ -775,6 +797,7 @@ class RecordingIO:
             "ha_states": self._ha_states,
             "baseload": self._baseload,
             "heatpump_run_hours": self._heatpump_run_hours,
+            "avg_temperature": self._avg_temperature,
             "solar_predictions": {
                 key: _dataframe_to_payload(df) for key, df in self._solar_predictions.items()
             },
@@ -930,6 +953,9 @@ class ReplayIO:
         self._heatpump_run_hours: dict[str, float] = self._snapshot.get(
             "heatpump_run_hours", {}
         )
+        self._avg_temperature: dict[str, float] = self._snapshot.get(
+            "avg_temperature", {}
+        )
         self._solar_predictions: dict[str, pd.DataFrame] = {
             key: _dataframe_from_payload(payload)
             for key, payload in self._snapshot.get("solar_predictions", {}).items()
@@ -994,7 +1020,7 @@ class ReplayIO:
 
     # Zet alle class- en module-patches voor deze replaysessie neer: config, reads, writes en de klok.
     def _install_patches(self) -> None:
-        DaBase, Report, DBmanagerObj, SolarPredictor, da_base_module = _import_targets()
+        DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, da_base_module = _import_targets()
 
         if self._config_dict is None:
             raise SnapshotMiss(
@@ -1063,7 +1089,7 @@ class ReplayIO:
         self._patches.set(DaBase, "get_calculated_baseload", _replay_baseload)
 
         # Levert de opgeslagen prijsdata terug in plaats van een databasequery uit te voeren.
-        def _replay_get_price_data(instance, start, end=None, interval="1hour"):
+        def _replay_get_price_data(instance, start, end=None, interval="1hour", extension:int=0):
             if self._price_data is None:
                 raise SnapshotMiss(
                     f"ReplayIO ({self._source}): snapshot has no price_data."
@@ -1084,6 +1110,21 @@ class ReplayIO:
             return self._heatpump_run_hours[key]
 
         self._patches.set(Report, "get_heatpump_run_hours", _replay_hp_hours)
+
+        # Levert de opgeslagen gemiddelde temperatuur terug per argumentcombinatie en faalt hard als die ontbreekt.
+        def _replay_avg_temperature(instance, *args, **kwargs):
+            key = _call_key(args, kwargs)
+            if key not in self._avg_temperature:
+                raise SnapshotMiss(
+                    f"ReplayIO ({self._source}): get_avg_temperature"
+                    f"{tuple(args)} is not present in the snapshot "
+                    f"(looked up as key {key}) — either the fixture predates "
+                    f"the heat pump being enabled, or this is a heating "
+                    f"config the capture never exercised."
+                )
+            return self._avg_temperature[key]
+
+        self._patches.set(Meteo, "get_avg_temperature", _replay_avg_temperature)
 
         # Levert de opgeslagen zonnevoorspelling terug op paneelnaam, ongevoelig voor een afwijkend tijdvenster.
         def _replay_predict_solar_device(instance, solar_option, start, end):
@@ -2698,6 +2739,7 @@ def cmd_inspect(args: argparse.Namespace, data_dir: Path) -> int:
         "prog_data_shape": _df_payload_shape(snapshot.get("prog_data")),
         "baseload_days": len(snapshot.get("baseload", {})),
         "heatpump_run_hours_count": len(snapshot.get("heatpump_run_hours", {})),
+        "avg_temperature_count": len(snapshot.get("avg_temperature", {})),
         "secrets_redacted": _count_redacted(snapshot.get("config") or {}),
         "result": result,
     }
@@ -2712,7 +2754,8 @@ def cmd_inspect(args: argparse.Namespace, data_dir: Path) -> int:
             f"price_data {d['price_data_shape']} | "
             f"prog_data {d['prog_data_shape']} | "
             f"baseload {d['baseload_days']} day(s) | "
-            f"hp_run_hours {d['heatpump_run_hours_count']}"
+            f"hp_run_hours {d['heatpump_run_hours_count']} | "
+            f"avg_temperature {d['avg_temperature_count']}"
         )
         print(f"config    secrets: {d['secrets_redacted']} redacted")
         if d["result"]:
@@ -3643,6 +3686,248 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
     return EXIT_OK if ok else EXIT_ASSERTION_FAILED
 
 
+# ---------------------------------------------------------------------------
+# scenario suite: list / show / validate / run / bless the declarative
+# scenario corpus in dao/prog/scenarios/cases/.
+# ---------------------------------------------------------------------------
+#
+# The runner and the synthetic-snapshot builder live in dao/prog/scenarios/;
+# they are imported lazily here so `da_debug` keeps working (capture, replay,
+# dump, …) even where pandas / the solver is not installed.
+
+
+def _scenario_pkg():
+    from dao.prog import scenarios
+
+    return scenarios
+
+
+def cmd_scenario_list(args: argparse.Namespace, data_dir: Path) -> int:
+    scenarios = _scenario_pkg()
+    rows = [
+        {"id": s.id, "description": s.description, "source": s.source_file,
+         "horizon_h": s.horizon_hours, "skip": s.skip}
+        for s in scenarios.load_all()
+    ]
+
+    def render(d):
+        for r in d["rows"]:
+            flag = " (skip)" if r["skip"] else ""
+            print(f"{r['id']:<16} {r['horizon_h']:>3}h  {r['description']}{flag}")
+        print(f"\n{len(d['rows'])} scenario(s).")
+
+    _emit(args, {"rows": rows}, render)
+    return EXIT_OK
+
+
+def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
+    scenarios = _scenario_pkg()
+    from dataclasses import asdict
+    from dao.prog.scenarios import baseline
+
+    try:
+        (scenario,) = scenarios.load([args.id])
+    except KeyError as ex:
+        raise UsageError(str(ex)) from ex
+    d = asdict(scenario)
+
+    # Only present when the scenario actually opts into Tier C (most of the
+    # 24 EV cases don't) — mirrors the "only print non-empty sections" rule
+    # `states`/`config_patch`/`ev` already follow below.
+    d["baseline"] = None
+    if "objective_within_baseline" in scenario.expect:
+        existing = baseline.load_baseline(scenario.id)
+        d["baseline"] = {
+            "checked": bool(scenario.expect["objective_within_baseline"]),
+            "objective": existing["objective"] if existing else None,
+            "path": str(baseline.baseline_path(scenario.id)) if existing else None,
+        }
+
+    def render(dd):
+        print(f"{dd['id']}  —  {dd['description']}")
+        print(f"  source     {dd['source_file']}")
+        print(f"  start      {dd['start']}   horizon {len(dd['prices_cons'])} h")
+        print(f"  prices.cons {dd['prices_cons']}")
+        if dd["prices_prod"] is not None:
+            print(f"  prices.prod {dd['prices_prod']}")
+        print(f"  solar      {dd['solar'] if dd['solar'] is not None else '(none — all zero)'}")
+        print(f"  options    {dd['options'] or 'options_example (default)'}")
+        if dd["states"]:
+            print("  states")
+            for k, v in dd["states"].items():
+                print(f"    {k} = {v}")
+        if dd["config_patch"]:
+            print("  config_patch")
+            for k, v in dd["config_patch"].items():
+                print(f"    {k} = {v}")
+        if dd["ev"]:
+            print(f"  ev         {dd['ev']}")
+        print(f"  expect     {dd['expect']}  (+ the Tier A invariants, always)")
+        if dd["baseline"] is not None:
+            b = dd["baseline"]
+            note = "" if b["checked"] else "  (objective_within_baseline: false — not checked)"
+            if b["objective"] is not None:
+                print(f"  baseline   {b['objective']:.6f}  ({b['path']}){note}")
+            else:
+                print(f"  baseline   none yet — reports PENDING until `scenario-bless {dd['id']}`{note}")
+
+    _emit(args, d, render)
+    return EXIT_OK
+
+
+def cmd_scenario_validate(args: argparse.Namespace, data_dir: Path) -> int:
+    scenarios = _scenario_pkg()
+    problems: list[str] = []
+    try:
+        loaded = scenarios.load_all()
+    except Exception as ex:  # noqa: BLE001
+        raise UsageError(f"scenario corpus does not load: {ex}") from ex
+
+    # base_states.json must parse and the base config must be buildable
+    try:
+        from dao.prog.scenarios.build_snapshot import load_base_states
+        n_states = len(load_base_states())
+    except Exception as ex:  # noqa: BLE001
+        problems.append(f"base_states.json: {ex}")
+        n_states = 0
+    try:
+        from dao.prog.scenarios.base_config import base_config
+        base_config("options_example")
+    except Exception as ex:  # noqa: BLE001
+        problems.append(f"options_example config does not load: {ex}")
+    if any(sc.options == "options_2ev" for sc in loaded):
+        try:
+            from dao.prog.scenarios.base_config import base_config
+            base_config("options_2ev")
+        except Exception as ex:  # noqa: BLE001
+            problems.append(f"options_2ev config does not load: {ex}")
+
+    data = {
+        "scenarios": len(loaded),
+        "base_states": n_states,
+        "problems": problems,
+        "ok": not problems,
+    }
+
+    def render(d):
+        print(f"scenarios   {d['scenarios']}  (loaded, ids unique)")
+        print(f"base_states {d['base_states']} entities")
+        for p in d["problems"]:
+            print(f"  PROBLEM: {p}")
+        print("validate:", "PASS" if d["ok"] else "FAIL")
+
+    _emit(args, data, render)
+    return EXIT_OK if not problems else EXIT_ASSERTION_FAILED
+
+
+def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
+    scenarios = _scenario_pkg()
+    from dao.prog.scenarios.runner import run_scenario, STATUS_PASS, STATUS_SKIP
+
+    try:
+        selected = scenarios.load(args.ids) if args.ids else scenarios.load_all()
+    except KeyError as ex:
+        raise UsageError(str(ex)) from ex
+
+    report_dir = (data_dir / "scenario_reports") if (args.log or args.png or args.report) else None
+
+    results = []
+    for sc in selected:
+        r = run_scenario(sc, threads=args.threads, keep_png=args.png, report_dir=report_dir)
+        results.append(r)
+        if not getattr(args, "json", False):
+            st = r.stats
+            print(f"[{r.status}] {r.id}: {r.description}"
+                  + (f"   objective {r.objective:.6f}" if r.objective is not None else "")
+                  + (f"   threads={r.threads}" if r.threads != 1 else "")
+                  + (f"   solve {st.wall_time_sec or '—'}s / {st.nodes or '—'} nodes"
+                     f" / gap {st.gap if st.gap is not None else '—'}"
+                     if st is not None else ""))
+            for f in r.failures:
+                print(f"        - {f}")
+            if r.log_path:
+                print(f"        log: {r.log_path}")
+            if r.png_path:
+                print(f"        png: {r.png_path}")
+
+    n_ok = sum(1 for r in results if r.status in (STATUS_PASS, STATUS_SKIP))
+
+    report_paths = None
+    if args.report:
+        from dao.prog.scenarios.reporting import write_reports
+
+        md_path, csv_path = write_reports(results, report_dir)
+        report_paths = {"md": str(md_path), "csv": str(csv_path)}
+        if not getattr(args, "json", False):
+            print(f"\nreport: {md_path}\nreport: {csv_path}")
+
+    data = {
+        "results": [
+            {"id": r.id, "status": r.status, "objective": r.objective,
+             "threads": r.threads, "log_path": r.log_path, "png_path": r.png_path,
+             "failures": r.failures,
+             "wall_time_sec": r.stats.wall_time_sec if r.stats else None,
+             "nodes": r.stats.nodes if r.stats else None,
+             "gap": r.stats.gap if r.stats else None,
+             "checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.checks],
+             "setup_checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.setup_checks]}
+            for r in results
+        ],
+        "passed": n_ok,
+        "total": len(results),
+        "report_paths": report_paths,
+    }
+
+    def render(d):
+        print(f"\n{d['passed']}/{d['total']} passed.")
+        bad = [r["id"] for r in d["results"] if r["status"] not in (STATUS_PASS, STATUS_SKIP)]
+        if bad:
+            print("needs a look:", bad)
+
+    _emit(args, data, render)
+    return EXIT_OK if n_ok == len(results) else EXIT_ASSERTION_FAILED
+
+
+def cmd_scenario_bless(args: argparse.Namespace, data_dir: Path) -> int:
+    """Write (or overwrite) the Tier C baseline for each given scenario id —
+    explicit, and never done implicitly by a plain `scenario-run`. Refuses
+    to bless a scenario that doesn't currently PASS, so a broken baseline
+    can't be committed by accident."""
+    scenarios = _scenario_pkg()
+    from dao.prog.scenarios import baseline
+    from dao.prog.scenarios.runner import STATUS_PASS, run_scenario
+
+    try:
+        selected = scenarios.load(args.ids)
+    except KeyError as ex:
+        raise UsageError(str(ex)) from ex
+
+    rows = []
+    for sc in selected:
+        r = run_scenario(sc, threads=args.threads)
+        if r.status != STATUS_PASS:
+            rows.append({"id": sc.id, "blessed": False, "objective": r.objective,
+                         "reason": f"{r.status}: not blessing a non-passing scenario"})
+            continue
+        if r.objective is None:
+            rows.append({"id": sc.id, "blessed": False, "objective": None,
+                         "reason": "solve produced no objective"})
+            continue
+        path = baseline.write_baseline(sc.id, r.objective)
+        rows.append({"id": sc.id, "blessed": True, "objective": r.objective, "path": str(path)})
+
+    def render(d):
+        for row in d["rows"]:
+            if row["blessed"]:
+                print(f"blessed {row['id']}: objective {row['objective']:.6f} -> {row['path']}")
+            else:
+                print(f"NOT blessed {row['id']}: {row['reason']}")
+
+    n_ok = sum(1 for row in rows if row["blessed"])
+    _emit(args, {"rows": rows}, render)
+    return EXIT_OK if n_ok == len(rows) else EXIT_ASSERTION_FAILED
+
+
 # -- argument parsing / entry point --------------------------------------
 
 
@@ -3813,6 +4098,60 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("selftest", parents=[common], help="Run da_debug's own offline checks.")
 
+    p = sub.add_parser("scenario-list", parents=[common],
+                       help="List the declarative scenarios in dao/prog/scenarios/cases/.")
+
+    p = sub.add_parser("scenario-show", parents=[common],
+                       help="Print one scenario's resolved deltas and expectations (no solve).")
+    p.add_argument("id", help="scenario id (see `scenario-list`)")
+
+    p = sub.add_parser("scenario-validate", parents=[common],
+                       help="Check the scenario corpus, base_states.json and the base config load. No solve.")
+
+    p = sub.add_parser("scenario-run", parents=[common],
+                       help="Build a synthetic snapshot per scenario, solve it hermetically, run the Tier A invariants.")
+    p.add_argument("ids", nargs="*", help="scenario ids to run (default: all)")
+    p.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        metavar="N",
+        help="CBC thread count (mip.Model.threads semantics: -1 = all cores). "
+        "Default 1, for reproducibility. Run the same scenario twice with "
+        "different --threads and compare the objective / --log output to "
+        "see whether they agree.",
+    )
+    p.add_argument(
+        "--log",
+        action="store_true",
+        help="Write the captured Python + CBC log to "
+        "<data-dir>/scenario_reports/<id>.log and print its path.",
+    )
+    p.add_argument(
+        "--png",
+        action="store_true",
+        help="Keep day_ahead.py's dispatch chart (suppressed by default) "
+        "and move it to <data-dir>/scenario_reports/<id>.png.",
+    )
+    p.add_argument(
+        "--report",
+        action="store_true",
+        help="Write a combined Markdown + CSV report of this run to "
+        "<data-dir>/scenario_reports/.",
+    )
+
+    p = sub.add_parser("scenario-bless", parents=[common],
+                       help="Solve the given scenario(s) and, if they PASS, write/overwrite their Tier C baseline. "
+                            "Never done implicitly by scenario-run.")
+    p.add_argument("ids", nargs="+", help="scenario ids to bless")
+    p.add_argument(
+        "--threads",
+        type=int,
+        default=1,
+        metavar="N",
+        help="CBC thread count for the solve backing the new baseline (mip.Model.threads semantics). Default 1.",
+    )
+
     return parser
 
 
@@ -3826,6 +4165,11 @@ _COMMANDS = {
     "dump": cmd_dump,
     "dangling": cmd_dangling,
     "selftest": cmd_selftest,
+    "scenario-list": cmd_scenario_list,
+    "scenario-show": cmd_scenario_show,
+    "scenario-validate": cmd_scenario_validate,
+    "scenario-run": cmd_scenario_run,
+    "scenario-bless": cmd_scenario_bless,
 }
 
 

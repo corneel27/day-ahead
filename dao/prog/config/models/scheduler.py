@@ -2,7 +2,7 @@
 Scheduler configuration models.
 """
 
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
@@ -16,6 +16,7 @@ SchedulerAction = Literal[
     "clean_data",
     "calc_baseloads",
     "train_ml_predictions",
+    "predicted_prices"
 ]
 
 
@@ -63,6 +64,18 @@ class SchedulerConfig(BaseModel):
             "x-help": "When enabled, scheduled tasks will run automatically at configured times. Disable to prevent all scheduled tasks from running.",
             "x-ui-section": "Scheduler",
             "x-order": 1,
+        },
+    )
+    offset: Optional[int] = Field(
+        default = 10,
+        ge=0,
+        le=60,
+        description="Number of seconds the task is started before schedule-time (due to time in task start overhead)",
+        json_schema_extra={
+            "x-help": "Number of seconds the task is scheduled before schedule-time (due to time in task start overhead)",
+            "x-unit": "s",
+            "x-ui-section": "Scheduler",
+            "x-validation-hint": "Must be >= 0 and <=60, typically 10 seconds",
         },
     )
     schedule: list[ScheduleEntry] = Field(
