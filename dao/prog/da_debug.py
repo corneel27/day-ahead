@@ -1030,6 +1030,15 @@ class ReplayIO:
         rehydrated_config = _rehydrate_config(self._config_dict)
         self._patches.set(DaBase, "_config", rehydrated_config)
         self._patches.set(DaBase, "_loader", _FakeLoader())
+        # DaBase.__init__ haalt de configuratie via config_cache, dat het
+        # bestand van schijf leest; bij een replay bestaat dat bestand niet, dus
+        # levert de cache hier de configuratie uit de snapshot.
+        from dao.prog.config.loader import config_cache
+
+        fake_loader = DaBase._loader
+        self._patches.set(
+            config_cache, "get", lambda _path: (rehydrated_config, fake_loader)
+        )
 
         # Same capture as RecordingIO, for the same reason: without this,
         # a replay produces no *.result.json at all, so there is nothing
