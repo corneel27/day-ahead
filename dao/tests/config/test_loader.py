@@ -5,7 +5,12 @@ Tests for configuration loader.
 import json
 import pytest
 from pathlib import Path
-from dao.prog.config.loader import ConfigurationLoader
+from dao.prog.config.loader import (
+    CURRENT_VERSION,
+    ConfigurationLoader,
+    config_cache,
+    file_stamp,
+)
 
 
 @pytest.fixture
@@ -131,3 +136,204 @@ class TestConfigurationLoader:
         assert saved_data["meteoserver-key"] == "updated_api_key"
         assert saved_data["unknown_field"] == "should_be_kept"
         assert saved_data["config_version"] == 0
+
+
+class TestConfigCache:
+    """Test the process-wide configuration cache."""
+
+    @pytest.fixture(autouse=True)
+    def clean_cache(self):
+        """Every test starts and ends with an empty cache."""
+        config_cache.invalidate()
+        yield
+        config_cache.invalidate()
+
+    @staticmethod
+    def write_config(config_path: Path, logging_level: str) -> None:
+        config_path.write_text(
+            json.dumps(
+                {
+                    "config_version": 2,
+                    "logging_level": logging_level,
+                    "meteoserver-key": "test_api_key",
+                }
+            )
+        )
+
+    def test_cached_config_is_reused(self, temp_config_dir):
+        """An unchanged config file is loaded only once."""
+        config_path = temp_config_dir / "options.json"
+        self.write_config(config_path, "info")
+
+        config1, loader1 = config_cache.get(config_path)
+        config2, loader2 = config_cache.get(config_path)
+
+        assert config1 is config2
+        assert loader1 is loader2
+
+    def test_changed_config_is_reloaded(self, temp_config_dir):
+        """A changed config file is read again, also within one process."""
+        config_path = temp_config_dir / "options.json"
+        self.write_config(config_path, "info")
+
+        config1, _ = config_cache.get(config_path)
+        assert config1.logging_level == "info"
+
+        self.write_config(config_path, "debug")
+
+        config2, _ = config_cache.get(config_path)
+        assert config2 is not config1
+        assert config2.logging_level == "debug"
+
+    def test_changed_secrets_are_reloaded(self, temp_config_dir):
+        """A changed secrets file invalidates the cached config as well."""
+        config_path = temp_config_dir / "options.json"
+        secrets_path = temp_config_dir / "secrets.json"
+        self.write_config(config_path, "info")
+        secrets_path.write_text(json.dumps({"api_key": "key456"}))
+
+        config1, loader1 = config_cache.get(config_path)
+        assert loader1.secrets == {"api_key": "key456"}
+
+        secrets_path.write_text(json.dumps({"api_key": "new_key"}))
+
+        config2, loader2 = config_cache.get(config_path)
+        assert config2 is not config1
+        assert loader2.secrets == {"api_key": "new_key"}
+
+    def test_invalidate_forces_reload(self, temp_config_dir):
+        """After invalidate() the config is read from disk again."""
+        config_path = temp_config_dir / "options.json"
+        self.write_config(config_path, "info")
+
+        config1, _ = config_cache.get(config_path)
+        config_cache.invalidate()
+        config2, _ = config_cache.get(config_path)
+
+        assert config2 is not config1
+        assert config2.logging_level == config1.logging_level
+
+    def test_other_config_file_is_loaded(self, temp_config_dir):
+        """Another path is loaded, not served from the cache."""
+        config_path = temp_config_dir / "options.json"
+        other_path = temp_config_dir / "other_options.json"
+        self.write_config(config_path, "info")
+        self.write_config(other_path, "debug")
+
+        config1, _ = config_cache.get(config_path)
+        config2, _ = config_cache.get(other_path)
+
+        assert config1.logging_level == "info"
+        assert config2.logging_level == "debug"
+
+    def test_failed_load_does_not_keep_other_config_cached(self, temp_config_dir):
+        """A failing load never leaves the configuration of another file cached."""
+        config_path = temp_config_dir / "options.json"
+        broken_path = temp_config_dir / "broken_options.json"
+        self.write_config(config_path, "info")
+        broken_path.write_text("{ this is not json")
+
+        config1, _ = config_cache.get(config_path)
+
+        with pytest.raises(ValueError):
+            config_cache.get(broken_path)
+
+        # het eerste bestand wordt opnieuw gelezen, niet uit de cache geleverd
+        config2, _ = config_cache.get(config_path)
+        assert config2 is not config1
+        assert config2.logging_level == "info"
+
+    def test_file_stamp_of_missing_file(self, temp_config_dir):
+        """A missing file has no stamp."""
+        assert file_stamp(temp_config_dir / "nonexistent.json") is None
+
+
+class TestLoadDoesNotWrite:
+    """
+    Reading the configuration must not open options.json for writing.
+
+    watchdog.sh watches options.json with inotify. A file that is opened for
+    writing gives an IN_CLOSE_WRITE event as soon as it is closed, even when
+    nothing was written. Reading the configuration would then be reported as a
+    changed configuration, the scheduler and gunicorn would be restarted, those
+    read the configuration again, and the add-on restarts itself endlessly.
+    """
+
+    @staticmethod
+    def write_config(config_path: Path, version: int = 2) -> None:
+        config_path.write_text(
+            json.dumps(
+                {
+                    "config_version": version,
+                    "logging_level": "info",
+                    "meteoserver-key": "test_api_key",
+                }
+            )
+        )
+
+    @staticmethod
+    def record_open_modes(monkeypatch, config_path: Path) -> list[str]:
+        """Records the mode of every open() of config_path."""
+        import builtins
+
+        modes: list[str] = []
+        real_open = builtins.open
+
+        def spy(file, mode="r", *args, **kwargs):
+            if Path(file) == config_path:
+                modes.append(mode)
+            return real_open(file, mode, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "open", spy)
+        return modes
+
+    def test_up_to_date_config_is_opened_read_only(self, temp_config_dir, monkeypatch):
+        """Loading a current configuration opens the file read-only."""
+        config_path = temp_config_dir / "options.json"
+        self.write_config(config_path)
+
+        modes = self.record_open_modes(monkeypatch, config_path)
+
+        loader = ConfigurationLoader(config_path)
+        loader.load_and_validate()
+
+        assert modes, "options.json was not opened at all"
+        assert all("+" not in mode and "w" not in mode and "a" not in mode
+                   for mode in modes), f"opened for writing: {modes}"
+
+    def test_up_to_date_config_is_left_untouched(self, temp_config_dir):
+        """Loading a current configuration changes neither content nor stamp."""
+        config_path = temp_config_dir / "options.json"
+        self.write_config(config_path)
+
+        content_before = config_path.read_text()
+        stamp_before = file_stamp(config_path)
+
+        ConfigurationLoader(config_path).load_and_validate()
+
+        assert config_path.read_text() == content_before
+        assert file_stamp(config_path) == stamp_before
+
+    def test_migration_still_writes_the_migrated_config(self, temp_config_dir):
+        """An outdated configuration is still migrated and written back."""
+        config_path = temp_config_dir / "options.json"
+        self.write_config(config_path, version=0)
+
+        ConfigurationLoader(config_path).load_and_validate()
+
+        written = json.loads(config_path.read_text())
+        assert written["config_version"] == CURRENT_VERSION
+        # de backup van de oorspronkelijke versie is gemaakt
+        assert (temp_config_dir / "options_v0.json").exists()
+
+    def test_second_load_after_migration_does_not_write_again(self, temp_config_dir):
+        """Once migrated, a following load leaves the file alone."""
+        config_path = temp_config_dir / "options.json"
+        self.write_config(config_path, version=0)
+
+        ConfigurationLoader(config_path).load_and_validate()
+        stamp_after_migration = file_stamp(config_path)
+
+        ConfigurationLoader(config_path).load_and_validate()
+
+        assert file_stamp(config_path) == stamp_after_migration
