@@ -2,9 +2,9 @@
 Scheduler configuration models.
 """
 
-from typing import Literal, Optional
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import Literal
 
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Valid scheduler actions
 SchedulerAction = Literal[
@@ -66,7 +66,7 @@ class SchedulerConfig(BaseModel):
             "x-order": 1,
         },
     )
-    offset: Optional[int] = Field(
+    offset: int | None = Field(
         default = 10,
         ge=0,
         le=60,

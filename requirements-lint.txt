@@ -1,0 +1,2 @@
+# Keep this synchronized with required-version in ruff.toml.
+ruff==0.16.10

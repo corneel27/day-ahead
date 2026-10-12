@@ -1,39 +1,36 @@
+import base64
 import calendar
 import datetime
+import itertools
+import json
+import logging
+import math
+from io import BytesIO
+
+import matplotlib.pyplot as plt
 
 # from unittest.mock import inplace
-
 import pandas as pd
-import base64
-from io import BytesIO
 from dateutil.relativedelta import relativedelta
 from pandas.core.dtypes.inference import is_number
+from sklearn.metrics import r2_score
+from sqlalchemy import (
+    BigInteger,
+    String,
+    Table,
+    and_,
+    case,
+    column,
+    func,
+    literal,
+    select,
+    union,
+    values,
+)
 
 from dao.lib.da_graph import GraphBuilder
 from dao.prog.da_base import DaBase
 from dao.prog.utils import get_value_from_dict
-import math
-import json
-import itertools
-import logging
-from sqlalchemy import (
-    Table,
-    select,
-    func,
-    literal,
-    and_,
-    case,
-    true,
-    bindparam,
-    union_all,
-    String,
-    values,
-    column,
-    BigInteger,
-    union,
-)
-import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score
 
 
 def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
@@ -54,7 +51,7 @@ class Report(DaBase):
 
         self.report_options = self.config.report
         if self.report_options is None:
-            logging.error(f"Er zijn geen report-instellingen gevonden")
+            logging.error("Er zijn geen report-instellingen gevonden")
         self.make_periodes(_now=_now)
         _r = self.report_options
         self.grid_consumption_sensors = _r.entities_grid_consumption if _r else []
@@ -661,7 +658,7 @@ class Report(DaBase):
             for key in self.co2_graph_options["graphs"][graph_num]["series_keys"]:
                 serie = self.co2_dict[key]
                 serie["column"] = key
-                if not ("type" in serie):
+                if "type" not in serie:
                     serie["type"] = "stacked"
                 serie["title"] = serie["name"]
                 self.co2_graph_options["graphs"][graph_num]["series"].append(serie)
@@ -2984,7 +2981,7 @@ class Report(DaBase):
         period = self.periodes[periode]
         if dict is None:
             dict = self.energy_balance_dict
-        if not (field in dict):
+        if field not in dict:
             result = None
             return result
         categorie = dict[field]
@@ -3605,10 +3602,10 @@ class Report(DaBase):
                 sensors_cte.c.code.label("code"),
                 sensors_cte.c.sensor.label("sensor"),
                 (
-                        (
+                        
                                 func.max(filtered_statistics.c.sum)
                                 - func.min(filtered_statistics.c.sum)
-                        )
+                        
                 ).label("sensor_value"),
             )
             .select_from(

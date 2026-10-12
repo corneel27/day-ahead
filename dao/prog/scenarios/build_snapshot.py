@@ -11,14 +11,15 @@ can align their intervals by timestamp.
 
 from __future__ import annotations
 
-from . import _env  # noqa: F401  -- pins TZ=UTC (g.timestamp() below is tz-sensitive)
-
 import datetime as dt
 import json
 from pathlib import Path
 from typing import Any
 
-from . import BASE_STATES_PATH
+from . import (
+    BASE_STATES_PATH,
+    _env,  # noqa: F401  -- pins TZ=UTC (g.timestamp() below is tz-sensitive)
+)
 from .base_config import base_config
 from .loader import set_dotted
 from .model import Scenario

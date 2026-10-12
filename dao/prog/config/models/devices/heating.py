@@ -2,8 +2,10 @@
 Heating system / heat pump configuration models.
 """
 
-from typing import Annotated, Literal, Optional, Union
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from ..base import EntityId, FlexFloat
 
 
@@ -78,7 +80,7 @@ class HeatingEnabled(BaseModel):
             "x-ui-section": "General",
         },
     )
-    entity_hp_enabled: Optional[EntityId] = Field(
+    entity_hp_enabled: EntityId | None = Field(
         default=None,
         alias="entity hp enabled",
         description="HA binary sensor for heat pump enabled status",
@@ -120,7 +122,7 @@ class HeatingEnabled(BaseModel):
             "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power",
         },
     )
-    entity_adjust_heating_curve: Optional[EntityId] = Field(
+    entity_adjust_heating_curve: EntityId | None = Field(
         default=None,
         alias="entity adjust heating curve",
         description="HA entity to adjust heating curve",
@@ -130,7 +132,7 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "number,input_number",
         },
     )
-    adjustment_factor: Optional[float] = Field(
+    adjustment_factor: float | None = Field(
         default=None,
         alias="adjustment factor",
         description="Factor for heating curve adjustment",
@@ -153,7 +155,7 @@ class HeatingEnabled(BaseModel):
             "x-validation-hint": "Must be >= 1, typically 2-4 for 1h intervals",
         },
     )
-    entity_heat_produced: Optional[EntityId] = Field(
+    entity_heat_produced: EntityId | None = Field(
         default=None,
         alias="entity hp heat produced",
         description="HA entity for heat produced",
@@ -164,7 +166,7 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
-    entity_hp_heat_demand: Optional[EntityId] = Field(
+    entity_hp_heat_demand: EntityId | None = Field(
         default=None,
         alias="entity hp heat demand",
         description="HA entity for heat demand",
@@ -175,7 +177,7 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
-    entity_avg_outside_temp: Optional[EntityId] = Field(
+    entity_avg_outside_temp: EntityId | None = Field(
         default=None,
         alias="entity avg outside temp",
         description="HA entity for average temperature",
@@ -186,7 +188,7 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
-    entity_hp_cop: Optional[EntityId] = Field(
+    entity_hp_cop: EntityId | None = Field(
         default=None,
         alias="entity hp cop",
         description="HA entity for heat pump COP",
@@ -197,7 +199,7 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
-    entity_hp_power: Optional[EntityId] = Field(
+    entity_hp_power: EntityId | None = Field(
         default=None,
         alias="entity hp power",
         description="HA entity for heat pump power",
@@ -208,7 +210,7 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
-    entity_hp_switch: Optional[EntityId] = Field(
+    entity_hp_switch: EntityId | None = Field(
         default=None,
         alias="entity hp switch",
         description="HA entity to control heat pump on/off",
@@ -283,6 +285,6 @@ Define power levels and corresponding COP values:
 # Discriminated union: routes on heater_present (Literal[True] → HeatingEnabled,
 # Literal[False] → HeatingDisabled). Pydantic generates oneOf + const in JSON Schema.
 HeatingConfig = Annotated[
-    Union[HeatingEnabled, HeatingDisabled],
+    HeatingEnabled | HeatingDisabled,
     Field(discriminator="heater_present"),
 ]

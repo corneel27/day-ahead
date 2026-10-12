@@ -5,8 +5,8 @@ TEMPLATE: This file is commented out and serves as a template for future version
 Uncomment and modify when you need to create a real v1 schema.
 """
 
-from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from typing import Literal
+
 from .v1 import ConfigurationV1
 
 

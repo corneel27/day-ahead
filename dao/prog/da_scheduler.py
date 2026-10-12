@@ -2,9 +2,9 @@ import datetime
 import logging
 import sys
 import time
+from subprocess import Popen
 
 from da_base import DaBase
-from subprocess import Popen, PIPE, STDOUT
 
 
 class DaScheduler(DaBase):

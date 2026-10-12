@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from dao.lib.db_manager import DBmanagerObj
 
@@ -26,8 +26,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Module-level singletons — one DBmanagerObj per database per process.
-_db_da: Optional[DBmanagerObj] = None
-_db_ha: Optional[DBmanagerObj] = None
+_db_da: DBmanagerObj | None = None
+_db_ha: DBmanagerObj | None = None
 # Lock protecting singleton initialisation; held only for fast local work.
 _db_lock = threading.Lock()
 
@@ -36,7 +36,7 @@ def _build_db_da(
     config: ConfigurationV0,
     secrets: dict,
     check_create: bool = False,
-) -> Optional[DBmanagerObj]:
+) -> DBmanagerObj | None:
     """Construct a DBmanagerObj for the Day Ahead database."""
     db = config.database_da
     kwargs = dict(
@@ -66,7 +66,7 @@ def _build_db_da(
 def _build_db_ha(
     config: ConfigurationV0,
     secrets: dict,
-) -> Optional[DBmanagerObj]:
+) -> DBmanagerObj | None:
     """Construct a DBmanagerObj for the Home Assistant database."""
     db = config.database_ha
     kwargs = dict(
@@ -109,7 +109,7 @@ def make_db_da(
     config: ConfigurationV0,
     secrets: dict,
     check_create: bool = False,
-) -> Optional[DBmanagerObj]:
+) -> DBmanagerObj | None:
     """
     Return the singleton DBmanagerObj for the Day Ahead database.
 
@@ -132,7 +132,7 @@ def make_db_da(
 def make_db_ha(
     config: ConfigurationV0,
     secrets: dict,
-) -> Optional[DBmanagerObj]:
+) -> DBmanagerObj | None:
     """
     Return the singleton DBmanagerObj for the Home Assistant database.
 

@@ -21,9 +21,9 @@ app.secret_key = "secret_cookie_key"
 app.wsgi_app = IngressMiddleware(app.wsgi_app)
 
 from . import routes
+from .api.routes import api
 from .v1.routes import app as v1
 from .v2.routes import v2
-from .api.routes import api
 
 app.register_blueprint(v1, name="v1", url_prefix="/v1")
 app.register_blueprint(v2, name="v2", url_prefix="/v2")

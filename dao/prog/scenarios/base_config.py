@@ -26,7 +26,7 @@ from __future__ import annotations
 import copy
 import shutil
 import tempfile
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 _DAO_DATA = Path(__file__).resolve().parents[3] / "dao" / "data"
@@ -43,7 +43,7 @@ OPTIONS_SOURCES = {
 DUMMY_HASS_TOKEN = "replay-dummy-token"
 
 
-@lru_cache(maxsize=None)
+@cache
 def _sanitised_options(name: str) -> dict:
     from dao.prog.config.loader import ConfigurationLoader
     from dao.prog.da_debug import _sanitize_config

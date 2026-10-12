@@ -11,7 +11,14 @@ import csv
 import datetime as dt
 from pathlib import Path
 
-from .runner import STATUS_ERROR, STATUS_FAIL, STATUS_INFEASIBLE, STATUS_PASS, STATUS_SKIP, ScenarioResult
+from .runner import (
+    STATUS_ERROR,
+    STATUS_FAIL,
+    STATUS_INFEASIBLE,
+    STATUS_PASS,
+    STATUS_SKIP,
+    ScenarioResult,
+)
 
 
 def write_reports(results: list[ScenarioResult], out_dir: Path) -> tuple[Path, Path]:

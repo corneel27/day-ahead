@@ -2,8 +2,10 @@
 Home Assistant connection configuration models.
 """
 
-from typing import Optional, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
+
 from .base import SecretStr
 
 
@@ -19,7 +21,7 @@ class HomeAssistantConfig(BaseModel):
             "x-ui-section": "Homeassistant",
         },
     )
-    ip_port: Optional[int] = Field(
+    ip_port: int | None = Field(
         default=None,
         alias="ip port",
         description="Home Assistant port (default: 8123)",
@@ -30,7 +32,7 @@ class HomeAssistantConfig(BaseModel):
             "x-validation-hint": "Default 8123, change if custom",
         },
     )
-    hasstoken: Optional[SecretStr] = Field(
+    hasstoken: SecretStr | None = Field(
         default=None,
         description="Home Assistant long-lived access token (can use !secret)",
         alias="token",

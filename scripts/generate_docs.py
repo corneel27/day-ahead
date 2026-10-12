@@ -14,15 +14,14 @@ Exit codes:
 
 import json
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
-from collections import defaultdict
 
 # Ensure the repo root is on sys.path so `dao` package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dao.prog.config.versions.v0 import ConfigurationV0
-
 
 # Icon mapping for x-icon values
 ICON_MAP = {

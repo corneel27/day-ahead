@@ -1,0 +1,16 @@
+# Match the Python version used by the scenario CI jobs.
+target-version = "py312"
+required-version = "==0.16.10"
+preview = false
+unsafe-fixes = false
+
+# The tracked tests are matched by the legacy .gitignore; lint them too.
+respect-gitignore = false
+extend-exclude = [".venv*", "__pycache__", "dao/webserver/app/static/build"]
+
+[lint]
+# Syntax/import errors, Pyflakes, import ordering, Python upgrades and Bugbear.
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[lint.isort]
+known-first-party = ["dao"]

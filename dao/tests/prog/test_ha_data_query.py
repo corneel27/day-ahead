@@ -7,12 +7,22 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
-from sqlalchemy import (Column, Double, Index, Integer, MetaData, String, Table,
-                        create_engine, text)
+from sqlalchemy import (
+    Column,
+    Double,
+    Index,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+    text,
+)
 from sqlalchemy.engine import make_url
+
 from dao.lib import db_connections
-from dao.prog.da_base import DaBase
 from dao.prog.config.loader import ConfigurationLoader
+from dao.prog.da_base import DaBase
 from dao.prog.da_report import Report
 
 
@@ -97,7 +107,7 @@ def database(request, tmp_path, monkeypatch):
 
 @pytest.fixture
 def start():
-    return dt.datetime(2026, 1, 1, tzinfo=dt.timezone.utc)
+    return dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
 
 
 def populate(database, points):

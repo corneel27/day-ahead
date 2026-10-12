@@ -1,11 +1,13 @@
 from datetime import datetime
-from flask import Blueprint, current_app, request
-from subprocess import run as subprocess_run
-from dao.prog.da_report import Report
-from markupsafe import escape
-from dao.prog.da_const import tasks
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pathlib import Path
+from subprocess import run as subprocess_run
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from flask import Blueprint, current_app, request
+from markupsafe import escape
+
+from dao.prog.da_const import tasks
+from dao.prog.da_report import Report
 
 api = Blueprint("api", __name__)
 

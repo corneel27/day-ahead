@@ -1,7 +1,8 @@
 """XGBoost predictor configuration model."""
 
-from typing import Any, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class XGBoostConfig(BaseModel):
@@ -25,7 +26,7 @@ class XGBoostConfig(BaseModel):
             )
         },
     )
-    param_grid: Optional[dict[str, Any]] = Field(
+    param_grid: dict[str, Any] | None = Field(
         default=None,
         description=(
             "Grid of hyper-parameters for GridSearchCV. "
@@ -39,7 +40,7 @@ class XGBoostConfig(BaseModel):
             )
         },
     )
-    parameters: Optional[dict[str, Any]] = Field(
+    parameters: dict[str, Any] | None = Field(
         default=None,
         description=(
             "Fixed hyper-parameters used when tune_hyperparameters is false. "

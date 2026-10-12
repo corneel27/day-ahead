@@ -11,8 +11,6 @@ Tier C objective-baseline comparison as one of its expect keys.
 
 from __future__ import annotations
 
-from . import _env  # noqa: F401  -- pins TZ=UTC before day_ahead is imported
-
 import io
 import logging
 import os
@@ -21,7 +19,13 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .build_snapshot import build_config, build_snapshot, resolve_ev, solar_quarter_series
+from . import _env  # noqa: F401  -- pins TZ=UTC before day_ahead is imported
+from .build_snapshot import (
+    build_config,
+    build_snapshot,
+    resolve_ev,
+    solar_quarter_series,
+)
 from .expectations import (
     CaseContext,
     CheckResult,
@@ -189,8 +193,8 @@ def run_scenario(
         # different sys.modules key, and ReplayIO's CBC-log-capture patch
         # (installed on dao.prog.day_ahead) would silently miss it.
         da_debug._ensure_day_ahead_importable()
-        from dao.prog.day_ahead import DaCalc
         import dao.prog.day_ahead as day_ahead_module
+        from dao.prog.day_ahead import DaCalc
 
         # day_ahead.py's dispatch chart is written to a path relative to cwd
         # ("../data/images/..."), on the assumption that cwd is its own

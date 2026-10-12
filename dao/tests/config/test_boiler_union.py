@@ -7,7 +7,11 @@ Verifies BoilerEnabled / BoilerDisabled routing with Literal[True] / Literal[Fal
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from dao.prog.config.models.devices.boiler import BoilerConfig, BoilerEnabled, BoilerDisabled
+from dao.prog.config.models.devices.boiler import (
+    BoilerConfig,
+    BoilerDisabled,
+    BoilerEnabled,
+)
 
 
 def parse_boiler(data: dict):

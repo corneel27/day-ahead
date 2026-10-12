@@ -1,11 +1,12 @@
+import logging
+import math
+
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from matplotlib.patches import Patch
-import pandas as pd
 import numpy as np
-import math
-import logging
+import pandas as pd
+from matplotlib.patches import Patch
 
 
 class GraphBuilder:

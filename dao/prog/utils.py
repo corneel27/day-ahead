@@ -1,16 +1,18 @@
-from dateutil import easter
-import datetime
 import bisect
-import math
+import datetime
 import json
+import logging
+import math
 import os
 import sys
+import traceback
+
 import numpy as np
 import pandas as pd
+from dateutil import easter
 from requests import post
-import logging
-import traceback
-from sqlalchemy import Table, select, and_
+from sqlalchemy import Table, and_, select
+
 from dao.prog.version import __version__
 
 
@@ -92,9 +94,10 @@ def convert_timestr(time_str: str, now_dt: datetime.datetime) -> datetime.dateti
 
 
 def get_tibber_data():
-    from dao.prog.config.loader import ConfigurationLoader
-    from dao.lib.db_connections import make_db_da
     from pathlib import Path
+
+    from dao.lib.db_connections import make_db_da
+    from dao.prog.config.loader import ConfigurationLoader
 
     def get_datetime_from_str(s):
         # "2022-09-01T01:00:00.000+02:00"
@@ -218,12 +221,12 @@ def get_tibber_data():
         timestamp = int(get_datetime_from_str(node["from"]).timestamp())
         if timestamp < today_ts:
             time_stamp = str(timestamp)
-            if not (node["production"] is None):
+            if node["production"] is not None:
                 code = "prod"
                 value = float(node["production"])
                 logging.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
-            if not (node["profit"] is None):
+            if node["profit"] is not None:
                 code = "profit"
                 value = float(node["profit"])
                 logging.info(f"{node} {time_stamp} {value}")
@@ -233,12 +236,12 @@ def get_tibber_data():
         timestamp = int(get_datetime_from_str(node["from"]).timestamp())
         if timestamp < today_ts:
             time_stamp = str(timestamp)
-            if not (node["consumption"] is None):
+            if node["consumption"] is not None:
                 code = "cons"
                 value = float(node["consumption"])
                 logging.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
-            if not (node["cost"] is None):
+            if node["cost"] is not None:
                 code = "cost"
                 value = float(node["cost"])
                 logging.info(f"{node} {time_stamp} {value}")
@@ -413,9 +416,10 @@ print(all_interp)
 
 
 def interpolate_prognose_data():
-    from dao.prog.config.loader import ConfigurationLoader
-    from dao.lib.db_connections import make_db_da
     from pathlib import Path
+
+    from dao.lib.db_connections import make_db_da
+    from dao.prog.config.loader import ConfigurationLoader
 
     loader = ConfigurationLoader(Path("../data/options.json"))
     config = loader.load_and_validate()
@@ -518,8 +522,9 @@ def interpolate(df: pd.DataFrame, field: str, quantity: bool = False, time_field
 
 
 def tst_interpolate_df():
-    import pandas as pd
     import datetime
+
+    import pandas as pd
 
     data = pd.DataFrame(
         {

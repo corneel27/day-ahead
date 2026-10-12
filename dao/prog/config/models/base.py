@@ -9,15 +9,15 @@ This module provides:
 """
 
 import re
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, ClassVar
+
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
     TypeAdapter,
-    field_validator,
     model_serializer,
     model_validator,
-    ConfigDict,
 )
 from pydantic_core import core_schema as _core_schema
 
@@ -106,7 +106,7 @@ class FlexValue(BaseModel):
     # Any on the base = no coercion; typed subclasses override this.
     _resolve_type: ClassVar[Any] = Any
 
-    value: Union[int, float, str, bool] = Field()
+    value: int | float | str | bool = Field()
 
     model_config = ConfigDict(extra="forbid")
 
@@ -257,7 +257,7 @@ class FlexEnum(FlexValue):
     """
 
     _resolve_type: ClassVar[type] = str
-    enum_values: Optional[list[str]] = Field(default=None, exclude=True)
+    enum_values: list[str] | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def validate_enum_value(self):

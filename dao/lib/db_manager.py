@@ -1,29 +1,26 @@
-import pandas as pd
-import numpy as np
 import datetime
-from sqlalchemy import (
-    create_engine,
-    Table,
-    MetaData,
-    select,
-    insert,
-    update,
-    func,
-    and_,
-    text,
-    TIMESTAMP,
-)
-import sqlalchemy_utils
-import os
 import logging
+import os
+
+import numpy as np
+import pandas as pd
+from sqlalchemy import (
+    MetaData,
+    Table,
+    and_,
+    create_engine,
+    func,
+    insert,
+    select,
+    update,
+)
 
 from dao.prog.utils import interpolate
-
 
 # import utils as utils
 
 
-class DBmanagerObj(object):
+class DBmanagerObj:
     """
     Database manager class.
     """
