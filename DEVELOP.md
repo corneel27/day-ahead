@@ -468,9 +468,12 @@ startup imports need a narrow suppression with an explanation; do not suppress
 whole files or rule families to make the check pass. `zip(..., strict=False)`
 preserves existing truncation; use `strict=True` when equal lengths are validated.
 
-The linter is pinned in `requirements-lint.txt` and `ruff.toml` (`required-version`);
-update both together and review new diagnostics before upgrading. Ruff is not an
-add-on runtime dependency. Full-repository `ruff format` enforcement is a separate
+When upgrading Ruff, review its release notes, update the pins in
+`requirements-lint.txt` and `ruff.toml` (`required-version`) together, and update
+hook pins once hooks are adopted. Review changes to standard defaults and new
+diagnostics, then run lint, formatting once adopted, and relevant behavioral tests
+before merging the upgrade. Ruff is not an add-on runtime dependency.
+Full-repository `ruff format` enforcement is a separate
 follow-up to avoid a large formatting diff during this rollout; see
 [`docs/ruff-rollout.md`](docs/ruff-rollout.md).
 

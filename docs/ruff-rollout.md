@@ -19,13 +19,24 @@ moving to the standard defaults is still planned work.
 
 For this repository, full Ruff support means a shared pinned configuration,
 linting and formatting of all maintained Python sources and tests, documented
-editor and pre-commit integration, required CI checks, and an actively maintained
-rule set supported by behavioral tests.
+editor and pre-commit integration, and required CI checks supported by behavioral
+tests.
 
 We will introduce this in stages to keep review and upstream updates manageable.
 The lint foundation is implemented. The remaining stages align it with Ruff's
-standard defaults and add formatting, local tooling, required merge checks and
-a maintenance process.
+standard defaults and add formatting, local tooling and required merge checks.
+
+## Definition of complete adoption
+
+Ruff adoption is complete when all four stages are delivered on the target repository's default branch and:
+
+- All maintained Python sources and tests pass `ruff check .` and `ruff format --check .` using Ruff's standard stable rules and default formatter settings.
+- Local tools, pre-commit hooks and CI use the same pinned version and shared configuration, with documented reasons for necessary repository-specific settings.
+- A new contributor can follow `DEVELOP.md` to set up the tools and reproduce the CI checks.
+- Both lint and formatting are required merge checks, and a deliberate violation has demonstrated that the normal pull request workflow blocks merging until it is fixed.
+- Relevant scenario and regression tests pass after the adoption changes.
+
+Update this roadmap and the developer guide when completing a stage.
 
 ## Current status
 
@@ -133,47 +144,6 @@ the normal contributor workflow.
 
 **What this adds:** the clean baseline becomes an enforced convention with the
 same protection for every contributor.
-
-## Stage 5 — Maintain adoption of Ruff's standard defaults
-
-**Status: version pinning is implemented; the maintenance process is pending.**
-
-1. Review release notes when proposing an upgrade. Update both version pins and,
-   once available, hook pins in the same pull request.
-2. Run lint and formatting with the proposed version, review changed diagnostics
-   and fixes, and rerun relevant behavioral checks.
-3. Review changes to Ruff's standard stable rules and settings during each upgrade.
-   Adopt the new defaults deliberately after resolving findings and verifying
-   behavior; keep additional custom rules outside the standard adoption plan.
-4. Keep exceptions narrow, explained and periodically reviewed.
-5. Document upgrade cadence and ownership in the developer guide.
-
-**Completion criteria:** upgrades and rule additions have a clear review path,
-consistent versions across tools, and green lint, formatting and behavioral checks.
-
-**What this adds:** code quality keeps improving while development-tool changes
-remain predictable for contributors.
-
-## Verification and ownership
-
-Verify each stage on its own commits. Confirm that source discovery includes all
-maintained Python files, run the applicable Ruff checks, and run the scenario and
-isolated regression checks relevant to the changes. Preserve existing scenario
-baselines unless an intentional behavior change has been separately reviewed.
-
-Use isolated data and synthetic scenarios for routine CI. Optional database tests
-need a disposable test database; live-installation scripts require a separate,
-explicitly planned verification procedure. Ruff complements the tests that
-verify planning, queries and configuration behavior.
-
-Keep commands, editor setup, hook installation, check names and upgrade
-instructions in [the developer guide](../DEVELOP.md). This roadmap records the
-adoption target, remaining work and completion criteria. Put individual bug fixes,
-finding counts and test-run results in the relevant pull request description.
-
-The developer completing a stage must update its status, the current-status table
-and any affected developer instructions in the same change. Maintainers review
-those updates and own repository protection and the agreed upgrade policy.
 
 ## References
 
