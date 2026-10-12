@@ -1485,7 +1485,7 @@ class Report(DaBase):
 
         if interval != "uur":
             agg_dict = {"vanaf": "min"}
-            for key, categorie in self.energy_balance_dict.items():
+            for key, _categorie in self.energy_balance_dict.items():
                 agg_dict[key] = "sum"
             result = result.groupby([interval], as_index=False).agg(agg_dict)
 
@@ -2315,8 +2315,8 @@ class Report(DaBase):
         """
         df_result = pd.DataFrame(columns=[rep_interval] + rep_columns)
         df_result[rep_interval] = df_input[rep_interval]
-        for column in rep_columns:
-            df_result[column] = df_input[column]
+        for report_column in rep_columns:
+            df_result[report_column] = df_input[report_column]
             # df_result[rep_columns] = df_input[rep_columns]
         df_result = self.agg_interval(calc_dict, df_result, rep_interval)
         if active_view == "tabel":

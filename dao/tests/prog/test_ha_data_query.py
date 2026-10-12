@@ -126,7 +126,7 @@ def assert_expected(database, start, expected, end=None, step=None, fields=None)
     with database.engine.connect() as connection:
         actual = [tuple(row) for row in connection.execute(query)]
     assert len(actual) == len(expected)
-    for row, wanted in zip(actual, expected):
+    for row, wanted in zip(actual, expected, strict=True):
         assert row[:2] == wanted[:2]  # timestamps, source codes and ordering
         if wanted[2] is None:
             assert row[2] is None
@@ -259,10 +259,13 @@ def test_meter_and_time_range_index(database, start):
             plan = json.loads(connection.execute(text('EXPLAIN FORMAT=JSON '+sql)).scalar())
             def tables(node):
                 if isinstance(node, dict):
-                    if node.get('table_name') == 'statistics': yield node
-                    for child in node.values(): yield from tables(child)
+                    if node.get('table_name') == 'statistics':
+                        yield node
+                    for child in node.values():
+                        yield from tables(child)
                 elif isinstance(node, list):
-                    for child in node: yield from tables(child)
+                    for child in node:
+                        yield from tables(child)
             assert any(table.get('access_type') == 'range'
                        and {'metadata_id', 'start_ts'} <= set(table.get('used_key_parts', []))
                        for table in tables(plan)), plan

@@ -126,7 +126,7 @@ def test_unknown_keys_preserved(options_example_data):
     
     # Pydantic should preserve it with extra='allow'
     # We can check via model_dump()
-    dumped = config.model_dump()
+    config.model_dump()
     # Note: Pydantic may not preserve unknown keys at root level by default
     # This test documents current behavior
     print("✅ Unknown key handling test complete")

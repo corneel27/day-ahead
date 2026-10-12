@@ -17,6 +17,7 @@ from flask import (
     request,
     url_for,
 )
+from sqlalchemy import Table
 from werkzeug.security import safe_join
 
 from dao.prog.config.loader import ConfigurationLoader
@@ -449,7 +450,7 @@ def task_state():
             try:
                 with open(current_state["logfile"]) as f:
                     content = f.read()
-            except:
+            except (OSError, UnicodeError):
                 content = "Could not read logfile"
 
     headers = {

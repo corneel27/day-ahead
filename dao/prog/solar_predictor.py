@@ -623,7 +623,7 @@ class SolarPredictor(DaBase):
             "training_samples": len(X_train),
             "testing_samples": len(X_test),
             "feature_importance": dict(
-                zip(self.feature_columns, self.model.feature_importances_)
+                zip(self.feature_columns, self.model.feature_importances_, strict=False)
             ),
             "mean_target": y.mean(),
             "std_target": y.std(),
@@ -740,7 +740,7 @@ class SolarPredictor(DaBase):
         if not self.is_trained or self.model is None:
             raise ValueError("Model must be trained before getting feature importance")
 
-        return dict(zip(self.feature_columns, self.model.feature_importances_))
+        return dict(zip(self.feature_columns, self.model.feature_importances_, strict=False))
 
     def import_weatherdata(self, filename: str):
         """
@@ -785,7 +785,7 @@ class SolarPredictor(DaBase):
         return
 
     def get_and_save_knmi_data(
-        self, start: dt.datetime, end: dt.datetime, variables: list = ["FH", "T", "Q"]
+        self, start: dt.datetime, end: dt.datetime, variables: list[str] | None = None
     ):
         """
         haalt data op en bewaart ze in dao-db
@@ -793,6 +793,8 @@ class SolarPredictor(DaBase):
         :param end: datetime
         :return: None
         """
+        if variables is None:
+            variables = ["FH", "T", "Q"]
         knmi_df = knmi.get_hour_data_dataframe(
             [self.knmi_station],
             start=start - dt.timedelta(days=1),
@@ -964,9 +966,9 @@ class SolarPredictor(DaBase):
                 df_solar = df_sensor
             else:
                 df_sensor["overlap"] = df_sensor["tijd"].isin(df_solar["tijd"])
-                df_sensor_overlap = df_sensor[df_sensor["overlap"] == True]
+                df_sensor_overlap = df_sensor[df_sensor["overlap"]]
                 report.add_col_df(df_sensor_overlap, df_solar, "solar_kwh")
-                df_sensor_new = df_sensor[df_sensor["overlap"] == False]
+                df_sensor_new = df_sensor[~df_sensor["overlap"]]
                 df_solar = pd.concat([df_solar, df_sensor_new])
             count += 1
         df_solar["utc"] = pd.to_datetime(df_solar["utc"], unit="s", utc=True)
@@ -1049,7 +1051,7 @@ class SolarPredictor(DaBase):
             raise FileNotFoundError(
                 f"Er is geen model aanwezig voor {self.solar_name},svp eerst trainen."
             )
-        latest_dt = self.db_da.get_time_border_record(
+        self.db_da.get_time_border_record(
             "gr", latest=True, table_name="prognoses"
         )
         prognose = True  # latest_dt < end

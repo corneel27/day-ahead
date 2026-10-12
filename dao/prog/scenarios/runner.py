@@ -96,7 +96,7 @@ def _solar_patch(scenario: Scenario):
         share = _capacity_of(solar_option) / total_cap
 
         rows_tijd, rows_pred = [], []
-        for t, kw in zip(grid, total_kw):
+        for t, kw in zip(grid, total_kw, strict=False):
             if t < vanaf or t >= tot:
                 continue
             rows_tijd.append(t)

@@ -1932,7 +1932,7 @@ def _try_sigma_collapse(c, registry_by_idx: dict) -> str | None:
     dim_names = _dims(name)
     axis_pos = _interval_axis(dim_names)[0]
     rest_dims = [d for pos, d in enumerate(dim_names) if pos != axis_pos]
-    label = name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest)) + "[u]"
+    label = name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest, strict=False)) + "[u]"
     rhs = -c.expr.const + 0.0
     sense = _SENSE_SYMBOLS.get(c.expr.sense, c.expr.sense)
     return (
@@ -2105,7 +2105,7 @@ def dump_interval(
                 delta = (value_out - value_in) if value_out is not None else None
                 row = {
                     "kind": "boundary",
-                    "label": name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest)),
+                    "label": name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest, strict=False)),
                     "container": name,
                     "unit": unit,
                     "value_in": value_in,
@@ -2132,7 +2132,7 @@ def dump_interval(
                     {
                         "kind": "scalar",
                         "label": name + "".join(
-                            f"[{d}={v}]" for d, v in zip(dims, idx_tuple)
+                            f"[{d}={v}]" for d, v in zip(dims, idx_tuple, strict=False)
                         ),
                         "container": name,
                         "unit": unit,
@@ -2240,7 +2240,7 @@ def dump_interval(
                 neighbour_sections.setdefault(section_key, []).append(
                     {
                         "label": name + "".join(
-                            f"[{d}={v}]" for d, v in zip(dims, idx_tuple)
+                            f"[{d}={v}]" for d, v in zip(dims, idx_tuple, strict=False)
                         ),
                         "unit": _unit(name),
                         "value": model.vars[var_idx].x,
@@ -2274,7 +2274,7 @@ def dump_interval(
 def _format_dump_text(data: dict, show_all: bool = False) -> str:
     lines: list[str] = []
     header_bits = [f"interval {data['interval']}"]
-    for k, v in data.get("header", {}).items():
+    for _k, v in data.get("header", {}).items():
         if v is not None:
             header_bits.append(str(v))
     lines.append("  ".join(header_bits))
@@ -3599,7 +3599,7 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
             model = mip.Model()
             fake_registry: dict = {}
             terms = []
-            for i, name in enumerate(sorted(signature)):
+            for _i, name in enumerate(sorted(signature)):
                 v = model.add_var(var_type=mip.CONTINUOUS)
                 fake_registry[v.idx] = (name, (0,))
                 terms.append(v)

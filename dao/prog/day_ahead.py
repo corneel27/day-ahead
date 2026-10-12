@@ -459,7 +459,7 @@ class DaCalc(DaBase):
             sum_w_prices += pl[u] * hour_fraction[u]
             sum_hf += hour_fraction[u]
         p_avg = sum_w_prices/sum_hf
-        for u in range(U):
+        for _u in range(U):
             pl_avg.append(p_avg)
 
         try:
@@ -584,7 +584,7 @@ class DaCalc(DaBase):
             red_hours = self.battery_options[b].reduced_hours or {}
             red_power = []
             reduced = False
-            for u in range(U):
+            for _u in range(U):
                 red_power.append(max(max_charge_power[b], max_discharge_power[b]))
             for key, value in red_hours.items():
                 reduced = True
@@ -3096,7 +3096,7 @@ class DaCalc(DaBase):
             # ma_kw_dt: per machine een lijst van kwartiertijdstippen
             kw_dt = []
             kwartier_dt = start_ma_dt
-            for u in range(U):
+            for _u in range(U):
                 uur_kw.append([])
             for kw in range(kw_num):
                 # index in uur-lijst

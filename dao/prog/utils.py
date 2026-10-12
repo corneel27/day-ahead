@@ -369,7 +369,7 @@ def interpolate_old(
     row = None
     old_val = None
     now_val = None
-    for new_index, new_row in org_df.iterrows():
+    for _new_index, new_row in org_df.iterrows():
         if row is None:
             row = new_row
             continue

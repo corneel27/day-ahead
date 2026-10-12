@@ -173,24 +173,24 @@ class FlexValue(BaseModel):
             state_value = ha_state_getter(self.value)
             if target_type is Any:
                 return state_value
-            elif target_type == bool:
+            elif target_type is bool:
                 return _bool_adapter.validate_python(state_value)
-            elif target_type == int:
+            elif target_type is int:
                 return int(float(state_value))  # handle "95.0" → 95
-            elif target_type == float:
+            elif target_type is float:
                 return float(state_value)
             else:
                 return str(state_value)
         else:
             if target_type is Any:
                 return self.value
-            elif target_type == bool:
+            elif target_type is bool:
                 return _bool_adapter.validate_python(self.value)
-            elif target_type == int and not isinstance(self.value, int):
+            elif target_type is int and not isinstance(self.value, int):
                 return int(self.value)
-            elif target_type == float and not isinstance(self.value, (int, float)):
+            elif target_type is float and not isinstance(self.value, (int, float)):
                 return float(self.value)
-            elif target_type == str and not isinstance(self.value, str):
+            elif target_type is str and not isinstance(self.value, str):
                 return str(self.value)
             return self.value
 

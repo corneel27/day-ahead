@@ -311,7 +311,7 @@ def menu():
 def home():
     subjects = ["balans"]
     views = ["grafiek", "tabel"]
-    cur_subject = "grid"
+    _cur_subject = "grid"
     active_subject = "grid"
     cur_view = "grafiek"
     # global active_view
@@ -333,7 +333,7 @@ def home():
         # print('Home:', lst)
         if "cur_subject" in lst:
             #   active_subject = lst["cur_subject"][0]
-            cur_subject = lst["cur_subject"][0]
+            _cur_subject = lst["cur_subject"][0]
         if "cur_view" in lst:
             #   active_view = lst["cur_view"][0]
             cur_view = lst["cur_view"][0]
@@ -392,7 +392,7 @@ def home():
         index = len(flist) - 1
 
     if action in ["fast_forward", "fast_reverse"]:
-        if type(active_time) != float:
+        if type(active_time) is not float:
             active_time = float(active_time)
         if action == "fast_forward":
             target_time = active_time - (6 * 3600)  # Add 6 hours

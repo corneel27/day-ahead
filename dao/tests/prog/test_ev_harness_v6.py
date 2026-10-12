@@ -220,7 +220,6 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Union
 
 from day_ahead import DaCalc  # adjust import if your entrypoint differs
 
@@ -361,11 +360,13 @@ def _with_stop_entity_removed(da_calc: DaCalc, ev_index: int):
     original = ev.entity_stop_charging
     try:
         ev.entity_stop_charging = None
-        restore = lambda: setattr(ev, "entity_stop_charging", original)
+        def restore():
+            ev.entity_stop_charging = original
     except Exception:
         new_ev = ev.model_copy(update={"entity_stop_charging": None})
         da_calc.ev_options[ev_index] = new_ev
-        restore = lambda: da_calc.ev_options.__setitem__(ev_index, ev)
+        def restore():
+            da_calc.ev_options[ev_index] = ev
     try:
         yield
     finally:
@@ -490,7 +491,7 @@ def day_rollover_ready_time(
 # Test case definition
 # ---------------------------------------------------------------------------
 
-ReadyDtSpec = Union[dt.datetime, Callable[[DaCalc], dt.datetime], None]
+ReadyDtSpec = dt.datetime | Callable[[DaCalc], dt.datetime] | None
 
 
 @dataclass
@@ -630,7 +631,8 @@ def _top_stage_accu_kw(da_calc: DaCalc, ev_index: int) -> float:
     ampere = float(getattr(top, "ampere", 0.0))
     efficiency = float(getattr(top, "efficiency", 1.0) or 1.0)
     try:
-        ha_getter = lambda eid: da_calc.get_state(eid).state
+        def ha_getter(eid):
+            return da_calc.get_state(eid).state
         three_phase = bool(ev.charge_three_phase.resolve(ha_getter))
     except Exception:  # noqa: BLE001 - config shape varies, see docstring
         three_phase = False

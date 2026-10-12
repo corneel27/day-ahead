@@ -10,7 +10,7 @@ import warnings
 from dataclasses import dataclass
 from logging import Handler
 from pathlib import Path
-from subprocess import PIPE, run
+from subprocess import run
 
 # from db_manager import DBmanagerObj
 import hassapi as hass
@@ -112,7 +112,7 @@ class DaBase(hass.Hass):
         log_level_str = self.config.logging_level or "info"
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
-            raise ValueError("Invalid log level: %s" % _log_level)
+            raise ValueError(f"Invalid log level: {_log_level}")
         self.log_level = _log_level
         logging.addLevelName(logging.DEBUG, "debug")
         logging.addLevelName(logging.INFO, "info")
@@ -682,7 +682,6 @@ class DaBase(hass.Hass):
             prog_data.index = pd.to_datetime(prog_data["tijd"])
             while len(prog_data) > 0 and prog_data.iloc[0]["tijd"] < vanaf:
                 prog_data = prog_data.iloc[1:]
-            index = 0
             for row in prog_data.itertuples():
                 h_frac = interval_s / 3600
                 prod = self.calc_prod_solar(
@@ -766,7 +765,7 @@ class DaBase(hass.Hass):
             return
         run_task = self.tasks[task]
         cmd = run_task["cmd"]
-        proc = run(cmd, stdout=PIPE, stderr=PIPE)
+        proc = run(cmd, capture_output=True)
         data = proc.stdout.decode()
         err = proc.stderr.decode()
         log_content = data + err

@@ -190,10 +190,10 @@ class PricingConfig(BaseModel):
     @classmethod
     def validate_vat_percentages(cls, v: dict[str, float]) -> dict[str, float]:
         """Validate VAT percentages are between 0 and 100."""
-        for date, percentage in v.items():
+        for date_key, percentage in v.items():
             if not (0 <= percentage <= 100):
                 raise ValueError(
-                    f"VAT percentage must be between 0 and 100, got {percentage} for date {date}"
+                    f"VAT percentage must be between 0 and 100, got {percentage} for date {date_key}"
                 )
         return v
 

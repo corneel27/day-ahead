@@ -76,7 +76,7 @@ class GraphBuilder:
         old_total = 0
         old_amount = None
         for i, (total, bottom, amount) in enumerate(
-            zip(df["Running_Total"], df["Shifted_Total"], df[y])
+            zip(df["Running_Total"], df["Shifted_Total"], df[y], strict=False)
         ):
             total = old_total if i == (len(df["Running_Total"]) - 1) else total
             old_total = total
