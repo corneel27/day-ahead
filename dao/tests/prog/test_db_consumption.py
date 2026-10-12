@@ -31,7 +31,8 @@ def database():
         connection.execute(variables.insert(), [{"id": 1, "code": "cons"}, {"id": 2, "code": "prod"}])
         rows = []
         for hour, consumed, produced in [(1, 1.0, 0.5), (3, 3.0, 1.5)]:
-            timestamp = int(dt.datetime(2026, 1, 14, hour, tzinfo=dt.UTC).timestamp())
+            # Query boundaries are local wall times, converted to UTC by SQLite.
+            timestamp = int(dt.datetime(2026, 1, 14, hour).timestamp())
             rows.extend([
                 {"variabel": 1, "time": timestamp, "value": consumed},
                 {"variabel": 2, "time": timestamp, "value": produced},
