@@ -6,19 +6,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-# Valid scheduler actions
-SchedulerAction = Literal[
-    "get_meteo_data",
-    "get_tibber_data",
-    "get_day_ahead_prices",
-    "calc_optimum",
-    "calc_optimum_met_debug",
-    "clean_data",
-    "calc_baseloads",
-    "train_ml_predictions",
-    "predicted_prices"
-]
+from dao.prog.da_const import tasks
 
+# Valid scheduler actions
+SchedulerAction = Literal[*tasks.keys()]
 
 class ScheduleEntry(BaseModel):
     """A single scheduled task entry."""

@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 import warnings
+from copy import deepcopy
 from dataclasses import dataclass
 from logging import Handler
 from pathlib import Path
@@ -259,70 +260,13 @@ class DaBase(hass.Hass):
 
     @staticmethod
     def generate_tasks():
-        tasks = {
-            "calc_optimum_met_debug": {
-                "name": "Optimaliseringsberekening met debug",
-                "cmd": ["python3", "../prog/day_ahead.py", "debug", "calc"],
-                "object": "DaCalc",
-                "function": "calc_optimum_met_debug",
-                "file_name": "calc_debug",
-            },
-            "calc_optimum": {
-                "name": "Optimaliseringsberekening zonder debug",
-                "cmd": ["python3", "../prog/day_ahead.py", "calc"],
-                "object": "DaBase",
-                "function": "calc_optimum",
-                "file_name": "calc",
-            },
-            "tibber": {
-                "name": "Verbruiksgegevens bij Tibber ophalen",
-                "cmd": ["python3", "../prog/day_ahead.py", "tibber"],
-                "function": "get_tibber_data",
-                "file_name": "tibber",
-            },
-            "meteo": {
-                "name": "Meteoprognoses ophalen",
-                "cmd": ["python3", "day_ahead.py", "meteo"],
-                "function": "get_meteo_data",
-                "file_name": "meteo",
-            },
-            "prices": {
-                "name": "Day ahead prijzen ophalen",
-                "cmd": ["python3", "../prog/day_ahead.py", "prices"],
-                "function": "get_day_ahead_prices",
-                "file_name": "prices",
-            },
-            "predicted_prices": {
-                "name": "Day ahead prijsvoorspelling ophalen",
-                "cmd": ["python3", "../prog/day_ahead.py", "predicted_prices"],
-                "function": "get_day_ahead_predicted_prices",
-                "file_name": "pred_prices",
-            },
-            "calc_baseloads": {
-                "name": "Bereken de baseloads",
-                "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],
-                "function": "calc_baseloads",
-                "file_name": "baseloads",
-            },
-            "clean": {
-                "name": "Bestanden opschonen",
-                "cmd": ["python3", "../prog/day_ahead.py", "clean_data"],
-                "function": "clean_data",
-                "file_name": "clean",
-            },
-            "train_ml_predictions": {
-                "name": "ML modellen trainen",
-                "cmd": ["python3", "../prog/day_ahead.py", "train"],
-                "function": "train_ml_predictions",
-                "file_name": "train",
-            },
-            "consolidate": {
-                "name": "Verbruik/productie consolideren",
-                "cmd": ["python3", "../prog/day_ahead.py", "consolidate"],
-                "function": "consolidate_data",
-                "file_name": "consolidate",
-            },
-        }
+        from dao.prog.da_const import tasks as t
+
+        tasks = deepcopy(t)
+
+        for task in tasks.values():
+            task["cmd"][1] = "../prog/day_ahead.py"
+
         return tasks
 
     def start_logging(self):
@@ -358,7 +302,7 @@ class DaBase(hass.Hass):
 
     @staticmethod
     def get_tibber_data():
-        get_tibber_data()
+        return get_tibber_data()
 
     @staticmethod
     def consolidate_data():
@@ -592,7 +536,7 @@ class DaBase(hass.Hass):
         dacalc = DaCalc(self.file_name)
         # dacalc = DaCalc("../data/tst_options/options_mirabis.json")
         dacalc.debug = True
-        dacalc.calc_optimum()
+        return dacalc.calc_optimum()
         # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 9, 28, 21, minute=0), _start_soc=50)
 
     def calc_optimum(self):
@@ -705,7 +649,10 @@ class DaBase(hass.Hass):
 
         # oude task
         if task not in self.tasks:
-            return
+            logging.error(
+                f"Taak niet gedefinieerd \"{task}\" "
+            )
+            return False
         run_task = self.tasks[task]
         file_handler = None
         stream_handler = None
@@ -713,6 +660,7 @@ class DaBase(hass.Hass):
         formatter = logging.Formatter(
             "%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
+
         if logfile:
             # old_stdout = sys.stdout
             for handler in logger.handlers[:]:  # make a copy of the list
@@ -740,6 +688,8 @@ class DaBase(hass.Hass):
             notification_handler.setFormatter(formatter)
             logger.addHandler(notification_handler)
         self.start_logging()
+
+        exit_code = 0
         try:
             logging.info(
                 f"Day Ahead Optimalisatie gestart: "
@@ -747,17 +697,24 @@ class DaBase(hass.Hass):
                 f"taak: {run_task['function']}"
             )
             self.db_da.log_pool_status()
-            getattr(self, run_task["function"])()
+            ret_val = getattr(self, run_task["function"])()
+
+            print(ret_val)
+            if ret_val is False:
+                exit_code = 1
+
             self.set_last_activity()
             self.db_da.log_pool_status()
         except Exception:
             logging.exception("Er is een fout opgetreden, zie de fout-tracering")
-            raise
+            exit_code = 1
 
         if logfile:
             file_handler.flush()
             file_handler.close()
             stream_handler.close()
+
+        return exit_code
 
     def run_task_cmd(self, task):
         if task not in self.tasks:
