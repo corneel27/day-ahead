@@ -36,8 +36,6 @@ a maintenance process.
 | CI | Independent **Ruff lint** job on pushes and pull requests | Require lint before merging | Automated feedback becomes merge protection |
 | Formatting | Ruff is available; repository-wide formatting is not yet adopted | Apply the default formatter settings, format the code, add a CI check | Consistent layout and less style-review effort |
 | Developer tools | Installation and lint commands documented in `DEVELOP.md` | Add editor guidance and pinned pre-commit hooks | Earlier feedback and fewer avoidable CI failures |
-| Behavioral verification | Scenario and isolated regression checks accompany lint in CI | Keep these checks passing during later stages | Cleanup is checked against application behavior |
-| Maintenance | Version and current rule selection are explicit | Define upgrade cadence, ownership and review of changes to standard defaults | Tooling improvements remain predictable |
 
 ## Stage 1 — Establish the lint foundation
 
