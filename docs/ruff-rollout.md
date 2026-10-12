@@ -13,16 +13,15 @@ editor and pre-commit integration, required CI checks, and an actively maintaine
 rule set supported by behavioral tests.
 
 We will introduce this in stages to keep review and upstream updates manageable.
-The lint foundation is implemented on `chore/introduce-ruff` in
-[PR #1](https://github.com/patrickvorgers/day-ahead/pull/1). It is ready for review;
-adoption on the default branch still requires merging.
+The lint foundation is implemented. The remaining stages extend it with
+formatting, local tooling, required merge checks and a maintenance process.
 
 ## Current status
 
 | Area | Implemented now | Remaining work | Developer benefit |
 | --- | --- | --- | --- |
 | Shared configuration | Ruff 0.16.10, Python 3.12 target, explicit rules, separate lint requirements | Maintain the version pins together | Local and CI results are reproducible |
-| Lint coverage | All 96 tracked Python files included; zero findings under the selected rules | Merge the introduction and maintain the clean baseline | Common mistakes are detected before they accumulate |
+| Lint coverage | All tracked Python files included; zero findings under the selected rules | Maintain coverage and the clean baseline as the codebase changes | Common mistakes are detected before they accumulate |
 | CI | Independent **Ruff lint** job on pushes and pull requests | Require lint before merging | Automated feedback becomes merge protection |
 | Formatting | Ruff is available; repository-wide formatting is not yet adopted | Agree on settings, format the code, add a CI check | Consistent layout and less style-review effort |
 | Developer tools | Installation and lint commands documented in `DEVELOP.md` | Add editor guidance and pinned pre-commit hooks | Earlier feedback and fewer avoidable CI failures |
@@ -31,7 +30,7 @@ adoption on the default branch still requires merging.
 
 ## Stage 1 — Establish the lint foundation
 
-**Status: implemented on the introduction branch; review and merge remain.**
+**Status: completed.**
 
 We have added `ruff.toml` and pinned Ruff to 0.16.10 in both
 `requirements-lint.txt` and `required-version`. The configuration targets Python
@@ -54,8 +53,9 @@ The review fixed an undefined SQLAlchemy `Table` import, defaults that leaked
 state or captured the time at import, and a pre-existing boiler COP serialization
 defect exposed by the expanded tests. These fixes have regression coverage.
 
-**Completion criteria:** merge the reviewed branch with green lint and behavioral
-checks. The default branch then becomes our clean baseline.
+**Completion criteria:** all maintained Python files are covered, the selected
+lint rules pass, and the cleanup is verified by green behavioral checks.
+These criteria are met for the lint foundation.
 
 **What this adds:** automated detection of common Python mistakes, cleaner
 imports and a reproducible starting point for the next stages.
@@ -102,8 +102,8 @@ avoidable CI failures and review turnaround.
 
 **Status: lint runs automatically; required merge checks are pending.**
 
-1. After the lint introduction is merged, configure the repository ruleset or
-   branch protection to require **Ruff lint** for pull requests.
+1. Configure the repository ruleset or branch protection to require **Ruff lint**
+   for pull requests, using the existing CI check name.
 2. After formatter adoption, require its formatting check as well.
 3. Verify the settings with a temporary pull request containing a deliberate
    violation, then correct it and confirm the checks pass.
@@ -140,7 +140,7 @@ The initial assessment found 511 diagnostics across 94 Python files under the
 selected rules. Those findings included style and modernization suggestions as
 well as actual defects; the number is not a count of runtime bugs.
 
-The foundation at commit `b56c020` was verified with:
+The initial lint foundation was verified with:
 
 - Zero Ruff findings across all 96 tracked Python files.
 - An undefined-name probe correctly rejected with `F821` and exit 1.
@@ -163,7 +163,6 @@ verifying planning, queries and configuration behavior alongside Ruff.
 
 - [Developer guide](../DEVELOP.md)
 - [Scenario testing guide](testing.md)
-- [Introduction pull request](https://github.com/patrickvorgers/day-ahead/pull/1)
 - [Ruff configuration](https://docs.astral.sh/ruff/configuration/)
 - [Ruff linting and fix safety](https://docs.astral.sh/ruff/linter/)
 - [Ruff formatter](https://docs.astral.sh/ruff/formatter/)
