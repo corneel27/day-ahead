@@ -45,9 +45,39 @@ mechanical formatting commit, rerun the behavioral tests, and then enable
 
 ## Verification record
 
-Fill in actual results as the rollout proceeds. Local lint success does not imply
-that solver or route tests passed, and synthetic scenarios do not verify live
-device behavior. No live deployment is part of this rollout.
+- The configuration and cleanup are committed separately from reviewed fixes
+  and CI wiring. The branch is available as [draft PR #1](https://github.com/patrickvorgers/day-ahead/pull/1).
+- Ruff 0.16.10 passes with zero diagnostics. Discovery includes all 96 tracked
+  Python files (the 94 original files plus two new regression modules); the
+  additional discovered TOML file is not counted as Python. An undefined-name
+  probe under the test path is rejected with `F821` and exit 1.
+- Eight database-consumption and charging-schedule tests pass locally. The new
+  per-call end-time test fails against the unchanged base method while the
+  explicit-end test passes, demonstrating that it detects the original defect.
+- GitHub checked the initial implementation at `10bbf50`: scenario validation
+  passed, 12 solver-free tests passed (40 solve cases skipped in that unit job),
+  and the separate solver job passed all 40 cases. The expanded regression gate
+  found two pre-existing boiler round-trip failures, with 115 passes and 18
+  optional MariaDB skips. Lint, model documentation and CodeQL were green.
+- Both boiler failures reproduce in the unchanged base with the same Pydantic
+  2.13.5 version: the default COP bypasses validation and remains a raw float,
+  which the FlexFloat serializer cannot serialize. A separate fix enables
+  validation of that single field's existing `3.0` default. Existing round-trip
+  tests and an added default-value test now pass (77 model tests locally).
+  The Windows model-only comparison bypassed the package initializer that
+  eagerly imports the POSIX loader; model validation and serialization were
+  real. It does not verify file locking, loader I/O or the full Linux stack.
+- Final-head Linux results, including the rerun after the COP fix, are available
+  in the PR's checks. Those checks run the real package initialization without
+  the Windows comparison workaround. Optional MariaDB cases require a dedicated
+  disposable database and remain skipped when it is not configured.
+
+No live installation was used. The legacy live-data test script and EV harness
+were not executed; the 40 hermetic scenarios cover EV planning instead. Loader
+and example-file legacy tests are not newly gated by this rollout; configuration
+coverage comes from scenario validation and the model/migration/round-trip tests.
+Full formatting and making **Ruff lint** a required branch-protection check are
+follow-ups; adding the workflow itself does not change repository protection.
 
 ## References
 
