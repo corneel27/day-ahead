@@ -25,7 +25,7 @@ RUN source $VIRTUAL_ENV/bin/activate \
     && uv pip install  -r /root/dao/requirements.txt \
     && pip3 uninstall -y uv
 
-COPY webserver/package.json webserver/package-lock.json webserver/vite.config.js /root/dao/webserver/
+COPY webserver/package.json webserver/package-lock.json webserver/vite.config.mjs /root/dao/webserver/
 COPY webserver/assets /root/dao/webserver/assets
 
 WORKDIR /root/dao/webserver

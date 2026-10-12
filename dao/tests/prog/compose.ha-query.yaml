@@ -1,0 +1,35 @@
+# Run from the repository root:
+# docker compose -f dao/tests/prog/compose.ha-query.yaml up --build --abort-on-container-exit --exit-code-from query-tests
+# Cleanup:
+# docker compose -f dao/tests/prog/compose.ha-query.yaml down --volumes
+name: dao-ha-query-tests
+services:
+  mariadb:
+    image: mariadb:11.4.10
+    environment:
+      MARIADB_ROOT_PASSWORD: isolated-test-only
+      MARIADB_DATABASE: dao_query_test
+      MARIADB_USER: dao_test
+      MARIADB_PASSWORD: isolated-test-only
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  query-tests:
+    build:
+      context: ../../..
+      dockerfile: dao/tests/prog/Dockerfile.ha-query
+    entrypoint: ["/root/dao/venv/day_ahead/bin/python3"]
+    command: ["-m", "pytest", "dao/tests/prog/test_ha_data_query.py", "-v", "-p", "no:cacheprovider"]
+    working_dir: /workspace
+    volumes:
+      - ../../..:/workspace:ro
+    environment:
+      DAO_TEST_MARIADB_URL: mysql+pymysql://dao_test:isolated-test-only@mariadb/dao_query_test
+      DAO_TEST_ALLOW_SCHEMA_RESET: "1"
+    depends_on:
+      mariadb:
+        condition: service_healthy

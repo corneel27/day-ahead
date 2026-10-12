@@ -1,0 +1,36 @@
+[
+  {
+    "id": "heatpump-cold-day-runs",
+    "description": "Heat pump enabled, zero solar, a cold flat -5C day - real heat demand, so it runs",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22,
+               0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
+    },
+    "temp": [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0,
+             -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0],
+    "states": { "binary_sensor.heatpump_heating": "on" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "heatpump_runs": { "start": "00:00", "end": "00:00", "runs": true }
+    }
+  },
+  {
+    "id": "heatpump-mild-day-idle",
+    "description": "Heat pump enabled but a mild 18C day - no heat demand (degree-days clamp to 0), so it never runs",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22,
+               0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
+    },
+    "temp": [18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0,
+             18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0, 18.0],
+    "states": { "binary_sensor.heatpump_heating": "on" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "heatpump_runs": { "start": "00:00", "end": "00:00", "runs": false }
+    }
+  }
+]
