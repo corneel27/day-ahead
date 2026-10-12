@@ -290,12 +290,21 @@ class BatteryConfig(BaseModel):
     cycle_cost: float = Field(
         alias="cycle cost",
         ge=0,
-        description="Cost per battery cycle in euros",
+        description="Battery wear cost per kWh moved, charged on charging and on discharging",
         json_schema_extra={
-            "x-help": "Degradation cost per full charge-discharge cycle in euros. Used to factor battery wear into optimization. Calculate as: (battery_cost / warranted_cycles). Example: €5000 battery with 6000 cycles = €0.83/cycle.",
-            "x-unit": "€",
+            "x-help": (
+                "Degradation cost in euros per kWh moved in or out of the battery, "
+                "measured on the DC side. It is charged twice per cycle: once on the "
+                "charge leg and once on the discharge leg (half cycles). One full "
+                "charge-discharge of E kWh therefore costs about 2 × cycle cost × E. "
+                "Convert a per-cycle figure with: "
+                "cycle cost = battery_cost / (warranted_cycles × capacity × 2). "
+                "Example: a €5000, 10 kWh battery warranted for 6000 cycles is "
+                "€0.83 per full cycle, so enter 5000 / (6000 × 10 × 2) = 0.042 €/kWh."
+            ),
+            "x-unit": "€/kWh",
             "x-ui-section": "Power Configuration",
-            "x-validation-hint": "Must be >= 0, typically €0.50-€1.50 per cycle",
+            "x-validation-hint": "Must be >= 0, typically €0.01-€0.05 per kWh",
         },
     )
 

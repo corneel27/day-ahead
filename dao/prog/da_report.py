@@ -62,7 +62,8 @@ class Report(DaBase):
         self.battery_production_sensors = _r.entities_battery_production if _r else []
         self.battery_consumption_sensors = _r.entities_battery_consumption if _r else []
         self.solar_production_ac_sensors = _r.entities_solar_production_ac if _r else []
-        self.co2_intensity_sensor = _r.co2_intensity_sensor if _r else []
+        _co2 = _r.co2_intensity_sensor if _r else []
+        self.co2_intensity_sensor = [_co2] if type(_co2) is str else _co2 if type(_co2) is list else []
         self.ev_consumption_sensors = _r.entities_ev_consumption if _r else []
         self.wp_consumption_sensors = _r.entities_wp_consumption if _r else []
         self.boiler_consumption_sensors = _r.entities_boiler_consumption if _r else []
@@ -3046,7 +3047,7 @@ class Report(DaBase):
                 df = pd.concat([df, df_uur])
         return df, last_moment
 
-    def get_price_data(self, start, end, interval: str = "1hour"):
+    def get_price_data(self, start, end, interval: str = "1hour", extension=0):
         if interval == "1hour":
             agg_func = "avg"
         else:
@@ -3054,6 +3055,20 @@ class Report(DaBase):
         df_da = self.db_da.get_column_data(
             "values", "da", start=start, end=end, agg_func=agg_func
         )
+        if extension > 0:
+            if len(df_da) > 0:
+                last_moment = pd.to_datetime(df_da["time"].iloc[-1])
+                start = last_moment + datetime.timedelta(minutes=60 if interval == "1hour" else 15)
+            end = start + datetime.timedelta(hours=extension)
+            df_prediction = self.db_da.get_column_data(
+                "prognoses", "da", start=start, end=end, agg_func=agg_func
+            )
+            from dao.prog.utils import interpolate
+            if interval == "15min":
+                df_prediction["time"]= pd.to_datetime(df_prediction["time"])
+                df_prediction = interpolate(df_prediction, "value", time_field="time", quantity=False)
+                df_prediction["time"] = df_prediction["time"].dt.strftime('%Y-%m-%d %H:%M')
+            df_da = pd.concat([df_da, df_prediction])
         old_dagstr = ""
         taxes_l = 0
         taxes_t = 0
@@ -3554,6 +3569,36 @@ class Report(DaBase):
         if sensors_cte is None:
             return None
 
+        # Resolve metadata IDs before the statistics query so both database
+        # engines can use a range scan on (metadata_id, start_ts).
+        with self.db_ha.engine.connect() as connection:
+            metadata_ids = list(connection.execute(
+                select(statistics_meta.c.id).where(
+                    statistics_meta.c.statistic_id.in_(
+                        select(sensors_cte.c.sensor)
+                    )
+                )
+            ).scalars())
+
+        # DISTINCT prevents derived-table merging in MariaDB and flattening
+        # in SQLite. Including the primary key preserves every source row.
+        # Keep the inclusive end boundary used by the existing interval joins.
+        filtered_statistics = (
+            select(
+                statistics.c.id,
+                statistics.c.metadata_id,
+                statistics.c.start_ts,
+                statistics.c.sum,
+            )
+            .where(
+                statistics.c.metadata_id.in_(metadata_ids),
+                statistics.c.start_ts >= int(start.timestamp()),
+                statistics.c.start_ts <= int(end.timestamp()),
+            )
+            .distinct()
+            .cte("filtered_statistics")
+        )
+
         sensor_values_cte = (
             select(
                 intervals_cte.c.ts_start.label("ts"),
@@ -3561,23 +3606,23 @@ class Report(DaBase):
                 sensors_cte.c.sensor.label("sensor"),
                 (
                         (
-                                func.max(statistics.c.sum)
-                                - func.min(statistics.c.sum)
+                                func.max(filtered_statistics.c.sum)
+                                - func.min(filtered_statistics.c.sum)
                         )
                 ).label("sensor_value"),
             )
             .select_from(
                 intervals_cte
                 .join(
-                    statistics,
+                    filtered_statistics,
                     and_(
-                        statistics.c.start_ts >= intervals_cte.c.ts_start,
-                        statistics.c.start_ts <= intervals_cte.c.ts_end,
+                        filtered_statistics.c.start_ts >= intervals_cte.c.ts_start,
+                        filtered_statistics.c.start_ts <= intervals_cte.c.ts_end,
                     ),
                 )
                 .join(
                     statistics_meta,
-                    statistics_meta.c.id == statistics.c.metadata_id,
+                    statistics_meta.c.id == filtered_statistics.c.metadata_id,
                 )
                 .join(
                     sensors_cte,

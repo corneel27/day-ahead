@@ -1,0 +1,48 @@
+[
+  {
+    "id": "machine-tight-window-must-run",
+    "description": "Vaatwasser (2h eco program) given a window that exactly fits it - it must run there even though cheaper hours exist outside the window",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.30, 0.30, 0.05, 0.05, 0.30, 0.30, 0.30, 0.45, 0.45, 0.30, 0.30, 0.30,
+               0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30]
+    },
+    "states": {
+      "input_datetime.start_window_vaatwasser": "07:00:00",
+      "input_datetime.end_window_vaatwasser": "09:00:00"
+    },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "machine_runs_in_window": { "machine": "vaatwasser", "start": "07:00", "end": "09:00", "runs": true }
+    }
+  },
+  {
+    "id": "machine-slack-window-picks-cheap",
+    "description": "Wasmachine (1.5h program) keeps its wide default window - free to roam, it schedules itself into the one cheap afternoon trough",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+               0.30, 0.05, 0.05, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30]
+    },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "machine_runs_in_window": { "machine": "wasmachine", "start": "13:00", "end": "15:00", "runs": true }
+    }
+  },
+  {
+    "id": "machine-two-machines-competing",
+    "description": "Wasmachine and vaatwasser both keep their wide default windows and are both pulled toward the same midday trough - neither one is starved out of a schedule",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30,
+               0.05, 0.05, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30]
+    },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "machine_runs_in_window": { "machine": "wasmachine", "start": "07:00", "end": "23:00", "runs": true }
+    }
+  }
+]

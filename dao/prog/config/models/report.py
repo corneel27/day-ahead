@@ -120,9 +120,9 @@ class ReportConfig(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
-    co2_intensity_sensor: Optional[EntityId] = Field(
-        default=None,
-        alias="co2 intensity sensor",
+    co2_intensity_sensor: Optional[list[EntityId]] | Optional[EntityId] = Field(
+        default=[],
+        alias="entity co2-intensity",
         description="HA entity for CO2 intensity",
         json_schema_extra={
             "x-help": "Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calculate and report carbon footprint of electricity usage.",

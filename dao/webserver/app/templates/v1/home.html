@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "v1/base.html" %}
 {% block selectie %}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -104,12 +104,12 @@
     {% for view in views %}
       {% if active_view == view %}
         <button name="view" class="btn chosen btn_mid" value="{{ view }}" style="font-size: 18px;">
-          <img src="static/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+          <img src="/static/v1/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1.5em; width:auto;" />
           {{ view }}
         </button>
       {% else %}
         <button name="view" class="btn btn_mid" value="{{view}}" style="font-size: 18px;">
-          <img src="static/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+          <img src="/static/v1/{{view}}.png" alt="first" border="0" style="display:inline-block; height:1.5em; width:auto;" />
         </button>
       {% endif %}
     {% endfor %}
@@ -118,26 +118,26 @@
   <div class="spacer">
     <div class="select action">
       <button name="action" class="btn btn_left" value="last">
-        <img src="static/last.png" alt="first" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+        <img src="/static/v1/last.png" alt="first" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
       <button name="action" class="btn btn_mid" value="fast_forward" title="-6 uur">
-        <img src="static/frev.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+        <img src="/static/v1/frev.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
       <button name="action" class="btn btn_mid" value="next">
-        <img src="static/next.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+        <img src="/static/v1/next.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
       <input type="text" id="datetime_picker" placeholder="Select datetime" value="{{ flatpickr_default }}" style="height: 1em; padding: 0.25em; min-width: 110px; max-width: 160px;">
       <button name="action" class="btn btn_mid" value="previous">
-        <img src="static/prev.png" alt="next" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+        <img src="/static/v1/prev.png" alt="next" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
       <button name="action" class="btn btn_mid" value="fast_reverse" title="+6 uur">
-        <img src="static/ffwd.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+        <img src="/static/v1/ffwd.png" alt="prev" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
       <button name="action" class="btn btn_mid" value="first">
-        <img src="static/first.png" alt="last" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+        <img src="/static/v1/first.png" alt="last" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
       <button name="action" class="btn btn_right" onclick="confirmation()" value="delete">
-        <img src="static/delete.png" alt="last" border="0" style="display:inline-block; height:1.5em; width:auto;" />
+        <img src="/static/v1/delete.png" alt="last" border="0" style="display:inline-block; height:1.5em; width:auto;" />
       </button>
     </div>
   </div>

@@ -1,0 +1,6 @@
+FROM ghcr.io/corneel27/dao:2026.9.1
+# Use a known DAO dependency environment for importing the actual Report module.
+# SQLAlchemy 2.1 is incompatible with this image's sqlalchemy-utils imports.
+RUN /root/dao/venv/day_ahead/bin/python3 -m pip install --no-cache-dir "SQLAlchemy==2.0.52" "pytest==9.1.1"
+ENV PYTHONPATH=/workspace PYTHONDONTWRITEBYTECODE=1
+WORKDIR /workspace
