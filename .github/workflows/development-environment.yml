@@ -21,6 +21,7 @@ jobs:
       - name: Install from a clean checkout and verify repeat setup
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace day-ahead-dev bash -e -c '
+            git config --global --add safe.directory /workspace
             python scripts/setup_environment.py
             python scripts/verify_environment.py
             python scripts/setup_environment.py

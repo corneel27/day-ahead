@@ -7,7 +7,7 @@
     "5000": {"label": "Day Ahead web preview", "onAutoForward": "notify"},
     "5173": {"label": "Vite assets", "onAutoForward": "silent"}
   },
-  "postCreateCommand": "python scripts/setup_environment.py",
+  "postCreateCommand": "git config --global --add safe.directory \"$PWD\" && python scripts/setup_environment.py",
   "customizations": {
     "vscode": {
       "extensions": ["ms-python.python", "ms-python.vscode-pylance", "ms-python.debugpy", "charliermarsh.ruff"],

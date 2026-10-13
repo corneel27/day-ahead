@@ -29,6 +29,10 @@ for path in ('/', '/v2/chart', '/v2/config'):
 """], cwd=ROOT / "dao/webserver", env=environment, check=True)
     launch = json.loads((ROOT / ".vscode/launch.json").read_text())["configurations"][0]
     assert launch["module"] == "flask" and launch["env"]["DAO_WEB_DATA_DIR"]
+    container = json.loads((ROOT / ".devcontainer/devcontainer.json").read_text())
+    assert container["build"]["dockerfile"] == "Dockerfile"
+    assert "python scripts/setup_environment.py" in container["postCreateCommand"]
+    assert container["forwardPorts"] == [5000, 5173]
     print("Dependency integrity, Ruff version, scenarios and web preview passed.")
 
 
