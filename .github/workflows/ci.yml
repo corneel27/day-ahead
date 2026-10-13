@@ -80,16 +80,6 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
-      - name: Install system dependencies
-        # The mariadb connector in dao/requirements.txt has no prebuilt
-        # wheel and needs MariaDB Connector/C to build; mysqlclient probes
-        # for the same lib via pkg-config. The scenario suite never touches
-        # either driver at runtime (ReplayIO patches out all DB access) but
-        # still needs the full requirements.txt to install for this job.
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libmariadb-dev pkg-config
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
