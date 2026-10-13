@@ -19,6 +19,21 @@ This guide will help developers set up their development environment, test chang
 
 Install Git, Docker (Docker Desktop on Windows/macOS) and VS Code with the **Dev Containers** extension. On Windows, enable Docker Desktop's Linux containers/WSL 2 backend. Docker must be running; host Python and Node installations are not needed for this route.
 
+### Planned start from the developer page
+
+**Status: the fork-URL input page still needs to be built and published.** The automatic container setup and F5 debugging already work.
+
+The intended procedure follows Home Assistant's developer start page:
+
+1. Fork the repository on GitHub and copy your fork URL.
+2. Paste the URL into the developer page and click **Open**.
+3. Allow your browser to open VS Code and wait for the automatic clone, container build and installation. Install Dev Containers if VS Code prompts you to do so.
+4. Press **F5** to start the web preview. Ruff feedback and the test tools are ready to use.
+
+The page must pass the entered fork URL to VS Code's **Clone Repository in Container Volume** flow. It must not require the developer to clone manually, choose an interpreter or run installation commands. Before publishing, verify this procedure with a fresh VS Code profile and a fork URL, including the first-time prompts, Ruff feedback and F5 debugging.
+
+### Available start until the developer page is published
+
 [![Open in Dev Containers](https://img.shields.io/badge/Dev_Containers-Open-blue)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%253A%252F%252Fgithub.com%252Fcorneel27%252Fday-ahead)
 
 1. Fork the repository on GitHub. In VS Code, run **Dev Containers: Clone Repository in Container Volume...**, paste your fork URL and select the branch you want to develop. The Open button above opens the upstream repository directly for exploration. You can also paste a GitHub branch or PR URL into the clone command.
