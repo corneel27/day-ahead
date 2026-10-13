@@ -2593,7 +2593,7 @@
             "get_tibber_data",
             "get_meteo_data",
             "get_day_ahead_prices",
-            "predicted_prices",
+            "get_predicted_prices",
             "calc_baseloads",
             "clean_data",
             "train_ml_predictions",
