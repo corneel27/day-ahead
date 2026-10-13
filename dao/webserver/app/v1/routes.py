@@ -25,7 +25,7 @@ app = Blueprint("app", __name__)
 
 # globals
 web_datapath = "/static/data/"
-app_datapath = "app/static/data/"
+app_datapath = os.environ.get("DAO_WEB_DATA_DIR", "app/static/data").rstrip("/") + "/"
 images_folder = os.path.join(web_datapath, "images")
 config = None
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -208,7 +208,7 @@ check_web_menu_items()
 
 _save_days = config.history.save_days if config is not None else 7
 handler = TimedRotatingFileHandler(
-    "../data/log/" + logname,
+    os.environ.get("DAO_WEB_DATA_DIR", "../data").rstrip("/") + "/log/" + logname,
     when="midnight",
     backupCount=_save_days,
 )

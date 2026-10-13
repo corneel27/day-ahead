@@ -34,7 +34,7 @@ def inject_data():
     }
 
 # globals
-app_datapath = "app/static/data/"
+app_datapath = os.environ.get("DAO_WEB_DATA_DIR", "app/static/data").rstrip("/") + "/"
 
 VITE_DEV_PORT = os.getenv("VITE_DEV_PORT", "5173")
 VITE_MANIFEST = Path("app/static/build/.vite/manifest.json")
@@ -314,7 +314,7 @@ def get_solar_items_with_ml():
 def chart():
     kwargs = log_chart("images/", "*.png")
     if kwargs is None:
-        return render_template("v2/no-tasks.html", )
+        return render_template("v2/no-task.html", )
 
     kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
     return render_template(

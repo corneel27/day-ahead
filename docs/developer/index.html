@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Develop Day Ahead</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="start.mjs"></script>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Day Ahead Optimizer</p>
+    <h1>Start developing</h1>
+    <p>Use your GitHub fork to open a ready-to-use development environment in VS Code, following the Home Assistant workflow.</p>
+    <ol>
+      <li>Install <a href="https://code.visualstudio.com/">VS Code</a> and its <a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers">Dev Containers extension</a>, and start <a href="https://www.docker.com/products/docker-desktop/">Docker</a> with Linux containers. Install <a href="https://git-scm.com/downloads">Git</a> if needed.</li>
+      <li><a href="https://github.com/corneel27/day-ahead/fork">Create your fork</a> on GitHub and copy its URL.</li>
+      <li>Enter your fork URL below and click <strong>Open in VS Code</strong>.</li>
+    </ol>
+    <form id="start-form">
+      <label for="repository">Your GitHub fork URL</label>
+      <input id="repository" name="repository" type="url" placeholder="https://github.com/your-name/day-ahead" autocomplete="url" required aria-describedby="url-help error">
+      <p id="url-help" class="hint">A repository URL opens its default branch in VS Code. For a branch URL such as https://github.com/your-name/day-ahead/tree/my-branch, this page shows the manual VS Code clone instructions.</p>
+      <p id="error" role="alert" hidden></p>
+      <button id="open" type="submit">Open in VS Code</button>
+    </form>
+    <section id="next" hidden aria-live="polite">
+      <h2 id="next-title">Continue in VS Code</h2>
+      <p id="instructions">Allow your browser to open VS Code. Confirm the clone and workspace trust prompts, then wait for the container build and automatic installation. The first installation can take several minutes.</p>
+      <p><a id="launch" href="#">Open VS Code again</a> · <a id="guide" href="https://github.com/corneel27/day-ahead/blob/main/DEVELOP.md">Developer guide</a></p>
+      <p>To open a branch, or if your browser does not open VS Code, press <strong>F1</strong>, run <strong>Dev Containers: Clone Repository in Container Volume...</strong> and paste:</p>
+      <code id="clone-url"></code>
+      <p>When setup finishes, press <strong>F5</strong> with <strong>Day Ahead: web preview</strong> selected. Ruff shows findings while editing and applies safe fixes on save. Open <strong>Testing</strong> for the regression tests.</p>
+    </section>
+    <p class="hint">The fork URL is processed in your browser. No account, access token or Home Assistant credentials are needed on this page. Private forks may require GitHub sign-in inside VS Code.</p>
+    <noscript>Enable JavaScript, or use Dev Containers: Clone Repository in Container Volume... in VS Code with your fork URL.</noscript>
+  </main>
+</body>
+</html>
