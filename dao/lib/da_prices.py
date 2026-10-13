@@ -464,16 +464,3 @@ class DaPrices:
         )
         self.db_da.savedata(df_db, tablename="prognoses")
         return 0
-
-    def get_price_prediction(self, source:str="dap"):
-        if source.lower() == "dap":
-            url = ("https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json")
-            resp = get(url)
-            logging.debug(resp.text)
-            json_object = json.loads(resp.text)
-            df = pd.DataFrame.from_records(json_object)
-            df.rename(columns={"time":"time_dt", "time_ts":"time", "prediction":"value"}, inplace=True)
-            df["code"] = "da"
-            # save
-            print(df.to_string(index=False))
-            self.db_da.savedata(df, "prognoses")
