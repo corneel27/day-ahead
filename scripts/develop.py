@@ -123,10 +123,12 @@ def watch_versions() -> None:
     """Notify on checkout/tool changes without installing anything automatically."""
     previous = None
     last_state = None
+    launcher = TOOLS / ("ruff-project.exe" if os.name == "nt" else "ruff-project")
     while True:
         state = (
             (ROOT / "requirements-lint.txt").read_bytes(),
             RUFF.stat().st_mtime_ns if RUFF.exists() else None,
+            launcher.stat().st_mtime_ns if launcher.exists() else None,
         )
         if state != last_state:
             try:

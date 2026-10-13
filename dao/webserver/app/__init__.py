@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, abort, send_from_directory
+from flask import Flask, abort, request, send_from_directory
 
 
 class IngressMiddleware:
@@ -21,6 +21,28 @@ class IngressMiddleware:
 app = Flask(__name__)
 app.secret_key = "secret_cookie_key"
 app.wsgi_app = IngressMiddleware(app.wsgi_app)
+app.config["DAO_WEB_PREVIEW"] = bool(os.environ.get("DAO_WEB_DATA_DIR"))
+
+
+@app.before_request
+def isolate_preview_tasks():
+    """Keep live task processes and shared task state outside the preview."""
+    if not app.config["DAO_WEB_PREVIEW"]:
+        return None
+    task_endpoints = {
+        "v1.run_process", "v1.status", "v1.show_log",
+        "v2.tasks", "v2.task_exec", "v2.task_cancel", "v2.task_state",
+        "api.run_api",
+    }
+    if request.endpoint in task_endpoints or "current_bewerking" in request.form:
+        return (
+            "Live tasks are unavailable in the isolated web preview. "
+            "Use the synthetic scenario debugger to develop the calculation core.",
+            403,
+            {"Content-Type": "text/plain; charset=utf-8"},
+        )
+    return None
+
 
 # The development preview keeps its configuration and output outside dao/data.
 if os.environ.get("DAO_WEB_DATA_DIR"):

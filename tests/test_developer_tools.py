@@ -458,6 +458,17 @@ class DeveloperToolsTest(unittest.TestCase):
             )
             requirements.write_text(original)
             self.assertIn("is ready", status_line())
+            # Repairing the launcher does not reinstall an unchanged Ruff binary.
+            launcher = self.root / ".venv-tools" / (
+                "ruff-project.exe" if os.name == "nt" else "ruff-project"
+            )
+            backup = launcher.with_name(launcher.name + ".watch-backup")
+            launcher.rename(backup)
+            try:
+                self.assertIn("version guard is missing", status_line())
+            finally:
+                backup.rename(launcher)
+            self.assertIn("is ready", status_line())
             self.assertEqual(
                 self.command(str(self.python), "-m", "ruff", "--version").strip(),
                 f"ruff {pinned_version()}",

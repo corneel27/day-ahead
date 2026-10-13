@@ -26,6 +26,9 @@ for path in ('/', '/v2/chart', '/v2/config'):
     response = client.get(path, follow_redirects=True)
     assert response.status_code == 200, (path, response.status_code)
     assert b'/static/build/' in response.data, path
+# Preview tasks must never fall back to the ordinary dao/data installation.
+assert client.post('/v2/task-exec', data={'task': 'clean_data'}).status_code == 403
+assert client.get('/api/run/clean_data').status_code == 403
 """], cwd=ROOT / "dao/webserver", env=environment, check=True)
     launches = json.loads((ROOT / ".vscode/launch.json").read_text())
     web = next(item for item in launches["configurations"] if item["name"] == "Day Ahead: web preview")
