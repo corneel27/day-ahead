@@ -31,3 +31,34 @@ test('non-repository URLs and credential-bearing links never launch', () => {
     'https://github.com/owner/repo?token=secret', 'https://github.com/owner/repo#fragment',
   ]) assert.throws(() => launchUrl(value));
 });
+
+test('the form prefills a rollout branch and opens only after a valid submission', async () => {
+  const repo = 'https://github.com/patrickvorgers/day-ahead/tree/chore/development-environment';
+  const elements = new Map();
+  for (const id of ['#start-form', '#repository', '#error', '#launch', '#guide', '#clone-url', '#next']) {
+    elements.set(id, { hidden: true, focus() {}, addEventListener(event, handler) { this.submit = handler; } });
+  }
+  const initial = `https://patrickvorgers.github.io/day-ahead/developer/?repository=${encodeURIComponent(repo)}`;
+  globalThis.document = { querySelector: id => elements.get(id) };
+  globalThis.location = { href: initial };
+  try {
+    await import('./start.mjs?form-test');
+    assert.equal(elements.get('#repository').value, repo);
+    assert.equal(location.href, initial);
+    elements.get('#repository').value = 'https://other-site.test/owner/repo';
+    elements.get('#start-form').submit({ preventDefault() {} });
+    assert.equal(location.href, initial);
+    assert.equal(elements.get('#error').hidden, false);
+    assert.equal(elements.get('#next').hidden, true);
+    elements.get('#repository').value = repo;
+    elements.get('#start-form').submit({ preventDefault() {} });
+    assert.equal(location.href, launchUrl(repo));
+    assert.equal(elements.get('#launch').href, launchUrl(repo));
+    assert.equal(elements.get('#clone-url').textContent, repo);
+    assert.equal(elements.get('#error').hidden, true);
+    assert.equal(elements.get('#next').hidden, false);
+  } finally {
+    delete globalThis.document;
+    delete globalThis.location;
+  }
+});
