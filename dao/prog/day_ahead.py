@@ -5301,54 +5301,47 @@ def main():
     """
     main function
     """
+    from dao.prog.da_const import tasks
+
+    def find_task(cmd: str) -> str | None:
+        for key, task in tasks.items():
+            if cmd == key or cmd in task.get("aliases", []):
+                return key
+        return None
 
     da_calc = DaCalc("../data/options.json")
     if da_calc.config is None:
         return
 
-    exit_code = 0
-    if len(sys.argv) > 1:
-        args = sys.argv[1:]
-        for arg in args:
-            if arg.lower() == "debug":
-                da_calc.debug = not da_calc.debug
-                continue
-            if arg.lower() == "calc":
-                if da_calc.debug:
-                    exit_code = da_calc.run_task_function("calc_optimum_met_debug")
-                else:
-                    exit_code = da_calc.run_task_function("calc_optimum")
-                continue
-            if arg.lower() == "meteo":
-                exit_code = da_calc.run_task_function("get_meteo_data")
-                continue
-            if arg.lower() == "prices":
-                exit_code = da_calc.run_task_function("get_day_ahead_prices")
-                continue
-            if arg.lower() == "get_predicted_prices":
-                exit_code = da_calc.run_task_function("get_predicted_prices")
-                continue
-            if arg.lower() == "tibber":
-                exit_code = da_calc.run_task_function("get_tibber_data")
-                continue
-            if arg.lower() == "clean":
-                exit_code = da_calc.run_task_function("clean_data")
-                continue
-            if arg.lower() == "consolidate":
-                exit_code = da_calc.run_task_function("consolidate")
-                continue
-            if arg.lower() == "calc_baseloads":
-                exit_code = da_calc.run_task_function("calc_baseloads")
-                continue
-            if arg.lower() == "train":
-                exit_code = da_calc.run_task_function("train_ml_predictions")
-                continue
+    args = sys.argv[1:]
+    cmd = args[0] if args else None
 
-            if exit_code is False:
-                exit_code = 1
+    if cmd in (None, "help", "--help", "-h", "list"):
+        print("Usage: day_ahead.py <task> [--debug]\n")
+        print("Available tasks:")
 
-            if exit_code > 0:
-                break
+        for key, task in tasks.items():
+            aliases = task.get("aliases", [])
+            alias_text = f" ({', '.join(aliases)})" if aliases else ""
+            print(f"  {key + alias_text:<40} {task['name']}")
+
+        sys.exit(0)
+
+    if cmd == "debug":
+        print("The debug flag is deprecated, use `calc --debug`")
+        cmd = "calc_debug"
+
+    task = find_task(cmd)
+
+    if task is None:
+        print(f"Unknown task: {cmd}\nUse --help to list available tasks.")
+        sys.exit(1)
+
+    da_calc.debug = "--debug" in args or cmd == "calc_debug"
+    exit_code = da_calc.run_task_function(task)
+
+    if exit_code is False:
+        exit_code = 1
 
     da_calc.db_da.log_pool_status()
 
