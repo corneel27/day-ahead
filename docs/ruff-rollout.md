@@ -83,13 +83,13 @@ These criteria are met for the lint foundation.
 **What this adds:** automated detection of common Python mistakes, cleaner
 imports and a reproducible starting point for the next stages.
 
-## Stage 2 - Provide early developer feedback
+## Stage 2 — Provide early developer feedback
 
 **Status: lint support implemented; formatter integration will follow Stage 3.**
 
 Developers install the recommended Python and Ruff extensions and run the **Development: Set up Ruff** VS Code task. A repeatable cross-platform setup installs pinned tools in a dedicated environment, prepares the lint hook and checks the repository. Existing application environments and custom hook settings are preserved. See `DEVELOP.md` for installation, migration and troubleshooting.
 
-VS Code reports findings while editing and applies safe lint fixes and import organization on save, including Auto Save. The editor and local tasks use the pinned Ruff executable and shared filesystem configuration. The commit hook catches remaining findings before committing; CI remains the full-repository gate.
+VS Code reports findings while editing and applies safe lint fixes and import organization on explicit save and Auto Save on focus/window change. The editor and local tasks use the pinned Ruff executable and shared filesystem configuration. The commit hook catches remaining findings before committing; CI remains the full-repository gate.
 
 **Completion criteria:** setup succeeds from a clean checkout and can be repeated in an existing checkout; the Ruff language server, local CLI and hook agree on representative findings; safe fixes are applied before commit and an unresolved finding blocks the commit. Windows and Linux installation checks run in CI. Verify the VS Code save workflow using the developer guide when changing editor settings.
 
