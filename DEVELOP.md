@@ -202,15 +202,19 @@ day-ahead/
 
 ## Running the Application Locally
 
+This section covers everyday development **after either setup route is complete**. Dev Container users run the application inside the container through VS Code. Developers using the manual Linux/WSL setup run it in their local `.venv`. The recommended F5 launch and testing workflow are available to both routes.
+
 ### Running the Flask Web Server
 
 The Day Ahead Optimizer includes a Flask-based web interface for configuration and visualization.
 
-#### Start the isolated preview
+#### Start the isolated preview in VS Code (recommended)
 
-In VS Code, select **Day Ahead: web preview** and press **F5**. This builds assets and starts Flask inside the selected Linux environment. The UI and solver run as processes inside the Dev Container; no second application container is started. The development image includes extra tooling and does not replace production-image validation.
+In VS Code, select **Day Ahead: web preview** and press **F5**. This builds assets and starts Flask inside the selected Linux environment. With a Dev Container, the application runs inside that container; with manual Linux/WSL setup, it runs in the local environment. No second application container is started. The development image includes extra tooling and does not replace production-image validation.
 
-For a terminal-only start, after shared setup, run from the repository root:
+#### Manual terminal alternative (native Linux/WSL)
+
+Use these commands if you completed the manual Linux/WSL setup and want to start without the VS Code launch configuration. Run them from the repository root. Dev Container users can use **F5** or **Development: Run Day Ahead** instead; they do not need to repeat this manual start procedure.
 
 ```bash
 source .venv/bin/activate
