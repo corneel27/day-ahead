@@ -134,7 +134,11 @@ def watch_versions() -> None:
             if state == last_state:
                 time.sleep(2)
                 continue
-            message = f"Ruff {check_version()} is ready. Watching for version changes."
+            message = (
+                f"Ruff {check_version()} is ready. You can start editing Python files. "
+                "Next step: press F5 with 'Day Ahead: web preview' selected to open the application. "
+                "This watcher stays running; you do not need to wait for it to finish."
+            )
             last_state = state
         except (OSError, ValueError) as error:
             message = f"requirements-lint.txt:2:1: error: {error}"

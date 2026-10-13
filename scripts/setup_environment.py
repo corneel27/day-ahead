@@ -45,7 +45,7 @@ def main() -> None:
     run("npm", "run", "build", cwd=ROOT / "dao/webserver")
     prepare_preview()
     run(str(PYTHON), "scripts/develop.py", "setup")
-    print("Environment ready. Select .venv/bin/python, then press F5 for the web preview.")
+    print("Development environment is ready. Next step: press F5 with 'Day Ahead: web preview' selected to open the application.")
 
 
 if __name__ == "__main__":
