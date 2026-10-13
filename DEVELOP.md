@@ -26,11 +26,11 @@ Install Git, Docker (Docker Desktop on Windows/macOS) and VS Code with the **Dev
 
 ### Start from the developer page
 
-Open the [developer start page](https://patrickvorgers.github.io/day-ahead/developer/) to start from your own fork. During the fork rollout, use [the development branch](https://patrickvorgers.github.io/day-ahead/developer/?repository=https%3A%2F%2Fgithub.com%2Fpatrickvorgers%2Fday-ahead%2Ftree%2Fchore%2Fdevelopment-environment): the new setup is not yet available on the upstream default branch.
+Open the [developer start page](https://corneel27.github.io/day-ahead/developer/) to start from your own fork.
 
 The procedure follows Home Assistant's developer start page:
 
-1. Fork the repository on GitHub and copy your fork URL.
+1. [Fork the repository on GitHub](https://github.com/corneel27/day-ahead/fork) and copy your fork URL. Keep your fork's `main` branch current using GitHub's **Sync fork** action.
 2. Paste the URL into the developer page and click **Open in VS Code**.
 3. Allow your browser to open VS Code and wait for the automatic clone, container build and installation. Install Dev Containers if VS Code prompts you to do so.
 4. Press **F5** to start the web preview. Ruff feedback and the test tools are ready to use.
@@ -43,7 +43,7 @@ The page passes the entered repository or branch URL to VS Code's **Clone Reposi
 
 [![Open in Dev Containers](https://img.shields.io/badge/Dev_Containers-Open-blue)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%253A%252F%252Fgithub.com%252Fcorneel27%252Fday-ahead)
 
-1. Fork the repository on GitHub. In VS Code, run **Dev Containers: Clone Repository in Container Volume...**, paste your fork URL and select the branch you want to develop. The Open button above opens the upstream repository directly for exploration. You can also paste a GitHub branch or PR URL into the clone command.
+1. Fork the repository on GitHub. In VS Code, run **Dev Containers: Clone Repository in Container Volume...**, paste your fork URL and select the branch you want to develop. The Open button above opens `corneel27/day-ahead` directly for exploration. You can also paste a GitHub branch or PR URL into the clone command.
 2. Wait for the container build and automatic setup. Python, Node, application/test dependencies, frontend assets, Ruff, hooks and editor extensions are prepared automatically. A new workspace selects its application interpreter automatically; there is no separate install command or environment activation.
 3. Press **F5** with **Day Ahead: web preview** selected. The web preview opens in your browser once Flask is ready. Alternatively, choose **Terminal > Run Task > Development: Run Day Ahead** to start without debugging, then open `http://localhost:5000`.
 4. For calculation-core work, select **Day Ahead: debug synthetic scenario** and press **F5**. Open **Testing** for isolated unit/regression tests, or run **Tests: Solve all synthetic scenarios** from **Terminal > Run Task** for the solver corpus.
@@ -85,7 +85,7 @@ To continue later, start Docker and reopen the workspace through **Remote Explor
 | --- | --- |
 | The browser does not open VS Code | Install Dev Containers, allow the browser's application-opening prompt, or use the direct VS Code clone procedure above. |
 | Docker is unavailable or container creation fails | Start Docker and check that it is using Linux containers. Read the container build/setup log in VS Code's Dev Containers output and report the first failing step. |
-| The selected branch has no development setup | During the fork rollout, use the development-branch link above. A repository-only URL selects its default branch, which may not contain this change yet. |
+| The selected branch has no development setup | Sync your fork with the repository's current `main` branch. A repository-only URL selects the default branch; a branch URL selects that specific branch. Check that the selected branch contains `.devcontainer/devcontainer.json`. |
 | Setup stops before **Environment ready** | Keep the first error from the setup output. After addressing it, use **Development: Set up environment**; use **Dev Containers: Rebuild Container** if image creation failed. |
 | Ruff or tests are unavailable after setup | Check that the Python and Ruff extensions are installed in the container. Select `.venv/bin/python` only if the interpreter is wrong; run **Ruff: Restart Server** for missing lint feedback. |
 | Port 5000 is already in use on your computer | Use the **Ports** view to choose another forwarded local port and open that address. If another preview is running inside the container, stop it before starting F5 again. |
@@ -101,13 +101,13 @@ The **Development environment** workflow builds the actual Dockerfile, runs the 
 
 Locally, run **Development: Verify environment** for the smoke checks. CI verifies the installation and application startup; extension installation, actual VS Code interactions, breakpoint stopping and browser appearance still require a manual clean-checkout check.
 
-### Publishing and verifying the developer start page
+### Maintaining the developer start page
 
 The static page is maintained in `docs/developer/` in this repository. Its **Developer start page** workflow checks repository/branch URL handling on pull requests and publishes only the HTML, JavaScript and stylesheet; it has no server or extra package dependencies.
 
-To enable publication, a repository administrator selects **Settings > Pages > Source: GitHub Actions** and adds the Actions repository variable `DEVELOPER_PAGES_ENABLED=true`. The default branch then publishes automatically when the page changes. For a fork rollout, set `DEVELOPER_PAGES_BRANCH` to the development branch and allow that branch in the `github-pages` environment. Remove this temporary variable after the feature reaches the default branch. Update the page links in this guide when enabling an upstream site; the normal project URL is `https://OWNER.github.io/day-ahead/developer/` unless a custom domain is configured.
+GitHub Pages publishes the start page at `https://corneel27.github.io/day-ahead/developer/`. Changes to the page on `main` publish automatically through GitHub Actions. Publication uses the repository variable `DEVELOPER_PAGES_ENABLED=true`; the `github-pages` environment restricts deployments to `main`. To republish without changing files, run **Actions > Developer start page > Run workflow** on `main`.
 
-Before offering the route upstream, open the published page in a browser, enter the fork's development-branch URL and click **Open in VS Code**. Use a fresh Docker volume and VS Code profile; confirm the first-time prompts, automatic setup, Ruff findings and safe fixes on save, Test Explorer discovery and F5 startup with a working breakpoint. Record results in the pull request, including any browser interaction still awaiting manual confirmation. CI's clean-install workflow complements this check but does not exercise the browser-to-VS-Code permission prompt.
+When changing the start page or installation procedure, open the page in a browser, enter the URL of a fork containing the changes and click **Open in VS Code**. Use a fresh Docker volume and VS Code profile; confirm the first-time prompts, automatic setup, Ruff findings and safe fixes on save, test discovery and F5 startup with a working breakpoint. Record results and any incomplete checks in the pull request. CI's clean-install workflow complements this check but does not exercise the browser-to-VS-Code permission prompt.
 
 ## Prerequisites
 
@@ -338,7 +338,7 @@ Record commit SHA, host OS/architecture, Docker/VS Code versions, results and an
 
 ### Required checks before merge
 
-A maintainer must configure the target repository's `main` ruleset or branch protection to require a pull request and these existing GitHub Actions check names:
+Changes to `main` go through a pull request. The following GitHub Actions checks must pass before merging:
 
 - `Ruff lint`
 - `Scenario suite (unit)`
@@ -347,9 +347,9 @@ A maintainer must configure the target repository's `main` ruleset or branch pro
 - `Developer setup (windows-latest)`
 - `clean-install` (Development environment workflow)
 
-These are repository settings, not enabled by committing this guide. Confirm the settings on the actual merge target, including the upstream repository if contributing from a fork. This change does not add a formatting requirement; formatter adoption is a separate rollout.
+Formatting is not a required merge check. The current checks enforce the shared lint configuration and verify application behavior and developer setup.
 
-Verify enforcement on a disposable PR branch: add an undefined-name lint violation, confirm `Ruff lint` fails and normal merging is blocked, then remove the violation and confirm all required checks pass. Record any maintainer bypass policy and the verification result; do not merge the violation.
+When changing branch protection, verify enforcement on a disposable PR branch: add an undefined-name lint violation, confirm `Ruff lint` fails and normal merging is blocked, then remove the violation and confirm all required checks pass. Record any maintainer bypass policy and the verification result; do not merge the violation.
 
 ---
 
@@ -499,7 +499,7 @@ python scripts/develop.py setup
 
 Use `python3` on systems where `python` is unavailable, or `py -3.13` on Windows when that is your installed interpreter. Setup reads the minimum version from `ruff.toml` rather than requiring a particular launcher. On Debian, install the matching `python3-venv` package if virtual-environment creation is unavailable.
 
-While editing, Ruff reports lint findings in the editor and Problems view. Saving a Python file explicitly, or using Auto Save on focus/window change, applies Ruff's safe fixes and import organization. Findings such as undefined names still require a manual fix. Review automatic changes and run tests for affected behavior before committing. VS Code skips these save actions for timed Auto Save (`afterDelay`); use Save or select `onFocusChange`/`onWindowChange` if you want automatic fixes. Live lint feedback remains available while typing. Formatting on save is disabled until the separate formatting rollout is complete; explicit **Format Document** remains available through Ruff.
+While editing, Ruff reports lint findings in the editor and Problems view. Saving a Python file explicitly, or using Auto Save on focus/window change, applies Ruff's safe fixes and import organization. Findings such as undefined names still require a manual fix. Review automatic changes and run tests for affected behavior before committing. VS Code skips these save actions for timed Auto Save (`afterDelay`); use Save or select `onFocusChange`/`onWindowChange` if you want automatic fixes. Live lint feedback remains available while typing. Formatting on save is disabled; explicit **Format Document** remains available through Ruff.
 
 VS Code uses a version-checked Ruff launcher from `.venv-tools`, independently of the application interpreter. Both Windows and Unix executable paths are included. The filesystem configuration takes precedence over editor rule settings. `requirements-lint.txt` is the single maintained Ruff version pin. Setup and version checks derive an ignored `.ruff.toml` that extends the shared `ruff.toml` and enforces that version, including when the extension falls back to another Ruff executable. Do not edit the generated file. An existing personal `.ruff.toml` is preserved: resolve that configuration conflict before enabling this setup.
 
@@ -546,9 +546,8 @@ whole files or rule families to make the check pass. `zip(..., strict=False)`
 preserves existing truncation; use `strict=True` when equal lengths are validated.
 
 Dependabot checks Ruff and pre-commit in the repository root weekly. A Ruff upgrade changes only the pin in `requirements-lint.txt`; the editor, local hook and CI derive their required version from it. Review release notes, changes to standard defaults and new diagnostics, then run lint, formatting once adopted, and relevant behavioral tests before merging the upgrade. Rerun developer setup after pulling a tooling update and restart the editor's Ruff server. Ruff is not an add-on runtime dependency.
-Full-repository `ruff format` enforcement is a separate
-follow-up to avoid a large formatting diff during this rollout; see
-[`docs/ruff-rollout.md`](docs/ruff-rollout.md).
+Full-repository `ruff format` enforcement is not enabled. See the
+[Ruff adoption roadmap](docs/ruff-rollout.md) for the remaining formatting and rule-adoption work.
 
 For behavioral verification on Linux, follow [`docs/testing.md`](docs/testing.md).
 The scenario workflow also runs isolated configuration-model, SQLite query,
