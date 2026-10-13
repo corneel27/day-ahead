@@ -58,7 +58,7 @@ After pulling dependency changes, run **Development: Set up environment**. Chang
 
 ### Your first development session
 
-The first installation needs internet access and can take several minutes. VS Code reads `.devcontainer/devcontainer.json`, builds the environment from the repository's `Dockerfile` and runs `script/setup` to install and configure the application and tools. Wait for the setup output to end with **Environment ready** before starting the application. Allow workspace trust and automatic tasks when prompted for this repository.
+The first installation needs internet access and can take several minutes. VS Code reads `.devcontainer/devcontainer.json`, builds the environment from the repository's `Dockerfile` and runs `script/setup` to install and configure the application and tools. The container configuration makes VS Code wait for this setup to finish before connecting the editor, so Python and the pinned Ruff launcher are ready when extensions start. The setup output ends with **Environment ready**. Allow workspace trust and automatic tasks when prompted for this repository.
 
 Confirm that the environment is ready:
 
@@ -88,6 +88,7 @@ To continue later, start Docker and reopen the workspace through **Remote Explor
 | The selected branch has no development setup | Sync your fork with the repository's current `main` branch. A repository-only URL selects the default branch; use the manual VS Code clone command for a specific branch URL. Check that the selected branch contains `.devcontainer/devcontainer.json`. |
 | Setup stops before **Environment ready** | Keep the first error from the setup output. After addressing it, use **Development: Set up environment**; use **Dev Containers: Rebuild Container** if image creation failed. |
 | Ruff or tests are unavailable after setup | Check that the Python and Ruff extensions are installed in the container. Select `.venv/bin/python` only if the interpreter is wrong; run **Ruff: Restart Server** for missing lint feedback. |
+| Ruff reports a required-version mismatch immediately after installation | An older container may have started the extension's bundled Ruff before setup finished. Wait for **Environment ready**, then run **Ruff: Restart Server**. New containers wait for setup before connecting the editor; use **Dev Containers: Rebuild Container** after updating the container configuration. |
 | Port 5000 is already in use on your computer | Use the **Ports** view to choose another forwarded local port and open that address. If another preview is running inside the container, stop it before starting F5 again. |
 | A commit or push fails | Read the hook output, configure Git identity if requested, or complete GitHub sign-in. Check that the remote is your fork and review/stage any automatic hook fixes. |
 

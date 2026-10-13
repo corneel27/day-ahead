@@ -19,6 +19,7 @@
     }
   },
   "postCreateCommand": "git config --global --add safe.directory \"$PWD\" && sh script/setup",
+  "waitFor": "postCreateCommand",
   "customizations": {
     "vscode": {
       "extensions": [

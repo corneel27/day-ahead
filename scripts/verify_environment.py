@@ -54,6 +54,7 @@ assert client.get('/api/run/clean_data').status_code == 403
     container = json.loads((ROOT / ".devcontainer/devcontainer.json").read_text())
     assert container["build"]["dockerfile"] == "Dockerfile"
     assert "sh script/setup" in container["postCreateCommand"]
+    assert container["waitFor"] == "postCreateCommand"
     assert container["forwardPorts"] == [5000, 5173]
     print("Dependency integrity, Ruff version, scenarios and web preview passed.")
 

@@ -18,14 +18,18 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build the actual development image
         run: docker build --pull -t day-ahead-dev .devcontainer
-      - name: Install from a clean checkout and verify repeat setup
+      - name: Verify container startup, repeat setup and application behavior
         run: |
-          docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace day-ahead-dev bash -e -c '
-            git config --global --add safe.directory /workspace
-            sh script/setup
+          npx --yes @devcontainers/cli@0.89.0 up \
+            --workspace-folder "$GITHUB_WORKSPACE" \
+            --skip-non-blocking-commands > "$RUNNER_TEMP/devcontainer-result.json"
+          container_id=$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).containerId" "$RUNNER_TEMP/devcontainer-result.json")
+          workspace=$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).remoteWorkspaceFolder" "$RUNNER_TEMP/devcontainer-result.json")
+          docker exec -w "$workspace" "$container_id" bash -e -c '
             python scripts/verify_environment.py
             sh script/setup
             python scripts/verify_environment.py
             .venv/bin/python -m pytest -c pytest-dev.ini -q
-            PYTHONPATH=/workspace:/workspace/dao/prog .venv/bin/python -m dao.prog.da_debug scenario-run --report
+            PYTHONPATH="$PWD:$PWD/dao/prog" .venv/bin/python -m dao.prog.da_debug scenario-run --report
           '
+          docker stop "$container_id"
