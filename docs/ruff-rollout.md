@@ -164,9 +164,9 @@ Remove the custom `lint.select` and unnecessary lint overrides once the standard
 
 ## Stage 5 — Require checks before merging
 
-**Status: lint and development checks are required on `patrickvorgers/day-ahead` main; formatting and upstream enforcement remain pending.**
+**Status: lint and development checks are implemented in CI; required merge checks must be configured by the repository maintainer. Formatting enforcement remains pending.**
 
-The active **Main required development checks** ruleset requires Ruff lint, both scenario jobs, both Windows/Linux developer-tool jobs and clean-install from GitHub Actions. PRs are required, with no bypass actors and no mandatory review approvals. A deliberate undefined-name violation in temporary PR #2 demonstrated a failing required Ruff check and a disabled merge button on 2026-10-13. See the developer guide for the check names and clean-checkout manual acceptance checklist. The rule is repository-specific; it does not configure the upstream repository or finish formatter adoption.
+Require Ruff lint, both scenario jobs, both Windows/Linux developer-tool jobs and clean-install from GitHub Actions before merging. See the developer guide for the check names and clean-checkout manual acceptance checklist. Repository protection is configured in GitHub settings; merging the workflow files does not enable it. Maintainers choose any review requirements and intentional bypass policy.
 
 1. Configure the repository ruleset or branch protection to require **Ruff lint**
    for pull requests, using the existing CI check name.
