@@ -420,8 +420,13 @@ class DeveloperToolsTest(unittest.TestCase):
             self.command(str(self.python), "scripts/develop.py", "setup")
 
     def test_workspace_watch_reports_upgrade_without_installing(self):
+        tasks = json.loads((SOURCE / ".vscode/tasks.json").read_text())
+        task = next(item for item in tasks["tasks"] if item["label"] == "Development: Watch Ruff version")
+        runner = task.get("windows", task) if os.name == "nt" else task
+        # Exercise the configured folder-open command without activating any
+        # VS Code extension; a command-variable dependency would fail here.
         process = subprocess.Popen(
-            [str(self.python), "scripts/develop.py", "watch"],
+            [runner["command"], *runner["args"]],
             cwd=self.root,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -449,7 +454,6 @@ class DeveloperToolsTest(unittest.TestCase):
             )
             warning = status_line()
             self.assertIn("requires Ruff 0.0.0", warning)
-            tasks = json.loads((SOURCE / ".vscode/tasks.json").read_text())
             matcher = tasks["tasks"][0]["problemMatcher"][0]
             match = re.match(matcher["pattern"]["regexp"], warning)
             self.assertIsNotNone(match)

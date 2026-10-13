@@ -23,7 +23,11 @@ export function repositoryUrl(value) {
 }
 
 export function launchUrl(value) {
-  return `vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=${encodeURIComponent(repositoryUrl(value))}`;
+  const repo = repositoryUrl(value);
+  if (new URL(repo).pathname.split('/').length > 3) {
+    throw new Error('For a branch URL, use Dev Containers: Clone Repository in Container Volume... in VS Code and paste the full branch URL.');
+  }
+  return `vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=${encodeURIComponent(repo)}`;
 }
 
 export function developerGuideUrl(value) {
@@ -38,17 +42,32 @@ if (typeof document !== 'undefined') {
   const error = document.querySelector('#error');
   // The documentation can prefill a branch during a rollout; nothing opens automatically.
   input.value = new URL(location.href).searchParams.get('repository') || '';
+  const updateButton = () => {
+    document.querySelector('#open').textContent = input.value.includes('/tree/')
+      ? 'Show branch instructions' : 'Open in VS Code';
+  };
+  input.addEventListener('input', updateButton);
+  updateButton();
   form.addEventListener('submit', event => {
     event.preventDefault();
     error.hidden = true;
     try {
       const repo = repositoryUrl(input.value);
-      const target = launchUrl(repo);
-      document.querySelector('#launch').href = target;
       document.querySelector('#guide').href = developerGuideUrl(repo);
       document.querySelector('#clone-url').textContent = repo;
       document.querySelector('#next').hidden = false;
-      location.href = target;
+      const branch = new URL(repo).pathname.split('/').length > 3;
+      document.querySelector('#launch').hidden = branch;
+      if (branch) {
+        document.querySelector('#next-title').textContent = 'Open this branch in VS Code';
+        document.querySelector('#instructions').textContent = 'Branch URLs work through the VS Code clone command below. The browser launch link only supports repository URLs and would fail with a /tree/branch address. Paste the full branch URL into the command so the selected branch is preserved.';
+      } else {
+        const target = launchUrl(repo);
+        document.querySelector('#launch').href = target;
+        document.querySelector('#next-title').textContent = 'Continue in VS Code';
+        document.querySelector('#instructions').textContent = 'Allow your browser to open VS Code. Confirm the clone and workspace trust prompts, then wait for the container build and automatic installation. The first installation can take several minutes.';
+        location.href = target;
+      }
     } catch (exception) {
       error.textContent = exception.message;
       error.hidden = false;

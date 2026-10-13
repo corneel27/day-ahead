@@ -4,7 +4,7 @@
     {
       "label": "Development: Watch Ruff version",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "python3",
       "args": [
         "scripts/develop.py",
         "watch"
@@ -44,12 +44,20 @@
         "reveal": "always",
         "panel": "dedicated",
         "focus": false
+      },
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "watch"
+        ]
       }
     },
     {
       "label": "Development: Set up Ruff",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "python3",
       "args": [
         "scripts/develop.py",
         "setup"
@@ -61,12 +69,20 @@
       "presentation": {
         "reveal": "always",
         "panel": "dedicated"
+      },
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "setup"
+        ]
       }
     },
     {
       "label": "Ruff: Check all Python files",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "python3",
       "args": [
         "scripts/develop.py",
         "check"
@@ -78,13 +94,21 @@
       "group": {
         "kind": "test",
         "isDefault": true
+      },
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "check"
+        ]
       }
     },
     {
       "label": "Ruff: Apply safe fixes to all Python files",
       "detail": "Review the diff and run relevant tests after fixing.",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "python3",
       "args": [
         "scripts/develop.py",
         "fix"
@@ -92,13 +116,21 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "fix"
+        ]
+      }
     },
     {
       "label": "Ruff: Run commit hooks on all files",
       "detail": "Hooks apply safe fixes; review and stage any resulting changes.",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "python3",
       "args": [
         "scripts/develop.py",
         "hooks"
@@ -106,12 +138,20 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "hooks"
+        ]
+      }
     },
     {
       "label": "Development: Check Ruff version",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "python3",
       "args": [
         "scripts/develop.py",
         "status"
@@ -119,12 +159,20 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "status"
+        ]
+      }
     },
     {
       "label": "Development: Set up environment",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "${workspaceFolder}/.venv/bin/python",
       "args": [
         "scripts/setup_environment.py"
       ],
@@ -141,7 +189,7 @@
     {
       "label": "Development: Verify environment",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "${workspaceFolder}/.venv/bin/python",
       "args": [
         "scripts/verify_environment.py"
       ],
@@ -158,7 +206,7 @@
     {
       "label": "Tests: Isolated unit and regression tests",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "${workspaceFolder}/.venv/bin/python",
       "args": [
         "-m",
         "pytest",
@@ -179,7 +227,7 @@
     {
       "label": "Tests: Solve all synthetic scenarios",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "${workspaceFolder}/.venv/bin/python",
       "args": [
         "-m",
         "dao.prog.da_debug",
@@ -228,7 +276,7 @@
     {
       "label": "Development: Run Day Ahead",
       "type": "process",
-      "command": "${command:python.interpreterPath}",
+      "command": "${workspaceFolder}/.venv/bin/python",
       "args": [
         "-m",
         "flask",
