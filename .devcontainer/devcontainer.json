@@ -1,0 +1,19 @@
+{
+  "name": "Day Ahead development",
+  "build": {"dockerfile": "Dockerfile"},
+  "remoteUser": "root",
+  "forwardPorts": [5000, 5173],
+  "portsAttributes": {
+    "5000": {"label": "Day Ahead web preview", "onAutoForward": "notify"},
+    "5173": {"label": "Vite assets", "onAutoForward": "silent"}
+  },
+  "postCreateCommand": "python scripts/setup_environment.py",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-python.vscode-pylance", "ms-python.debugpy", "charliermarsh.ruff"],
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+      }
+    }
+  }
+}

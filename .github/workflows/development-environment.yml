@@ -1,0 +1,30 @@
+name: Development environment
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clean-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the actual development image
+        run: docker build --pull -t day-ahead-dev .devcontainer
+      - name: Install from a clean checkout and verify repeat setup
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace day-ahead-dev bash -e -c '
+            python scripts/setup_environment.py
+            python scripts/verify_environment.py
+            python scripts/setup_environment.py
+            python scripts/verify_environment.py
+            .venv/bin/python -m pytest -c pytest-dev.ini -q
+            PYTHONPATH=/workspace:/workspace/dao/prog .venv/bin/python -m dao.prog.da_debug scenario-run --report
+          '

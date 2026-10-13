@@ -120,6 +120,110 @@
         "cwd": "${workspaceFolder}"
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Development: Set up environment",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "scripts/setup_environment.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "TZ": "UTC",
+          "MPLBACKEND": "Agg"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Development: Verify environment",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "scripts/verify_environment.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "TZ": "UTC",
+          "MPLBACKEND": "Agg"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: Isolated unit and regression tests",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "-m",
+        "pytest",
+        "-c",
+        "pytest-dev.ini",
+        "-q"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "TZ": "UTC",
+          "MPLBACKEND": "Agg"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: Solve all synthetic scenarios",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "-m",
+        "dao.prog.da_debug",
+        "scenario-run",
+        "--report"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "TZ": "UTC",
+          "MPLBACKEND": "Agg"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Development: Build frontend",
+      "type": "process",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/dao/webserver"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Development: Frontend live reload",
+      "type": "process",
+      "command": "npm",
+      "args": [
+        "run",
+        "vite-serve"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/dao/webserver",
+        "env": {
+          "VITE_DEV_HOST": "localhost"
+        }
+      },
+      "problemMatcher": []
     }
   ]
 }

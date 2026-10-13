@@ -29,3 +29,5 @@ dao/webserver/node_modules
 dao/webserver/app/static/build
 /dao/data/home-assistant_v2.db-journal
 /dao/data/meta
+
+/.local/

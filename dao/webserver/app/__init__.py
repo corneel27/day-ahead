@@ -1,4 +1,6 @@
-from flask import Flask
+import os
+
+from flask import Flask, abort, send_from_directory
 
 
 class IngressMiddleware:
@@ -19,6 +21,14 @@ class IngressMiddleware:
 app = Flask(__name__)
 app.secret_key = "secret_cookie_key"
 app.wsgi_app = IngressMiddleware(app.wsgi_app)
+
+# The development preview keeps its configuration and output outside dao/data.
+if os.environ.get("DAO_WEB_DATA_DIR"):
+    @app.route("/static/data/<path:filename>")
+    def development_data(filename):
+        if filename.split("/", 1)[0] not in ("images", "log"):
+            abort(404)
+        return send_from_directory(os.environ["DAO_WEB_DATA_DIR"], filename)
 
 # Initialize the app before importing modules that register routes.
 # isort: off

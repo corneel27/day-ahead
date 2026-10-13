@@ -4,6 +4,7 @@ This guide will help developers set up their development environment, test chang
 
 ## Table of Contents
 
+- [VS Code quick start](#vs-code-quick-start-recommended)
 - [Prerequisites](#prerequisites)
 - [Setting Up Development Environment](#setting-up-development-environment)
 - [Project Structure](#project-structure)
@@ -13,6 +14,30 @@ This guide will help developers set up their development environment, test chang
 - [Code Style and Best Practices](#code-style-and-best-practices)
 
 ---
+
+## VS Code quick start (recommended)
+
+Install Git, Docker (Docker Desktop on Windows/macOS) and VS Code with the **Dev Containers** extension. On Windows, enable Docker Desktop's Linux containers/WSL 2 backend. Docker must be running; host Python and Node installations are not needed for this route.
+
+1. Clone your fork and open the repository root in VS Code.
+2. Choose **Dev Containers: Reopen in Container**. The container provides Python 3.13, Node 22 and native database build dependencies. Its first-time setup creates `.venv`, installs application/test dependencies, builds frontend assets, and installs the shared Ruff tools and commit hooks in `.venv-tools`.
+3. Select `.venv/bin/python` with **Python: Select Interpreter** if an existing workspace selection overrides the default. Run **Ruff: Restart Server** and allow automatic tasks in this trusted folder for the Ruff version watcher.
+4. Press **F5** with **Day Ahead: web preview** selected. Open `http://localhost:5000`. The debugger builds frontend assets first and supports Python and Jinja breakpoints.
+5. Open **Testing** for isolated unit/regression tests, or run **Tests: Solve all synthetic scenarios** from **Terminal > Run Task** for the solver corpus.
+
+The preview uses `.local/web-data` with example options, empty secrets and empty image/log directories. Setup preserves existing preview edits and never copies credentials from `dao/data`. It is an empty web preview, not a simulated production dashboard: reports and live tasks require a separately configured installation. Synthetic scenarios exercise planning independently of Home Assistant and databases. Existing `dao/data` files are not changed by setup.
+
+After pulling dependency changes, run **Development: Set up environment**. Changes to the container image require **Dev Containers: Rebuild Container**. Setup is repeatable; restart Ruff after tooling changes. Do not reuse a Windows `.venv` inside Linux: use a separate Linux checkout or explicitly recreate that environment. Existing hooks are preserved according to the Ruff setup instructions below.
+
+For frontend live reload, start **Development: Frontend live reload**, then add `"VITE_DEV": "1"` to a personal copy of the web debug configuration. Port 5173 is forwarded alongside Flask. The default F5 configuration uses built assets and needs no second server.
+
+**Native Linux/WSL alternative:** install Python 3.12+ (3.13 matches the container), Node 22.12+, Git, a compiler, pkg-config and MariaDB development libraries. From the repository root run `python3 scripts/setup_environment.py`, then open VS Code and select `.venv/bin/python`. On Debian/Ubuntu the native libraries can be installed with `sudo apt-get install build-essential pkg-config libmariadb-dev`. Application support is Linux/WSL; the separate Ruff-only setup also supports native Windows.
+
+### Automatic installation verification
+
+The **Development environment** workflow builds the actual Dockerfile, runs the same setup used by the Dev Container from a clean checkout, checks Python dependency integrity and Ruff version, validates scenarios, renders the real web preview with built frontend assets, repeats setup, then runs isolated regression tests and all synthetic scenarios. It runs on pushes, pull requests, and weekly to catch changed base images or dependency resolution even without a code change. Dependency upgrade PRs therefore exercise the complete installation route.
+
+Locally, run **Development: Verify environment** for the smoke checks. CI verifies the installation and application startup; extension installation, actual VS Code interactions, breakpoint stopping and browser appearance still require a manual clean-checkout check.
 
 ## Prerequisites
 
@@ -90,15 +115,7 @@ npm install
 In case you get an error like this: `This error typically indicates that MariaDB Connector/C, a dependency which must be preinstalled, is not found.`
 * **Ubuntu**: `sudo apt install -y build-essential pkg-config libmariadb-dev`
 
-In case you get an error like this: `ERROR: No matching distribution found for mip==1.16rc0` or equivalent you need to install manually.
-* Edit dao/requirements.txt and remove the line with mip
-* pip install -r dao/requirements.txt
-* Install mip: tar -xzf dao/miplib_amd64.tar.gz -C dao/prog
-* pip install --ignore-requires-python mip==1.16rc0
-* export PMIP_CBC_LIBRARY=~/day-ahead/dao/prog/miplib/lib/libCbc.so
-* export LD_LIBRARY_PATH=~/day-ahead/dao/prog/miplib/lib/
-
-Repeat the two export statements under Option 1 below when starting up the environment a second time.
+Use the current `mip` and `cbcbox` versions from `dao/requirements.txt`. The former manual `mip==1.16rc0` workaround is obsolete. Do not remove dependencies or override Python compatibility to get setup to pass; use the container and report installation failures.
 
 #### 3.2 Install in editable mode
 If you're developing the package itself, you can also install it in editable mode:
