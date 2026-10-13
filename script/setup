@@ -1,0 +1,5 @@
+#!/bin/sh
+# Keep native Linux/WSL setup and Dev Container setup on the same installer.
+set -eu
+cd "$(dirname "$0")/.."
+exec python3 scripts/setup_environment.py "$@"

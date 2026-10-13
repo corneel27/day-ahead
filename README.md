@@ -5,6 +5,12 @@
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 
+## Development
+
+[![Open in Dev Containers](https://img.shields.io/badge/Dev_Containers-Open-blue)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%253A%252F%252Fgithub.com%252Fcorneel27%252Fday-ahead)
+
+Open the repository in a Docker volume, wait for automatic setup, then press **F5**. To contribute from your own fork, use **Dev Containers: Clone Repository in Container Volume...** and paste your fork URL. See [the developer quick start](DEVELOP.md#vs-code-quick-start-recommended) for prerequisites, tests and existing checkouts.
+
 ## Inleiding
 Het programma Day Ahead Optimizer (DAO) voert de volgende acties, 
 berekeningen en bewerkingen uit: 

@@ -22,9 +22,9 @@ jobs:
         run: |
           docker run --rm -v "$GITHUB_WORKSPACE:/workspace" -w /workspace day-ahead-dev bash -e -c '
             git config --global --add safe.directory /workspace
-            python scripts/setup_environment.py
+            sh script/setup
             python scripts/verify_environment.py
-            python scripts/setup_environment.py
+            sh script/setup
             python scripts/verify_environment.py
             .venv/bin/python -m pytest -c pytest-dev.ini -q
             PYTHONPATH=/workspace:/workspace/dao/prog .venv/bin/python -m dao.prog.da_debug scenario-run --report

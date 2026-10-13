@@ -25,7 +25,12 @@
       },
       "preLaunchTask": "Development: Build frontend",
       "jinja": true,
-      "justMyCode": true
+      "justMyCode": true,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Running on (http://127\\.0\\.0\\.1:[0-9]+)",
+        "uriFormat": "%s"
+      }
     },
     {
       "name": "Day Ahead: debug synthetic scenario",

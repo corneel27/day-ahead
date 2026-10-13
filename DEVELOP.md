@@ -19,11 +19,16 @@ This guide will help developers set up their development environment, test chang
 
 Install Git, Docker (Docker Desktop on Windows/macOS) and VS Code with the **Dev Containers** extension. On Windows, enable Docker Desktop's Linux containers/WSL 2 backend. Docker must be running; host Python and Node installations are not needed for this route.
 
-1. Clone your fork and open the repository root in VS Code.
-2. Choose **Dev Containers: Reopen in Container**. The container provides Python 3.13, Node 22 and native database build dependencies. Its first-time setup creates `.venv`, installs application/test dependencies, builds frontend assets, and installs the shared Ruff tools and commit hooks in `.venv-tools`.
-3. Select `.venv/bin/python` with **Python: Select Interpreter** if an existing workspace selection overrides the default. Run **Ruff: Restart Server** and allow automatic tasks in this trusted folder for the Ruff version watcher.
-4. Press **F5** with **Day Ahead: web preview** selected. Open `http://localhost:5000`. The debugger builds frontend assets first and supports Python and Jinja breakpoints.
-5. For the calculation core, select **Day Ahead: debug synthetic scenario** and press **F5** to run one scenario with breakpoints. Open **Testing** for isolated unit/regression tests, or run **Tests: Solve all synthetic scenarios** from **Terminal > Run Task** for the solver corpus.
+[![Open in Dev Containers](https://img.shields.io/badge/Dev_Containers-Open-blue)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%253A%252F%252Fgithub.com%252Fcorneel27%252Fday-ahead)
+
+1. Fork the repository on GitHub. In VS Code, run **Dev Containers: Clone Repository in Container Volume...**, paste your fork URL and select the branch you want to develop. The Open button above opens the upstream repository directly for exploration. You can also paste a GitHub branch or PR URL into the clone command.
+2. Wait for the container build and automatic setup. Python, Node, application/test dependencies, frontend assets, Ruff, hooks and editor extensions are prepared automatically. A new workspace selects its application interpreter automatically; there is no separate install command or environment activation.
+3. Press **F5** with **Day Ahead: web preview** selected. The web preview opens in your browser once Flask is ready. Alternatively, choose **Terminal > Run Task > Development: Run Day Ahead** to start without debugging, then open `http://localhost:5000`.
+4. For calculation-core work, select **Day Ahead: debug synthetic scenario** and press **F5**. Open **Testing** for isolated unit/regression tests, or run **Tests: Solve all synthetic scenarios** from **Terminal > Run Task** for the solver corpus.
+
+The container-volume route stores the checkout in Docker's Linux filesystem and avoids sharing a Windows virtual environment with Linux. To reopen it later, use **Remote Explorer > Dev Containers**. Push commits to your fork to retain your work independently of the local Docker volume.
+
+**Existing checkout:** open its repository root and choose **Dev Containers: Reopen in Container**. Keep your personal files and settings. Only if an earlier interpreter selection overrides the default, select `.venv/bin/python` with **Python: Select Interpreter**. Ruff normally starts after automatic setup; use **Ruff: Restart Server** if it was already running before tools changed. Allow automatic tasks in this trusted folder when prompted to enable the Ruff version watcher. VS Code may request permission to open links, trust the repository or run automatic tasks; these choices remain with the developer.
 
 The preview uses `.local/web-data` with example options, empty secrets and empty image/log directories. Setup preserves existing preview edits and never copies credentials from `dao/data`. It is an empty web preview, not a simulated production dashboard: reports require a separately configured installation, and live task execution/state endpoints are disabled in preview mode. Use the synthetic scenario debugger for calculation-core work. Synthetic scenarios exercise planning independently of Home Assistant and databases. Existing `dao/data` files are not changed by setup.
 
@@ -31,7 +36,7 @@ After pulling dependency changes, run **Development: Set up environment**. Chang
 
 For frontend live reload, start **Development: Frontend live reload**, then add `"VITE_DEV": "1"` to a personal copy of the web debug configuration. Port 5173 is forwarded alongside Flask. The default F5 configuration uses built assets and needs no second server.
 
-**Native Linux/WSL alternative:** install Python 3.12+ (3.13 matches the container), Node 22.12+, Git, a compiler, pkg-config and MariaDB development libraries. From the repository root run `python3 scripts/setup_environment.py`, then open VS Code and select `.venv/bin/python`. On Debian/Ubuntu the native libraries can be installed with `sudo apt-get install build-essential pkg-config libmariadb-dev`. Application support is Linux/WSL; the separate Ruff-only setup also supports native Windows.
+**Native Linux/WSL alternative:** install Python 3.12+ (3.13 matches the container), Node 22.12+, Git, a compiler, pkg-config and MariaDB development libraries. From the repository root run `./script/setup`, then open VS Code and select `.venv/bin/python`. On Debian/Ubuntu the native libraries can be installed with `sudo apt-get install build-essential pkg-config libmariadb-dev`. Application support is Linux/WSL; the separate Ruff-only setup also supports native Windows.
 
 ### Automatic installation verification
 

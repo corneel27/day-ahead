@@ -224,6 +224,38 @@
         }
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Development: Run Day Ahead",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "-m",
+        "flask",
+        "--app",
+        "app",
+        "run",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "5000",
+        "--no-reload"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/dao/webserver",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "DAO_WEB_DATA_DIR": "${workspaceFolder}/.local/web-data",
+          "MPLBACKEND": "Agg",
+          "TZ": "UTC"
+        }
+      },
+      "dependsOn": "Development: Build frontend",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
     }
   ]
 }
