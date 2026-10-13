@@ -348,17 +348,19 @@ class DaBase(hass.Hass):
         :param df: het dataframe met de code van de variabelen in de kolomheader
         :return: None
         """
-        df_db = pd.DataFrame(columns=["time", "code", "value"])
         df = df.reset_index(drop=True)
         columns = df.columns.values.tolist()[1:]
         tz = pytz.timezone(self.time_zone)
+        rows = []
         for index in range(min(len(tijd), len(df))):
             dt = pd.to_datetime(tijd[index])
             dt = tz.localize(dt)
             utc = int(dt.timestamp())
             for c in columns:
-                db_row = [str(utc), c, float(df.loc[index, c])]
-                df_db.loc[df_db.shape[0]] = db_row
+                rows.append([str(utc), c, float(df.at[index, c])])
+        # in een keer opbouwen: rij voor rij toevoegen met .loc kost per rij
+        # bijna een milliseconde
+        df_db = pd.DataFrame(rows, columns=["time", "code", "value"])
         logging.debug(f"Save calculated data:\n{df_db.to_string()}")
         self.db_da.savedata(df_db, tablename=tablename)
         return
@@ -570,8 +572,6 @@ class DaBase(hass.Hass):
         :param _ml_prediction: boolean default None(= from config)
         :return:
         """
-        from dao.prog.solar_predictor import SolarPredictor
-
         if _ml_prediction is None:
             ml_prediction = solar_option.ml_prediction
         else:
@@ -583,6 +583,10 @@ class DaBase(hass.Hass):
             interval_s = 900 if interval == "15min" else 3600
         solar_name = solar_option.name.replace(" ", "_").replace("-", "_")
         if ml_prediction:
+            # alleen hier importeren: xgboost, sklearn en scipy laden kost
+            # ongeveer een seconde, en de dao-voorspelling heeft ze niet nodig
+            from dao.prog.solar_predictor import SolarPredictor
+
             solar_predictor = SolarPredictor()
             try:
                 solar_prog = solar_predictor.predict_solar_device(
