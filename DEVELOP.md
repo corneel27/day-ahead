@@ -5,6 +5,8 @@ This guide will help developers set up their development environment, test chang
 ## Table of Contents
 
 - [VS Code quick start](#vs-code-quick-start-recommended)
+- [Your first development session](#your-first-development-session)
+- [Start-up troubleshooting](#start-up-troubleshooting)
 - [Prerequisites](#prerequisites)
 - [Setting Up Development Environment](#setting-up-development-environment)
 - [Project Structure](#project-structure)
@@ -12,10 +14,13 @@ This guide will help developers set up their development environment, test chang
 - [Testing](#testing)
 - [Making Contributions](#making-contributions)
 - [Code Style and Best Practices](#code-style-and-best-practices)
+- [Getting Help](#getting-help)
 
 ---
 
 ## VS Code quick start (recommended)
+
+A **Dev Container** is a development environment running in Docker on your computer. This repository contains the instructions to build it and automatically install Python, Node, the application and developer tools. VS Code connects to that environment so you can edit, run and debug the application without installing Python or Node on your computer.
 
 Install Git, Docker (Docker Desktop on Windows/macOS) and VS Code with the **Dev Containers** extension. On Windows, enable Docker Desktop's Linux containers/WSL 2 backend. Docker must be running; host Python and Node installations are not needed for this route.
 
@@ -26,7 +31,7 @@ Open the [developer start page](https://patrickvorgers.github.io/day-ahead/devel
 The procedure follows Home Assistant's developer start page:
 
 1. Fork the repository on GitHub and copy your fork URL.
-2. Paste the URL into the developer page and click **Open**.
+2. Paste the URL into the developer page and click **Open in VS Code**.
 3. Allow your browser to open VS Code and wait for the automatic clone, container build and installation. Install Dev Containers if VS Code prompts you to do so.
 4. Press **F5** to start the web preview. Ruff feedback and the test tools are ready to use.
 
@@ -51,6 +56,41 @@ The preview uses `.local/web-data` with example options, empty secrets and empty
 
 After pulling dependency changes, run **Development: Set up environment**. Changes to the container image require **Dev Containers: Rebuild Container**. Setup is repeatable; restart Ruff after tooling changes. Do not reuse a Windows `.venv` inside Linux: use a separate Linux checkout or explicitly recreate that environment. Existing hooks are preserved according to the Ruff setup instructions below.
 
+### Your first development session
+
+The first installation needs internet access and can take several minutes. VS Code reads `.devcontainer/devcontainer.json`, builds the environment from the repository's `Dockerfile` and runs `script/setup` to install and configure the application and tools. Wait for the setup output to end with **Environment ready** before starting the application. Allow workspace trust and automatic tasks when prompted for this repository.
+
+Confirm that the environment is ready:
+
+1. Press **F5** with **Day Ahead: web preview** selected. The preview should open in your browser. If it does not, open VS Code's **Ports** view and use the browser button for port 5000.
+2. Open **Testing** in VS Code. The isolated tests should appear; run a test or use **Terminal > Run Task > Tests: Isolated unit and regression tests**.
+3. Open a Python file. Ruff findings appear in the editor and **Problems** view; saving applies safe fixes. Formatting on save is not yet enabled. See [the Ruff setup section](#set-up-automatic-feedback-in-vs-code) for a small verification example.
+
+Before your first commit, set your Git name and email on your computer if they are not already configured:
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your-email@example.com"
+```
+
+Use the email associated with your GitHub account, or its GitHub-provided private email address. Dev Containers normally copies your local Git configuration into the container when it starts. If Git still asks for an identity in an already-open container, run the same two commands in its terminal or rebuild the container. See [VS Code's Git credential guide](https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials) for credential helpers and SSH forwarding.
+
+Create a feature branch, make a small change, inspect the diff, run the relevant tests, then commit and push to your fork using **Source Control** or the [contribution commands](#creating-a-pull-request). GitHub may ask you to sign in when pushing; follow the authentication prompt and confirm that `origin` points to your fork with `git remote -v`. Your Git name/email identifies commits; it does not sign you into GitHub. If the commit hook fixes a file, review and stage the correction, then commit again.
+
+To continue later, start Docker and reopen the workspace through **Remote Explorer > Dev Containers**. A **Docker volume** keeps the source files and installed tools when the container stops. Deleting that volume deletes its local contents, including unpushed changes; push your work to your fork before removing it.
+
+### Start-up troubleshooting
+
+| Problem | What to do |
+| --- | --- |
+| The browser does not open VS Code | Install Dev Containers, allow the browser's application-opening prompt, or use the direct VS Code clone procedure above. |
+| Docker is unavailable or container creation fails | Start Docker and check that it is using Linux containers. Read the container build/setup log in VS Code's Dev Containers output and report the first failing step. |
+| The selected branch has no development setup | During the fork rollout, use the development-branch link above. A repository-only URL selects its default branch, which may not contain this change yet. |
+| Setup stops before **Environment ready** | Keep the first error from the setup output. After addressing it, use **Development: Set up environment**; use **Dev Containers: Rebuild Container** if image creation failed. |
+| Ruff or tests are unavailable after setup | Check that the Python and Ruff extensions are installed in the container. Select `.venv/bin/python` only if the interpreter is wrong; run **Ruff: Restart Server** for missing lint feedback. |
+| Port 5000 is already in use on your computer | Use the **Ports** view to choose another forwarded local port and open that address. If another preview is running inside the container, stop it before starting F5 again. |
+| A commit or push fails | Read the hook output, configure Git identity if requested, or complete GitHub sign-in. Check that the remote is your fork and review/stage any automatic hook fixes. |
+
 For frontend live reload, start **Development: Frontend live reload**, then add `"VITE_DEV": "1"` to a personal copy of the web debug configuration. Port 5173 is forwarded alongside Flask. The default F5 configuration uses built assets and needs no second server.
 
 **Native Linux/WSL alternative:** install Python 3.12+ (3.13 matches the container), Node 22.12+, Git, a compiler, pkg-config and MariaDB development libraries. From the repository root run `./script/setup`, then open VS Code and select `.venv/bin/python`. On Debian/Ubuntu the native libraries can be installed with `sudo apt-get install build-essential pkg-config libmariadb-dev`. Application support is Linux/WSL; the separate Ruff-only setup also supports native Windows.
@@ -65,7 +105,7 @@ Locally, run **Development: Verify environment** for the smoke checks. CI verifi
 
 The static page is maintained in `docs/developer/` in this repository. Its **Developer start page** workflow checks repository/branch URL handling on pull requests and publishes only the HTML, JavaScript and stylesheet; it has no server or extra package dependencies.
 
-To enable publication, a repository administrator selects **Settings > Pages > Source: GitHub Actions** and adds the Actions repository variable `DEVELOPER_PAGES_ENABLED=true`. The default branch then publishes automatically when the page changes. For a fork rollout, set `DEVELOPER_PAGES_BRANCH` to the development branch and allow that branch in the `github-pages` environment. Remove this temporary variable after the feature reaches the default branch. Update the page links above and in `README.md` when enabling an upstream site; the normal project URL is `https://OWNER.github.io/day-ahead/developer/` unless a custom domain is configured.
+To enable publication, a repository administrator selects **Settings > Pages > Source: GitHub Actions** and adds the Actions repository variable `DEVELOPER_PAGES_ENABLED=true`. The default branch then publishes automatically when the page changes. For a fork rollout, set `DEVELOPER_PAGES_BRANCH` to the development branch and allow that branch in the `github-pages` environment. Remove this temporary variable after the feature reaches the default branch. Update the page links in this guide when enabling an upstream site; the normal project URL is `https://OWNER.github.io/day-ahead/developer/` unless a custom domain is configured.
 
 Before offering the route upstream, open the published page in a browser, enter the fork's development-branch URL and click **Open in VS Code**. Use a fresh Docker volume and VS Code profile; confirm the first-time prompts, automatic setup, Ruff findings and safe fixes on save, Test Explorer discovery and F5 startup with a working breakpoint. Record results in the pull request, including any browser interaction still awaiting manual confirmation. CI's clean-install workflow complements this check but does not exercise the browser-to-VS-Code permission prompt.
 
@@ -126,14 +166,13 @@ day-ahead/
 ├── dao/                          # Main application directory
 │   ├── prog/                     # Core application logic
 │   │   ├── day_ahead.py          # Main entry point
-│   │   ├── da_config.py          # Configuration management
-│   │   ├── da_prices.py          # Price fetching logic
-│   │   ├── da_meteo.py           # Weather data integration
+│   │   ├── config/               # Configuration loading and models
+│   │   ├── scenarios/            # Synthetic calculation scenarios
+│   │   ├── da_debug.py           # Scenario command-line tools
 │   │   ├── da_scheduler.py       # Optimization scheduler
 │   │   ├── da_report.py          # Reporting functionality
-│   │   ├── da_graph.py           # Graph generation
-│   │   ├── db_manager.py         # Database management
 │   │   └── utils.py              # Utility functions
+│   ├── lib/                      # Database, graphs and data integrations
 │   ├── webserver/                # Flask web application
 │   │   ├── da_server.py          # Flask server entry point
 │   │   ├── gunicorn_config.py    # Production server config
@@ -145,6 +184,12 @@ day-ahead/
 │   ├── data/                     # Runtime data and configuration
 │   ├── tests/                    # Test files
 │   └── requirements.txt          # Python dependencies
+├── .devcontainer/                # Container build and automatic setup
+├── .vscode/                      # Editor settings, tasks and debugging
+├── scripts/                      # Environment setup and verification
+├── script/setup                  # Shared Linux setup entry point
+├── requirements-lint.txt         # Central Ruff version
+├── DEVELOP.md                    # Developer instructions
 ├── setup.py                      # Package setup configuration
 └── README.md                     # User documentation
 ```
@@ -282,7 +327,7 @@ The pytest selection contains isolated unit/regression tests. Solver cases skipp
 Perform this check when changing setup, editor settings or debugger configuration. CI cannot demonstrate actual VS Code interaction or visible breakpoint stops.
 
 - [ ] Open a fresh clone of the change branch with no pre-existing virtual environments in **Dev Containers: Reopen in Container**; allow setup to finish.
-- [ ] Select `.venv/bin/python`, restart Ruff and allow the folder-open watcher. Confirm Ruff diagnostics appear in a temporary Python file, then remove the file.
+- [ ] Confirm that `.venv/bin/python` was selected automatically; select it manually only if needed. Allow the folder-open watcher. Confirm Ruff diagnostics appear in a temporary Python file, then remove the file.
 - [ ] Launch **Day Ahead: web preview** with F5, open forwarded port 5000 and check the configuration/chart pages and built frontend assets.
 - [ ] Set a Python route breakpoint and refresh the page; confirm the debugger stops, then continue.
 - [ ] Launch **Day Ahead: debug synthetic scenario** with the default ID. Confirm a breakpoint inside `run_scenario` or `calc_optimum` stops; inspect variables, continue and confirm one passing scenario/report.
@@ -301,8 +346,6 @@ A maintainer must configure the target repository's `main` ruleset or branch pro
 - `Developer setup (ubuntu-latest)`
 - `Developer setup (windows-latest)`
 - `clean-install` (Development environment workflow)
-
-As of 2026-10-13, the active **Main required development checks** ruleset on `patrickvorgers/day-ahead` targets `main` and requires all six checks above from GitHub Actions. It requires a PR with zero mandatory review approvals, has no bypass actors, and blocks force pushes/deletion of `main`. A deliberate undefined-name violation in [temporary PR #2](https://github.com/patrickvorgers/day-ahead/pull/2) failed the required Ruff check and disabled normal merging. After removing the violation, all six required checks passed and the merge button became available. The test PR was closed without merging. The clean-checkout VS Code checklist above still needs manual execution.
 
 These are repository settings, not enabled by committing this guide. Confirm the settings on the actual merge target, including the upstream repository if contributing from a fork. This change does not add a formatting requirement; formatter adoption is a separate rollout.
 
@@ -441,6 +484,8 @@ Before submitting your PR, ensure:
 ### Python lint checks
 
 #### Set up automatic feedback in VS Code
+
+The Dev Container and the shared application setup already install these tools. The manual procedure below is for Ruff-only work or an existing environment that has not used that setup.
 
 Open the repository root in VS Code and install the recommended **Python** and **Ruff** extensions from the Extensions view (`@recommended`). Select an installed Python 3.12 or newer with **Python: Select Interpreter**, then choose **Terminal > Run Task > Development: Set up Ruff**. After setup, run **Ruff: Restart Server** from the Command Palette. In a remote workspace, install the extensions in that workspace's extension host.
 

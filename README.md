@@ -5,10 +5,6 @@
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 
-## Development
-
-See [the developer guide](DEVELOP.md) for setting up VS Code, using the Dev Container, running tests and contributing changes.
-
 ## Inleiding
 Het programma Day Ahead Optimizer (DAO) voert de volgende acties, 
 berekeningen en bewerkingen uit: 
