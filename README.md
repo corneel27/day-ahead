@@ -7,11 +7,7 @@
 
 ## Development
 
-[Start from your fork in VS Code](https://patrickvorgers.github.io/day-ahead/developer/): enter your fork URL and click **Open in VS Code**. During the fork rollout, [open the development branch](https://patrickvorgers.github.io/day-ahead/developer/?repository=https%3A%2F%2Fgithub.com%2Fpatrickvorgers%2Fday-ahead%2Ftree%2Fchore%2Fdevelopment-environment); the new setup is not yet on the upstream default branch.
-
-[![Open in Dev Containers](https://img.shields.io/badge/Dev_Containers-Open-blue)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%253A%252F%252Fgithub.com%252Fcorneel27%252Fday-ahead)
-
-Open the repository in a Docker volume, wait for automatic setup, then press **F5**. To contribute from your own fork, use **Dev Containers: Clone Repository in Container Volume...** and paste your fork URL. See [the developer quick start](DEVELOP.md#vs-code-quick-start-recommended) for prerequisites, tests and existing checkouts.
+See [the developer guide](DEVELOP.md) for setting up VS Code, using the Dev Container, running tests and contributing changes.
 
 ## Inleiding
 Het programma Day Ahead Optimizer (DAO) voert de volgende acties, 
