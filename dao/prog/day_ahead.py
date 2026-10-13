@@ -5325,8 +5325,8 @@ def main():
             if arg.lower() == "prices":
                 exit_code = da_calc.run_task_function("get_day_ahead_prices")
                 continue
-            if arg.lower() == "predicted_prices":
-                exit_code = da_calc.run_task_function("predicted_prices")
+            if arg.lower() == "get_predicted_prices":
+                exit_code = da_calc.run_task_function("get_predicted_prices")
                 continue
             if arg.lower() == "tibber":
                 exit_code = da_calc.run_task_function("get_tibber_data")
