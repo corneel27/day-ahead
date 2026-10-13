@@ -105,6 +105,8 @@ def test_bad_data_dates_are_client_errors(client, query):
     ("POST", "/v1/run", {"current_bewerking": "clean_data"}),
     ("GET", "/v1/run", {"current_bewerking": "clean_data"}),
     ("POST", "/v1/", {"current_menu": "run", "current_bewerking": "clean_data"}),
+    ("POST", "/v1/", {"current_menu": "run"}),
+    ("POST", "/v1/", {"menu_run": "Run"}),
     ("GET", "/v1/status", {}),
     ("GET", "/v1/log", {}),
 ])

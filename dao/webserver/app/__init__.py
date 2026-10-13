@@ -34,7 +34,12 @@ def isolate_preview_tasks():
         "v2.tasks", "v2.task_exec", "v2.task_cancel", "v2.task_state",
         "api.run_api",
     }
-    if request.endpoint in task_endpoints or "current_bewerking" in request.form:
+    if (
+        request.endpoint in task_endpoints
+        or "current_bewerking" in request.form
+        or "menu_run" in request.form
+        or request.form.get("current_menu") == "run"
+    ):
         return (
             "Live tasks are unavailable in the isolated web preview. "
             "Use the synthetic scenario debugger to develop the calculation core.",
