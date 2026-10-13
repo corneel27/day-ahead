@@ -19,20 +19,20 @@ This guide will help developers set up their development environment, test chang
 
 Install Git, Docker (Docker Desktop on Windows/macOS) and VS Code with the **Dev Containers** extension. On Windows, enable Docker Desktop's Linux containers/WSL 2 backend. Docker must be running; host Python and Node installations are not needed for this route.
 
-### Planned start from the developer page
+### Start from the developer page
 
-**Status: the fork-URL input page still needs to be built and published.** The automatic container setup and F5 debugging already work.
+Open the [developer start page](https://patrickvorgers.github.io/day-ahead/developer/) to start from your own fork. During the fork rollout, use [the development branch](https://patrickvorgers.github.io/day-ahead/developer/?repository=https%3A%2F%2Fgithub.com%2Fpatrickvorgers%2Fday-ahead%2Ftree%2Fchore%2Fdevelopment-environment): the new setup is not yet available on the upstream default branch.
 
-The intended procedure follows Home Assistant's developer start page:
+The procedure follows Home Assistant's developer start page:
 
 1. Fork the repository on GitHub and copy your fork URL.
 2. Paste the URL into the developer page and click **Open**.
 3. Allow your browser to open VS Code and wait for the automatic clone, container build and installation. Install Dev Containers if VS Code prompts you to do so.
 4. Press **F5** to start the web preview. Ruff feedback and the test tools are ready to use.
 
-The page must pass the entered fork URL to VS Code's **Clone Repository in Container Volume** flow. It must not require the developer to clone manually, choose an interpreter or run installation commands. Before publishing, verify this procedure with a fresh VS Code profile and a fork URL, including the first-time prompts, Ruff feedback and F5 debugging.
+The page passes the entered repository or branch URL to VS Code's **Clone Repository in Container Volume** flow. There is no manual clone, interpreter selection or installation command. The browser and VS Code can ask for permission to open the application, clone and trust the workspace. The page also provides a retry link and a manual clone fallback.
 
-### Available start until the developer page is published
+### Direct VS Code alternative
 
 [![Open in Dev Containers](https://img.shields.io/badge/Dev_Containers-Open-blue)](https://vscode.dev/redirect?url=vscode%3A%2F%2Fms-vscode-remote.remote-containers%2FcloneInVolume%3Furl%3Dhttps%253A%252F%252Fgithub.com%252Fcorneel27%252Fday-ahead)
 
@@ -58,6 +58,14 @@ For frontend live reload, start **Development: Frontend live reload**, then add 
 The **Development environment** workflow builds the actual Dockerfile, runs the same setup used by the Dev Container from a clean checkout, checks Python dependency integrity and Ruff version, validates scenarios, renders the real web preview with built frontend assets, repeats setup, then runs isolated regression tests and all synthetic scenarios. It runs on pushes, pull requests, and weekly to catch changed base images or dependency resolution even without a code change. Dependency upgrade PRs therefore exercise the complete installation route.
 
 Locally, run **Development: Verify environment** for the smoke checks. CI verifies the installation and application startup; extension installation, actual VS Code interactions, breakpoint stopping and browser appearance still require a manual clean-checkout check.
+
+### Publishing and verifying the developer start page
+
+The static page is maintained in `docs/developer/` in this repository. Its **Developer start page** workflow checks repository/branch URL handling on pull requests and publishes only the HTML, JavaScript and stylesheet; it has no server or extra package dependencies.
+
+To enable publication, a repository administrator selects **Settings > Pages > Source: GitHub Actions** and adds the Actions repository variable `DEVELOPER_PAGES_ENABLED=true`. The default branch then publishes automatically when the page changes. For a fork rollout, set `DEVELOPER_PAGES_BRANCH` to the development branch and allow that branch in the `github-pages` environment. Remove this temporary variable after the feature reaches the default branch. Update the page links above and in `README.md` when enabling an upstream site; the normal project URL is `https://OWNER.github.io/day-ahead/developer/` unless a custom domain is configured.
+
+Before offering the route upstream, open the published page in a browser, enter the fork's development-branch URL and click **Open in VS Code**. Use a fresh Docker volume and VS Code profile; confirm the first-time prompts, automatic setup, Ruff findings and safe fixes on save, Test Explorer discovery and F5 startup with a working breakpoint. Record results in the pull request, including any browser interaction still awaiting manual confirmation. CI's clean-install workflow complements this check but does not exercise the browser-to-VS-Code permission prompt.
 
 ## Prerequisites
 

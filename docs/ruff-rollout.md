@@ -48,7 +48,7 @@ Update this roadmap and the developer guide when completing a stage.
 | Lint coverage | All tracked Python files included in the existing lint gate | Resolve findings under Ruff's standard rules and maintain coverage | Common mistakes are detected using Ruff's supported defaults |
 | CI | Independent **Ruff lint** job on pushes and pull requests | Required on the fork's main; configure the actual upstream merge target separately | Automated feedback becomes merge protection |
 | Formatting | Ruff is available; repository-wide formatting is not yet adopted | Apply the default formatter settings, format the code, add a CI check | Consistent layout and less style-review effort |
-| Developer tools | VS Code feedback and safe fixes on save, repeatable setup, pinned lint hook and local tasks | Add the fork-URL input page; add formatting on save and a formatter hook during Stage 3 | Easier onboarding, earlier feedback and fewer avoidable CI failures |
+| Developer tools | VS Code feedback and safe fixes on save, repeatable setup, pinned lint hook, local tasks and fork-URL start page | Verify the published onboarding route on the fork; enable upstream publication; add formatting on save and a formatter hook during Stage 3 | Easier onboarding, earlier feedback and fewer avoidable CI failures |
 
 ## Stage 1 — Establish the lint foundation
 
@@ -85,7 +85,7 @@ imports and a reproducible starting point for the next stages.
 
 ## Stage 2 — Provide early developer feedback
 
-**Status: lint support implemented; the browser onboarding page is pending. Formatter integration will follow Stage 3.**
+**Status: lint support and the browser onboarding page are implemented on the fork; complete browser-to-editor verification and upstream publication remain. Formatter integration will follow Stage 3.**
 
 Developers install the recommended Python and Ruff extensions and run the **Development: Set up Ruff** VS Code task. A repeatable cross-platform setup installs pinned tools in a dedicated environment, prepares the lint hook and checks the repository. Existing application environments and custom hook settings are preserved. See `DEVELOP.md` for installation, migration and troubleshooting.
 
@@ -95,7 +95,7 @@ Complete the new-developer start with a small browser page, following Home Assis
 2. VS Code clones the fork in a Docker volume and automatically prepares the development environment, extensions and Ruff tools.
 3. The developer presses **F5** to start the web preview, with Ruff feedback and tests available immediately.
 
-Build and publish the fork-URL input page, then verify the complete route with a fresh VS Code profile. The container setup and debugging are implemented; the input page is not yet available. Keep the detailed start procedure and the current alternative in `DEVELOP.md`.
+The fork-URL input page and its optional GitHub Pages workflow are implemented. Verify the published route on the fork with a fresh VS Code profile before enabling it upstream. Keep publication settings, the detailed start procedure and the direct VS Code alternative in `DEVELOP.md`.
 
 VS Code reports findings while editing and applies safe lint fixes and import organization on explicit save and Auto Save on focus/window change. The editor and local tasks use the pinned Ruff executable and shared filesystem configuration. The commit hook catches remaining findings before committing; CI remains the full-repository gate.
 
