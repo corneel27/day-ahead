@@ -2588,15 +2588,16 @@
         "action": {
           "description": "Action to execute at this time",
           "enum": [
-            "get_meteo_data",
-            "get_tibber_data",
-            "get_day_ahead_prices",
-            "calc_optimum",
             "calc_optimum_met_debug",
-            "clean_data",
+            "calc_optimum",
+            "get_tibber_data",
+            "get_meteo_data",
+            "get_day_ahead_prices",
+            "predicted_prices",
             "calc_baseloads",
+            "clean_data",
             "train_ml_predictions",
-            "predicted_prices"
+            "consolidate"
           ],
           "title": "Action",
           "type": "string",

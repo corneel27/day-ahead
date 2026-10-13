@@ -2041,7 +2041,7 @@ _A single scheduled task entry._
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
-| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `calc_optimum`, `calc_optimum_met_debug`, `clean_data`, `calc_baseloads`, `train_ml_predictions`, `predicted_prices` |
+| `action` | string | Yes | — | Action to execute at this time. Options: `calc_optimum_met_debug`, `calc_optimum`, `get_tibber_data`, `get_meteo_data`, `get_day_ahead_prices`, `predicted_prices`, `calc_baseloads`, `clean_data`, `train_ml_predictions`, `consolidate` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
