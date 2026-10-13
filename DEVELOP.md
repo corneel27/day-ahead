@@ -23,7 +23,7 @@ Install Git, Docker (Docker Desktop on Windows/macOS) and VS Code with the **Dev
 2. Choose **Dev Containers: Reopen in Container**. The container provides Python 3.13, Node 22 and native database build dependencies. Its first-time setup creates `.venv`, installs application/test dependencies, builds frontend assets, and installs the shared Ruff tools and commit hooks in `.venv-tools`.
 3. Select `.venv/bin/python` with **Python: Select Interpreter** if an existing workspace selection overrides the default. Run **Ruff: Restart Server** and allow automatic tasks in this trusted folder for the Ruff version watcher.
 4. Press **F5** with **Day Ahead: web preview** selected. Open `http://localhost:5000`. The debugger builds frontend assets first and supports Python and Jinja breakpoints.
-5. Open **Testing** for isolated unit/regression tests, or run **Tests: Solve all synthetic scenarios** from **Terminal > Run Task** for the solver corpus.
+5. For the calculation core, select **Day Ahead: debug synthetic scenario** and press **F5** to run one scenario with breakpoints. Open **Testing** for isolated unit/regression tests, or run **Tests: Solve all synthetic scenarios** from **Terminal > Run Task** for the solver corpus.
 
 The preview uses `.local/web-data` with example options, empty secrets and empty image/log directories. Setup preserves existing preview edits and never copies credentials from `dao/data`. It is an empty web preview, not a simulated production dashboard: reports and live tasks require a separately configured installation. Synthetic scenarios exercise planning independently of Home Assistant and databases. Existing `dao/data` files are not changed by setup.
 
@@ -41,101 +41,51 @@ Locally, run **Development: Verify environment** for the smoke checks. CI verifi
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Choose one application development route:
 
-- **Python 3.12+** (the scenario CI uses Python 3.12)
-- **Git** for version control
-- **pip** (Python package installer)
-- **npm** (Node Package Manager)
-- A code editor (VS Code, PyCharm, etc.)
----
+| Route | Requirements | Support |
+| --- | --- | --- |
+| Dev Container (recommended) | Git, Docker with Linux containers, VS Code and Dev Containers | Linux application environment; Docker Desktop hosts on Windows/macOS |
+| Native Linux/WSL | Python 3.12+ with venv/pip, Node 22.12+, Git, compiler, pkg-config and MariaDB development libraries | Same setup and checks as the container; Python 3.13 matches the container |
+| Ruff only | Git and Python 3.12+ | Windows and Linux tooling are checked in CI; this does not install the application or solver |
+
+Native Windows/macOS application installation is not part of the supported setup. Use the Linux Dev Container on those hosts. macOS Ruff tooling is not covered by the current CI matrix.
 
 ## Setting Up Development Environment
 
-### 1. Clone the Repository
+### Shared application setup on Linux/WSL
 
-First, clone the repository and navigate to the project directory:
-
-```bash
-git clone https://github.com/corneel27/day-ahead.git
-cd day-ahead
-```
-Alternatively, you can use a fork to your own account.
-
-### 2.1. Quick setup and run (limited support)
-
-Supported on:
-- Ubuntu/Debian (apt based)
-- OpenSuse (zypper based)
-
-This command will start the dev environment in the recommended mode as described [here](#running-the-application-locally).
-Add the `--setup` argument to execute all steps below
+Clone your fork and work from the repository root. On Debian/Ubuntu, install the native build prerequisites:
 
 ```bash
-chmod +x dao/run/run_dev.sh # Once
-./dao/run/run_dev.sh --setup # Add --setup to install/update, only once
+sudo apt-get update
+sudo apt-get install -y build-essential pkg-config libmariadb-dev python3-venv
 ```
 
-Optionally, define the flask port using `--flask-port=5001`
+Install Python 3.12+ and Node 22.12+ using your distribution or their supported installation methods; check their versions before continuing. Other Linux distributions need equivalent compiler and MariaDB development packages.
 
-When error, see: [In case of error](#31-in-case-of-error)  
-When successful, continue reading: [Project Structure](#project-structure)  
-
-### 2.2. Create a Python Virtual Environment
-
-Creating a virtual environment isolates your project dependencies from your system Python installation.
-
-**On macOS/Linux:**
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-**On Windows:**
-```bash
-python3 -m venv .venv
-.venv\Scripts\activate
-```
-
-You should see `(.venv)` in your terminal prompt, indicating the virtual environment is active.
-
-### 3. Install Dependencies
-
-Install all required packages from the requirements file:
+Run the same setup and verification used inside the Dev Container:
 
 ```bash
-pip install --upgrade pip
-pip install -r dao/requirements.txt
-
-cd dao/webserver
-npm install 
+python3 scripts/setup_environment.py
+.venv/bin/python scripts/verify_environment.py
 ```
 
-#### 3.1 In case of error
-In case you get an error like this: `This error typically indicates that MariaDB Connector/C, a dependency which must be preinstalled, is not found.`
-* **Ubuntu**: `sudo apt install -y build-essential pkg-config libmariadb-dev`
+Setup creates the application/test environment in `.venv`, builds frontend assets with `npm ci`, prepares the isolated preview and installs Ruff/hooks in `.venv-tools`. Select `.venv/bin/python` in VS Code. Repeat setup after dependency changes; it preserves existing preview files. Do not share a virtual environment between Windows and Linux checkouts.
 
-Use the current `mip` and `cbcbox` versions from `dao/requirements.txt`. The former manual `mip==1.16rc0` workaround is obsolete. Do not remove dependencies or override Python compatibility to get setup to pass; use the container and report installation failures.
+For Ruff-only work, use the [Ruff setup instructions](#set-up-automatic-feedback-in-vs-code) below. For application or solver work, use the complete setup above.
 
-#### 3.2 Install in editable mode
-If you're developing the package itself, you can also install it in editable mode:
+### Existing installations and the legacy launcher
 
-```bash
-pip install -e .
-```
+`dao/run/run_dev.sh` remains a legacy alternative for an already configured installation. It uses `venv/day_ahead`, prepares files in `dao/data` and starts Vite alongside Flask. Its `--setup` route does not provide the shared developer-tool installation and clean-install verification. New contributors should use the Dev Container or shared Linux/WSL setup above.
 
-### 4. Set Up Configuration Files
+Do not mix those environments in one development session. Keep the legacy route for existing workflows until it can be migrated separately.
 
-The application requires configuration files in the `dao/data/` directory. Once these files are setup you can modify them through the web interface.
+### Installation troubleshooting
 
-1. Copy the example configuration files:
-   ```bash
-   cp dao/data/options_example.json dao/data/options.json
-   ```
+If MariaDB Connector/C or mysqlclient cannot build, check the compiler, pkg-config and MariaDB development libraries. Use the pinned `mip` and `cbcbox` from `dao/requirements.txt`; the old manual `mip==1.16rc0` workaround and custom solver-library overrides are obsolete for the supported setup.
 
-2. Edit `dao/data/options.json` to match your development environment settings.
-
-3. If you need database credentials, create `dao/data/secrets.json` based on your database setup.
+Do not remove dependencies or override Python compatibility to force installation. Use the Dev Container and report the failing setup step, operating system and Python/Node versions.
 
 ---
 
@@ -177,54 +127,36 @@ day-ahead/
 
 The Day Ahead Optimizer includes a Flask-based web interface for configuration and visualization.
 
-#### Option 1: Run with Flask Development Server (Recommended for Development)
+#### Start the isolated preview
 
-**Important:** The application must be run from the **webserver directory** with the PYTHONPATH set so Python can find the `dao` module.
+In VS Code, select **Day Ahead: web preview** and press **F5**. This builds assets and starts Flask inside the selected Linux environment. The UI and solver run as processes inside the Dev Container; no second application container is started. The development image includes extra tooling and does not replace production-image validation.
 
-From the project root (`day-ahead/`):
+For a terminal-only start, after shared setup, run from the repository root:
 
 ```bash
-# Make sure you're in the project root directory
-cd /path/to/day-ahead
-
-# Activate your virtual environment if not already active
-source .venv/bin/activate  # On macOS/Linux
-# or
-.venv\Scripts\activate     # On Windows
-
-# In case of manual mip install:
-export PMIP_CBC_LIBRARY=~/day-ahead/dao/prog/miplib/lib/libCbc.so
-export LD_LIBRARY_PATH=~/day-ahead/dao/prog/miplib/lib/
-
-# Set PYTHONPATH and navigate to webserver directory
-export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+source .venv/bin/activate
+export PYTHONPATH="$(pwd):$(pwd)/dao/prog"
+export DAO_WEB_DATA_DIR="$(pwd)/.local/web-data"
+export MPLBACKEND=Agg
+export TZ=UTC
+unset VITE_DEV
 cd dao/webserver
-
-# If you want to use the assets from the Vite dev server:
-export VITE_DEV=1
-
-# Run the Flask development server
-python da_server.py --debug
+python -m flask --app app run --host 127.0.0.1 --port 5000
 ```
 
-The development server will start on `http://localhost:5000` by default.
+For a remote container, F5 binds Flask to all container interfaces and the Dev Container forwards port 5000. If the host port is occupied, select another forwarded local port in VS Code's **Ports** view.
 
-**For macOS users:** Port 5000 is often used by the AirPlay Receiver service. To run on port 5001 instead, set the FLASK_PORT environment variable:
+#### Debug one calculation scenario
+
+Select **Day Ahead: debug synthetic scenario** and press **F5**. Enter one scenario ID; the default is `battery-flat-no-incentive`. List available IDs from the repository root:
 
 ```bash
-export FLASK_PORT=5001
+PYTHONPATH=.:dao/prog .venv/bin/python -m dao.prog.da_debug scenario-list
 ```
 
-Or disable AirPlay Receiver in System Settings → General → AirDrop & Handoff → AirPlay Receiver (turn off).
+Set a breakpoint in `dao/prog/scenarios/runner.py` inside `run_scenario`, or in `dao/prog/day_ahead.py` inside `calc_optimum`. The launch runs one synthetic scenario with one solver thread, captures logs and writes a report under `dao/data/scenario_reports`. It needs no Home Assistant or database credentials. Continue execution to inspect the scenario's PASS/FAIL result. It does not update scenario baselines.
 
-Then access the application at `http://localhost:5001/` instead of port 5000.
-
-**With debug mode enabled, you get:**
-- **Automatic reload** - Server restarts when code changes are detected
-- **Interactive debugger** - Detailed error pages with stack traces and interactive console
-- **Better error messages** - More informative error output
-
-**Warning:** Never run with `debug=True` in production as it exposes security risks.
+Use **Day Ahead: debug test** through the Testing view to debug an individual isolated test. Use **Tests: Solve all synthetic scenarios** for the full solver corpus.
 
 #### Build or serve the assets
 
@@ -278,8 +210,8 @@ assets once and start the webserver without `VITE_DEV`.
 ```bash
 cd dao/webserver
 npm run build
-unset VITE_DEV        # note: run_dev.sh always sets it, so start da_server.py directly
-python da_server.py --debug
+unset VITE_DEV
+python -m flask --app app run --host 127.0.0.1 --port 5000
 ```
 
 You lose hot reloading of stylesheets, which does not matter when only touching
@@ -297,33 +229,52 @@ Python.
 | `FLASK_PORT` | webserver | `5000` | Port of the Flask development server. |
 
 
-#### Option 2: Run with Gunicorn (Production-like Environment)
+### Working with a configured installation
 
-For testing in a production-like environment:
+The isolated preview and synthetic scenarios are the default development workflow. Live price/weather APIs, Home Assistant tasks, database operations and populated reports require a separately configured installation.
+
+Use [dao/DOCS.md](dao/DOCS.md) for application settings. Keep live credentials and data outside the disposable preview, select configuration paths deliberately, and use a dedicated test installation for changes that can write to Home Assistant or databases. The legacy `test_dao.py` and EV harness can access live data and are excluded from the isolated test commands below.
+
+## Testing
+
+From the repository root in the container or native Linux/WSL environment:
 
 ```bash
-# From the project root
-cd dao/webserver
-gunicorn -c gunicorn_config.py "app:app"
+.venv/bin/python scripts/develop.py check
+.venv/bin/python -m pytest -c pytest-dev.ini -q
+PYTHONPATH=.:dao/prog TZ=UTC MPLBACKEND=Agg .venv/bin/python -m dao.prog.da_debug scenario-run --report
 ```
 
-### Accessing the Web Interface
+The pytest selection contains isolated unit/regression tests. Solver cases skipped there are exercised by the separate scenario command. Optional MariaDB cases require a dedicated disposable database and are currently skipped without it. See [docs/testing.md](docs/testing.md) for detailed test scope and results.
 
-Once the server is running, open your browser and navigate to http://localhost:5000/
+### Manual clean-checkout acceptance
 
----
+Perform this check when changing setup, editor settings or debugger configuration. CI cannot demonstrate actual VS Code interaction or visible breakpoint stops.
 
-### Manual Testing Checklist
+- [ ] Open a fresh clone of the change branch with no pre-existing virtual environments in **Dev Containers: Reopen in Container**; allow setup to finish.
+- [ ] Select `.venv/bin/python`, restart Ruff and allow the folder-open watcher. Confirm Ruff diagnostics appear in a temporary Python file, then remove the file.
+- [ ] Launch **Day Ahead: web preview** with F5, open forwarded port 5000 and check the configuration/chart pages and built frontend assets.
+- [ ] Set a Python route breakpoint and refresh the page; confirm the debugger stops, then continue.
+- [ ] Launch **Day Ahead: debug synthetic scenario** with the default ID. Confirm a breakpoint inside `run_scenario` or `calc_optimum` stops; inspect variables, continue and confirm one passing scenario/report.
+- [ ] Run **Tests: Isolated unit and regression tests**, **Tests: Solve all synthetic scenarios** and **Ruff: Check all Python files**.
+- [ ] Repeat **Development: Set up environment** and **Development: Verify environment**. Confirm preview edits are preserved and startup still succeeds.
 
-When testing changes, verify:
+Record commit SHA, host OS/architecture, Docker/VS Code versions, results and any failure in the PR. An unchecked item is pending manual validation, not evidence of success.
 
-1. **Configuration Loading:** Settings are loaded correctly from JSON files
-2. **Price Fetching:** Dynamic electricity prices are retrieved from APIs
-3. **Weather Data:** Meteorological data is fetched and processed
-4. **Optimization:** MIP solver runs without errors
-5. **Web Interface:** All pages load and forms submit correctly
-6. **Database Operations:** Data is stored and retrieved correctly
-7. **Graph Generation:** Visualizations are generated properly
+### Required checks before merge
+
+A maintainer must configure the target repository's `main` ruleset or branch protection to require a pull request and these existing GitHub Actions check names:
+
+- `Ruff lint`
+- `Scenario suite (unit)`
+- `Scenario suite (solve)`
+- `Developer setup (ubuntu-latest)`
+- `Developer setup (windows-latest)`
+- `clean-install` (Development environment workflow)
+
+These are repository settings, not enabled by committing this guide. Confirm the settings on the actual merge target, including the upstream repository if contributing from a fork. This change does not add a formatting requirement; formatter adoption is a separate rollout.
+
+Verify enforcement on a disposable PR branch: add an undefined-name lint violation, confirm `Ruff lint` fails and normal merging is blocked, then remove the violation and confirm all required checks pass. Record any maintainer bypass policy and the verification result; do not merge the violation.
 
 ---
 
@@ -368,16 +319,7 @@ This project uses the following branching model:
 
 4. **Test Your Changes**
 
-   ```bash
-   # Run the application locally (from project root)
-   export PYTHONPATH="${PYTHONPATH}:$(pwd)"
-   cd dao/webserver
-   python da_server.py
-   
-   # Run unit tests (from project root)
-   cd dao/tests/prog
-   python test_dao.py
-   ```
+   Run the isolated [testing commands](#testing) from the repository root. Run the manual acceptance checklist when changing the development environment. Use a separately configured test installation for live integration checks.
 
 5. **Commit Your Changes**
 

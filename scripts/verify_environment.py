@@ -27,8 +27,27 @@ for path in ('/', '/v2/chart', '/v2/config'):
     assert response.status_code == 200, (path, response.status_code)
     assert b'/static/build/' in response.data, path
 """], cwd=ROOT / "dao/webserver", env=environment, check=True)
-    launch = json.loads((ROOT / ".vscode/launch.json").read_text())["configurations"][0]
-    assert launch["module"] == "flask" and launch["env"]["DAO_WEB_DATA_DIR"]
+    launches = json.loads((ROOT / ".vscode/launch.json").read_text())
+    web = next(item for item in launches["configurations"] if item["name"] == "Day Ahead: web preview")
+    assert web["module"] == "flask" and web["env"]["DAO_WEB_DATA_DIR"]
+    # Execute the actual core launch arguments with its default input. VS Code
+    # breakpoint interaction remains part of the manual acceptance checklist.
+    core = next(item for item in launches["configurations"]
+                if item["name"] == "Day Ahead: debug synthetic scenario")
+    scenario = next(item["default"] for item in launches["inputs"] if item["id"] == "scenarioId")
+    arguments = [argument.replace("${input:scenarioId}", scenario) for argument in core["args"]]
+    core_environment = dict(os.environ)
+    core_environment.update({key: value.replace("${workspaceFolder}", str(ROOT))
+                             for key, value in core["env"].items()})
+    result = subprocess.run(
+        [str(python), "-m", core["module"], *arguments, "--json"],
+        cwd=core["cwd"].replace("${workspaceFolder}", str(ROOT)),
+        env=core_environment, capture_output=True, text=True, check=True,
+    )
+    report = json.loads(result.stdout)
+    assert report["total"] == 1 and report["results"][0]["id"] == scenario
+    assert report["results"][0]["status"] == "PASS", report
+    print(f"Default core debug launch passed: {scenario}.")
     container = json.loads((ROOT / ".devcontainer/devcontainer.json").read_text())
     assert container["build"]["dockerfile"] == "Dockerfile"
     assert "python scripts/setup_environment.py" in container["postCreateCommand"]
