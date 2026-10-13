@@ -3,6 +3,7 @@
 import json
 import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -10,11 +11,20 @@ import tempfile
 import threading
 import tomllib
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import yaml
 
 SOURCE = Path(__file__).resolve().parents[1]
+
+
+def pinned_version():
+    return next(
+        line.split("==", 1)[1]
+        for line in (SOURCE / "requirements-lint.txt").read_text().splitlines()
+        if line.startswith("ruff==")
+    )
 
 
 class DeveloperToolsTest(unittest.TestCase):
@@ -29,6 +39,8 @@ class DeveloperToolsTest(unittest.TestCase):
             "requirements-dev.txt",
             ".pre-commit-config.yaml",
             ".gitignore",
+            "tools/ruff_guard/pyproject.toml",
+            "tools/ruff_guard/ruff_guard.py",
         ):
             target = cls.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -123,11 +135,47 @@ class DeveloperToolsTest(unittest.TestCase):
         finally:
             self.command("git", "config", "--unset", "core.hooksPath")
 
+    def test_concurrent_version_checks_generate_a_complete_guard(self):
+        generated = self.root / ".ruff.toml"
+        generated.unlink()
+        with ThreadPoolExecutor(max_workers=6) as executor:
+            outputs = list(
+                executor.map(
+                    lambda _: self.command(
+                        str(self.python), "scripts/develop.py", "status"
+                    ),
+                    range(6),
+                )
+            )
+        self.assertTrue(
+            all("matches requirements-lint.txt" in output for output in outputs)
+        )
+        self.assertEqual(
+            tomllib.loads(generated.read_text())["required-version"],
+            f"=={pinned_version()}",
+        )
+
+    def test_existing_personal_ruff_configuration_is_preserved(self):
+        generated = self.root / ".ruff.toml"
+        original = generated.read_text()
+        personal = "line-length = 100\n"
+        try:
+            generated.write_text(personal)
+            message = self.command(
+                str(self.python), "scripts/develop.py", "status", expected=1
+            )
+            self.assertIn("configuration conflict", message)
+            self.assertEqual(generated.read_text(), personal)
+        finally:
+            generated.write_text(original)
+
     def test_editor_hook_and_ci_version_agree(self):
         configuration = tomllib.loads((SOURCE / "ruff.toml").read_text())
-        pin = configuration["required-version"].removeprefix("==")
+        self.assertNotIn("required-version", configuration)
+        pin = pinned_version()
         hooks = yaml.safe_load((SOURCE / ".pre-commit-config.yaml").read_text())
-        self.assertEqual(hooks["repos"][0]["rev"], f"v{pin}")
+        self.assertEqual(hooks["repos"][0]["repo"], "local")
+        self.assertNotIn("rev", hooks["repos"][0])
         self.assertIn(f"ruff=={pin}", (SOURCE / "requirements-lint.txt").read_text())
         self.assertEqual(
             self.command(str(self.python), "-m", "ruff", "--version").strip(),
@@ -140,7 +188,11 @@ class DeveloperToolsTest(unittest.TestCase):
         self.assertEqual(self.command(executable, "--version").strip(), f"ruff {pin}")
 
     def test_language_server_matches_cli_and_supplies_save_fix(self):
-        executable = self.python.parent / ("ruff.exe" if os.name == "nt" else "ruff")
+        executable = (
+            self.root
+            / ".venv-tools"
+            / ("ruff-project.exe" if os.name == "nt" else "ruff-project")
+        )
         process = subprocess.Popen(
             [str(executable), "server"],
             cwd=self.root,
@@ -193,9 +245,7 @@ class DeveloperToolsTest(unittest.TestCase):
                     "workspaceFolders": [{"uri": self.root.as_uri(), "name": "test"}],
                 },
             )
-            pin = tomllib.loads((SOURCE / "ruff.toml").read_text())["required-version"][
-                2:
-            ]
+            pin = pinned_version()
             self.assertEqual(initialized["serverInfo"]["version"], pin)
             send({"method": "initialized", "params": {}})
             send(
@@ -273,13 +323,151 @@ class DeveloperToolsTest(unittest.TestCase):
                 4, "textDocument/diagnostic", {"textDocument": {"uri": uri}}
             )
             self.assertEqual([item["code"] for item in remaining["items"]], ["F821"])
+            # A checkout upgrade during the editor session stops the old server.
+            requirements = self.root / "requirements-lint.txt"
+            original = requirements.read_text()
+            try:
+                requirements.write_text(original.replace(f"ruff=={pin}", "ruff==0.0.0"))
+                self.assertNotEqual(process.wait(timeout=10), 0)
+                self.assertIn("Restart Server", process.stderr.read().decode())
+            finally:
+                requirements.write_text(original)
         finally:
-            process.kill()
+            if process.poll() is None:
+                process.kill()
             process.wait(timeout=10)
             reader.join(timeout=10)
             process.stdin.close()
             process.stdout.close()
             process.stderr.close()
+
+    def test_version_change_blocks_cli_editor_and_non_python_commit(self):
+        requirements = self.root / "requirements-lint.txt"
+        original = requirements.read_text()
+        pin = pinned_version()
+        executable = (
+            self.root
+            / ".venv-tools"
+            / ("ruff-project.exe" if os.name == "nt" else "ruff-project")
+        )
+        try:
+            requirements.write_text(original.replace(f"ruff=={pin}", "ruff==0.0.0"))
+            for action in ("status", "check", "fix", "hooks", "ci-check"):
+                message = self.command(
+                    str(self.python), "scripts/develop.py", action, expected=1
+                )
+                self.assertIn("requires Ruff 0.0.0", message)
+                self.assertIn("Set up Ruff", message)
+            self.command(str(executable), "server", expected=1)
+            self.command("git", "add", "requirements-lint.txt")
+            blocked = self.command(
+                "git", "commit", "--quiet", "-m", "Stale tooling", expected=1
+            )
+            self.assertIn("requires Ruff 0.0.0", blocked)
+            generated = tomllib.loads((self.root / ".ruff.toml").read_text())
+            self.assertEqual(generated["required-version"], "==0.0.0")
+            # Even an unguarded or bundled Ruff is prevented from using stale rules.
+            self.command(str(self.python), "-m", "ruff", "check", ".", expected=2)
+        finally:
+            requirements.write_text(original)
+            self.command("git", "add", "requirements-lint.txt")
+            self.command(str(self.python), "scripts/develop.py", "status")
+
+    def test_missing_guard_in_an_existing_environment_has_repair_message(self):
+        launcher = (
+            self.root
+            / ".venv-tools"
+            / ("ruff-project.exe" if os.name == "nt" else "ruff-project")
+        )
+        backup = launcher.with_name(launcher.name + ".backup")
+        launcher.rename(backup)
+        try:
+            message = self.command(
+                str(self.python), "scripts/develop.py", "status", expected=1
+            )
+            self.assertIn("version guard is missing", message)
+            self.assertIn("Set up Ruff", message)
+        finally:
+            backup.rename(launcher)
+
+    def test_upgrade_changes_only_requirements_pin_and_setup_repairs(self):
+        requirements = self.root / "requirements-lint.txt"
+        original = requirements.read_text()
+        # Exercise a real published release, not a mocked pip or Ruff binary.
+        alternate = "0.17.0" if pinned_version() != "0.17.0" else "0.16.10"
+        try:
+            requirements.write_text(
+                original.replace(f"ruff=={pinned_version()}", f"ruff=={alternate}")
+            )
+            self.command(str(self.python), "scripts/develop.py", "status", expected=1)
+            self.command(str(self.python), "scripts/develop.py", "setup")
+            self.assertIn(
+                f"Ruff {alternate} matches",
+                self.command(str(self.python), "scripts/develop.py", "status"),
+            )
+            self.command(str(self.python), "scripts/develop.py", "hooks")
+            self.command(str(self.python), "scripts/develop.py", "ci-check")
+            self.assertEqual(
+                (self.root / "ruff.toml").read_bytes(),
+                (SOURCE / "ruff.toml").read_bytes(),
+            )
+            self.assertEqual(
+                (self.root / ".pre-commit-config.yaml").read_bytes(),
+                (SOURCE / ".pre-commit-config.yaml").read_bytes(),
+            )
+        finally:
+            requirements.write_text(original)
+            self.command(str(self.python), "scripts/develop.py", "setup")
+
+    def test_workspace_watch_reports_upgrade_without_installing(self):
+        process = subprocess.Popen(
+            [str(self.python), "scripts/develop.py", "watch"],
+            cwd=self.root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        lines = queue.Queue()
+        reader = threading.Thread(
+            target=lambda: [lines.put(line) for line in process.stdout], daemon=True
+        )
+        reader.start()
+        requirements = self.root / "requirements-lint.txt"
+        original = requirements.read_text()
+
+        def status_line():
+            while (line := lines.get(timeout=15)).startswith(
+                "Ruff version check started"
+            ):
+                pass
+            return line
+
+        try:
+            self.assertIn("is ready", status_line())
+            requirements.write_text(
+                original.replace(f"ruff=={pinned_version()}", "ruff==0.0.0")
+            )
+            warning = status_line()
+            self.assertIn("requires Ruff 0.0.0", warning)
+            tasks = json.loads((SOURCE / ".vscode/tasks.json").read_text())
+            matcher = tasks["tasks"][0]["problemMatcher"][0]
+            match = re.match(matcher["pattern"]["regexp"], warning)
+            self.assertIsNotNone(match)
+            self.assertEqual(
+                match.group(matcher["pattern"]["file"]), "requirements-lint.txt"
+            )
+            requirements.write_text(original)
+            self.assertIn("is ready", status_line())
+            self.assertEqual(
+                self.command(str(self.python), "-m", "ruff", "--version").strip(),
+                f"ruff {pinned_version()}",
+            )
+        finally:
+            requirements.write_text(original)
+            process.terminate()
+            process.wait(timeout=10)
+            reader.join(timeout=10)
+            process.stdout.close()
 
 
 if __name__ == "__main__":

@@ -465,13 +465,19 @@ Use `python3` on systems where `python` is unavailable, or `py -3.13` on Windows
 
 While editing, Ruff reports lint findings in the editor and Problems view. Saving a Python file explicitly, or using Auto Save on focus/window change, applies Ruff's safe fixes and import organization. Findings such as undefined names still require a manual fix. Review automatic changes and run tests for affected behavior before committing. VS Code skips these save actions for timed Auto Save (`afterDelay`); use Save or select `onFocusChange`/`onWindowChange` if you want automatic fixes. Live lint feedback remains available while typing. Formatting on save is disabled until the separate formatting rollout is complete; explicit **Format Document** remains available through Ruff.
 
-VS Code uses Ruff from `.venv-tools`, independently of the application interpreter. Both Windows and Unix executable paths are included. The filesystem configuration takes precedence over editor rule settings. `ruff.toml` enforces the exact Ruff version used by CI. If setup is missing or incomplete, the extension can search other environments or its bundled executable; do not assume feedback is correct merely because the extension is installed. Run setup, restart Ruff, and inspect **Output > Ruff** to confirm that the server uses `.venv-tools` and the pinned version. An incompatible version produces a configuration error rather than valid lint results.
+VS Code uses a version-checked Ruff launcher from `.venv-tools`, independently of the application interpreter. Both Windows and Unix executable paths are included. The filesystem configuration takes precedence over editor rule settings. `requirements-lint.txt` is the single maintained Ruff version pin. Setup and version checks derive an ignored `.ruff.toml` that extends the shared `ruff.toml` and enforces that version, including when the extension falls back to another Ruff executable. Do not edit the generated file. An existing personal `.ruff.toml` is preserved: resolve that configuration conflict before enabling this setup.
+
+When opening the repository, allow **automatic tasks in this trusted folder** when VS Code asks, or use **Tasks: Manage Automatic Tasks in Folder**. **Development: Watch Ruff version** checks the installation immediately and continues watching the requirements pin and installed executable. Its dedicated terminal reports missing or stale tools with the commands needed to repair them. The same warning appears in **Problems** under **Ruff setup** and is cleared when the installation matches again. This requires the Python extension and a selected Python 3.12+ interpreter. The task can also be started manually; without permission for automatic tasks, it does not start on its own.
+
+After a pull changes the Ruff pin, the watcher updates the generated version guard and reports the mismatch within its two-second polling interval. The editor launcher also stops an already-running Ruff server when the required version changes. Local lint tasks and all commits, including commits without Python changes, stop until the installed version matches. Nothing is installed automatically. Run **Development: Set up Ruff**, followed by **Ruff: Restart Server**; the watcher reports readiness once the environment is current. Inspect **Output > Ruff** for editor server failures or the launcher path. Before the first successful setup or workspace check, the extension may still use its normal executable fallback; install the tools before relying on its feedback.
 
 The following tasks are available through **Terminal > Run Task**:
 
 | Task | Result |
 | --- | --- |
 | Development: Set up Ruff | Install or refresh tools and activate the commit hook |
+| Development: Watch Ruff version | Check at workspace opening and report version changes during the session |
+| Development: Check Ruff version | Check the installation once and show repair instructions if needed |
 | Ruff: Check all Python files | Check the complete repository using the same configuration as CI |
 | Ruff: Apply safe fixes to all Python files | Apply safe lint fixes; review the diff afterwards |
 | Ruff: Run commit hooks on all files | Run the fixing hook across tracked Python files |
@@ -488,7 +494,7 @@ From the repository root, install the pinned development-only linter and run:
 
 ```bash
 python -m pip install -r requirements-lint.txt
-ruff check .
+python scripts/develop.py ci-check
 ```
 
 `ruff.toml` explicitly enables syntax/import checks, Pyflakes, import ordering,
@@ -503,11 +509,7 @@ startup imports need a narrow suppression with an explanation; do not suppress
 whole files or rule families to make the check pass. `zip(..., strict=False)`
 preserves existing truncation; use `strict=True` when equal lengths are validated.
 
-When upgrading Ruff, review its release notes, update the pins in
-`requirements-lint.txt` and `ruff.toml` (`required-version`) together, and update
-the Ruff hook revision in `.pre-commit-config.yaml`. Rerun developer setup after pulling a tooling update. Review changes to standard defaults and new
-diagnostics, then run lint, formatting once adopted, and relevant behavioral tests
-before merging the upgrade. Ruff is not an add-on runtime dependency.
+Dependabot checks Ruff and pre-commit in the repository root weekly. A Ruff upgrade changes only the pin in `requirements-lint.txt`; the editor, local hook and CI derive their required version from it. Review release notes, changes to standard defaults and new diagnostics, then run lint, formatting once adopted, and relevant behavioral tests before merging the upgrade. Rerun developer setup after pulling a tooling update and restart the editor's Ruff server. Ruff is not an add-on runtime dependency.
 Full-repository `ruff format` enforcement is a separate
 follow-up to avoid a large formatting diff during this rollout; see
 [`docs/ruff-rollout.md`](docs/ruff-rollout.md).

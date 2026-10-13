@@ -2,42 +2,123 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Development: Watch Ruff version",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "scripts/develop.py",
+        "watch"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "runOptions": {
+        "runOn": "folderOpen",
+        "instanceLimit": 1
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "ruff-version",
+          "source": "Ruff setup",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}"
+          ],
+          "pattern": {
+            "regexp": "^(.+):(\\d+):(\\d+): (error): (.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^Ruff version check started$",
+            "endsPattern": "^(Ruff .+ is ready\\.|requirements-lint\\.txt:)"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false
+      }
+    },
+    {
       "label": "Development: Set up Ruff",
       "type": "process",
       "command": "${command:python.interpreterPath}",
-      "args": ["scripts/develop.py", "setup"],
-      "options": {"cwd": "${workspaceFolder}"},
+      "args": [
+        "scripts/develop.py",
+        "setup"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [],
-      "presentation": {"reveal": "always", "panel": "dedicated"}
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
     },
     {
       "label": "Ruff: Check all Python files",
       "type": "process",
-      "command": "${workspaceFolder}/.venv-tools/bin/python",
-      "windows": {"command": "${workspaceFolder}/.venv-tools/Scripts/python.exe"},
-      "args": ["scripts/develop.py", "check"],
-      "options": {"cwd": "${workspaceFolder}"},
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "scripts/develop.py",
+        "check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": [],
-      "group": {"kind": "test", "isDefault": true}
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
     },
     {
       "label": "Ruff: Apply safe fixes to all Python files",
       "detail": "Review the diff and run relevant tests after fixing.",
       "type": "process",
-      "command": "${workspaceFolder}/.venv-tools/bin/python",
-      "windows": {"command": "${workspaceFolder}/.venv-tools/Scripts/python.exe"},
-      "args": ["scripts/develop.py", "fix"],
-      "options": {"cwd": "${workspaceFolder}"},
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "scripts/develop.py",
+        "fix"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": []
     },
     {
       "label": "Ruff: Run commit hooks on all files",
       "detail": "Hooks apply safe fixes; review and stage any resulting changes.",
       "type": "process",
-      "command": "${workspaceFolder}/.venv-tools/bin/python",
-      "windows": {"command": "${workspaceFolder}/.venv-tools/Scripts/python.exe"},
-      "args": ["scripts/develop.py", "hooks"],
-      "options": {"cwd": "${workspaceFolder}"},
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "scripts/develop.py",
+        "hooks"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Development: Check Ruff version",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": [
+        "scripts/develop.py",
+        "status"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": []
     }
   ]

@@ -1,10 +1,15 @@
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Keep synchronized with requirements-lint.txt and ruff.toml.
-    rev: v0.16.10
+  - repo: local
     hooks:
       - id: ruff-check
-        args: [--fix]
+        name: Ruff (repository version)
+        entry: .venv-tools/ruff-project check --fix
+        language: system
         types_or: [python, pyi]
-        # Match Ruff's source exclusions when filenames are passed explicitly.
         exclude: ^(?:\.venv[^/]*/|dao/webserver/app/static/build/)
+      - id: ruff-version
+        name: Ruff version check
+        entry: .venv-tools/ruff-project --version
+        language: system
+        always_run: true
+        pass_filenames: false

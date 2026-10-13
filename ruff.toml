@@ -1,6 +1,5 @@
 # Match the Python version used by the scenario CI jobs.
 target-version = "py312"
-required-version = "==0.16.10"
 preview = false
 unsafe-fixes = false
 

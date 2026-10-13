@@ -1,5 +1,12 @@
 version: 2
 updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: ruff
+      - dependency-name: pre-commit
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

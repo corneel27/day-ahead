@@ -1,7 +1,7 @@
 {
   "ruff.path": [
-    "${workspaceFolder}/.venv-tools/Scripts/ruff.exe",
-    "${workspaceFolder}/.venv-tools/bin/ruff"
+    "${workspaceFolder}/.venv-tools/ruff-project.exe",
+    "${workspaceFolder}/.venv-tools/ruff-project"
   ],
   "ruff.configurationPreference": "filesystemFirst",
   "ruff.lint.enable": true,

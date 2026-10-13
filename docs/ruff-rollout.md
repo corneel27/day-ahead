@@ -55,7 +55,7 @@ Update this roadmap and the developer guide when completing a stage.
 **Status: completed.**
 
 `ruff.toml` holds our shared configuration. The version is pinned in
-`requirements-lint.txt` and `required-version`; both must be updated together.
+`requirements-lint.txt` only. Developer tools derive an ignored `.ruff.toml` version guard from that pin; the local hook and editor use the same installation.
 The Python target must match the supported application version. Ruff is a
 development dependency, separate from the add-on runtime. See these files for
 the current version and settings.
@@ -90,6 +90,8 @@ imports and a reproducible starting point for the next stages.
 Developers install the recommended Python and Ruff extensions and run the **Development: Set up Ruff** VS Code task. A repeatable cross-platform setup installs pinned tools in a dedicated environment, prepares the lint hook and checks the repository. Existing application environments and custom hook settings are preserved. See `DEVELOP.md` for installation, migration and troubleshooting.
 
 VS Code reports findings while editing and applies safe lint fixes and import organization on explicit save and Auto Save on focus/window change. The editor and local tasks use the pinned Ruff executable and shared filesystem configuration. The commit hook catches remaining findings before committing; CI remains the full-repository gate.
+
+Workspace version monitoring reports missing or outdated tools when the folder opens and after a version change is pulled. A running editor server stops after a required-version change, and local checks and commits reject stale installations. Dependabot proposes weekly updates to the single Ruff pin; developers refresh their environment with the setup task and restart Ruff. Automatic workspace tasks must first be allowed in VS Code.
 
 **Completion criteria:** setup succeeds from a clean checkout and can be repeated in an existing checkout; the Ruff language server, local CLI and hook agree on representative findings; safe fixes are applied before commit and an unresolved finding blocks the commit. Windows and Linux installation checks run in CI. Verify the VS Code save workflow using the developer guide when changing editor settings.
 
