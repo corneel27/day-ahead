@@ -1,0 +1,16 @@
+{
+  "ruff.path": [
+    "${workspaceFolder}/.venv-tools/Scripts/ruff.exe",
+    "${workspaceFolder}/.venv-tools/bin/ruff"
+  ],
+  "ruff.configurationPreference": "filesystemFirst",
+  "ruff.lint.enable": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": false,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "always",
+      "source.organizeImports.ruff": "always"
+    }
+  }
+}

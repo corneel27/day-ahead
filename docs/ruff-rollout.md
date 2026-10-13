@@ -48,7 +48,7 @@ Update this roadmap and the developer guide when completing a stage.
 | Lint coverage | All tracked Python files included in the existing lint gate | Resolve findings under Ruff's standard rules and maintain coverage | Common mistakes are detected using Ruff's supported defaults |
 | CI | Independent **Ruff lint** job on pushes and pull requests | Require lint before merging | Automated feedback becomes merge protection |
 | Formatting | Ruff is available; repository-wide formatting is not yet adopted | Apply the default formatter settings, format the code, add a CI check | Consistent layout and less style-review effort |
-| Developer tools | Installation and lint commands documented in `DEVELOP.md` | Add editor guidance and pinned pre-commit hooks | Earlier feedback and fewer avoidable CI failures |
+| Developer tools | VS Code feedback and safe fixes on save, repeatable setup, pinned lint hook and local tasks | Add formatting on save and a formatter hook during Stage 3 | Earlier feedback and fewer avoidable CI failures |
 
 ## Stage 1 — Establish the lint foundation
 
@@ -61,7 +61,7 @@ development dependency, separate from the add-on runtime. See these files for
 the current version and settings.
 
 The following custom rule selection describes the implemented baseline. It will
-be replaced by Ruff's standard stable selection in Stage 3.
+be replaced by Ruff's standard stable selection in Stage 4.
 
 | Rules | Purpose |
 | --- | --- |
@@ -83,41 +83,55 @@ These criteria are met for the lint foundation.
 **What this adds:** automated detection of common Python mistakes, cleaner
 imports and a reproducible starting point for the next stages.
 
-## Stage 2 — Adopt default formatting
+## Stage 2 - Provide early developer feedback
+
+**Status: lint support implemented; formatter integration will follow Stage 3.**
+
+Developers install the recommended Python and Ruff extensions and run the **Development: Set up Ruff** VS Code task. A repeatable cross-platform setup installs pinned tools in a dedicated environment, prepares the lint hook and checks the repository. Existing application environments and custom hook settings are preserved. See `DEVELOP.md` for installation, migration and troubleshooting.
+
+VS Code reports findings while editing and applies safe lint fixes and import organization on save, including Auto Save. The editor and local tasks use the pinned Ruff executable and shared filesystem configuration. The commit hook catches remaining findings before committing; CI remains the full-repository gate.
+
+**Completion criteria:** setup succeeds from a clean checkout and can be repeated in an existing checkout; the Ruff language server, local CLI and hook agree on representative findings; safe fixes are applied before commit and an unresolved finding blocks the commit. Windows and Linux installation checks run in CI. Verify the VS Code save workflow using the developer guide when changing editor settings.
+
+**What this adds:** developers receive feedback during editing and saving, before the commit and CI checks. Adding later lint rules requires no separate editor rollout.
+
+Formatter automation is completed with Stage 3: enable formatting on save and add the pinned formatter hook only when the repository formatting baseline and CI check are ready.
+
+## Stage 3 — Adopt default formatting
 
 **Status: pending.**
 
-### 2.1 — Assess the formatting diff
+### 3.1 — Assess the formatting diff
 
 Use Ruff's default formatter settings and measure the diff on the current code. Review the scope and upstream merge impact. This step uses the formatter only; it does not apply lint fixes or rewrite application logic.
 
 **Completion criteria:** the formatting scope is understood and the settings match the pinned version's defaults.
 
-### 2.2 — Apply and verify formatting
+### 3.2 — Apply and verify formatting
 
 Run `ruff format .` and commit the formatting as one separate mechanical change. Inspect the diff and run the existing lint gate and relevant scenario and regression checks. Keep import cleanup, modernization and behavioral fixes in separate commits.
 
 **Completion criteria:** `ruff format --check .` passes across all maintained Python files, the existing lint gate passes, and verification finds no behavior changes.
 
-### 2.3 — Enforce formatting in CI
+### 3.3 — Enforce formatting in CI
 
-Add `ruff format --check .` as a separate CI check with a clear, stable name. Verify that a formatting violation fails the check and that formatted code passes.
+Enable Ruff formatting on save in VS Code and add the pinned `ruff-format` pre-commit hook. Add `ruff format --check .` as a separate CI check with a clear, stable name. Verify that a formatting violation fails the check and that formatted code passes.
 
 **Completion criteria:** CI reports formatting independently of lint and checks all maintained Python files.
 
 **What this adds:** consistent layout and automatic detection of formatting drift, with a mechanical diff that can be reviewed independently of code changes.
 
-## Stage 3 — Adopt standard stable lint rules
+## Stage 4 — Adopt standard stable lint rules
 
 **Status: pending. This track can progress independently of formatting.**
 
-### 3.1 — Assess standard-rule findings
+### 4.1 — Assess standard-rule findings
 
 Compare the current configuration with the standard stable defaults of the pinned Ruff version using a temporary assessment configuration. Keep the existing CI gate while collecting and classifying findings. Identify import cleanup, code modernization, possible behavioral defects and justified exceptions.
 
 **Completion criteria:** findings are grouped into reviewable batches, with the required verification identified for each batch.
 
-### 3.2 — Resolve findings in reviewable batches
+### 4.2 — Resolve findings in reviewable batches
 
 - Review import cleanup for side effects and required initialization order before committing it.
 - Keep code modernization separate from import cleanup and formatting; check supported Python versions and runtime uses of annotations or APIs.
@@ -128,32 +142,13 @@ Apply safe fixes selectively and inspect their diffs. Run the existing lint gate
 
 **Completion criteria:** each batch is independently reviewed and verified, and all findings under the standard rules are resolved or narrowly justified.
 
-### 3.3 — Activate the standard lint rules
+### 4.3 — Activate the standard lint rules
 
 Remove the custom `lint.select` and unnecessary lint overrides once the standard checks pass across the repository. Retain version pinning, the supported Python target, source-discovery settings and justified exceptions. Verify that local and CI checks use the same standard stable selection.
 
 **Completion criteria:** `ruff check .` passes under the pinned version's standard stable rules for all maintained Python files, with relevant behavioral checks passing and necessary overrides explained.
 
 **What this adds:** adoption of Ruff's supported defaults through manageable changes, with code rewrites and behavior fixes visible to reviewers.
-
-## Stage 4 — Integrate local developer tools
-
-**Status: lint commands are documented; editor guidance and hooks are pending.**
-
-1. Document editor setup for lint feedback and formatting using the repository
-   configuration and pinned version.
-2. Add `.pre-commit-config.yaml` with pinned Ruff lint and formatter hooks.
-3. Document hook installation and full-repository local checks.
-4. Verify that editor, hook and CI results agree on representative files.
-
-Safe fixes can be applied locally, followed by diff review and relevant tests.
-Behavioral changes require explicit review and regression coverage.
-
-**Completion criteria:** a new contributor can follow the developer guide to
-install the tools, receive editor feedback and reproduce CI results.
-
-**What this adds:** developers catch and fix issues before pushing, reducing
-avoidable CI failures and review turnaround.
 
 ## Stage 5 — Require checks before merging
 

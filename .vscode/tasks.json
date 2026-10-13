@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Development: Set up Ruff",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["scripts/develop.py", "setup"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": [],
+      "presentation": {"reveal": "always", "panel": "dedicated"}
+    },
+    {
+      "label": "Ruff: Check all Python files",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv-tools/bin/python",
+      "windows": {"command": "${workspaceFolder}/.venv-tools/Scripts/python.exe"},
+      "args": ["scripts/develop.py", "check"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": [],
+      "group": {"kind": "test", "isDefault": true}
+    },
+    {
+      "label": "Ruff: Apply safe fixes to all Python files",
+      "detail": "Review the diff and run relevant tests after fixing.",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv-tools/bin/python",
+      "windows": {"command": "${workspaceFolder}/.venv-tools/Scripts/python.exe"},
+      "args": ["scripts/develop.py", "fix"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "Ruff: Run commit hooks on all files",
+      "detail": "Hooks apply safe fixes; review and stage any resulting changes.",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv-tools/bin/python",
+      "windows": {"command": "${workspaceFolder}/.venv-tools/Scripts/python.exe"},
+      "args": ["scripts/develop.py", "hooks"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    }
+  ]
+}

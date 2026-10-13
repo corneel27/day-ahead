@@ -449,6 +449,41 @@ Before submitting your PR, ensure:
 
 ### Python lint checks
 
+#### Set up automatic feedback in VS Code
+
+Open the repository root in VS Code and install the recommended **Python** and **Ruff** extensions from the Extensions view (`@recommended`). Select an installed Python 3.12 or newer with **Python: Select Interpreter**, then choose **Terminal > Run Task > Development: Set up Ruff**. After setup, run **Ruff: Restart Server** from the Command Palette. In a remote workspace, install the extensions in that workspace's extension host.
+
+The same setup works for a new checkout or an existing development environment. It creates a dedicated `.venv-tools` directory, installs `requirements-dev.txt`, prepares and installs the commit hook, and runs the full lint check. It can be rerun after pulling tool upgrades. It leaves the application environment and selected application interpreter intact. Internet access is required for the initial tool and hook installation; subsequent checks use the installed tools.
+
+Without VS Code, run the same procedure from the repository root:
+
+```bash
+python scripts/develop.py setup
+```
+
+Use `python3` on systems where `python` is unavailable, or `py -3.13` on Windows when that is your installed interpreter. Setup reads the minimum version from `ruff.toml` rather than requiring a particular launcher. On Debian, install the matching `python3-venv` package if virtual-environment creation is unavailable.
+
+While editing, Ruff reports lint findings in the editor and Problems view. Saving a Python file, including Auto Save, applies Ruff's safe fixes and import organization. Findings such as undefined names still require a manual fix. Review automatic changes and run tests for affected behavior before committing. Formatting on save is disabled until the separate formatting rollout is complete; explicit **Format Document** remains available through Ruff.
+
+VS Code uses Ruff from `.venv-tools`, independently of the application interpreter. Both Windows and Unix executable paths are included. The filesystem configuration takes precedence over editor rule settings. `ruff.toml` enforces the exact Ruff version used by CI. If setup is missing or incomplete, the extension can search other environments or its bundled executable; do not assume feedback is correct merely because the extension is installed. Run setup, restart Ruff, and inspect **Output > Ruff** to confirm that the server uses `.venv-tools` and the pinned version. An incompatible version produces a configuration error rather than valid lint results.
+
+The following tasks are available through **Terminal > Run Task**:
+
+| Task | Result |
+| --- | --- |
+| Development: Set up Ruff | Install or refresh tools and activate the commit hook |
+| Ruff: Check all Python files | Check the complete repository using the same configuration as CI |
+| Ruff: Apply safe fixes to all Python files | Apply safe lint fixes; review the diff afterwards |
+| Ruff: Run commit hooks on all files | Run the fixing hook across tracked Python files |
+
+The commit hook checks staged Python files, including tracked tests despite the legacy `.gitignore`. If it fixes a file, the commit stops: inspect the diff, stage the corrected file and commit again. Remaining findings also block the commit. CI checks the complete repository, including files not touched by the commit.
+
+For an existing checkout, keep any personal workspace settings and merge the Ruff entries if necessary. Disable competing Python fix-on-save actions if they cause conflicting edits. Setup uses pre-commit's migration mode to preserve existing custom hooks; it does not use `--overwrite`. If `core.hooksPath` is configured, setup stops with an explanation instead of changing it. Integrate pre-commit with that hook manager, or run local checks manually. Use `pre-commit uninstall` through the tool environment to restore a migrated hook.
+
+To verify the editor installation, create a temporary Python file containing `import os` and `print(missing_name)`. Ruff should show `F401` and `F821`; saving removes the unused import and leaves the undefined name visible. Fix the name, delete the temporary file and run **Ruff: Check all Python files**. This checks the same rules that CI uses, with editor fixes occurring earlier.
+
+#### Run lint without editor integration
+
 From the repository root, install the pinned development-only linter and run:
 
 ```bash
@@ -470,7 +505,7 @@ preserves existing truncation; use `strict=True` when equal lengths are validate
 
 When upgrading Ruff, review its release notes, update the pins in
 `requirements-lint.txt` and `ruff.toml` (`required-version`) together, and update
-hook pins once hooks are adopted. Review changes to standard defaults and new
+the Ruff hook revision in `.pre-commit-config.yaml`. Rerun developer setup after pulling a tooling update. Review changes to standard defaults and new
 diagnostics, then run lint, formatting once adopted, and relevant behavioral tests
 before merging the upgrade. Ruff is not an add-on runtime dependency.
 Full-repository `ruff format` enforcement is a separate
