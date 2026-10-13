@@ -8,7 +8,7 @@ This guide will help developers set up their development environment, test chang
 - [Your first development session](#your-first-development-session)
 - [Start-up troubleshooting](#start-up-troubleshooting)
 - [Prerequisites](#prerequisites)
-- [Setting Up Development Environment](#setting-up-development-environment)
+- [Manual development environment setup](#manual-development-environment-setup)
 - [Project Structure](#project-structure)
 - [Running the Application Locally](#running-the-application-locally)
 - [Testing](#testing)
@@ -93,7 +93,7 @@ To continue later, start Docker and reopen the workspace through **Remote Explor
 
 For frontend live reload, start **Development: Frontend live reload**, then add `"VITE_DEV": "1"` to a personal copy of the web debug configuration. Port 5173 is forwarded alongside Flask. The default F5 configuration uses built assets and needs no second server.
 
-**Native Linux/WSL alternative:** install Python 3.12+ (3.13 matches the container), Node 22.12+, Git, a compiler, pkg-config and MariaDB development libraries. From the repository root run `./script/setup`, then open VS Code and select `.venv/bin/python`. On Debian/Ubuntu the native libraries can be installed with `sudo apt-get install build-essential pkg-config libmariadb-dev`. Application support is Linux/WSL; the separate Ruff-only setup also supports native Windows.
+**Manual Linux/WSL alternative:** to develop directly on Linux or WSL without a container, follow [Manual development environment setup](#manual-development-environment-setup). The separate Ruff-only setup also supports native Windows.
 
 ### Automatic installation verification
 
@@ -116,14 +116,18 @@ Choose one application development route:
 | Route | Requirements | Support |
 | --- | --- | --- |
 | Dev Container (recommended) | Git, Docker with Linux containers, VS Code and Dev Containers | Linux application environment; Docker Desktop hosts on Windows/macOS |
-| Native Linux/WSL | Python 3.12+ with venv/pip, Node 22.12+, Git, compiler, pkg-config and MariaDB development libraries | Same setup and checks as the container; Python 3.13 matches the container |
+| Manual Linux/WSL | Python 3.12+ with venv/pip, Node 22.12+, Git, compiler, pkg-config and MariaDB development libraries | Same setup and checks as the container; Python 3.13 matches the container |
 | Ruff only | Git and Python 3.12+ | Windows and Linux tooling are checked in CI; this does not install the application or solver |
 
 Native Windows/macOS application installation is not part of the supported setup. Use the Linux Dev Container on those hosts. macOS Ruff tooling is not covered by the current CI matrix.
 
-## Setting Up Development Environment
+## Manual development environment setup
 
-### Shared application setup on Linux/WSL
+Use this section when running the application directly on Linux or WSL **without the Dev Container**. You install the system requirements and run the repository's setup command yourself.
+
+**Dev Container users can skip this section.** The [recommended VS Code route](#vs-code-quick-start-recommended) builds the container and runs the initial setup automatically. Continue with [Your first development session](#your-first-development-session) after that installation finishes.
+
+### Install and configure on Linux/WSL
 
 Clone your fork and work from the repository root. On Debian/Ubuntu, install the native build prerequisites:
 
@@ -134,7 +138,7 @@ sudo apt-get install -y build-essential pkg-config libmariadb-dev python3-venv
 
 Install Python 3.12+ and Node 22.12+ using your distribution or their supported installation methods; check their versions before continuing. Other Linux distributions need equivalent compiler and MariaDB development packages.
 
-Run the same setup and verification used inside the Dev Container:
+Run the repository's setup and verification commands manually. These are the same scripts used by the automatic container setup:
 
 ```bash
 python3 scripts/setup_environment.py
@@ -143,7 +147,7 @@ python3 scripts/setup_environment.py
 
 Setup creates the application/test environment in `.venv`, builds frontend assets with `npm ci`, prepares the isolated preview and installs Ruff/hooks in `.venv-tools`. Select `.venv/bin/python` in VS Code. Repeat setup after dependency changes; it preserves existing preview files. Do not share a virtual environment between Windows and Linux checkouts.
 
-For Ruff-only work, use the [Ruff setup instructions](#set-up-automatic-feedback-in-vs-code) below. For application or solver work, use the complete setup above.
+For manual Ruff-only installation, use the [Ruff setup instructions](#set-up-automatic-feedback-in-vs-code) below; these do not install the application or solver. For manual application or solver development, use the complete setup above.
 
 ### Existing installations and the legacy launcher
 
@@ -151,7 +155,7 @@ For Ruff-only work, use the [Ruff setup instructions](#set-up-automatic-feedback
 
 Do not mix those environments in one development session. Keep the legacy route for existing workflows until it can be migrated separately.
 
-### Installation troubleshooting
+### Manual installation troubleshooting
 
 If MariaDB Connector/C or mysqlclient cannot build, check the compiler, pkg-config and MariaDB development libraries. Use the pinned `mip` and `cbcbox` from `dao/requirements.txt`; the old manual `mip==1.16rc0` workaround and custom solver-library overrides are obsolete for the supported setup.
 
