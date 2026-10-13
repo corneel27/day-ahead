@@ -25,3 +25,5 @@ jobs:
         run: python -m unittest discover -s tests -p test_developer_tools.py -v
       - name: Verify isolated preview setup preserves existing files
         run: python -m unittest discover -s tests -p test_environment_setup.py -v
+      - name: Verify transient Windows guard locks are retried
+        run: python -m unittest discover -s tests -p test_guard_reads.py -v

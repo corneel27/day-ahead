@@ -40,7 +40,18 @@ def write_version_guard() -> str:
     pin = required_version()
     path = ROOT / ".ruff.toml"
     content = GUARD_HEADER + f'extend = "ruff.toml"\nrequired-version = "=={pin}"\n'
-    previous = path.read_text(encoding="utf-8") if path.exists() else ""
+    # Windows can also deny a read briefly while another process replaces it.
+    for attempt in range(20):
+        try:
+            previous = path.read_text(encoding="utf-8")
+            break
+        except FileNotFoundError:
+            previous = ""
+            break
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.05)
     if previous and not previous.startswith(GUARD_HEADER):
         raise ValueError(
             "An existing .ruff.toml is not generated; preserve it and resolve the configuration conflict."
