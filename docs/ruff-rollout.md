@@ -46,7 +46,7 @@ Update this roadmap and the developer guide when completing a stage.
 | --- | --- | --- | --- |
 | Shared configuration | Pinned Ruff version, Python target, custom explicit rules, separate lint requirements | Adopt standard stable rules/settings while retaining necessary repository details | Reproducible checks with less custom configuration |
 | Lint coverage | All tracked Python files included in the existing lint gate | Resolve findings under Ruff's standard rules and maintain coverage | Common mistakes are detected using Ruff's supported defaults |
-| CI | Independent **Ruff lint** job on pushes and pull requests | Require lint before merging | Automated feedback becomes merge protection |
+| CI | Independent **Ruff lint** job on pushes and pull requests | Required on the fork's main; configure the actual upstream merge target separately | Automated feedback becomes merge protection |
 | Formatting | Ruff is available; repository-wide formatting is not yet adopted | Apply the default formatter settings, format the code, add a CI check | Consistent layout and less style-review effort |
 | Developer tools | VS Code feedback and safe fixes on save, repeatable setup, pinned lint hook and local tasks | Add formatting on save and a formatter hook during Stage 3 | Earlier feedback and fewer avoidable CI failures |
 
@@ -154,7 +154,9 @@ Remove the custom `lint.select` and unnecessary lint overrides once the standard
 
 ## Stage 5 — Require checks before merging
 
-**Status: lint runs automatically; required merge checks are pending.**
+**Status: lint and development checks are required on `patrickvorgers/day-ahead` main; formatting and upstream enforcement remain pending.**
+
+The active **Main required development checks** ruleset requires Ruff lint, both scenario jobs, both Windows/Linux developer-tool jobs and clean-install from GitHub Actions. PRs are required, with no bypass actors and no mandatory review approvals. A deliberate undefined-name violation in temporary PR #2 demonstrated a failing required Ruff check and a disabled merge button on 2026-10-13. See the developer guide for the check names and clean-checkout manual acceptance checklist. The rule is repository-specific; it does not configure the upstream repository or finish formatter adoption.
 
 1. Configure the repository ruleset or branch protection to require **Ruff lint**
    for pull requests, using the existing CI check name.

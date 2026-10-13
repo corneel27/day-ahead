@@ -272,6 +272,8 @@ A maintainer must configure the target repository's `main` ruleset or branch pro
 - `Developer setup (windows-latest)`
 - `clean-install` (Development environment workflow)
 
+As of 2026-10-13, the active **Main required development checks** ruleset on `patrickvorgers/day-ahead` targets `main` and requires all six checks above from GitHub Actions. It requires a PR with zero mandatory review approvals, has no bypass actors, and blocks force pushes/deletion of `main`. A deliberate undefined-name violation in [temporary PR #2](https://github.com/patrickvorgers/day-ahead/pull/2) failed the required Ruff check and disabled normal merging. The clean-checkout VS Code checklist above still needs manual execution.
+
 These are repository settings, not enabled by committing this guide. Confirm the settings on the actual merge target, including the upstream repository if contributing from a fork. This change does not add a formatting requirement; formatter adoption is a separate rollout.
 
 Verify enforcement on a disposable PR branch: add an undefined-name lint violation, confirm `Ruff lint` fails and normal merging is blocked, then remove the violation and confirm all required checks pass. Record any maintainer bypass policy and the verification result; do not merge the violation.
