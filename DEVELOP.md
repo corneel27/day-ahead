@@ -30,6 +30,8 @@ The procedure follows Home Assistant's developer start page:
 3. Allow your browser to open VS Code and wait for the automatic clone, container build and installation. Install Dev Containers if VS Code prompts you to do so.
 4. Press **F5** to start the web preview. Ruff feedback and the test tools are ready to use.
 
+![Developer start page with a fork URL entered and the Open in VS Code button](docs/images/developer-start.png)
+
 The page passes the entered repository or branch URL to VS Code's **Clone Repository in Container Volume** flow. There is no manual clone, interpreter selection or installation command. The browser and VS Code can ask for permission to open the application, clone and trust the workspace. The page also provides a retry link and a manual clone fallback.
 
 ### Direct VS Code alternative
