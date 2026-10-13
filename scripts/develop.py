@@ -125,23 +125,26 @@ def watch_versions() -> None:
     last_state = None
     launcher = TOOLS / ("ruff-project.exe" if os.name == "nt" else "ruff-project")
     while True:
-        state = (
-            (ROOT / "requirements-lint.txt").read_bytes(),
-            RUFF.stat().st_mtime_ns if RUFF.exists() else None,
-            launcher.stat().st_mtime_ns if launcher.exists() else None,
-        )
-        if state != last_state:
-            try:
-                message = (
-                    f"Ruff {check_version()} is ready. Watching for version changes."
-                )
-            except (OSError, ValueError) as error:
-                message = f"requirements-lint.txt:2:1: error: {error}"
-            if message != previous:
-                print("Ruff version check started", flush=True)
-                print(message, flush=True)
-                previous = message
+        try:
+            state = (
+                (ROOT / "requirements-lint.txt").read_bytes(),
+                RUFF.stat().st_mtime_ns if RUFF.exists() else None,
+                launcher.stat().st_mtime_ns if launcher.exists() else None,
+            )
+            if state == last_state:
+                time.sleep(2)
+                continue
+            message = f"Ruff {check_version()} is ready. Watching for version changes."
             last_state = state
+        except (OSError, ValueError) as error:
+            message = f"requirements-lint.txt:2:1: error: {error}"
+            # Retry even when the pin and timestamps did not change: a lock or
+            # interrupted replacement may have prevented the version check.
+            last_state = None
+        if message != previous:
+            print("Ruff version check started", flush=True)
+            print(message, flush=True)
+            previous = message
         time.sleep(2)
 
 

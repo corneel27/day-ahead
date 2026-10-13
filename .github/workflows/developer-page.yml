@@ -43,7 +43,7 @@ jobs:
       cancel-in-progress: false
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}developer/
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
