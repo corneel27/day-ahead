@@ -233,7 +233,12 @@ def setup() -> None:
     run(str(PYTHON), "-m", "pre_commit", "install", "--install-hooks")
     run(str(PYTHON), "-m", "ruff", "--version")
     run(str(PYTHON), "-m", "ruff", "check", ".")
-    print("Setup complete. In VS Code run 'Ruff: Restart Server'.", flush=True)
+    print("Setup complete. Ruff is ready.", flush=True)
+    print(
+        "If Ruff was already running before setup, run 'Ruff: Restart Server' in VS Code. "
+        "A fresh Dev Container starts Ruff automatically after setup.",
+        flush=True,
+    )
     print("Safe lint fixes run on save. Review fixes before committing.", flush=True)
 
 

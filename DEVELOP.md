@@ -496,7 +496,7 @@ Before submitting your PR, ensure:
 
 The Dev Container and the shared application setup already install these tools. The manual procedure below is for Ruff-only work or an existing environment that has not used that setup.
 
-Open the repository root in VS Code and install the recommended **Python** and **Ruff** extensions from the Extensions view (`@recommended`). Select an installed Python 3.12 or newer with **Python: Select Interpreter**, then choose **Terminal > Run Task > Development: Set up Ruff**. After setup, run **Ruff: Restart Server** from the Command Palette. In a remote workspace, install the extensions in that workspace's extension host.
+Open the repository root in VS Code and install the recommended **Python** and **Ruff** extensions from the Extensions view (`@recommended`). Select an installed Python 3.12 or newer with **Python: Select Interpreter**, then choose **Terminal > Run Task > Development: Set up Ruff**. If Ruff was already running before setup, run **Ruff: Restart Server** from the Command Palette. A fresh Dev Container starts Ruff automatically after setup. In a remote workspace, install the extensions in that workspace's extension host.
 
 The same setup works for a new checkout or an existing development environment. It creates a dedicated `.venv-tools` directory, installs `requirements-dev.txt`, prepares and installs the commit hook, and runs the full lint check. It can be rerun after pulling tool upgrades. It leaves the application environment and selected application interpreter intact. Internet access is required for the initial tool and hook installation; subsequent checks use the installed tools.
 
