@@ -387,7 +387,7 @@ class CaseContext:
     # start time and length in hours of every interval u (vocabulary.model_grid)
     grid: list[dt.datetime]
     row_hours: list[float]
-    objective: Optional[float]
+    objective: float | None
     max_gap: float
     reads: set[str]
     requested_states: dict[str, Any]

@@ -239,7 +239,7 @@ class _CallSequence:
     A schema-1 snapshot holds one frame per channel. That frame is served
     for every call, which is what replay always did before schema 2."""
 
-    def __init__(self, channel: str, source: str, records: Optional[list], legacy: Optional[pd.DataFrame] = None):
+    def __init__(self, channel: str, source: str, records: list | None, legacy: pd.DataFrame | None = None):
         self._channel = channel
         self._source = source
         self._records = [
@@ -251,7 +251,7 @@ class _CallSequence:
 
     # Het eerste opgenomen frame; voor de dump-header, die alleen het vaste deel nodig heeft.
     @property
-    def first(self) -> Optional[pd.DataFrame]:
+    def first(self) -> pd.DataFrame | None:
         if self._records:
             return self._records[0][1]
         return self._legacy
@@ -283,7 +283,7 @@ class _CallSequence:
 
 
 # Leest het enkele frame uit een schema-1-snapshot, of None als dat er niet is.
-def _legacy_frame(snapshot: dict, channel: str) -> Optional[pd.DataFrame]:
+def _legacy_frame(snapshot: dict, channel: str) -> pd.DataFrame | None:
     payload = snapshot.get(channel)
     return _dataframe_from_payload(payload) if payload is not None else None
 
@@ -351,7 +351,7 @@ class _FakeDbManager:
     doesn't patch yet, and needs a real patch added."""
 
     # Onthoudt de opgenomen prognose-aanroepen en een label voor duidelijke foutmeldingen.
-    def __init__(self, prog_calls: "_CallSequence", label: str):
+    def __init__(self, prog_calls: _CallSequence, label: str):
         self._prog_calls = prog_calls
         self._label = label
 
