@@ -2162,7 +2162,8 @@
               "enum": [
                 "epexpredictor",
                 "energypriceforecast_eu",
-                "dap"
+                "dap",
+                "jeroen_nl"
               ],
               "type": "string"
             },
@@ -2187,9 +2188,35 @@
           ],
           "default": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
           "description": "The url of the supplier of prediction data, with which DAO can get the prediction data ",
+          "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=jsonx-ui-section": "Prices",
           "title": "Api",
-          "x-help": "The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
-          "x-ui-section": "Prices"
+          "x-help": "The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"
+        },
+        "api-key": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SecretStr"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "api key for request of predicted prices (can use !secret)",
+          "x-docs-url": "https://jeroen.nl/account/data/stroomprijzen",
+          "x-help": "API key for several sources of predicted prices, like jeroen_nl.",
+          "x-ui-rules": {
+            "condition": {
+              "schema": {
+                "const": "jeroen_nl"
+              },
+              "scope": "#/properties/source_day_ahead_prediction"
+            },
+            "effect": "SHOW"
+          },
+          "x-ui-section": "Prices",
+          "x-validation-hint": "Required for jeroen_nl, use !secret",
+          "title": "Api Key"
         }
       },
       "title": "PricePrediction",
