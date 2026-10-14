@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from pathlib import Path
 from subprocess import run as subprocess_run
@@ -12,7 +13,7 @@ from dao.prog.da_report import Report
 api = Blueprint("api", __name__)
 
 # globals
-app_datapath = "app/static/data/"
+app_datapath = os.environ.get("DAO_WEB_DATA_DIR", "app/static/data").rstrip("/") + "/"
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 PROG_DIR = BASE_DIR / "prog"
 
