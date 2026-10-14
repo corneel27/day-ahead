@@ -2192,7 +2192,7 @@
           "title": "Api",
           "x-help": "The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"
         },
-        "api-key": {
+        "api_key": {
           "anyOf": [
             {
               "$ref": "#/$defs/SecretStr"
