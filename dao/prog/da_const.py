@@ -6,7 +6,7 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "object": "DaCalc",
         "function": "calc_optimum_met_debug",
         "file_name": "calc_debug",
-        "aliases": ["calc_debug"]
+        "aliases": ["calc_debug", "calc_met_debug"]
     },
     "calc_optimum": {
         "name": "Optimaliseringsberekening zonder debug",
@@ -14,28 +14,28 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "object": "DaBase",
         "function": "calc_optimum",
         "file_name": "calc",
-        "aliases": ["calc"],
+        "aliases": ["calc", "calc_zonder_debug"],
     },
     "get_tibber_data": {
         "name": "Verbruiksgegevens bij Tibber ophalen",
         "cmd": ["python3", "day_ahead.py", "tibber"],
         "function": "get_tibber_data",
         "file_name": "tibber",
-        "aliases": ["tibber"],
+        "aliases": ["tibber", "get_tibber"],
     },
     "get_meteo_data": {
         "name": "Meteoprognoses ophalen",
         "cmd": ["python3", "day_ahead.py", "meteo"],
         "function": "get_meteo_data",
         "file_name": "meteo",
-        "aliases": ["meteo"],
+        "aliases": ["meteo", "get_meteo"],
     },
     "get_day_ahead_prices": {
         "name": "Day ahead prijzen ophalen",
         "cmd": ["python3", "day_ahead.py", "prices"],
         "function": "get_day_ahead_prices",
         "file_name": "prices",
-        "aliases": ["prices"],
+        "aliases": ["prices", "get_prices"],
     },
     "get_predicted_prices": {
         "name": "Day ahead prijsvoorspelling ophalen",
