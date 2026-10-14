@@ -1,0 +1,309 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Development: Watch Ruff version",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "scripts/develop.py",
+        "watch"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "runOptions": {
+        "runOn": "folderOpen",
+        "instanceLimit": 1
+      },
+      "isBackground": true,
+      "problemMatcher": [
+        {
+          "owner": "ruff-version",
+          "source": "Ruff setup",
+          "fileLocation": [
+            "relative",
+            "${workspaceFolder}"
+          ],
+          "pattern": {
+            "regexp": "^(.+):(\\d+):(\\d+): (error): (.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "severity": 4,
+            "message": 5
+          },
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": "^Ruff version check started$",
+            "endsPattern": "^(Ruff .+ is ready\\.|requirements-lint\\.txt:)"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false
+      },
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "watch"
+        ]
+      }
+    },
+    {
+      "label": "Development: Set up Ruff",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "scripts/develop.py",
+        "setup"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "setup"
+        ]
+      }
+    },
+    {
+      "label": "Ruff: Check all Python files",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "scripts/develop.py",
+        "check"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "check"
+        ]
+      }
+    },
+    {
+      "label": "Ruff: Apply safe fixes to all Python files",
+      "detail": "Review the diff and run relevant tests after fixing.",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "scripts/develop.py",
+        "fix"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "fix"
+        ]
+      }
+    },
+    {
+      "label": "Ruff: Run commit hooks on all files",
+      "detail": "Hooks apply safe fixes; review and stage any resulting changes.",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "scripts/develop.py",
+        "hooks"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "hooks"
+        ]
+      }
+    },
+    {
+      "label": "Development: Check Ruff version",
+      "type": "process",
+      "command": "python3",
+      "args": [
+        "scripts/develop.py",
+        "status"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "scripts/develop.py",
+          "status"
+        ]
+      }
+    },
+    {
+      "label": "Development: Set up environment",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "scripts/setup_environment.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "TZ": "UTC",
+          "MPLBACKEND": "Agg"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Development: Verify environment",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "scripts/verify_environment.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "TZ": "UTC",
+          "MPLBACKEND": "Agg"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: Isolated unit and regression tests",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "pytest",
+        "-c",
+        "pytest-dev.ini",
+        "-q"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "TZ": "UTC",
+          "MPLBACKEND": "Agg"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tests: Solve all synthetic scenarios",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "dao.prog.da_debug",
+        "scenario-run",
+        "--report"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "TZ": "UTC",
+          "MPLBACKEND": "Agg"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Development: Build frontend",
+      "type": "process",
+      "command": "npm",
+      "args": [
+        "run",
+        "build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/dao/webserver"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Development: Frontend live reload",
+      "type": "process",
+      "command": "npm",
+      "args": [
+        "run",
+        "vite-serve"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/dao/webserver",
+        "env": {
+          "VITE_DEV_HOST": "localhost"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Development: Run Day Ahead",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": [
+        "-m",
+        "flask",
+        "--app",
+        "app",
+        "run",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "5000",
+        "--no-reload"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/dao/webserver",
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+          "DAO_WEB_DATA_DIR": "${workspaceFolder}/.local/web-data",
+          "MPLBACKEND": "Agg",
+          "TZ": "UTC"
+        }
+      },
+      "dependsOn": "Development: Build frontend",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}
