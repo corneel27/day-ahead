@@ -472,7 +472,7 @@ class DaPrices:
         df_db = pd.DataFrame(columns=["time", "tijd", "code", "value"])
         tz = pytz.timezone(self.time_zone)
         for row in data:
-            utc_dt_str = row["datum_utc"]
+            utc_dt_str = row["datum_utc"]+"+00:00"
             utc_dt = datetime.datetime.fromisoformat(utc_dt_str)
             dt = utc_dt.astimezone(tz)
             if know_at < dt <= new_horizon:
