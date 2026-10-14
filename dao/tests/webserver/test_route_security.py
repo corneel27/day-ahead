@@ -1,6 +1,9 @@
 """Exercise the reported route vulnerabilities through Flask requests."""
 import importlib
+import json
 import logging
+from copy import deepcopy
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
@@ -14,6 +17,62 @@ with patch("dao.prog.config.loader.ConfigurationLoader.load_and_validate", retur
 
 api_routes = importlib.import_module("dao.webserver.app.api.routes")
 v2_routes = importlib.import_module("dao.webserver.app.v2.routes")
+v1_routes = importlib.import_module("dao.webserver.app.v1.routes")
+
+
+@pytest.mark.parametrize("age", [599, 600, 601])
+def test_running_task_expires_only_after_cutoff(monkeypatch, tmp_path, age):
+    state_file = tmp_path / "task_state.json"
+    state = {"status": "running", "task": "calculate", "logfile": "test.log",
+             "last_update": 1000 - age}
+    state_file.write_text(json.dumps(state), encoding="utf-8")
+    monkeypatch.setattr(v1_routes, "STATEFILE", str(state_file))
+    monkeypatch.setattr(v1_routes, "STALE_AFTER", 600)
+    monkeypatch.setattr(v1_routes.time, "time", lambda: 1000)
+
+    expected = {"status": "idle", "task": None, "logfile": None} if age > 600 else state
+    assert v1_routes.load_state() == expected
+
+
+@pytest.mark.parametrize("status", ["idle", "done", "failed"])
+def test_non_running_state_does_not_evaluate_missing_timestamp(monkeypatch, tmp_path, status):
+    state_file = tmp_path / "task_state.json"
+    state = {"status": status, "task": "calculate", "last_update": None}
+    state_file.write_text(json.dumps(state), encoding="utf-8")
+    monkeypatch.setattr(v1_routes, "STATEFILE", str(state_file))
+    assert v1_routes.load_state() == state
+
+
+@pytest.mark.parametrize("contents", [None, "invalid json"])
+def test_unavailable_task_state_falls_back_to_idle(monkeypatch, tmp_path, contents):
+    state_file = tmp_path / "task_state.json"
+    if contents is not None:
+        state_file.write_text(contents, encoding="utf-8")
+    monkeypatch.setattr(v1_routes, "STATEFILE", str(state_file))
+    result = v1_routes.load_state()
+    assert result["status"] == "idle"
+    assert result["task"] is None
+
+
+@pytest.mark.parametrize("solar_present", [False, True])
+def test_solar_menu_can_be_removed_repeatedly_and_restored(monkeypatch, solar_present):
+    keys = ("home", "run", "reports", "savings", "solar", "settings")
+    menu = {key: {"name": key} for key in keys if solar_present or key != "solar"}
+    other_items = {key: value for key, value in menu.items() if key != "solar"}
+    monkeypatch.setattr(v1_routes, "web_menu", menu)
+    monkeypatch.setattr(v1_routes, "solar_web_menu", deepcopy(v1_routes.solar_web_menu))
+    solar = SimpleNamespace(name="roof", ml_prediction=False)
+    monkeypatch.setattr(v1_routes, "config", SimpleNamespace(solar=[solar], battery=[]))
+
+    for _ in range(2):
+        assert v1_routes.generate_solar_items() == {}
+        assert v1_routes.web_menu == other_items
+
+    solar.ml_prediction = True
+    for _ in range(2):
+        assert v1_routes.generate_solar_items() == {"roof": solar}
+        assert tuple(v1_routes.web_menu) == keys
+        assert {key: value for key, value in v1_routes.web_menu.items() if key != "solar"} == other_items
 
 
 @pytest.fixture
@@ -21,7 +80,8 @@ def client():
     return app.test_client()
 
 
-def test_datasets_config_reflects_variable_table(monkeypatch):
+@pytest.mark.parametrize(("dim", "stepped"), [("kWh", False), ("euro/kWh", True)])
+def test_datasets_config_reflects_variable_table(monkeypatch, dim, stepped):
     engine = create_engine("sqlite:///:memory:")
     metadata = MetaData()
     variables = Table(
@@ -31,7 +91,7 @@ def test_datasets_config_reflects_variable_table(monkeypatch):
     )
     metadata.create_all(engine)
     with engine.begin() as connection:
-        connection.execute(variables.insert(), {"id": 1, "name": "Consumption", "code": "cons", "dim": "kWh"})
+        connection.execute(variables.insert(), {"id": 1, "name": "Consumption", "code": "cons", "dim": dim})
     report = Mock()
     report.db_da.metadata = MetaData()
     report.db_da.engine = engine
@@ -41,6 +101,7 @@ def test_datasets_config_reflects_variable_table(monkeypatch):
         assert len(datasets) == 1
         assert datasets[0]["label"] == "Consumption"
         assert datasets[0]["code"] == "cons"
+        assert datasets[0]["stepped"] is stepped
     finally:
         engine.dispose()
 

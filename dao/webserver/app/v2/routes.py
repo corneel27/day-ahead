@@ -375,7 +375,7 @@ def task_exec():
 
     task_name = request.form.to_dict()["task"]
 
-    if task_name not in tasks.keys():
+    if task_name not in tasks:
         return "Invalid task", 500
 
     # Save the state synchronous to prevent race condition
@@ -473,7 +473,7 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
             report_df, interval, view
         )
     elif subject == "balans":
-        report_df, lastmoment = report.get_energy_balance_data(
+        report_df, _lastmoment = report.get_energy_balance_data(
             period, _tot=tot
         )
         report_df = report.calc_balance_columns(
@@ -622,7 +622,7 @@ def solar():
         date=date_str,
         subject_options=[
             {"label": key, "value": key}
-            for key in solar_items.keys()
+            for key in solar_items
         ]
     )
 
@@ -780,7 +780,7 @@ def _datasets_config():
             "borderColor": _alter_hex(color, 0.8),
             "backgroundColor": color,
             "type": "bar" if row.dim == "kWh" else "line",
-            "stepped": True if row.dim == "euro/kWh" else False,
+            "stepped": row.dim == "euro/kWh",
             "yAxisID": f"y_{row.dim}",
             "unit": row.dim,
         })

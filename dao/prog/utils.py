@@ -173,7 +173,7 @@ def get_tibber_data():
     count = math.ceil((now_ts - latest_ts) / 3600)
     logging.info(
         f"Tibber data present tot en met: "
-        f"{str(datetime.datetime.fromtimestamp(latest_ts - 3600))}"
+        f"{datetime.datetime.fromtimestamp(latest_ts - 3600)!s}"
     )
     if count < 24:
         logging.info("Er worden geen data opgehaald.")

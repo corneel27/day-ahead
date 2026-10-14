@@ -849,7 +849,6 @@ class Report(DaBase):
         tot = tot_g
         vanaf = tot + datetime.timedelta(days=-365)
         self.periodes.update(create_dict("365 dagen", vanaf, tot, "maand"))
-        return
 
     def get_time_border_ha_record(
             self, sensor: str, latest: bool = True
@@ -1382,7 +1381,6 @@ class Report(DaBase):
                 df_db.loc[df_db.shape[0]] = db_row
             print(df_db)
             self.db_da.savedata(df_db, tablename="values")
-        return
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
         def get_datasoort(ds):
@@ -1485,7 +1483,7 @@ class Report(DaBase):
 
         if interval != "uur":
             agg_dict = {"vanaf": "min"}
-            for key, _categorie in self.energy_balance_dict.items():
+            for key in self.energy_balance_dict:
                 agg_dict[key] = "sum"
             result = result.groupby([interval], as_index=False).agg(agg_dict)
 
@@ -2211,61 +2209,60 @@ class Report(DaBase):
                     last_moment = vanaf
                 df_prices = self.get_price_data(vanaf, last_moment, interval="1hour")
 
-            if source == "all" or source == "da":
-                if last_moment < tot:
-                    # get prognose consumption and production:
-                    prog_table = Table(
-                        "prognoses",
-                        self.db_da.metadata,
-                        autoload_with=self.db_da.engine,
+            if (source == "all" or source == "da") and last_moment < tot:
+                # get prognose consumption and production:
+                prog_table = Table(
+                    "prognoses",
+                    self.db_da.metadata,
+                    autoload_with=self.db_da.engine,
+                )
+                p1 = prog_table.alias("p1")
+                p2 = prog_table.alias("p2")
+                # Build the SQLAlchemy query
+                query = select(
+                    self.db_da.from_unixtime(p1.c.time).label("tijd"),
+                    p1.c.value.label("consumption"),
+                    p2.c.value.label("production"),
+                    literal("expected").label("datasoort"),
+                ).where(
+                    and_(
+                        p1.c.time == p2.c.time,
+                        p1.c.variabel == v1.c.id,
+                        v1.c.code == "cons",
+                        p2.c.variabel == v2.c.id,
+                        v2.c.code == "prod",
+                        p1.c.time
+                        >= self.db_da.unix_timestamp(
+                            last_moment.strftime("%Y-%m-%d %H:%M:%S")
+                        ),
+                        p1.c.time
+                        < self.db_da.unix_timestamp(
+                            tot.strftime("%Y-%m-%d %H:%M:%S")
+                        ),
                     )
-                    p1 = prog_table.alias("p1")
-                    p2 = prog_table.alias("p2")
-                    # Build the SQLAlchemy query
-                    query = select(
-                        self.db_da.from_unixtime(p1.c.time).label("tijd"),
-                        p1.c.value.label("consumption"),
-                        p2.c.value.label("production"),
-                        literal("expected").label("datasoort"),
-                    ).where(
-                        and_(
-                            p1.c.time == p2.c.time,
-                            p1.c.variabel == v1.c.id,
-                            v1.c.code == "cons",
-                            p2.c.variabel == v2.c.id,
-                            v2.c.code == "prod",
-                            p1.c.time
-                            >= self.db_da.unix_timestamp(
-                                last_moment.strftime("%Y-%m-%d %H:%M:%S")
-                            ),
-                            p1.c.time
-                            < self.db_da.unix_timestamp(
-                                tot.strftime("%Y-%m-%d %H:%M:%S")
-                            ),
-                        )
+                )
+
+                with self.db_da.engine.connect() as connection:
+                    query_str = str(query.compile(connection))
+                    logging.debug(f"query get prognose data:\n {query_str}")
+                    df_prog = pd.read_sql_query(query, connection)
+
+                df_prog.index = pd.to_datetime(df_prog["tijd"])
+                df_prog["datasoort"] = "expected"
+                if len(df_prog) > 0:
+                    df_prog_prices = self.get_price_data(
+                        last_moment, tot, interval=self.interval
                     )
-
-                    with self.db_da.engine.connect() as connection:
-                        query_str = str(query.compile(connection))
-                        logging.debug(f"query get prognose data:\n {query_str}")
-                        df_prog = pd.read_sql_query(query, connection)
-
-                    df_prog.index = pd.to_datetime(df_prog["tijd"])
-                    df_prog["datasoort"] = "expected"
-                    if len(df_prog) > 0:
-                        df_prog_prices = self.get_price_data(
-                            last_moment, tot, interval=self.interval
+                    if len(df_ha) == 0:
+                        df_ha = df_prog
+                        df_prices = df_prog_prices
+                    else:
+                        df_ha = pd.concat([df_ha, df_prog])
+                        df_prices.index = pd.to_datetime(df_prices["time"])
+                        df_prog_prices.index = pd.to_datetime(
+                            df_prog_prices["time"]
                         )
-                        if len(df_ha) == 0:
-                            df_ha = df_prog
-                            df_prices = df_prog_prices
-                        else:
-                            df_ha = pd.concat([df_ha, df_prog])
-                            df_prices.index = pd.to_datetime(df_prices["time"])
-                            df_prog_prices.index = pd.to_datetime(
-                                df_prog_prices["time"]
-                            )
-                            df_prices = pd.concat([df_prices, df_prog_prices])
+                        df_prices = pd.concat([df_prices, df_prog_prices])
 
             df_prices.rename(columns={"time": "tijd"}, inplace=True)
             df_prices.index = pd.to_datetime(df_prices["tijd"])
@@ -2329,10 +2326,7 @@ class Report(DaBase):
                     mean = df_result[key][:-1].mean()
                     df_result.at[df_result.index[-1], key] = mean
             header_col = []
-            if "with header" in calc_dict:
-                with_header = calc_dict["with header"]
-            else:
-                with_header = True
+            with_header = calc_dict.get("with header", True)
             if with_header:
                 header_col = [rep_interval.capitalize()]
                 name_col = [""]
@@ -2974,7 +2968,6 @@ class Report(DaBase):
             out_file = "../data/baseload/baseload_" + str(weekday) + ".json"
             with open(out_file, "w") as f:
                 print(json.dumps(baseload, indent=2), file=f)
-        return
 
     # ------------------------------------------------
     def get_field_data(self, field: str, periode: str, tot=None, dict=None):
@@ -3299,7 +3292,7 @@ class Report(DaBase):
 
     def get_api_data(self, field: str, _periode: str, cumulate: bool = False):
         periode = _periode.replace("_", " ")
-        if periode not in self.periodes.keys():
+        if periode not in self.periodes:
             result = f'{{"message": "Failed", "reason": "Periode: \'{_periode}\' is not allowed"}}'
             return result
 

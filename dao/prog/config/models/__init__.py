@@ -4,10 +4,10 @@ from .base import EntityId, FlexBool, FlexFloat, FlexInt, FlexStr, FlexValue, Se
 
 __all__ = [
     "EntityId",
-    "FlexValue",
+    "FlexBool",
     "FlexFloat",
     "FlexInt",
-    "FlexBool",
     "FlexStr",
+    "FlexValue",
     "SecretStr",
 ]

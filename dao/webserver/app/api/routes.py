@@ -50,7 +50,7 @@ def api_report(fld: str, periode: str):
 
 @api.route("/run/<string:task>", methods=["GET", "POST"])
 def run_api(task: str):
-    if task in tasks.keys():
+    if task in tasks:
         proc = subprocess_run(
             tasks[task]["cmd"],
             cwd=PROG_DIR,

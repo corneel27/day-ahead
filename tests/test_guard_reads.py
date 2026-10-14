@@ -67,9 +67,9 @@ class GuardReadTests(unittest.TestCase):
                     patch.object(Path, "stat", stat), \
                     patch.object(DEVELOP, "check_version", side_effect=version_results) as check, \
                     patch.object(DEVELOP.time, "sleep", side_effect=[None, None, KeyboardInterrupt]), \
-                    patch("sys.stdout", output):
-                with self.assertRaises(KeyboardInterrupt):
-                    DEVELOP.watch_versions()
+                    patch("sys.stdout", output), \
+                    self.assertRaises(KeyboardInterrupt):
+                DEVELOP.watch_versions()
             messages = output.getvalue()
             self.assertEqual(messages.count("error:"), 1)
             self.assertEqual(messages.count("is ready"), 1)

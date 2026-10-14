@@ -17,6 +17,7 @@ from pathlib import Path
 import yaml
 
 SOURCE = Path(__file__).resolve().parents[1]
+ADOPTION_CASES = json.loads((SOURCE / "tests/ruff_adoption_cases.json").read_text())
 
 
 def pinned_version():
@@ -172,6 +173,7 @@ class DeveloperToolsTest(unittest.TestCase):
     def test_editor_hook_and_ci_version_agree(self):
         configuration = tomllib.loads((SOURCE / "ruff.toml").read_text())
         self.assertNotIn("required-version", configuration)
+        self.assertEqual({case["code"] for case in ADOPTION_CASES}, set(configuration["lint"]["extend-select"]))
         pin = pinned_version()
         hooks = yaml.safe_load((SOURCE / ".pre-commit-config.yaml").read_text())
         self.assertEqual(hooks["repos"][0]["repo"], "local")
@@ -183,9 +185,37 @@ class DeveloperToolsTest(unittest.TestCase):
         )
         settings = json.loads((SOURCE / ".vscode/settings.json").read_text())
         self.assertEqual(settings["ruff.configurationPreference"], "filesystemFirst")
+        for override in ("ruff.configuration", "ruff.lint.select", "ruff.lint.extendSelect", "ruff.lint.ignore", "ruff.exclude", "ruff.lineLength"):
+            self.assertNotIn(override, settings)
         executable = settings["ruff.path"][0 if os.name == "nt" else 1]
         executable = executable.replace("${workspaceFolder}", str(self.root))
         self.assertEqual(self.command(executable, "--version").strip(), f"ruff {pin}")
+
+    def test_adopted_rules_use_the_same_effective_settings_and_hook(self):
+        probe = self.root / "adoption_probe.py"
+        try:
+            probe.write_text('print("ready")\n', encoding="utf-8")
+            editor = self.command(str(self.python), "-m", "ruff", "check", "--show-settings", str(probe))
+            ci = self.command(str(self.python), "-m", "ruff", "check", "--config", "ruff.toml", "--show-settings", str(probe))
+            self.assertEqual(editor.partition("# General Settings")[2], ci.partition("# General Settings")[2])
+            for case in ADOPTION_CASES:
+                with self.subTest(rule=case["code"]):
+                    probe.write_text(case["invalid"], encoding="utf-8")
+                    self.command("git", "add", probe.name)
+                    cli = self.command(str(self.python), "-m", "ruff", "check", probe.name, "--output-format", "json", expected=1)
+                    self.assertIn(case["code"], {item["code"] for item in json.loads(cli)})
+                    ci_failure = self.command(str(self.python), "scripts/develop.py", "ci-check", expected=1)
+                    self.assertIn(case["code"], ci_failure)
+                    original = probe.read_text()
+                    hook = self.command(str(self.python), "-m", "pre_commit", "run", "ruff-check", "--files", probe.name, expected=1)
+                    self.assertTrue(case["code"] in hook or probe.read_text() != original)
+                    probe.write_text(case["corrected"], encoding="utf-8")
+                    self.command("git", "add", probe.name)
+                    self.command(str(self.python), "-m", "pre_commit", "run", "ruff-check", "--files", probe.name)
+                    self.command(str(self.python), "scripts/develop.py", "ci-check")
+        finally:
+            self.command("git", "rm", "--cached", "--ignore-unmatch", probe.name)
+            probe.unlink(missing_ok=True)
 
     def test_language_server_matches_cli_and_supplies_save_fix(self):
         executable = (
@@ -323,6 +353,24 @@ class DeveloperToolsTest(unittest.TestCase):
                 4, "textDocument/diagnostic", {"textDocument": {"uri": uri}}
             )
             self.assertEqual([item["code"] for item in remaining["items"]], ["F821"])
+            # Exercise every newly adopted rule through the real server with
+            # the same fixtures used by CI and the configured commit hook.
+            for index, case in enumerate(ADOPTION_CASES):
+                with self.subTest(rule=case["code"]):
+                    for repaired, content in enumerate((case["invalid"], case["corrected"])):
+                        send({"method": "textDocument/didChange", "params": {
+                            "textDocument": {"uri": uri, "version": 3 + index * 2 + repaired},
+                            "contentChanges": [{"text": content}],
+                        }})
+                        response = request(100 + index * 2 + repaired, "textDocument/diagnostic", {"textDocument": {"uri": uri}})
+                        result = subprocess.run([str(executable), "check", "--stdin-filename", "editor_probe.py", "--output-format", "json", "-"], cwd=self.root, input=content, capture_output=True, text=True, check=False)
+                        self.assertIn(result.returncode, (0, 1), result.stderr)
+                        codes = {item["code"] for item in json.loads(result.stdout)}
+                        self.assertEqual({item["code"] for item in response["items"]}, codes)
+                        if repaired:
+                            self.assertEqual(codes, set())
+                        else:
+                            self.assertIn(case["code"], codes)
             # A checkout upgrade during the editor session stops the old server.
             requirements = self.root / "requirements-lint.txt"
             original = requirements.read_text()
