@@ -533,6 +533,47 @@ For an existing checkout, keep any personal workspace settings and merge the Ruf
 
 To verify the editor installation, create a temporary Python file containing `import os` and `print(missing_name)`. Ruff should show `F401` and `F821`; saving removes the unused import and leaves the undefined name visible. Fix the name, delete the temporary file and run **Ruff: Check all Python files**. This checks the same rules that CI uses, with editor fixes occurring earlier.
 
+#### Set up Ruff in PyCharm
+
+PyCharm users can keep their existing application interpreter and development environment. VS Code and Docker are optional. The setup below installs only the shared developer tools; new native Linux application checkouts still need the [manual application setup](#manual-development-environment-setup).
+
+1. **Install the shared tools.** Open the repository root in PyCharm and use its terminal with Python 3.12 or newer. If the shared application setup has already installed the tools, start with `status` instead of repeating `setup`:
+
+   ```bash
+   python3 scripts/develop.py setup
+   python3 scripts/develop.py status
+   ```
+
+   Setup creates `.venv-tools`, installs the pinned Ruff and commit hooks, and leaves the application environment intact. On Windows, use an installed Python 3.12+ launcher as described above; this provides Ruff tooling, not a native Windows application setup.
+
+2. **Choose the Ruff integration.** In current PyCharm, open **Settings > Python > Tools > External Tools** and enable Ruff. If your version has no built-in Ruff integration, follow the plugin instructions in [Ruff's PyCharm setup guide](https://docs.astral.sh/ruff/editors/setup/#pycharm). Use one Ruff integration at a time. Menu names and available features depend on the PyCharm version; see [JetBrains' Python tools documentation](https://www.jetbrains.com/help/pycharm/lsp-tools.html).
+
+3. **Select the project launcher explicitly.** Use the Ruff executable's Path option and point it to the absolute path of `.venv-tools/ruff-project` in this checkout, for example `/home/your-user/day-ahead/.venv-tools/ruff-project`. Windows uses `.venv-tools/ruff-project.exe`. Where invocation sources are configurable, disable SDK, PATH auto-detection and `uvx` fallbacks so another Ruff version cannot be selected. Keep the application's Python interpreter selected; do not replace it with `.venv-tools`.
+
+   Let Ruff discover the project configuration. Setup generates `.ruff.toml`, which extends `ruff.toml` and adds the required-version guard. If the IDE requires an explicit configuration path, select that generated `.ruff.toml`; do not edit it or duplicate rule selections in PyCharm settings.
+
+4. **Enable feedback.** Enable Ruff inspections and available quick fixes. Until repository-wide formatter adoption is complete, leave automatic Ruff formatting disabled. Apply safe quick fixes and review their changes. Fix-on-save options depend on the integration and version; verify them separately if you enable them rather than assuming they match the VS Code save actions.
+
+5. **Verify the integration.** Create a temporary `ruff_probe.py` in the repository root, outside excluded directories such as `.local`:
+
+   ```python
+   import os
+
+   print(missing_name)
+   ```
+
+   Ruff should report `F401` and `F821`. Confirm that they are Ruff diagnostics, rather than only PyCharm's own inspections. Apply the unused-import quick fix: `F401` should disappear while `F821` remains. Change the print statement to `print("Ruff works")`; the remaining finding should clear. Delete the temporary file and run:
+
+   ```bash
+   python3 scripts/develop.py check
+   ```
+
+During normal development, use PyCharm to edit, run and debug as before. The installed pre-commit hooks check changes made from either the terminal or the IDE. If a hook applies fixes, inspect the diff, stage the corrected files and commit again. CI checks the complete repository using the same shared Ruff version and configuration.
+
+After pulling a change to the Ruff requirement, rerun `python3 scripts/develop.py setup` and `python3 scripts/develop.py status`. Restart the Ruff integration or reopen the project if its server was already running. The project launcher rejects a version mismatch and stops an outdated running server; it does not install upgrades automatically. For continuous terminal monitoring, `python3 scripts/develop.py watch` reports missing or stale tools; stop it with Ctrl+C. Unlike the VS Code folder-open task, this watcher does not start automatically in PyCharm.
+
+The shared tooling and hooks are verified on Linux and Windows. PyCharm editor behavior must be confirmed with the verification step above on the installed IDE version; the repository does not currently configure PyCharm automatically or provide automated PyCharm UI acceptance tests.
+
 #### Run lint without editor integration
 
 From the repository root, install the pinned development-only linter and run:
