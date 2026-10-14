@@ -24,7 +24,7 @@ jobs:
           mkdir -p _site/developer
           cp docs/developer/index.html docs/developer/start.mjs docs/developer/style.css _site/developer/
           touch _site/.nojekyll
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
