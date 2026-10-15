@@ -34,7 +34,7 @@ def main() -> None:
     if sys.platform != "linux":
         raise SystemExit("Use the VS Code Dev Container or Linux/WSL for the application environment.")
     if sys.version_info < (3, 12):  # noqa: UP036 -- bootstrap may run before selecting the project interpreter
-        raise SystemExit("Python 3.12 or newer is required; the Dev Container provides Python 3.13.")
+        raise SystemExit("Python 3.12 or newer is required; the Dev Container provides Python 3.14.")
     if not PYTHON.exists():
         if (ROOT / ".venv").exists():
             raise SystemExit("Existing .venv is not a Linux environment. Use a separate checkout or recreate it explicitly.")
