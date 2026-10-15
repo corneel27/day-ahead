@@ -13,6 +13,7 @@ This guide will help developers set up their development environment, test chang
 - [Running the Application Locally](#running-the-application-locally)
 - [Testing](#testing)
 - [Making Contributions](#making-contributions)
+- [CodeRabbit PR reviews](#coderabbit-pr-reviews)
 - [Code Style and Best Practices](#code-style-and-best-practices)
 - [Getting Help](#getting-help)
 
@@ -495,6 +496,22 @@ This project uses the following branching model:
    git rebase main
    git push --force-with-lease
    ```
+
+### CodeRabbit PR reviews
+
+Once the maintainer activates the CodeRabbit GitHub App, ready-for-review PRs
+targeting the default branch receive advisory AI feedback. New pushes are reviewed
+incrementally; drafts are skipped. The policy in `.coderabbit.yaml` asks for
+findings introduced or worsened by the PR, without unrelated legacy cleanup.
+
+Check each finding against the change and its base branch before acting on it.
+CodeRabbit supplements the existing CI and independent human review. Maintainers
+apply fixes through reviewed, GitHub-verified commits; automatic code repairs and
+the CodeRabbit approval workflow are disabled for this introduction.
+
+See [CodeRabbit setup and review policy](docs/code-review.md) for the intended
+benefits, administrator installation steps, configuration, live acceptance checks
+and how to pause reviews. The hosted app requires no additional Actions workflow.
 
 ### Pull Request Checklist
 
