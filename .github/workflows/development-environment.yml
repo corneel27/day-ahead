@@ -28,6 +28,7 @@ jobs:
           docker exec -w "$workspace" "$container_id" bash -e -c '
             python scripts/verify_environment.py
             .venv/bin/python scripts/verify_python_runtime.py --expected-python 3.14
+            .venv-tools/bin/python -m unittest discover -s tests -p test_guard_reads.py -v
             sh script/setup
             python scripts/verify_environment.py
             .venv/bin/python -m pytest -c pytest-dev.ini -q

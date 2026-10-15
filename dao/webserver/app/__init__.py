@@ -41,8 +41,8 @@ def isolate_preview_tasks():
         or request.form.get("current_menu") == "run"
     ):
         return (
-            "Live tasks are unavailable in the isolated web preview. "
-            "Use the synthetic scenario debugger to develop the calculation core.",
+            ("Live tasks are unavailable in the isolated web preview. "
+            "Use the synthetic scenario debugger to develop the calculation core."),
             403,
             {"Content-Type": "text/plain; charset=utf-8"},
         )

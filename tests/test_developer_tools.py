@@ -181,7 +181,10 @@ class DeveloperToolsTest(unittest.TestCase):
     def test_editor_hook_and_ci_version_agree(self):
         configuration = tomllib.loads((SOURCE / "ruff.toml").read_text())
         self.assertNotIn("required-version", configuration)
-        self.assertEqual({case["code"] for case in ADOPTION_CASES}, set(tomllib.loads(self.fixture_config.decode())["lint"]["extend-select"]))
+        expected_rules = {case["code"] for case in ADOPTION_CASES}
+        self.assertEqual(expected_rules, set(configuration["lint"]["extend-select"]))
+        fixture = tomllib.loads(self.fixture_config.decode())
+        self.assertEqual(expected_rules, set(fixture["lint"]["extend-select"]))
         pin = pinned_version()
         hooks = yaml.safe_load((SOURCE / ".pre-commit-config.yaml").read_text())
         self.assertEqual(hooks["repos"][0]["repo"], "local")

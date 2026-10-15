@@ -174,10 +174,9 @@ def generate_solar_items():
             key = solar_option.name or "default"
             result[key] = solar_option
     if len(result) == 0:
-        if "solar" in web_menu.keys():
-            del web_menu["solar"]
+        web_menu.pop("solar", None)
     else:
-        if "solar" not in web_menu.keys():
+        if "solar" not in web_menu:
             web_menu.update(solar_web_menu)
             key_order = ("home", "run", "reports", "savings", "solar", "settings")
             web_menu = collections.OrderedDict((k, web_menu[k]) for k in key_order)
@@ -199,7 +198,7 @@ def check_web_menu_items():
     global solar_items, web_menu_items
     create_config()
     solar_items = generate_solar_items()
-    if len(solar_items) > 0 and "solar" in web_menu.keys():
+    if len(solar_items) > 0 and "solar" in web_menu:
         web_menu["solar"]["submenu"]["items"] = solar_items
     web_menu_items = get_web_menu_items()
 
@@ -284,7 +283,7 @@ def menu():
             return run_process()
         elif current_menu == "reports" or current_menu == "savings":
             return reports(current_menu)
-        elif current_menu == "solar" and "solar" in web_menu_items.keys():
+        elif current_menu == "solar" and "solar" in web_menu_items:
             return solar()
         elif current_menu == "settings":
             return settings()
@@ -315,7 +314,6 @@ def home():
     active_subject = "grid"
     cur_view = "grafiek"
     # global active_view
-    global previous_time
     active_time = None
     action = None
     confirm_delete = False
@@ -491,10 +489,12 @@ def load_state():
 
         # 🔥 check op "stale" state
         last = state.get("last_update", 0)
-        if state.get("status") == "running":
-            if time.time() - last > STALE_AFTER:
-                # taak is waarschijnlijk dood
-                return {"status": "idle", "task": None, "logfile": None}
+        if (
+            (state.get("status") == "running")
+            and (time.time() - last > STALE_AFTER)
+        ):
+            # taak is waarschijnlijk dood
+            return {"status": "idle", "task": None, "logfile": None}
         return state
     except Exception:
         return {"status": "idle", "task": None}
@@ -692,7 +692,7 @@ def reports(active_menu: str):
                 report_df, active_interval, active_view
             )
         elif active_subject == "balans":
-            report_df, lastmoment = report.get_energy_balance_data(
+            report_df, _lastmoment = report.get_energy_balance_data(
                 active_period, _tot=tot
             )
             report_df = report.calc_balance_columns(

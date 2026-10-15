@@ -1831,10 +1831,10 @@ class DaCalc(DaBase):
             if not ev_plugged_in[e]:
                 reden = reden + " auto is niet ingeplugd,"
             if not (tijd[0] < ready):
-                reden = reden + f" opgegeven tijdstip ({str(ready)}) is verouderd,"
+                reden = reden + f" opgegeven tijdstip ({ready!s}) is verouderd,"
             if tijd[U - 1] < ready:
                 reden = reden + (
-                    f" opgegeven tijdstip ({str(ready)}) ligt voorbij de "
+                    f" opgegeven tijdstip ({ready!s}) ligt voorbij de "
                     f"planningshorizon ({tijd[U - 1]}),"
                 )
             if (
@@ -3978,35 +3978,37 @@ class DaCalc(DaBase):
             # logging.info(f"{some_label}   {cols}")            
             """
             for e in range(EV):
-                if ready_u[e] < U:
-                    if self.log_level <= logging.INFO:
-                        logging.info(
-                            f"Inzet-factor laden {self.ev_options[e].name} per stop"
-                        )
-                        amps = "         ".join(
-                            f"{ev_charge_stages[e][cs]['ampere']:4.1f}A"
+                if (
+                    (ready_u[e] < U)
+                    and (self.log_level <= logging.INFO)
+                ):
+                    logging.info(
+                        f"Inzet-factor laden {self.ev_options[e].name} per stop"
+                    )
+                    amps = "         ".join(
+                        f"{ev_charge_stages[e][cs]['ampere']:4.1f}A"
+                        for cs in range(ECS[e])
+                    )
+                    line1 = f"  uur        {amps}   cons   power     on   off  part bound    soc   delta    cost"
+                    logging.info(line1)
+
+                    for u in range(ready_u[e] + 1):
+                        line2 = f"{uur[u]}  "
+                        stages = "   ".join(
+                            f"{stage_factor[e][cs][u].x:.4f}({stage_on[e][cs][u].x})"
                             for cs in range(ECS[e])
                         )
-                        line1 = f"  uur        {amps}   cons   power     on   off  part bound    soc   delta    cost"
-                        logging.info(line1)
-
-                        for u in range(ready_u[e] + 1):
-                            line2 = f"{uur[u]}  "
-                            stages = "   ".join(
-                                f"{stage_factor[e][cs][u].x:.4f}({stage_on[e][cs][u].x})"
-                                for cs in range(ECS[e])
-                            )
-                            line2 += stages + (
-                                f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
-                                f"   {ev_is_on[e][u].x}"
-                                f"   {ev_is_off[e][u].x}"
-                                f"   {ev_is_partial[e][u].x}"
-                                f"   {ev_boundary_stop[e][u].x}"
-                                f"   {ev_soc_kwh[e][u].x:.3f}"
-                                f"   {ev_delta_soc[e][u].x:.3f}"
-                                f"   {low_soc_penalty_int[e][u].x:.3f}"
-                            )
-                            logging.info(line2)
+                        line2 += stages + (
+                            f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
+                            f"   {ev_is_on[e][u].x}"
+                            f"   {ev_is_off[e][u].x}"
+                            f"   {ev_is_partial[e][u].x}"
+                            f"   {ev_boundary_stop[e][u].x}"
+                            f"   {ev_soc_kwh[e][u].x:.3f}"
+                            f"   {ev_delta_soc[e][u].x:.3f}"
+                            f"   {low_soc_penalty_int[e][u].x:.3f}"
+                        )
+                        logging.info(line2)
 
                 start_ev_laden = stop_ev_laden = None
                 for u in range(U):
@@ -4738,7 +4740,7 @@ class DaCalc(DaBase):
         style = self.config.graphics.style
         import matplotlib.lines as mlines
         import matplotlib.pyplot as plt
-        import matplotlib.ticker as ticker
+        from matplotlib import ticker
 
         plt.set_loglevel(level="warning")
         pil_logger = logging.getLogger("PIL")
