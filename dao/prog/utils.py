@@ -112,7 +112,6 @@ def get_tibber_data():
             current_ts += 3600
         return all_hours
 
-    print("TEST")
     loader = ConfigurationLoader(Path("../data/options.json"))
     config = loader.load_and_validate()
     tibber_options = config.tibber
@@ -139,7 +138,6 @@ def get_tibber_data():
             error_handling(ex)
             return False
 
-    print("TEST")
     # no starttime
     if (len(sys.argv) <= 2) or (start_ts is None):
         # search first missing
@@ -206,8 +204,6 @@ def get_tibber_data():
         '}" '
         "}"
     )
-
-    print("TEST")
 
     now = datetime.datetime.now()
     today_ts = datetime.datetime(

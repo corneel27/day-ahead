@@ -93,3 +93,41 @@ def test_data_errors_hide_exception_details(client, monkeypatch):
 def test_bad_data_dates_are_client_errors(client, query):
     response = client.get("/api/data/?aggregate=hour&" + query)
     assert response.status_code == 400
+
+
+@pytest.mark.parametrize("method,path,data", [
+    ("POST", "/v2/task-exec", {"task": "clean_data"}),
+    ("GET", "/v2/task-cancel", {}),
+    ("GET", "/v2/task-state", {}),
+    ("GET", "/v2/tasks", {}),
+    ("GET", "/api/run/clean_data", {}),
+    ("POST", "/api/run/clean_data", {}),
+    ("POST", "/v1/run", {"current_bewerking": "clean_data"}),
+    ("GET", "/v1/run", {"current_bewerking": "clean_data"}),
+    ("POST", "/v1/", {"current_menu": "run", "current_bewerking": "clean_data"}),
+    ("POST", "/v1/", {"current_menu": "run"}),
+    ("POST", "/v1/", {"menu_run": "Run"}),
+    ("GET", "/v1/status", {}),
+    ("GET", "/v1/log", {}),
+])
+def test_preview_blocks_live_tasks_and_shared_state(client, monkeypatch, method, path, data):
+    v1_routes = importlib.import_module("dao.webserver.app.v1.routes")
+    monkeypatch.setitem(app.config, "DAO_WEB_PREVIEW", True)
+    live_calls = [
+        (api_routes, "subprocess_run"),
+        (v2_routes, "get_task_state"),
+        (v2_routes, "Popen"),
+        (v1_routes, "load_state"),
+        (v1_routes, "Popen"),
+    ]
+    mocks = []
+    for module, name in live_calls:
+        blocked = Mock(side_effect=AssertionError("Preview accessed live task execution/state"))
+        monkeypatch.setattr(module, name, blocked)
+        mocks.append(blocked)
+    response = client.open(path, method=method, data=data)
+    assert response.status_code == 403
+    assert response.mimetype == "text/plain"
+    assert b"synthetic scenario" in response.data
+    for blocked in mocks:
+        blocked.assert_not_called()
