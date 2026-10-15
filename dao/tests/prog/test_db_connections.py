@@ -15,8 +15,8 @@ from dao.lib.db_manager import DBmanagerObj
 @pytest.fixture(params=["sqlite", "mariadb", "postgresql"])
 def database(request, tmp_path):
     backend = request.param
-    options = dict(engine="sqlite", database="review.db", db_path=str(tmp_path),
-                   server=None, username=None, password=None, port=0)
+    options = {"engine": "sqlite", "database": "review.db", "db_path": str(tmp_path),
+               "server": None, "username": None, "password": None, "port": 0}
     if backend != "sqlite":
         value = os.getenv(f"DAO_TEST_{backend.upper()}_URL")
         if not value or os.getenv("DAO_TEST_ALLOW_SCHEMA_RESET") != "1":

@@ -76,7 +76,6 @@ class CheckDB:
         with self.engine.connect() as connection:
             connection.execute(query)
             connection.commit()
-        return
 
     def get_all_var_data(
         self,
@@ -122,7 +121,6 @@ class CheckDB:
         with self.engine.connect() as connection:
             connection.execute(delete_stmt)
             connection.commit()
-        return
 
     def move_meteodata_to_prognoses(self):
         variabelen = [

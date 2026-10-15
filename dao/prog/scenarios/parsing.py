@@ -112,34 +112,44 @@ def verify_setup_echo(resolved, echo: SetupEcho) -> list[str]:
     because the entity_id it should have targeted is None or unconfigured
     for this EV; see case 5.1."""
     mismatches = []
-    if resolved.plugged_in is not None and echo.plugged_in is not None:
-        if resolved.plugged_in != echo.plugged_in:
-            mismatches.append(
-                f"plugged_in: requested {resolved.plugged_in}, log shows {echo.plugged_in}"
-            )
-    if resolved.position is not None and echo.position is not None:
-        if resolved.position.lower() != echo.position.lower():
-            mismatches.append(
-                f"position: requested {resolved.position!r}, log shows {echo.position!r}"
-            )
-    if resolved.actual_soc is not None and echo.actual_soc is not None:
-        if abs(resolved.actual_soc - echo.actual_soc) > 0.05:
-            mismatches.append(
-                f"actual_soc: requested {resolved.actual_soc}, log shows {echo.actual_soc}"
-            )
-    if resolved.instant_charge is not None and echo.instant_charge is not None:
-        if resolved.instant_charge != echo.instant_charge:
-            mismatches.append(
-                f"instant_charge: requested {resolved.instant_charge}, log shows "
-                f"{echo.instant_charge} (entity_instant_start is likely None/"
-                f"unconfigured for this EV — override had nothing to write to)"
-            )
-    if resolved.wished_level is not None and echo.wished_level is not None:
-        if abs(resolved.wished_level - echo.wished_level) > 0.05:
-            mismatches.append(
-                f"wished_level: requested {resolved.wished_level}, log shows "
-                f"{echo.wished_level}"
-            )
+    if (
+        (resolved.plugged_in is not None and echo.plugged_in is not None)
+        and (resolved.plugged_in != echo.plugged_in)
+    ):
+        mismatches.append(
+            f"plugged_in: requested {resolved.plugged_in}, log shows {echo.plugged_in}"
+        )
+    if (
+        (resolved.position is not None and echo.position is not None)
+        and (resolved.position.lower() != echo.position.lower())
+    ):
+        mismatches.append(
+            f"position: requested {resolved.position!r}, log shows {echo.position!r}"
+        )
+    if (
+        (resolved.actual_soc is not None and echo.actual_soc is not None)
+        and (abs(resolved.actual_soc - echo.actual_soc) > 0.05)
+    ):
+        mismatches.append(
+            f"actual_soc: requested {resolved.actual_soc}, log shows {echo.actual_soc}"
+        )
+    if (
+        (resolved.instant_charge is not None and echo.instant_charge is not None)
+        and (resolved.instant_charge != echo.instant_charge)
+    ):
+        mismatches.append(
+            f"instant_charge: requested {resolved.instant_charge}, log shows "
+            f"{echo.instant_charge} (entity_instant_start is likely None/"
+            f"unconfigured for this EV — override had nothing to write to)"
+        )
+    if (
+        (resolved.wished_level is not None and echo.wished_level is not None)
+        and (abs(resolved.wished_level - echo.wished_level) > 0.05)
+    ):
+        mismatches.append(
+            f"wished_level: requested {resolved.wished_level}, log shows "
+            f"{echo.wished_level}"
+        )
     if resolved.ready_dt is not None and echo.ready_dt is not None:
         delta = abs((resolved.ready_dt - echo.ready_dt).total_seconds())
         if delta > 5:

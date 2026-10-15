@@ -128,6 +128,8 @@ jobs:
             dao/tests/prog/test_ev_schedule.py \
             dao/tests/prog/test_ha_data_query.py \
             dao/tests/prog/test_solar_defaults.py \
+            dao/tests/prog/test_scheduler_dispatch.py \
+            dao/tests/prog/test_report_forecasts.py \
             dao/tests/webserver/test_route_security.py
 
       - name: Publish report to the job summary

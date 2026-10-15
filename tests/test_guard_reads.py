@@ -34,6 +34,7 @@ class GuardReadTests(unittest.TestCase):
             output = io.StringIO()
             original_read = Path.read_bytes
             original_stat = Path.stat
+            original_exists = Path.exists
             stat_calls = 0
             read_calls = 0
 
@@ -45,14 +46,19 @@ class GuardReadTests(unittest.TestCase):
                         raise FileNotFoundError("pin replaced during checkout")
                 return original_read(path)
 
+            def exists(path):
+                if path in (ruff, launcher):
+                    return True
+                return original_exists(path)
+
             def stat(path, *args, **kwargs):
                 nonlocal stat_calls
                 target = ruff if fault == "ruff" else launcher
                 if fault in ("ruff", "launcher") and path == target:
                     stat_calls += 1
-                    # exists() succeeds, then the explicit stat() races with
-                    # pip replacing the executable during an upgrade.
-                    if stat_calls == 2:
+                    # Fail the explicit timestamp read after exists() succeeds,
+                    # independently of how pathlib implements exists().
+                    if stat_calls == 1:
                         raise FileNotFoundError("executable replaced during upgrade")
                 return original_stat(path, *args, **kwargs)
 
@@ -64,12 +70,13 @@ class GuardReadTests(unittest.TestCase):
                     patch.object(DEVELOP, "TOOLS", tools), \
                     patch.object(DEVELOP, "RUFF", ruff), \
                     patch.object(Path, "read_bytes", read), \
+                    patch.object(Path, "exists", exists), \
                     patch.object(Path, "stat", stat), \
                     patch.object(DEVELOP, "check_version", side_effect=version_results) as check, \
                     patch.object(DEVELOP.time, "sleep", side_effect=[None, None, KeyboardInterrupt]), \
-                    patch("sys.stdout", output):
-                with self.assertRaises(KeyboardInterrupt):
-                    DEVELOP.watch_versions()
+                    patch("sys.stdout", output), \
+                    self.assertRaises(KeyboardInterrupt):
+                DEVELOP.watch_versions()
             messages = output.getvalue()
             self.assertEqual(messages.count("error:"), 1)
             self.assertEqual(messages.count("is ready"), 1)

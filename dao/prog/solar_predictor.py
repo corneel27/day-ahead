@@ -728,7 +728,6 @@ class SolarPredictor(DaBase):
         self.model = joblib.load(model_path)
         self.is_trained = True
 
-        return None
 
     def get_feature_importance(self) -> dict[str, float]:
         """
@@ -782,7 +781,6 @@ class SolarPredictor(DaBase):
             save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds / 10]
         self.db_da.savedata(save_df, tablename="values")
         os.remove(filename)
-        return
 
     def get_and_save_knmi_data(
         self, start: dt.datetime, end: dt.datetime, variables: list[str] | None = None
@@ -830,7 +828,7 @@ class SolarPredictor(DaBase):
             if "winds" in knmi_df.columns:
                 save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds / 10]
         self.db_da.savedata(save_df, tablename="values")
-        return None
+        return
 
     def import_knmi_df(self, start: dt.datetime, end: dt.datetime):
         """
@@ -879,12 +877,12 @@ class SolarPredictor(DaBase):
             logging.info(f"Er zijn knmi-data aanwezig vanaf {first_dt} tot {latest_dt}")
         if first_dt <= start and latest_dt >= end:
             logging.info("Er worden geen knmi-data opgehaald")
-            return None
+            return
         if first_dt > start:
             self.get_and_save_knmi_data(start, first_dt)
         if latest_dt < end:
             self.get_and_save_knmi_data(latest_dt, end)
-        return None
+        return
 
     def get_weatherdata(
         self,
