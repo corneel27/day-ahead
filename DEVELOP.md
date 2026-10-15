@@ -331,6 +331,18 @@ PYTHONPATH=.:dao/prog TZ=UTC MPLBACKEND=Agg .venv/bin/python -m dao.prog.da_debu
 
 The pytest selection contains isolated unit/regression tests. Solver cases skipped there are exercised by the separate scenario command. Optional MariaDB cases require a dedicated disposable database and are currently skipped without it. See [docs/testing.md](docs/testing.md) for detailed test scope and results.
 
+### Browser regressions
+
+After `sh script/setup`, run the real built frontend against the isolated task backend:
+
+```bash
+cd dao/webserver
+npx playwright install --with-deps chromium
+npm run test:browser
+```
+
+These Chromium tests exercise the real task routes, templates and Vite bundle: boosted submission, status polling, cancellation, URL/history preservation and HTTP/network error banners. The backend uses temporary configuration and in-memory synthetic task state; task threads and subprocesses are replaced before serving, and unrelated routes are blocked. No live tasks or devices are used. The development-container CI runs this suite and retains traces/screenshots under `.local/frontend-test-results` when a browser test fails.
+
 ### Manual clean-checkout acceptance
 
 Perform this check when changing setup, editor settings or debugger configuration. CI cannot demonstrate actual VS Code interaction or visible breakpoint stops.
