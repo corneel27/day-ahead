@@ -27,6 +27,7 @@ jobs:
           workspace=$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).remoteWorkspaceFolder" "$RUNNER_TEMP/devcontainer-result.json")
           docker exec -w "$workspace" "$container_id" bash -e -c '
             python scripts/verify_environment.py
+            .venv/bin/python scripts/verify_python_runtime.py --expected-python 3.14
             sh script/setup
             python scripts/verify_environment.py
             .venv/bin/python -m pytest -c pytest-dev.ini -q
