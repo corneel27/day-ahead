@@ -234,7 +234,8 @@ class _CallSequence:
 
     Recorded calls are served in call order. The n-th replayed call gets the
     n-th recorded frame, after a check that ``interval`` and ``extension``
-    agree. A different call count or a mismatch raises ``SnapshotMiss``.
+    agree. A different call count or a mismatch raises ``SnapshotMiss``;
+    ``check_consumed`` catches recordings left unused.
 
     A schema-1 snapshot holds one frame per channel. That frame is served
     for every call, which is what replay always did before schema 2."""
@@ -280,6 +281,16 @@ class _CallSequence:
                 )
         self._next += 1
         return frame.copy()
+
+    # Faalt hard als er opgenomen aanroepen over zijn; een schema-1-frame telt niet.
+    def check_consumed(self) -> None:
+        left = len(self._records) - self._next
+        if left > 0:
+            raise SnapshotMiss(
+                f"ReplayIO ({self._source}): {self._channel} served "
+                f"{self._next} of {len(self._records)} recorded call(s). "
+                f"calc_optimum() now skips a call the recorded run made."
+            )
 
 
 # Leest het enkele frame uit een schema-1-snapshot, of None als dat er niet is.
@@ -1085,12 +1096,18 @@ class ReplayIO:
         self._install_patches()
         return self
 
-    # Stopt de bevroren klok en herstelt de patches bij het verlaten van de with-blok.
+    # Stopt de bevroren klok, herstelt de patches en controleert na een run die
+    # de solver bereikte dat alle opgenomen aanroepen zijn gebruikt.
     def __exit__(self, exc_type, exc, tb) -> bool:
         if self._freeze is not None:
             self._freeze.stop()
             self._freeze = None
         self._patches.restore()
+        # Alle price/prog-reads vallen voor model.optimize(). Een run die eerder
+        # stopte, heeft zijn eigen oorzaak; die mag deze check niet verbergen.
+        if exc_type is None and self._model is not None:
+            self._price_calls.check_consumed()
+            self._prog_calls.check_consumed()
         return False
 
     # -- patch installation ----------------------------------------------
@@ -3490,7 +3507,8 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
             raise AssertionError("_call_key is not stable/discriminating")
 
     # Controleert dat _CallSequence op volgorde serveert, hard faalt bij een
-    # afwijkende of extra aanroep, en een schema-1-frame bij elke aanroep teruggeeft.
+    # afwijkende, extra of ongebruikte aanroep, en een schema-1-frame bij elke
+    # aanroep teruggeeft.
     def _call_sequence_order():
         fixed = pd.DataFrame({"value": [1.0, 2.0]})
         pred = pd.DataFrame({"value": [3.0]})
@@ -3514,10 +3532,19 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
             raise AssertionError("an interval mismatch did not raise SnapshotMiss")
         except SnapshotMiss:
             pass
+        seq.check_consumed()
+        partial = _CallSequence("price_data", "selftest", records)
+        partial.serve(interval="15min", extension=0)
+        try:
+            partial.check_consumed()
+            raise AssertionError("an unused recording did not raise SnapshotMiss")
+        except SnapshotMiss:
+            pass
         legacy = _CallSequence("prog_data", "selftest", None, fixed)
         for _ in range(3):
             if not legacy.serve(interval="1hour").equals(fixed):
                 raise AssertionError("schema-1 frame was not served for every call")
+        legacy.check_consumed()
 
     # Controleert dat _config_hash ordeonafhankelijk is en verschilt bij een andere waarde.
     def _config_hash_determinism():
