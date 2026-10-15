@@ -333,6 +333,14 @@ PYTHONPATH=.:dao/prog TZ=UTC MPLBACKEND=Agg .venv/bin/python -m dao.prog.da_debu
 
 The pytest selection contains isolated unit/regression tests. Solver cases skipped there are exercised by the separate scenario command. Optional MariaDB cases require a dedicated disposable database and are currently skipped without it. See [docs/testing.md](docs/testing.md) for detailed test scope and results.
 
+### Database startup regressions
+
+`dao/tests/prog/test_db_connections.py` checks new database creation, recognition of existing databases, preservation of stored rows and missing-database handling. SQLite runs by default. The **Scenario suite (solve)** CI job also supplies disposable MariaDB and PostgreSQL services and enables the existing MariaDB report-query tests.
+
+For local server tests, use disposable servers and set `DAO_TEST_ALLOW_SCHEMA_RESET=1`, `DAO_TEST_MARIADB_URL` and `DAO_TEST_POSTGRESQL_URL`. Each URL must point to the dedicated `dao_query_test` database with credentials allowed to create and drop databases. The startup tests create uniquely named `dao_dependency_*` databases and remove them afterward. The report-query tests reset tables in `dao_query_test`. Never supply a production database URL. Without explicit enablement, server cases are skipped.
+
+Run `python -m pytest -c pytest-dev.ini -q dao/tests/prog/test_db_connections.py dao/tests/prog/test_ha_data_query.py` after setup.
+
 ### Browser regressions
 
 After `sh script/setup`, run the real built frontend against the isolated task backend:
