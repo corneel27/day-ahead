@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+  tools:
+    # The existing CI job uses the repository's pinned Ruff version and rules.
+    ruff:
+      enabled: false
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        Review this pull request against its base branch. Report only actionable
+        issues introduced or made worse by the changes in this PR. Touching a
+        file is not an invitation to audit or clean up the rest of that file.
+
+        Read unchanged code, callers, configuration and dependencies as context
+        when needed to understand the change. Report a problem in unchanged code
+        only when this PR newly activates, exposes or worsens it, and explain
+        the changed behavior that causes the problem. Attach findings to the
+        responsible changed lines where possible; never move an unrelated old
+        finding onto a changed line just to make it appear in scope.
+
+        Do not report pre-existing bugs, security issues, lint warnings, missing
+        docstrings, typing gaps, formatting, naming or refactoring opportunities
+        that this PR does not worsen. Apply the same rule to external-tool
+        findings and review summaries: do not list the repository's backlog.
+        Avoid repeating findings already clearly reported by the existing CI.
+
+        Keep feedback focused on concrete correctness, security, compatibility
+        and meaningful test gaps caused by this PR. For formatting-only or
+        mechanically moved code, do not raise legacy issues merely because
+        those lines appear in the diff; still check for actual behavior changes.
+
+        For dependency/version bumps, assess whether changed dependency behavior
+        leaves a real regression-test gap. Request a targeted test only when a
+        concrete compatibility or behavior risk lacks existing coverage. Do not
+        request unrelated tests or broad test-suite cleanup.
