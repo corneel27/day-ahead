@@ -22,6 +22,17 @@ updates:
     directory: "/.devcontainer"
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: node
+        # Node 22 and 24 are the supported LTS lines as of October 2026.
+        # Review this range when LTS status or end-of-life dates change.
+        # Keep major versions explicit so upgrades remain reviewable PRs.
+        versions: ["< 22", "~> 23.0", ">= 25"]
+    cooldown:
+      default-days: 3
+      # Floating major tags are republished for patch updates. Do not let
+      # their publication age hide the supported Node LTS upgrade.
+      exclude: [node]
   - package-ecosystem: npm
     directory: "/dao/webserver"
     schedule:
