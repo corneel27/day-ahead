@@ -98,6 +98,7 @@ jobs:
             dao/tests/config/test_boiler_union.py \
             dao/tests/config/test_migrations.py \
             dao/tests/config/test_roundtrip.py \
+            dao/tests/config/test_loader_contracts.py \
             dao/tests/prog/test_db_consumption.py \
             dao/tests/prog/test_ev_schedule.py \
             dao/tests/prog/test_ha_data_query.py \
@@ -121,7 +122,7 @@ jobs:
 
       - name: Upload scenario report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scenario-reports
           path: dao/data/scenario_reports/

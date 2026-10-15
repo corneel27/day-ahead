@@ -46,6 +46,14 @@ class DeveloperToolsTest(unittest.TestCase):
             target = cls.root / name
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(SOURCE / name, target)
+        # Exercise future adoption rules only in the disposable test checkout.
+        # The production rule selection is not changed by a Ruff version bump.
+        fixture_config = cls.root / "ruff.toml"
+        configuration = fixture_config.read_text()
+        if "extend-select" not in configuration:
+            codes = json.dumps([case["code"] for case in ADOPTION_CASES])
+            fixture_config.write_text(configuration.replace("[lint]\n", f"[lint]\nextend-select = {codes}\n"))
+        cls.fixture_config = fixture_config.read_bytes()
         cls.python = (
             cls.root
             / ".venv-tools"
@@ -173,7 +181,10 @@ class DeveloperToolsTest(unittest.TestCase):
     def test_editor_hook_and_ci_version_agree(self):
         configuration = tomllib.loads((SOURCE / "ruff.toml").read_text())
         self.assertNotIn("required-version", configuration)
-        self.assertEqual({case["code"] for case in ADOPTION_CASES}, set(configuration["lint"]["extend-select"]))
+        expected_rules = {case["code"] for case in ADOPTION_CASES}
+        self.assertEqual(expected_rules, set(configuration["lint"]["extend-select"]))
+        fixture = tomllib.loads(self.fixture_config.decode())
+        self.assertEqual(expected_rules, set(fixture["lint"]["extend-select"]))
         pin = pinned_version()
         hooks = yaml.safe_load((SOURCE / ".pre-commit-config.yaml").read_text())
         self.assertEqual(hooks["repos"][0]["repo"], "local")
@@ -457,7 +468,7 @@ class DeveloperToolsTest(unittest.TestCase):
             self.command(str(self.python), "scripts/develop.py", "ci-check")
             self.assertEqual(
                 (self.root / "ruff.toml").read_bytes(),
-                (SOURCE / "ruff.toml").read_bytes(),
+                self.fixture_config,
             )
             self.assertEqual(
                 (self.root / ".pre-commit-config.yaml").read_bytes(),

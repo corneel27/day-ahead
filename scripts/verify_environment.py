@@ -2,10 +2,64 @@
 
 import json
 import os
+import re
 import subprocess
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urljoin, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class FrontendLinks(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.urls = set()
+
+    def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
+        url = None
+        if tag == "script":
+            url = attributes.get("src")
+        elif tag == "link" and attributes.get("rel") in ("stylesheet", "modulepreload"):
+            url = attributes.get("href")
+        if url and url.startswith("/static/build/"):
+            self.urls.add(url)
+
+
+def verify_frontend_assets(client):
+    """Check the built frontend through Flask, including CSS-referenced icon fonts."""
+    urls = set()
+    for path in ("/", "/v2/chart", "/v2/config"):
+        response = client.get(path, follow_redirects=True)
+        assert response.status_code == 200, (path, response.status_code)
+        links = FrontendLinks()
+        links.feed(response.get_data(as_text=True))
+        assert links.urls, f"No built frontend assets in {path}"
+        urls.update(links.urls)
+    stylesheets = 0
+    scripts = 0
+    icon_fonts = set()
+    for url in sorted(urls):
+        response = client.get(url)
+        assert response.status_code == 200 and response.data, (url, response.status_code)
+        suffix = Path(urlsplit(url).path).suffix
+        if suffix == ".js":
+            scripts += 1
+            assert response.mimetype in ("text/javascript", "application/javascript"), url
+        elif suffix == ".css":
+            stylesheets += 1
+            assert response.mimetype == "text/css", url
+            for reference in re.findall(r"url\(\s*['\"]?([^'\"\s)]+)", response.get_data(as_text=True)):
+                if "bootstrap-icons" in reference and Path(urlsplit(reference).path).suffix in (".woff", ".woff2"):
+                    font_url = urljoin(url, reference)
+                    assert not urlsplit(font_url).netloc, font_url
+                    font = client.get(font_url)
+                    assert font.status_code == 200, (font_url, font.status_code)
+                    assert font.data[:4] in (b"wOFF", b"wOF2"), font_url
+                    icon_fonts.add(font_url)
+    assert scripts and stylesheets and icon_fonts, "Missing built JavaScript, CSS or Bootstrap icon fonts"
+    print(f"Built frontend: {scripts} scripts, {stylesheets} stylesheets and {len(icon_fonts)} icon fonts served.")
 
 
 def main() -> None:
@@ -21,11 +75,9 @@ def main() -> None:
     # No mocked application startup: missing dependencies or config fail here.
     subprocess.run([str(python), "-c", """
 from app import app
+from scripts.verify_environment import verify_frontend_assets
 client = app.test_client()
-for path in ('/', '/v2/chart', '/v2/config'):
-    response = client.get(path, follow_redirects=True)
-    assert response.status_code == 200, (path, response.status_code)
-    assert b'/static/build/' in response.data, path
+verify_frontend_assets(client)
 # Preview tasks must never fall back to the ordinary dao/data installation.
 assert client.post('/v2/task-exec', data={'task': 'clean_data'}).status_code == 403
 assert client.get('/api/run/clean_data').status_code == 403
