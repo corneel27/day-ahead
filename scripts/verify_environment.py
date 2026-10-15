@@ -63,6 +63,8 @@ def verify_frontend_assets(client):
 
 
 def main() -> None:
+    subprocess.run(["node", str(ROOT / "scripts/verify_node_runtime.mjs")], check=True)
+    subprocess.run(["node", "--test", str(ROOT / "scripts/verify_node_runtime.test.mjs")], check=True)
     python = ROOT / ".venv/bin/python"
     environment = dict(os.environ, PYTHONPATH=os.pathsep.join((str(ROOT), str(ROOT / "dao/prog"))),
                        DAO_WEB_DATA_DIR=str(ROOT / ".local/web-data"), TZ="UTC", MPLBACKEND="Agg")
