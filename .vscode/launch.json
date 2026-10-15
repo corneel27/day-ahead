@@ -1,0 +1,75 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Day Ahead: web preview",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "flask",
+      "args": [
+        "--app",
+        "app",
+        "run",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "5000",
+        "--no-reload"
+      ],
+      "cwd": "${workspaceFolder}/dao/webserver",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+        "DAO_WEB_DATA_DIR": "${workspaceFolder}/.local/web-data",
+        "MPLBACKEND": "Agg",
+        "TZ": "UTC"
+      },
+      "preLaunchTask": "Development: Build frontend",
+      "jinja": true,
+      "justMyCode": true,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "Running on (http://127\\.0\\.0\\.1:[0-9]+)",
+        "uriFormat": "%s"
+      }
+    },
+    {
+      "name": "Day Ahead: debug synthetic scenario",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "dao.prog.da_debug",
+      "args": [
+        "scenario-run",
+        "${input:scenarioId}",
+        "--threads",
+        "1",
+        "--log",
+        "--report"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}:${workspaceFolder}/dao/prog",
+        "MPLBACKEND": "Agg",
+        "TZ": "UTC"
+      },
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Day Ahead: debug test",
+      "type": "debugpy",
+      "request": "launch",
+      "purpose": [
+        "debug-test"
+      ],
+      "justMyCode": true
+    }
+  ],
+  "inputs": [
+    {
+      "id": "scenarioId",
+      "type": "promptString",
+      "description": "One synthetic scenario ID (list with scenario-list)",
+      "default": "battery-flat-no-incentive"
+    }
+  ]
+}

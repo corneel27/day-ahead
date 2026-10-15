@@ -337,7 +337,7 @@ class DaBase(hass.Hass):
         )
         self.prices.get_prices(source, start, end)
 
-    def get_day_ahead_predicted_prices(self):
+    def get_predicted_prices(self):
         self.prices.get_predicted_prices()
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
@@ -703,7 +703,6 @@ class DaBase(hass.Hass):
             self.db_da.log_pool_status()
             ret_val = getattr(self, run_task["function"])()
 
-            print(ret_val)
             if ret_val is False:
                 exit_code = 1
 

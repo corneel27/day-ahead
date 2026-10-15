@@ -1,10 +1,10 @@
 pandas~=3.0.6
-pydantic~=2.13.5
+pydantic~=2.14.1
 pydantic-settings~=2.15.0
 pytz~=2026.5
 requests~=2.34.2
 matplotlib~=3.11.2
-numpy~=2.5.3
+numpy~=2.5.4
 mysql~=0.0.3
 cffi~=2.1.1
 mysql-connector-python~=26.7.0
@@ -14,7 +14,7 @@ nordpool~=0.5.1
 entsoe-py~=0.8.1
 beautifulsoup4~=4.15.0
 sqlalchemy~=2.1.4
-SQLAlchemy-Utils~=0.42.1
+SQLAlchemy-Utils~=0.43.0
 psycopg2-binary
 pymysql~=1.2.3
 mariadb~=1.1.14

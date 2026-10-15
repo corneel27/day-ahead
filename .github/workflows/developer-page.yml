@@ -1,0 +1,71 @@
+name: Developer start page
+
+on:
+  push:
+    paths: ['docs/developer/**', 'scripts/test_pages_action.mjs', '.github/workflows/developer-page.yml']
+  pull_request:
+    paths: ['docs/developer/**', 'scripts/test_pages_action.mjs', '.github/workflows/developer-page.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - run: node --test docs/developer/start.test.mjs
+      - name: Prepare the static site
+        run: |
+          mkdir -p _site/developer
+          cp docs/developer/index.html docs/developer/start.mjs docs/developer/style.css _site/developer/
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    if: >-
+      github.event_name != 'pull_request' && vars.DEVELOPER_PAGES_ENABLED == 'true' &&
+      (github.ref_name == github.event.repository.default_branch ||
+       github.ref_name == vars.DEVELOPER_PAGES_BRANCH)
+    needs: [check, deployment-contract]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: developer-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}developer/
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  deployment-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Resolve the deployment action version from this workflow
+        id: pages-action
+        run: |
+          ref="$(sed -n 's/^[[:space:]]*uses: actions\/deploy-pages@//p' .github/workflows/developer-page.yml)"
+          test -n "$ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          repository: actions/deploy-pages
+          ref: ${{ steps.pages-action.outputs.ref }}
+          path: .local/deploy-pages
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Test the published action against local API fixtures
+        run: node --test scripts/test_pages_action.mjs
