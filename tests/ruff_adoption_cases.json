@@ -1,0 +1,92 @@
+[
+  {
+    "code": "C408",
+    "invalid": "value = dict(answer=42)\n",
+    "corrected": "value = {\"answer\": 42}\n"
+  },
+  {
+    "code": "ISC004",
+    "invalid": "items = [\"first \"\n         \"second\"]\n",
+    "corrected": "items = [(\"first \"\n          \"second\")]\n"
+  },
+  {
+    "code": "PERF102",
+    "invalid": "data = {\"a\": 1}\nfor _key, value in data.items():\n    print(value)\n",
+    "corrected": "data = {\"a\": 1}\nfor value in data.values():\n    print(value)\n"
+  },
+  {
+    "code": "PIE790",
+    "invalid": "def example():\n    print(1)\n    pass\n",
+    "corrected": "def example():\n    print(1)\n"
+  },
+  {
+    "code": "PLR0402",
+    "invalid": "import os.path as path\n\nprint(path)\n",
+    "corrected": "from os import path\n\nprint(path)\n"
+  },
+  {
+    "code": "PLR1711",
+    "invalid": "def example():\n    print(1)\n    return\n",
+    "corrected": "def example():\n    print(1)\n"
+  },
+  {
+    "code": "PLW0602",
+    "invalid": "value = 1\n\ndef example():\n    global value\n    print(value)\n",
+    "corrected": "value = 1\n\ndef example():\n    print(value)\n"
+  },
+  {
+    "code": "RET501",
+    "invalid": "def example(flag):\n    if flag:\n        print(flag)\n        return None\n    print(1)\n",
+    "corrected": "def example(flag):\n    if flag:\n        print(flag)\n        return\n    print(1)\n"
+  },
+  {
+    "code": "RUF010",
+    "invalid": "value = 42\nmessage = f\"{str(value)}\"\n",
+    "corrected": "value = 42\nmessage = f\"{value!s}\"\n"
+  },
+  {
+    "code": "RUF022",
+    "invalid": "__all__ = [\"zebra\", \"alpha\"]\nzebra = 1\nalpha = 2\n",
+    "corrected": "__all__ = [\"alpha\", \"zebra\"]\nzebra = 1\nalpha = 2\n"
+  },
+  {
+    "code": "RUF023",
+    "invalid": "class Example:\n    __slots__ = (\"zebra\", \"alpha\")\n",
+    "corrected": "class Example:\n    __slots__ = (\"alpha\", \"zebra\")\n"
+  },
+  {
+    "code": "RUF059",
+    "invalid": "def example(values):\n    used, unused = values\n    return used\n",
+    "corrected": "def example(values):\n    used, _unused = values\n    return used\n"
+  },
+  {
+    "code": "SIM102",
+    "invalid": "def example(first, second):\n    if first:\n        if second:\n            print(1)\n",
+    "corrected": "def example(first, second):\n    if first and second:\n        print(1)\n"
+  },
+  {
+    "code": "SIM114",
+    "invalid": "def example(value):\n    if value == 1:\n        print(value)\n    elif value == 2:\n        print(value)\n",
+    "corrected": "def example(value):\n    if value == 1 or value == 2:\n        print(value)\n"
+  },
+  {
+    "code": "SIM117",
+    "invalid": "from contextlib import nullcontext\n\n\ndef example():\n    with nullcontext():\n        with nullcontext():\n            print(1)\n",
+    "corrected": "from contextlib import nullcontext\n\n\ndef example():\n    with nullcontext(), nullcontext():\n        print(1)\n"
+  },
+  {
+    "code": "SIM118",
+    "invalid": "data = {\"a\": 1}\nprint(\"a\" in data.keys())\n",
+    "corrected": "data = {\"a\": 1}\nprint(\"a\" in data)\n"
+  },
+  {
+    "code": "SIM210",
+    "invalid": "def example(value):\n    return True if value == 1 else False\n",
+    "corrected": "def example(value):\n    return bool(value == 1)\n"
+  },
+  {
+    "code": "SIM401",
+    "invalid": "def example(data: dict):\n    if \"a\" in data:\n        value = data[\"a\"]\n    else:\n        value = 42\n    return value\n",
+    "corrected": "def example(data: dict):\n    value = data.get(\"a\", 42)\n    return value\n"
+  }
+]
