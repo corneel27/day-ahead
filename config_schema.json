@@ -1642,6 +1642,18 @@
           "x-validation-hint": "Must be > 0, typically 0.5-10.0",
           "title": "Degree Days Factor"
         },
+        "degree days base temperature": {
+          "default": 16.0,
+          "description": "Base temperature (heating limit) for degree days",
+          "maximum": 30.0,
+          "minimum": 0.0,
+          "title": "Degree Days Base Temperature",
+          "type": "number",
+          "x-help": "Average daily outdoor temperature in °C at and above which no heating is needed (the heating limit). Heat demand is calculated from the degree days below this temperature: (base temperature - average outdoor temperature) per day. Raise it if your heating starts at a higher outdoor temperature, lower it for a well-insulated house. Default: 16 °C.",
+          "x-ui-section": "Configuration",
+          "x-unit": "°C",
+          "x-validation-hint": "Between 0 and 30, typically 15-18"
+        },
         "adjustment": {
           "default": "power",
           "description": "Adjustment mode",

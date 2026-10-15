@@ -711,6 +711,7 @@ Het is allemaal optioneel.
 |                           | entity hp enabled             | string           |                                    | bij afwezigheid wordt heatpump ingepland           |
 |                           | entity hp heat demand         | string           |                                    |                                                    |
 |                           | degree days factor            | getal of string  |                                    | kWh/K.day of HA 'sensor' entity                    | 
+|                           | degree days base temperature  | getal            | 16.0                               | stookgrens in °C voor de graaddagen                |
 |                           | adjustment                    | string           | "power"                            | type besturing warmtepomp                          |
 |                           | entity hp heat produced       | string           |                                    |                                                    |
 |                           | entity hp switch              | string           |                                    |                                                    |
@@ -1230,10 +1231,16 @@ Dit onderdeel is nog in ontwikkeling.
   * **heater present**  als **true** zal de warmtepomp worden ingepland als **false** wordt er geen warmtepomp ingepland.
   * **entity hp enabled**:  een 'binary_sensor' of input_boolean die aangeeft of de aanwezige warmtepomp in bedrijf is (waarde is **on** en moet worden ingepland of dat hij uit staat (waarde is **off**) door bijvoorbeeld de zomer of een vakantie en niet mag worden ingepland.
   * **entity hp heat demand** : een 'binary_sensor' of input_boolean die aangeeft of er directe warmtevraag is in de woning (bijvoorbeeld via een thermostaat). aan de warmtepomp. Als "on" zal de inzet van de warmtepomp vanaf het eerste uur worden geoptimliseerd. Als "off" zal het eerste uur de warmtepomp altijd uit zijn en de inplanning worden berekend vanaf het volgende uur.
-  * **degree days factor**: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag (met 16°C als referentietemperatuur).<br>
+  * **degree days factor**: kWh/K.dag hoeveel thermische kWh is er nodig per graaddag (met de `degree days base temperature` als referentietemperatuur).<br>
      Zet deze op 0 als je geen warmtepomp hebt zodat er ook geen warmtevraag is. <br>
 Behalve een getal kun je hier ook een HA entiteit (bijv een input_number) 
 opgegeven, zodat je in HA deze factor kunt berekenen op basis van wind- en/of zonprognoses. 
+  * **degree days base temperature**: de stookgrens in °C (getal tussen 0 en 30, default 16).
+     Is de verwachte gemiddelde etmaaltemperatuur gelijk aan of hoger dan deze waarde, dan zijn er geen graaddagen
+     en wordt de warmtepomp niet ingepland. Onder deze grens is het aantal graaddagen per dag
+     `(stookgrens - gemiddelde buitentemperatuur)`, gewogen met een seizoensfactor.
+     Verhoog de waarde als jouw woning al bij een hogere buitentemperatuur gaat stoken,
+     verlaag hem voor een goed geïsoleerde woning. Bij het weglaten van deze instelling blijft 16°C gelden.
    * **entity hp heat produced** : HA 'sensor' entiteit die aangeeft hoeveel kWh thermische energie vandaag al is geleverd door de warmtepomp.
    * **adjustment**. Je hebt de keuze uit drie soorten regelingen:
      * "on/off" :  voor een aan/uit warmtepomp waarvan de aan/uit thermostaat stand door HA entiteit `entity hp heat demand` wordt gegeven. HA entiteit `entity hp switch` moet dan worden gebruikt 
