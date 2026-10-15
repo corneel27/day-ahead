@@ -20,6 +20,8 @@ een intel 64 bit processor (amd64). Maar het kan ook separate Docker-container w
 ## Documentatie 
 In de loop van 2025 is begonnen met het verhuizen en actualiseren van de documentie vanaf DOCS.md
 naar de wiki-pagina's op github: https://github.com/corneel27/day-ahead/wiki
+
+Voor bijdragen aan de code: [CodeRabbit PR-reviews en beheerdersinstructies](docs/code-review.md).
 ---
 
 ## Installatie

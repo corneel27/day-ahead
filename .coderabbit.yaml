@@ -1,12 +1,35 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Installation, rollout and acceptance: docs/code-review.md
 language: en-US
 reviews:
   profile: chill
   request_changes_workflow: false
+  allow_author_approval: false
+  high_level_summary_in_walkthrough: true
+  suggested_labels: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
   auto_review:
     enabled: true
     auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
     drafts: false
+  # Start with feedback only; maintainers apply fixes through signed commits.
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+    autofix:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+  post_merge_actions: []
   pre_merge_checks:
     docstrings:
       mode: "off"
