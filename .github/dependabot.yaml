@@ -1,5 +1,14 @@
 version: 2
 updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: ruff
+      - dependency-name: pre-commit
+      - dependency-name: pytest
+      - dependency-name: debugpy
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -9,3 +18,16 @@ updates:
     directory: "/dao"
     schedule:
       interval: daily
+  - package-ecosystem: docker
+    directory: "/.devcontainer"
+    schedule:
+      interval: weekly
+    # Node follows the digest-pinned Active LTS tag in the Dockerfile.
+    # Allow its digest refresh even when that floating tag was recently republished.
+    cooldown:
+      default-days: 3
+      exclude: [node]
+  - package-ecosystem: npm
+    directory: "/dao/webserver"
+    schedule:
+      interval: weekly

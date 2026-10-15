@@ -29,10 +29,10 @@ def format_ev_charge_schedule(
     charge_periods: list[tuple[dt.datetime, dt.datetime, float]] = []
     tolerance = 1e-6
 
-    for interval_start, energy_by_stage in zip(timestamps, stage_energy):
+    for interval_start, energy_by_stage in zip(timestamps, stage_energy, strict=True):
         segment_start = max(interval_start, calculation_start)
         for energy_kwh, power_kw, ampere in zip(
-            energy_by_stage, stage_powers, stage_amperes
+            energy_by_stage, stage_powers, stage_amperes, strict=True
         ):
             if energy_kwh <= tolerance or power_kw <= tolerance or ampere <= 0:
                 continue

@@ -2,7 +2,7 @@
 Dashboard/web UI configuration models.
 """
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DashboardConfig(BaseModel):

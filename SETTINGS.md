@@ -2015,6 +2015,7 @@ Power profile as list of watts per time interval. Length defines program duratio
 | `extension` | integer (optional) | No | `0` | The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices (Unit: `h`) |
 | `source` | string (optional) | No | `"dap"` | The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu |
 | `api` | string (optional) | No | `"https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"` | The url of the supplier of prediction data, with which DAO can get the prediction data  |
+| `api_key` | [SecretStr](#secretstr) (optional) | No | `null` | api key for request of predicted prices (can use !secret) _Required for jeroen_nl, use !secret_ |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -2031,6 +2032,10 @@ The name of the supplier of prediction data, now there is support for epexpredic
 
 The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json
 
+**`api_key`**
+
+API key for several sources of predicted prices, like jeroen_nl.
+
 </details>
 
 
@@ -2041,7 +2046,7 @@ _A single scheduled task entry._
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
-| `action` | string | Yes | — | Action to execute at this time. Options: `get_meteo_data`, `get_tibber_data`, `get_day_ahead_prices`, `calc_optimum`, `calc_optimum_met_debug`, `clean_data`, `calc_baseloads`, `train_ml_predictions`, `predicted_prices` |
+| `action` | string | Yes | — | Action to execute at this time. Options: `calc_optimum_met_debug`, `calc_optimum`, `get_tibber_data`, `get_meteo_data`, `get_day_ahead_prices`, `get_predicted_prices`, `calc_baseloads`, `clean_data`, `train_ml_predictions`, `consolidate` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>

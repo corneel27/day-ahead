@@ -1,16 +1,19 @@
+import os
 from datetime import datetime
-from flask import Blueprint, current_app, request
-from subprocess import run as subprocess_run
-from dao.prog.da_report import Report
-from markupsafe import escape
-from dao.prog.da_const import tasks
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pathlib import Path
+from subprocess import run as subprocess_run
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from flask import Blueprint, current_app, request
+from markupsafe import escape
+
+from dao.prog.da_const import tasks
+from dao.prog.da_report import Report
 
 api = Blueprint("api", __name__)
 
 # globals
-app_datapath = "app/static/data/"
+app_datapath = os.environ.get("DAO_WEB_DATA_DIR", "app/static/data").rstrip("/") + "/"
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 PROG_DIR = BASE_DIR / "prog"
 

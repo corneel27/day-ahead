@@ -1,14 +1,16 @@
-import pandas as pd
-from dao.lib.db_manager import DBmanagerObj
-from entsoe import EntsoePandasClient
 import datetime
-from requests import get, post
-from nordpool.elspot import Prices as NordpoolPrices
-import pytz
 import json
+import logging
 import math
 import pprint as pp
-import logging
+
+import pandas as pd
+import pytz
+from entsoe import EntsoePandasClient
+from nordpool.elspot import Prices as NordpoolPrices
+from requests import get, post
+
+from dao.lib.db_manager import DBmanagerObj
 
 
 class DaPrices:
@@ -61,13 +63,13 @@ class DaPrices:
             end = tz.normalize(tz.localize(end))
 
         present = self.db_da.get_time_border_record("da")
-        if not (present is None) and _start is None:
+        if present is not None and _start is None:
             present = tz.normalize(tz.localize(present))
             present = present + datetime.timedelta(minutes=resolution)
             start = max(present, start)
 
             if present >= (end - datetime.timedelta(hours=1)):
-                logging.info(f"Spot prices already present")
+                logging.info("Spot prices already present")
                 return
 
         logging.debug(f"Day ahead tarieven ophalen voor {start} tot {end}")
@@ -353,7 +355,7 @@ class DaPrices:
         df_db = pd.DataFrame(columns=["time", "tijd", "code", "value"])
         for row in rows:
             dt = datetime.datetime.strptime(row["startsAt"], "%Y-%m-%dT%H:%M:%S%f%z")
-            if dt > know_at and dt <= new_horizon:
+            if know_at < dt <= new_horizon:
                 time_stamp = int(dt.timestamp())
                 value = float(row["total"])/100
                 logging.info(f"{row} {dt} {time_stamp} {value}")
@@ -392,7 +394,7 @@ class DaPrices:
             utc_dt_str = row["start"].replace("Z", "+00:00")
             utc_dt = datetime.datetime.fromisoformat(utc_dt_str)
             dt = utc_dt.astimezone(tz)   # tz.localize(dt)
-            if dt > know_at and dt <= new_horizon:
+            if know_at < dt <= new_horizon:
                 time_stamp = int(dt.timestamp())
                 value = float(row["value"])
                 logging.info(f"{row} {dt} {time_stamp} {value}")
@@ -432,10 +434,60 @@ class DaPrices:
         df["code"] = "da"
         return df
 
+    def extract_data_jeroen_nl(self,
+                               data:dict,
+                               know_at:datetime.datetime,
+                               new_horizon:datetime.datetime
+                               )->pd.DataFrame:
+
+        """
+        [
+          {
+            "datum_nl": "2026-10-15 00:00:00",
+            "datum_utc": "2026-10-14 22:00:00",
+            "prijs_excl_belastingen": "0,147734",
+            "band_laag": "0,138766",
+            "band_hoog": "0,206114",
+            "voorspeld_op": "2026-10-13 05:00:00"
+          },
+          {
+            "datum_nl": "2026-10-15 00:15:00",
+            "datum_utc": "2026-10-14 22:15:00",
+            "prijs_excl_belastingen": "0,140237",
+            "band_laag": "0,131390",
+            "band_hoog": "0,198617",
+            "voorspeld_op": "2026-10-13 05:00:00"
+          },
+          {
+            "datum_nl": "2026-10-15 00:30:00",
+            "datum_utc": "2026-10-14 22:30:00",
+            "prijs_excl_belastingen": "0,137321",
+            "band_laag": "0,128478",
+            "band_hoog": "0,195701",
+            "voorspeld_op": "2026-10-13 05:00:00"
+          }
+          .....
+        ]
+        """
+        df_db = pd.DataFrame(columns=["time", "tijd", "code", "value"])
+        tz = pytz.timezone(self.time_zone)
+        for row in data:
+            utc_dt_str = row["datum_utc"]+"+00:00"
+            utc_dt = datetime.datetime.fromisoformat(utc_dt_str)
+            dt = utc_dt.astimezone(tz)
+            if know_at < dt <= new_horizon:
+                time_stamp = int(dt.timestamp())
+                value_str=row["prijs_excl_belastingen"]
+                value = float(value_str.replace(",", "."))
+                logging.info(f"{row} {dt} {time_stamp} {value}")
+                df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
+        return df_db
 
     def get_predicted_prices(self):
         source = self.config.prices.prediction.source
         api_url = self.config.prices.prediction.api
+        _key = self.config.prices.prediction.api_key
+        key = _key.resolve(self._secrets) if _key is not None else None
         extension = 96
         if extension == 0:
             logging.warning("predicted horizon extension is 0, no predicted prices are returned")
@@ -446,6 +498,8 @@ class DaPrices:
         fetch_hours = math.ceil((new_horizon - now).total_seconds()/3600)
         api_url= api_url.replace("<hours>", str(fetch_hours))
         api_url= api_url.replace("<region>", self.country)
+        if key is not None:
+            api_url= api_url.replace("<key>", key)
         resp = get(api_url)
         if resp.status_code != 200:
             logging.error(f"No data from {source} off predict prices, "
@@ -462,16 +516,3 @@ class DaPrices:
         )
         self.db_da.savedata(df_db, tablename="prognoses")
         return 0
-
-    def get_price_prediction(self, source:str="dap"):
-        if source.lower() == "dap":
-            url = (f"https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json")
-            resp = get(url)
-            logging.debug(resp.text)
-            json_object = json.loads(resp.text)
-            df = pd.DataFrame.from_records(json_object)
-            df.rename(columns={"time":"time_dt", "time_ts":"time", "prediction":"value"}, inplace=True)
-            df["code"] = "da"
-            # save
-            print(df.to_string(index=False))
-            self.db_da.savedata(df, "prognoses")

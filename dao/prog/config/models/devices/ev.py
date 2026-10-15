@@ -2,8 +2,9 @@
 Electric Vehicle configuration models.
 """
 
-from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from ..base import EntityId, FlexBool
 
 
@@ -106,7 +107,7 @@ class EVConfig(BaseModel):
             "x-validation-hint": "Must be > 0, typically 40-100 kWh",
         },
     )
-    switch_cost: Optional[float] = Field(
+    switch_cost: float | None = Field(
         ge=0,
         default=0.0,
         alias="switch cost",
@@ -119,7 +120,7 @@ class EVConfig(BaseModel):
             "x-validation-hint": "Must be >= 0, typically 0.01- 0.10 euro/switch",
         },
     )
-    low_soc_cost: Optional[float] = Field(
+    low_soc_cost: float | None = Field(
         ge=0,
         default=0.0,
         alias="low soc cost",
@@ -178,7 +179,7 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "binary_sensor",
         },
     )
-    entity_instant_start: Optional[EntityId] = Field(
+    entity_instant_start: EntityId | None = Field(
         default=None,
         alias="entity instant start",
         description="HA entity for instant start charging",
@@ -188,7 +189,7 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "switch,input_boolean",
         },
     )
-    entity_instant_level: Optional[EntityId] = Field(
+    entity_instant_level: EntityId | None = Field(
         default=None,
         alias="entity instant level",
         description="HA entity for instant charge level target",
@@ -199,7 +200,7 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "input_number,number,sensor",
         },
     )
-    charge_scheduler: Optional[EVChargeScheduler] = Field(
+    charge_scheduler: EVChargeScheduler | None = Field(
         default=None,
         alias="charge scheduler",
         description="Charge scheduling configuration",
@@ -227,7 +228,7 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "number,input_number",
         },
     )
-    entity_stop_charging: Optional[EntityId] = Field(
+    entity_stop_charging: EntityId | None = Field(
         default=None,
         alias="entity stop charging",
         description="HA entity for stop charging datetime",
@@ -237,7 +238,7 @@ class EVConfig(BaseModel):
             "x-ui-widget-filter": "input_datetime,datetime",
         },
     )
-    entity_charging_schedule: Optional[EntityId] = Field(
+    entity_charging_schedule: EntityId | None = Field(
         default=None,
         alias="entity charging schedule",
         description="HA text entity for the calculated charging schedule",

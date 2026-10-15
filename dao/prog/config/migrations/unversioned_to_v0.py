@@ -12,6 +12,7 @@ Changes:
 
 import logging
 from typing import Any
+
 from pydantic import TypeAdapter
 
 _bool_adapter = TypeAdapter(bool)

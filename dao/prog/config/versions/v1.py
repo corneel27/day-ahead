@@ -5,8 +5,10 @@ TEMPLATE: This file is commented out and serves as a template for future version
 Uncomment and modify when you need to create a real v1 schema.
 """
 
-from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import Field
+
 from .v0 import ConfigurationV0
 
 
@@ -26,7 +28,7 @@ class ConfigurationV1(ConfigurationV0):
     # Add your new or modified fields here
     # Example:
     # new_field: str = Field(description="New required field")
-    meteoserver_attempts: Optional[int] = Field(
+    meteoserver_attempts: int | None = Field(
         default=2,
         alias="meteoserver-attempts",
         ge=1,

@@ -1,34 +1,34 @@
 import datetime
-import sys
-import os
 import fnmatch
-import time
-import threading
-import pytz
-import warnings
-from dataclasses import dataclass
-from requests import get
 import json
-import hassapi as hass
-import pandas as pd
-from subprocess import PIPE, run
 import logging
+import os
+import sys
+import threading
+import time
+import warnings
+from copy import deepcopy
+from dataclasses import dataclass
 from logging import Handler
-from sqlalchemy import Table, select, func, and_
-
-# from dao.prog.solar_predictor import SolarPredictor
-from dao.prog.utils import get_tibber_data, error_handling
-from dao.prog.version import __version__
 from pathlib import Path
-from dao.prog.config.loader import ConfigurationLoader
-from dao.lib.db_connections import make_db_da, make_db_ha
-from dao.lib.da_meteo import Meteo
-from dao.lib.da_prices import DaPrices
-from dao.prog.utils import interpolate
+from subprocess import run
 
 # from db_manager import DBmanagerObj
-from typing import Union
+import hassapi as hass
+import pandas as pd
+import pytz
 from hassapi.models import StateList
+from requests import get
+from sqlalchemy import Table, and_, func, select
+
+from dao.lib.da_meteo import Meteo
+from dao.lib.da_prices import DaPrices
+from dao.lib.db_connections import make_db_da, make_db_ha
+from dao.prog.config.loader import ConfigurationLoader
+
+# from dao.prog.solar_predictor import SolarPredictor
+from dao.prog.utils import error_handling, get_tibber_data, interpolate
+from dao.prog.version import __version__
 
 
 @dataclass
@@ -113,7 +113,7 @@ class DaBase(hass.Hass):
         log_level_str = self.config.logging_level or "info"
         _log_level = getattr(logging, log_level_str.upper(), None)
         if not isinstance(_log_level, int):
-            raise ValueError("Invalid log level: %s" % _log_level)
+            raise ValueError(f"Invalid log level: {_log_level}")
         self.log_level = _log_level
         logging.addLevelName(logging.DEBUG, "debug")
         logging.addLevelName(logging.INFO, "info")
@@ -242,7 +242,7 @@ class DaBase(hass.Hass):
     def ha_getter(self, eid):
         return self.get_state(eid).state
 
-    def set_value(self, entity_id: str, value: Union[int, float, str]) -> StateList:
+    def set_value(self, entity_id: str, value: int | float | str) -> StateList:
         try:
             result = super().set_value(entity_id, value)
             state = self.get_state(entity_id).state
@@ -260,70 +260,13 @@ class DaBase(hass.Hass):
 
     @staticmethod
     def generate_tasks():
-        tasks = {
-            "calc_optimum_met_debug": {
-                "name": "Optimaliseringsberekening met debug",
-                "cmd": ["python3", "../prog/day_ahead.py", "debug", "calc"],
-                "object": "DaCalc",
-                "function": "calc_optimum_met_debug",
-                "file_name": "calc_debug",
-            },
-            "calc_optimum": {
-                "name": "Optimaliseringsberekening zonder debug",
-                "cmd": ["python3", "../prog/day_ahead.py", "calc"],
-                "object": "DaBase",
-                "function": "calc_optimum",
-                "file_name": "calc",
-            },
-            "tibber": {
-                "name": "Verbruiksgegevens bij Tibber ophalen",
-                "cmd": ["python3", "../prog/day_ahead.py", "tibber"],
-                "function": "get_tibber_data",
-                "file_name": "tibber",
-            },
-            "meteo": {
-                "name": "Meteoprognoses ophalen",
-                "cmd": ["python3", "day_ahead.py", "meteo"],
-                "function": "get_meteo_data",
-                "file_name": "meteo",
-            },
-            "prices": {
-                "name": "Day ahead prijzen ophalen",
-                "cmd": ["python3", "../prog/day_ahead.py", "prices"],
-                "function": "get_day_ahead_prices",
-                "file_name": "prices",
-            },
-            "predicted_prices": {
-                "name": "Day ahead prijsvoorspelling ophalen",
-                "cmd": ["python3", "../prog/day_ahead.py", "predicted_prices"],
-                "function": "get_day_ahead_predicted_prices",
-                "file_name": "pred_prices",
-            },
-            "calc_baseloads": {
-                "name": "Bereken de baseloads",
-                "cmd": ["python3", "../prog/day_ahead.py", "calc_baseloads"],
-                "function": "calc_baseloads",
-                "file_name": "baseloads",
-            },
-            "clean": {
-                "name": "Bestanden opschonen",
-                "cmd": ["python3", "../prog/day_ahead.py", "clean_data"],
-                "function": "clean_data",
-                "file_name": "clean",
-            },
-            "train_ml_predictions": {
-                "name": "ML modellen trainen",
-                "cmd": ["python3", "../prog/day_ahead.py", "train"],
-                "function": "train_ml_predictions",
-                "file_name": "train",
-            },
-            "consolidate": {
-                "name": "Verbruik/productie consolideren",
-                "cmd": ["python3", "../prog/day_ahead.py", "consolidate"],
-                "function": "consolidate_data",
-                "file_name": "consolidate",
-            },
-        }
+        from dao.prog.da_const import tasks as t
+
+        tasks = deepcopy(t)
+
+        for task in tasks.values():
+            task["cmd"][1] = "../prog/day_ahead.py"
+
         return tasks
 
     def start_logging(self):
@@ -359,7 +302,7 @@ class DaBase(hass.Hass):
 
     @staticmethod
     def get_tibber_data():
-        get_tibber_data()
+        return get_tibber_data()
 
     @staticmethod
     def consolidate_data():
@@ -394,7 +337,7 @@ class DaBase(hass.Hass):
         )
         self.prices.get_prices(source, start, end)
 
-    def get_day_ahead_predicted_prices(self):
+    def get_predicted_prices(self):
         self.prices.get_predicted_prices()
 
     def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
@@ -405,18 +348,20 @@ class DaBase(hass.Hass):
         :param df: het dataframe met de code van de variabelen in de kolomheader
         :return: None
         """
-        df_db = pd.DataFrame(columns=["time", "code", "value"])
         df = df.reset_index(drop=True)
         columns = df.columns.values.tolist()[1:]
         tz = pytz.timezone(self.time_zone)
+        rows = []
         for index in range(min(len(tijd), len(df))):
             dt = pd.to_datetime(tijd[index])
             dt = tz.localize(dt)
             utc = int(dt.timestamp())
             for c in columns:
-                db_row = [str(utc), c, float(df.loc[index, c])]
-                df_db.loc[df_db.shape[0]] = db_row
-        logging.debug("Save calculated data:\n{}".format(df_db.to_string()))
+                rows.append([str(utc), c, float(df.at[index, c])])
+        # in een keer opbouwen: rij voor rij toevoegen met .loc kost per rij
+        # bijna een milliseconde
+        df_db = pd.DataFrame(rows, columns=["time", "code", "value"])
+        logging.debug(f"Save calculated data:\n{df_db.to_string()}")
         self.db_da.savedata(df_db, tablename=tablename)
         return
 
@@ -428,7 +373,7 @@ class DaBase(hass.Hass):
         :return: een lijst van eerder berekende baseload van 24uurvoor de betreffende dag
         """
         in_file = "../data/baseload/baseload_" + str(weekday) + ".json"
-        with open(in_file, "r") as f:
+        with open(in_file) as f:
             result = json.load(f)
         return result
 
@@ -593,7 +538,7 @@ class DaBase(hass.Hass):
         dacalc = DaCalc(self.file_name)
         # dacalc = DaCalc("../data/tst_options/options_mirabis.json")
         dacalc.debug = True
-        dacalc.calc_optimum()
+        return dacalc.calc_optimum()
         # dacalc.calc_optimum(_start_dt=datetime.datetime(2025, 9, 28, 21, minute=0), _start_soc=50)
 
     def calc_optimum(self):
@@ -627,8 +572,6 @@ class DaBase(hass.Hass):
         :param _ml_prediction: boolean default None(= from config)
         :return:
         """
-        from dao.prog.solar_predictor import SolarPredictor
-
         if _ml_prediction is None:
             ml_prediction = solar_option.ml_prediction
         else:
@@ -640,6 +583,10 @@ class DaBase(hass.Hass):
             interval_s = 900 if interval == "15min" else 3600
         solar_name = solar_option.name.replace(" ", "_").replace("-", "_")
         if ml_prediction:
+            # alleen hier importeren: xgboost, sklearn en scipy laden kost
+            # ongeveer een seconde, en de dao-voorspelling heeft ze niet nodig
+            from dao.prog.solar_predictor import SolarPredictor
+
             solar_predictor = SolarPredictor()
             try:
                 solar_prog = solar_predictor.predict_solar_device(
@@ -683,7 +630,6 @@ class DaBase(hass.Hass):
             prog_data.index = pd.to_datetime(prog_data["tijd"])
             while len(prog_data) > 0 and prog_data.iloc[0]["tijd"] < vanaf:
                 prog_data = prog_data.iloc[1:]
-            index = 0
             for row in prog_data.itertuples():
                 h_frac = interval_s / 3600
                 prod = self.calc_prod_solar(
@@ -707,7 +653,10 @@ class DaBase(hass.Hass):
 
         # oude task
         if task not in self.tasks:
-            return
+            logging.error(
+                f"Taak niet gedefinieerd \"{task}\" "
+            )
+            return False
         run_task = self.tasks[task]
         file_handler = None
         stream_handler = None
@@ -715,6 +664,7 @@ class DaBase(hass.Hass):
         formatter = logging.Formatter(
             "%(asctime)s %(levelname)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
+
         if logfile:
             # old_stdout = sys.stdout
             for handler in logger.handlers[:]:  # make a copy of the list
@@ -742,6 +692,8 @@ class DaBase(hass.Hass):
             notification_handler.setFormatter(formatter)
             logger.addHandler(notification_handler)
         self.start_logging()
+
+        exit_code = 0
         try:
             logging.info(
                 f"Day Ahead Optimalisatie gestart: "
@@ -749,17 +701,23 @@ class DaBase(hass.Hass):
                 f"taak: {run_task['function']}"
             )
             self.db_da.log_pool_status()
-            getattr(self, run_task["function"])()
+            ret_val = getattr(self, run_task["function"])()
+
+            if ret_val is False:
+                exit_code = 1
+
             self.set_last_activity()
             self.db_da.log_pool_status()
         except Exception:
             logging.exception("Er is een fout opgetreden, zie de fout-tracering")
-            raise
+            exit_code = 1
 
         if logfile:
             file_handler.flush()
             file_handler.close()
             stream_handler.close()
+
+        return exit_code
 
     def run_task_cmd(self, task):
         if task not in self.tasks:
@@ -767,7 +725,7 @@ class DaBase(hass.Hass):
             return
         run_task = self.tasks[task]
         cmd = run_task["cmd"]
-        proc = run(cmd, stdout=PIPE, stderr=PIPE)
+        proc = run(cmd, capture_output=True)
         data = proc.stdout.decode()
         err = proc.stderr.decode()
         log_content = data + err

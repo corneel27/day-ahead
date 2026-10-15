@@ -2,8 +2,9 @@
 Tibber integration configuration models.
 """
 
-from typing import Optional
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field
+
 from .base import SecretStr
 
 
@@ -20,7 +21,7 @@ class TibberConfig(BaseModel):
             "x-docs-url": "https://developer.tibber.com/",
         },
     )
-    api_url: Optional[str] = Field(
+    api_url: str | None = Field(
         default="https://api.tibber.com/v1-beta/gql",
         alias="api url",
         description="Tibber API URL",

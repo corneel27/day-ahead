@@ -1,5 +1,5 @@
-import os
 import argparse
+import os
 
 if not os.path.lexists("app/static/data"):
     os.symlink("../data", "app/static/data")

@@ -8,6 +8,7 @@ MIGRATIONS registry.
 
 import logging
 from typing import Any
+
 from .unversioned_to_v0 import migrate_unversioned_to_v0
 
 # Uncomment when creating v0→v1 migration:

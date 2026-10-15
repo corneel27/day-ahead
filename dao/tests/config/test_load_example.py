@@ -3,8 +3,10 @@ Test loading the actual options_example.json with Pydantic models.
 """
 
 import json
-import pytest
 from pathlib import Path
+
+import pytest
+
 from dao.prog.config.versions.v0 import ConfigurationV0
 
 
@@ -17,7 +19,7 @@ def options_example_path():
 @pytest.fixture
 def options_example_data(options_example_path):
     """Load options_example.json as dict."""
-    with open(options_example_path, 'r') as f:
+    with open(options_example_path) as f:
         return json.load(f)
 
 
@@ -34,7 +36,7 @@ def test_load_options_example(options_example_data):
         assert len(config.baseload) == 24
         assert len(config.battery) >= 1
         assert len(config.solar) >= 1
-        print(f"✅ Successfully loaded options_example.json")
+        print("✅ Successfully loaded options_example.json")
         print(f"  - {len(config.battery)} battery config(s)")
         print(f"  - {len(config.solar)} solar config(s)")
         print(f"  - {len(config.electric_vehicle)} EV config(s)")
@@ -100,7 +102,7 @@ def test_optional_devices(options_example_data):
     # Tibber is present in example
     assert config.tibber is not None
     
-    print(f"✅ Optional devices loaded correctly")
+    print("✅ Optional devices loaded correctly")
 
 
 def test_scheduler_dict_access(options_example_data):
@@ -124,7 +126,7 @@ def test_unknown_keys_preserved(options_example_data):
     
     # Pydantic should preserve it with extra='allow'
     # We can check via model_dump()
-    dumped = config.model_dump()
+    config.model_dump()
     # Note: Pydantic may not preserve unknown keys at root level by default
     # This test documents current behavior
-    print(f"✅ Unknown key handling test complete")
+    print("✅ Unknown key handling test complete")

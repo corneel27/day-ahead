@@ -1,12 +1,28 @@
-import time, os, fnmatch, re, datetime, time, threading, json
-from flask import Blueprint, render_template, request, redirect, url_for, has_request_context, abort
-
-from dao.prog.version import __version__
-from subprocess import Popen, DEVNULL
+import datetime
+import fnmatch
+import json
+import os
+import re
+import threading
+import time
 from pathlib import Path
+from subprocess import DEVNULL, Popen
+
+from flask import (
+    Blueprint,
+    abort,
+    has_request_context,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
+from sqlalchemy import Table
 from werkzeug.security import safe_join
-from dao.prog.da_report import Report
+
 from dao.prog.config.loader import ConfigurationLoader
+from dao.prog.da_report import Report
+from dao.prog.version import __version__
 
 v2 = Blueprint("v2", __name__)
 
@@ -18,7 +34,7 @@ def inject_data():
     }
 
 # globals
-app_datapath = "app/static/data/"
+app_datapath = os.environ.get("DAO_WEB_DATA_DIR", "app/static/data").rstrip("/") + "/"
 
 VITE_DEV_PORT = os.getenv("VITE_DEV_PORT", "5173")
 VITE_MANIFEST = Path("app/static/build/.vite/manifest.json")
@@ -144,7 +160,7 @@ def get_task_state() -> dict:
     }
 
     try:
-        with open(STATEFILE, "r", encoding="utf-8") as f:
+        with open(STATEFILE, encoding="utf-8") as f:
             state = json.load(f)
     except FileNotFoundError:
         return no_state
@@ -177,6 +193,8 @@ def run_and_log(cmd, state):
     )
 
     while proc.poll() is None:
+        time.sleep(1)
+
         updated_state = get_task_state()
 
         if updated_state.get("status") == "cancelled":
@@ -215,8 +233,6 @@ def run_and_log(cmd, state):
 
         if state["status"] == "running":
             save_task_state(state)
-
-        time.sleep(1)
 
     proc.wait()
 
@@ -298,7 +314,7 @@ def get_solar_items_with_ml():
 def chart():
     kwargs = log_chart("images/", "*.png")
     if kwargs is None:
-        return render_template("v2/no-tasks.html", )
+        return render_template("v2/no-task.html", )
 
     kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
     return render_template(
@@ -314,7 +330,7 @@ def log():
         return render_template("v2/no-task.html", )
 
     log_file = app_datapath + "log/" + kwargs["filename"]
-    with open(log_file, "r") as f:
+    with open(log_file) as f:
         kwargs["logdata"] = f.read()
 
     return render_template(
@@ -335,7 +351,8 @@ def delete_file():
 
 @v2.route("/tasks")
 def tasks():
-    return render_template("v2/tasks.html")
+    from dao.prog.da_const import tasks
+    return render_template("v2/tasks.html", tasks=tasks)
 
 @v2.route("/task-cancel")
 def task_cancel():
@@ -343,53 +360,36 @@ def task_cancel():
         state = get_task_state()
         state["status"] = "cancelled"
         save_task_state(state)
-        return render_template("v2/tasks.html")
+        return redirect(url_for('v2.task_state'))
     except Exception:
         return "Error cancelling task", 500
 
 
 @v2.route("/task-exec", methods=["POST"])
 def task_exec():
+    from dao.prog.da_const import tasks
     current_state = get_task_state()
 
     if current_state["status"] == "running":
         return "Process already running: " + current_state["task"], 500
 
-    task = request.form.to_dict()["task"]
+    task_name = request.form.to_dict()["task"]
 
-    cmd = None
-    match task:
-        case "optimize_debug":
-            cmd = ["debug", "calc"]
-        case "optimize_regular":
-            cmd = ["calc"]
-        case "calc_baseloads":
-            cmd = ["calc_baseloads"]
-        case "update_tibber":
-            cmd = ["tibber"]
-        case "update_meteo":
-            cmd = ["meteo"]
-        case "update_prices":
-            cmd = ["prices"]
-        case "predicted_prices":
-            cmd = ["predicted_prices"]
-        case "train_ml":
-            cmd = ["train"]
-
-    if cmd is None:
-        return "Invalid action", 500
+    if task_name not in tasks.keys():
+        return "Invalid task", 500
 
     # Save the state synchronous to prevent race condition
     state = {
         "status": "running",
         "started": time.time(),
-        "task": task,
+        "task": task_name,
         "returncode": None,
         "logfile": None,
     }
     save_task_state(state)
 
-    cmd = ["python3", "../prog/day_ahead.py", *cmd]
+    cmd = tasks[task_name]["cmd"].copy()
+    cmd[1] ="../prog/day_ahead.py"
 
     threading.Thread(
         target=run_and_log,
@@ -432,9 +432,9 @@ def task_state():
             content = "No log data available yet"
         else:
             try:
-                with open(current_state["logfile"], "r") as f:
+                with open(current_state["logfile"]) as f:
                     content = f.read()
-            except:
+            except (OSError, UnicodeError):
                 content = "Could not read logfile"
 
     headers = {
@@ -672,7 +672,7 @@ def config():
         except Exception as err:
             error = f"Error: {err}"
     else:
-        with open(path, "r") as file:
+        with open(path) as file:
             content = file.read()
 
     return render_template(
@@ -700,7 +700,7 @@ def secrets():
         except Exception as err:
             error = f"Error: {err}"
     else:
-        with open(path, "r") as file:
+        with open(path) as file:
             content = file.read()
 
     return render_template(

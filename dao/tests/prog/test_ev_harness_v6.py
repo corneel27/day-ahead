@@ -216,10 +216,10 @@ import logging
 import os
 import re
 import tempfile
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional, Union
 
 from day_ahead import DaCalc  # adjust import if your entrypoint differs
 
@@ -360,11 +360,13 @@ def _with_stop_entity_removed(da_calc: DaCalc, ev_index: int):
     original = ev.entity_stop_charging
     try:
         ev.entity_stop_charging = None
-        restore = lambda: setattr(ev, "entity_stop_charging", original)
+        def restore():
+            ev.entity_stop_charging = original
     except Exception:
         new_ev = ev.model_copy(update={"entity_stop_charging": None})
         da_calc.ev_options[ev_index] = new_ev
-        restore = lambda: da_calc.ev_options.__setitem__(ev_index, ev)
+        def restore():
+            da_calc.ev_options[ev_index] = ev
     try:
         yield
     finally:
@@ -391,7 +393,7 @@ def _find_ev_index(da_calc: DaCalc, name_substring: str) -> int:
 
 def ready_u_zero_full_window(
     buffer_seconds: int = 45,
-) -> Callable[[DaCalc], tuple[dt.datetime, dt.datetime, Optional[str]]]:
+) -> Callable[[DaCalc], tuple[dt.datetime, dt.datetime, str | None]]:
     """Returns a factory (da_calc) -> (start_dt, ready_dt) for a ready_u==0
     test with a near-full interval's charging window, regardless of when
     in a multi-case run this particular case happens to execute.
@@ -489,16 +491,16 @@ def day_rollover_ready_time(
 # Test case definition
 # ---------------------------------------------------------------------------
 
-ReadyDtSpec = Union[dt.datetime, Callable[[DaCalc], dt.datetime], None]
+ReadyDtSpec = dt.datetime | Callable[[DaCalc], dt.datetime] | None
 
 
 @dataclass
 class EvCaseInput:
-    plugged_in: Optional[bool] = None
-    position: Optional[str] = None  # "home" / "away"
-    actual_soc: Optional[float] = None
-    instant_charge: Optional[bool] = None
-    wished_level: Optional[float] = None
+    plugged_in: bool | None = None
+    position: str | None = None  # "home" / "away"
+    actual_soc: float | None = None
+    instant_charge: bool | None = None
+    wished_level: float | None = None
     ready_dt: ReadyDtSpec = None  # None -> leave real entity alone
     # When set, this exact string is sent as the ready-datetime HA state
     # instead of formatting ready_dt as "%Y-%m-%d %H:%M:%S". Use for testing
@@ -506,7 +508,7 @@ class EvCaseInput:
     # path) — ready_dt should still be set (or resolved via dynamic_setup)
     # to the PREDICTED result, so setup-echo verification has something to
     # check against.
-    ready_override_str: Optional[str] = None
+    ready_override_str: str | None = None
 
 
 @dataclass
@@ -515,13 +517,13 @@ class ResolvedEvInput:
     concrete datetime (or None), so it can be reused both for building
     overrides and for verifying the log echo without calling a
     now()-dependent factory twice."""
-    plugged_in: Optional[bool]
-    position: Optional[str]
-    actual_soc: Optional[float]
-    instant_charge: Optional[bool]
-    wished_level: Optional[float]
-    ready_dt: Optional[dt.datetime]
-    ready_override_str: Optional[str] = None
+    plugged_in: bool | None
+    position: str | None
+    actual_soc: float | None
+    instant_charge: bool | None
+    wished_level: float | None
+    ready_dt: dt.datetime | None
+    ready_override_str: str | None = None
 
 
 def _resolve(da_calc: DaCalc, inp: EvCaseInput) -> ResolvedEvInput:
@@ -546,7 +548,7 @@ class TestCase:
     other_input: EvCaseInput = field(
         default_factory=lambda: EvCaseInput(plugged_in=False, position="away")
     )
-    start_dt: Optional[dt.datetime] = None  # None -> now
+    start_dt: dt.datetime | None = None  # None -> now
     # For cases where start_dt and target_input.ready_dt (and optionally a
     # raw ready_override_str) must be derived from the SAME now() snapshot
     # (e.g. ready_u_zero_full_window, day_rollover_ready_time) rather than
@@ -554,34 +556,32 @@ class TestCase:
     # target_input.ready_dt, and target_input.ready_override_str at run
     # time. Third tuple element is None to leave ready_override_str as
     # whatever target_input already had.
-    dynamic_setup: Optional[
-        Callable[[DaCalc], tuple[dt.datetime, dt.datetime, Optional[str]]]
-    ] = None
+    dynamic_setup: Callable[[DaCalc], tuple[dt.datetime, dt.datetime, str | None]] | None = None
     remove_stop_entity_on_target: bool = False
     # Computes (actual_soc, wished_level) for the TARGET ev from its real
     # config at run time, overriding whatever target_input carried. Needed by
     # the minimum-duty cases, which must derive the SoC pair backwards from
     # the car's own top-stage delivery rather than hardcoding percentages —
     # see remainder_soc_factory.
-    soc_factory: Optional[Callable[[DaCalc, int], tuple[float, float]]] = None
+    soc_factory: Callable[[DaCalc, int], tuple[float, float]] | None = None
     # pass criteria
-    expect_scheduled: Optional[bool] = None  # None -> don't check
-    expect_reason_substr: Optional[str] = None
+    expect_scheduled: bool | None = None  # None -> don't check
+    expect_reason_substr: str | None = None
     expect_ready_index_zero: bool = False
     # When set, also parses and checks the OTHER EV's scheduling outcome —
     # used for the two-EVs-simultaneously case, where both cars have real
     # charging needs rather than the default away/unplugged "other_input".
-    other_expect_scheduled: Optional[bool] = None
+    other_expect_scheduled: bool | None = None
     # Minimum number of partial-duty intervals the case must produce. Used by
     # the minimum-duty cases as a "does this case still bite?" guard: they are
     # NEGATIVE tests (assert no slivers), so if the engineered remainder ever
     # stops landing partway through an interval, they would silently pass
     # while testing nothing. Note this count is stable across the fix — the
     # remainder interval is partial either way, only its size changes.
-    expect_partial_at_least: Optional[int] = None
+    expect_partial_at_least: int | None = None
     # Whether the model's min-duty feasibility guard ("minimale schakelduur
     # ... wordt niet toegepast") is expected to fire. None -> don't check.
-    expect_min_duty_guard: Optional[bool] = None
+    expect_min_duty_guard: bool | None = None
     # Whether day_ahead.py is expected to clip wished_level down for
     # insufficient time ("Er is te weinig tijd..."). None -> don't check.
     # For instant_charge cases this should be explicitly False: instant
@@ -589,7 +589,7 @@ class TestCase:
     # this fires despite instant_charge=True, that's Bug 7 (day_ahead.py
     # reads hours_avail from entity_ready_datetime unconditionally, before
     # the instant_charge branch is ever consulted).
-    expect_wished_level_clipped: Optional[bool] = None
+    expect_wished_level_clipped: bool | None = None
 
 
 def _now_plus(hours: float = 0, minutes: float = 0) -> dt.datetime:
@@ -631,7 +631,8 @@ def _top_stage_accu_kw(da_calc: DaCalc, ev_index: int) -> float:
     ampere = float(getattr(top, "ampere", 0.0))
     efficiency = float(getattr(top, "efficiency", 1.0) or 1.0)
     try:
-        ha_getter = lambda eid: da_calc.get_state(eid).state
+        def ha_getter(eid):
+            return da_calc.get_state(eid).state
         three_phase = bool(ev.charge_three_phase.resolve(ha_getter))
     except Exception:  # noqa: BLE001 - config shape varies, see docstring
         three_phase = False
@@ -1048,13 +1049,13 @@ EV_CAPACITY_KWH = {"tesla": 55.0, "golf": 36.3}
 
 @dataclass
 class SetupEcho:
-    instant_charge: Optional[bool] = None
-    ready_dt: Optional[dt.datetime] = None
-    actual_soc: Optional[float] = None
-    wished_level: Optional[float] = None
-    position: Optional[str] = None
-    plugged_in: Optional[bool] = None
-    capacity_kwh: Optional[float] = None
+    instant_charge: bool | None = None
+    ready_dt: dt.datetime | None = None
+    actual_soc: float | None = None
+    wished_level: float | None = None
+    position: str | None = None
+    plugged_in: bool | None = None
+    capacity_kwh: float | None = None
 
 
 def parse_setup_echo(block_lines: list[str]) -> SetupEcho:
@@ -1084,7 +1085,7 @@ def parse_setup_echo(block_lines: list[str]) -> SetupEcho:
     return echo
 
 
-def check_capacity(car_key: str, echo: SetupEcho) -> Optional[str]:
+def check_capacity(car_key: str, echo: SetupEcho) -> str | None:
     """Cheap cross-EV-leak sanity check: does this car's log block show
     ITS OWN known capacity? A mismatch would mean the wrong EV's config
     got read into this block — exactly the class of bug the "two EVs
@@ -1148,11 +1149,11 @@ def verify_setup_echo(resolved: ResolvedEvInput, echo: SetupEcho) -> list[str]:
 
 @dataclass
 class SolveStats:
-    wall_time_sec: Optional[float] = None
-    nodes: Optional[int] = None
-    gap: Optional[float] = None
-    objective: Optional[float] = None
-    cost_after_optimize: Optional[float] = None
+    wall_time_sec: float | None = None
+    nodes: int | None = None
+    gap: float | None = None
+    objective: float | None = None
+    cost_after_optimize: float | None = None
     # Whether the model actually reached an optimal solution. calc_optimum()
     # returns None immediately on model.num_solutions == 0 (infeasible), or
     # if self.strategy doesn't match a known value — BEFORE any EV dispatch
@@ -1164,7 +1165,7 @@ class SolveStats:
     # harness as a false PASS. Fail-closed: solved is only True if the
     # exact success line is found, not merely "no failure line found".
     solved: bool = False
-    failure_reason: Optional[str] = None
+    failure_reason: str | None = None
 
 
 _STATS_TIME_RE = re.compile(r"Rekentijd:\s*([\d.]+)\s*sec")
@@ -1208,13 +1209,13 @@ def parse_solve_stats(log_text: str) -> SolveStats:
 
 @dataclass
 class ParsedEvRun:
-    scheduled: Optional[bool] = None
-    reason: Optional[str] = None
-    energy_needed_kwh: Optional[float] = None
+    scheduled: bool | None = None
+    reason: str | None = None
+    energy_needed_kwh: float | None = None
     rows: list[dict] = field(default_factory=list)  # per-interval parsed data
-    partial_stops: Optional[int] = None
-    boundary_stops: Optional[int] = None
-    start_stops: Optional[int] = None
+    partial_stops: int | None = None
+    boundary_stops: int | None = None
+    start_stops: int | None = None
     multi_stage_intervals: list[str] = field(default_factory=list)  # 'uur' values
     # (uur, stage_index, factor) for every real stage running below the
     # minimum duty cycle but above zero — i.e. a charge command too short to
@@ -1223,7 +1224,7 @@ class ParsedEvRun:
     # Smallest non-zero real-stage factor seen anywhere in the run. Reported
     # rather than asserted: it is the number a human reads to judge whether a
     # minimum-duty case is still provoking anything.
-    min_nonzero_factor: Optional[float] = None
+    min_nonzero_factor: float | None = None
     # True iff day_ahead.py logged that it skipped the minimum-duty
     # constraint because energy_needed was below one switching action.
     min_duty_guard_fired: bool = False

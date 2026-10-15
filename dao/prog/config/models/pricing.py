@@ -2,13 +2,16 @@
 Pricing configuration models.
 """
 
-from typing import Optional, Literal
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from .base import SecretStr
 from datetime import date
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .base import SecretStr
+
 
 class PricePrediction(BaseModel):
-    extension: Optional[int] = Field (
+    extension: int | None = Field (
         default=0,
         ge=0,
         description="The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices",
@@ -18,7 +21,7 @@ class PricePrediction(BaseModel):
             "x-ui-section": "Prices",
         },
     )
-    source: Optional[Literal["epexpredictor", "energypriceforecast_eu", "dap"]] = Field (
+    source: Literal["epexpredictor", "energypriceforecast_eu", "dap","jeroen_nl"] | None = Field (
         default="dap",
         description="The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
         json_schema_extra={
@@ -26,7 +29,7 @@ class PricePrediction(BaseModel):
             "x-ui-section": "Prices",
         },
     )
-    api: Optional[str] = Field (
+    api: str | None = Field (
         default="https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
         description="The url of the supplier of prediction data, with which DAO can get the prediction data ",
         json_schema_extra={
@@ -34,9 +37,28 @@ class PricePrediction(BaseModel):
                       "for Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"
                       "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>"
                       "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+                      "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json"
             "x-ui-section": "Prices",
         },
     )
+    api_key: SecretStr | None = Field(
+        default=None,
+        description="api key for request of predicted prices (can use !secret)",
+        json_schema_extra={
+            "x-help": "API key for several sources of predicted prices, like jeroen_nl.",
+            "x-ui-section": "Prices",
+            "x-validation-hint": "Required for jeroen_nl, use !secret",
+            "x-docs-url": "https://jeroen.nl/account/data/stroomprijzen",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/source_day_ahead_prediction",
+                    "schema": {"const": "jeroen_nl"},
+                },
+            },
+        },
+    )
+
 
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
@@ -50,7 +72,7 @@ class PricingConfig(BaseModel):
             "x-ui-section": "Prices",
         },
     )
-    prediction: Optional[PricePrediction] = Field(
+    prediction: PricePrediction | None = Field(
         default_factory = PricePrediction,
         description="Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
         json_schema_extra={
@@ -58,7 +80,7 @@ class PricingConfig(BaseModel):
             "x-ui-section": "Prices",
         },
     )
-    entsoe_api_key: Optional[SecretStr] = Field(
+    entsoe_api_key: SecretStr | None = Field(
         default=None,
         alias="entsoe-api-key",
         description="ENTSO-E API key (can use !secret)",
@@ -141,7 +163,7 @@ class PricingConfig(BaseModel):
             "x-validation-hint": "Dict with YYYY-MM-DD keys, integer 0-100 values",
         },
     )
-    multiplier_consumption: Optional[dict[str, float]] = Field(
+    multiplier_consumption: dict[str, float] | None = Field(
         default={"2000-01-01": 1.0},
         alias="multiplier consumption",
         description="Multiplier for consumption by date (YYYY-MM-DD -> x.xx)",
@@ -152,7 +174,7 @@ class PricingConfig(BaseModel):
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float -100.0 - +100.0 values",
         },
     )
-    multiplier_production: Optional[dict[str, float]] = Field(
+    multiplier_production: dict[str, float] | None = Field(
         default={"2000-01-01": 1.0},
         alias="multiplier production",
         description="Multiplier for production by date (YYYY-MM-DD -> x.xx)",
@@ -187,10 +209,10 @@ class PricingConfig(BaseModel):
     @classmethod
     def validate_vat_percentages(cls, v: dict[str, float]) -> dict[str, float]:
         """Validate VAT percentages are between 0 and 100."""
-        for date, percentage in v.items():
+        for date_key, percentage in v.items():
             if not (0 <= percentage <= 100):
                 raise ValueError(
-                    f"VAT percentage must be between 0 and 100, got {percentage} for date {date}"
+                    f"VAT percentage must be between 0 and 100, got {percentage} for date {date_key}"
                 )
         return v
 

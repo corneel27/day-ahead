@@ -36,7 +36,7 @@ def migrate_v1_to_v2(config: dict[str, Any]) -> dict[str, Any]:
     #             battery['efficiency'] = 0.95  # Migration default
     #             logger.info(f"Added efficiency=0.95 to battery '{battery.get('name', 'unknown')}'")
 
-    if not ("grid" in migrated):
+    if "grid" not in migrated:
         migrated["grid"] = {}
     if "battery" in migrated and isinstance(migrated["battery"], list):
         # entity_balance_switch

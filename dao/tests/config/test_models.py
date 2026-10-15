@@ -1,6 +1,14 @@
 import pytest
 from pydantic import BaseModel, ValidationError
-from dao.prog.config.models.base import EntityId, FlexValue, FlexFloat, FlexInt, FlexBool, FlexStr, SecretStr
+
+from dao.prog.config.models.base import (
+    EntityId,
+    FlexBool,
+    FlexFloat,
+    FlexInt,
+    FlexStr,
+    SecretStr,
+)
 
 
 class _Model(BaseModel):

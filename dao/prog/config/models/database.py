@@ -2,8 +2,10 @@
 Database configuration models.
 """
 
-from typing import Optional, Literal
-from pydantic import BaseModel, Field, model_validator, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
 from .base import SecretStr
 
 
@@ -18,7 +20,7 @@ class HADatabaseConfig(BaseModel):
             "x-ui-section": "Homeassistant DB",
         },
     )
-    server: Optional[str] = Field(
+    server: str | None = Field(
         default=None,
         description="Database server hostname (required for mysql/postgresql)",
         json_schema_extra={
@@ -34,7 +36,7 @@ class HADatabaseConfig(BaseModel):
             },
         },
     )
-    port: Optional[int] = Field(
+    port: int | None = Field(
         default=None,
         ge=1,
         le=65535,
@@ -53,7 +55,7 @@ class HADatabaseConfig(BaseModel):
             },
         },
     )
-    db_path: Optional[str] = Field(
+    db_path: str | None = Field(
         default=None,
         description="Database path for SQLite",
         json_schema_extra={
@@ -68,7 +70,7 @@ class HADatabaseConfig(BaseModel):
             },
         },
     )
-    database: Optional[str] = Field(
+    database: str | None = Field(
         default=None,
         description="Database name",
         json_schema_extra={
@@ -76,7 +78,7 @@ class HADatabaseConfig(BaseModel):
             "x-ui-section": "Homeassistant DB",
         },
     )
-    username: Optional[str] = Field(
+    username: str | None = Field(
         default=None,
         description="Database username",
         json_schema_extra={
@@ -91,7 +93,7 @@ class HADatabaseConfig(BaseModel):
             },
         },
     )
-    password: Optional[SecretStr] = Field(
+    password: SecretStr | None = Field(
         default=None,
         description="Database password (can use !secret)",
         json_schema_extra={
@@ -176,7 +178,7 @@ class DatabaseConfig(BaseModel):
     )
 
     # SQLite fields
-    db_path: Optional[str] = Field(
+    db_path: str | None = Field(
         default=None,
         description="Database path for SQLite (e.g., '../data')",
         json_schema_extra={
@@ -192,7 +194,7 @@ class DatabaseConfig(BaseModel):
             },
         },
     )
-    database: Optional[str] = Field(
+    database: str | None = Field(
         default=None,
         description="Database filename for SQLite or database name for MySQL",
         json_schema_extra={
@@ -203,7 +205,7 @@ class DatabaseConfig(BaseModel):
     )
 
     # MySQL fields
-    server: Optional[str] = Field(
+    server: str | None = Field(
         default=None,
         description="MySQL server hostname (required for mysql)",
         json_schema_extra={
@@ -219,7 +221,7 @@ class DatabaseConfig(BaseModel):
             },
         },
     )
-    port: Optional[int] = Field(
+    port: int | None = Field(
         default=None,
         ge=1,
         le=65535,
@@ -237,7 +239,7 @@ class DatabaseConfig(BaseModel):
             },
         },
     )
-    username: Optional[str] = Field(
+    username: str | None = Field(
         default=None,
         description="MySQL username (required for mysql)",
         json_schema_extra={
@@ -253,7 +255,7 @@ class DatabaseConfig(BaseModel):
             },
         },
     )
-    password: Optional[SecretStr] = Field(
+    password: SecretStr | None = Field(
         default=None,
         description="MySQL password (can use !secret)",
         json_schema_extra={
@@ -269,7 +271,7 @@ class DatabaseConfig(BaseModel):
             },
         },
     )
-    time_zone: Optional[str] = Field(
+    time_zone: str | None = Field(
         default=None,
         alias="time_zone",
         description="Database timezone",

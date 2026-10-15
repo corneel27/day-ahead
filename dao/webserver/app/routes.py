@@ -1,5 +1,7 @@
-from . import app
 from flask import redirect, url_for
+
+from . import app
+
 
 @app.route("/", methods=["GET"])
 def index():

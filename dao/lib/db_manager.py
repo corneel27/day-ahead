@@ -1,29 +1,27 @@
-import pandas as pd
-import numpy as np
 import datetime
-from sqlalchemy import (
-    create_engine,
-    Table,
-    MetaData,
-    select,
-    insert,
-    update,
-    func,
-    and_,
-    text,
-    TIMESTAMP,
-)
-import sqlalchemy_utils
-import os
 import logging
+import os
+
+import numpy as np
+import pandas as pd
+from sqlalchemy import (
+    MetaData,
+    Table,
+    and_,
+    bindparam,
+    create_engine,
+    func,
+    insert,
+    select,
+    update,
+)
 
 from dao.prog.utils import interpolate
-
 
 # import utils as utils
 
 
-class DBmanagerObj(object):
+class DBmanagerObj:
     """
     Database manager class.
     """
@@ -245,59 +243,68 @@ class DBmanagerObj(object):
             # Reflect existing tables from the database
             values_table = Table(tablename, self.metadata, autoload_with=self.engine)
             variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
-            df = df.reset_index()  # make sure indexes pair with number of rows
-            df["tijd"] = df["time"].apply(
-                lambda x: datetime.datetime.fromtimestamp(int(float(x))).strftime(
-                    "%Y-%m-%d %H:%M"
-                )
-            )
-            for index, dfrow in df.iterrows():
-                logging.debug(
-                    f"Save record: {dfrow['tijd']} {dfrow['code']} "
-                    f"{dfrow['time']} {dfrow['value']}"
-                )
-                code = dfrow["code"]
-                time = dfrow["time"]
-                value = dfrow["value"]
+            records = []
+            for code, time, value in zip(df["code"], df["time"], df["value"], strict=False):
                 if not isinstance(value, (int, float)):
                     continue
                 if pd.isna(value):
                     continue
                 if value == float("inf"):
                     continue
+                records.append((code, int(float(time)), value))
+            if len(records) == 0:
+                return
 
-                # Get the variabel_id
-                select_variabel = select(variabel_table.c.id).where(
-                    variabel_table.c.code == code
-                )
-                variabel_result = connection.execute(select_variabel).first()
-                if variabel_result:
-                    variabel_id = variabel_result[0]
-                else:
-                    logging.error(f"Onbekende code opslaan data: {code}")
-                    continue
+            # de id's van de codes en van de al aanwezige records in twee
+            # queries ophalen in plaats van twee queries per waarde
+            codes = {code for code, _, _ in records}
+            select_variabel = select(variabel_table.c.id, variabel_table.c.code).where(
+                variabel_table.c.code.in_(sorted(codes))
+            )
+            variabel_ids = {
+                row.code: row.id for row in connection.execute(select_variabel)
+            }
+            for code in codes - variabel_ids.keys():
+                logging.error(f"Onbekende code opslaan data: {code}")
+            times = [time for _, time, _ in records]
+            select_value = select(
+                values_table.c.id, values_table.c.variabel, values_table.c.time
+            ).where(
+                values_table.c.variabel.in_(list(variabel_ids.values()))
+                & (values_table.c.time >= min(times))
+                & (values_table.c.time <= max(times))
+            )
+            value_ids = {}
+            for row in connection.execute(select_value):
+                value_ids.setdefault((row.variabel, int(row.time)), row.id)
 
-                # Query to check if the record exists
-                select_value = select(values_table.c.id).where(
-                    (values_table.c.variabel == variabel_id)
-                    & (values_table.c.time == time)
-                )
-                value_result = connection.execute(select_value).first()
-                if value_result:
-                    # Update existing record
-                    value_id = value_result[0]
-                    update_value = (
-                        update(values_table)
-                        .values(value=value)
-                        .where(values_table.c.id == value_id)
-                    )
-                    connection.execute(update_value)
+            # bij een dubbele code en tijd wint de laatste waarde, net als
+            # toen elke waarde apart werd opgeslagen
+            new_values = {}
+            for code, time, value in records:
+                logging.debug(f"Save record: {code} {time} {value}")
+                variabel_id = variabel_ids.get(code)
+                if variabel_id is not None:
+                    new_values[(variabel_id, time)] = value
+            updates = []
+            inserts = []
+            for (variabel_id, time), value in new_values.items():
+                value_id = value_ids.get((variabel_id, time))
+                if value_id is not None:
+                    updates.append({"value_id": value_id, "new_value": value})
                 else:
-                    # Record does not exist, perform insert
-                    insert_value = insert(values_table).values(
-                        variabel=variabel_id, time=time, value=value
+                    inserts.append(
+                        {"variabel": variabel_id, "time": time, "value": value}
                     )
-                    connection.execute(insert_value)
+            if updates:
+                update_value = (
+                    update(values_table)
+                    .where(values_table.c.id == bindparam("value_id"))
+                    .values(value=bindparam("new_value"))
+                )
+                connection.execute(update_value, updates)
+            if inserts:
+                connection.execute(insert(values_table), inserts)
             connection.commit()
         finally:
             connection.close()
@@ -379,7 +386,6 @@ class DBmanagerObj(object):
                 num_days = 2
             end_dt = start_dt + datetime.timedelta(days=num_days)
             end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
-            end_ts = end_dt.timestamp()
             query = query.where(
                 t1.c.time < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
             )
@@ -436,7 +442,6 @@ class DBmanagerObj(object):
                     num_days = 2
                 end_dt = start_dt + datetime.timedelta(days=num_days)
                 end_dt = datetime.datetime(end_dt.year, end_dt.month, end_dt.day)
-                end_ts = end_dt.timestamp()
                 query = query.where(
                     t1.c.time
                     < self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
@@ -559,13 +564,17 @@ class DBmanagerObj(object):
         )
         return df
 
-    def get_consumption(self, start: datetime.datetime, end=datetime.datetime.now()):
+    def get_consumption(
+        self, start: datetime.datetime, end: datetime.datetime | None = None
+    ):
         """
         retourneert een dataframe met consumption en production in periode vanaf start tot until
         :param start: start moment
         :param end: eindmoment , default nu
         :return: dataframe
         """
+        if end is None:
+            end = datetime.datetime.now()
         values_table = Table("values", self.metadata, autoload_with=self.engine)
         # Aliases for the values table
         t1 = values_table.alias("t1")

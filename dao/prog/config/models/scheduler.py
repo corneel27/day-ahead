@@ -2,23 +2,14 @@
 Scheduler configuration models.
 """
 
-from typing import Literal, Optional
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import Literal
 
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from dao.prog.da_const import tasks
 
 # Valid scheduler actions
-SchedulerAction = Literal[
-    "get_meteo_data",
-    "get_tibber_data",
-    "get_day_ahead_prices",
-    "calc_optimum",
-    "calc_optimum_met_debug",
-    "clean_data",
-    "calc_baseloads",
-    "train_ml_predictions",
-    "predicted_prices"
-]
-
+SchedulerAction = Literal[*tasks.keys()]
 
 class ScheduleEntry(BaseModel):
     """A single scheduled task entry."""
@@ -66,7 +57,7 @@ class SchedulerConfig(BaseModel):
             "x-order": 1,
         },
     )
-    offset: Optional[int] = Field(
+    offset: int | None = Field(
         default = 10,
         ge=0,
         le=60,

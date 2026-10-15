@@ -30,8 +30,16 @@ for _p in (str(_REPO_ROOT), str(_PROG_DIR)):
         sys.path.insert(0, _p)
 
 from dao.prog.scenarios import loader, plugins  # noqa: E402
-from dao.prog.scenarios.loader import ScenarioLoadError, parse_scenario, set_dotted  # noqa: E402
-from dao.prog.scenarios.vocabulary import VocabularyError, parse_start, upsample  # noqa: E402
+from dao.prog.scenarios.loader import (  # noqa: E402
+    ScenarioLoadError,
+    parse_scenario,
+    set_dotted,
+)
+from dao.prog.scenarios.vocabulary import (  # noqa: E402
+    VocabularyError,
+    parse_start,
+    upsample,
+)
 
 
 def _solver_ready() -> bool:
