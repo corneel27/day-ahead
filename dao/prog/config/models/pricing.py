@@ -21,7 +21,7 @@ class PricePrediction(BaseModel):
             "x-ui-section": "Prices",
         },
     )
-    source: Literal["epexpredictor", "energypriceforecast_eu", "dap"] | None = Field (
+    source: Literal["epexpredictor", "energypriceforecast_eu", "dap","jeroen_nl"] | None = Field (
         default="dap",
         description="The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
         json_schema_extra={
@@ -37,9 +37,28 @@ class PricePrediction(BaseModel):
                       "for Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"
                       "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>"
                       "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+                      "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json"
             "x-ui-section": "Prices",
         },
     )
+    api_key: SecretStr | None = Field(
+        default=None,
+        description="api key for request of predicted prices (can use !secret)",
+        json_schema_extra={
+            "x-help": "API key for several sources of predicted prices, like jeroen_nl.",
+            "x-ui-section": "Prices",
+            "x-validation-hint": "Required for jeroen_nl, use !secret",
+            "x-docs-url": "https://jeroen.nl/account/data/stroomprijzen",
+            "x-ui-rules": {
+                "effect": "SHOW",
+                "condition": {
+                    "scope": "#/properties/source_day_ahead_prediction",
+                    "schema": {"const": "jeroen_nl"},
+                },
+            },
+        },
+    )
+
 
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
