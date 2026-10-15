@@ -33,5 +33,17 @@ jobs:
             python scripts/verify_environment.py
             .venv/bin/python -m pytest -c pytest-dev.ini -q
             PYTHONPATH="$PWD:$PWD/dao/prog" .venv/bin/python -m dao.prog.da_debug scenario-run --report
+            cd dao/webserver
+            npx playwright install --with-deps chromium
+            npm run test:browser
           '
           docker stop "$container_id"
+      - name: Upload browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-failures
+          path: .local/frontend-test-results/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

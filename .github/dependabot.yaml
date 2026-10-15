@@ -22,6 +22,11 @@ updates:
     directory: "/.devcontainer"
     schedule:
       interval: weekly
+    # Node follows the digest-pinned Active LTS tag in the Dockerfile.
+    # Allow its digest refresh even when that floating tag was recently republished.
+    cooldown:
+      default-days: 3
+      exclude: [node]
   - package-ecosystem: npm
     directory: "/dao/webserver"
     schedule:

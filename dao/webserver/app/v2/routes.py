@@ -360,7 +360,7 @@ def task_cancel():
         state = get_task_state()
         state["status"] = "cancelled"
         save_task_state(state)
-        return render_template("v2/tasks.html")
+        return redirect(url_for('v2.task_state'))
     except Exception:
         return "Error cancelling task", 500
 
@@ -389,7 +389,10 @@ def task_exec():
     save_task_state(state)
 
     cmd = tasks[task_name]["cmd"].copy()
-    cmd[1] ="../prog/day_ahead.py"
+    cmd[1] = "../prog/day_ahead.py"
+
+    if task_name == "get_day_ahead_prices":
+        cmd.append(datetime.date.today().strftime("%Y-%m-%d"))
 
     threading.Thread(
         target=run_and_log,

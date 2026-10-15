@@ -106,7 +106,9 @@ Locally, run **Development: Verify environment** for the smoke checks. CI verifi
 
 The static page is maintained in `docs/developer/` in this repository. Its **Developer start page** workflow checks repository/branch URL handling on pull requests and publishes only the HTML, JavaScript and stylesheet; it has no server or extra package dependencies.
 
-GitHub Pages publishes the start page at `https://corneel27.github.io/day-ahead/developer/`. Changes to the page on `main` publish automatically through GitHub Actions. Publication uses the repository variable `DEVELOPER_PAGES_ENABLED=true`; the `github-pages` environment restricts deployments to `main`. To republish without changing files, run **Actions > Developer start page > Run workflow** on `main`.
+When GitHub Pages is configured, the start page is published at `https://corneel27.github.io/day-ahead/developer/`. Enable publication with the repository variable `DEVELOPER_PAGES_ENABLED=true` and restrict the `github-pages` environment to the intended publication branch. The workflow permits `main` or the branch named by `DEVELOPER_PAGES_BRANCH`; pull requests never publish. To republish without changing files, run **Actions > Developer start page > Run workflow** on the publication branch.
+
+The workflow also tests the published `actions/deploy-pages` bundle on Node 24 against local API fixtures. It checks artifact selection, deployment payloads, polling, URL output and failure handling without real credentials or publication. Deployment waits for both the page tests and these action tests. To run the action tests locally, check out the workflow's action version into `.local/deploy-pages`, then run `node --test scripts/test_pages_action.mjs` with Node 24. Set `PAGES_ACTION_DIR` to use another checkout. These checks do not validate live Pages permissions or environment approval rules.
 
 When changing the start page or installation procedure, open the page in a browser, enter the URL of a fork containing the changes and click **Open in VS Code**. Use a fresh Docker volume and VS Code profile; confirm the first-time prompts, automatic setup, Ruff findings and safe fixes on save, test discovery and F5 startup with a working breakpoint. Record results and any incomplete checks in the pull request. CI's clean-install workflow complements this check but does not exercise the browser-to-VS-Code permission prompt.
 
@@ -330,6 +332,26 @@ PYTHONPATH=.:dao/prog TZ=UTC MPLBACKEND=Agg .venv/bin/python -m dao.prog.da_debu
 ```
 
 The pytest selection contains isolated unit/regression tests. Solver cases skipped there are exercised by the separate scenario command. Optional MariaDB cases require a dedicated disposable database and are currently skipped without it. See [docs/testing.md](docs/testing.md) for detailed test scope and results.
+
+### Database startup regressions
+
+`dao/tests/prog/test_db_connections.py` checks new database creation, recognition of existing databases, preservation of stored rows and missing-database handling. SQLite runs by default. The **Scenario suite (solve)** CI job also supplies disposable MariaDB and PostgreSQL services and enables the existing MariaDB report-query tests.
+
+For local server tests, use disposable servers and set `DAO_TEST_ALLOW_SCHEMA_RESET=1`, `DAO_TEST_MARIADB_URL` and `DAO_TEST_POSTGRESQL_URL`. Each URL must point to the dedicated `dao_query_test` database with credentials allowed to create and drop databases. The startup tests create uniquely named `dao_dependency_*` databases and remove them afterward. The report-query tests reset tables in `dao_query_test`. Never supply a production database URL. Without explicit enablement, server cases are skipped.
+
+Run `python -m pytest -c pytest-dev.ini -q dao/tests/prog/test_db_connections.py dao/tests/prog/test_ha_data_query.py` after setup.
+
+### Browser regressions
+
+After `sh script/setup`, run the real built frontend against the isolated task backend:
+
+```bash
+cd dao/webserver
+npx playwright install --with-deps chromium
+npm run test:browser
+```
+
+These Chromium tests exercise the real task routes, templates and Vite bundle: boosted submission, status polling, cancellation, URL/history preservation and HTTP/network error banners. The backend uses temporary configuration and in-memory synthetic task state; task threads and subprocesses are replaced before serving, and unrelated routes are blocked. No live tasks or devices are used. The development-container CI runs this suite and retains traces/screenshots under `.local/frontend-test-results` when a browser test fails.
 
 ### Manual clean-checkout acceptance
 
