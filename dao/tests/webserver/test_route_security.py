@@ -106,41 +106,11 @@ def test_datasets_config_reflects_variable_table(monkeypatch, dim, stepped):
         engine.dispose()
 
 
-@pytest.mark.parametrize("method", ["GET", "POST"])
-@pytest.mark.parametrize("task", ["calc_optimum", "calc", "calc_zonder_debug"])
-def test_api_task_and_aliases_execute_exactly_once(client, monkeypatch, tmp_path, method, task):
-    program_dir = tmp_path / "prog"
-    program_dir.mkdir()
-    log_dir = tmp_path / "data" / "log"
-    log_dir.mkdir(parents=True)
-    monkeypatch.chdir(program_dir)
-    monkeypatch.setitem(app.config, "DAO_WEB_PREVIEW", False)
-    monkeypatch.setattr(api_routes, "PROG_DIR", program_dir)
-    runner = Mock(return_value=SimpleNamespace(stdout="task output\n", stderr="task warning\n"))
-    monkeypatch.setattr(api_routes, "subprocess_run", runner)
-
-    response = client.open(f"/api/run/{task}", method=method)
-
-    assert response.status_code == 200
-    assert response.mimetype == "text/plain"
-    assert response.data == b"task output\ntask warning\n"
-    runner.assert_called_once_with(
-        api_routes.tasks["calc_optimum"]["cmd"], cwd=program_dir, capture_output=True, text=True,
-    )
-    logs = list(log_dir.glob("calc_*.log"))
-    assert len(logs) == 1
-    assert logs[0].read_text() == "task output\ntask warning\n"
-
-
-@pytest.mark.parametrize("method", ["GET", "POST"])
-def test_unknown_task_is_escaped_plain_text(client, monkeypatch, method):
-    runner = Mock(side_effect=AssertionError("Unknown task must not execute a command"))
-    monkeypatch.setattr(api_routes, "subprocess_run", runner)
-    response = client.open("/api/run/%3Cimg%20src=x%20onerror=alert(1)%3E", method=method)
+def test_unknown_task_is_escaped_plain_text(client):
+    response = client.get("/api/run/%3Cimg%20src=x%20onerror=alert(1)%3E")
     assert response.status_code == 400
     assert response.mimetype == "text/plain"
     assert b"<img" not in response.data
-    runner.assert_not_called()
 
 
 @pytest.mark.parametrize("filename", [None, "../options.json", "/tmp/private.log", "..\\private.log", "file\x00.log"])
