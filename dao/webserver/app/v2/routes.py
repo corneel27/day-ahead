@@ -360,7 +360,7 @@ def task_cancel():
         state = get_task_state()
         state["status"] = "cancelled"
         save_task_state(state)
-        return render_template("v2/tasks.html")
+        return redirect(url_for('v2.task_state'))
     except Exception:
         return "Error cancelling task", 500
 
