@@ -2728,16 +2728,26 @@ class DaCalc(DaBase):
                     min_run_length = max(
                         min_run_length, math.floor(hp_hours / blocks_num)
                     )
+                    # length of lastblock
+                    last_block_len = (hp_hours - first_block_len) % min_run_length
+                    if last_block_len == 0:
+                        last_block_len = min_run_length
                 else:
-                    min_run_length = max(
-                        min_run_length, math.floor(hours_avail / blocks_num)
-                    )
-                # length of lastblock
-                last_block_len = (hp_hours - first_block_len) % min_run_length
-                if last_block_len == 0:
-                    last_block_len = min_run_length
+                    # De blokken samen beslaan precies hp_hours: de uren die op het
+                    # minimale vermogen nodig zijn. Gebaseerd op hours_avail werd de
+                    # wp langer ingepland dan nodig (overproductie, ook in dure uren).
+                    if blocks_num > 1:
+                        rest_hours = hp_hours - first_block_len
+                        min_run_length = max(
+                            min_run_length, math.floor(rest_hours / (blocks_num - 1))
+                        )
+                        last_block_len = max(
+                            1, rest_hours - (blocks_num - 2) * min_run_length
+                        )
+                    else:
+                        last_block_len = first_block_len
                 logging.info(f"Eerste blok van {first_block_len} uur")
-                if last_block_len < min_run_length:
+                if last_block_len != min_run_length:
                     logging.info(
                         f"Tussenin {blocks_num - 2} blokken van {min_run_length} uur"
                     )
