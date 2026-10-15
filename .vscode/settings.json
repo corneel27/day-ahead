@@ -1,0 +1,25 @@
+{
+  "ruff.path": [
+    "${workspaceFolder}/.venv-tools/ruff-project.exe",
+    "${workspaceFolder}/.venv-tools/ruff-project"
+  ],
+  "ruff.configurationPreference": "filesystemFirst",
+  "ruff.lint.enable": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": false,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "always",
+      "source.organizeImports.ruff": "always"
+    }
+  },
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "-c",
+    "pytest-dev.ini"
+  ],
+  "python.testing.cwd": "${workspaceFolder}",
+  "python.envFile": "${workspaceFolder}/.vscode/test.env"
+}

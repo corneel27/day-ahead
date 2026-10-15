@@ -1,0 +1,15 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Ruff (repository version)
+        entry: .venv-tools/ruff-project check --fix
+        language: system
+        types_or: [python, pyi]
+        exclude: ^(?:\.venv[^/]*/|dao/webserver/app/static/build/)
+      - id: ruff-version
+        name: Ruff version check
+        entry: .venv-tools/ruff-project --version
+        language: system
+        always_run: true
+        pass_filenames: false
