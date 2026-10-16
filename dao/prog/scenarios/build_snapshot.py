@@ -4,9 +4,16 @@ ReplayIO serves price_data, prog_data, baseload, ha_states, config, and
 ha_context straight from this dict and patches away every DB, HA, and
 network call, so nothing here needs a capture.
 
-Everything the scenario expresses hourly is expanded to the 15-minute model
-grid. price_data and prog_data are built on the same grid so day_ahead.py
-can align their intervals by timestamp.
+Everything the scenario expresses hourly is expanded to the model grid
+(vocabulary.model_grid): 15-minute intervals for the fixed part, hourly
+intervals for the predicted part (prices.predicted). price_data and
+prog_data are built on the same grid and the same length, because
+day_ahead.py copies price columns onto prog_data positionally.
+
+With a predicted part, day_ahead.py calls get_price_data and
+get_prognose_data twice each: once for the fixed part, once for the
+predicted part. The snapshot records both calls, in that order, as
+da_debug's call-sequence channels expect.
 """
 
 from __future__ import annotations
@@ -23,7 +30,15 @@ from . import (
 from .base_config import base_config
 from .loader import set_dotted
 from .model import Scenario
-from .vocabulary import INTERVAL_S, STEPS_PER_HOUR, interval_grid, parse_start, upsample
+from .vocabulary import (
+    INTERVAL_S,
+    expand_to_model_grid,
+    hourly_grid,
+    interval_grid,
+    model_grid,
+    parse_start,
+    upsample,
+)
 
 # A fixed NL location so solar geometry (used by the DAO predictor when a
 # scenario doesn't inject a solar array) is realistic. De Bilt-ish.
@@ -48,6 +63,8 @@ def load_base_states() -> dict[str, str]:
 
 def build_config(scenario: Scenario) -> dict:
     cfg = base_config(scenario.options or "options_example")
+    if scenario.predicted_hours:
+        set_dotted(cfg, "prices.prediction.extension", scenario.predicted_hours)
     for path, value in scenario.config_patch.items():
         set_dotted(cfg, path, value)
     return cfg
@@ -71,13 +88,13 @@ def resolve_ev(scenario: Scenario, config: dict):
     return expanded
 
 
-def _price_frame(pd, grid: list[dt.datetime], cons_q: list[float], prod_q: list[float]):
+def _price_frame(pd, grid: list[dt.datetime], cons_q: list[float], prod_q: list[float], datasoort: str = "expected"):
     df = pd.DataFrame({
         "time": grid,
         "da_ex": cons_q,
         "da_cons": cons_q,
         "da_prod": prod_q,
-        "datasoort": ["expected"] * len(grid),
+        "datasoort": [datasoort] * len(grid),
     })
     df.index = pd.to_datetime(df["time"])
     df.index.name = "time"
@@ -102,15 +119,21 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states:
     from dao.prog import da_debug
 
     start = parse_start(scenario.start)
+    fixed_h, pred_h = scenario.fixed_hours, scenario.predicted_hours
     horizon_h = scenario.horizon_hours
-    grid = interval_grid(start, horizon_h)
+    grid = interval_grid(start, fixed_h)
+    pred_start = start + dt.timedelta(hours=fixed_h)
+    pred_grid = hourly_grid(pred_start, pred_h)
 
-    cons_q = upsample(scenario.prices_cons, horizon_h, label="prices.cons")
+    cons_q = upsample(scenario.prices_cons, fixed_h, label="prices.cons")
     prod_src = scenario.prices_prod if scenario.prices_prod is not None else scenario.prices_cons
-    prod_q = upsample(prod_src, horizon_h, label="prices.prod")
+    prod_q = upsample(prod_src, fixed_h, label="prices.prod")
+    pred_cons = list(scenario.prices_pred_cons)
+    pred_prod = list(scenario.prices_pred_prod) if scenario.prices_pred_prod is not None else pred_cons
 
     temp_src = scenario.temp if scenario.temp is not None else [DEFAULT_TEMP_C] * horizon_h
-    temp_q = upsample(temp_src, horizon_h, label="temp")
+    temp_all = expand_to_model_grid(temp_src, fixed_h, pred_h, label="temp")
+    temp_q, temp_pred = temp_all[: len(grid)], temp_all[len(grid):]
 
     if scenario.baseload is not None:
         baseload_hourly = list(scenario.baseload)[:horizon_h]
@@ -128,8 +151,23 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states:
         for eid, value in ev_states.items():
             states[eid] = _statestr(value)
 
-    price_df = _price_frame(pd, grid, cons_q, prod_q)
-    prog_df = _prog_frame(pd, grid, temp_q)
+    price_calls = [da_debug._sequence_record(
+        {"start": start, "end": None, "interval": "15min", "extension": 0},
+        _price_frame(pd, grid, cons_q, prod_q),
+    )]
+    prog_calls = [da_debug._sequence_record(
+        {"start": start, "end": pred_start if pred_h else None, "interval": "15min"},
+        _prog_frame(pd, grid, temp_q),
+    )]
+    if pred_h:
+        price_calls.append(da_debug._sequence_record(
+            {"start": pred_start, "end": None, "interval": "1hour", "extension": pred_h},
+            _price_frame(pd, pred_grid, pred_cons, pred_prod, datasoort="prediction"),
+        ))
+        prog_calls.append(da_debug._sequence_record(
+            {"start": pred_start, "end": None, "interval": "1hour"},
+            _prog_frame(pd, pred_grid, temp_pred),
+        ))
 
     return {
         "meta": {
@@ -144,9 +182,8 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states:
             "scenario_id": scenario.id,
         },
         "ha_context": dict(HA_CONTEXT),
-        "price_data": da_debug._dataframe_to_payload(price_df),
-        "price_data_args": None,
-        "prog_data": da_debug._dataframe_to_payload(prog_df),
+        "price_data_calls": price_calls,
+        "prog_data_calls": prog_calls,
         "ha_states": states,
         "baseload": {str(d): list(baseload_hourly) for d in range(7)},
         "heatpump_run_hours": _heatpump_hours_channel(scenario),
@@ -157,13 +194,14 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states:
 
 
 def solar_quarter_series(scenario: Scenario) -> list[float]:
-    """The scenario's total-house PV in kW on the 15-minute grid, all zero
-    when the scenario gives no solar array. runner.py splits this across
-    the configured PV arrays by capacity share."""
-    horizon_h = scenario.horizon_hours
+    """The scenario's total-house PV in kW on the model grid
+    (vocabulary.model_grid), all zero when the scenario gives no solar
+    array. runner.py splits this across the configured PV arrays by
+    capacity share."""
+    n = len(model_grid(parse_start(scenario.start), scenario.fixed_hours, scenario.predicted_hours))
     if scenario.solar is None:
-        return [0.0] * (horizon_h * STEPS_PER_HOUR)
-    return upsample(scenario.solar, horizon_h, label="solar")
+        return [0.0] * n
+    return expand_to_model_grid(scenario.solar, scenario.fixed_hours, scenario.predicted_hours, label="solar")
 
 
 def _heatpump_hours_channel(scenario: Scenario) -> dict:

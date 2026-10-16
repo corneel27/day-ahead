@@ -62,7 +62,9 @@ except ImportError:  # pragma: no cover - mip is a hard project dependency,
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 1
+# 2: price_data/prog_data are recorded per call (price_data_calls,
+# prog_data_calls) instead of as one frame. Schema-1 snapshots still replay.
+SCHEMA_VERSION = 2
 SCHEMA_MIN_SUPPORTED = 1
 
 REDACTED_SECRET = "<redacted:SecretStr>"
@@ -217,6 +219,94 @@ def _call_key(args: tuple, kwargs: dict) -> str:
     return json.dumps([list(args), sorted(kwargs.items())], default=str, sort_keys=True)
 
 
+# Argumenten die bij een call-sequence channel moeten overeenkomen tussen opname en
+# replay. Tijdstippen (start/end) horen er bewust niet bij: die volgen uit
+# calc_optimum()'s eigen dt.datetime.now() en kunnen over een intervalgrens
+# verschuiven, zie het predict_solar_device-kanaal.
+_SEQUENCE_MATCH_ARGS = ("interval", "extension")
+
+
+class _CallSequence:
+    """Replay side of a channel that ``calc_optimum()`` calls several times
+    with different windows: ``Report.get_price_data`` (fixed day-ahead part,
+    then the predicted extension) and ``get_prognose_data`` (the same two
+    parts, plus one call per solar device from ``calc_solar_predictions``).
+
+    Recorded calls are served in call order. The n-th replayed call gets the
+    n-th recorded frame, after a check that ``interval`` and ``extension``
+    agree. A different call count or a mismatch raises ``SnapshotMiss``;
+    ``check_consumed`` catches recordings left unused.
+
+    A schema-1 snapshot holds one frame per channel. That frame is served
+    for every call, which is what replay always did before schema 2."""
+
+    def __init__(self, channel: str, source: str, records: list | None, legacy: pd.DataFrame | None = None):
+        self._channel = channel
+        self._source = source
+        self._records = [
+            (rec.get("args") or {}, _dataframe_from_payload(rec["data"]))
+            for rec in (records or [])
+        ]
+        self._legacy = legacy
+        self._next = 0
+
+    # Het eerste opgenomen frame; voor de dump-header, die alleen het vaste deel nodig heeft.
+    @property
+    def first(self) -> pd.DataFrame | None:
+        if self._records:
+            return self._records[0][1]
+        return self._legacy
+
+    # Levert het volgende opgenomen frame en faalt hard bij een afwijkende aanroep.
+    def serve(self, **args) -> pd.DataFrame:
+        if not self._records:
+            if self._legacy is None:
+                raise SnapshotMiss(f"ReplayIO ({self._source}): snapshot has no {self._channel}.")
+            return self._legacy.copy()
+        n = self._next
+        if n >= len(self._records):
+            raise SnapshotMiss(
+                f"ReplayIO ({self._source}): {self._channel} call #{n + 1} "
+                f"{args} has no recording; the snapshot holds "
+                f"{len(self._records)} call(s)."
+            )
+        recorded_args, frame = self._records[n]
+        for name in _SEQUENCE_MATCH_ARGS:
+            if name in recorded_args and str(recorded_args[name]) != str(args.get(name)):
+                raise SnapshotMiss(
+                    f"ReplayIO ({self._source}): {self._channel} call #{n + 1} "
+                    f"has {name}={args.get(name)!r}, the recording has "
+                    f"{recorded_args[name]!r}. calc_optimum() now calls this "
+                    f"channel in a different order or with different arguments."
+                )
+        self._next += 1
+        return frame.copy()
+
+    # Faalt hard als er opgenomen aanroepen over zijn; een schema-1-frame telt niet.
+    def check_consumed(self) -> None:
+        left = len(self._records) - self._next
+        if left > 0:
+            raise SnapshotMiss(
+                f"ReplayIO ({self._source}): {self._channel} served "
+                f"{self._next} of {len(self._records)} recorded call(s). "
+                f"calc_optimum() now skips a call the recorded run made."
+            )
+
+
+# Leest het enkele frame uit een schema-1-snapshot, of None als dat er niet is.
+def _legacy_frame(snapshot: dict, channel: str) -> pd.DataFrame | None:
+    payload = snapshot.get(channel)
+    return _dataframe_from_payload(payload) if payload is not None else None
+
+
+# Zet een opgenomen aanroep om naar het snapshot-formaat van een call-sequence channel.
+def _sequence_record(args: dict, frame: pd.DataFrame) -> dict:
+    return {
+        "args": {k: (None if v is None else str(v)) for k, v in args.items()},
+        "data": _dataframe_to_payload(frame),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Lightweight stand-ins used only during replay
 # ---------------------------------------------------------------------------
@@ -271,18 +361,14 @@ class _FakeDbManager:
     ``calc_optimum()`` reads from the database somewhere this module
     doesn't patch yet, and needs a real patch added."""
 
-    # Onthoudt de opgeslagen prognosedata en een label voor duidelijke foutmeldingen.
-    def __init__(self, prog_data: pd.DataFrame | None, label: str):
-        self._prog_data = prog_data
+    # Onthoudt de opgenomen prognose-aanroepen en een label voor duidelijke foutmeldingen.
+    def __init__(self, prog_calls: _CallSequence, label: str):
+        self._prog_calls = prog_calls
         self._label = label
 
-    # Levert de opgeslagen prognosedata terug in plaats van een echte databasequery uit te voeren.
+    # Levert de volgende opgenomen prognosedata terug in plaats van een echte databasequery uit te voeren.
     def get_prognose_data(self, start=None, end=None, interval="1hour"):
-        if self._prog_data is None:
-            raise SnapshotMiss(
-                f"ReplayIO ({self._label}): prog_data not present in snapshot"
-            )
-        return self._prog_data.copy()
+        return self._prog_calls.serve(start=start, end=end, interval=interval)
 
     # Doet niets; bestaat alleen omdat DaBase.__init__ dit aanroept en anders een AttributeError zou geven.
     def log_pool_status(self):
@@ -532,9 +618,8 @@ class RecordingIO:
         self._png = png
         self._patches = _PatchList()
         self._primary = None  # first DaBase-family instance constructed
-        self._price_data: pd.DataFrame | None = None
-        self._price_data_args: dict | None = None
-        self._prog_data: pd.DataFrame | None = None
+        self._price_calls: list[dict] = []
+        self._prog_calls: list[dict] = []
         self._ha_states: dict[str, str] = {}
         self._baseload: dict[str, list] = {}
         self._heatpump_run_hours: dict[str, float] = {}
@@ -627,15 +712,16 @@ class RecordingIO:
 
         original_get_price_data = Report.get_price_data
 
-        # Roept Report.get_price_data echt aan en bewaart het teruggegeven DataFrame.
-        def _wrapped_get_price_data(instance, start, end=None, interval="1hour"):
-            result = original_get_price_data(instance, start, end=end, interval=interval)
-            self._price_data = result
-            self._price_data_args = {
-                "start": str(start),
-                "end": str(end),
-                "interval": interval,
-            }
+        # Roept Report.get_price_data echt aan en bewaart elke aanroep op volgorde:
+        # met een prijsvoorspelling (extension > 0) zijn het er twee.
+        def _wrapped_get_price_data(instance, start, end=None, interval="1hour", extension=0):
+            result = original_get_price_data(
+                instance, start, end=end, interval=interval, extension=extension
+            )
+            self._price_calls.append(_sequence_record(
+                {"start": start, "end": end, "interval": interval, "extension": extension},
+                result,
+            ))
             return result
 
         self._patches.set(Report, "get_price_data", _wrapped_get_price_data)
@@ -672,10 +758,13 @@ class RecordingIO:
 
         original_get_prognose_data = DBmanagerObj.get_prognose_data
 
-        # Roept de echte prognosedata-query aan en bewaart het resultaat.
+        # Roept de echte prognosedata-query aan en bewaart elke aanroep op volgorde
+        # (vast deel, voorspeld deel, en per zonnepaneel uit calc_solar_predictions).
         def _wrapped_get_prognose_data(instance, start=None, end=None, interval="1hour"):
             result = original_get_prognose_data(instance, start=start, end=end, interval=interval)
-            self._prog_data = result
+            self._prog_calls.append(_sequence_record(
+                {"start": start, "end": end, "interval": interval}, result
+            ))
             return result
 
         self._patches.set(DBmanagerObj, "get_prognose_data", _wrapped_get_prognose_data)
@@ -786,13 +875,8 @@ class RecordingIO:
         snapshot = {
             "meta": meta,
             "ha_context": ha_context,
-            "price_data": _dataframe_to_payload(self._price_data)
-            if self._price_data is not None
-            else None,
-            "price_data_args": self._price_data_args,
-            "prog_data": _dataframe_to_payload(self._prog_data)
-            if self._prog_data is not None
-            else None,
+            "price_data_calls": self._price_calls,
+            "prog_data_calls": self._prog_calls,
             "ha_states": self._ha_states,
             "baseload": self._baseload,
             "heatpump_run_hours": self._heatpump_run_hours,
@@ -937,16 +1021,18 @@ class ReplayIO:
                 current_version,
             )
 
-        self._price_data = (
-            _dataframe_from_payload(self._snapshot["price_data"])
-            if self._snapshot.get("price_data") is not None
-            else None
+        self._price_calls = _CallSequence(
+            "price_data", self._source,
+            self._snapshot.get("price_data_calls"),
+            _legacy_frame(self._snapshot, "price_data"),
         )
-        self._prog_data = (
-            _dataframe_from_payload(self._snapshot["prog_data"])
-            if self._snapshot.get("prog_data") is not None
-            else None
+        self._prog_calls = _CallSequence(
+            "prog_data", self._source,
+            self._snapshot.get("prog_data_calls"),
+            _legacy_frame(self._snapshot, "prog_data"),
         )
+        # Vaste deel van de prijsdata, voor de dump-header.
+        self._price_data = self._price_calls.first
         self._ha_states: dict[str, str] = self._snapshot.get("ha_states", {})
         self._baseload: dict[str, list] = self._snapshot.get("baseload", {})
         self._heatpump_run_hours: dict[str, float] = self._snapshot.get(
@@ -1007,12 +1093,18 @@ class ReplayIO:
         self._install_patches()
         return self
 
-    # Stopt de bevroren klok en herstelt de patches bij het verlaten van de with-blok.
+    # Stopt de bevroren klok, herstelt de patches en controleert na een run die
+    # de solver bereikte dat alle opgenomen aanroepen zijn gebruikt.
     def __exit__(self, exc_type, exc, tb) -> bool:
         if self._freeze is not None:
             self._freeze.stop()
             self._freeze = None
         self._patches.restore()
+        # Alle price/prog-reads vallen voor model.optimize(). Een run die eerder
+        # stopte, heeft zijn eigen oorzaak; die mag deze check niet verbergen.
+        if exc_type is None and self._model is not None:
+            self._price_calls.check_consumed()
+            self._prog_calls.check_consumed()
         return False
 
     # -- patch installation ----------------------------------------------
@@ -1088,12 +1180,10 @@ class ReplayIO:
         self._patches.set(DaBase, "get_calculated_baseload", _replay_baseload)
 
         # Levert de opgeslagen prijsdata terug in plaats van een databasequery uit te voeren.
-        def _replay_get_price_data(instance, start, end=None, interval="1hour", extension:int=0):
-            if self._price_data is None:
-                raise SnapshotMiss(
-                    f"ReplayIO ({self._source}): snapshot has no price_data."
-                )
-            return self._price_data.copy()
+        def _replay_get_price_data(instance, start, end=None, interval="1hour", extension: int = 0):
+            return self._price_calls.serve(
+                start=start, end=end, interval=interval, extension=extension
+            )
 
         self._patches.set(Report, "get_price_data", _replay_get_price_data)
 
@@ -1140,7 +1230,7 @@ class ReplayIO:
 
         self._patches.set(SolarPredictor, "predict_solar_device", _replay_predict_solar_device)
 
-        fake_db = _FakeDbManager(self._prog_data, self._source)
+        fake_db = _FakeDbManager(self._prog_calls, self._source)
         self._patches.set(da_base_module, "make_db_da", lambda *a, **k: fake_db)
         self._patches.set(da_base_module, "make_db_ha", lambda *a, **k: fake_db)
 
@@ -2482,6 +2572,17 @@ def _df_payload_shape(payload: dict | None) -> str:
         return "unknown"
 
 
+# Vorm per aanroep van een call-sequence channel ("96x3+60x3"), of de vorm van het
+# enkele frame in een schema-1-snapshot.
+def _calls_payload_shape(snapshot: dict, channel: str) -> str:
+    calls = snapshot.get(f"{channel}_calls")
+    if calls is None:
+        return _df_payload_shape(snapshot.get(channel))
+    if not calls:
+        return "none"
+    return "+".join(_df_payload_shape(rec.get("data")) for rec in calls)
+
+
 # Telt hoeveel velden in een configboom als geheim zijn geredigeerd, voor een snelle controle in inspect.
 def _count_redacted(value: Any) -> int:
     """Count REDACTED_SECRET markers anywhere in a sanitised config tree."""
@@ -2739,8 +2840,8 @@ def cmd_inspect(args: argparse.Namespace, data_dir: Path) -> int:
         "path": str(snapshot_path),
         "meta": meta,
         "ha_states_count": len(snapshot.get("ha_states", {})),
-        "price_data_shape": _df_payload_shape(snapshot.get("price_data")),
-        "prog_data_shape": _df_payload_shape(snapshot.get("prog_data")),
+        "price_data_shape": _calls_payload_shape(snapshot, "price_data"),
+        "prog_data_shape": _calls_payload_shape(snapshot, "prog_data"),
         "baseload_days": len(snapshot.get("baseload", {})),
         "heatpump_run_hours_count": len(snapshot.get("heatpump_run_hours", {})),
         "avg_temperature_count": len(snapshot.get("avg_temperature", {})),
@@ -3406,6 +3507,46 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         if k1 != k2 or k1 == k3:
             raise AssertionError("_call_key is not stable/discriminating")
 
+    # Controleert dat _CallSequence op volgorde serveert, hard faalt bij een
+    # afwijkende, extra of ongebruikte aanroep, en een schema-1-frame bij elke
+    # aanroep teruggeeft.
+    def _call_sequence_order():
+        fixed = pd.DataFrame({"value": [1.0, 2.0]})
+        pred = pd.DataFrame({"value": [3.0]})
+        records = [
+            _sequence_record({"start": "a", "interval": "15min", "extension": 0}, fixed),
+            _sequence_record({"start": "b", "interval": "1hour", "extension": 60}, pred),
+        ]
+        seq = _CallSequence("price_data", "selftest", records)
+        # start differs from the recording on purpose: timestamps are not matched
+        if seq.serve(start="x", interval="15min", extension=0)["value"].tolist() != [1.0, 2.0]:
+            raise AssertionError("first call did not get the first recording")
+        if seq.serve(start="y", interval="1hour", extension=60)["value"].tolist() != [3.0]:
+            raise AssertionError("second call did not get the second recording")
+        try:
+            seq.serve(start="z", interval="1hour", extension=60)
+            raise AssertionError("a third call did not raise SnapshotMiss")
+        except SnapshotMiss:
+            pass
+        try:
+            _CallSequence("price_data", "selftest", records).serve(interval="1hour", extension=60)
+            raise AssertionError("an interval mismatch did not raise SnapshotMiss")
+        except SnapshotMiss:
+            pass
+        seq.check_consumed()
+        partial = _CallSequence("price_data", "selftest", records)
+        partial.serve(interval="15min", extension=0)
+        try:
+            partial.check_consumed()
+            raise AssertionError("an unused recording did not raise SnapshotMiss")
+        except SnapshotMiss:
+            pass
+        legacy = _CallSequence("prog_data", "selftest", None, fixed)
+        for _ in range(3):
+            if not legacy.serve(interval="1hour").equals(fixed):
+                raise AssertionError("schema-1 frame was not served for every call")
+        legacy.check_consumed()
+
     # Controleert dat _config_hash ordeonafhankelijk is en verschilt bij een andere waarde.
     def _config_hash_determinism():
         a = _config_hash({"x": 1, "y": [1, 2]})
@@ -3660,6 +3801,7 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
     for name, fn in [
         ("dataframe_roundtrip", _dataframe_roundtrip),
         ("call_key_stability", _call_key_stability),
+        ("call_sequence_order", _call_sequence_order),
         ("config_hash_determinism", _config_hash_determinism),
         ("secret_leak_gate", _secret_leak_gate),
         ("patch_list_restore", _patch_list_restore_check),
