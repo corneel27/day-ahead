@@ -140,7 +140,7 @@ def main():
     actual = f"{sys.version_info.major}.{sys.version_info.minor}"
     if arguments.expected_python:
         assert actual == arguments.expected_python, (actual, arguments.expected_python)
-    for name in ("numpy", "pandas", "pydantic", "pydantic_core", "mariadb", "MySQLdb",
+    for name in ("numpy", "pandas", "pydantic", "pydantic_core", "pymysql",
                  "psycopg2", "mip", "scipy", "sklearn", "xgboost", "debugpy"):
         importlib.import_module(name)
     print(f"Native dependency imports passed on Python {actual}.")
