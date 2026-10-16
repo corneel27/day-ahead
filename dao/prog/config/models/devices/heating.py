@@ -37,6 +37,7 @@ class HeatingStage(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-help": "Define heat pump performance curve by power stages and corresponding COP values. Multiple stages allow accurate modeling of variable-speed compressors.",
             "x-ui-section": "General",
@@ -60,6 +61,7 @@ class HeatingDisabled(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-ui-group": "Heating",
             "x-icon": "heat-pump",
@@ -224,6 +226,7 @@ class HeatingEnabled(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "title": "HeatingConfig",
             "x-ui-group": "Heating",
