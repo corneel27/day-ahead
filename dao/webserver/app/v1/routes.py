@@ -21,6 +21,8 @@ from dao.prog.da_const import tasks as bewerkingen
 from dao.prog.da_report import Report
 from dao.prog.version import __version__
 
+_LOGGER = logging.getLogger(__name__)
+
 app = Blueprint("app", __name__)
 
 # globals
@@ -43,8 +45,8 @@ def create_config():
         loader = ConfigurationLoader(Path(app_datapath + "options.json"))
         config = loader.load_and_validate()
     except (ValueError, RuntimeError) as ex:
-        logging.error(app_datapath)
-        logging.error(ex)
+        _LOGGER.error(app_datapath)
+        _LOGGER.error(ex)
         config = None
 
 

@@ -14,6 +14,8 @@ from sqlalchemy import Table, and_, func, select
 from dao.lib.da_graph import GraphBuilder
 from dao.lib.db_manager import DBmanagerObj
 
+_LOGGER = logging.getLogger(__name__)
+
 
 # noinspection PyUnresolvedReferences
 class Meteo:
@@ -413,12 +415,12 @@ class Meteo:
             url = "https://data.meteoserver.nl/api/uurverwachting_gfs.php"
         while count <= self.meteoserver_attempts:
             resp = get(url + parameters)
-            logging.debug(resp.text)
+            _LOGGER.debug(resp.text)
             json_object = {}
             try:
                 json_object = json.loads(resp.text)
             except Exception as ex:
-                logging.info(ex)
+                _LOGGER.info(ex)
             if "data" in json_object:
                 data = json_object["data"]
                 break
@@ -431,12 +433,12 @@ class Meteo:
         df1 = df[["tijd", "tijd_nl", "gr", "temp", "winds", "neersl"]]
         df1["tijd"] = df1["tijd"].astype(int)
         df1 = df1[df1["tijd"].diff().fillna(0) <= 3600]
-        logging.info(f"Meteodata model {model}")
-        logging.info(
+        _LOGGER.info(f"Meteodata model {model}")
+        _LOGGER.info(
             f"Aantal uitgevoerde ophaalpogingen: {count + 1} van maximaal: {self.meteoserver_attempts}"
         )
-        logging.info(f"Aantal records: {len(df1)}")
-        logging.info(f"Data {model}: \n{df1.to_string(index=True)}")
+        _LOGGER.info(f"Aantal records: {len(df1)}")
+        _LOGGER.info(f"Data {model}: \n{df1.to_string(index=True)}")
         return df1
 
     def get_meteo_data(self, show_graph=False):
@@ -444,7 +446,7 @@ class Meteo:
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         count = len(df1)
         if count == 0:
-            logging.error(f"No {self.meteoserver_model}-data recieved from meteoserver")
+            _LOGGER.error(f"No {self.meteoserver_model}-data recieved from meteoserver")
         else:
             df1 = df1.reset_index()  # make sure indexes pair with number of rows
             for row in df1.itertuples():
@@ -503,7 +505,7 @@ class Meteo:
         df_tostring["tijd"] = df_tostring["time"].apply(
             lambda x: datetime.datetime.fromtimestamp(int(x)).strftime("%Y-%m-%d %H:%M")
         )
-        logging.debug(f"Meteo data records \n{df_tostring.to_string(index=False)}")
+        _LOGGER.debug(f"Meteo data records \n{df_tostring.to_string(index=False)}")
         self.db_da.savedata(df_db, tablename="prognoses")
         """
         if len(df1) > 0:

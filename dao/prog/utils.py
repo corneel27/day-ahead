@@ -15,6 +15,8 @@ from sqlalchemy import Table, and_, select
 
 from dao.prog.version import __version__
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def make_data_path():
     if os.path.lexists("../data"):
@@ -171,12 +173,12 @@ def get_tibber_data():
             latest_ts = min(latest_ts, latest)
 
     count = math.ceil((now_ts - latest_ts) / 3600)
-    logging.info(
+    _LOGGER.info(
         f"Tibber data present tot en met: "
         f"{datetime.datetime.fromtimestamp(latest_ts - 3600)!s}"
     )
     if count < 24:
-        logging.info("Er worden geen data opgehaald.")
+        _LOGGER.info("Er worden geen data opgehaald.")
         return False
 
     query = (
@@ -209,7 +211,7 @@ def get_tibber_data():
     today_ts = datetime.datetime(
         year=now.year, month=now.month, day=now.day
     ).timestamp()
-    logging.debug(query)
+    _LOGGER.debug(query)
     resp = post(url, headers=headers, data=query)
     tibber_dict = json.loads(resp.text)
     production_nodes = tibber_dict["data"]["viewer"]["homes"][0]["production"]["nodes"]
@@ -224,12 +226,12 @@ def get_tibber_data():
             if node["production"] is not None:
                 code = "prod"
                 value = float(node["production"])
-                logging.info(f"{node} {time_stamp} {value}")
+                _LOGGER.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
             if node["profit"] is not None:
                 code = "profit"
                 value = float(node["profit"])
-                logging.info(f"{node} {time_stamp} {value}")
+                _LOGGER.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
 
     for node in consumption_nodes:
@@ -239,14 +241,14 @@ def get_tibber_data():
             if node["consumption"] is not None:
                 code = "cons"
                 value = float(node["consumption"])
-                logging.info(f"{node} {time_stamp} {value}")
+                _LOGGER.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
             if node["cost"] is not None:
                 code = "cost"
                 value = float(node["cost"])
-                logging.info(f"{node} {time_stamp} {value}")
+                _LOGGER.info(f"{node} {time_stamp} {value}")
                 tibber_df.loc[tibber_df.shape[0]] = [time_stamp, code, value]
-    logging.info(
+    _LOGGER.info(
         f"Opgehaalde data bij Tibber (database records):"
         f"\n{tibber_df.to_string(index=False)}"
     )
@@ -304,7 +306,7 @@ def log_exc_plus():
     stack.reverse()
     traceback.print_exc()
     for frame in stack:
-        logging.error(
+        _LOGGER.error(
             f"File: {frame.f_code.co_filename}, line {frame.f_lineno}, "
             f"in {frame.f_code.co_name}"
         )
@@ -312,7 +314,7 @@ def log_exc_plus():
 
 def error_handling(ex):
     if logging.root.level == logging.DEBUG:
-        logging.exception(ex)
+        _LOGGER.exception(ex)
     else:
         log_exc_plus()
 

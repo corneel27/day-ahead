@@ -8,6 +8,8 @@ sys.path.append("../../../dao/prog")
 import dao.prog.da_report
 import dao.prog.day_ahead
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def test_get_grid_data_sqlite():
     report = dao.prog.da_report.Report(file_name="../data/options_sqlite.json")
@@ -39,7 +41,7 @@ def start_logging():
         format="%(asctime)s %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    logging.info(
+    _LOGGER.info(
         f"Testen Day Ahead Optimalisatie gestart: "
         f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
     )

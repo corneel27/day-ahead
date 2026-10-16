@@ -88,5 +88,15 @@
     "code": "SIM401",
     "invalid": "def example(data: dict):\n    if \"a\" in data:\n        value = data[\"a\"]\n    else:\n        value = 42\n    return value\n",
     "corrected": "def example(data: dict):\n    value = data.get(\"a\", 42)\n    return value\n"
+  },
+  {
+    "code": "LOG015",
+    "invalid": "import logging\n\nlogging.info(\"ready\")\n",
+    "corrected": "import logging\n\nlogger = logging.getLogger(__name__)\nlogger.info(\"ready\")\n"
+  },
+  {
+    "code": "TRY401",
+    "invalid": "import logging\n\nlogger = logging.getLogger(__name__)\ntry:\n    int(\"invalid\")\nexcept ValueError as exc:\n    logger.exception(\"Conversion failed: %s\", exc)\n",
+    "corrected": "import logging\n\nlogger = logging.getLogger(__name__)\ntry:\n    int(\"invalid\")\nexcept ValueError:\n    logger.exception(\"Conversion failed\")\n"
   }
 ]

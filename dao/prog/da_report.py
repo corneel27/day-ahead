@@ -32,6 +32,8 @@ from dao.lib.da_graph import GraphBuilder
 from dao.prog.da_base import DaBase
 from dao.prog.utils import get_value_from_dict
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
     if serie_x.count() < 24 or serie_y.count() < 24:
@@ -51,7 +53,7 @@ class Report(DaBase):
 
         self.report_options = self.config.report
         if self.report_options is None:
-            logging.error("Er zijn geen report-instellingen gevonden")
+            _LOGGER.error("Er zijn geen report-instellingen gevonden")
         self.make_periodes(_now=_now)
         _r = self.report_options
         self.grid_consumption_sensors = _r.entities_grid_consumption if _r else []
@@ -837,7 +839,7 @@ class Report(DaBase):
             datetime.time(),
         )
         if vanaf + datetime.timedelta(days=366) < vanaf_m:
-            logging.warning(
+            _LOGGER.warning(
                 f'"last invoice" ({self.prices_options.last_invoice if hasattr(self.prices_options, "last_invoice") else self.prices_options["last invoice"]}) '
                 f"is verouderd en moet worden bijgewerkt"
             )
@@ -1059,7 +1061,7 @@ class Report(DaBase):
         # Execute the query and load results into a DataFrame
         with self.db_ha.engine.connect() as connection:
             query_str = str(query.compile(connection))
-            logging.debug(f"query get sensor data:\n {query_str}")
+            _LOGGER.debug(f"query get sensor data:\n {query_str}")
             df_raw = pd.read_sql(query, connection)
 
         if len(df_raw) == 0:
@@ -1128,7 +1130,7 @@ class Report(DaBase):
                 df_insert.index = df_insert["tijd"]
                 df_raw = pd.concat([df_raw, df_insert])
                 df_raw.sort_index(inplace=True)
-        logging.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
+        _LOGGER.debug(f"sensordata raw, sensor {sensor},\n {df_raw.to_string()}\n")
         return df_raw
 
     @staticmethod
@@ -1187,7 +1189,7 @@ class Report(DaBase):
         # Round the  values
 
         # Print the aggregated DataFrame
-        logging.debug(f"sensordata aggregated:\n {df_aggregated.to_string()}\n")
+        _LOGGER.debug(f"sensordata aggregated:\n {df_aggregated.to_string()}\n")
         return df_aggregated
 
     @staticmethod
@@ -2107,7 +2109,7 @@ class Report(DaBase):
 
                 with self.db_da.engine.connect() as connection:
                     query_str = str(query.compile(connection))
-                    logging.debug(f"Query: \n {query_str}")
+                    _LOGGER.debug(f"Query: \n {query_str}")
                     result_cat = pd.read_sql_query(query, connection)
                 result_cat.index = result_cat[
                     interval
@@ -2244,7 +2246,7 @@ class Report(DaBase):
 
                 with self.db_da.engine.connect() as connection:
                     query_str = str(query.compile(connection))
-                    logging.debug(f"query get prognose data:\n {query_str}")
+                    _LOGGER.debug(f"query get prognose data:\n {query_str}")
                     df_prog = pd.read_sql_query(query, connection)
 
                 df_prog.index = pd.to_datetime(df_prog["tijd"])
@@ -2837,9 +2839,9 @@ class Report(DaBase):
                 result = Report.add_col_df(df, result, col_name)
 
         if result is None:
-            logging.debug(f"Geen data voor baseload van {col_name}")
+            _LOGGER.debug(f"Geen data voor baseload van {col_name}")
         else:
-            logging.debug(f"Baseload berekening {col_name}:\n {result.to_string()}\n")
+            _LOGGER.debug(f"Baseload berekening {col_name}:\n {result.to_string()}\n")
         return result
 
     def calc_weekday_baseload(self, wd: int) -> list:
@@ -2948,11 +2950,11 @@ class Report(DaBase):
             battery_production, result, "battery_production", "baseload"
         )
 
-        logging.debug(f"Baseload berekening per uur:\n {result.to_string()}\n")
+        _LOGGER.debug(f"Baseload berekening per uur:\n {result.to_string()}\n")
         result = result.groupby("uur", as_index=False).agg(
             {"tijd": "min", "weekdag": "mean", "baseload": "mean"}
         )
-        logging.debug(f"Geagregeerde baseload uur:\n {result.to_string()}\n")
+        _LOGGER.debug(f"Geagregeerde baseload uur:\n {result.to_string()}\n")
         result.baseload = result.baseload.round(3)
         result = result["baseload"].values.tolist()
         return result
@@ -2960,11 +2962,11 @@ class Report(DaBase):
     def calc_save_baseloads(self):
         for weekday in range(7):
             baseload = self.calc_weekday_baseload(weekday)
-            logging.info(f"baseload voor weekdag {weekday} :")
+            _LOGGER.info(f"baseload voor weekdag {weekday} :")
             bl_str = ""
             for x in baseload:
                 bl_str += str(x) + " "
-            logging.info(bl_str)
+            _LOGGER.info(bl_str)
             out_file = "../data/baseload/baseload_" + str(weekday) + ".json"
             with open(out_file, "w") as f:
                 print(json.dumps(baseload, indent=2), file=f)

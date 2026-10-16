@@ -6,13 +6,15 @@ from subprocess import Popen
 
 from da_base import DaBase
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class DaScheduler(DaBase):
     def __init__(self, file_name: str = None):
         super().__init__(file_name)
         self.active = self.config.scheduler.active
         self.offset_start = self.config.scheduler.offset or 0
-        logging.info(f"Offset tasks {self.offset_start} sec")
+        _LOGGER.info(f"Offset tasks {self.offset_start} sec")
         self.scheduler_tasks = {
             entry.time: entry.action for entry in self.config.scheduler.schedule
         }
@@ -33,19 +35,19 @@ class DaScheduler(DaBase):
         last_minute = -1
         while True:
             t = datetime.datetime.now()
-            logging.debug(f"Entry loop at {t}")
+            _LOGGER.debug(f"Entry loop at {t}")
             next_min = t.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
             if next_min.minute == last_minute:
                 time.sleep(max(0, (next_min - t).total_seconds()))
                 continue
             last_minute = next_min.minute
-            logging.debug(f"Next minute {next_min}")
+            _LOGGER.debug(f"Next minute {next_min}")
             start_at = next_min - datetime.timedelta(seconds=self.offset_start)
-            logging.debug(f"Geplande start at {start_at}")
+            _LOGGER.debug(f"Geplande start at {start_at}")
             time.sleep(max(0, (start_at - t).total_seconds()))
             if not self.active:
                 continue
-            logging.debug(f"Gestart op {datetime.datetime.now()}")
+            _LOGGER.debug(f"Gestart op {datetime.datetime.now()}")
             hour = next_min.hour
             minute = next_min.minute
             key0 = str(hour).zfill(2) + str(minute).zfill(2)
