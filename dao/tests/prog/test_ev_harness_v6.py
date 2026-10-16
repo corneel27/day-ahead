@@ -223,6 +223,8 @@ from pathlib import Path
 
 from day_ahead import DaCalc  # adjust import if your entrypoint differs
 
+_LOGGER = logging.getLogger(__name__)
+
 CONFIG_PATH = "../data/options.json"  # matches main() in day_ahead.py
 REPORT_DIR = Path("test_reports")
 
@@ -1323,7 +1325,7 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
                         if min_duty > 0 and f < min_duty - DUTY_COMPARE_TOL:
                             result.duty_slivers.append((uur, k, f))
                 except ValueError as ex:
-                    logging.warning(
+                    _LOGGER.warning(
                         f"parse_ev_log: could not parse row {uur!r}: "
                         f"{ex} — raw line: {lines[j]!r}"
                     )

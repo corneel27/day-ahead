@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 
 from .vocabulary import INTERVAL_S
 
+_LOGGER = logging.getLogger(__name__)
+
 # --- minimum duty cycle (day_ahead.py's ev_min_duty_s) ----------------------
 # Every REAL charge stage (cs >= 1) is constrained to be either off or on for
 # at least EV_MIN_DUTY_S seconds via
@@ -305,7 +307,7 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
                         if min_duty > 0 and f < min_duty - DUTY_COMPARE_TOL:
                             result.duty_slivers.append((uur, k, f))
                 except ValueError as ex:
-                    logging.warning(
+                    _LOGGER.warning(
                         f"parse_ev_log: could not parse row {uur!r}: "
                         f"{ex} — raw line: {lines[j]!r}"
                     )

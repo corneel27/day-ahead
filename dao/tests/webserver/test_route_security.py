@@ -20,6 +20,22 @@ v2_routes = importlib.import_module("dao.webserver.app.v2.routes")
 v1_routes = importlib.import_module("dao.webserver.app.v1.routes")
 
 
+def test_configuration_error_keeps_dashboard_logs_and_fallback(monkeypatch, caplog):
+    loader = Mock()
+    loader.load_and_validate.side_effect = ValueError("synthetic invalid configuration")
+    monkeypatch.setattr(v1_routes, "ConfigurationLoader", Mock(return_value=loader))
+    monkeypatch.setattr(v1_routes, "config", object())
+    with caplog.at_level(logging.ERROR):
+        v1_routes.create_config()
+    assert v1_routes.config is None
+    records = [record for record in caplog.records if record.name == v1_routes.__name__]
+    assert [record.getMessage() for record in records] == [
+        v1_routes.app_datapath, "synthetic invalid configuration",
+    ]
+    assert v1_routes._LOGGER.propagate
+    assert not v1_routes._LOGGER.handlers
+
+
 @pytest.mark.parametrize("age", [599, 600, 601])
 def test_running_task_expires_only_after_cutoff(monkeypatch, tmp_path, age):
     state_file = tmp_path / "task_state.json"

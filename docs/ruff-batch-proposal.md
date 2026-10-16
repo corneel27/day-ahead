@@ -36,9 +36,26 @@ There are 63 distinct starting lines in these 67 diagnostics. Ruff labels 34 fix
 
 The adoption acceptance criteria are included in this branch and first PR; there is no separate documentation PR. The version/effective-settings checks and 18 invalid/corrected fixtures are implemented in `tests/test_developer_tools.py` and `tests/ruff_adoption_cases.json`. Both Windows and Linux CI jobs run these checks through the configured hook, the actual CI command and the real Ruff language server. `tests/vscode_ruff_adoption` supplies a separate actual VS Code extension-host suite for diagnostics, explicit save actions and corrected documents. It requires a trusted workspace and the pinned project launcher; language-server-only checks are not reported as editor save verification. Formatting remains out of scope.
 
+## Second pull request - module logging
+
+Branch: `chore/ruff-logging-upstream`, prepared directly on upstream `main` after the first batch merged in PR #920. Only the logging batch is carried forward. The earlier `chore/ruff-logging` branch is preserved separately; its stacked development history is not included in the new branch. Recent upstream price-reload, CLI/API and heat-pump scheduling changes are retained.
+
+The logging assessment reports 400 diagnostics in 14 files: 399 LOG015 root-logger calls and one TRY401 redundant exception message. This batch enables both codes in the shared configuration and replaces emitting calls with `_LOGGER = logging.getLogger(__name__)` per module. Root logging remains responsible for configuration, handlers and levels. Module loggers inherit the effective level and propagate records to the existing handlers; no module adds a handler or changes the log format. The source module is available in each record's name without changing the text consumed by scenario parsers.
+
+The Nordpool failure path retains two ERROR records and its existing return behavior. The exception record now supplies provider/date context while the exception type, message and traceback remain attached through `exception()`. The second error message is retained. No changes to exception policy, price retrieval or scenario baselines are included.
+
+Verification after refreshing the batch:
+
+- Repository lint passes with both logging rules enabled, including logging calls added by recent upstream changes. No suppressions are added.
+- Sixteen added behavioral cases cover inherited logger levels and propagation, existing scenario capture, console/file output, notification delivery, task failure return codes and tracebacks, Nordpool failure context and the dashboard configuration-error fallback. The local regression selection and CI include them.
+- Full isolated Linux regression suite: 198 passed, 69 skipped. Skips cover optional/external services and separately executed solver scenarios. All 41 synthetic solver scenarios passed.
+- Windows and Linux tooling acceptance: 12 tests passed on each platform. The invalid/corrected fixtures cover all 20 adopted rules through the configured hook, actual CI command and real language server.
+- Native Windows VS Code diagnostics/save verification passed for the original logging preparation. That editor UI run has not been repeated for this refreshed branch and is not presented as current acceptance evidence.
+- This branch is prepared for a separate upstream pull request; current GitHub PR checks will be assessed when it is submitted.
+
 ## Completion and sequencing
 
-Each PR activates its rules in the shared configuration together with corrections and justified narrow exceptions. VS Code, hooks and CI therefore receive the same new checks as soon as the PR is merged. PR #916 has merged; the first upstream batch now targets `main` without repeating the developer-environment changes. Later batches remain on their existing dependent branches until their preceding batch merges upstream.
+Each PR activates its rules in the shared configuration together with corrections and justified narrow exceptions. VS Code, hooks and CI therefore receive the same new checks as soon as the PR is merged. PR #916 and the first Ruff batch (PR #920) have merged. The second batch is now prepared on upstream `main`; the remaining later batches stay on their existing branches until their preceding batch merges upstream.
 
 After all lint batches, compare the final effective selection with both the pinned standard defaults and the previously enforced rules. Make any removal of an existing check explicit rather than silently weakening the gate. Standard compliance can include necessary documented exceptions; never change application behavior solely to silence a diagnostic.
 

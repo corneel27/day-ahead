@@ -30,6 +30,8 @@ from dao.prog.config.loader import ConfigurationLoader
 from dao.prog.utils import error_handling, get_tibber_data, interpolate
 from dao.prog.version import __version__
 
+_LOGGER = logging.getLogger(__name__)
+
 
 @dataclass
 class HAContext:
@@ -101,10 +103,10 @@ class DaBase(hass.Hass):
                     )
                     DaBase._config = DaBase._loader.load_and_validate()
                 except FileNotFoundError as e:
-                    logging.error(f"Configuratiebestand niet gevonden: {e}")
+                    _LOGGER.error(f"Configuratiebestand niet gevonden: {e}")
                     return
                 except (ValueError, RuntimeError) as e:
-                    logging.error(f"Configuratie kon niet worden geladen: {e}")
+                    _LOGGER.error(f"Configuratie kon niet worden geladen: {e}")
                     return
 
         self.config = DaBase._config
@@ -149,7 +151,7 @@ class DaBase(hass.Hass):
         }
         resp = get(self.hassurl + "api/config", headers=headers)
         resp_dict = json.loads(resp.text)
-        logging.debug(f"hass/api/config: {resp.text}")
+        _LOGGER.debug(f"hass/api/config: {resp.text}")
         self.ha_context = HAContext(
             latitude=resp_dict["latitude"],
             longitude=resp_dict["longitude"],
@@ -253,7 +255,7 @@ class DaBase(hass.Hass):
                 if state != value:
                     raise ValueError
         except Exception:
-            logging.error(f"Fout bij schrijven naar {entity_id}, waarde {value}")
+            _LOGGER.error(f"Fout bij schrijven naar {entity_id}, waarde {value}")
             # error_handling(ex)
             raise
         return result
@@ -270,14 +272,14 @@ class DaBase(hass.Hass):
         return tasks
 
     def start_logging(self):
-        logging.debug(f"python pad:{sys.path}")
-        logging.info(f"Day Ahead Optimalisering versie: {__version__}")
-        logging.info(
+        _LOGGER.debug(f"python pad:{sys.path}")
+        _LOGGER.info(f"Day Ahead Optimalisering versie: {__version__}")
+        _LOGGER.info(
             f"Day Ahead Optimalisering gestart op: "
             f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"
         )
         if self.config is not None and self.ha_context is not None:
-            logging.debug(
+            _LOGGER.debug(
                 f"Locatie: latitude {self.ha_context.latitude!s} "
                 f"longitude: {self.ha_context.longitude!s}"
             )
@@ -361,7 +363,7 @@ class DaBase(hass.Hass):
         # in een keer opbouwen: rij voor rij toevoegen met .loc kost per rij
         # bijna een milliseconde
         df_db = pd.DataFrame(rows, columns=["time", "code", "value"])
-        logging.debug(f"Save calculated data:\n{df_db.to_string()}")
+        _LOGGER.debug(f"Save calculated data:\n{df_db.to_string()}")
         self.db_da.savedata(df_db, tablename=tablename)
 
     @staticmethod
@@ -459,9 +461,9 @@ class DaBase(hass.Hass):
         # Execute the query and fetch the result
         with self.db_da.engine.connect() as connection:
             query_str = str(inner_query.compile(connection))
-            logging.debug(f"inner query p_avg: {query_str}")
+            _LOGGER.debug(f"inner query p_avg: {query_str}")
             query_str = str(outer_query.compile(connection))
-            logging.debug(f"outer query p_avg: {query_str}")
+            _LOGGER.debug(f"outer query p_avg: {query_str}")
             result = connection.execute(outer_query)
             return result.scalar()
 
@@ -514,7 +516,7 @@ class DaBase(hass.Hass):
         def clean_folder(folder: str, pattern: str):
             current_time = time.time()
             day = 24 * 60 * 60
-            logging.info(f"Start removing files in {folder} with pattern {pattern}")
+            _LOGGER.info(f"Start removing files in {folder} with pattern {pattern}")
             current_dir = os.getcwd()
             os.chdir(os.path.join(os.getcwd(), folder))
             list_files = os.listdir()
@@ -524,7 +526,7 @@ class DaBase(hass.Hass):
                     save_days = self.history_options.save_days
                     if (current_time - creation_time) >= save_days * day:
                         os.remove(f)
-                        logging.info(f"{f} removed")
+                        _LOGGER.info(f"{f} removed")
             os.chdir(current_dir)
 
         clean_folder("../data/log", "*.log")
@@ -592,14 +594,14 @@ class DaBase(hass.Hass):
                     solar_option, vanaf, tot
                 )
                 if solar_prog.isnull().any().any():
-                    logging.warning(
+                    _LOGGER.warning(
                         f"NaN-waarden aangetroffen in voorspelling van {solar_name}"
                         f"Deze zijn op '0' gezet"
                     )
                     solar_prog.fillna(0, inplace=True)
             except FileNotFoundError as ex:
-                logging.warning(ex)
-                logging.info(
+                _LOGGER.warning(ex)
+                _LOGGER.info(
                     f"Voor {solar_option.name} is geen model "
                     f"en dus wordt DAO-predictor gebruikt"
                 )
@@ -652,7 +654,7 @@ class DaBase(hass.Hass):
 
         # oude task
         if task not in self.tasks:
-            logging.error(
+            _LOGGER.error(
                 f"Taak niet gedefinieerd \"{task}\" "
             )
             return False
@@ -694,7 +696,7 @@ class DaBase(hass.Hass):
 
         exit_code = 0
         try:
-            logging.info(
+            _LOGGER.info(
                 f"Day Ahead Optimalisatie gestart: "
                 f"{datetime.datetime.now().strftime('%d-%m-%Y %H:%M:%S')} "
                 f"taak: {run_task['function']}"
@@ -708,7 +710,7 @@ class DaBase(hass.Hass):
             self.set_last_activity()
             self.db_da.log_pool_status()
         except Exception:
-            logging.exception("Er is een fout opgetreden, zie de fout-tracering")
+            _LOGGER.exception("Er is een fout opgetreden, zie de fout-tracering")
             exit_code = 1
 
         if logfile:
@@ -720,7 +722,7 @@ class DaBase(hass.Hass):
 
     def run_task_cmd(self, task):
         if task not in self.tasks:
-            logging.error(f"Onbekende taak: {task}")
+            _LOGGER.error(f"Onbekende taak: {task}")
             return
         run_task = self.tasks[task]
         cmd = run_task["cmd"]

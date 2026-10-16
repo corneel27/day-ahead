@@ -12,6 +12,8 @@ from requests import get, post
 
 from dao.lib.db_manager import DBmanagerObj
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class DaPrices:
     def __init__(
@@ -69,10 +71,10 @@ class DaPrices:
             start = max(present, start)
 
             if present >= (end - datetime.timedelta(hours=1)):
-                logging.info("Spot prices already present")
+                _LOGGER.info("Spot prices already present")
                 return
 
-        logging.debug(f"Day ahead tarieven ophalen voor {start} tot {end}")
+        _LOGGER.debug(f"Day ahead tarieven ophalen voor {start} tot {end}")
 
         # For providers that only return data for one date, we need to check
         # what dates are already present and fetch only missing ones
@@ -97,7 +99,7 @@ class DaPrices:
                             df_db = pd.concat([df_db, daily_df], ignore_index=True)
 
                 except Exception as ex:
-                    logging.error(f"Error fetching data for {current_date.date()}: {ex}")
+                    _LOGGER.error(f"Error fetching data for {current_date.date()}: {ex}")
 
                 current_date = current_end
 
@@ -135,21 +137,21 @@ class DaPrices:
                 self.country, start=start, end=end
             )
         except Exception as ex:
-            logging.error(ex)
-            logging.error(f"Geen data van Entsoe: tussen {start} en {end}")
+            _LOGGER.error(ex)
+            _LOGGER.error(f"Geen data van Entsoe: tussen {start} en {end}")
         if len(da_prices.index) > 0:
             df_db = pd.DataFrame(columns=["time", "code", "value"])
             da_prices = (
                 da_prices.reset_index()
             )  # make sure indexes pair with number of rows
-            logging.info(
+            _LOGGER.info(
                 f"Day ahead prijzen van Entsoe: \n{da_prices.to_string(index=False)}"
             )
             last_time = start
             for row in da_prices.itertuples():
                 last_time = int(datetime.datetime.timestamp(row[1]))
                 df_db.loc[df_db.shape[0]] = [str(last_time), "da", row[2] / 1000]
-            logging.debug(
+            _LOGGER.debug(
                 f"Day ahead prijzen (source: entsoe, db-records): \n"
                 f"{df_db.to_string(index=False)}"
             )
@@ -158,9 +160,9 @@ class DaPrices:
             last_time_dt = datetime.datetime.fromtimestamp(last_time)
             if last_time_dt < end_dt:
                 if len(df_db) == 0:
-                    logging.error(f"Geen data van Entsoe tot en met {end_dt}")
+                    _LOGGER.error(f"Geen data van Entsoe tot en met {end_dt}")
                 else:
-                    logging.warning(
+                    _LOGGER.warning(
                         f"Geen data van Entsoe tussen {last_time_dt} en {end_dt}"
                     )
 
@@ -177,7 +179,7 @@ class DaPrices:
             count = count * 4
             if count > 674:
                 count = 674
-                logging.warning(
+                _LOGGER.warning(
                     "Je kunt met Tibber maximaal 7 dagen terug opvragen"
                 )
         count = max(1, min(674, count))
@@ -215,7 +217,7 @@ class DaPrices:
                   "}"
         )
 
-        logging.debug(query)
+        _LOGGER.debug(query)
         _tibber = self.config.tibber
         _tok = _tibber.api_token
         api_token = _tok.resolve(self._secrets)
@@ -243,9 +245,9 @@ class DaPrices:
                 )
                 time_stamp = int(dt.timestamp())
                 value = float(node["energy"])
-                logging.info(f"{node} {dt} {time_stamp} {value}")
+                _LOGGER.info(f"{node} {dt} {time_stamp} {value}")
                 df_db.loc[df_db.shape[0]] = [time_stamp, "da", value]
-        logging.debug(
+        _LOGGER.debug(
             f"Day ahead prijzen (source: tibber, db-records): \n "
             f"{df_db.to_string(index=False)}"
         )
@@ -263,10 +265,10 @@ class DaPrices:
                 + endstr
         )
         resp = get(url)
-        logging.debug(resp.text)
+        _LOGGER.debug(resp.text)
         json_object = json.loads(resp.text)
         df = pd.DataFrame.from_records(json_object)
-        logging.info(
+        _LOGGER.info(
             f"Day ahead prijzen van Easyenergy:\n {df.to_string(index=False)}"
         )
         # datetime.datetime.strptime('Tue Jun 22 12:10:20 2010 EST', '%a %b %d %H:%M:%S %Y %Z')
@@ -289,17 +291,17 @@ class DaPrices:
             act_spot_prices = prices_spot.fetch(
                 areas=[self.country], end_date=date, resolution=resolution
             )
-        except Exception as ex:
-            logging.exception(ex)
-            logging.error(f"Fout bij ophalen data van Nordpool voor {date}")
+        except Exception:
+            _LOGGER.exception("Ophalen Nordpool-prijzen mislukt voor %s", date)
+            _LOGGER.error(f"Fout bij ophalen data van Nordpool voor {date}")
             return
         if act_spot_prices is None:
-            logging.error(f"Geen data van Nordpool voor {date}")
+            _LOGGER.error(f"Geen data van Nordpool voor {date}")
             return
 
         act_values = act_spot_prices["areas"][self.country]["values"]
         s = pp.pformat(act_values, indent=2)
-        logging.info(f"Day ahead prijzen van Nordpool:\n {s}")
+        _LOGGER.info(f"Day ahead prijzen van Nordpool:\n {s}")
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         for act_value in act_values:
             time_dt = act_value["start"]
@@ -310,13 +312,13 @@ class DaPrices:
             else:
                 value = value / 1000
             df_db.loc[df_db.shape[0]] = [str(time_ts), "da", value]
-        logging.debug(
+        _LOGGER.debug(
             f"Day ahead prices for "
             f"{date.strftime('%Y-%m-%d') if date else 'tomorrow'}"
             f" (source: nordpool, db-records): \n {df_db.to_string(index=False)}"
         )
         if df_db.empty:
-            logging.warning(
+            _LOGGER.warning(
                 f"Retrieve of day ahead prices for "
                 f"{date.strftime('%Y-%m-%d') if date else 'tomorrow'} "
                 f"failed"
@@ -358,7 +360,7 @@ class DaPrices:
             if know_at < dt <= new_horizon:
                 time_stamp = int(dt.timestamp())
                 value = float(row["total"])/100
-                logging.info(f"{row} {dt} {time_stamp} {value}")
+                _LOGGER.info(f"{row} {dt} {time_stamp} {value}")
                 df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
         return df_db
 
@@ -397,7 +399,7 @@ class DaPrices:
             if know_at < dt <= new_horizon:
                 time_stamp = int(dt.timestamp())
                 value = float(row["value"])
-                logging.info(f"{row} {dt} {time_stamp} {value}")
+                _LOGGER.info(f"{row} {dt} {time_stamp} {value}")
                 df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
         return df_db
 
@@ -479,7 +481,7 @@ class DaPrices:
                 time_stamp = int(dt.timestamp())
                 value_str=row["prijs_excl_belastingen"]
                 value = float(value_str.replace(",", "."))
-                logging.info(f"{row} {dt} {time_stamp} {value}")
+                _LOGGER.info(f"{row} {dt} {time_stamp} {value}")
                 df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
         return df_db
 
@@ -490,7 +492,7 @@ class DaPrices:
         key = _key.resolve(self._secrets) if _key is not None else None
         extension = 96
         if extension == 0:
-            logging.warning("predicted horizon extension is 0, no predicted prices are returned")
+            _LOGGER.warning("predicted horizon extension is 0, no predicted prices are returned")
             return
         known_at = self.db_da.get_time_border_record("da").astimezone()
         new_horizon = known_at + datetime.timedelta(hours=extension)
@@ -502,15 +504,15 @@ class DaPrices:
             api_url= api_url.replace("<key>", key)
         resp = get(api_url)
         if resp.status_code != 200:
-            logging.error(f"No data from {source} off predict prices, "
+            _LOGGER.error(f"No data from {source} off predict prices, "
                           f"statuscode: {resp.status_code},"
                           f"message: {resp.text}")
             return resp.status_code
-        logging.debug(resp.text)
+        _LOGGER.debug(resp.text)
         json_object = json.loads(resp.text)
         extract_data_f = "extract_data_"+source
         df_db = getattr(self, extract_data_f)(json_object, known_at, new_horizon)
-        logging.info(
+        _LOGGER.info(
             f"Day ahead prediction prijzen (source: {source}, db-records): \n "
             f"{df_db.to_string(index=False)}"
         )

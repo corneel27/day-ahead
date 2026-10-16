@@ -18,6 +18,8 @@ from sqlalchemy import (
 
 from dao.prog.utils import interpolate
 
+_LOGGER = logging.getLogger(__name__)
+
 # import utils as utils
 
 
@@ -114,7 +116,7 @@ class DBmanagerObj:
                 db_path = "../data"
             abs_db_path = os.path.abspath(db_path)
             result = f"sqlite:////{abs_db_path}/{db_name}"
-        logging.debug(f"db_url: {result}")
+        _LOGGER.debug(f"db_url: {result}")
         return result
 
     def log_pool_status(self):
@@ -124,7 +126,7 @@ class DBmanagerObj:
         cf = cf.f_back
         filename = getframeinfo(cf).filename
         lineno = getframeinfo(cf).lineno
-        logging.debug(
+        _LOGGER.debug(
             f"Connection status {self.engine.pool.status()} at line "
             f"{lineno} in {filename}"
         )
@@ -234,7 +236,7 @@ class DBmanagerObj:
                value	float
             tablename: values or prognoses
         """
-        logging.debug(f"Opslaan dataframe:\n{df.to_string()}")
+        _LOGGER.debug(f"Opslaan dataframe:\n{df.to_string()}")
 
         # with self.engine.connect() as connection:
         connection = self.engine.connect()
@@ -265,7 +267,7 @@ class DBmanagerObj:
                 row.code: row.id for row in connection.execute(select_variabel)
             }
             for code in codes - variabel_ids.keys():
-                logging.error(f"Onbekende code opslaan data: {code}")
+                _LOGGER.error(f"Onbekende code opslaan data: {code}")
             times = [time for _, time, _ in records]
             select_value = select(
                 values_table.c.id, values_table.c.variabel, values_table.c.time
@@ -282,7 +284,7 @@ class DBmanagerObj:
             # toen elke waarde apart werd opgeslagen
             new_values = {}
             for code, time, value in records:
-                logging.debug(f"Save record: {code} {time} {value}")
+                _LOGGER.debug(f"Save record: {code} {time} {value}")
                 variabel_id = variabel_ids.get(code)
                 if variabel_id is not None:
                     new_values[(variabel_id, time)] = value
@@ -545,7 +547,7 @@ class DBmanagerObj:
 
         with self.engine.connect() as connection:
             query_str = str(query.compile(connection))
-            logging.debug(f"query get column data da:\n {query_str}")
+            _LOGGER.debug(f"query get column data da:\n {query_str}")
             result = connection.execute(query)
         df = pd.DataFrame(result.fetchall(), columns=result.keys())
         if agg_func is not None:

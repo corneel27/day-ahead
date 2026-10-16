@@ -28,6 +28,8 @@ from xgboost import XGBRegressor
 from dao.prog.config.models.devices.solar import SolarConfig
 from dao.prog.da_base import DaBase
 
+_LOGGER = logging.getLogger(__name__)
+
 # import pvlib
 
 warnings.filterwarnings("ignore")
@@ -369,7 +371,7 @@ class SolarPredictor(DaBase):
         Returns:
             Clean data with outliers removed
         """
-        logging.info("Detecting outliers...")
+        _LOGGER.info("Detecting outliers...")
         original_size = len(merged_data)
 
         # 1. Context-aware outlier detection by hour
@@ -459,13 +461,13 @@ class SolarPredictor(DaBase):
 
         outliers_removed = original_size - len(final_clean_data)
         if outliers_removed > 0:
-            logging.info(
+            _LOGGER.info(
                 f"Outliers removed: {outliers_removed} "
                 f"({outliers_removed / original_size * 100:.1f}%)"
             )
             if self.log_level >= logging.DEBUG:
                 outliers = merged_data[~merged_data.isin(final_clean_data).all(axis=1)]
-                logging.debug(f"Detected outliers:\n{outliers.to_string()}")
+                _LOGGER.debug(f"Detected outliers:\n{outliers.to_string()}")
         return final_clean_data
 
     def train(
@@ -493,17 +495,17 @@ class SolarPredictor(DaBase):
         Returns:
             Dictionary with training statistics
         """
-        logging.info(
+        _LOGGER.info(
             f"Starting solar prediction model for {self.solar_name} training..."
         )
 
         # Load and process data
-        logging.info("Loading and processing data...")
+        _LOGGER.info("Loading and processing data...")
         weather_features = self._load_and_process_weather_data(weather_data)
         solar_df = self._load_and_process_solar_data(solar_data)
 
         # Merge datasets
-        logging.info("Merging weather and solar data...")
+        _LOGGER.info("Merging weather and solar data...")
         # Align timezone information
         if weather_features.index.tz is None:
             weather_features.index = weather_features.index.tz_localize(
@@ -521,16 +523,16 @@ class SolarPredictor(DaBase):
         # drop when irradiance=0 and solar_kwh=0
         # merged_data.query('irradiance > 0 or solar_kwh > 0', inplace=True)
 
-        logging.info(f"Merged dataset: {len(merged_data)} records")
-        logging.info(
+        _LOGGER.info(f"Merged dataset: {len(merged_data)} records")
+        _LOGGER.info(
             f"Date range: {merged_data.index.min()} to {merged_data.index.max()}"
         )
-        logging.debug(f"Merged dataset all records:\n {merged_data.to_string()}")
+        _LOGGER.debug(f"Merged dataset all records:\n {merged_data.to_string()}")
 
         # Outlier detection
         if remove_outliers:
             merged_data = self._detect_outliers(merged_data)
-            logging.info(f"Clean dataset: {len(merged_data)} records")
+            _LOGGER.info(f"Clean dataset: {len(merged_data)} records")
 
         # Prepare features and target
         X = merged_data[self.feature_columns].copy()
@@ -546,15 +548,15 @@ class SolarPredictor(DaBase):
         X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
         y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
 
-        logging.info(f"Training samples: {len(X_train)}")
-        logging.info(f"Testing samples: {len(X_test)}")
+        _LOGGER.info(f"Training samples: {len(X_train)}")
+        _LOGGER.info(f"Testing samples: {len(X_test)}")
 
         _xgboost_cfg = self.config.xgboost
         tune_hyperparameters = _xgboost_cfg.tune_hyperparameters
-        logging.info(f"Tune hyperparameters: {tune_hyperparameters}")
+        _LOGGER.info(f"Tune hyperparameters: {tune_hyperparameters}")
         # Model training
         if tune_hyperparameters:
-            logging.info("Tuning hyperparameters...")
+            _LOGGER.info("Tuning hyperparameters...")
             param_grid = {
                 "n_estimators": [100, 200, 300],
                 "max_depth": [3, 4, 6],
@@ -562,7 +564,7 @@ class SolarPredictor(DaBase):
                 "subsample": [0.8, 0.9],
             }
             param_grid = _xgboost_cfg.param_grid or param_grid
-            logging.info(f"Parameter grid: {param_grid}")
+            _LOGGER.info(f"Parameter grid: {param_grid}")
 
             # Use subset for faster grid search
             subset_size = min(5000, len(X_train))
@@ -581,7 +583,7 @@ class SolarPredictor(DaBase):
 
             grid_search.fit(X_train_subset, y_train_subset)
             best_params = grid_search.best_params_
-            logging.info(f"Best parameters: {best_params}")
+            _LOGGER.info(f"Best parameters: {best_params}")
         else:
             # Use default parameters
             best_params = {
@@ -593,8 +595,8 @@ class SolarPredictor(DaBase):
             best_params = _xgboost_cfg.parameters or best_params
 
         # Train final model
-        logging.info("Training final model...")
-        logging.info(f"Parameters: {best_params}")
+        _LOGGER.info("Training final model...")
+        _LOGGER.info(f"Parameters: {best_params}")
         self.model = XGBRegressor(
             **best_params, random_state=self.random_state, objective="reg:squarederror"
         )
@@ -640,17 +642,17 @@ class SolarPredictor(DaBase):
         joblib.dump(self.model, model_save_path)
         self.is_trained = True
 
-        logging.info(f"Model training van {self.solar_name} complete")
-        logging.info(f"Model saved to: {model_save_path}")
-        logging.info(f"Training MAE: {train_mae:.4f} kWh")
-        logging.info(f"Testing MAE: {test_mae:.4f} kWh")
-        logging.info(f"Training R²: {train_r2:.4f}")
-        logging.info(f"Testing R²: {test_r2:.4f}")
-        logging.info("Sorted features:")
+        _LOGGER.info(f"Model training van {self.solar_name} complete")
+        _LOGGER.info(f"Model saved to: {model_save_path}")
+        _LOGGER.info(f"Training MAE: {train_mae:.4f} kWh")
+        _LOGGER.info(f"Testing MAE: {test_mae:.4f} kWh")
+        _LOGGER.info(f"Training R²: {train_r2:.4f}")
+        _LOGGER.info(f"Testing R²: {test_r2:.4f}")
+        _LOGGER.info("Sorted features:")
         importance = self.training_stats["feature_importance"]
         sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
         for i, (feature, score) in enumerate(sorted_features):
-            logging.info(f"  {i + 1}. {feature}: {score:.3f}")
+            _LOGGER.info(f"  {i + 1}. {feature}: {score:.3f}")
         return self.training_stats
 
     def predict(
@@ -800,7 +802,7 @@ class SolarPredictor(DaBase):
             variables=variables,
         )
         if len(knmi_df) == 0:
-            logging.info(
+            _LOGGER.info(
                 f"Er zijn geen aanvullende knmi-data beschikbaar vanaf {start}-{end}"
             )
             return
@@ -810,7 +812,7 @@ class SolarPredictor(DaBase):
         knmi_laatste = pd.to_datetime(knmi_df["utc"].iloc[-1]).tz_localize(
             self.time_zone
         )
-        logging.info(
+        _LOGGER.info(
             f"Er zijn data van het KNMI binnengekomen vanaf {knmi_eerste} tot en met "
             f"{knmi_laatste}"
         )
@@ -849,14 +851,14 @@ class SolarPredictor(DaBase):
         """
         # get dataframe with knmi-py
         # datetime of latest data-reord
-        logging.info(
+        _LOGGER.info(
             f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}"
         )
 
         latest_wind_dt = self.db_da.get_time_border_record("winds", latest=True)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         if latest_wind_dt is None and latest_dt is not None:
-            logging.info("Er zijn nog geen winddata van knmi aanwezig")
+            _LOGGER.info("Er zijn nog geen winddata van knmi aanwezig")
             self.get_and_save_knmi_data(start, latest_dt, ["FH"])
         else:
             if (
@@ -869,14 +871,14 @@ class SolarPredictor(DaBase):
         first_dt = self.db_da.get_time_border_record("gr", latest=False)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         if latest_dt is None:  # er zijn nog geen data
-            logging.info("Er zijn nog geen knmi-data aanwezig")
+            _LOGGER.info("Er zijn nog geen knmi-data aanwezig")
             self.get_and_save_knmi_data(start, end)
             first_dt = self.db_da.get_time_border_record("gr", latest=False)
             latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         else:
-            logging.info(f"Er zijn knmi-data aanwezig vanaf {first_dt} tot {latest_dt}")
+            _LOGGER.info(f"Er zijn knmi-data aanwezig vanaf {first_dt} tot {latest_dt}")
         if first_dt <= start and latest_dt >= end:
-            logging.info("Er worden geen knmi-data opgehaald")
+            _LOGGER.info("Er worden geen knmi-data opgehaald")
             return
         if first_dt > start:
             self.get_and_save_knmi_data(start, first_dt)
@@ -919,7 +921,7 @@ class SolarPredictor(DaBase):
                 latest_dt = self.db_da.get_time_border_record(weather_item, latest=True)
                 if latest_dt < end and _end is not None:
                     table_name = "prognoses"
-                    logging.warning(
+                    _LOGGER.warning(
                         f"Er zijn geen meetdata van {weather_item} op "
                         f"{start.strftime('%Y-%m_%d')}"
                     )
@@ -1066,7 +1068,7 @@ class SolarPredictor(DaBase):
         """
         prediction["prediction"][prediction["prediction"] < 0] = 0
         prediction["prediction"].round(3)
-        logging.info(f"ML prediction {self.solar_name}\n{prediction}")
+        _LOGGER.info(f"ML prediction {self.solar_name}\n{prediction}")
         return prediction
 
     def test_solar_predictor(self, start, end):
