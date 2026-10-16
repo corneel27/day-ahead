@@ -664,16 +664,27 @@ def config():
     error = None
     success = None
 
+    tmp_file = Path('/tmp/options_tmp.json')
+
     if request.method == "POST" and request.form.to_dict()["config"] is not None:
         content = request.form.to_dict()["config"]
         try:
             # try loading json
             json.loads(content)
+
+            with open(tmp_file, "w") as tmp_f:
+                tmp_f.write(content)
+
+            loader = ConfigurationLoader(tmp_file)
+            loader.load_and_validate()
+
             with open(path, "w") as f:
                 f.write(content)
             success = "Config updated successfully"
         except Exception as err:
             error = f"Error: {err}"
+            Path.unlink(tmp_file)
+
     else:
         with open(path) as file:
             content = file.read()

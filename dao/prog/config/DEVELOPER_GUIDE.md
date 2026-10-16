@@ -145,6 +145,7 @@ class BatteryConfig(BaseModel):
     model_config = ConfigDict(
         extra='allow',
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             # TOC section grouping
             'x-ui-group': 'Energy',

@@ -115,6 +115,7 @@ class MachineConfig(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-ui-group": "Devices",
             "x-icon": "washing-machine",
