@@ -89,6 +89,7 @@ def database(request, tmp_path, monkeypatch):
             assert self.db_ha is not None
             self.time_zone = self.config.time_zone
             self.prices_options = self.config.prices
+            self.interval = self.config.interval
 
         monkeypatch.setattr(DaBase, '__init__', initialize_test_base)
         report = Report(file_name=str(options_file), _now=dt.datetime(2026, 1, 1))
