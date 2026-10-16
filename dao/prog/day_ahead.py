@@ -3977,7 +3977,7 @@ class DaCalc(DaBase):
             
             # if you had subsequent columns per stop, build them the same way:
             # cols = "    ".join(str(value) for value in some_list)
-            # _LOGGER.info(f"{some_label}   {cols}")            
+            # _LOGGER.info(f"{some_label}   {cols}")
             """
             for e in range(EV):
                 if (
