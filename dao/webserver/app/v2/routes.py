@@ -681,9 +681,12 @@ def config():
             with open(path, "w") as f:
                 f.write(content)
             success = "Config updated successfully"
+            Path.unlink(tmp_file)
         except Exception as err:
             error = f"Error: {err}"
-            Path.unlink(tmp_file)
+
+            if Path.exists(tmp_file):
+                Path.unlink(tmp_file)
 
     else:
         with open(path) as file:
