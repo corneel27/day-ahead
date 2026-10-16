@@ -1,6 +1,7 @@
 """Exercise report source and forecast boundaries with isolated SQLite data."""
 
 import datetime as dt
+import threading
 from unittest.mock import Mock
 
 import pandas as pd
@@ -30,6 +31,7 @@ def test_forecasts_only_fill_unfinished_da_or_combined_reports(source, complete)
     manager.db_dialect = "sqlite"
     manager.engine = create_engine("sqlite:///:memory:")
     manager.metadata = MetaData()
+    manager._metadata_lock = threading.RLock()
     metadata = MetaData()
     variables = Table("variabel", metadata, Column("id", Integer, primary_key=True), Column("code", String))
     values = Table("values", metadata, Column("time", Integer), Column("variabel", Integer), Column("value", Float))
