@@ -2246,7 +2246,11 @@ class DaCalc(DaBase):
                 logging.info("Warmtepomp staat uit - warmtepomp wordt niet ingepland")
         if self.hp_enabled:
             # degree days
-            degree_days_today = self.meteo.calc_graaddagen(weighted=True)
+            base_temp = self.heating_options.degree_days_base_temperature
+            logging.info(f"Stookgrens (graaddagen): {base_temp:.1f} °C")
+            degree_days_today = self.meteo.calc_graaddagen(
+                weighted=True, base_temp=base_temp
+            )
             logging.info(f"Gewogen graaddagen vandaag: {degree_days_today:.1f} K.day")
             if U > self.steps_day:
                 degree_days_tomorrow = self.meteo.calc_graaddagen(
@@ -2254,6 +2258,7 @@ class DaCalc(DaBase):
                         dt.date.today() + dt.timedelta(days=1), dt.datetime.min.time()
                     ),
                     weighted=True,
+                    base_temp=base_temp,
                 )
                 logging.info(
                     f"Gewogen graaddagen morgen: {degree_days_tomorrow:.1f} K.day"
