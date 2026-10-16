@@ -1831,10 +1831,10 @@ class DaCalc(DaBase):
             if not ev_plugged_in[e]:
                 reden = reden + " auto is niet ingeplugd,"
             if not (tijd[0] < ready):
-                reden = reden + f" opgegeven tijdstip ({str(ready)}) is verouderd,"
+                reden = reden + f" opgegeven tijdstip ({ready!s}) is verouderd,"
             if tijd[U - 1] < ready:
                 reden = reden + (
-                    f" opgegeven tijdstip ({str(ready)}) ligt voorbij de "
+                    f" opgegeven tijdstip ({ready!s}) ligt voorbij de "
                     f"planningshorizon ({tijd[U - 1]}),"
                 )
             if (
@@ -2728,16 +2728,26 @@ class DaCalc(DaBase):
                     min_run_length = max(
                         min_run_length, math.floor(hp_hours / blocks_num)
                     )
+                    # length of lastblock
+                    last_block_len = (hp_hours - first_block_len) % min_run_length
+                    if last_block_len == 0:
+                        last_block_len = min_run_length
                 else:
-                    min_run_length = max(
-                        min_run_length, math.floor(hours_avail / blocks_num)
-                    )
-                # length of lastblock
-                last_block_len = (hp_hours - first_block_len) % min_run_length
-                if last_block_len == 0:
-                    last_block_len = min_run_length
+                    # De blokken samen beslaan precies hp_hours: de uren die op het
+                    # minimale vermogen nodig zijn. Gebaseerd op hours_avail werd de
+                    # wp langer ingepland dan nodig (overproductie, ook in dure uren).
+                    if blocks_num > 1:
+                        rest_hours = hp_hours - first_block_len
+                        min_run_length = max(
+                            min_run_length, math.floor(rest_hours / (blocks_num - 1))
+                        )
+                        last_block_len = max(
+                            1, rest_hours - (blocks_num - 2) * min_run_length
+                        )
+                    else:
+                        last_block_len = first_block_len
                 logging.info(f"Eerste blok van {first_block_len} uur")
-                if last_block_len < min_run_length:
+                if last_block_len != min_run_length:
                     logging.info(
                         f"Tussenin {blocks_num - 2} blokken van {min_run_length} uur"
                     )
@@ -3968,35 +3978,37 @@ class DaCalc(DaBase):
             # logging.info(f"{some_label}   {cols}")            
             """
             for e in range(EV):
-                if ready_u[e] < U:
-                    if self.log_level <= logging.INFO:
-                        logging.info(
-                            f"Inzet-factor laden {self.ev_options[e].name} per stop"
-                        )
-                        amps = "         ".join(
-                            f"{ev_charge_stages[e][cs]['ampere']:4.1f}A"
+                if (
+                    (ready_u[e] < U)
+                    and (self.log_level <= logging.INFO)
+                ):
+                    logging.info(
+                        f"Inzet-factor laden {self.ev_options[e].name} per stop"
+                    )
+                    amps = "         ".join(
+                        f"{ev_charge_stages[e][cs]['ampere']:4.1f}A"
+                        for cs in range(ECS[e])
+                    )
+                    line1 = f"  uur        {amps}   cons   power     on   off  part bound    soc   delta    cost"
+                    logging.info(line1)
+
+                    for u in range(ready_u[e] + 1):
+                        line2 = f"{uur[u]}  "
+                        stages = "   ".join(
+                            f"{stage_factor[e][cs][u].x:.4f}({stage_on[e][cs][u].x})"
                             for cs in range(ECS[e])
                         )
-                        line1 = f"  uur        {amps}   cons   power     on   off  part bound    soc   delta    cost"
-                        logging.info(line1)
-
-                        for u in range(ready_u[e] + 1):
-                            line2 = f"{uur[u]}  "
-                            stages = "   ".join(
-                                f"{stage_factor[e][cs][u].x:.4f}({stage_on[e][cs][u].x})"
-                                for cs in range(ECS[e])
-                            )
-                            line2 += stages + (
-                                f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
-                                f"   {ev_is_on[e][u].x}"
-                                f"   {ev_is_off[e][u].x}"
-                                f"   {ev_is_partial[e][u].x}"
-                                f"   {ev_boundary_stop[e][u].x}"
-                                f"   {ev_soc_kwh[e][u].x:.3f}"
-                                f"   {ev_delta_soc[e][u].x:.3f}"
-                                f"   {low_soc_penalty_int[e][u].x:.3f}"
-                            )
-                            logging.info(line2)
+                        line2 += stages + (
+                            f"  {c_ev[e][u].x:.3f}  {p_ev[e][u].x:.3f} "
+                            f"   {ev_is_on[e][u].x}"
+                            f"   {ev_is_off[e][u].x}"
+                            f"   {ev_is_partial[e][u].x}"
+                            f"   {ev_boundary_stop[e][u].x}"
+                            f"   {ev_soc_kwh[e][u].x:.3f}"
+                            f"   {ev_delta_soc[e][u].x:.3f}"
+                            f"   {low_soc_penalty_int[e][u].x:.3f}"
+                        )
+                        logging.info(line2)
 
                 start_ev_laden = stop_ev_laden = None
                 for u in range(U):
@@ -4728,7 +4740,7 @@ class DaCalc(DaBase):
         style = self.config.graphics.style
         import matplotlib.lines as mlines
         import matplotlib.pyplot as plt
-        import matplotlib.ticker as ticker
+        from matplotlib import ticker
 
         plt.set_loglevel(level="warning")
         pil_logger = logging.getLogger("PIL")
@@ -5301,54 +5313,47 @@ def main():
     """
     main function
     """
+    from dao.prog.da_const import tasks
+
+    def find_task(cmd: str) -> str | None:
+        for key, task in tasks.items():
+            if cmd == key or cmd in task.get("aliases", []):
+                return key
+        return None
 
     da_calc = DaCalc("../data/options.json")
     if da_calc.config is None:
         return
 
-    exit_code = 0
-    if len(sys.argv) > 1:
-        args = sys.argv[1:]
-        for arg in args:
-            if arg.lower() == "debug":
-                da_calc.debug = not da_calc.debug
-                continue
-            if arg.lower() == "calc":
-                if da_calc.debug:
-                    exit_code = da_calc.run_task_function("calc_optimum_met_debug")
-                else:
-                    exit_code = da_calc.run_task_function("calc_optimum")
-                continue
-            if arg.lower() == "meteo":
-                exit_code = da_calc.run_task_function("get_meteo_data")
-                continue
-            if arg.lower() == "prices":
-                exit_code = da_calc.run_task_function("get_day_ahead_prices")
-                continue
-            if arg.lower() == "get_predicted_prices":
-                exit_code = da_calc.run_task_function("get_predicted_prices")
-                continue
-            if arg.lower() == "tibber":
-                exit_code = da_calc.run_task_function("get_tibber_data")
-                continue
-            if arg.lower() == "clean":
-                exit_code = da_calc.run_task_function("clean_data")
-                continue
-            if arg.lower() == "consolidate":
-                exit_code = da_calc.run_task_function("consolidate")
-                continue
-            if arg.lower() == "calc_baseloads":
-                exit_code = da_calc.run_task_function("calc_baseloads")
-                continue
-            if arg.lower() == "train":
-                exit_code = da_calc.run_task_function("train_ml_predictions")
-                continue
+    args = sys.argv[1:]
+    cmd = args[0] if args else None
 
-            if exit_code is False:
-                exit_code = 1
+    if cmd in (None, "help", "--help", "-h", "list"):
+        print("Usage: day_ahead.py <task> [--debug]\n")
+        print("Available tasks:")
 
-            if exit_code > 0:
-                break
+        for key, task in tasks.items():
+            aliases = task.get("aliases", [])
+            alias_text = f" ({', '.join(aliases)})" if aliases else ""
+            print(f"  {key + alias_text:<40} {task['name']}")
+
+        sys.exit(0)
+
+    if cmd == "debug":
+        print("The debug flag is deprecated, use `calc --debug`")
+        cmd = "calc_debug"
+
+    task = find_task(cmd)
+
+    if task is None:
+        print(f"Unknown task: {cmd}\nUse --help to list available tasks.")
+        sys.exit(1)
+
+    da_calc.debug = "--debug" in args or cmd == "calc_debug"
+    exit_code = da_calc.run_task_function(task)
+
+    if exit_code is False:
+        exit_code = 1
 
     da_calc.db_da.log_pool_status()
 

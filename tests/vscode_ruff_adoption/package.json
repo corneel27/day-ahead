@@ -1,0 +1,13 @@
+{
+  "name": "day-ahead-ruff-acceptance",
+  "publisher": "local-verification",
+  "version": "0.0.1",
+  "private": true,
+  "extensionDependencies": ["charliermarsh.ruff"],
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [{"command": "dayAhead.verifyRuffAdoption", "title": "Day Ahead: Verify Ruff adoption"}]
+  },
+  "engines": {"vscode": "^1.100.0"},
+  "main": "extension.js"
+}

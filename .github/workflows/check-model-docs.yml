@@ -5,10 +5,12 @@ on:
     paths:
       - 'dao/prog/config/**/*.py'
       - 'scripts/generate_docs.py'
+      - 'dao/requirements.txt'
   pull_request:
     paths:
       - 'dao/prog/config/**/*.py'
       - 'scripts/generate_docs.py'
+      - 'dao/requirements.txt'
       - 'SETTINGS.md'
       - 'config_schema.json'
 

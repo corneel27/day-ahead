@@ -1,0 +1,2 @@
+-r requirements-lint.txt
+pre-commit==4.7.0

@@ -1,0 +1,49 @@
+name: Development environment
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '23 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clean-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the actual development image
+        run: docker build --pull -t day-ahead-dev .devcontainer
+      - name: Verify container startup, repeat setup and application behavior
+        run: |
+          npx --yes @devcontainers/cli@0.89.0 up \
+            --workspace-folder "$GITHUB_WORKSPACE" \
+            --skip-non-blocking-commands > "$RUNNER_TEMP/devcontainer-result.json"
+          container_id=$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).containerId" "$RUNNER_TEMP/devcontainer-result.json")
+          workspace=$(node -p "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).remoteWorkspaceFolder" "$RUNNER_TEMP/devcontainer-result.json")
+          docker exec -w "$workspace" "$container_id" bash -e -c '
+            python scripts/verify_environment.py
+            .venv/bin/python scripts/verify_python_runtime.py --expected-python 3.14
+            .venv-tools/bin/python -m unittest discover -s tests -p test_guard_reads.py -v
+            sh script/setup
+            python scripts/verify_environment.py
+            .venv/bin/python -m pytest -c pytest-dev.ini -q
+            PYTHONPATH="$PWD:$PWD/dao/prog" .venv/bin/python -m dao.prog.da_debug scenario-run --report
+            cd dao/webserver
+            npx playwright install --with-deps chromium
+            npm run test:browser
+          '
+          docker stop "$container_id"
+      - name: Upload browser failure traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-failures
+          path: .local/frontend-test-results/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

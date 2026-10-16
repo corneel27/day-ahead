@@ -278,8 +278,8 @@ class DaBase(hass.Hass):
         )
         if self.config is not None and self.ha_context is not None:
             logging.debug(
-                f"Locatie: latitude {str(self.ha_context.latitude)} "
-                f"longitude: {str(self.ha_context.longitude)}"
+                f"Locatie: latitude {self.ha_context.latitude!s} "
+                f"longitude: {self.ha_context.longitude!s}"
             )
 
     @staticmethod
@@ -363,7 +363,6 @@ class DaBase(hass.Hass):
         df_db = pd.DataFrame(rows, columns=["time", "code", "value"])
         logging.debug(f"Save calculated data:\n{df_db.to_string()}")
         self.db_da.savedata(df_db, tablename=tablename)
-        return
 
     @staticmethod
     def get_calculated_baseload(weekday: int) -> list:

@@ -336,7 +336,7 @@ class _FakeHttpResponse:
     on the result. Supporting all three keeps both call sites served by one
     small stand-in."""
 
-    __slots__ = ("_payload", "text", "ok", "status_code")
+    __slots__ = ("_payload", "ok", "status_code", "text")
 
     # Bouwt een minimale requests.Response-imitatie met .text/.ok/.status_code, 
     # nodig om zowel da_base.py's eigen HA-aanroep als hassapi's interne verzoek te kunnen bedienen.
@@ -465,7 +465,6 @@ def _make_noop_set_value(label: str):
     # Logt de onderdrukte write en geeft None terug in plaats van echt naar HA te schrijven.
     def _noop_set_value(instance, entity_id, value):
         logger.debug("%s: onderdrukt write set_value(%s, %s)", label, entity_id, value)
-        return None
 
     return _noop_set_value
 
@@ -475,7 +474,6 @@ def _make_noop_call_service(label: str):
     # Onderdrukt een service-aanroep naar HA.
     def _noop_call_service(instance, *args, **kwargs):
         logger.debug("%s: onderdrukt write call_service%s %s", label, args, kwargs)
-        return None
 
     return _noop_call_service
 
@@ -485,7 +483,6 @@ def _make_noop_savefig(label: str):
     # Doet niets in plaats van een bestand op schijf te zetten.
     def _noop_savefig(*args, **kwargs):
         logger.debug("%s: onderdrukt write plt.savefig%s", label, args)
-        return None
 
     return _noop_savefig
 
@@ -1114,7 +1111,7 @@ class ReplayIO:
 
     # Zet alle class- en module-patches voor deze replaysessie neer: config, reads, writes en de klok.
     def _install_patches(self) -> None:
-        DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, da_base_module = _import_targets()
+        DaBase, Report, _DBmanagerObj, SolarPredictor, Meteo, da_base_module = _import_targets()
 
         if self._config_dict is None:
             raise SnapshotMiss(
@@ -2246,18 +2243,22 @@ def dump_interval(
     price_cons = header.get("price_cons")
     price_prod = header.get("price_prod")
     for contrib in objective_contributions:
-        if contrib["label"].startswith("c_l[") and price_cons is not None:
-            if abs(contrib["coef"] - price_cons) > 1e-4:
-                price_mismatch = (
-                    f"c_l coefficient {contrib['coef']:.6f} != header price_cons "
-                    f"{price_cons:.6f}"
-                )
-        if contrib["label"].startswith("c_t[") and price_prod is not None:
-            if abs(contrib["coef"] - (-price_prod)) > 1e-4:
-                price_mismatch = (
-                    f"c_t coefficient {contrib['coef']:.6f} != -header price_prod "
-                    f"{-price_prod:.6f}"
-                )
+        if (
+            (contrib["label"].startswith("c_l[") and price_cons is not None)
+            and (abs(contrib["coef"] - price_cons) > 1e-4)
+        ):
+            price_mismatch = (
+                f"c_l coefficient {contrib['coef']:.6f} != header price_cons "
+                f"{price_cons:.6f}"
+            )
+        if (
+            (contrib["label"].startswith("c_t[") and price_prod is not None)
+            and (abs(contrib["coef"] - (-price_prod)) > 1e-4)
+        ):
+            price_mismatch = (
+                f"c_t coefficient {contrib['coef']:.6f} != -header price_prod "
+                f"{-price_prod:.6f}"
+            )
 
     cost_idx = _find_scalar_idx(by_idx, "cost")
     inv = _inverse_var_constraint_index(model)
@@ -2364,7 +2365,7 @@ def dump_interval(
 def _format_dump_text(data: dict, show_all: bool = False) -> str:
     lines: list[str] = []
     header_bits = [f"interval {data['interval']}"]
-    for _k, v in data.get("header", {}).items():
+    for v in data.get("header", {}).values():
         if v is not None:
             header_bits.append(str(v))
     lines.append("  ".join(header_bits))
@@ -3108,7 +3109,7 @@ def _lookup_price_at_interval(
 # zonder dat de CLI U apart hoeft te kennen.
 def _max_known_interval(registry_by_idx: dict) -> int:
     max_u = -1
-    for _var_idx, (name, idx_tuple) in registry_by_idx.items():
+    for (name, idx_tuple) in registry_by_idx.values():
         if name not in SHAPES:
             continue
         dims = _dims(name)

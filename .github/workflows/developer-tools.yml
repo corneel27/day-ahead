@@ -1,0 +1,29 @@
+name: Developer tools
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    name: Developer setup (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install pinned developer tools
+        run: python -m pip install -r requirements-dev.txt
+      - name: Verify setup, shared rule fixtures, language server and commit hooks
+        run: python -m unittest discover -s tests -p test_developer_tools.py -v
+      - name: Verify isolated preview setup preserves existing files
+        run: python -m unittest discover -s tests -p test_environment_setup.py -v
+      - name: Verify transient Windows guard locks are retried
+        run: python -m unittest discover -s tests -p test_guard_reads.py -v

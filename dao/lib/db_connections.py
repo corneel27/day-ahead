@@ -39,15 +39,15 @@ def _build_db_da(
 ) -> DBmanagerObj | None:
     """Construct a DBmanagerObj for the Day Ahead database."""
     db = config.database_da
-    kwargs = dict(
-        db_dialect=db.engine,
-        db_name=db.database,
-        db_server=db.server,
-        db_user=db.username,
-        db_password=db.password.resolve(secrets) if db.password is not None else None,
-        db_port=db.port,
-        db_path=db.db_path,
-    )
+    kwargs = {
+        "db_dialect": db.engine,
+        "db_name": db.database,
+        "db_server": db.server,
+        "db_user": db.username,
+        "db_password": db.password.resolve(secrets) if db.password is not None else None,
+        "db_port": db.port,
+        "db_path": db.db_path,
+    }
 
     import sqlalchemy_utils
     db_url = DBmanagerObj.db_url(**kwargs)
@@ -69,15 +69,15 @@ def _build_db_ha(
 ) -> DBmanagerObj | None:
     """Construct a DBmanagerObj for the Home Assistant database."""
     db = config.database_ha
-    kwargs = dict(
-        db_dialect=db.engine,
-        db_name=db.database,
-        db_server=db.server,
-        db_user=db.username,
-        db_password=db.password.resolve(secrets) if db.password is not None else None,
-        db_port=db.port,
-        db_path=db.db_path,
-    )
+    kwargs = {
+        "db_dialect": db.engine,
+        "db_name": db.database,
+        "db_server": db.server,
+        "db_user": db.username,
+        "db_password": db.password.resolve(secrets) if db.password is not None else None,
+        "db_port": db.port,
+        "db_path": db.db_path,
+    }
     try:
         import sqlalchemy_utils
 

@@ -55,11 +55,7 @@ class DaScheduler(DaBase):
             key2 = str(hour).zfill(2) + "xx"
             tasks = []
             for key in self.scheduler_tasks:
-                if key == key0:
-                    tasks.append(self.scheduler_tasks[key])
-                elif key == key1:
-                    tasks.append(self.scheduler_tasks[key])
-                elif key == key2:
+                if key == key0 or key == key1 or key == key2:
                     tasks.append(self.scheduler_tasks[key])
             for task in tasks:
                 for key_task in self.tasks:
@@ -68,7 +64,6 @@ class DaScheduler(DaBase):
                             self.run_task_process(key_task)
                         except KeyboardInterrupt:
                             sys.exit()
-                            pass
                         except Exception as e:
                             print(e)
                             continue

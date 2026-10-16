@@ -1,16 +1,21 @@
 # Match the Python version used by the scenario CI jobs.
 target-version = "py312"
-required-version = "==0.16.10"
 preview = false
 unsafe-fixes = false
 
 # The tracked tests are matched by the legacy .gitignore; lint them too.
 respect-gitignore = false
-extend-exclude = [".venv*", "__pycache__", "dao/webserver/app/static/build"]
+extend-exclude = [".venv*", ".local", "__pycache__", "dao/webserver/app/static/build"]
 
 [lint]
 # Syntax/import errors, Pyflakes, import ordering, Python upgrades and Bugbear.
 select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+# First standard-rule adoption batch: local simplifications and explicit intent.
+extend-select = [
+    "C408", "ISC004", "PERF102", "PIE790", "PLR0402", "PLR1711",
+    "PLW0602", "RET501", "RUF010", "RUF022", "RUF023", "RUF059",
+    "SIM102", "SIM114", "SIM117", "SIM118", "SIM210", "SIM401",
+]
 
 [lint.isort]
 known-first-party = ["dao"]

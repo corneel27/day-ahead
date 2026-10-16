@@ -46,6 +46,27 @@ jobs:
   scenarios:
     name: Scenario suite (solve)
     runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: fixture
+          MARIADB_DATABASE: dao_query_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: fixture
+          POSTGRES_DB: dao_query_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s --health-timeout=5s --health-retries=20
     steps:
 
       - name: Check out repository
@@ -90,6 +111,9 @@ jobs:
         timeout-minutes: 5
         env:
           TZ: UTC
+          DAO_TEST_ALLOW_SCHEMA_RESET: '1'
+          DAO_TEST_MARIADB_URL: mysql+pymysql://root:fixture@127.0.0.1:3306/dao_query_test
+          DAO_TEST_POSTGRESQL_URL: postgresql+psycopg2://postgres:fixture@127.0.0.1:5432/dao_query_test
         # The legacy test_dao.py and EV harness require a user's live setup.
         # The scenario corpus above exercises EV planning hermetically instead.
         run: |
@@ -98,10 +122,14 @@ jobs:
             dao/tests/config/test_boiler_union.py \
             dao/tests/config/test_migrations.py \
             dao/tests/config/test_roundtrip.py \
+            dao/tests/config/test_loader_contracts.py \
             dao/tests/prog/test_db_consumption.py \
+            dao/tests/prog/test_db_connections.py \
             dao/tests/prog/test_ev_schedule.py \
             dao/tests/prog/test_ha_data_query.py \
             dao/tests/prog/test_solar_defaults.py \
+            dao/tests/prog/test_scheduler_dispatch.py \
+            dao/tests/prog/test_report_forecasts.py \
             dao/tests/webserver/test_route_security.py
 
       - name: Publish report to the job summary
@@ -119,7 +147,7 @@ jobs:
 
       - name: Upload scenario report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scenario-reports
           path: dao/data/scenario_reports/
