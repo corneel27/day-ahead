@@ -1642,7 +1642,7 @@
           "x-validation-hint": "Must be > 0, typically 0.5-10.0",
           "title": "Degree Days Factor"
         },
-        "degree days base temperature": {
+        "degree_days_base_temperature": {
           "default": 16.0,
           "description": "Base temperature (heating limit) for degree days",
           "maximum": 30.0,

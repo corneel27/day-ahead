@@ -709,7 +709,7 @@ Define power levels and corresponding COP values:
 | `heater present` | boolean | Discriminator | `true` | Whether heating system is present/enabled |
 | `entity hp enabled` | [EntityId](#entityid) (optional) | No | `null` | HA binary sensor for heat pump enabled status |
 | `degree days factor` | [FlexFloat](#flexfloat) | No | `1.0` | Degree days factor for heat demand calculation (Unit: `factor`) _Must be > 0, typically 0.5-10.0_ |
-| `degree days base temperature` | number | No | `16.0` | Base temperature (heating limit) for degree days (Unit: `°C`) _Between 0 and 30, typically 15-18_ |
+| `degree_days_base_temperature` | number | No | `16.0` | Base temperature (heating limit) for degree days (Unit: `°C`) _Between 0 and 30, typically 15-18_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | No | `[]` | Heating power/COP stages _Required for 'power' and 'heating curve' adjustment; must be sorted by max_power_ |
 | `entity adjust heating curve` | [EntityId](#entityid) (optional) | No | `null` | HA entity to adjust heating curve |
@@ -737,7 +737,7 @@ Optional: Home Assistant binary sensor indicating if heat pump is enabled and op
 
 Multiplier for degree-day heat demand calculation. Adjust based on building insulation and heat loss. Higher = more heat needed. Typical: 0.5-2.0.
 
-**`degree days base temperature`**
+**`degree_days_base_temperature`**
 
 Average daily outdoor temperature in °C at and above which no heating is needed (the heating limit). Heat demand is calculated from the degree days below this temperature: (base temperature - average outdoor temperature) per day. Raise it if your heating starts at a higher outdoor temperature, lower it for a well-insulated house. Default: 16 °C.
 

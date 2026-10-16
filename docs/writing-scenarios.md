@@ -224,7 +224,7 @@ scenario written before S4. To exercise the heat pump, set:
 ```
 
 Demand comes from **degree-days**: `(base_temp − avg_outside_temp) × weight_factor ×
-degree_days_factor`, where `base_temp` is the `degree days base temperature`
+degree_days_factor`, where `base_temp` is the `degree_days_base_temperature`
 setting (default 16 °C). It is zero, and the heat pump is forced off, whenever
 `avg_outside_temp ≥ base_temp`. The average is the mean of the scenario's own
 `temp` array. It reaches the solve through the `avg_temperature` snapshot

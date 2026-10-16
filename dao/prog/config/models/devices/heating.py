@@ -103,7 +103,6 @@ class HeatingEnabled(BaseModel):
     )
     degree_days_base_temperature: float = Field(
         default=16.0,
-        alias="degree days base temperature",
         ge=0.0,
         le=30.0,
         description="Base temperature (heating limit) for degree days",
