@@ -103,6 +103,22 @@ class HeatingEnabled(BaseModel):
             "x-validation-hint": "Must be > 0, typically 0.5-10.0",
         },
     )
+    degree_days_base_temperature: float = Field(
+        default=16.0,
+        ge=0.0,
+        le=30.0,
+        description="Base temperature (heating limit) for degree days",
+        json_schema_extra={
+            "x-help": "Average daily outdoor temperature in °C at and above which no heating is needed (the heating limit). "
+            "Heat demand is calculated from the degree days below this temperature: "
+            "(base temperature - average outdoor temperature) per day. "
+            "Raise it if your heating starts at a higher outdoor temperature, lower it for a well-insulated house. "
+            "Default: 16 °C.",
+            "x-unit": "°C",
+            "x-ui-section": "Configuration",
+            "x-validation-hint": "Between 0 and 30, typically 15-18",
+        },
+    )
     adjustment: Literal["on/off", "power", "heating curve"] = Field(
         default="power",
         description="Adjustment mode",

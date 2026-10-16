@@ -223,16 +223,18 @@ scenario written before S4. To exercise the heat pump, set:
 "states": { "binary_sensor.heatpump_heating": "on" }
 ```
 
-Demand comes from **degree-days**: `(16 − avg_outside_temp) × weight_factor ×
-degree_days_factor`. It is zero, and the heat pump is forced off, whenever
-`avg_outside_temp ≥ 16 °C`. The average is the mean of the scenario's own
+Demand comes from **degree-days**: `(base_temp − avg_outside_temp) × weight_factor ×
+degree_days_factor`, where `base_temp` is the `degree_days_base_temperature`
+setting (default 16 °C). It is zero, and the heat pump is forced off, whenever
+`avg_outside_temp ≥ base_temp`. The average is the mean of the scenario's own
 `temp` array. It reaches the solve through the `avg_temperature` snapshot
 channel in `da_debug.py`. The architecture doc (§5) explains why the channel
 lives there and not in a scenario-suite patch. The same channel also makes real
 `da_debug capture` and `replay` work for an installation with a heat pump.
 
-Set `temp` clearly below or above 16 °C, depending on the branch you want to
-test. `heatpump-cold-day-runs` uses a flat `-5.0`. `heatpump-mild-day-idle`
+Set `temp` clearly below or above the base temperature (16 °C unless the
+scenario overrides it), depending on the branch you want to test.
+`heatpump-cold-day-runs` uses a flat `-5.0`. `heatpump-mild-day-idle`
 uses a flat `18.0`.
 
 **A second requirement: the heating-curve offset entity.** With the heat pump

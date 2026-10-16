@@ -14,6 +14,9 @@ from sqlalchemy import Table, and_, func, select
 from dao.lib.da_graph import GraphBuilder
 from dao.lib.db_manager import DBmanagerObj
 
+# Stookgrens in oC waarbij geen graaddagen meer worden gerekend (fallback)
+DEFAULT_DEGREE_DAYS_BASE_TEMP = 16.0
+
 
 # noinspection PyUnresolvedReferences
 class Meteo:
@@ -596,10 +599,10 @@ class Meteo:
 
     def get_avg_temperature(self, date: datetime.datetime = None) -> float:
         """
-        Berekent gewogen met temperatuur grens van 16 oC
+        Berekent de gemiddelde buitentemperatuur over 24 uur vanaf het begin van de dag
         :param date: de datum waarvoor de berekening wordt gevraagd
         als None: vandaag
-        :return: berekende gewogen graaddagen
+        :return: de gemiddelde temperatuur in oC
         """
         if date is None:
             date = datetime.datetime.combine(
@@ -661,13 +664,16 @@ class Meteo:
         date: datetime.datetime = None,
         avg_temp: float | None = None,
         weighted: bool = False,
+        base_temp: float = DEFAULT_DEGREE_DAYS_BASE_TEMP,
     ) -> float:
         """
-        Berekent graaddagen met temperatuur grens van 16 oC
+        Berekent graaddagen met een instelbare temperatuurgrens (stookgrens)
         :param date: de datum waarvoor de berekening wordt gevraagd
                     als None: vandaag
         :param avg_temp: de gemiddelde temperatuur, default None
         :param weighted: boolean, gewogen als true, default false
+        :param base_temp: de stookgrens in oC: vanaf deze gemiddelde
+                    temperatuur zijn er geen graaddagen, default 16 oC
         :return: berekende eventueel gewogen graaddagen
         """
         if date is None:
@@ -683,10 +689,10 @@ class Meteo:
                 weight_factor = 1.1
             elif 4 <= mon <= 9:
                 weight_factor = 0.8
-        if avg_temp >= 16:
+        if avg_temp >= base_temp:
             result = 0
         else:
-            result = weight_factor * (16 - avg_temp)
+            result = weight_factor * (base_temp - avg_temp)
         return result
 
     def calc_solar_rad(
