@@ -692,7 +692,7 @@ Define power levels and corresponding COP values:
 
 ## Tips
 - Use degree_days_factor to calibrate heat demand for your building
-- Set min_run_length to prevent excessive cycling (2-4h typical)
+- Set min_run_length, min_off_length and start_cost to prevent excessive cycling
 - Higher COP = cheaper heating, maximize runtime during high-COP conditions
 - Consider solar production when scheduling heating loads
 
@@ -714,7 +714,11 @@ Define power levels and corresponding COP values:
 | `stages` | list[[HeatingStage](#heatingstage)] | No | `[]` | Heating power/COP stages _Required for 'power' and 'heating curve' adjustment; must be sorted by max_power_ |
 | `entity adjust heating curve` | [EntityId](#entityid) (optional) | No | `null` | HA entity to adjust heating curve |
 | `adjustment factor` | number (optional) | No | `null` | Factor for heating curve adjustment (Unit: `factor`) _Typically 0.5-2.0 if specified_ |
-| `min run length` | integer | No | `1` | Minimum run length in time intervals (Unit: `intervals`) _Must be >= 1, typically 2-4 for 1h intervals_ |
+| `min run length` | integer | No | `1` | Minimum run length in hours (Unit: `hours`) _Must be >= 1, typically 1-3_ |
+| `min_off_length` | number | No | `0.0` | Minimum off time in hours (Unit: `hours`) _Must be >= 0, typically 0.5-1_ |
+| `start_cost` | number | No | `0.0` | Virtual cost in euro per heat pump start (Unit: `euro/start`) _Must be >= 0, typically 0.02-0.20 euro/start_ |
+| `entity_hp_running` | [EntityId](#entityid) (optional) | No | `null` | HA entity that is on while the heat pump (compressor) runs |
+| `entity_hp_running_since` | [EntityId](#entityid) (optional) | No | `null` | HA timestamp sensor: when the heat pump last started or stopped |
 | `entity hp heat produced` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat produced (Unit: `kWh`) |
 | `entity hp heat demand` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat demand (Unit: `W`) |
 | `entity avg outside temp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for average temperature (Unit: `°C`) |
@@ -759,7 +763,23 @@ Optional: Multiplier for heating curve adjustments. Higher values = more aggress
 
 **`min run length`**
 
-Minimum number of consecutive time intervals heat pump must run once started. Prevents excessive on/off cycling which reduces efficiency and equipment life. Typical: 2-4 intervals (2-4 hours).
+Minimum number of hours the heat pump runs once started. Prevents excessive on/off cycling which reduces efficiency and equipment life. Typical: 1-3 hours.
+
+**`min_off_length`**
+
+Minimum number of hours the heat pump stays off once stopped, before it is planned to start again. 0 = no minimum off time. Typical: 0.5-1 hour.
+
+**`start_cost`**
+
+Virtual cost in euro per start of the heat pump, added to the optimization. Higher = fewer, longer runs: a start is only planned when it saves more than this. Covers wear and the extra consumption at start-up. 0 = starts are free.
+
+**`entity_hp_running`**
+
+Optional: Home Assistant binary sensor that is 'on' while the compressor runs. Its state and last change tell how long the heat pump has been running (minimum run time) or stopped (minimum off time) at the start of the planning. Without it the run hours are derived from the heat produced (whole hours).
+
+**`entity_hp_running_since`**
+
+Optional, with entity_hp_running: Home Assistant timestamp sensor holding the moment the compressor last started or stopped. Used instead of the last change of entity_hp_running, which Home Assistant resets on a restart (e.g. a trigger-based template sensor survives restarts).
 
 **`entity hp heat produced`**
 

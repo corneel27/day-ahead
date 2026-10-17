@@ -1714,14 +1714,68 @@
         },
         "min run length": {
           "default": 1,
-          "description": "Minimum run length in time intervals",
+          "description": "Minimum run length in hours",
           "minimum": 1,
           "title": "Min Run Length",
           "type": "integer",
-          "x-help": "Minimum number of consecutive time intervals heat pump must run once started. Prevents excessive on/off cycling which reduces efficiency and equipment life. Typical: 2-4 intervals (2-4 hours).",
+          "x-help": "Minimum number of hours the heat pump runs once started. Prevents excessive on/off cycling which reduces efficiency and equipment life. Typical: 1-3 hours.",
           "x-ui-section": "Configuration",
-          "x-unit": "intervals",
-          "x-validation-hint": "Must be >= 1, typically 2-4 for 1h intervals"
+          "x-unit": "hours",
+          "x-validation-hint": "Must be >= 1, typically 1-3"
+        },
+        "min_off_length": {
+          "default": 0.0,
+          "description": "Minimum off time in hours",
+          "minimum": 0,
+          "title": "Min Off Length",
+          "type": "number",
+          "x-help": "Minimum number of hours the heat pump stays off once stopped, before it is planned to start again. 0 = no minimum off time. Typical: 0.5-1 hour.",
+          "x-ui-section": "Configuration",
+          "x-unit": "hours",
+          "x-validation-hint": "Must be >= 0, typically 0.5-1"
+        },
+        "start_cost": {
+          "default": 0.0,
+          "description": "Virtual cost in euro per heat pump start",
+          "minimum": 0,
+          "title": "Start Cost",
+          "type": "number",
+          "x-help": "Virtual cost in euro per start of the heat pump, added to the optimization. Higher = fewer, longer runs: a start is only planned when it saves more than this. Covers wear and the extra consumption at start-up. 0 = starts are free.",
+          "x-ui-section": "Configuration",
+          "x-unit": "euro/start",
+          "x-validation-hint": "Must be >= 0, typically 0.02-0.20 euro/start"
+        },
+        "entity_hp_running": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity that is on while the heat pump (compressor) runs",
+          "x-help": "Optional: Home Assistant binary sensor that is 'on' while the compressor runs. Its state and last change tell how long the heat pump has been running (minimum run time) or stopped (minimum off time) at the start of the planning. Without it the run hours are derived from the heat produced (whole hours).",
+          "x-ui-section": "Sensors",
+          "x-ui-widget-filter": "binary_sensor",
+          "title": "Entity Hp Running"
+        },
+        "entity_hp_running_since": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA timestamp sensor: when the heat pump last started or stopped",
+          "x-help": "Optional, with entity_hp_running: Home Assistant timestamp sensor holding the moment the compressor last started or stopped. Used instead of the last change of entity_hp_running, which Home Assistant resets on a restart (e.g. a trigger-based template sensor survives restarts).",
+          "x-ui-section": "Sensors",
+          "x-ui-widget-filter": "sensor",
+          "title": "Entity Hp Running Since"
         },
         "entity hp heat produced": {
           "anyOf": [
@@ -1828,7 +1882,7 @@
       "title": "HeatingConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Heating-Configuration",
-      "x-help": "# Heat Pump Configuration\n\nOptimize heat pump operation based on electricity prices, heat demand, and weather conditions.\n\n## Key Concepts\n\n### COP (Coefficient of Performance)\nRatio of heat output to electrical input. Higher is better:\n- COP 3.0 = 3 kW heat from 1 kW electricity (300% efficient)\n- COP 4.0 = 4 kW heat from 1 kW electricity (400% efficient)\n- Varies with outdoor temperature and power level\n\n### Adjustment Modes\n- **on/off**: Simple binary control (least flexible)\n- **power**: Variable power control (recommended for variable-speed pumps)\n- **heating curve**: Adjust water temperature based on outdoor temp (most advanced)\n\n### Stages\nDefine power levels and corresponding COP values:\n- Single stage: Fixed power heat pump\n- Multiple stages: Variable-speed compressor with better efficiency\n- Must be sorted by power (ascending)\n\n## Tips\n- Use degree_days_factor to calibrate heat demand for your building\n- Set min_run_length to prevent excessive cycling (2-4h typical)\n- Higher COP = cheaper heating, maximize runtime during high-COP conditions\n- Consider solar production when scheduling heating loads\n",
+      "x-help": "# Heat Pump Configuration\n\nOptimize heat pump operation based on electricity prices, heat demand, and weather conditions.\n\n## Key Concepts\n\n### COP (Coefficient of Performance)\nRatio of heat output to electrical input. Higher is better:\n- COP 3.0 = 3 kW heat from 1 kW electricity (300% efficient)\n- COP 4.0 = 4 kW heat from 1 kW electricity (400% efficient)\n- Varies with outdoor temperature and power level\n\n### Adjustment Modes\n- **on/off**: Simple binary control (least flexible)\n- **power**: Variable power control (recommended for variable-speed pumps)\n- **heating curve**: Adjust water temperature based on outdoor temp (most advanced)\n\n### Stages\nDefine power levels and corresponding COP values:\n- Single stage: Fixed power heat pump\n- Multiple stages: Variable-speed compressor with better efficiency\n- Must be sorted by power (ascending)\n\n## Tips\n- Use degree_days_factor to calibrate heat demand for your building\n- Set min_run_length, min_off_length and start_cost to prevent excessive cycling\n- Higher COP = cheaper heating, maximize runtime during high-COP conditions\n- Consider solar production when scheduling heating loads\n",
       "x-icon": "heat-pump",
       "x-order": 4,
       "x-ui-group": "Heating",

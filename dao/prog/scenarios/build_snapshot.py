@@ -213,7 +213,10 @@ def _avg_temperature_channel(scenario: Scenario) -> dict:
     return channel
 
 
-def _statestr(value: Any) -> str:
+def _statestr(value: Any) -> str | dict:
+    """A state string; a dict ``{"state", "last_changed"}`` keeps its last change."""
+    if isinstance(value, dict):
+        return {**value, "state": _statestr(value["state"])}
     if isinstance(value, bool):
         return "on" if value else "off"
     return str(value)

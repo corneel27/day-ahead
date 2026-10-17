@@ -38,7 +38,7 @@ the number of hours in `prices.cons`. No separate horizon field exists.
 | `baseload` | flat 0.25 kW | hourly kW. Real households have an evening bump. Set it explicitly if the battery or grid needs demand to discharge into (§6) |
 | `temp` | flat 6.0 °C | hourly outside temperature. Feeds the heat pump's degree-days demand calculation (§7) and `prog_data.temp` |
 | `heatpump_hours` | `0` | heat-pump run-hours history. With the config in `options_example.json` no scenario can reach it: `entity_heat_produced` is not configured, so day_ahead.py short-circuits before it calls `get_heatpump_run_hours` |
-| `states` | `{}` | entity id → value, layered on top of the 28 entities in `scenarios/base_states.json` |
+| `states` | `{}` | entity id → value, layered on top of the 28 entities in `scenarios/base_states.json`. A value can also be `{"state": "on", "last_changed": "2026-01-14 05:30"}` for an entity whose last change is read (e.g. `entity_hp_running`) |
 | `config_patch` | `{}` | dotted path → value, applied to the sanitised base config (§5) |
 | `options` | `"options_example"` | or `"options_2ev"` for the two-EV cases |
 | `ev` | *(none)* | EV shorthand block. The 24 cases in `cases/ev.json` show the full vocabulary, which this page does not cover |
