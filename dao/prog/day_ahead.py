@@ -15,7 +15,7 @@ import time
 from contextlib import contextmanager
 
 import pandas as pd
-from mip import BINARY, CONTINUOUS, INTEGER, Model, minimize, xsum
+from mip import BINARY, CBC, CONTINUOUS, INTEGER, Model, minimize, xsum
 from pandas.core.dtypes.inference import is_number
 from utils import (
     calc_adjustment_heatcurve,
@@ -69,6 +69,51 @@ def _log_native_output(text: str) -> None:
     for line in text.splitlines():
         if line.strip():
             logging.info(line)
+
+
+def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, color=None):
+    """Draw the same bars as ``ax.bar()``, but as one PolyCollection.
+
+    ``ax.bar()`` creates a separate Rectangle artist per bar; with 15-minute
+    intervals the calc chart has thousands of them, and creating, laying out
+    and drawing those dominates the run time of a calculation.
+    """
+    import matplotlib as mpl
+    import numpy as np
+    from matplotlib.collections import PolyCollection
+
+    ax.xaxis.update_units(x)
+    xs = np.asarray(ax.convert_xunits(x), dtype=float)
+    n = len(xs)
+    h = np.broadcast_to(np.asarray(height, dtype=float), (n,))
+    w = np.broadcast_to(np.asarray(width, dtype=float), (n,))
+    b = np.broadcast_to(np.asarray(0.0 if bottom is None else bottom, dtype=float), (n,))
+    left = xs if align == "edge" else xs - w / 2
+    verts = np.stack(
+        [
+            np.column_stack([left, b]),
+            np.column_stack([left, b + h]),
+            np.column_stack([left + w, b + h]),
+            np.column_stack([left + w, b]),
+        ],
+        axis=1,
+    )
+    if color is None:
+        color = ax._get_patches_for_fill.get_next_color()
+    rc = mpl.rcParams
+    coll = PolyCollection(
+        verts,
+        facecolors=color,
+        edgecolors=rc["patch.edgecolor"] if rc["patch.force_edgecolor"] else "none",
+        linewidths=rc["patch.linewidth"],
+        antialiaseds=rc["patch.antialiased"],
+        label=label if label is not None else "_nolegend_",
+    )
+    # like bar(): no autoscale margin below the bars' bottoms
+    coll.sticky_edges.y[:] = np.unique(b).tolist()
+    ax.add_collection(coll, autolim=True)
+    ax._request_autoscale_view()
+    return coll
 
 
 class DaCalc(DaBase):
@@ -489,7 +534,8 @@ class DaCalc(DaBase):
             logging.info(f"pv_ac: {len(pv_org_ac)}")
             logging.info(f"pv_dc: {len(pv_org_dc)}")
 
-        model = Model()
+        # Name the solver explicitly to avoid trying Gurobi first
+        model = Model(solver_name=CBC)
 
         ##############################################################
         #                          pv ac
@@ -4776,7 +4822,7 @@ class DaCalc(DaBase):
         ]
         breedte.append(breedte[-1])
         if solar_num > 0:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(pv_p_org),
                 width=breedte,
@@ -4786,7 +4832,7 @@ class DaCalc(DaBase):
             )
         # 2
         if sum(pv_ac_p) > 0:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(pv_ac_p),
                 width=breedte,
@@ -4796,7 +4842,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         # 3
-        axis[0].bar(
+        _bar(axis[0],
             tijd,
             np.array(org_l),
             width=breedte,
@@ -4806,7 +4852,7 @@ class DaCalc(DaBase):
             align="edge",
         )
 
-        axis[0].bar(
+        _bar(axis[0],
             tijd,
             np.array(base_n),
             width=breedte,
@@ -4815,7 +4861,7 @@ class DaCalc(DaBase):
             align="edge"
         )
         if self.boiler_present:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(boiler_n),
                 width=breedte,
@@ -4825,7 +4871,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if self.hp_present:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(heatpump_n),
                 width=breedte,
@@ -4835,7 +4881,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if EV > 0:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(ev_n),
                 width=breedte,
@@ -4845,7 +4891,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if M > 0:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(mach_n),
                 width=breedte,
@@ -4857,7 +4903,7 @@ class DaCalc(DaBase):
                 color="brown",
                 align="edge",
             )
-        axis[0].bar(
+        _bar(axis[0],
             tijd,
             np.array(org_t),
             width=breedte,
@@ -4907,7 +4953,7 @@ class DaCalc(DaBase):
             f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\nNiet geoptimaliseerd"
         )
 
-        axis[1].bar(
+        _bar(axis[1],
             tijd,
             np.array(pv_p_opt),
             width=breedte,
@@ -4915,7 +4961,7 @@ class DaCalc(DaBase):
             color="green",
             align="edge",
         )
-        axis[1].bar(
+        _bar(axis[1],
             tijd,
             np.array(accu_out_p),
             width=breedte,
@@ -4924,7 +4970,7 @@ class DaCalc(DaBase):
             color="red",
             align="edge",
         )
-        axis[1].bar(
+        _bar(axis[1],
             tijd,
             np.array(c_l_p),
             width=breedte,
@@ -4935,11 +4981,11 @@ class DaCalc(DaBase):
         )
 
         # axis[1].bar(tijd, np.array(cons_n), label="Verbruik", color='yellow')
-        axis[1].bar(
+        _bar(axis[1],
             tijd, np.array(base_n), width=breedte, label="Overig verbr.", color="#f1a603", align="edge"
         )
         if self.boiler_present:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(boiler_n),
                 width=breedte,
@@ -4949,7 +4995,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if self.hp_present:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(heatpump_n),
                 width=breedte,
@@ -4959,7 +5005,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if EV > 0:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(ev_n),
                 width=breedte,
@@ -4969,7 +5015,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if M > 0:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(mach_n),
                 width=breedte,
@@ -4982,7 +5028,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if B > 0:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(accu_in_n),
                 width=breedte,
@@ -4995,7 +5041,7 @@ class DaCalc(DaBase):
                 color="#ff8000",
                 align="edge",
             )
-        axis[1].bar(
+        _bar(axis[1],
             tijd,
             np.array(c_t_n),
             width=breedte,
@@ -5063,10 +5109,10 @@ class DaCalc(DaBase):
                 pv_p.append(0)
                 bat_p.append(0)
                 bat_n.append(0)
-                leg1 = axis[gr_no].bar(
+                leg1 = _bar(axis[gr_no],
                     tijd, np.array(ac_p), width=breedte, label="AC<->", color="red", align="edge"
                 )
-                leg2 = axis[gr_no].bar(
+                leg2 = _bar(axis[gr_no],
                     tijd,
                     np.array(bat_p),
                     label="BAT<->",
@@ -5076,7 +5122,7 @@ class DaCalc(DaBase):
                     align="edge",
                 )
                 if pv_dc_num[b] > 0:
-                    leg3 = axis[gr_no].bar(
+                    leg3 = _bar(axis[gr_no],
                         tijd,
                         np.array(pv_p),
                         width=breedte,
@@ -5087,8 +5133,8 @@ class DaCalc(DaBase):
                     )
                 else:
                     leg3 = None
-                axis[gr_no].bar(tijd, np.array(ac_n), width=breedte, color="red", align="edge")
-                axis[gr_no].bar(
+                _bar(axis[gr_no], tijd, np.array(ac_n), width=breedte, color="red", align="edge")
+                _bar(axis[gr_no],
                     tijd,
                     np.array(bat_n),
                     width=breedte,
@@ -5289,7 +5335,7 @@ class DaCalc(DaBase):
 
         plt.subplots_adjust(right=0.75)
         fig.tight_layout()
-        plt.savefig(
+        fig.savefig(
             "../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png"
         )
         plt.close("all")
