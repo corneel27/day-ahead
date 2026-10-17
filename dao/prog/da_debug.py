@@ -227,7 +227,7 @@ class _FakeState:
     returns. Call sites read ``.state``; the heat pump run state also reads
     ``.last_changed`` (None unless the snapshot gives one)."""
 
-    __slots__ = ("state", "last_changed")
+    __slots__ = ("last_changed", "state")
 
     # Bewaart de state-string en optioneel het tijdstip van de laatste wijziging.
     def __init__(self, state: str, last_changed: dt.datetime | None = None):
@@ -235,7 +235,7 @@ class _FakeState:
         self.last_changed = last_changed
 
 
-def _fake_state(value) -> "_FakeState":
+def _fake_state(value) -> _FakeState:
     """A snapshot ha_states value: a state string, or
     ``{"state": ..., "last_changed": "<ISO datetime>"}``."""
     if isinstance(value, dict):
