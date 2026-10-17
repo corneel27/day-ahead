@@ -224,15 +224,27 @@ def _call_key(args: tuple, kwargs: dict) -> str:
 
 class _FakeState:
     """Minimal stand-in for whatever hassapi's ``get_state()`` normally
-    returns. Every call site in day_ahead.py/da_base.py only ever reads
-    ``.state`` off the result (verified by grep) so nothing else is
-    implemented."""
+    returns. Call sites read ``.state``; the heat pump run state also reads
+    ``.last_changed`` (None unless the snapshot gives one)."""
 
-    __slots__ = ("state",)
+    __slots__ = ("state", "last_changed")
 
-    # Bewaart alleen de state-string; dat is het enige dat aanroepers van get_state() ooit uitlezen.
-    def __init__(self, state: str):
+    # Bewaart de state-string en optioneel het tijdstip van de laatste wijziging.
+    def __init__(self, state: str, last_changed: dt.datetime | None = None):
         self.state = state
+        self.last_changed = last_changed
+
+
+def _fake_state(value) -> "_FakeState":
+    """A snapshot ha_states value: a state string, or
+    ``{"state": ..., "last_changed": "<ISO datetime>"}``."""
+    if isinstance(value, dict):
+        last_changed = value.get("last_changed")
+        return _FakeState(
+            str(value["state"]),
+            dt.datetime.fromisoformat(last_changed) if last_changed else None,
+        )
+    return _FakeState(value)
 
 
 class _FakeHttpResponse:
@@ -1071,7 +1083,7 @@ class ReplayIO:
                     f"present in the snapshot's ha_states — either the "
                     f"fixture is stale or a scenario override is missing."
                 )
-            return _FakeState(self._ha_states[entity_id])
+            return _fake_state(self._ha_states[entity_id])
 
         self._patches.set(DaBase, "get_state", _replay_get_state)
 

@@ -165,12 +165,49 @@ class HeatingEnabled(BaseModel):
         default=1,
         alias="min run length",
         ge=1,
-        description="Minimum run length in time intervals",
+        description="Minimum run length in hours",
         json_schema_extra={
-            "x-help": "Minimum number of consecutive time intervals heat pump must run once started. Prevents excessive on/off cycling which reduces efficiency and equipment life. Typical: 2-4 intervals (2-4 hours).",
-            "x-unit": "intervals",
+            "x-help": "Minimum number of hours the heat pump runs once started. Prevents excessive on/off cycling which reduces efficiency and equipment life. Typical: 1-3 hours.",
+            "x-unit": "hours",
             "x-ui-section": "Configuration",
-            "x-validation-hint": "Must be >= 1, typically 2-4 for 1h intervals",
+            "x-validation-hint": "Must be >= 1, typically 1-3",
+        },
+    )
+    min_off_length: float = Field(
+        default=0.0,
+        ge=0,
+        description="Minimum off time in hours",
+        json_schema_extra={
+            "x-help": "Minimum number of hours the heat pump stays off once stopped, before it is planned to start again. "
+            "0 = no minimum off time. Typical: 0.5-1 hour.",
+            "x-unit": "hours",
+            "x-ui-section": "Configuration",
+            "x-validation-hint": "Must be >= 0, typically 0.5-1",
+        },
+    )
+    start_cost: float = Field(
+        default=0.0,
+        ge=0,
+        description="Virtual cost in euro per heat pump start",
+        json_schema_extra={
+            "x-help": "Virtual cost in euro per start of the heat pump, added to the optimization. "
+            "Higher = fewer, longer runs: a start is only planned when it saves more than this. "
+            "Covers wear and the extra consumption at start-up. 0 = starts are free.",
+            "x-unit": "euro/start",
+            "x-ui-section": "Configuration",
+            "x-validation-hint": "Must be >= 0, typically 0.02-0.20 euro/start",
+        },
+    )
+    entity_hp_running: EntityId | None = Field(
+        default=None,
+        description="HA entity that is on while the heat pump (compressor) runs",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant binary sensor that is 'on' while the compressor runs. "
+            "Its state and last change tell how long the heat pump has been running (minimum run time) "
+            "or stopped (minimum off time) at the start of the planning. "
+            "Without it the run hours are derived from the heat produced (whole hours).",
+            "x-ui-section": "Sensors",
+            "x-ui-widget-filter": "binary_sensor",
         },
     )
     entity_heat_produced: EntityId | None = Field(
@@ -274,7 +311,7 @@ Define power levels and corresponding COP values:
 
 ## Tips
 - Use degree_days_factor to calibrate heat demand for your building
-- Set min_run_length to prevent excessive cycling (2-4h typical)
+- Set min_run_length, min_off_length and start_cost to prevent excessive cycling
 - Higher COP = cheaper heating, maximize runtime during high-COP conditions
 - Consider solar production when scheduling heating loads
 """,
