@@ -4600,9 +4600,13 @@ class DaCalc(DaBase):
         pv_p_org = []
         pv_p_opt = []
         pv_ac_p = []
+        org_l_p = []
+        org_t_p = []
         max_y = 0
         for u in range(U):
             c_t_n.append(-c_t[u].x/hour_fraction[u])
+            org_l_p.append(org_l[u]/hour_fraction[u])
+            org_t_p.append(org_t[u]/hour_fraction[u])
             c_l_p.append(c_l[u].x/hour_fraction[u])
             base_n.append(-b_l[u]/hour_fraction[u])
             boiler_n.append(-c_b[u].x/hour_fraction[u])
@@ -4733,8 +4737,8 @@ class DaCalc(DaBase):
         grid0_df["index"] = np.arange(U)
         grid0_df["uur"] = uur[0:U]
         grid0_df["uur"] = grid0_df["uur"].str[2:]
-        grid0_df["verbruik"] = org_l
-        grid0_df["productie"] = org_t
+        grid0_df["verbruik"] = org_l_p
+        grid0_df["productie"] = org_t_p
         grid0_df["baseload"] = base_n
         grid0_df["boiler"] = boiler_n
         grid0_df["heatpump"] = heatpump_n
@@ -4798,7 +4802,7 @@ class DaCalc(DaBase):
         # 3
         axis[0].bar(
             tijd,
-            np.array(org_l),
+            np.array(org_l_p),
             width=breedte,
             bottom=np.array(pv_p_org) + np.array(pv_ac_p),
             label="Levering",
@@ -4859,7 +4863,7 @@ class DaCalc(DaBase):
             )
         axis[0].bar(
             tijd,
-            np.array(org_t),
+            np.array(org_t_p),
             width=breedte,
             bottom=np.array(base_n)
             + np.array(boiler_n)
