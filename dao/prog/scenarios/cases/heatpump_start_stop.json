@@ -598,6 +598,212 @@
     }
   },
   {
+    "id": "heatpump-start-stop-running-since-overrides-restart",
+    "description": "The heat pump has run for 3 h (entity_hp_running_since), but its running entity changed 5 min ago (a Home Assistant restart resets last_changed). With min_run_length 2 h the run is already long enough, so it stops for the expensive first hours",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [
+        0.5,
+        0.5,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    "temp": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ],
+    "states": {
+      "binary_sensor.heatpump_heating": "on",
+      "binary_sensor.heatpump_compressor_running": {
+        "state": "on",
+        "last_changed": "2026-01-13 23:55"
+      },
+      "sensor.heatpump_compressor_state_since": "2026-01-13T21:00:00"
+    },
+    "config_patch": {
+      "heating.min_run_length": 2,
+      "heating.degree_days_factor.value": 1.0,
+      "heating.stages": [
+        {
+          "max_power": 0,
+          "cop": 8.0
+        },
+        {
+          "max_power": 450,
+          "cop": 4.4
+        },
+        {
+          "max_power": 650,
+          "cop": 4.8
+        },
+        {
+          "max_power": 1000,
+          "cop": 4.0
+        },
+        {
+          "max_power": 1250,
+          "cop": 3.9
+        }
+      ],
+      "heating.entity_hp_running": "binary_sensor.heatpump_compressor_running",
+      "heating.entity_hp_running_since": "sensor.heatpump_compressor_state_since"
+    },
+    "expect": {
+      "solved": true,
+      "heatpump_runs": {
+        "start": "00:00",
+        "end": "01:30",
+        "runs": false
+      }
+    }
+  },
+  {
+    "id": "heatpump-start-stop-running-since-unreadable-falls-back",
+    "description": "As heatpump-start-stop-running-since-overrides-restart, but the timestamp sensor is unavailable: the running entity's last change (5 min ago) is used, so the minimum run keeps it running through the expensive first hours",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [
+        0.5,
+        0.5,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    "temp": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ],
+    "states": {
+      "binary_sensor.heatpump_heating": "on",
+      "binary_sensor.heatpump_compressor_running": {
+        "state": "on",
+        "last_changed": "2026-01-13 23:55"
+      },
+      "sensor.heatpump_compressor_state_since": "unavailable"
+    },
+    "config_patch": {
+      "heating.min_run_length": 2,
+      "heating.degree_days_factor.value": 1.0,
+      "heating.stages": [
+        {
+          "max_power": 0,
+          "cop": 8.0
+        },
+        {
+          "max_power": 450,
+          "cop": 4.4
+        },
+        {
+          "max_power": 650,
+          "cop": 4.8
+        },
+        {
+          "max_power": 1000,
+          "cop": 4.0
+        },
+        {
+          "max_power": 1250,
+          "cop": 3.9
+        }
+      ],
+      "heating.entity_hp_running": "binary_sensor.heatpump_compressor_running",
+      "heating.entity_hp_running_since": "sensor.heatpump_compressor_state_since"
+    },
+    "expect": {
+      "solved": true,
+      "heatpump_runs": {
+        "start": "00:00",
+        "end": "01:30",
+        "runs": true
+      }
+    }
+  },
+  {
     "id": "heatpump-start-stop-cheap-first-hour-runs-separate-boiler",
     "description": "Start/stop model control case: the heat pump stopped 15 min ago, no minimum off time, and the first hour is by far the cheapest, so it runs then. Boiler heated by its own heat pump instead of this one",
     "start": "2026-01-14 00:00",
@@ -1197,6 +1403,214 @@
       "heatpump_runs": {
         "start": "04:00",
         "end": "05:00",
+        "runs": true
+      }
+    }
+  },
+  {
+    "id": "heatpump-start-stop-running-since-overrides-restart-separate-boiler",
+    "description": "The heat pump has run for 3 h (entity_hp_running_since), but its running entity changed 5 min ago (a Home Assistant restart resets last_changed). With min_run_length 2 h the run is already long enough, so it stops for the expensive first hours. Boiler heated by its own heat pump instead of this one",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [
+        0.5,
+        0.5,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    "temp": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ],
+    "states": {
+      "binary_sensor.heatpump_heating": "on",
+      "binary_sensor.heatpump_compressor_running": {
+        "state": "on",
+        "last_changed": "2026-01-13 23:55"
+      },
+      "sensor.heatpump_compressor_state_since": "2026-01-13T21:00:00"
+    },
+    "config_patch": {
+      "heating.min_run_length": 2,
+      "heating.degree_days_factor.value": 1.0,
+      "heating.stages": [
+        {
+          "max_power": 0,
+          "cop": 8.0
+        },
+        {
+          "max_power": 450,
+          "cop": 4.4
+        },
+        {
+          "max_power": 650,
+          "cop": 4.8
+        },
+        {
+          "max_power": 1000,
+          "cop": 4.0
+        },
+        {
+          "max_power": 1250,
+          "cop": 3.9
+        }
+      ],
+      "heating.entity_hp_running": "binary_sensor.heatpump_compressor_running",
+      "heating.entity_hp_running_since": "sensor.heatpump_compressor_state_since",
+      "boiler.boiler_heated_by_heatpump": false
+    },
+    "expect": {
+      "solved": true,
+      "heatpump_runs": {
+        "start": "00:00",
+        "end": "01:30",
+        "runs": false
+      }
+    }
+  },
+  {
+    "id": "heatpump-start-stop-running-since-unreadable-falls-back-separate-boiler",
+    "description": "As heatpump-start-stop-running-since-overrides-restart, but the timestamp sensor is unavailable: the running entity's last change (5 min ago) is used, so the minimum run keeps it running through the expensive first hours. Boiler heated by its own heat pump instead of this one",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [
+        0.5,
+        0.5,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    "temp": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ],
+    "states": {
+      "binary_sensor.heatpump_heating": "on",
+      "binary_sensor.heatpump_compressor_running": {
+        "state": "on",
+        "last_changed": "2026-01-13 23:55"
+      },
+      "sensor.heatpump_compressor_state_since": "unavailable"
+    },
+    "config_patch": {
+      "heating.min_run_length": 2,
+      "heating.degree_days_factor.value": 1.0,
+      "heating.stages": [
+        {
+          "max_power": 0,
+          "cop": 8.0
+        },
+        {
+          "max_power": 450,
+          "cop": 4.4
+        },
+        {
+          "max_power": 650,
+          "cop": 4.8
+        },
+        {
+          "max_power": 1000,
+          "cop": 4.0
+        },
+        {
+          "max_power": 1250,
+          "cop": 3.9
+        }
+      ],
+      "heating.entity_hp_running": "binary_sensor.heatpump_compressor_running",
+      "heating.entity_hp_running_since": "sensor.heatpump_compressor_state_since",
+      "boiler.boiler_heated_by_heatpump": false
+    },
+    "expect": {
+      "solved": true,
+      "heatpump_runs": {
+        "start": "00:00",
+        "end": "01:30",
         "runs": true
       }
     }

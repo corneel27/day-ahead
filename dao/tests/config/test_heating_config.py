@@ -75,6 +75,7 @@ class TestStartStopOptions:
         assert result.min_off_length == 0.0
         assert result.start_cost == 0.0
         assert result.entity_hp_running is None
+        assert result.entity_hp_running_since is None
 
     def test_configured_values_are_used(self):
         result = parse_heating(
@@ -84,11 +85,15 @@ class TestStartStopOptions:
                 "min_off_length": 0.75,
                 "start_cost": 0.1,
                 "entity_hp_running": "binary_sensor.heatpump_compressor_running",
+                "entity_hp_running_since": "sensor.heatpump_compressor_state_since",
             }
         )
         assert result.min_off_length == 0.75
         assert result.start_cost == 0.1
         assert result.entity_hp_running == "binary_sensor.heatpump_compressor_running"
+        assert (
+            result.entity_hp_running_since == "sensor.heatpump_compressor_state_since"
+        )
 
     @pytest.mark.parametrize("field", ["min_off_length", "start_cost"])
     def test_negative_is_rejected(self, field):
@@ -102,7 +107,13 @@ class TestStartStopOptions:
             )
 
     @pytest.mark.parametrize(
-        "field", ["min_off_length", "start_cost", "entity_hp_running"]
+        "field",
+        [
+            "min_off_length",
+            "start_cost",
+            "entity_hp_running",
+            "entity_hp_running_since",
+        ],
     )
     def test_has_no_alias(self, field):
         assert HeatingEnabled.model_fields[field].alias is None

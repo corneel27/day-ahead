@@ -96,11 +96,35 @@ class DaCalc(DaBase):
         self.machines = self.config.machines
         # self.start_logging()
 
+    def get_hp_running_since(self) -> dt.datetime | None:
+        """The moment in ``entity_hp_running_since``; None when not configured or unreadable."""
+        entity = self.heating_options.entity_hp_running_since
+        if entity is None:
+            return None
+        try:
+            since = dt.datetime.fromisoformat(str(self.get_state(entity).state))
+        except Exception as e:
+            logging.warning(
+                f"Start-/stoptijd warmtepomp ({entity}) niet leesbaar ({e}), "
+                f"de laatste wijziging van de status wordt gebruikt"
+            )
+            return None
+        now = dt.datetime.now(since.tzinfo) if since.tzinfo is not None else dt.datetime.now()
+        if since > now:
+            logging.warning(
+                f"Start-/stoptijd warmtepomp ({entity}) ligt in de toekomst, "
+                f"de laatste wijziging van de status wordt gebruikt"
+            )
+            return None
+        return since
+
     def get_hp_run_state(self, report, entity_heat_produced) -> tuple[bool, float | None]:
         """Heat pump state at the start of the planning: (running, hours in that state).
 
-        From ``entity_hp_running`` (state and last change) when configured, else from
-        the heat produced: running for the number of whole hours with production.
+        From ``entity_hp_running`` when configured: its state, and the time since the
+        moment in ``entity_hp_running_since`` or else since its own last change (which
+        Home Assistant resets on a restart). Without it from the heat produced: running
+        for the number of whole hours with production.
         Hours are None when unknown; the minimum run/off time then doesn't carry over.
         """
         entity = self.heating_options.entity_hp_running
@@ -108,12 +132,14 @@ class DaCalc(DaBase):
             try:
                 state = self.get_state(entity)
                 running = str(state.state).lower() == "on"
-                last_changed = getattr(state, "last_changed", None)
-                if last_changed is None:
+                since = self.get_hp_running_since()
+                if since is None:
+                    since = getattr(state, "last_changed", None)
+                if since is None:
                     return running, None
-                if last_changed.tzinfo is not None:
-                    last_changed = last_changed.astimezone().replace(tzinfo=None)
-                hours = (dt.datetime.now() - last_changed).total_seconds() / 3600
+                if since.tzinfo is not None:
+                    since = since.astimezone().replace(tzinfo=None)
+                hours = (dt.datetime.now() - since).total_seconds() / 3600
                 return running, max(0.0, hours)
             except Exception as e:
                 logging.warning(

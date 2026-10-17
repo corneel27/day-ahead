@@ -210,6 +210,17 @@ class HeatingEnabled(BaseModel):
             "x-ui-widget-filter": "binary_sensor",
         },
     )
+    entity_hp_running_since: EntityId | None = Field(
+        default=None,
+        description="HA timestamp sensor: when the heat pump last started or stopped",
+        json_schema_extra={
+            "x-help": "Optional, with entity_hp_running: Home Assistant timestamp sensor holding the moment the "
+            "compressor last started or stopped. Used instead of the last change of entity_hp_running, which "
+            "Home Assistant resets on a restart (e.g. a trigger-based template sensor survives restarts).",
+            "x-ui-section": "Sensors",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
     entity_heat_produced: EntityId | None = Field(
         default=None,
         alias="entity hp heat produced",

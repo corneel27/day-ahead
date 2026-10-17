@@ -718,6 +718,7 @@ Define power levels and corresponding COP values:
 | `min_off_length` | number | No | `0.0` | Minimum off time in hours (Unit: `hours`) _Must be >= 0, typically 0.5-1_ |
 | `start_cost` | number | No | `0.0` | Virtual cost in euro per heat pump start (Unit: `euro/start`) _Must be >= 0, typically 0.02-0.20 euro/start_ |
 | `entity_hp_running` | [EntityId](#entityid) (optional) | No | `null` | HA entity that is on while the heat pump (compressor) runs |
+| `entity_hp_running_since` | [EntityId](#entityid) (optional) | No | `null` | HA timestamp sensor: when the heat pump last started or stopped |
 | `entity hp heat produced` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat produced (Unit: `kWh`) |
 | `entity hp heat demand` | [EntityId](#entityid) (optional) | No | `null` | HA entity for heat demand (Unit: `W`) |
 | `entity avg outside temp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for average temperature (Unit: `°C`) |
@@ -775,6 +776,10 @@ Virtual cost in euro per start of the heat pump, added to the optimization. High
 **`entity_hp_running`**
 
 Optional: Home Assistant binary sensor that is 'on' while the compressor runs. Its state and last change tell how long the heat pump has been running (minimum run time) or stopped (minimum off time) at the start of the planning. Without it the run hours are derived from the heat produced (whole hours).
+
+**`entity_hp_running_since`**
+
+Optional, with entity_hp_running: Home Assistant timestamp sensor holding the moment the compressor last started or stopped. Used instead of the last change of entity_hp_running, which Home Assistant resets on a restart (e.g. a trigger-based template sensor survives restarts).
 
 **`entity hp heat produced`**
 
