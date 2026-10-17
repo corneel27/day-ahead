@@ -11,6 +11,18 @@ fi
 
 CXXFLAGS="${MARCH} -O3"
 
+# The compiler toolchain is not part of the image: install it on first use.
+# The result is kept in /config/miplib, so this only runs once.
+if ! command -v g++ > /dev/null || ! command -v make > /dev/null; then
+  echo "Installing the build tools for CBC."
+  # Run apt as root without its _apt sandbox: the add-on's AppArmor profile
+  # grants no setuid/setgid capability to switch users.
+  apt-get -o APT::Sandbox::User=root update -y
+  apt-get -o APT::Sandbox::User=root install -y --no-install-recommends \
+    gcc g++ make pkg-config patch git wget ca-certificates \
+    libnauty-dev coinor-libcgl-dev
+fi
+
 if [ -d ~/build ]; then rm -rf ~/build; fi
 mkdir -p ~/build
 cd ~/build
