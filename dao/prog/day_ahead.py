@@ -2252,7 +2252,9 @@ class DaCalc(DaBase):
                 weighted=True, base_temp=base_temp
             )
             logging.info(f"Gewogen graaddagen vandaag: {degree_days_today:.1f} K.day")
-            if U > self.steps_day:
+            # Tomorrow's heat counts once the horizon is longer than a day. In hours, not
+            # intervals: with predicted prices the extension has 1 h intervals.
+            if sum(hour_fraction) > 24:
                 degree_days_tomorrow = self.meteo.calc_graaddagen(
                     date=dt.datetime.combine(
                         dt.date.today() + dt.timedelta(days=1), dt.datetime.min.time()
@@ -2294,6 +2296,18 @@ class DaCalc(DaBase):
             # heat needed
             heat_needed = max(0.0, (degree_days * degree_days_factor) - heat_produced)
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
+            # The heat is needed today and tomorrow, so it has to be produced before the
+            # end of tomorrow. Intervals after that (a horizon extended with predicted
+            # prices) don't count for it, or the heat could be moved past the days it is
+            # needed for.
+            heat_deadline = dt.datetime.combine(
+                dt.date.today() + dt.timedelta(days=2), dt.time.min
+            )
+            U_heat = sum(1 for u in range(U) if tijd[u] < heat_deadline)
+            if U_heat < U:
+                logging.info(
+                    f"Benodigde warmte wordt geproduceerd voor {heat_deadline:%d-%m %H:%M}"
+                )
             if heat_needed <= 0:
                 logging.info("Geen warmte nodig: warmtepomp wordt niet ingepland")
                 self.hp_enabled = False
@@ -2354,7 +2368,7 @@ class DaCalc(DaBase):
                     logging.info(
                         f"Gem. buitentemperatuur vandaag: {avg_temp_today:.1f} °C"
                     )
-                    if U > self.steps_day:
+                    if sum(hour_fraction) > 24:
                         avg_temp_tomorrow = self.meteo.get_avg_temperature(
                             date=dt.datetime.combine(
                                 dt.date.today() + dt.timedelta(days=1),
@@ -2540,7 +2554,7 @@ class DaCalc(DaBase):
                     )
                     model += c_hp[0] == 0
                     model += hp_on[0] == 0
-                model += xsum(h_hp[u] for u in range(U)) >= heat_needed
+                model += xsum(h_hp[u] for u in range(U_heat)) >= heat_needed
                 # tot hier hp_adjustment == on/off
             else:
                 # vanaf hier hp_adjustment == "power" or "heating curve"
@@ -2661,7 +2675,7 @@ class DaCalc(DaBase):
                 hp_hours = math.floor(hp_hours)
                 logging.info(f"Aantal in te plannen uren: {hp_hours:.1f}")
 
-                model += xsum(h_hp[u] for u in range(U)) >= heat_needed
+                model += xsum(h_hp[u] for u in range(U_heat)) >= heat_needed
 
             # tot hier alleen power en heat-curve regeling
 
