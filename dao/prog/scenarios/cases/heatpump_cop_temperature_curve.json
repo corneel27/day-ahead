@@ -1,0 +1,212 @@
+[
+  {
+    "id": "heatpump-power-no-cop-curve-runs-cold-night",
+    "description": "Power-mode heat pump on a day with a -5 C night and a +10 C afternoon; the night is slightly cheaper. Without a COP temperature curve every hour gives the same heat per kWh, so it heats in the cheap cold night",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.27,
+        0.27,
+        0.27,
+        0.26,
+        0.26,
+        0.26,
+        0.26,
+        0.26,
+        0.26,
+        0.26,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    "temp": [
+      -5,
+      -5,
+      -5,
+      -5,
+      -5,
+      -5,
+      -4,
+      -3,
+      -1,
+      2,
+      5,
+      8,
+      10,
+      10,
+      10,
+      9,
+      7,
+      4,
+      1,
+      -1,
+      -2,
+      -3,
+      -4,
+      -5
+    ],
+    "states": {
+      "binary_sensor.heatpump_heating": "on"
+    },
+    "config_patch": {
+      "heating.min_run_length": 1,
+      "heating.degree_days_factor.value": 0.5,
+      "heating.stages": [
+        {
+          "max_power": 0,
+          "cop": 8.0
+        },
+        {
+          "max_power": 450,
+          "cop": 6.2
+        },
+        {
+          "max_power": 650,
+          "cop": 6.1
+        },
+        {
+          "max_power": 1000,
+          "cop": 5.5
+        },
+        {
+          "max_power": 1250,
+          "cop": 5.3
+        }
+      ]
+    },
+    "expect": {
+      "solved": true,
+      "heatpump_runs": {
+        "start": "00:00",
+        "end": "06:00",
+        "runs": true
+      }
+    }
+  },
+  {
+    "id": "heatpump-power-cop-curve-avoids-cold-night",
+    "description": "As heatpump-power-no-cop-curve-runs-cold-night, but with a COP temperature curve (factor 0.66 at -5 C, 1.2 at +10 C). The cold night's lower COP outweighs its slightly lower price, so the heat pump is planned in the mild hours instead",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.24,
+        0.27,
+        0.27,
+        0.27,
+        0.26,
+        0.26,
+        0.26,
+        0.26,
+        0.26,
+        0.26,
+        0.26,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.25,
+        0.25,
+        0.25
+      ]
+    },
+    "temp": [
+      -5,
+      -5,
+      -5,
+      -5,
+      -5,
+      -5,
+      -4,
+      -3,
+      -1,
+      2,
+      5,
+      8,
+      10,
+      10,
+      10,
+      9,
+      7,
+      4,
+      1,
+      -1,
+      -2,
+      -3,
+      -4,
+      -5
+    ],
+    "states": {
+      "binary_sensor.heatpump_heating": "on"
+    },
+    "config_patch": {
+      "heating.min_run_length": 1,
+      "heating.degree_days_factor.value": 0.5,
+      "heating.stages": [
+        {
+          "max_power": 0,
+          "cop": 8.0
+        },
+        {
+          "max_power": 450,
+          "cop": 6.2
+        },
+        {
+          "max_power": 650,
+          "cop": 6.1
+        },
+        {
+          "max_power": 1000,
+          "cop": 5.5
+        },
+        {
+          "max_power": 1250,
+          "cop": 5.3
+        }
+      ],
+      "heating.cop_temperature_curve": [
+        {
+          "temperature": -4.0,
+          "factor": 0.66
+        },
+        {
+          "temperature": 0.0,
+          "factor": 0.75
+        },
+        {
+          "temperature": 7.0,
+          "factor": 1.0
+        },
+        {
+          "temperature": 14.0,
+          "factor": 1.22
+        }
+      ]
+    },
+    "expect": {
+      "solved": true,
+      "heatpump_runs": {
+        "start": "00:00",
+        "end": "06:00",
+        "runs": false
+      }
+    }
+  }
+]
