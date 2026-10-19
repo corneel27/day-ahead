@@ -71,12 +71,11 @@ def _log_native_output(text: str) -> None:
             logging.info(line)
 
 
-def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, color=None):
+def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, *, color):
     """Draw the same bars as ``ax.bar()``, but as one PolyCollection.
 
-    ``ax.bar()`` creates a separate Rectangle artist per bar; with 15-minute
-    intervals the calc chart has thousands of them, and creating, laying out
-    and drawing those dominates the run time of a calculation.
+    Uses only public matplotlib API. ``color`` is required because taking the
+    next colour from the axes' property cycle has no public API.
     """
     import matplotlib as mpl
     import numpy as np
@@ -98,8 +97,6 @@ def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, colo
         ],
         axis=1,
     )
-    if color is None:
-        color = ax._get_patches_for_fill.get_next_color()
     rc = mpl.rcParams
     coll = PolyCollection(
         verts,
@@ -112,7 +109,7 @@ def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, colo
     # like bar(): no autoscale margin below the bars' bottoms
     coll.sticky_edges.y[:] = np.unique(b).tolist()
     ax.add_collection(coll, autolim=True)
-    ax._request_autoscale_view()
+    ax.autoscale_view()
     return coll
 
 
