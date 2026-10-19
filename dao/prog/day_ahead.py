@@ -2567,11 +2567,10 @@ class DaCalc(DaBase):
                     else cop_temperature_factor(cop_curve, t)
                     for t in temp_out
                 ]
-                avg_cop_factor = sum(cop_factor) / U
                 if cop_curve:
                     logging.info(
                         f"COP-factor buitentemperatuur: {min(cop_factor):.2f} - "
-                        f"{max(cop_factor):.2f} (gem. {avg_cop_factor:.2f})"
+                        f"{max(cop_factor):.2f}"
                     )
                 # p_hp[s][u]: het gevraagde vermogen in W in dat uur
                 p_hp = [
@@ -2641,31 +2640,30 @@ class DaCalc(DaBase):
                         * hour_fraction[u]
                     )
 
-                # max heat power in kW (at the average COP factor over the horizon)
-                max_heat_power = (
-                    hp_stages[-1]["max_power"]
-                    * hp_stages[-1]["cop"]
-                    * avg_cop_factor
-                    / 1000
-                )
-                logging.info(
-                    f"Maximaal warmteproducerend vermogen: {max_heat_power} kW"
-                )
-
+                # max/min te produceren warmte per interval, met de COP-factor
+                # van dat interval (extensie-intervallen tellen voor een heel uur)
+                nom_max_power = hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
+                nom_min_power = hp_stages[1]["max_power"] * hp_stages[1]["cop"] / 1000
+                avail = range(U - boiler_int)
+                hours_prod = sum(hour_fraction[u] for u in avail)
                 max_heat_prod = sum(
-                    max_heat_power * hour_fraction[u] for u in range(U - boiler_int)
-                )
-                # logging.info(
-                #    f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh"
-                # )
-                min_heat_power = (
-                    hp_stages[1]["max_power"] * hp_stages[1]["cop"] * avg_cop_factor / 1000
-                )
-                logging.info(
-                    f"Minimaal warmteproducerend vermogen: {min_heat_power} kW"
+                    nom_max_power * cop_factor[u] * hour_fraction[u] for u in avail
                 )
                 min_heat_prod = sum(
-                    min_heat_power * hour_fraction[u] for u in range(U - boiler_int)
+                    nom_min_power * cop_factor[u] * hour_fraction[u] for u in avail
+                )
+                # gemiddeld vermogen over de beschikbare uren
+                if hours_prod > 0:
+                    max_heat_power = max_heat_prod / hours_prod
+                    min_heat_power = min_heat_prod / hours_prod
+                else:
+                    max_heat_power = nom_max_power
+                    min_heat_power = nom_min_power
+                logging.info(
+                    f"Maximaal warmteproducerend vermogen: {max_heat_power:.2f} kW"
+                )
+                logging.info(
+                    f"Minimaal warmteproducerend vermogen: {min_heat_power:.2f} kW"
                 )
                 hours_avail = (U - boiler_int) * self.interval_s / 3600
                 logging.info(f"Aantal beschikbare uren: {hours_avail:.2f}")
