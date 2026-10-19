@@ -766,6 +766,7 @@ def main():
     dbase = DaBase("../data/options.json")
     meteo = dbase.meteo
     station = meteo.which_station()
+    print(station)
     test_afstand_km(meteo)
 
 if __name__ == "__main__":
