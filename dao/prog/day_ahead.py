@@ -3477,12 +3477,12 @@ class DaCalc(DaBase):
             sum_old_cons += netto
             if netto >= 0:
                 old_cost_da += netto * pl[u]
-                org_l.append(netto)
+                org_l.append(netto/hour_fraction[u])
                 org_t.append(0)
             else:
                 old_cost_da += netto * pt[u]
                 org_l.append(0)
-                org_t.append(netto)
+                org_t.append(netto/hour_fraction[u])
         if self.boiler_present:
             boiler_at_23 = (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (
                 spec_heat_boiler / (3600 * cop_boiler)
