@@ -754,8 +754,6 @@ def test_afstand_km(meteo):
     print(f"Zelfde punt: {d3:.2f} km")
     assert abs(d3) < 1e-9
 
-    station = meteo.which_station(_latitude = 53.150874, _longitude = 6.272249)
-    print(station)
     station=meteo.which_station()
     print(station)
 
