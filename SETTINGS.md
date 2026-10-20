@@ -1991,7 +1991,7 @@ FlexValue enables dynamic configuration using Home Assistant entities. Instead o
 
 _Report series that DAO writes to Home Assistant entities._
 
-Each entity gets the value of the current interval as state; the attribute 'data' holds today and tomorrow as a list of {time_ts, time, value, datatype}. Entities that are not set are not written. The soc of a single battery is written for extra keys 'soc_0', 'soc_1', ... The entities are written after every optimization and by the task 'push_ha_sensors'.
+Each entity gets the value of the current interval as state; the attribute 'data' holds today and tomorrow as a list of {time_ts, time, value, datatype} and the attribute 'last_update' the moment of the push (the same for all entities of one push). Entities that are not set are not written. The soc of a single battery is written for extra keys 'soc_0', 'soc_1', ... Each entity can be used for one series only. The entities are written after every optimization and by the task 'push_ha_sensors'.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|

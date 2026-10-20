@@ -69,6 +69,18 @@ def test_config_invalid_entity():
         )
 
 
+def test_config_invalid_soc_battery_entity():
+    with pytest.raises(ValueError):
+        ReportConfig.model_validate({"ha_sensors": {"soc_0": "geen entity"}})
+
+
+def test_config_duplicate_entity():
+    with pytest.raises(ValueError, match="sensor.dao_price"):
+        ReportConfig.model_validate(
+            {"ha_sensors": {"da_cons": "sensor.dao_price", "da_prod": "sensor.dao_price"}}
+        )
+
+
 def test_price_prediction_range():
     report = make_report(True, 24, {})
     today = report.periodes["vandaag en morgen"]["vanaf"]
@@ -155,6 +167,11 @@ def test_push_ha_sensors_prediction_range(include, tot_hours, extension):
     assert data[0]["value"] == 0.25
     assert battery.args == ("sensor.dao_battery_in", 1.5)
     assert battery.kwargs["attributes"]["friendly_name"] == "DAO bat_in"
+    # alle entiteiten van een push hebben dezelfde last_update
+    assert (
+        battery.kwargs["attributes"]["last_update"]
+        == prices.kwargs["attributes"]["last_update"]
+    )
     assert battery.kwargs["attributes"]["unit_of_measurement"] == "kW"
 
 

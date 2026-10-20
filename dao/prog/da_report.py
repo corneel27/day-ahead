@@ -3514,6 +3514,8 @@ class Report(DaBase):
             else:
                 tot = min(tot, end_known)
         now = datetime.datetime.now()
+        # zelfde tijdstempel voor alle entiteiten van deze push
+        last_update = now.astimezone().isoformat(timespec="seconds")
         # de prijzen worden maar een keer opgehaald voor da_ex, da_cons en da_prod
         api_dfs = {}
         result = True
@@ -3539,6 +3541,7 @@ class Report(DaBase):
                 attributes = {
                     "friendly_name": f"DAO {key}",
                     "unit_of_measurement": self.ha_sensor_unit(key),
+                    "last_update": last_update,
                     "data": json.loads(df.to_json(orient="records")),
                 }
                 self.set_state(entity, state, attributes=attributes)

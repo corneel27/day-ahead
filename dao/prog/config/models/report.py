@@ -3,7 +3,9 @@ Reporting configuration models.
 """
 
 
-from pydantic import BaseModel, ConfigDict, Field
+import re
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .base import EntityId
 
@@ -209,11 +211,29 @@ class HaSensorsConfig(BaseModel):
         },
     )
 
+    @model_validator(mode="after")
+    def check_entities(self):
+        # soc per batterij (soc_0, soc_1, ...) staat in de extra velden
+        for key, value in (self.model_extra or {}).items():
+            if re.fullmatch(r"soc_\d+", key) and value is not None:
+                self.model_extra[key] = EntityId._validate(value)
+        entities = [
+            value
+            for key, value in self.model_dump().items()
+            if key != "include_price_prediction" and isinstance(value, str)
+        ]
+        duplicates = sorted({e for e in entities if entities.count(e) > 1})
+        if duplicates:
+            raise ValueError(
+                f"Each ha_sensors entity can receive only one series: {duplicates}"
+            )
+        return self
+
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
         json_schema_extra={
-            "x-help": "Each entity gets the value of the current interval as state; the attribute 'data' holds today and tomorrow as a list of {time_ts, time, value, datatype}. Entities that are not set are not written. The soc of a single battery is written for extra keys 'soc_0', 'soc_1', ... The entities are written after every optimization and by the task 'push_ha_sensors'.",
+            "x-help": "Each entity gets the value of the current interval as state; the attribute 'data' holds today and tomorrow as a list of {time_ts, time, value, datatype} and the attribute 'last_update' the moment of the push (the same for all entities of one push). Entities that are not set are not written. The soc of a single battery is written for extra keys 'soc_0', 'soc_1', ... Each entity can be used for one series only. The entities are written after every optimization and by the task 'push_ha_sensors'.",
         },
     )
 
