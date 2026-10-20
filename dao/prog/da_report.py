@@ -1347,7 +1347,15 @@ class Report(DaBase):
             return None
         da_df.index = pd.to_datetime(da_df["time"])
         energy_df.index = pd.to_datetime(energy_df["tijd"])
+        # bij de wintertijdovergang geldt de eerste prijs van 02:00 voor beide uren
+        da_df = da_df[~da_df.index.duplicated()]
         data = energy_df[["tijd", energy_code]].join(da_df[[price_col]], how="inner")
+        missing = energy_df.index.difference(data.index)
+        if len(missing) > 0:
+            logging.warning(
+                f"Consolidatie {code}: geen day-ahead prijs voor {len(missing)} "
+                f"uur, o.a. {missing.min()}; deze uren worden overgeslagen"
+            )
         data["value"] = data[energy_code] * data[price_col]
         return data[["tijd", "value"]]
 
@@ -1380,9 +1388,14 @@ class Report(DaBase):
             if data is None or len(data) == 0:
                 continue
             tijd = pd.to_datetime(data["tijd"])
+            # lokale tijd; bij de wintertijdovergang is het tweede uur 02:00 fold=1
+            repeated = tijd.duplicated().to_numpy()
             df_db = pd.DataFrame(
                 {
-                    "time": [str(int(t.timestamp())) for t in tijd],
+                    "time": [
+                        str(int(t.to_pydatetime().replace(fold=int(r)).timestamp()))
+                        for t, r in zip(tijd, repeated, strict=True)
+                    ],
                     "code": code,
                     "value": data["value"].astype(float).to_numpy(),
                     "tijd": tijd.to_numpy(),
