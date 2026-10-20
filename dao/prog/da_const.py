@@ -42,6 +42,7 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "cmd": ["python3", "day_ahead.py", "get_predicted_prices"],
         "function": "get_predicted_prices",
         "file_name": "pred_prices",
+        "aliases": ["predicted_prices"],
     },
     "calc_baseloads": {
         "name": "Bereken de baseloads",
