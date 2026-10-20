@@ -8,6 +8,69 @@ from pydantic import BaseModel, ConfigDict, Field
 from .base import EntityId
 
 
+class HaSensorEntry(BaseModel):
+    """One report series that DAO writes to a Home Assistant entity."""
+
+    field: str = Field(
+        description="Report field to publish",
+        json_schema_extra={
+            "x-help": "The field as used in the api (/api/report/<field>/...): 'da' (prices), 'consumption', 'production', 'netto_consumption', 'cost', 'profit', 'netto_cost', 'grid', 'cons', 'prod', 'bat_in', 'bat_out', 'base', 'pv_ac', 'pv_dc', 'ev', 'wp', 'boil', 'mach' or 'soc' / 'soc_<n>'.",
+        },
+    )
+    entity: EntityId = Field(
+        description="HA entity that receives the data",
+        json_schema_extra={
+            "x-help": "Home Assistant entity that DAO creates or updates, e.g. 'sensor.dao_prices'. Its state is the value of the current interval; the attribute 'data' holds the whole series in the same format as the api.",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    column: str | None = Field(
+        default=None,
+        description="Column used for the state",
+        json_schema_extra={
+            "x-help": "Optional: column of the data that becomes the state. Default 'value'; for 'da' the default is 'da_cons' (consumption price, other columns: 'da_ex', 'da_prod'), for 'grid' 'netto_consumption'.",
+        },
+    )
+    name: str | None = Field(
+        default=None,
+        description="Friendly name of the entity",
+        json_schema_extra={
+            "x-help": "Optional: friendly name shown in Home Assistant. Default 'DAO <field>'.",
+        },
+    )
+    unit: str | None = Field(
+        default=None,
+        description="Unit of measurement",
+        json_schema_extra={
+            "x-help": "Optional: unit_of_measurement of the entity. Default: 'EUR/kWh' for prices, 'kWh' for energy per interval, 'EUR' for costs and '%' for soc.",
+        },
+    )
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class HaSensorsConfig(BaseModel):
+    """Report series that DAO writes to Home Assistant entities."""
+
+    include_price_prediction: bool = Field(
+        default=False,
+        alias="include_price_prediction",
+        description="Include values in the price prediction range",
+        json_schema_extra={
+            "x-help": "When true the series run until the end of the optimization horizon, including the part with predicted prices (prices.prediction.extension). When false they stop at the last known day-ahead price.",
+        },
+    )
+    entities: list[HaSensorEntry] = Field(
+        default_factory=list,
+        description="Entities that receive report data",
+        json_schema_extra={
+            "x-help": "List of report fields and the Home Assistant entity each is written to. The data cover today and tomorrow and are written after every optimization and by the task 'push_ha_sensors'.",
+        },
+    )
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
 class ReportConfig(BaseModel):
     """Reporting and sensor entity configuration."""
 
@@ -141,6 +204,16 @@ class ReportConfig(BaseModel):
         },
     )
 
+    ha_sensors: HaSensorsConfig = Field(
+        default_factory=HaSensorsConfig,
+        alias="ha_sensors",
+        description="Report data written to HA entities",
+        json_schema_extra={
+            "x-help": "Optional: write report series (prices, grid, battery, pv, ...) of today and tomorrow directly to Home Assistant entities, instead of polling the api with REST sensors.",
+            "x-ui-section": "HA sensors",
+        },
+    )
+
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -188,6 +261,23 @@ All entity fields accept lists of HA sensors:
 - **Boiler**: Hot water heating consumption
 - **Battery**: Charge/discharge tracking
 - **Machines**: Appliance consumption
+
+## HA sensors
+
+DAO can write report series directly to Home Assistant entities:
+```json
+"ha_sensors": {
+  "include_price_prediction": false,
+  "entities": [
+    {"field": "da", "entity": "sensor.dao_prices"},
+    {"field": "consumption", "entity": "sensor.dao_grid_consumption"},
+    {"field": "bat_in", "entity": "sensor.dao_battery_in"}
+  ]
+}
+```
+The state is the value of the current interval, the attribute `data` holds
+today and tomorrow in the format of the api. The entities are written after
+every optimization and by the scheduler task `push_ha_sensors`.
 
 ## Tips
 

@@ -1583,6 +1583,97 @@
       "x-help": "Home Assistant database connection for reading historical sensor data (prices, solar, baseload).",
       "x-ui-group": "Integration"
     },
+    "HaSensorEntry": {
+      "additionalProperties": true,
+      "description": "One report series that DAO writes to a Home Assistant entity.",
+      "properties": {
+        "field": {
+          "description": "Report field to publish",
+          "title": "Field",
+          "type": "string",
+          "x-help": "The field as used in the api (/api/report/<field>/...): 'da' (prices), 'consumption', 'production', 'netto_consumption', 'cost', 'profit', 'netto_cost', 'grid', 'cons', 'prod', 'bat_in', 'bat_out', 'base', 'pv_ac', 'pv_dc', 'ev', 'wp', 'boil', 'mach' or 'soc' / 'soc_<n>'."
+        },
+        "entity": {
+          "$ref": "#/$defs/EntityId",
+          "description": "HA entity that receives the data",
+          "x-help": "Home Assistant entity that DAO creates or updates, e.g. 'sensor.dao_prices'. Its state is the value of the current interval; the attribute 'data' holds the whole series in the same format as the api.",
+          "x-ui-widget-filter": "sensor",
+          "title": "Entity"
+        },
+        "column": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Column used for the state",
+          "title": "Column",
+          "x-help": "Optional: column of the data that becomes the state. Default 'value'; for 'da' the default is 'da_cons' (consumption price, other columns: 'da_ex', 'da_prod'), for 'grid' 'netto_consumption'."
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Friendly name of the entity",
+          "title": "Name",
+          "x-help": "Optional: friendly name shown in Home Assistant. Default 'DAO <field>'."
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Unit of measurement",
+          "title": "Unit",
+          "x-help": "Optional: unit_of_measurement of the entity. Default: 'EUR/kWh' for prices, 'kWh' for energy per interval, 'EUR' for costs and '%' for soc."
+        }
+      },
+      "required": [
+        "field",
+        "entity"
+      ],
+      "title": "HaSensorEntry",
+      "type": "object"
+    },
+    "HaSensorsConfig": {
+      "additionalProperties": true,
+      "description": "Report series that DAO writes to Home Assistant entities.",
+      "properties": {
+        "include_price_prediction": {
+          "default": false,
+          "description": "Include values in the price prediction range",
+          "title": "Include Price Prediction",
+          "type": "boolean",
+          "x-help": "When true the series run until the end of the optimization horizon, including the part with predicted prices (prices.prediction.extension). When false they stop at the last known day-ahead price."
+        },
+        "entities": {
+          "description": "Entities that receive report data",
+          "items": {
+            "$ref": "#/$defs/HaSensorEntry"
+          },
+          "title": "Entities",
+          "type": "array",
+          "x-help": "List of report fields and the Home Assistant entity each is written to. The data cover today and tomorrow and are written after every optimization and by the task 'push_ha_sensors'."
+        }
+      },
+      "title": "HaSensorsConfig",
+      "type": "object"
+    },
     "HeatingDisabled": {
       "additionalProperties": true,
       "description": "Heating system disabled — only heater_present is required.",
@@ -2604,12 +2695,19 @@
           "title": "Sensors",
           "x-help": "Optional: Additional custom sensor configurations. Advanced use for extending reporting capabilities beyond standard entities.",
           "x-ui-section": "General"
+        },
+        "ha_sensors": {
+          "$ref": "#/$defs/HaSensorsConfig",
+          "description": "Report data written to HA entities",
+          "x-help": "Optional: write report series (prices, grid, battery, pv, ...) of today and tomorrow directly to Home Assistant entities, instead of polling the api with REST sensors.",
+          "x-ui-section": "HA sensors",
+          "title": "Ha Sensors"
         }
       },
       "title": "ReportConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Reports",
-      "x-help": "# Reporting & Sensors Configuration\n\nConfigure Home Assistant sensors for comprehensive energy reporting.\n\n## Purpose\n\nConnect actual energy measurements to Day Ahead Optimizer:\n- Compare actual vs optimized usage\n- Track device-specific consumption\n- Calculate efficiency metrics\n- Generate cost reports\n- Monitor carbon footprint\n\n## Entity Lists\n\nAll entity fields accept lists of HA sensors:\n```json\n\"entities_grid_consumption\": [\n  \"sensor.grid_import_meter\",\n  \"sensor.backup_meter\"\n]\n```\n\n## Key Measurements\n\n### Grid\n- **Consumption**: Total import from grid\n- **Production**: Total export/feed-in to grid\n\n### Solar\n- **AC**: After inverter, to AC distribution\n- **DC**: Before inverter, directly to battery\n\n### Devices\n- **EV**: Charging consumption\n- **Heat Pump**: Heating/cooling consumption\n- **Boiler**: Hot water heating consumption\n- **Battery**: Charge/discharge tracking\n- **Machines**: Appliance consumption\n\n## Tips\n\n- Use energy sensors (kWh cumulative)\n- Multiple sensors per category are summed\n- Essential for accurate cost reporting\n- CO2 tracking optional but insightful\n- Update when adding new monitoring devices\n",
+      "x-help": "# Reporting & Sensors Configuration\n\nConfigure Home Assistant sensors for comprehensive energy reporting.\n\n## Purpose\n\nConnect actual energy measurements to Day Ahead Optimizer:\n- Compare actual vs optimized usage\n- Track device-specific consumption\n- Calculate efficiency metrics\n- Generate cost reports\n- Monitor carbon footprint\n\n## Entity Lists\n\nAll entity fields accept lists of HA sensors:\n```json\n\"entities_grid_consumption\": [\n  \"sensor.grid_import_meter\",\n  \"sensor.backup_meter\"\n]\n```\n\n## Key Measurements\n\n### Grid\n- **Consumption**: Total import from grid\n- **Production**: Total export/feed-in to grid\n\n### Solar\n- **AC**: After inverter, to AC distribution\n- **DC**: Before inverter, directly to battery\n\n### Devices\n- **EV**: Charging consumption\n- **Heat Pump**: Heating/cooling consumption\n- **Boiler**: Hot water heating consumption\n- **Battery**: Charge/discharge tracking\n- **Machines**: Appliance consumption\n\n## HA sensors\n\nDAO can write report series directly to Home Assistant entities:\n```json\n\"ha_sensors\": {\n  \"include_price_prediction\": false,\n  \"entities\": [\n    {\"field\": \"da\", \"entity\": \"sensor.dao_prices\"},\n    {\"field\": \"consumption\", \"entity\": \"sensor.dao_grid_consumption\"},\n    {\"field\": \"bat_in\", \"entity\": \"sensor.dao_battery_in\"}\n  ]\n}\n```\nThe state is the value of the current interval, the attribute `data` holds\ntoday and tomorrow in the format of the api. The entities are written after\nevery optimization and by the scheduler task `push_ha_sensors`.\n\n## Tips\n\n- Use energy sensors (kWh cumulative)\n- Multiple sensors per category are summed\n- Essential for accurate cost reporting\n- CO2 tracking optional but insightful\n- Update when adding new monitoring devices\n",
       "x-icon": "chart-bar",
       "x-order": 17,
       "x-ui-group": "Reporting"
@@ -2636,6 +2734,7 @@
             "calc_baseloads",
             "clean_data",
             "train_ml_predictions",
+            "push_ha_sensors",
             "consolidate"
           ],
           "title": "Action",
@@ -2696,7 +2795,7 @@
       "title": "SchedulerConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Scheduler",
-      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"active\": true,\n  \"schedule\": [\n    {\"time\": \"0435\", \"action\": \"get_day_ahead_prices\"},\n    {\"time\": \"0445\", \"action\": \"get_meteo_data\"},\n    {\"time\": \"0500\", \"action\": \"calc_optimum\"},\n    {\"time\": \"xx00\", \"action\": \"calc_baseloads\"},\n    {\"time\": \"0300\", \"action\": \"clean_data\"}\n  ]\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)\n2. **05:00**: Run optimization with fresh data\n3. **Hourly**: Update baseload calculations\n4. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
+      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Reporting\n- **push_ha_sensors**: Write the report data of today and tomorrow to the HA entities in report: ha_sensors (also done after every calc_optimum)\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"active\": true,\n  \"schedule\": [\n    {\"time\": \"0435\", \"action\": \"get_day_ahead_prices\"},\n    {\"time\": \"0445\", \"action\": \"get_meteo_data\"},\n    {\"time\": \"0500\", \"action\": \"calc_optimum\"},\n    {\"time\": \"xx00\", \"action\": \"calc_baseloads\"},\n    {\"time\": \"0300\", \"action\": \"clean_data\"}\n  ]\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)\n2. **05:00**: Run optimization with fresh data\n3. **Hourly**: Update baseload calculations\n4. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
       "x-icon": "clock-outline",
       "x-order": 18,
       "x-ui-group": "DAO"
@@ -3390,8 +3489,8 @@
         {
           "discriminator": {
             "mapping": {
-              "false": "#/$defs/BoilerDisabled",
-              "true": "#/$defs/BoilerEnabled"
+              "False": "#/$defs/BoilerDisabled",
+              "True": "#/$defs/BoilerEnabled"
             },
             "propertyName": "boiler present"
           },
@@ -3417,8 +3516,8 @@
         {
           "discriminator": {
             "mapping": {
-              "false": "#/$defs/HeatingDisabled",
-              "true": "#/$defs/HeatingEnabled"
+              "False": "#/$defs/HeatingDisabled",
+              "True": "#/$defs/HeatingEnabled"
             },
             "propertyName": "heater present"
           },

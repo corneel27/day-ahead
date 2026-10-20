@@ -50,6 +50,8 @@
   - [FlexEnum](#flexenum)
   - [FlexFloat](#flexfloat)
   - [FlexInt](#flexint)
+  - [HaSensorEntry](#hasensorentry)
+  - [HaSensorsConfig](#hasensorsconfig)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
   - [PricePrediction](#priceprediction)
@@ -1578,6 +1580,23 @@ All entity fields accept lists of HA sensors:
 - **Battery**: Charge/discharge tracking
 - **Machines**: Appliance consumption
 
+## HA sensors
+
+DAO can write report series directly to Home Assistant entities:
+```json
+"ha_sensors": {
+  "include_price_prediction": false,
+  "entities": [
+    {"field": "da", "entity": "sensor.dao_prices"},
+    {"field": "consumption", "entity": "sensor.dao_grid_consumption"},
+    {"field": "bat_in", "entity": "sensor.dao_battery_in"}
+  ]
+}
+```
+The state is the value of the current interval, the attribute `data` holds
+today and tomorrow in the format of the api. The entities are written after
+every optimization and by the scheduler task `push_ha_sensors`.
+
 ## Tips
 
 - Use energy sensors (kWh cumulative)
@@ -1603,6 +1622,7 @@ All entity fields accept lists of HA sensors:
 | `entities machine consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for machine consumption (Unit: `kWh`) |
 | `entity co2-intensity` | list[[EntityId](#entityid)] or [EntityId](#entityid) (optional) | No | `[]` | HA entity for CO2 intensity (Unit: `gCO2/kWh`) |
 | `sensors` | object (optional) | No | `null` | Additional sensors configuration |
+| `ha_sensors` | [HaSensorsConfig](#hasensorsconfig) | No | _See nested fields_ | Report data written to HA entities |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1655,6 +1675,10 @@ Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calcu
 
 Optional: Additional custom sensor configurations. Advanced use for extending reporting capabilities beyond standard entities.
 
+**`ha_sensors`**
+
+Optional: write report series (prices, grid, battery, pv, ...) of today and tomorrow directly to Home Assistant entities, instead of polling the api with REST sensors.
+
 </details>
 
 
@@ -1688,6 +1712,9 @@ Define when automatic tasks run using time patterns.
 ### Optimization
 - **calc_optimum**: Run main optimization algorithm
 - **calc_baseloads**: Calculate baseline consumption from history
+
+### Reporting
+- **push_ha_sensors**: Write the report data of today and tomorrow to the HA entities in report: ha_sensors (also done after every calc_optimum)
 
 ### Maintenance
 - **clean_data**: Clean up old data (runs save_days retention)
@@ -1963,6 +1990,67 @@ FlexValue enables dynamic configuration using Home Assistant entities. Instead o
 *No configuration fields.*
 
 
+### HaSensorEntry
+
+_One report series that DAO writes to a Home Assistant entity._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `field` | string | Yes | — | Report field to publish |
+| `entity` | [EntityId](#entityid) | Yes | — | HA entity that receives the data |
+| `column` | string (optional) | No | `null` | Column used for the state |
+| `name` | string (optional) | No | `null` | Friendly name of the entity |
+| `unit` | string (optional) | No | `null` | Unit of measurement |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`field`**
+
+The field as used in the api (/api/report/<field>/...): 'da' (prices), 'consumption', 'production', 'netto_consumption', 'cost', 'profit', 'netto_cost', 'grid', 'cons', 'prod', 'bat_in', 'bat_out', 'base', 'pv_ac', 'pv_dc', 'ev', 'wp', 'boil', 'mach' or 'soc' / 'soc_<n>'.
+
+**`entity`**
+
+Home Assistant entity that DAO creates or updates, e.g. 'sensor.dao_prices'. Its state is the value of the current interval; the attribute 'data' holds the whole series in the same format as the api.
+
+**`column`**
+
+Optional: column of the data that becomes the state. Default 'value'; for 'da' the default is 'da_cons' (consumption price, other columns: 'da_ex', 'da_prod'), for 'grid' 'netto_consumption'.
+
+**`name`**
+
+Optional: friendly name shown in Home Assistant. Default 'DAO <field>'.
+
+**`unit`**
+
+Optional: unit_of_measurement of the entity. Default: 'EUR/kWh' for prices, 'kWh' for energy per interval, 'EUR' for costs and '%' for soc.
+
+</details>
+
+
+### HaSensorsConfig
+
+_Report series that DAO writes to Home Assistant entities._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `include_price_prediction` | boolean | No | `false` | Include values in the price prediction range |
+| `entities` | list[[HaSensorEntry](#hasensorentry)] | No | `null` | Entities that receive report data |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`include_price_prediction`**
+
+When true the series run until the end of the optimization horizon, including the part with predicted prices (prices.prediction.extension). When false they stop at the last known day-ahead price.
+
+**`entities`**
+
+List of report fields and the Home Assistant entity each is written to. The data cover today and tomorrow and are written after every optimization and by the task 'push_ha_sensors'.
+
+</details>
+
+
 ### HeatingStage
 
 _Single heating stage with power and COP._
@@ -2051,7 +2139,7 @@ _A single scheduled task entry._
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
-| `action` | string | Yes | — | Action to execute at this time. Options: `calc_optimum_met_debug`, `calc_optimum`, `get_tibber_data`, `get_meteo_data`, `get_day_ahead_prices`, `get_predicted_prices`, `calc_baseloads`, `clean_data`, `train_ml_predictions`, `consolidate` |
+| `action` | string | Yes | — | Action to execute at this time. Options: `calc_optimum_met_debug`, `calc_optimum`, `get_tibber_data`, `get_meteo_data`, `get_day_ahead_prices`, `get_predicted_prices`, `calc_baseloads`, `clean_data`, `train_ml_predictions`, `push_ha_sensors`, `consolidate` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>

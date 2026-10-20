@@ -104,6 +104,9 @@ Define when automatic tasks run using time patterns.
 - **calc_optimum**: Run main optimization algorithm
 - **calc_baseloads**: Calculate baseline consumption from history
 
+### Reporting
+- **push_ha_sensors**: Write the report data of today and tomorrow to the HA entities in report: ha_sensors (also done after every calc_optimum)
+
 ### Maintenance
 - **clean_data**: Clean up old data (runs save_days retention)
 

@@ -547,6 +547,12 @@ class DaBase(hass.Hass):
         dacalc.debug = False
         dacalc.calc_optimum()
 
+    def push_ha_sensors(self):
+        from dao.prog.da_report import Report
+
+        report = Report(self.file_name or "../data/options.json")
+        return report.push_ha_sensors()
+
     @staticmethod
     def calc_baseloads():
         from da_report import Report
