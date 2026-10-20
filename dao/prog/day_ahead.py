@@ -5295,7 +5295,9 @@ class DaCalc(DaBase):
         plt.close("all")
         self.notify("DAO calc afgerond", self.notification_berekening)
         ha_sensors = self.config.report.ha_sensors if self.config.report else None
-        if ha_sensors is not None and len(ha_sensors.entities) > 0:
+        if ha_sensors is not None and any(
+                ha_sensors.model_dump(exclude={"include_price_prediction"}).values()
+        ):
             # een fout bij het schrijven van de sensoren laat de berekening niet mislukken
             try:
                 Report(self.file_name).push_ha_sensors()

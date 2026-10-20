@@ -50,7 +50,6 @@
   - [FlexEnum](#flexenum)
   - [FlexFloat](#flexfloat)
   - [FlexInt](#flexint)
-  - [HaSensorEntry](#hasensorentry)
   - [HaSensorsConfig](#hasensorsconfig)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
@@ -1586,16 +1585,14 @@ DAO can write report series directly to Home Assistant entities:
 ```json
 "ha_sensors": {
   "include_price_prediction": false,
-  "entities": [
-    {"field": "da", "entity": "sensor.dao_prices"},
-    {"field": "consumption", "entity": "sensor.dao_grid_consumption"},
-    {"field": "bat_in", "entity": "sensor.dao_battery_in"}
-  ]
+  "da_cons": "sensor.dao_price_consumption",
+  "consumption": "sensor.dao_grid_consumption",
+  "bat_in": "sensor.dao_battery_in"
 }
 ```
-The state is the value of the current interval, the attribute `data` holds
-today and tomorrow in the format of the api. The entities are written after
-every optimization and by the scheduler task `push_ha_sensors`.
+Only the entities that are set are written. The state is the value of the
+current interval, the attribute `data` holds today and tomorrow in the
+format of the api. The entities are written after every optimization and by the scheduler task `push_ha_sensors`.
 
 ## Tips
 
@@ -1990,52 +1987,36 @@ FlexValue enables dynamic configuration using Home Assistant entities. Instead o
 *No configuration fields.*
 
 
-### HaSensorEntry
-
-_One report series that DAO writes to a Home Assistant entity._
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `field` | string | Yes | — | Report field to publish |
-| `entity` | [EntityId](#entityid) | Yes | — | HA entity that receives the data |
-| `column` | string (optional) | No | `null` | Column used for the state |
-| `name` | string (optional) | No | `null` | Friendly name of the entity |
-| `unit` | string (optional) | No | `null` | Unit of measurement |
-
-<details>
-<summary><b>📖 Field Details</b> (click to expand)</summary>
-
-**`field`**
-
-The field as used in the api (/api/report/<field>/...): 'da' (prices), 'consumption', 'production', 'netto_consumption', 'cost', 'profit', 'netto_cost', 'grid', 'cons', 'prod', 'bat_in', 'bat_out', 'base', 'pv_ac', 'pv_dc', 'ev', 'wp', 'boil', 'mach' or 'soc' / 'soc_<n>'.
-
-**`entity`**
-
-Home Assistant entity that DAO creates or updates, e.g. 'sensor.dao_prices'. Its state is the value of the current interval; the attribute 'data' holds the whole series in the same format as the api.
-
-**`column`**
-
-Optional: column of the data that becomes the state. Default 'value'; for 'da' the default is 'da_cons' (consumption price, other columns: 'da_ex', 'da_prod'), for 'grid' 'netto_consumption'.
-
-**`name`**
-
-Optional: friendly name shown in Home Assistant. Default 'DAO <field>'.
-
-**`unit`**
-
-Optional: unit_of_measurement of the entity. Default: 'EUR/kWh' for prices, 'kWh' for energy per interval, 'EUR' for costs and '%' for soc.
-
-</details>
-
-
 ### HaSensorsConfig
 
 _Report series that DAO writes to Home Assistant entities._
 
+Each entity gets the value of the current interval as state; the attribute 'data' holds today and tomorrow as a list of {time_ts, time, value, datatype}. Entities that are not set are not written. The soc of a single battery is written for extra keys 'soc_0', 'soc_1', ... The entities are written after every optimization and by the task 'push_ha_sensors'.
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `include_price_prediction` | boolean | No | `false` | Include values in the price prediction range |
-| `entities` | list[[HaSensorEntry](#hasensorentry)] | No | `null` | Entities that receive report data |
+| `da_ex` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the day-ahead spot price without taxes and markup (Unit: `EUR/kWh`) |
+| `da_cons` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the price of consumption (spot price with energy tax, supplier markup and VAT) (Unit: `EUR/kWh`) |
+| `da_prod` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the price of production (feed-in), including a production bonus (Unit: `EUR/kWh`) |
+| `consumption` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid consumption (Unit: `kWh`) |
+| `production` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid production (Unit: `kWh`) |
+| `netto_consumption` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the netto grid consumption (consumption - production) (Unit: `kWh`) |
+| `cost` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the cost of the grid consumption (Unit: `EUR`) |
+| `profit` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the profit of the grid production (Unit: `EUR`) |
+| `netto_cost` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the netto cost (cost - profit) (Unit: `EUR`) |
+| `cons` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption in the energy balance (Unit: `kWh`) |
+| `prod` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the production in the energy balance (Unit: `kWh`) |
+| `bat_in` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the energy into the batteries (Unit: `kWh`) |
+| `bat_out` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the energy out of the batteries (Unit: `kWh`) |
+| `base` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the baseload (Unit: `kWh`) |
+| `pv_ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the AC solar production (Unit: `kWh`) |
+| `pv_dc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the DC solar production (Unit: `kWh`) |
+| `ev` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the electric vehicles (Unit: `kWh`) |
+| `wp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the heat pump (Unit: `kWh`) |
+| `boil` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the boiler (Unit: `kWh`) |
+| `mach` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the machines (Unit: `kWh`) |
+| `soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the average state of charge of the batteries (Unit: `%`) |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -2044,9 +2025,89 @@ _Report series that DAO writes to Home Assistant entities._
 
 When true the series run until the end of the optimization horizon, including the part with predicted prices (prices.prediction.extension). When false they stop at the last known day-ahead price.
 
-**`entities`**
+**`da_ex`**
 
-List of report fields and the Home Assistant entity each is written to. The data cover today and tomorrow and are written after every optimization and by the task 'push_ha_sensors'.
+Optional: Home Assistant entity that receives the day-ahead spot price without taxes and markup of today and tomorrow. Not written when not set.
+
+**`da_cons`**
+
+Optional: Home Assistant entity that receives the price of consumption (spot price with energy tax, supplier markup and VAT) of today and tomorrow. Not written when not set.
+
+**`da_prod`**
+
+Optional: Home Assistant entity that receives the price of production (feed-in), including a production bonus of today and tomorrow. Not written when not set.
+
+**`consumption`**
+
+Optional: Home Assistant entity that receives the grid consumption of today and tomorrow. Not written when not set.
+
+**`production`**
+
+Optional: Home Assistant entity that receives the grid production of today and tomorrow. Not written when not set.
+
+**`netto_consumption`**
+
+Optional: Home Assistant entity that receives the netto grid consumption (consumption - production) of today and tomorrow. Not written when not set.
+
+**`cost`**
+
+Optional: Home Assistant entity that receives the cost of the grid consumption of today and tomorrow. Not written when not set.
+
+**`profit`**
+
+Optional: Home Assistant entity that receives the profit of the grid production of today and tomorrow. Not written when not set.
+
+**`netto_cost`**
+
+Optional: Home Assistant entity that receives the netto cost (cost - profit) of today and tomorrow. Not written when not set.
+
+**`cons`**
+
+Optional: Home Assistant entity that receives the consumption in the energy balance of today and tomorrow. Not written when not set.
+
+**`prod`**
+
+Optional: Home Assistant entity that receives the production in the energy balance of today and tomorrow. Not written when not set.
+
+**`bat_in`**
+
+Optional: Home Assistant entity that receives the energy into the batteries of today and tomorrow. Not written when not set.
+
+**`bat_out`**
+
+Optional: Home Assistant entity that receives the energy out of the batteries of today and tomorrow. Not written when not set.
+
+**`base`**
+
+Optional: Home Assistant entity that receives the baseload of today and tomorrow. Not written when not set.
+
+**`pv_ac`**
+
+Optional: Home Assistant entity that receives the AC solar production of today and tomorrow. Not written when not set.
+
+**`pv_dc`**
+
+Optional: Home Assistant entity that receives the DC solar production of today and tomorrow. Not written when not set.
+
+**`ev`**
+
+Optional: Home Assistant entity that receives the consumption of the electric vehicles of today and tomorrow. Not written when not set.
+
+**`wp`**
+
+Optional: Home Assistant entity that receives the consumption of the heat pump of today and tomorrow. Not written when not set.
+
+**`boil`**
+
+Optional: Home Assistant entity that receives the consumption of the boiler of today and tomorrow. Not written when not set.
+
+**`mach`**
+
+Optional: Home Assistant entity that receives the consumption of the machines of today and tomorrow. Not written when not set.
+
+**`soc`**
+
+Optional: Home Assistant entity that receives the average state of charge of the batteries of today and tomorrow. Not written when not set.
 
 </details>
 

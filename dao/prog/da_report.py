@@ -3426,25 +3426,53 @@ class Report(DaBase):
         end_pred = datetime.datetime.fromtimestamp(int(df_pred["utc"].iloc[-1]) + 3600)
         return end_known, end_pred
 
-    # standaardkolom voor de state als de data geen kolom "value" heeft
-    HA_SENSOR_DEFAULT_COLUMNS = {"da": "da_cons", "grid": "netto_consumption"}
+    # sensor in report: ha_sensors -> (veld van de api, kolom met de waarde)
+    HA_SENSOR_FIELDS = {
+        "da_ex": ("da", "da_ex"),
+        "da_cons": ("da", "da_cons"),
+        "da_prod": ("da", "da_prod"),
+        **{
+            key: (key, "value")
+            for key in [
+                "consumption", "production", "netto_consumption",
+                "cost", "profit", "netto_cost",
+                "cons", "prod", "bat_in", "bat_out", "base",
+                "pv_ac", "pv_dc", "ev", "wp", "boil", "mach", "soc",
+            ]
+        },
+    }
 
-    def ha_sensor_unit(self, field: str, column: str) -> str | None:
+    @staticmethod
+    def ha_sensor_unit(key: str) -> str:
         """
         De eenheid van de state van een ha-sensor
-        :param field: het veld van de api
-        :param column: de kolom die de state wordt
-        :return: de eenheid of None
+        :param key: de naam van de sensor in report: ha_sensors
+        :return: de eenheid
         """
-        if field == "da":
+        if key[0:3] == "da_":
             return "EUR/kWh"
-        if field[0:3] == "soc":
+        if key[0:3] == "soc":
             return "%"
-        if column in ["cost", "profit", "netto_cost"] or (
-                field in ["cost", "profit", "netto_cost"] and column == "value"
-        ):
+        if key in ["cost", "profit", "netto_cost"]:
             return "EUR"
         return "kWh"
+
+    def ha_sensor_entities(self, sensors_options) -> dict:
+        """
+        De ingestelde ha-sensoren
+        :param sensors_options: report: ha_sensors
+        :return: dict naam -> (entity, veld van de api, kolom met de waarde)
+        """
+        result = {}
+        for key, (field, value_column) in self.HA_SENSOR_FIELDS.items():
+            entity = getattr(sensors_options, key)
+            if entity is not None:
+                result[key] = (entity, field, value_column)
+        # soc per batterij: soc_0, soc_1, ...
+        for key, entity in (sensors_options.model_extra or {}).items():
+            if key[0:4] == "soc_" and key[4:].isdigit() and entity:
+                result[key] = (entity, key, "value")
+        return result
 
     @staticmethod
     def current_row(df: pd.DataFrame, now: datetime.datetime) -> pd.Series | None:
@@ -3462,15 +3490,16 @@ class Report(DaBase):
 
     def push_ha_sensors(self) -> bool:
         """
-        Schrijft de data van "vandaag en morgen" van de ingestelde velden
-        (report: ha_sensors) naar entiteiten in Home Assistant.
+        Schrijft de data van "vandaag en morgen" naar de entiteiten die in
+        report: ha_sensors zijn ingesteld.
         De state is de waarde van het huidige interval, het attribuut "data"
-        bevat de hele reeks in hetzelfde formaat als de api.
+        bevat de hele reeks als {time_ts, time, value, datatype}.
         :return: False als een of meer entiteiten niet zijn geschreven
         """
         sensors_options = self.report_options.ha_sensors if self.report_options else None
-        if sensors_options is None or len(sensors_options.entities) == 0:
-            logging.info("Er zijn geen ha sensors ingesteld")
+        entities = self.ha_sensor_entities(sensors_options) if sensors_options else {}
+        if len(entities) == 0:
+            logging.info("Er zijn geen ha_sensors ingesteld")
             return True
         periode = "vandaag en morgen"
         vanaf = self.periodes[periode]["vanaf"]
@@ -3484,44 +3513,37 @@ class Report(DaBase):
             else:
                 tot = min(tot, end_known)
         now = datetime.datetime.now()
+        # de prijzen worden maar een keer opgehaald voor da_ex, da_cons en da_prod
+        api_dfs = {}
         result = True
-        for entry in sensors_options.entities:
+        for key, (entity, field, value_column) in entities.items():
             try:
-                df = self.get_api_df(entry.field, periode, _tot=tot, extension=extension)
-                if isinstance(df, str):
-                    logging.error(f"ha sensor {entry.entity}: {df}")
-                    result = False
-                    continue
-                column = entry.column or (
-                    "value"
-                    if "value" in df.columns
-                    else self.HA_SENSOR_DEFAULT_COLUMNS.get(entry.field, "value")
-                )
-                if column not in df.columns:
-                    logging.error(
-                        f"ha sensor {entry.entity}: kolom '{column}' bestaat niet "
-                        f"in '{entry.field}', kies uit "
-                        f"{[c for c in df.columns if c not in ['time_ts', 'time', 'datatype', 'interval_minutes']]}"
+                if field not in api_dfs:
+                    api_dfs[field] = self.get_api_df(
+                        field, periode, _tot=tot, extension=extension
                     )
+                df = api_dfs[field]
+                if isinstance(df, str):
+                    logging.error(f"ha_sensors {key} ({entity}): {df}")
                     result = False
                     continue
+                df = df[["time_ts", "time", value_column, "datatype"]].rename(
+                    columns={value_column: "value"}
+                )
                 row = self.current_row(df, now)
-                if row is None or pd.isnull(row[column]):
+                if row is None or pd.isnull(row["value"]):
                     state = "unknown"
                 else:
-                    state = round(float(row[column]), 5)
+                    state = round(float(row["value"]), 5)
                 attributes = {
-                    "friendly_name": entry.name or f"DAO {entry.field}",
-                    "unit_of_measurement": entry.unit
-                    or self.ha_sensor_unit(entry.field, column),
+                    "friendly_name": f"DAO {key}",
+                    "unit_of_measurement": self.ha_sensor_unit(key),
                     "data": json.loads(df.to_json(orient="records")),
                 }
-                self.set_state(entry.entity, state, attributes=attributes)
-                logging.info(
-                    f"ha sensor {entry.entity} bijgewerkt: {state}, {len(df)} waarden"
-                )
+                self.set_state(entity, state, attributes=attributes)
+                logging.info(f"ha_sensors {key} ({entity}): {state}, {len(df)} waarden")
             except Exception:
-                logging.exception(f"Fout bij schrijven van ha sensor {entry.entity}")
+                logging.exception(f"Fout bij schrijven van ha_sensors {key} ({entity})")
                 result = False
         return result
 

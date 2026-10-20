@@ -16,15 +16,10 @@ from dao.prog.config.models.report import ReportConfig
 from dao.prog.da_report import Report
 
 
-def make_report(include: bool, extension: int, entities: list) -> Report:
+def make_report(include: bool, extension: int, entities: dict) -> Report:
     report = object.__new__(Report)
     report.report_options = ReportConfig.model_validate(
-        {
-            "ha_sensors": {
-                "include_price_prediction": include,
-                "entities": entities,
-            }
-        }
+        {"ha_sensors": {"include_price_prediction": include, **entities}}
     )
     today = datetime.datetime.combine(datetime.date.today(), datetime.time())
     report.periodes = {
@@ -64,18 +59,18 @@ def api_df(start: datetime.datetime, hours: int, **columns) -> pd.DataFrame:
 def test_config_defaults():
     config = ReportConfig.model_validate({})
     assert config.ha_sensors.include_price_prediction is False
-    assert config.ha_sensors.entities == []
+    assert config.ha_sensors.da_cons is None
 
 
 def test_config_invalid_entity():
     with pytest.raises(ValueError):
         ReportConfig.model_validate(
-            {"ha_sensors": {"entities": [{"field": "da", "entity": "geen entity"}]}}
+            {"ha_sensors": {"da_cons": "geen entity"}}
         )
 
 
 def test_price_prediction_range():
-    report = make_report(True, 24, [])
+    report = make_report(True, 24, {})
     today = report.periodes["vandaag en morgen"]["vanaf"]
     end_known = today + datetime.timedelta(days=1)
     report.db_da = MagicMock()
@@ -91,7 +86,7 @@ def test_price_prediction_range():
 
 
 def test_price_prediction_range_without_extension():
-    report = make_report(True, 0, [])
+    report = make_report(True, 0, {})
     today = report.periodes["vandaag en morgen"]["vanaf"]
     report.db_da = MagicMock()
     report.db_da.get_column_data.return_value = column_df(today, 24)
@@ -107,12 +102,26 @@ def test_current_row():
     assert Report.current_row(df, start - datetime.timedelta(minutes=1)) is None
 
 
+def test_ha_sensor_entities():
+    report = make_report(False, 0, {
+        "da_prod": "sensor.dao_price_production",
+        "bat_in": "sensor.dao_battery_in",
+        "soc_1": "sensor.dao_soc_accu_2",
+    })
+    assert report.ha_sensor_entities(report.report_options.ha_sensors) == {
+        "da_prod": ("sensor.dao_price_production", "da", "da_prod"),
+        "bat_in": ("sensor.dao_battery_in", "bat_in", "value"),
+        "soc_1": ("sensor.dao_soc_accu_2", "soc_1", "value"),
+    }
+
+
 @pytest.mark.parametrize("include, tot_hours, extension", [(False, 24, 0), (True, 54, 30)])
 def test_push_ha_sensors_prediction_range(include, tot_hours, extension):
-    entities = [
-        {"field": "da", "entity": "sensor.dao_prices"},
-        {"field": "bat_in", "entity": "sensor.dao_battery_in", "name": "Accu in"},
-    ]
+    entities = {
+        "da_ex": "sensor.dao_spot_price",
+        "da_cons": "sensor.dao_price_consumption",
+        "bat_in": "sensor.dao_battery_in",
+    }
     report = make_report(include, 48, entities)
     today = report.periodes["vandaag en morgen"]["vanaf"]
     end_known = today + datetime.timedelta(days=1)
@@ -131,39 +140,46 @@ def test_push_ha_sensors_prediction_range(include, tot_hours, extension):
 
     assert report.push_ha_sensors() is True
 
+    # de prijzen worden een keer opgehaald voor beide prijs-sensoren
+    assert [call.args[0] for call in report.get_api_df.call_args_list] == ["da", "bat_in"]
     for call in report.get_api_df.call_args_list:
         assert call.kwargs["_tot"] == today + datetime.timedelta(hours=tot_hours)
         assert call.kwargs["extension"] == extension
-    prices, battery = report.set_state.call_args_list
-    assert prices.args == ("sensor.dao_prices", 0.25)
+    spot, prices, battery = report.set_state.call_args_list
+    assert spot.args == ("sensor.dao_spot_price", 0.1)
+    assert prices.args == ("sensor.dao_price_consumption", 0.25)
     assert prices.kwargs["attributes"]["unit_of_measurement"] == "EUR/kWh"
-    assert len(prices.kwargs["attributes"]["data"]) == hours
+    data = prices.kwargs["attributes"]["data"]
+    assert len(data) == hours
+    assert set(data[0]) == {"time_ts", "time", "value", "datatype"}
+    assert data[0]["value"] == 0.25
     assert battery.args == ("sensor.dao_battery_in", 1.5)
-    assert battery.kwargs["attributes"]["friendly_name"] == "Accu in"
+    assert battery.kwargs["attributes"]["friendly_name"] == "DAO bat_in"
     assert battery.kwargs["attributes"]["unit_of_measurement"] == "kWh"
 
 
-def test_push_ha_sensors_unknown_column():
-    report = make_report(False, 0, [
-        {"field": "da", "entity": "sensor.dao_prices", "column": "bestaat_niet"},
-        {"field": "cons", "entity": "sensor.dao_cons"},
-    ])
+def test_push_ha_sensors_error_does_not_stop_others():
+    report = make_report(False, 0, {
+        "soc": "sensor.dao_soc",
+        "cons": "sensor.dao_cons",
+    })
     today = report.periodes["vandaag en morgen"]["vanaf"]
     report.get_price_prediction_range = MagicMock(return_value=(None, None))
     report.get_api_df = MagicMock(
         side_effect=[
-            api_df(today, 48, da_cons=[0.25] * 48),
-            api_df(today, 48, value=[2.0] * 48),
+            '{"message":"Failed", "reason": "..."}',
+            api_df(today, 48, value=[50.0] * 48),
         ]
     )
-    # de eerste entiteit faalt, de tweede wordt toch geschreven
+    # cons faalt, soc wordt toch geschreven
     assert report.push_ha_sensors() is False
     assert report.set_state.call_count == 1
-    assert report.set_state.call_args.args[0] == "sensor.dao_cons"
+    assert report.set_state.call_args.args == ("sensor.dao_soc", 50.0)
+    assert report.set_state.call_args.kwargs["attributes"]["unit_of_measurement"] == "%"
 
 
 def test_push_ha_sensors_none_configured():
-    report = make_report(False, 0, [])
+    report = make_report(False, 0, {})
     report.get_api_df = MagicMock()
     assert report.push_ha_sensors() is True
     report.get_api_df.assert_not_called()
