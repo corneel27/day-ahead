@@ -3455,7 +3455,8 @@ class Report(DaBase):
             return "%"
         if key in ["cost", "profit", "netto_cost"]:
             return "EUR"
-        return "kWh"
+        # de energie per uur is gelijk aan het gemiddelde vermogen in dat uur
+        return "kW"
 
     def ha_sensor_entities(self, sensors_options) -> dict:
         """

@@ -155,7 +155,7 @@ def test_push_ha_sensors_prediction_range(include, tot_hours, extension):
     assert data[0]["value"] == 0.25
     assert battery.args == ("sensor.dao_battery_in", 1.5)
     assert battery.kwargs["attributes"]["friendly_name"] == "DAO bat_in"
-    assert battery.kwargs["attributes"]["unit_of_measurement"] == "kWh"
+    assert battery.kwargs["attributes"]["unit_of_measurement"] == "kW"
 
 
 def test_push_ha_sensors_error_does_not_stop_others():

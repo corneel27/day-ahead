@@ -1655,7 +1655,7 @@
           "description": "HA entity for the grid consumption",
           "x-help": "Optional: Home Assistant entity that receives the grid consumption of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Consumption"
         },
         "production": {
@@ -1671,7 +1671,7 @@
           "description": "HA entity for the grid production",
           "x-help": "Optional: Home Assistant entity that receives the grid production of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Production"
         },
         "netto_consumption": {
@@ -1687,7 +1687,7 @@
           "description": "HA entity for the netto grid consumption (consumption - production)",
           "x-help": "Optional: Home Assistant entity that receives the netto grid consumption (consumption - production) of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Netto Consumption"
         },
         "cost": {
@@ -1751,7 +1751,7 @@
           "description": "HA entity for the consumption in the energy balance",
           "x-help": "Optional: Home Assistant entity that receives the consumption in the energy balance of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Cons"
         },
         "prod": {
@@ -1767,7 +1767,7 @@
           "description": "HA entity for the production in the energy balance",
           "x-help": "Optional: Home Assistant entity that receives the production in the energy balance of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Prod"
         },
         "bat_in": {
@@ -1783,7 +1783,7 @@
           "description": "HA entity for the energy into the batteries",
           "x-help": "Optional: Home Assistant entity that receives the energy into the batteries of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Bat In"
         },
         "bat_out": {
@@ -1799,7 +1799,7 @@
           "description": "HA entity for the energy out of the batteries",
           "x-help": "Optional: Home Assistant entity that receives the energy out of the batteries of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Bat Out"
         },
         "base": {
@@ -1815,7 +1815,7 @@
           "description": "HA entity for the baseload",
           "x-help": "Optional: Home Assistant entity that receives the baseload of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Base"
         },
         "pv_ac": {
@@ -1831,7 +1831,7 @@
           "description": "HA entity for the AC solar production",
           "x-help": "Optional: Home Assistant entity that receives the AC solar production of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Pv Ac"
         },
         "pv_dc": {
@@ -1847,7 +1847,7 @@
           "description": "HA entity for the DC solar production",
           "x-help": "Optional: Home Assistant entity that receives the DC solar production of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Pv Dc"
         },
         "ev": {
@@ -1863,7 +1863,7 @@
           "description": "HA entity for the consumption of the electric vehicles",
           "x-help": "Optional: Home Assistant entity that receives the consumption of the electric vehicles of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Ev"
         },
         "wp": {
@@ -1879,7 +1879,7 @@
           "description": "HA entity for the consumption of the heat pump",
           "x-help": "Optional: Home Assistant entity that receives the consumption of the heat pump of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Wp"
         },
         "boil": {
@@ -1895,7 +1895,7 @@
           "description": "HA entity for the consumption of the boiler",
           "x-help": "Optional: Home Assistant entity that receives the consumption of the boiler of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Boil"
         },
         "mach": {
@@ -1911,7 +1911,7 @@
           "description": "HA entity for the consumption of the machines",
           "x-help": "Optional: Home Assistant entity that receives the consumption of the machines of today and tomorrow. Not written when not set.",
           "x-ui-widget-filter": "sensor",
-          "x-unit": "kWh",
+          "x-unit": "kW",
           "title": "Mach"
         },
         "soc": {

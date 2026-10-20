@@ -51,7 +51,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the grid consumption",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the grid consumption of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -60,7 +60,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the grid production",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the grid production of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -69,7 +69,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the netto grid consumption (consumption - production)",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the netto grid consumption (consumption - production) of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -105,7 +105,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the consumption in the energy balance",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the consumption in the energy balance of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -114,7 +114,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the production in the energy balance",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the production in the energy balance of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -123,7 +123,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the energy into the batteries",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the energy into the batteries of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -132,7 +132,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the energy out of the batteries",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the energy out of the batteries of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -141,7 +141,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the baseload",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the baseload of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -150,7 +150,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the AC solar production",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the AC solar production of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -159,7 +159,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the DC solar production",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the DC solar production of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -168,7 +168,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the consumption of the electric vehicles",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the consumption of the electric vehicles of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -177,7 +177,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the consumption of the heat pump",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the consumption of the heat pump of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -186,7 +186,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the consumption of the boiler",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the consumption of the boiler of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )
@@ -195,7 +195,7 @@ class HaSensorsConfig(BaseModel):
         description="HA entity for the consumption of the machines",
         json_schema_extra={
             "x-help": "Optional: Home Assistant entity that receives the consumption of the machines of today and tomorrow. Not written when not set.",
-            "x-unit": "kWh",
+            "x-unit": "kW",
             "x-ui-widget-filter": "sensor",
         },
     )

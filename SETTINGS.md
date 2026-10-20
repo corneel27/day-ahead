@@ -1999,23 +1999,23 @@ Each entity gets the value of the current interval as state; the attribute 'data
 | `da_ex` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the day-ahead spot price without taxes and markup (Unit: `EUR/kWh`) |
 | `da_cons` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the price of consumption (spot price with energy tax, supplier markup and VAT) (Unit: `EUR/kWh`) |
 | `da_prod` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the price of production (feed-in), including a production bonus (Unit: `EUR/kWh`) |
-| `consumption` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid consumption (Unit: `kWh`) |
-| `production` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid production (Unit: `kWh`) |
-| `netto_consumption` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the netto grid consumption (consumption - production) (Unit: `kWh`) |
+| `consumption` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid consumption (Unit: `kW`) |
+| `production` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid production (Unit: `kW`) |
+| `netto_consumption` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the netto grid consumption (consumption - production) (Unit: `kW`) |
 | `cost` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the cost of the grid consumption (Unit: `EUR`) |
 | `profit` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the profit of the grid production (Unit: `EUR`) |
 | `netto_cost` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the netto cost (cost - profit) (Unit: `EUR`) |
-| `cons` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption in the energy balance (Unit: `kWh`) |
-| `prod` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the production in the energy balance (Unit: `kWh`) |
-| `bat_in` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the energy into the batteries (Unit: `kWh`) |
-| `bat_out` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the energy out of the batteries (Unit: `kWh`) |
-| `base` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the baseload (Unit: `kWh`) |
-| `pv_ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the AC solar production (Unit: `kWh`) |
-| `pv_dc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the DC solar production (Unit: `kWh`) |
-| `ev` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the electric vehicles (Unit: `kWh`) |
-| `wp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the heat pump (Unit: `kWh`) |
-| `boil` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the boiler (Unit: `kWh`) |
-| `mach` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the machines (Unit: `kWh`) |
+| `cons` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption in the energy balance (Unit: `kW`) |
+| `prod` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the production in the energy balance (Unit: `kW`) |
+| `bat_in` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the energy into the batteries (Unit: `kW`) |
+| `bat_out` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the energy out of the batteries (Unit: `kW`) |
+| `base` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the baseload (Unit: `kW`) |
+| `pv_ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the AC solar production (Unit: `kW`) |
+| `pv_dc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the DC solar production (Unit: `kW`) |
+| `ev` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the electric vehicles (Unit: `kW`) |
+| `wp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the heat pump (Unit: `kW`) |
+| `boil` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the boiler (Unit: `kW`) |
+| `mach` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the machines (Unit: `kW`) |
 | `soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the average state of charge of the batteries (Unit: `%`) |
 
 <details>
