@@ -11,6 +11,10 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => { window.documentMarker = 'preserved' })
 })
 
+async function openTaskMenu(page) {
+  await page.getByRole('button', { name: 'Pick action' }).click()
+}
+
 test.afterEach(async ({ page }) => {
   expect(pageErrors.get(page)).toEqual([])
 })
@@ -24,6 +28,7 @@ test('boosted task submission polls and swaps status without navigation', async 
   })
   const submitted = page.waitForRequest(request =>
     new URL(request.url()).pathname === '/v2/task-exec' && request.method() === 'POST')
+  await openTaskMenu(page)
   await page.getByRole('button', { name: 'Run synthetic task', exact: true }).click()
   const request = await submitted
   expect(request.headers()['hx-request']).toBe('true')
@@ -44,6 +49,7 @@ test('boosted task submission polls and swaps status without navigation', async 
 
 test('cancellation updates the existing task status without an error banner', async ({ page }) => {
   const initialURL = page.url()
+  await openTaskMenu(page)
   await page.getByRole('button', { name: 'Run cancellable task', exact: true }).click()
   await expect(page.locator('#status-target h2')).toContainText('running')
   await page.locator('#run-cancel').click()
@@ -57,6 +63,7 @@ test('cancellation updates the existing task status without an error banner', as
 })
 
 test('HTTP errors show the application banner and preserve the current status', async ({ page }) => {
+  await openTaskMenu(page)
   const button = page.getByRole('button', { name: 'Run synthetic task', exact: true })
   await button.evaluate(element => { element.value = 'unknown-task' })
   await button.click()
@@ -70,6 +77,7 @@ test('HTTP errors show the application banner and preserve the current status', 
 
 test('connection failures show the application connection-error banner', async ({ page }) => {
   await page.route('**/v2/task-exec', route => route.abort('failed'))
+  await openTaskMenu(page)
   await page.getByRole('button', { name: 'Run synthetic task', exact: true }).click()
   await expect(page.locator('#htmx-error')).toBeVisible()
   await expect(page.locator('#htmx-error-message')).toHaveText('De server kon niet worden bereikt.')

@@ -248,7 +248,24 @@ class Meteo:
         ]
         return station in list_aws
 
-    def which_station(self) -> str:
+    @staticmethod
+    def afstand_km(lat1, long1, lat2, long2):
+        """
+        berekent de afstand in km tussen locatie 1 en locatie 2
+        :param lat1: latitude locatie 1
+        :param long1: longitude locatie 1
+        :param lat2: latitude locatie 2
+        :param long2: longitude locatie 2
+        :return:
+        """
+        lat1, long1, lat2, long2 = map(math.radians, (lat1, long1, lat2, long2))
+        dlat = lat2 - lat1
+        dlong = long2 - long1
+        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * (math.sin(dlong / 2))**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return 6371 * c
+
+    def which_station(self, _latitude:float|None = None, _longitude: float|None = None) -> str:
         """
         berekent welk weerstation het dichtst bij is
         :param latitude:
@@ -258,12 +275,17 @@ class Meteo:
         stations = knmi.stations
         distance = None
         result = None
+        latitude = _latitude if _latitude else self.latitude
+        longitude = _longitude if _longitude else self.longitude
         for key in stations:
             if self.is_aws(key):
                 station = stations[key]
-                afstand = (self.latitude - station.latitude) ** 2 + (
-                    self.longitude - station.longitude
+                afstand = self.afstand_km(latitude, longitude, station.latitude, station.longitude)
+                """
+                afstand = (latitude - station.latitude) ** 2 + (
+                    longitude - station.longitude
                 ) ** 2
+                """
                 if result is None or afstand < distance:
                     distance = afstand
                     result = key
@@ -716,14 +738,35 @@ class Meteo:
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot
 
+def test_afstand_km(meteo):
+    # Amsterdam -> Rotterdam (ongeveer 57 km)
+    d1 = meteo.afstand_km(52.3676, 4.9041, 51.9244, 4.4777)
+    print(f"Amsterdam -> Rotterdam: {d1:.2f} km")
+    assert 50 < d1 < 70
 
-"""
+    # Parijs -> Londen (ongeveer 344 km)
+    d2 = meteo.afstand_km(48.8566, 2.3522, 51.5074, -0.1278)
+    print(f"Parijs -> Londen: {d2:.2f} km")
+    assert 300 < d2 < 400
+
+    # Zelfde punt -> 0
+    d3 = meteo.afstand_km(52.0, 5.0, 52.0, 5.0)
+    print(f"Zelfde punt: {d3:.2f} km")
+    assert abs(d3) < 1e-9
+
+    station=meteo.which_station()
+    print(station)
+
+    print("Alle tests geslaagd.")
+
 def main():
     from dao.prog.da_base import DaBase
     dbase = DaBase("../data/options.json")
-    meteo = Meteo(dbase.config, dbase.db_da)
+    meteo = dbase.meteo
     station = meteo.which_station()
+    print(station)
+    test_afstand_km(meteo)
 
 if __name__ == "__main__":
     main()
-"""
+

@@ -2,13 +2,32 @@
 
 {% block title %}Run - DAO{% endblock %}
 {% block content %}
-<div class="col flex-grow-0">
+<div class="col flex-grow-0 ">
     <h1>Run</h1>
-<form method="POST" action="{{url_for('v2.task_exec')}}" hx-boost="true" hx-target="#status-target" hx-push-url="false" hx-replace-url="false">
-        {% for key, value in tasks.items() %}
-          <button type="submit" name="task" value="{{key}}" class="btn btn-outline-secondary">{{value["name"]}}</button>
-        {% endfor %}
-        <a href="{{url_for('v2.task_cancel')}}" hx-boost="false" hx-get="{{url_for('v2.task_cancel')}}" hx-target="#status-target" class="btn btn-outline-danger disabled" id="run-cancel">Cancel</a>
+    <form method="POST" action="{{url_for('v2.task_exec')}}" hx-boost="true" hx-target="#status-target"
+          hx-push-url="false" hx-replace-url="false">
+        <div class="btn-group">
+            <div class="dropdown" style="z-index: 1050">
+                <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                    Pick action
+                </button>
+                <ul class="dropdown-menu">
+                    {% for key, value in tasks.items() %}
+                    <li>
+                        <button type="submit" name="task" value="{{key}}"
+                                class="btn btn-outline-secondary dropdown-item">
+                            {{value["name"]}}
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="btn-group">
+            <a href="{{url_for('v2.task_cancel')}}" hx-boost="false" hx-get="{{url_for('v2.task_cancel')}}"
+               hx-target="#status-target" class="btn btn-outline-danger disabled" id="run-cancel">Cancel</a>
+        </div>
     </form>
 </div>
 <div class="col mt-2 flex-grow-1 overflow-auto" id="status-target"
