@@ -1,6 +1,7 @@
 """Check consumption windows against an isolated SQLite database."""
 
 import datetime as dt
+import threading
 
 import pytest
 from freezegun import freeze_time
@@ -16,6 +17,7 @@ def database():
     manager.db_dialect = "sqlite"
     manager.engine = create_engine("sqlite:///:memory:")
     manager.metadata = MetaData()
+    manager._metadata_lock = threading.RLock()
     metadata = MetaData()
     variables = Table(
         "variabel", metadata,

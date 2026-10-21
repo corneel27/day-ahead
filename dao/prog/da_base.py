@@ -19,7 +19,7 @@ import pandas as pd
 import pytz
 from hassapi.models import StateList
 from requests import get
-from sqlalchemy import Table, and_, func, select
+from sqlalchemy import and_, func, select
 
 from dao.lib.da_meteo import Meteo
 from dao.lib.da_prices import DaPrices
@@ -428,12 +428,8 @@ class DaBase(hass.Hass):
         )
         """
         # Reflect existing tables from the database
-        values_table = Table(
-            "values", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
-        variabel_table = Table(
-            "variabel", self.db_da.metadata, autoload_with=self.db_da.engine
-        )
+        values_table = self.db_da.get_table("values")
+        variabel_table = self.db_da.get_table("variabel")
 
         # Construct the inner query
         inner_query = (
@@ -561,6 +557,7 @@ class DaBase(hass.Hass):
         tot: datetime.datetime,
         interval: str = None,
         _ml_prediction: bool = None,
+        prefer_measured: bool = False,
     ) -> pd.DataFrame:
         """
         berekent de solar production
@@ -569,6 +566,10 @@ class DaBase(hass.Hass):
         :param tot: datetime tot
         :param interval: 15"min of 1 hour of None, als None wordt self.interval genomen
         :param _ml_prediction: boolean default None(= from config)
+        :param prefer_measured: boolean, alleen van toepassing op de
+            ml-voorspelling. True: per uur de gemeten straling gebruiken als
+            die aanwezig is en anders de prognose, zoals de dao-voorspelling
+            dat ook doet. Voor een dag in de toekomst maakt het geen verschil.
         :return:
         """
         if _ml_prediction is None:
@@ -589,7 +590,7 @@ class DaBase(hass.Hass):
             solar_predictor = SolarPredictor()
             try:
                 solar_prog = solar_predictor.predict_solar_device(
-                    solar_option, vanaf, tot
+                    solar_option, vanaf, tot, prefer_measured=prefer_measured
                 )
                 if solar_prog.isnull().any().any():
                     logging.warning(

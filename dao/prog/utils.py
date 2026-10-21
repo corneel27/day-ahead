@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from dateutil import easter
 from requests import post
-from sqlalchemy import Table, and_, select
+from sqlalchemy import and_, select
 
 from dao.prog.version import __version__
 
@@ -146,8 +146,8 @@ def get_tibber_data():
             last_invoice.year, last_invoice.month, last_invoice.day
         ).timestamp()
         timestamps = generate_hourly_timestamps(start_ts, now_ts)
-        values_table = Table("values", db_da.metadata, autoload_with=db_da.engine)
-        variabel_table = Table("variabel", db_da.metadata, autoload_with=db_da.engine)
+        values_table = db_da.get_table("values")
+        variabel_table = db_da.get_table("variabel")
         for code in ["cons", "prod"]:
             # Query the existing timestamps from the values table
             query = select(values_table.c.time).where(
