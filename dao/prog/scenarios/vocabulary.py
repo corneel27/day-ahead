@@ -75,6 +75,27 @@ def interval_grid(start: dt.datetime, horizon_hours: int) -> list[dt.datetime]:
     return [start + dt.timedelta(minutes=INTERVAL_MIN * i) for i in range(n)]
 
 
+def model_grid(start: dt.datetime, fixed_hours: int, predicted_hours: int = 0) -> list[dt.datetime]:
+    """Start time of every model interval u. The fixed part is on the
+    15-minute grid. With a price prediction, day_ahead.py continues on an
+    hourly grid for the predicted hours."""
+    pred_start = start + dt.timedelta(hours=fixed_hours)
+    return interval_grid(start, fixed_hours) + hourly_grid(pred_start, predicted_hours)
+
+
+def model_row_hours(fixed_hours: int, predicted_hours: int = 0) -> list[float]:
+    """Length in hours of every model interval u, matching model_grid."""
+    return [INTERVAL_MIN / 60] * (fixed_hours * STEPS_PER_HOUR) + [1.0] * predicted_hours
+
+
+def expand_to_model_grid(hourly: list[float], fixed_hours: int, predicted_hours: int, *, label: str) -> list[float]:
+    """An hourly array over the whole horizon, expanded to model_grid: each
+    fixed hour repeats STEPS_PER_HOUR times, each predicted hour once."""
+    horizon_hours = fixed_hours + predicted_hours
+    fixed = upsample(hourly, horizon_hours, label=label)[: fixed_hours * STEPS_PER_HOUR]
+    return fixed + [float(x) for x in hourly[fixed_hours:horizon_hours]]
+
+
 _OFFSET_RE = re.compile(
     r"^(?P<sign>[+-])"
     r"(?:(?P<hours>\d+(?:\.\d+)?)h)?"
@@ -112,13 +133,37 @@ def parse_time_of_day(hhmm: str, *, on_or_after: dt.datetime) -> dt.datetime:
     return candidate
 
 
-def window_indices(start: dt.datetime, horizon_hours: int, window_start: str, window_end: str) -> range:
+def window_indices(
+    start: dt.datetime,
+    grid: list[dt.datetime],
+    window_start: str,
+    window_end: str,
+    date: str | None = None,
+) -> range:
     """The half-open range of interval indices u covering clock times
-    [window_start, window_end) on the scenario's own grid. end at or
-    before start rolls to the next day, mirroring parse_time_of_day."""
-    w_start = parse_time_of_day(window_start, on_or_after=start)
+    [window_start, window_end) on the scenario's model grid (model_grid).
+    window_start resolves to its first occurrence at or after start, or on
+    date ('YYYY-MM-DD') when given. end at or before window_start rolls to
+    the next day, mirroring parse_time_of_day. u0 is the interval that
+    contains window_start, u1 the interval that contains window_end."""
+    anchor = start
+    if date is not None:
+        try:
+            anchor = dt.datetime.strptime(date, "%Y-%m-%d")
+        except (TypeError, ValueError) as ex:
+            raise VocabularyError(f"window date {date!r} is not 'YYYY-MM-DD'") from ex
+    w_start = parse_time_of_day(window_start, on_or_after=anchor)
     w_end = parse_time_of_day(window_end, on_or_after=w_start + dt.timedelta(minutes=INTERVAL_MIN))
-    n = horizon_hours * STEPS_PER_HOUR
-    u0 = max(0, int((w_start - start).total_seconds() // (INTERVAL_MIN * 60)))
-    u1 = min(n, int((w_end - start).total_seconds() // (INTERVAL_MIN * 60)))
+    n = len(grid)
+    if n == 0:
+        return range(0)
+    last_len = grid[-1] - grid[-2] if n > 1 else dt.timedelta(minutes=INTERVAL_MIN)
+    grid_end = grid[-1] + last_len
+
+    def containing(t: dt.datetime) -> int:
+        if t >= grid_end:
+            return n
+        return max([u for u, g in enumerate(grid) if g <= t], default=0)
+
+    u0, u1 = containing(w_start), containing(w_end)
     return range(u0, max(u0, u1))
