@@ -132,7 +132,8 @@ jobs:
             dao/tests/prog/test_solar_defaults.py \
             dao/tests/prog/test_scheduler_dispatch.py \
             dao/tests/prog/test_report_forecasts.py \
-            dao/tests/webserver/test_route_security.py
+            dao/tests/webserver/test_route_security.py \
+            dao/tests/webserver/test_task_worker.py
 
       - name: Publish report to the job summary
         # write_reports() runs before scenario-run's own exit code check, so
