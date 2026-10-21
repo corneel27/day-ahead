@@ -77,6 +77,7 @@ class SolarString(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-help": "Configuration for a single string of solar panels with the same tilt and orientation. Use multiple strings for panels facing different directions.",
             "x-ui-section": "Panel Orientation",
@@ -205,6 +206,7 @@ class SolarConfig(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-ui-group": "Energy",
             "x-icon": "solar-panel",
