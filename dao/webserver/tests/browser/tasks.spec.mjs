@@ -8,6 +8,9 @@ test.beforeEach(async ({ page }) => {
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/v2/tasks')
   await expect(page.locator('#status-target h2')).toContainText('idle')
+  const taskMenu = page.getByRole('button', { name: 'Pick action', exact: true })
+  await taskMenu.click()
+  await expect(taskMenu).toHaveAttribute('aria-expanded', 'true')
   await page.evaluate(() => { window.documentMarker = 'preserved' })
 })
 
