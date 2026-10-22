@@ -63,7 +63,7 @@ class PricePrediction(BaseModel):
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
 
-    source_day_ahead: Literal["nordpool", "entsoe", "tibber"] = Field(
+    source_day_ahead: Literal["nordpool", "entsoe", "tibber", "ha_epex_spot"] = Field(
         default="nordpool",
         alias="source day ahead",
         description="Source for day-ahead prices",

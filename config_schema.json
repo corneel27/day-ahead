@@ -2244,7 +2244,8 @@
           "enum": [
             "nordpool",
             "entsoe",
-            "tibber"
+            "tibber",
+            "ha_epex_spot"
           ],
           "title": "Source Day Ahead",
           "type": "string",
