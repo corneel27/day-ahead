@@ -1332,6 +1332,7 @@ System uses tariff active on optimization date.
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber`, `ha_epex_spot` |
+| `entity_epex_spot` | [EntityId](#entityid) (optional) | No | `"sensor.epex_spot_data_market_price"` | HA sensor where market data epex_spot are available as attribute |
 | `prediction` | [PricePrediction](#priceprediction) (optional) | No | `null` | Configuration of getting and using priceprediction beyond the day ahead spotprices of epex. |
 | `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
@@ -1351,6 +1352,10 @@ System uses tariff active on optimization date.
 **`source day ahead`**
 
 Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.
+
+**`entity_epex_spot`**
+
+Optional: Home Assistant sensor with the market prices. Only used when source = 'ha_epex_spot'.
 
 **`prediction`**
 

@@ -2252,6 +2252,22 @@
           "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
           "x-ui-section": "Prices"
         },
+        "entity_epex_spot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "sensor.epex_spot_data_market_price",
+          "description": "HA sensor where market data epex_spot are available as attribute",
+          "x-help": "Optional: Home Assistant sensor with the market prices. Only used when source = 'ha_epex_spot'.",
+          "x-ui-section": "Power Configuration",
+          "x-ui-widget-filter": "sensor",
+          "title": "Entity Epex Spot"
+        },
         "prediction": {
           "anyOf": [
             {

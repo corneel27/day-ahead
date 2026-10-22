@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .base import SecretStr
+from .base import SecretStr, EntityId
 
 
 class PricePrediction(BaseModel):
@@ -70,6 +70,15 @@ class PricingConfig(BaseModel):
         json_schema_extra={
             "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
             "x-ui-section": "Prices",
+        },
+    )
+    entity_epex_spot: EntityId | None = Field(
+        default="sensor.epex_spot_data_market_price",
+        description="HA sensor where market data epex_spot are available as attribute",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant sensor with the market prices. Only used when source = 'ha_epex_spot'.",
+            "x-ui-section": "Power Configuration",
+            "x-ui-widget-filter": "sensor",
         },
     )
     prediction: PricePrediction | None = Field(
