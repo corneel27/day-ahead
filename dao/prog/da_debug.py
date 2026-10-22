@@ -42,14 +42,17 @@ snapshot to get a solved model plus its registry.
 from __future__ import annotations
 
 import argparse
+import copy
 import datetime as dt
 import hashlib
 import io
 import json
 import logging
 import math
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -70,10 +73,21 @@ SCHEMA_MIN_SUPPORTED = 1
 REDACTED_SECRET = "<redacted:SecretStr>"
 
 
-class SnapshotMiss(RuntimeError):
+class SnapshotMiss(BaseException):
     """Raised by ReplayIO when a replayed run asks for input the snapshot
     does not have. Never caught internally — a stale or incomplete fixture
-    must fail loudly, not silently fall back to live/default behaviour."""
+    must fail loudly, not silently fall back to live/default behaviour.
+
+    Derives from BaseException, not Exception: calc_optimum() wraps many
+    reads in a broad ``except Exception`` with a default (battery SoC falls
+    back to 50%), which would otherwise turn a miss into a silently
+    different model. Catch it by name."""
+
+
+class RecordedReadError(RuntimeError):
+    """Replays a read that also failed during capture (for example an HA
+    entity that returned 404). calc_optimum() handles it the same way it
+    handled the original error, so the replay takes the same fallback."""
 
 
 # ---------------------------------------------------------------------------
@@ -621,6 +635,8 @@ class RecordingIO:
         self._price_calls: list[dict] = []
         self._prog_calls: list[dict] = []
         self._ha_states: dict[str, str] = {}
+        self._ha_state_errors: dict[str, str] = {}
+        self._calc_overrides: dict | None = None
         self._baseload: dict[str, list] = {}
         self._heatpump_run_hours: dict[str, float] = {}
         self._avg_temperature: dict[str, float] = {}
@@ -695,7 +711,14 @@ class RecordingIO:
 
         # Roept de echte get_state aan en legt de teruggegeven state vast onder de entity-id.
         def _wrapped_get_state(instance, entity_id, *args, **kwargs):
-            result = original_get_state(instance, entity_id, *args, **kwargs)
+            try:
+                result = original_get_state(instance, entity_id, *args, **kwargs)
+            except Exception as ex:
+                # Ook een mislukte read vastleggen: calc_optimum() valt dan
+                # terug op een default, en de replay moet dezelfde fout geven
+                # in plaats van een SnapshotMiss.
+                self._ha_state_errors[entity_id] = f"{type(ex).__name__}: {ex}"
+                raise
             try:
                 self._ha_states[entity_id] = result.state
             except AttributeError:
@@ -719,6 +742,9 @@ class RecordingIO:
         # Roept Report.get_price_data echt aan en bewaart elke aanroep op volgorde:
         # met een prijsvoorspelling (extension > 0) zijn het er twee.
         def _wrapped_get_price_data(instance, start, end=None, interval="1hour", extension=0):
+            # Vroege meting: de prijzen zijn het eerste invoerkanaal, dus ook
+            # een run die vóór de solve afbreekt heeft dan zijn startwaarden.
+            self._record_calc_overrides()
             result = original_get_price_data(
                 instance, start, end=end, interval=interval, extension=extension
             )
@@ -834,6 +860,24 @@ class RecordingIO:
 
         _install_model_capture(self._patches, self)
 
+        # Leest de startwaarden opnieuw op het moment van de solve; dit zijn
+        # precies de waarden waarmee het model is opgebouwd.
+        if mip is not None:
+            captured_optimize = mip.Model.optimize
+
+            # Legt de startwaarden vast en roept daarna de solver aan.
+            def _optimize_with_overrides(model_self, *args, **kwargs):
+                self._record_calc_overrides()
+                return captured_optimize(model_self, *args, **kwargs)
+
+            self._patches.set(mip.Model, "optimize", _optimize_with_overrides)
+
+    # Bewaart de startwaarden van de lopende calc_optimum()-aanroep, als die er is.
+    def _record_calc_overrides(self) -> None:
+        overrides = _calc_overrides_from_stack()
+        if overrides is not None:
+            self._calc_overrides = overrides
+
     # -- snapshot writing --------------------------------------------------
 
     # Bouwt en schrijft het snapshot-bestand met alle vastgelegde kanalen, inclusief de geheimencontrole vlak vóór het schrijven.
@@ -861,6 +905,7 @@ class RecordingIO:
             "git_sha": _git_sha(),
             "mip_version": getattr(mip, "__version__", None) if mip else None,
             "python_version": sys.version.split()[0],
+            "tz_name": _local_tz_name(),
             "config_hash": _config_hash(sanitized_config),
             "file_name": getattr(self._primary, "file_name", None),
             "exception": f"{type(exc).__name__}: {exc}" if exc is not None else None,
@@ -881,7 +926,9 @@ class RecordingIO:
             "ha_context": ha_context,
             "price_data_calls": self._price_calls,
             "prog_data_calls": self._prog_calls,
+            "calc_overrides": _overrides_to_payload(self._calc_overrides),
             "ha_states": self._ha_states,
+            "ha_state_errors": self._ha_state_errors,
             "baseload": self._baseload,
             "heatpump_run_hours": self._heatpump_run_hours,
             "avg_temperature": self._avg_temperature,
@@ -947,6 +994,139 @@ def _git_sha() -> str | None:
     return None
 
 
+# Bepaalt de IANA-tijdzone van dit proces, zodat een replay in dezelfde zone rekent als de capture.
+def _local_tz_name() -> str | None:
+    """IANA name of the process-local timezone, or None if it can't be
+    determined. calc_optimum() works in naive local datetimes, so a replay
+    must run in the same zone as the capture did."""
+    from zoneinfo import ZoneInfo
+
+    candidates = []
+    tz_env = os.environ.get("TZ")
+    if tz_env:
+        candidates.append(tz_env.lstrip(":"))
+    try:
+        candidates.append(Path("/etc/timezone").read_text().strip())
+    except OSError:
+        pass
+    try:
+        target = str(Path("/etc/localtime").resolve())
+        if "zoneinfo/" in target:
+            candidates.append(target.split("zoneinfo/", 1)[1])
+    except OSError:
+        pass
+    for name in candidates:
+        if "zoneinfo/" in name:
+            name = name.split("zoneinfo/", 1)[1]
+        try:
+            ZoneInfo(name)
+        except Exception:  # noqa: BLE001 - not a usable zone name, try the next
+            continue
+        return name
+    return None
+
+
+# Zet de startwaarden die calc_optimum() echt gebruikte om naar JSON.
+def _overrides_to_payload(overrides: dict | None) -> dict:
+    return {
+        k: (v.isoformat() if isinstance(v, dt.datetime) else v)
+        for k, v in (overrides or {}).items()
+    }
+
+
+# Zet vastgelegde startwaarden terug naar de argumenten van calc_optimum().
+def _overrides_from_payload(payload: dict | None) -> dict:
+    overrides = dict(payload or {})
+    if overrides.get("_start_dt") is not None:
+        overrides["_start_dt"] = dt.datetime.fromisoformat(overrides["_start_dt"])
+    return overrides
+
+
+_CALC_OVERRIDE_NAMES = ("_start_dt", "_start_soc", "_start_ev_soc")
+
+
+# Leest de startwaarden uit het lopende calc_optimum()-frame, zodat ook hard ingevulde waarden worden vastgelegd.
+def _calc_overrides_from_stack() -> dict | None:
+    """Return the _start_dt/_start_soc/_start_ev_soc values that the running
+    calc_optimum() call is using, read from its frame, or None when not
+    called from inside calc_optimum(). Reading the frame (instead of the
+    call's arguments) also catches values hard-coded at the top of the
+    method, without changing day_ahead.py."""
+    frame = sys._getframe(1)
+    try:
+        while frame is not None:
+            code = frame.f_code
+            if code.co_name == "calc_optimum" and code.co_filename.endswith("day_ahead.py"):
+                values = frame.f_locals
+                return {
+                    name: values[name]
+                    for name in _CALC_OVERRIDE_NAMES
+                    if values.get(name) is not None
+                }
+            frame = frame.f_back
+        return None
+    finally:
+        del frame
+
+
+# Laat het proces tijdelijk in een andere tijdzone rekenen; geeft een functie terug die dat herstelt.
+def _set_process_tz(tz_name: str):
+    """Point the process-local timezone at ``tz_name`` and return a function
+    that restores the previous setting. POSIX only (time.tzset); elsewhere
+    this is a no-op and the replay keeps the machine's own zone."""
+    if not hasattr(time, "tzset"):
+        return lambda: None
+    previous = os.environ.get("TZ")
+    os.environ["TZ"] = tz_name
+    time.tzset()
+
+    # Herstelt de tijdzone van vóór de replay.
+    def restore():
+        if previous is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = previous
+        time.tzset()
+
+    return restore
+
+
+# Laat freezegun naive datetimes als lokale tijd omrekenen, net als de echte datetime.
+def _patch_fake_datetime_local(patches: _PatchList) -> None:
+    """freezegun converts naive datetimes with one fixed offset (UTC unless
+    ``tz_offset`` is given), while the real datetime uses the process zone,
+    including DST. calc_optimum() round-trips naive datetimes through
+    timestamp()/fromtimestamp(), and a datetime created before the clock was
+    frozen is a real one, so the two rules disagree by the UTC offset. These
+    overrides make the fake class follow the process zone as well. Must run
+    before freeze_time().start(), which picks up fake_localtime then."""
+    import freezegun.api as freezegun_api
+    from freezegun.api import FakeDatetime, datetime_to_fakedatetime, real_datetime
+
+    original_timestamp = FakeDatetime.timestamp
+
+    # Rekent een naive datetime om met de lokale zone van het proces.
+    def timestamp(self):
+        if self.tzinfo is None:
+            return real_datetime(
+                self.year, self.month, self.day, self.hour, self.minute,
+                self.second, self.microsecond, fold=self.fold,
+            ).timestamp()
+        return original_timestamp(self)
+
+    # Zet een epoch-tijd om naar een naive lokale datetime, zoals de echte fromtimestamp.
+    def fromtimestamp(cls, t, tz=None):
+        return datetime_to_fakedatetime(real_datetime.fromtimestamp(t, tz))
+
+    # freezegun's eigen versie trekt alleen time.timezone af en negeert zomertijd.
+    def fake_localtime(t=None):
+        return freezegun_api.real_localtime(freezegun_api.fake_time() if t is None else t)
+
+    patches.set(FakeDatetime, "timestamp", timestamp)
+    patches.set(FakeDatetime, "fromtimestamp", classmethod(fromtimestamp))
+    patches.set(freezegun_api, "fake_localtime", fake_localtime)
+
+
 # ---------------------------------------------------------------------------
 # ReplayIO
 # ---------------------------------------------------------------------------
@@ -1002,7 +1182,9 @@ class ReplayIO:
         self._patches = _PatchList()
         self._primary = None
         self._reads: set[str] = set()
+        self._post_solve_misses: set[str] = set()
         self._freeze = None  # freezegun handle, set in _install_patches
+        self._restore_tz = None  # set when _install_patches changes the process TZ
         self._model = None  # last mip.Model.optimize() was called on
         self._cbc_log_chunks: list[str] = []
 
@@ -1038,6 +1220,10 @@ class ReplayIO:
         # Vaste deel van de prijsdata, voor de dump-header.
         self._price_data = self._price_calls.first
         self._ha_states: dict[str, str] = self._snapshot.get("ha_states", {})
+        self._ha_state_errors: dict[str, str] = self._snapshot.get("ha_state_errors", {})
+        self._calc_overrides: dict = _overrides_from_payload(
+            self._snapshot.get("calc_overrides")
+        )
         self._baseload: dict[str, list] = self._snapshot.get("baseload", {})
         self._heatpump_run_hours: dict[str, float] = self._snapshot.get(
             "heatpump_run_hours", {}
@@ -1059,6 +1245,13 @@ class ReplayIO:
         run — lets a caller detect a scenario override that nothing
         actually consulted (e.g. an entity_id typo in a test fixture)."""
         return set(self._reads)
+
+    @property
+    # Geeft de entity's terug die pas na de solve werden opgevraagd en niet in de snapshot zaten.
+    def post_solve_misses(self) -> set[str]:
+        """Entity ids read after ``optimize()`` that the snapshot lacks and
+        that got a placeholder state instead of a ``SnapshotMiss``."""
+        return set(self._post_solve_misses)
 
     @property
     # Geeft de meta-sectie van de snapshot terug.
@@ -1104,12 +1297,36 @@ class ReplayIO:
             self._freeze.stop()
             self._freeze = None
         self._patches.restore()
+        if self._restore_tz is not None:
+            self._restore_tz()
+            self._restore_tz = None
         # Alle price/prog-reads vallen voor model.optimize(). Een run die eerder
         # stopte, heeft zijn eigen oorzaak; die mag deze check niet verbergen.
         if exc_type is None and self._model is not None:
             self._price_calls.check_consumed()
             self._prog_calls.check_consumed()
         return False
+
+    # Geeft de vastgelegde startwaarden mee aan calc_optimum(), tenzij de aanroeper ze zelf opgeeft.
+    def _install_calc_overrides(self, DaCalc) -> None:
+        """Pass the capture's own _start_dt/_start_soc/_start_ev_soc to
+        calc_optimum(). An argument the caller passes explicitly wins, so a
+        scenario or a `dump` can still choose its own start."""
+        import inspect
+
+        original_calc_optimum = DaCalc.calc_optimum
+        signature = inspect.signature(original_calc_optimum)
+        overrides = self._calc_overrides
+
+        # Vult ontbrekende startwaarden aan met die uit de snapshot.
+        def _wrapped_calc_optimum(instance, *args, **kwargs):
+            bound = signature.bind_partial(instance, *args, **kwargs)
+            for name, value in overrides.items():
+                if name in signature.parameters and bound.arguments.get(name) is None:
+                    bound.arguments[name] = value
+            return original_calc_optimum(*bound.args, **bound.kwargs)
+
+        self._patches.set(DaCalc, "calc_optimum", _wrapped_calc_optimum)
 
     # -- patch installation ----------------------------------------------
 
@@ -1122,7 +1339,15 @@ class ReplayIO:
                 f"ReplayIO ({self._source}): snapshot has no 'config' field; "
                 f"cannot replay without a config to construct DaBase from."
             )
-        rehydrated_config = _rehydrate_config(self._config_dict)
+        # A capture made inside the add-on has hasstoken=None (DaBase then
+        # falls back to $SUPERVISOR_TOKEN); outside the add-on that env var
+        # is absent and hassapi dies on a missing HASS_TOKEN. Replay never
+        # talks to HA, so the redaction marker is a sufficient token.
+        config_dict = copy.deepcopy(self._config_dict)
+        ha_cfg = config_dict.setdefault("homeassistant", {})
+        if ha_cfg.get("hasstoken") is None:
+            ha_cfg["hasstoken"] = REDACTED_SECRET
+        rehydrated_config = _rehydrate_config(config_dict)
         self._patches.set(DaBase, "_config", rehydrated_config)
         self._patches.set(DaBase, "_loader", _FakeLoader())
 
@@ -1134,6 +1359,8 @@ class ReplayIO:
             import dao.prog.day_ahead as day_ahead_module
 
             _install_cbc_log_capture(self._patches, day_ahead_module, self)
+            if self._calc_overrides:
+                self._install_calc_overrides(day_ahead_module.DaCalc)
         except ImportError:
             logger.warning(
                 "ReplayIO: kon day_ahead niet importeren; het CBC-log "
@@ -1158,10 +1385,33 @@ class ReplayIO:
 
         self._patches.set(DaBase, "__init__", _wrapped_init)
 
-        # Levert de opgeslagen state terug en faalt hard als de gevraagde entity niet in de snapshot zit.
+        # Levert de opgeslagen state terug en faalt hard als de gevraagde entity niet in de snapshot zit,
+        # behalve na de solve: dan krijgt de entity een placeholder.
         def _replay_get_state(instance, entity_id, *args, **kwargs):
             self._reads.add(entity_id)
+            if entity_id not in self._ha_states and entity_id in self._ha_state_errors:
+                raise RecordedReadError(
+                    f"ReplayIO ({self._source}): read of '{entity_id}' failed "
+                    f"during capture: {self._ha_state_errors[entity_id]}"
+                )
             if entity_id not in self._ha_states:
+                # Na optimize() leest calc_optimum() alleen nog states om
+                # te loggen en om HA-schrijfacties te kiezen, en die zijn in
+                # replay al no-ops. Een capture zonder oplossing komt nooit
+                # in die fase, dus zulke entity's ontbreken in de snapshot.
+                # "0" werkt zowel voor de on/off-vergelijkingen als voor de
+                # float() op de stooklijnaanpassing.
+                if self._model is not None:
+                    if entity_id not in self._post_solve_misses:
+                        logger.warning(
+                            "ReplayIO (%s): entity '%s' ontbreekt in de "
+                            "snapshot en wordt pas na de solve gelezen; "
+                            "placeholder '0' gebruikt",
+                            self._source,
+                            entity_id,
+                        )
+                    self._post_solve_misses.add(entity_id)
+                    return _FakeState("0")
                 raise SnapshotMiss(
                     f"ReplayIO ({self._source}): entity '{entity_id}' is not "
                     f"present in the snapshot's ha_states — either the "
@@ -1296,7 +1546,34 @@ class ReplayIO:
                 # 0.00 sec" on every replay, since day_ahead.py measures
                 # solve time with time.perf_counter(), and a fully static
                 # clock makes any two reads of it identical by construction.
-                self._freeze = freezegun.freeze_time(captured_at, tick=True)
+                #
+                # captured_at is a naive local time. Replay in the capture's
+                # own zone (meta.tz_name; older snapshots fall back to the
+                # HA time zone), freeze at that instant, and make freezegun's
+                # naive conversions follow the process zone. Otherwise naive
+                # datetimes are read as UTC and every timestamp shifts by the
+                # UTC offset (2 h in CEST).
+                anchor = dt.datetime.fromisoformat(captured_at)
+                tz_name = self.meta.get("tz_name") or (self._ha_context or {}).get("time_zone")
+                if tz_name and anchor.tzinfo is None:
+                    from zoneinfo import ZoneInfo
+
+                    try:
+                        zone = ZoneInfo(tz_name)
+                    except Exception:  # noqa: BLE001 - unknown zone: keep the old UTC behaviour
+                        logger.warning(
+                            "ReplayIO: onbekende tijdzone %r; replay rekent in UTC", tz_name
+                        )
+                    else:
+                        self._restore_tz = _set_process_tz(tz_name)
+                        anchor = anchor.replace(tzinfo=zone)
+                        _patch_fake_datetime_local(self._patches)
+                elif not tz_name:
+                    logger.warning(
+                        "ReplayIO: snapshot bevat geen tijdzone; replay rekent in UTC"
+                    )
+                tz_offset = anchor.utcoffset() or dt.timedelta(0)
+                self._freeze = freezegun.freeze_time(anchor, tick=True, tz_offset=tz_offset)
                 self._freeze.start()
         except ImportError:
             logger.warning(
@@ -2790,6 +3067,7 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
             # from failure below.
             dacalc.calc_optimum()
         reads = sorted(replay.reads)
+        post_solve_misses = sorted(replay.post_solve_misses)
         result_dict = replay.build_result()
         solved = replay._model is not None and replay._model.num_solutions > 0
     finally:
@@ -2812,6 +3090,7 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
         "snapshot": str(snapshot_path),
         "result": str(result_path) if result_path else None,
         "reads": reads,
+        "post_solve_misses": post_solve_misses,
         "offline": bool(args.offline),
         "threads": args.threads,
         "png": bool(args.png),
@@ -2824,6 +3103,11 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
         print(f"threads:  {d['threads']}" + (" (all cores — pass --threads 1 for reproducibility)" if d["threads"] == -1 else ""))
         print(f"png:      {d['png']}" + ("" if d["png"] else " (pass --png to keep the chart)"))
         print(f"entities read: {len(d['reads'])}")
+        if d["post_solve_misses"]:
+            print(
+                "not in snapshot, read after the solve (placeholder '0'): "
+                + ", ".join(d["post_solve_misses"])
+            )
         print(f"result:   {d['result']}" if d["result"] else "result:   not written (solve never reached model.optimize())")
 
     _emit(args, data, render)
@@ -3561,6 +3845,24 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         if a != b or a == c:
             raise AssertionError("_config_hash is not order-independent/discriminating")
 
+    # Controleert dat vastgelegde startwaarden heel terugkomen, inclusief de datetime.
+    def _calc_overrides_roundtrip():
+        start = dt.datetime(2026, 10, 4, 14, 15)
+        payload = json.loads(json.dumps(_overrides_to_payload({"_start_dt": start, "_start_soc": 25.35})))
+        back = _overrides_from_payload(payload)
+        if back != {"_start_dt": start, "_start_soc": 25.35}:
+            raise AssertionError(f"calc_overrides roundtrip changed the values: {back}")
+
+    # Controleert dat een brede except in calc_optimum() een SnapshotMiss niet kan inslikken.
+    def _snapshot_miss_escapes_broad_except():
+        try:
+            try:
+                raise SnapshotMiss("probe")
+            except Exception:
+                raise AssertionError("SnapshotMiss was caught by 'except Exception'") from None
+        except SnapshotMiss:
+            pass
+
     # Controleert dat de geheimenlek-check afgaat op een geplant geheim en niets doet bij schone data.
     def _secret_leak_gate():
         try:
@@ -3810,6 +4112,8 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         ("call_sequence_order", _call_sequence_order),
         ("config_hash_determinism", _config_hash_determinism),
         ("secret_leak_gate", _secret_leak_gate),
+        ("calc_overrides_roundtrip", _calc_overrides_roundtrip),
+        ("snapshot_miss_escapes_broad_except", _snapshot_miss_escapes_broad_except),
         ("patch_list_restore", _patch_list_restore_check),
         ("var_registry_nested_containers", _var_registry_nested_containers),
         ("shapes_completeness_fires_on_unknown_container", _shapes_completeness_fires_on_unknown_container),
