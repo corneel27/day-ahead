@@ -636,7 +636,7 @@ class RecordingIO:
         self._prog_calls: list[dict] = []
         self._ha_states: dict[str, str] = {}
         self._ha_state_errors: dict[str, str] = {}
-        self._calc_overrides: Optional[dict] = None
+        self._calc_overrides: dict | None = None
         self._baseload: dict[str, list] = {}
         self._heatpump_run_hours: dict[str, float] = {}
         self._avg_temperature: dict[str, float] = {}
@@ -995,7 +995,7 @@ def _git_sha() -> str | None:
 
 
 # Bepaalt de IANA-tijdzone van dit proces, zodat een replay in dezelfde zone rekent als de capture.
-def _local_tz_name() -> Optional[str]:
+def _local_tz_name() -> str | None:
     """IANA name of the process-local timezone, or None if it can't be
     determined. calc_optimum() works in naive local datetimes, so a replay
     must run in the same zone as the capture did."""
@@ -1027,7 +1027,7 @@ def _local_tz_name() -> Optional[str]:
 
 
 # Zet de startwaarden die calc_optimum() echt gebruikte om naar JSON.
-def _overrides_to_payload(overrides: Optional[dict]) -> dict:
+def _overrides_to_payload(overrides: dict | None) -> dict:
     return {
         k: (v.isoformat() if isinstance(v, dt.datetime) else v)
         for k, v in (overrides or {}).items()
@@ -1035,7 +1035,7 @@ def _overrides_to_payload(overrides: Optional[dict]) -> dict:
 
 
 # Zet vastgelegde startwaarden terug naar de argumenten van calc_optimum().
-def _overrides_from_payload(payload: Optional[dict]) -> dict:
+def _overrides_from_payload(payload: dict | None) -> dict:
     overrides = dict(payload or {})
     if overrides.get("_start_dt") is not None:
         overrides["_start_dt"] = dt.datetime.fromisoformat(overrides["_start_dt"])
@@ -1046,7 +1046,7 @@ _CALC_OVERRIDE_NAMES = ("_start_dt", "_start_soc", "_start_ev_soc")
 
 
 # Leest de startwaarden uit het lopende calc_optimum()-frame, zodat ook hard ingevulde waarden worden vastgelegd.
-def _calc_overrides_from_stack() -> Optional[dict]:
+def _calc_overrides_from_stack() -> dict | None:
     """Return the _start_dt/_start_soc/_start_ev_soc values that the running
     calc_optimum() call is using, read from its frame, or None when not
     called from inside calc_optimum(). Reading the frame (instead of the
@@ -1092,7 +1092,7 @@ def _set_process_tz(tz_name: str):
 
 
 # Laat freezegun naive datetimes als lokale tijd omrekenen, net als de echte datetime.
-def _patch_fake_datetime_local(patches: "_PatchList") -> None:
+def _patch_fake_datetime_local(patches: _PatchList) -> None:
     """freezegun converts naive datetimes with one fixed offset (UTC unless
     ``tz_offset`` is given), while the real datetime uses the process zone,
     including DST. calc_optimum() round-trips naive datetimes through
@@ -3859,7 +3859,7 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
             try:
                 raise SnapshotMiss("probe")
             except Exception:
-                raise AssertionError("SnapshotMiss was caught by 'except Exception'")
+                raise AssertionError("SnapshotMiss was caught by 'except Exception'") from None
         except SnapshotMiss:
             pass
 
