@@ -50,6 +50,7 @@
   - [FlexEnum](#flexenum)
   - [FlexFloat](#flexfloat)
   - [FlexInt](#flexint)
+  - [HaSensorsConfig](#hasensorsconfig)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
   - [PricePrediction](#priceprediction)
@@ -1578,6 +1579,21 @@ All entity fields accept lists of HA sensors:
 - **Battery**: Charge/discharge tracking
 - **Machines**: Appliance consumption
 
+## HA sensors
+
+DAO can write report series directly to Home Assistant entities:
+```json
+"ha_sensors": {
+  "include_price_prediction": false,
+  "da_cons": "sensor.dao_price_consumption",
+  "consumption": "sensor.dao_grid_consumption",
+  "bat_in": "sensor.dao_battery_in"
+}
+```
+Only the entities that are set are written. The state is the value of the
+current interval, the attribute `data` holds today and tomorrow in the
+format of the api. The entities are written after every optimization and by the scheduler task `push_ha_sensors`.
+
 ## Tips
 
 - Use energy sensors (kWh cumulative)
@@ -1603,6 +1619,7 @@ All entity fields accept lists of HA sensors:
 | `entities machine consumption` | list[[EntityId](#entityid)] | No | `null` | HA entities for machine consumption (Unit: `kWh`) |
 | `entity co2-intensity` | list[[EntityId](#entityid)] or [EntityId](#entityid) (optional) | No | `[]` | HA entity for CO2 intensity (Unit: `gCO2/kWh`) |
 | `sensors` | object (optional) | No | `null` | Additional sensors configuration |
+| `ha_sensors` | [HaSensorsConfig](#hasensorsconfig) | No | _See nested fields_ | Report data written to HA entities |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>
@@ -1655,6 +1672,10 @@ Optional: Home Assistant sensor for grid CO2 intensity (gCO2/kWh). Used to calcu
 
 Optional: Additional custom sensor configurations. Advanced use for extending reporting capabilities beyond standard entities.
 
+**`ha_sensors`**
+
+Optional: write report series (prices, grid, battery, pv, ...) of today and tomorrow directly to Home Assistant entities, instead of polling the api with REST sensors.
+
 </details>
 
 
@@ -1688,6 +1709,9 @@ Define when automatic tasks run using time patterns.
 ### Optimization
 - **calc_optimum**: Run main optimization algorithm
 - **calc_baseloads**: Calculate baseline consumption from history
+
+### Reporting
+- **push_ha_sensors**: Write the report data of today and tomorrow to the HA entities in report: ha_sensors (also done after every calc_optimum)
 
 ### Maintenance
 - **clean_data**: Clean up old data (runs save_days retention)
@@ -1963,6 +1987,131 @@ FlexValue enables dynamic configuration using Home Assistant entities. Instead o
 *No configuration fields.*
 
 
+### HaSensorsConfig
+
+_Report series that DAO writes to Home Assistant entities._
+
+Each entity gets the value of the current interval as state; the attribute 'data' holds today and tomorrow as a list of {time_ts, time, value, datatype} and the attribute 'last_update' the moment of the push (the same for all entities of one push). Entities that are not set are not written. The soc of a single battery is written for extra keys 'soc_0', 'soc_1', ... Each entity can be used for one series only. The entities are written after every optimization and by the task 'push_ha_sensors'.
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `include_price_prediction` | boolean | No | `false` | Include values in the price prediction range |
+| `da_ex` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the day-ahead spot price without taxes and markup (Unit: `EUR/kWh`) |
+| `da_cons` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the price of consumption (spot price with energy tax, supplier markup and VAT) (Unit: `EUR/kWh`) |
+| `da_prod` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the price of production (feed-in), including a production bonus (Unit: `EUR/kWh`) |
+| `consumption` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid consumption (Unit: `kW`) |
+| `production` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the grid production (Unit: `kW`) |
+| `netto_consumption` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the netto grid consumption (consumption - production) (Unit: `kW`) |
+| `cost` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the cost of the grid consumption (Unit: `EUR`) |
+| `profit` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the profit of the grid production (Unit: `EUR`) |
+| `netto_cost` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the netto cost (cost - profit) (Unit: `EUR`) |
+| `cons` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption in the energy balance (Unit: `kW`) |
+| `prod` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the production in the energy balance (Unit: `kW`) |
+| `bat_in` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the energy into the batteries (Unit: `kW`) |
+| `bat_out` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the energy out of the batteries (Unit: `kW`) |
+| `base` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the baseload (Unit: `kW`) |
+| `pv_ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the AC solar production (Unit: `kW`) |
+| `pv_dc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the DC solar production (Unit: `kW`) |
+| `ev` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the electric vehicles (Unit: `kW`) |
+| `wp` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the heat pump (Unit: `kW`) |
+| `boil` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the boiler (Unit: `kW`) |
+| `mach` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the consumption of the machines (Unit: `kW`) |
+| `soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the average state of charge of the batteries (Unit: `%`) |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`include_price_prediction`**
+
+When true the series run until the end of the optimization horizon, including the part with predicted prices (prices.prediction.extension). When false they stop at the last known day-ahead price.
+
+**`da_ex`**
+
+Optional: Home Assistant entity that receives the day-ahead spot price without taxes and markup of today and tomorrow. Not written when not set.
+
+**`da_cons`**
+
+Optional: Home Assistant entity that receives the price of consumption (spot price with energy tax, supplier markup and VAT) of today and tomorrow. Not written when not set.
+
+**`da_prod`**
+
+Optional: Home Assistant entity that receives the price of production (feed-in), including a production bonus of today and tomorrow. Not written when not set.
+
+**`consumption`**
+
+Optional: Home Assistant entity that receives the grid consumption of today and tomorrow. Not written when not set.
+
+**`production`**
+
+Optional: Home Assistant entity that receives the grid production of today and tomorrow. Not written when not set.
+
+**`netto_consumption`**
+
+Optional: Home Assistant entity that receives the netto grid consumption (consumption - production) of today and tomorrow. Not written when not set.
+
+**`cost`**
+
+Optional: Home Assistant entity that receives the cost of the grid consumption of today and tomorrow. Not written when not set.
+
+**`profit`**
+
+Optional: Home Assistant entity that receives the profit of the grid production of today and tomorrow. Not written when not set.
+
+**`netto_cost`**
+
+Optional: Home Assistant entity that receives the netto cost (cost - profit) of today and tomorrow. Not written when not set.
+
+**`cons`**
+
+Optional: Home Assistant entity that receives the consumption in the energy balance of today and tomorrow. Not written when not set.
+
+**`prod`**
+
+Optional: Home Assistant entity that receives the production in the energy balance of today and tomorrow. Not written when not set.
+
+**`bat_in`**
+
+Optional: Home Assistant entity that receives the energy into the batteries of today and tomorrow. Not written when not set.
+
+**`bat_out`**
+
+Optional: Home Assistant entity that receives the energy out of the batteries of today and tomorrow. Not written when not set.
+
+**`base`**
+
+Optional: Home Assistant entity that receives the baseload of today and tomorrow. Not written when not set.
+
+**`pv_ac`**
+
+Optional: Home Assistant entity that receives the AC solar production of today and tomorrow. Not written when not set.
+
+**`pv_dc`**
+
+Optional: Home Assistant entity that receives the DC solar production of today and tomorrow. Not written when not set.
+
+**`ev`**
+
+Optional: Home Assistant entity that receives the consumption of the electric vehicles of today and tomorrow. Not written when not set.
+
+**`wp`**
+
+Optional: Home Assistant entity that receives the consumption of the heat pump of today and tomorrow. Not written when not set.
+
+**`boil`**
+
+Optional: Home Assistant entity that receives the consumption of the boiler of today and tomorrow. Not written when not set.
+
+**`mach`**
+
+Optional: Home Assistant entity that receives the consumption of the machines of today and tomorrow. Not written when not set.
+
+**`soc`**
+
+Optional: Home Assistant entity that receives the average state of charge of the batteries of today and tomorrow. Not written when not set.
+
+</details>
+
+
 ### HeatingStage
 
 _Single heating stage with power and COP._
@@ -2051,7 +2200,7 @@ _A single scheduled task entry._
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `time` | string | Yes | — | Time pattern in HHMM format _Format: HHMM (24-hour, e.g., '0435', 'xx15')_ |
-| `action` | string | Yes | — | Action to execute at this time. Options: `calc_optimum_met_debug`, `calc_optimum`, `get_tibber_data`, `get_meteo_data`, `get_day_ahead_prices`, `get_predicted_prices`, `calc_baseloads`, `clean_data`, `train_ml_predictions`, `consolidate` |
+| `action` | string | Yes | — | Action to execute at this time. Options: `calc_optimum_met_debug`, `calc_optimum`, `get_tibber_data`, `get_meteo_data`, `get_day_ahead_prices`, `get_predicted_prices`, `calc_baseloads`, `clean_data`, `train_ml_predictions`, `push_ha_sensors`, `consolidate` |
 
 <details>
 <summary><b>📖 Field Details</b> (click to expand)</summary>

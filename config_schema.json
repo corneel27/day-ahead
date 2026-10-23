@@ -1583,6 +1583,358 @@
       "x-help": "Home Assistant database connection for reading historical sensor data (prices, solar, baseload).",
       "x-ui-group": "Integration"
     },
+    "HaSensorsConfig": {
+      "additionalProperties": true,
+      "description": "Report series that DAO writes to Home Assistant entities.",
+      "properties": {
+        "include_price_prediction": {
+          "default": false,
+          "description": "Include values in the price prediction range",
+          "title": "Include Price Prediction",
+          "type": "boolean",
+          "x-help": "When true the series run until the end of the optimization horizon, including the part with predicted prices (prices.prediction.extension). When false they stop at the last known day-ahead price."
+        },
+        "da_ex": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the day-ahead spot price without taxes and markup",
+          "x-help": "Optional: Home Assistant entity that receives the day-ahead spot price without taxes and markup of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "EUR/kWh",
+          "title": "Da Ex"
+        },
+        "da_cons": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the price of consumption (spot price with energy tax, supplier markup and VAT)",
+          "x-help": "Optional: Home Assistant entity that receives the price of consumption (spot price with energy tax, supplier markup and VAT) of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "EUR/kWh",
+          "title": "Da Cons"
+        },
+        "da_prod": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the price of production (feed-in), including a production bonus",
+          "x-help": "Optional: Home Assistant entity that receives the price of production (feed-in), including a production bonus of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "EUR/kWh",
+          "title": "Da Prod"
+        },
+        "consumption": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the grid consumption",
+          "x-help": "Optional: Home Assistant entity that receives the grid consumption of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Consumption"
+        },
+        "production": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the grid production",
+          "x-help": "Optional: Home Assistant entity that receives the grid production of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Production"
+        },
+        "netto_consumption": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the netto grid consumption (consumption - production)",
+          "x-help": "Optional: Home Assistant entity that receives the netto grid consumption (consumption - production) of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Netto Consumption"
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the cost of the grid consumption",
+          "x-help": "Optional: Home Assistant entity that receives the cost of the grid consumption of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "EUR",
+          "title": "Cost"
+        },
+        "profit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the profit of the grid production",
+          "x-help": "Optional: Home Assistant entity that receives the profit of the grid production of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "EUR",
+          "title": "Profit"
+        },
+        "netto_cost": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the netto cost (cost - profit)",
+          "x-help": "Optional: Home Assistant entity that receives the netto cost (cost - profit) of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "EUR",
+          "title": "Netto Cost"
+        },
+        "cons": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the consumption in the energy balance",
+          "x-help": "Optional: Home Assistant entity that receives the consumption in the energy balance of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Cons"
+        },
+        "prod": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the production in the energy balance",
+          "x-help": "Optional: Home Assistant entity that receives the production in the energy balance of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Prod"
+        },
+        "bat_in": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the energy into the batteries",
+          "x-help": "Optional: Home Assistant entity that receives the energy into the batteries of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Bat In"
+        },
+        "bat_out": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the energy out of the batteries",
+          "x-help": "Optional: Home Assistant entity that receives the energy out of the batteries of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Bat Out"
+        },
+        "base": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the baseload",
+          "x-help": "Optional: Home Assistant entity that receives the baseload of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Base"
+        },
+        "pv_ac": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the AC solar production",
+          "x-help": "Optional: Home Assistant entity that receives the AC solar production of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Pv Ac"
+        },
+        "pv_dc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the DC solar production",
+          "x-help": "Optional: Home Assistant entity that receives the DC solar production of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Pv Dc"
+        },
+        "ev": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the consumption of the electric vehicles",
+          "x-help": "Optional: Home Assistant entity that receives the consumption of the electric vehicles of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Ev"
+        },
+        "wp": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the consumption of the heat pump",
+          "x-help": "Optional: Home Assistant entity that receives the consumption of the heat pump of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Wp"
+        },
+        "boil": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the consumption of the boiler",
+          "x-help": "Optional: Home Assistant entity that receives the consumption of the boiler of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Boil"
+        },
+        "mach": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the consumption of the machines",
+          "x-help": "Optional: Home Assistant entity that receives the consumption of the machines of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "kW",
+          "title": "Mach"
+        },
+        "soc": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "HA entity for the average state of charge of the batteries",
+          "x-help": "Optional: Home Assistant entity that receives the average state of charge of the batteries of today and tomorrow. Not written when not set.",
+          "x-ui-widget-filter": "sensor",
+          "x-unit": "%",
+          "title": "Soc"
+        }
+      },
+      "title": "HaSensorsConfig",
+      "type": "object",
+      "x-help": "Each entity gets the value of the current interval as state; the attribute 'data' holds today and tomorrow as a list of {time_ts, time, value, datatype} and the attribute 'last_update' the moment of the push (the same for all entities of one push). Entities that are not set are not written. The soc of a single battery is written for extra keys 'soc_0', 'soc_1', ... Each entity can be used for one series only. The entities are written after every optimization and by the task 'push_ha_sensors'."
+    },
     "HeatingDisabled": {
       "additionalProperties": true,
       "description": "Heating system disabled — only heater_present is required.",
@@ -2604,12 +2956,19 @@
           "title": "Sensors",
           "x-help": "Optional: Additional custom sensor configurations. Advanced use for extending reporting capabilities beyond standard entities.",
           "x-ui-section": "General"
+        },
+        "ha_sensors": {
+          "$ref": "#/$defs/HaSensorsConfig",
+          "description": "Report data written to HA entities",
+          "x-help": "Optional: write report series (prices, grid, battery, pv, ...) of today and tomorrow directly to Home Assistant entities, instead of polling the api with REST sensors.",
+          "x-ui-section": "HA sensors",
+          "title": "Ha Sensors"
         }
       },
       "title": "ReportConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Reports",
-      "x-help": "# Reporting & Sensors Configuration\n\nConfigure Home Assistant sensors for comprehensive energy reporting.\n\n## Purpose\n\nConnect actual energy measurements to Day Ahead Optimizer:\n- Compare actual vs optimized usage\n- Track device-specific consumption\n- Calculate efficiency metrics\n- Generate cost reports\n- Monitor carbon footprint\n\n## Entity Lists\n\nAll entity fields accept lists of HA sensors:\n```json\n\"entities_grid_consumption\": [\n  \"sensor.grid_import_meter\",\n  \"sensor.backup_meter\"\n]\n```\n\n## Key Measurements\n\n### Grid\n- **Consumption**: Total import from grid\n- **Production**: Total export/feed-in to grid\n\n### Solar\n- **AC**: After inverter, to AC distribution\n- **DC**: Before inverter, directly to battery\n\n### Devices\n- **EV**: Charging consumption\n- **Heat Pump**: Heating/cooling consumption\n- **Boiler**: Hot water heating consumption\n- **Battery**: Charge/discharge tracking\n- **Machines**: Appliance consumption\n\n## Tips\n\n- Use energy sensors (kWh cumulative)\n- Multiple sensors per category are summed\n- Essential for accurate cost reporting\n- CO2 tracking optional but insightful\n- Update when adding new monitoring devices\n",
+      "x-help": "# Reporting & Sensors Configuration\n\nConfigure Home Assistant sensors for comprehensive energy reporting.\n\n## Purpose\n\nConnect actual energy measurements to Day Ahead Optimizer:\n- Compare actual vs optimized usage\n- Track device-specific consumption\n- Calculate efficiency metrics\n- Generate cost reports\n- Monitor carbon footprint\n\n## Entity Lists\n\nAll entity fields accept lists of HA sensors:\n```json\n\"entities_grid_consumption\": [\n  \"sensor.grid_import_meter\",\n  \"sensor.backup_meter\"\n]\n```\n\n## Key Measurements\n\n### Grid\n- **Consumption**: Total import from grid\n- **Production**: Total export/feed-in to grid\n\n### Solar\n- **AC**: After inverter, to AC distribution\n- **DC**: Before inverter, directly to battery\n\n### Devices\n- **EV**: Charging consumption\n- **Heat Pump**: Heating/cooling consumption\n- **Boiler**: Hot water heating consumption\n- **Battery**: Charge/discharge tracking\n- **Machines**: Appliance consumption\n\n## HA sensors\n\nDAO can write report series directly to Home Assistant entities:\n```json\n\"ha_sensors\": {\n  \"include_price_prediction\": false,\n  \"da_cons\": \"sensor.dao_price_consumption\",\n  \"consumption\": \"sensor.dao_grid_consumption\",\n  \"bat_in\": \"sensor.dao_battery_in\"\n}\n```\nOnly the entities that are set are written. The state is the value of the\ncurrent interval, the attribute `data` holds today and tomorrow in the\nformat of the api. The entities are written after every optimization and by the scheduler task `push_ha_sensors`.\n\n## Tips\n\n- Use energy sensors (kWh cumulative)\n- Multiple sensors per category are summed\n- Essential for accurate cost reporting\n- CO2 tracking optional but insightful\n- Update when adding new monitoring devices\n",
       "x-icon": "chart-bar",
       "x-order": 17,
       "x-ui-group": "Reporting"
@@ -2636,6 +2995,7 @@
             "calc_baseloads",
             "clean_data",
             "train_ml_predictions",
+            "push_ha_sensors",
             "consolidate"
           ],
           "title": "Action",
@@ -2696,7 +3056,7 @@
       "title": "SchedulerConfig",
       "type": "object",
       "x-docs-url": "https://github.com/corneel27/day-ahead/wiki/Scheduler",
-      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"active\": true,\n  \"schedule\": [\n    {\"time\": \"0435\", \"action\": \"get_day_ahead_prices\"},\n    {\"time\": \"0445\", \"action\": \"get_meteo_data\"},\n    {\"time\": \"0500\", \"action\": \"calc_optimum\"},\n    {\"time\": \"xx00\", \"action\": \"calc_baseloads\"},\n    {\"time\": \"0300\", \"action\": \"clean_data\"}\n  ]\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)\n2. **05:00**: Run optimization with fresh data\n3. **Hourly**: Update baseload calculations\n4. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
+      "x-help": "# Scheduler Configuration\n\nDefine when automatic tasks run using time patterns.\n\n## Time Pattern Format\n\n- **Specific time**: \"0435\" (4:35 AM), \"1255\" (12:55 PM)\n- **Hourly wildcard**: \"xx00\" (every hour at :00), \"xx15\" (every hour at :15)\n- **Format**: HHMM (24-hour, no colons)\n\n## Available Actions\n\n### Data Collection\n- **get_meteo_data**: Fetch weather forecasts (solar irradiation, temperature)\n- **get_tibber_data**: Fetch Tibber prices (if using Tibber)\n- **get_day_ahead_prices**: Fetch day-ahead market prices\n\n### Optimization\n- **calc_optimum**: Run main optimization algorithm\n- **calc_baseloads**: Calculate baseline consumption from history\n\n### Reporting\n- **push_ha_sensors**: Write the report data of today and tomorrow to the HA entities in report: ha_sensors (also done after every calc_optimum)\n\n### Maintenance\n- **clean_data**: Clean up old data (runs save_days retention)\n\n## Example Configuration\n\n```json\n{\n  \"active\": true,\n  \"schedule\": [\n    {\"time\": \"0435\", \"action\": \"get_day_ahead_prices\"},\n    {\"time\": \"0445\", \"action\": \"get_meteo_data\"},\n    {\"time\": \"0500\", \"action\": \"calc_optimum\"},\n    {\"time\": \"xx00\", \"action\": \"calc_baseloads\"},\n    {\"time\": \"0300\", \"action\": \"clean_data\"}\n  ]\n}\n```\n\n## Typical Schedule\n\n1. **04:00-05:00**: Fetch prices and weather (after day-ahead auction)\n2. **05:00**: Run optimization with fresh data\n3. **Hourly**: Update baseload calculations\n4. **03:00**: Clean old data (low activity time)\n\n## Tips\n\n- Day-ahead prices available after ~13:00 (CET) for next day\n- Run optimization after all data fetched\n- Hourly baseload updates improve accuracy\n- Clean data during low activity (night)\n- Avoid overlapping long-running tasks\n",
       "x-icon": "clock-outline",
       "x-order": 18,
       "x-ui-group": "DAO"

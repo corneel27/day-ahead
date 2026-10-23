@@ -73,6 +73,12 @@ tasks: dict[str, dict[str, str | list[str] | bool]] = {
         "aliases": ["train"],
         "ui_enabled": True,
     },
+    "push_ha_sensors": {
+        "name": "Rapportage naar HA-sensoren schrijven",
+        "cmd": ["python3", "day_ahead.py", "push_ha_sensors"],
+        "function": "push_ha_sensors",
+        "file_name": "ha_sensors",
+    },
     "consolidate": {
         "name": "Verbruik/productie consolideren",
         "cmd": ["python3", "day_ahead.py", "consolidate"],
