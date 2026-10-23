@@ -1,6 +1,7 @@
 """
 Tests for the heating configuration: the configurable degree-days base temperature
-(stookgrens), which falls back to 16 °C when it is not configured.
+(stookgrens), which falls back to 16 °C when it is not configured, and the COP
+temperature curve.
 """
 
 import pytest
@@ -10,6 +11,7 @@ from dao.prog.config.models.devices.heating import (
     HeatingConfig,
     HeatingDisabled,
     HeatingEnabled,
+    cop_temperature_factor,
 )
 
 STAGES = [{"max_power": 1000, "cop": 4.0}]
@@ -28,7 +30,6 @@ def heating_with(base_temperature) -> dict:
 
 
 class TestDegreeDaysBaseTemperature:
-
     def test_defaults_to_16_when_not_configured(self):
         result = parse_heating({"heater present": True, "stages": STAGES})
         assert isinstance(result, HeatingEnabled)
@@ -67,3 +68,63 @@ class TestDegreeDaysBaseTemperature:
     def test_disabled_heating_needs_no_base_temperature(self):
         result = parse_heating({"heater present": False})
         assert isinstance(result, HeatingDisabled)
+
+
+CURVE = [
+    {"temperature": -4.0, "factor": 0.66},
+    {"temperature": 7.0, "factor": 1.0},
+    {"temperature": 14.0, "factor": 1.22},
+]
+
+
+def heating_with_curve(curve) -> dict:
+    return {"heater present": True, "stages": STAGES, "cop_temperature_curve": curve}
+
+
+class TestCopTemperatureCurve:
+    def test_defaults_to_no_curve(self):
+        result = parse_heating({"heater present": True, "stages": STAGES})
+        assert result.cop_temperature_curve == []
+        assert cop_temperature_factor(result.cop_temperature_curve, -10.0) == 1.0
+
+    def test_factor_at_a_point(self):
+        curve = parse_heating(heating_with_curve(CURVE)).cop_temperature_curve
+        assert cop_temperature_factor(curve, 7.0) == pytest.approx(1.0)
+        assert cop_temperature_factor(curve, -4.0) == pytest.approx(0.66)
+
+    def test_factor_is_interpolated_between_points(self):
+        curve = parse_heating(heating_with_curve(CURVE)).cop_temperature_curve
+        assert cop_temperature_factor(curve, 10.5) == pytest.approx(1.11)
+        assert cop_temperature_factor(curve, 1.5) == pytest.approx(0.83)
+
+    def test_factor_is_clamped_outside_the_curve(self):
+        curve = parse_heating(heating_with_curve(CURVE)).cop_temperature_curve
+        assert cop_temperature_factor(curve, -15.0) == pytest.approx(0.66)
+        assert cop_temperature_factor(curve, 25.0) == pytest.approx(1.22)
+
+    def test_single_point_gives_a_constant_factor(self):
+        curve = parse_heating(
+            heating_with_curve([{"temperature": 7.0, "factor": 0.9}])
+        ).cop_temperature_curve
+        assert cop_temperature_factor(curve, -10.0) == pytest.approx(0.9)
+        assert cop_temperature_factor(curve, 20.0) == pytest.approx(0.9)
+
+    def test_unsorted_curve_is_rejected(self):
+        with pytest.raises(ValidationError):
+            parse_heating(heating_with_curve(list(reversed(CURVE))))
+
+    def test_duplicate_temperature_is_rejected(self):
+        with pytest.raises(ValidationError):
+            parse_heating(heating_with_curve([CURVE[0], CURVE[0]]))
+
+    def test_non_positive_factor_is_rejected(self):
+        with pytest.raises(ValidationError):
+            parse_heating(heating_with_curve([{"temperature": 7.0, "factor": 0.0}]))
+
+    def test_survives_serialisation(self):
+        dumped = parse_heating(heating_with_curve(CURVE)).model_dump()
+        assert dumped["cop_temperature_curve"] == CURVE
+
+    def test_has_no_alias(self):
+        field = HeatingEnabled.model_fields["cop_temperature_curve"]
+        assert field.alias is None

@@ -697,6 +697,35 @@
       "x-ui-group": "Heating",
       "x-ui-section": "Boiler"
     },
+    "CopTemperaturePoint": {
+      "description": "Point of the COP temperature curve: a COP factor at an outdoor temperature.",
+      "properties": {
+        "temperature": {
+          "description": "Outdoor temperature in °C",
+          "title": "Temperature",
+          "type": "number",
+          "x-help": "Outdoor temperature in °C at which the factor applies.",
+          "x-ui-section": "General",
+          "x-unit": "°C"
+        },
+        "factor": {
+          "description": "COP factor at this outdoor temperature",
+          "exclusiveMinimum": 0,
+          "title": "Factor",
+          "type": "number",
+          "x-help": "Factor applied to every stage COP at this outdoor temperature. 1.0 at the temperature the stage COPs are given for (e.g. 7 °C, the A7 rating point).",
+          "x-ui-section": "General",
+          "x-unit": "factor",
+          "x-validation-hint": "Must be > 0"
+        }
+      },
+      "required": [
+        "temperature",
+        "factor"
+      ],
+      "title": "CopTemperaturePoint",
+      "type": "object"
+    },
     "DashboardConfig": {
       "additionalProperties": true,
       "description": "Dashboard web UI configuration.",
@@ -1678,6 +1707,18 @@
           "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending. When a 0 W stage is missed this is supplied by the program.",
           "x-ui-section": "Power Stages",
           "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power"
+        },
+        "cop_temperature_curve": {
+          "default": [],
+          "description": "COP factor per outdoor temperature",
+          "items": {
+            "$ref": "#/$defs/CopTemperaturePoint"
+          },
+          "title": "Cop Temperature Curve",
+          "type": "array",
+          "x-help": "Optional: how the COP changes with the outdoor temperature. Each point gives a factor on all stage COPs at an outdoor temperature; between points the factor is interpolated linearly, outside them the nearest point's factor is used. The stage COPs are then the COPs at the temperature where the factor is 1.0 (e.g. 7 °C). For every interval the factor at the forecast temperature (meteo) is used, so the heat pump is planned in the warmer hours when the higher COP outweighs the price. Empty: the stage COPs are used for every temperature.",
+          "x-ui-section": "Power Stages",
+          "x-validation-hint": "Sorted by temperature (ascending), factors > 0"
         },
         "entity adjust heating curve": {
           "anyOf": [
