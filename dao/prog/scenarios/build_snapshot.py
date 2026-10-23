@@ -188,7 +188,7 @@ def build_snapshot(scenario: Scenario, *, config: dict | None = None, ev_states:
         "baseload": {str(d): list(baseload_hourly) for d in range(7)},
         "heatpump_run_hours": _heatpump_hours_channel(scenario),
         "avg_temperature": _avg_temperature_channel(scenario),
-        "solar_predictions": {},
+        "solar_prediction_calls": {},
         "config": cfg,
     }
 

@@ -67,7 +67,10 @@ logger = logging.getLogger(__name__)
 
 # 2: price_data/prog_data are recorded per call (price_data_calls,
 # prog_data_calls) instead of as one frame. Schema-1 snapshots still replay.
-SCHEMA_VERSION = 2
+# 3: the ML solar forecast is recorded per call and per device
+# (solar_prediction_calls) instead of one frame per device. With a horizon
+# extension each device is asked twice. Older snapshots still replay.
+SCHEMA_VERSION = 3
 SCHEMA_MIN_SUPPORTED = 1
 
 REDACTED_SECRET = "<redacted:SecretStr>"
@@ -209,15 +212,23 @@ def _dataframe_from_payload(payload: dict) -> pd.DataFrame:
             continue
         try:
             if dtype.startswith("datetime64"):
-                df[col] = pd.to_datetime(df[col])
+                values = pd.to_datetime(df[col])
+                # to_json schrijft tz-aware tijden als UTC ("...Z"); zet ze terug
+                # naar de opgeslagen zone, anders verschuift elke lokale vergelijking.
+                tz = getattr(pd.api.types.pandas_dtype(dtype), "tz", None)
+                if tz is not None:
+                    if values.dt.tz is None:
+                        values = values.dt.tz_localize("UTC")
+                    values = values.dt.tz_convert(tz)
+                df[col] = values
             else:
                 df[col] = df[col].astype(dtype)
         except (TypeError, ValueError) as ex:
             logger.warning("Kon dtype %s van kolom %s niet herstellen: %s", dtype, col, ex)
     # Only coerce the index to datetime if it genuinely was one — blindly
     # doing this for every non-empty frame (the original bug) silently
-    # corrupted plain integer/RangeIndex frames, e.g. solar_predictions'
-    # results, which have no datetime index at all.
+    # corrupted plain integer/RangeIndex frames, e.g. the ML solar
+    # forecasts, which have no datetime index at all.
     if payload.get("index_is_datetime"):
         df.index = pd.to_datetime(df.index)
     df.index.name = payload.get("index_name")
@@ -244,7 +255,9 @@ class _CallSequence:
     """Replay side of a channel that ``calc_optimum()`` calls several times
     with different windows: ``Report.get_price_data`` (fixed day-ahead part,
     then the predicted extension) and ``get_prognose_data`` (the same two
-    parts, plus one call per solar device from ``calc_solar_predictions``).
+    parts, plus one call per solar device from ``calc_solar_predictions``),
+    and ``SolarPredictor.predict_solar_device`` per device (fixed part and
+    predicted part, one sequence per device).
 
     Recorded calls are served in call order. The n-th replayed call gets the
     n-th recorded frame, after a check that ``interval`` and ``extension``
@@ -305,6 +318,24 @@ class _CallSequence:
                 f"{self._next} of {len(self._records)} recorded call(s). "
                 f"calc_optimum() now skips a call the recorded run made."
             )
+
+
+# Bouwt per paneel de call sequence van de ML-zonnevoorspelling, ook uit een oudere snapshot.
+def _solar_call_sequences(snapshot: dict, source: str) -> dict[str, _CallSequence]:
+    """Schema 3 holds ``solar_prediction_calls`` ({device: [records]}).
+    Older snapshots hold ``solar_predictions``, one frame per device keyed
+    by ``_call_key((name,), {})``; that frame is served for every call, as
+    replay did before."""
+    sequences: dict[str, _CallSequence] = {}
+    for name, records in (snapshot.get("solar_prediction_calls") or {}).items():
+        sequences[name] = _CallSequence(f"solar prediction {name!r}", source, records)
+    for key, payload in (snapshot.get("solar_predictions") or {}).items():
+        name = json.loads(key)[0][0]
+        if name not in sequences:
+            sequences[name] = _CallSequence(
+                f"solar prediction {name!r}", source, None, _dataframe_from_payload(payload)
+            )
+    return sequences
 
 
 # Leest het enkele frame uit een schema-1-snapshot, of None als dat er niet is.
@@ -640,7 +671,7 @@ class RecordingIO:
         self._baseload: dict[str, list] = {}
         self._heatpump_run_hours: dict[str, float] = {}
         self._avg_temperature: dict[str, float] = {}
-        self._solar_predictions: dict[str, pd.DataFrame] = {}
+        self._solar_calls: dict[str, list[dict]] = {}
         self._captured_at = dt.datetime.now()
         self._model = None  # last mip.Model.optimize() was called on
         self._cbc_log_chunks: list[str] = []
@@ -810,21 +841,19 @@ class RecordingIO:
         # DB primitives generically.
         original_predict_solar_device = SolarPredictor.predict_solar_device
 
-        # Roept de echte ML-zonnevoorspelling aan en bewaart het resultaat per paneelnaam, niet per tijdvenster, want dat laatste kan meer drift geven dan bedoeld.
+        # Roept de echte ML-zonnevoorspelling aan en bewaart elke aanroep op volgorde, per paneel.
         def _wrapped_predict_solar_device(instance, solar_option, start, end):
             result = original_predict_solar_device(instance, solar_option, start, end)
-            # Keyed by device name only, not (start, end): those two are
-            # themselves derived from calc_optimum()'s own internal
-            # dt.datetime.now() call, which fires strictly later than (and
-            # therefore can drift from) RecordingIO's own captured_at
-            # timestamp — a live run's DB/HA setup alone can take long
-            # enough to cross an interval boundary between the two. There
-            # is only ever one legitimate (start, end) window per device
-            # per snapshot anyway, so the name alone is both sufficient
-            # and immune to that drift. Found by an actual capture/replay
-            # round trip against a live config, not by reasoning about it.
-            key = _call_key((getattr(solar_option, "name", None),), {})
-            self._solar_predictions[key] = result
+            # One call sequence per device name. With a horizon extension
+            # calc_optimum() asks every device twice (fixed part, then the
+            # predicted part), so one frame per device loses the first one.
+            # start/end are recorded but not matched on replay: they come
+            # from calc_optimum()'s own dt.datetime.now(), which can drift
+            # from the frozen replay clock across an interval boundary.
+            name = getattr(solar_option, "name", None)
+            self._solar_calls.setdefault(name, []).append(
+                _sequence_record({"start": start, "end": end}, result)
+            )
             return result
 
         self._patches.set(SolarPredictor, "predict_solar_device", _wrapped_predict_solar_device)
@@ -932,9 +961,7 @@ class RecordingIO:
             "baseload": self._baseload,
             "heatpump_run_hours": self._heatpump_run_hours,
             "avg_temperature": self._avg_temperature,
-            "solar_predictions": {
-                key: _dataframe_to_payload(df) for key, df in self._solar_predictions.items()
-            },
+            "solar_prediction_calls": self._solar_calls,
             "config": sanitized_config,
         }
 
@@ -1231,10 +1258,9 @@ class ReplayIO:
         self._avg_temperature: dict[str, float] = self._snapshot.get(
             "avg_temperature", {}
         )
-        self._solar_predictions: dict[str, pd.DataFrame] = {
-            key: _dataframe_from_payload(payload)
-            for key, payload in self._snapshot.get("solar_predictions", {}).items()
-        }
+        self._solar_calls: dict[str, _CallSequence] = _solar_call_sequences(
+            self._snapshot, self._source
+        )
         self._ha_context = self._snapshot.get("ha_context")
         self._config_dict = self._snapshot.get("config")
 
@@ -1305,6 +1331,8 @@ class ReplayIO:
         if exc_type is None and self._model is not None:
             self._price_calls.check_consumed()
             self._prog_calls.check_consumed()
+            for calls in self._solar_calls.values():
+                calls.check_consumed()
         return False
 
     # Geeft de vastgelegde startwaarden mee aan calc_optimum(), tenzij de aanroeper ze zelf opgeeft.
@@ -1422,7 +1450,9 @@ class ReplayIO:
         self._patches.set(DaBase, "get_state", _replay_get_state)
 
         # Levert de opgeslagen baseload terug voor de gevraagde weekdag en faalt hard als die ontbreekt.
-        def _replay_baseload(instance, weekday, *args, **kwargs):
+        # Een staticmethod, net als DaBase.get_calculated_baseload zelf, zodat een
+        # RecordingIO bovenop deze replay hem op dezelfde manier aanroept.
+        def _replay_baseload(weekday, *args, **kwargs):
             key = str(int(weekday))
             if key not in self._baseload:
                 raise SnapshotMiss(
@@ -1431,7 +1461,7 @@ class ReplayIO:
                 )
             return self._baseload[key]
 
-        self._patches.set(DaBase, "get_calculated_baseload", _replay_baseload)
+        self._patches.set(DaBase, "get_calculated_baseload", staticmethod(_replay_baseload))
 
         # Levert de opgeslagen prijsdata terug in plaats van een databasequery uit te voeren.
         def _replay_get_price_data(instance, start, end=None, interval="1hour", extension: int = 0):
@@ -1471,16 +1501,14 @@ class ReplayIO:
 
         # Levert de opgeslagen zonnevoorspelling terug op paneelnaam, ongevoelig voor een afwijkend tijdvenster.
         def _replay_predict_solar_device(instance, solar_option, start, end):
-            # Keyed by device name only — see the matching comment on the
-            # RecordingIO side for why (start, end) is deliberately excluded.
-            key = _call_key((getattr(solar_option, "name", None),), {})
-            if key not in self._solar_predictions:
+            # Per paneel op volgorde; start/end worden niet vergeleken, zie RecordingIO.
+            name = getattr(solar_option, "name", None)
+            if name not in self._solar_calls:
                 raise SnapshotMiss(
                     f"ReplayIO ({self._source}): predict_solar_device for "
-                    f"{getattr(solar_option, 'name', '?')!r} is not present "
-                    f"in the snapshot (looked up as key {key})."
+                    f"{name!r} is not present in the snapshot."
                 )
-            return self._solar_predictions[key].copy()
+            return self._solar_calls[name].serve(start=start, end=end)
 
         self._patches.set(SolarPredictor, "predict_solar_device", _replay_predict_solar_device)
 

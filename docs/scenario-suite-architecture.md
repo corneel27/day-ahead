@@ -238,8 +238,11 @@ mirrors `get_heatpump_run_hours`:
 day_ahead.py normally calls a trained ML model to predict the production of each
 solar array. `predict_solar_device`, the ML call one level below
 `calc_solar_predictions`, already has a `da_debug.py` channel
-(`solar_predictions`, recorded and replayed like the heat-pump channel). So real
-capture and replay of a solar installation worked before this suite existed.
+(`solar_prediction_calls`, one call sequence per device, recorded and replayed
+like the price and meteo channels). With a horizon extension each device is
+asked twice, once for the fixed part and once for the predicted part. The
+round trip in `dao/tests/prog/test_capture_replay_roundtrip.py` records a run
+with ML solar and checks that the replay sees the same forecasts.
 
 A synthetic scenario has no trained model file and no real capture that could have
 recorded one. `options_example.json` sets `solar[*].ml_prediction: false` (§3),
