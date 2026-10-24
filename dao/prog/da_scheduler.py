@@ -9,7 +9,7 @@ from da_base import DaBase
 # maximale looptijd in seconden van een geplande taak; een taak die
 # blijft hangen (bijvoorbeeld op een verbinding die is weggevallen) wordt
 # daarna gestopt, zodat de volgende geplande taken weer kunnen draaien
-TASK_TIMEOUT = 30 * 60
+TASK_TIMEOUT = 10 * 60
 
 
 class DaScheduler(DaBase):
