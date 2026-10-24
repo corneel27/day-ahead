@@ -19,7 +19,8 @@ class DaPrices:
             db_da: DBmanagerObj,
             country: str = None,
             secrets: dict = None,
-            time_zone: str = "CET"
+            time_zone: str = "CET",
+            da_base_obj: object = None,
     ):
         self.config = config
         self.db_da = db_da
@@ -27,6 +28,7 @@ class DaPrices:
         self.interval = str(config.interval or "1hour").lower()
         self.country = country if country is not None else "NL"
         self.time_zone = time_zone if time_zone is not None else "CET"
+        self.da_base_obj = da_base_obj
 
     def get_prices(
         self, source, _start: datetime.datetime|None = None, _end: datetime.datetime|None = None
@@ -115,6 +117,9 @@ class DaPrices:
             if source.lower() == "easyenergy":
                 df_db = self._get_prices_easyenergy(start, end)
 
+            if source.lower() == "ha_epex_spot":
+                df_db = self.get_prices_ha_epex_spot(start, end)
+
             if source.lower() == "tibber":
                 df_db = self._get_prices_tibber(start)
 
@@ -165,6 +170,27 @@ class DaPrices:
                     )
 
             return df_db
+
+    def get_prices_ha_epex_spot(self, start, end):
+        """
+        :param start:
+        :param end:
+        :return: dataframe
+        """
+        from dao.prog.da_base import DaBase
+        entity = self.config.prices.entity_epex_spot
+        data = DaBase(self.da_base_obj).get_state(entity).attributes["data"]
+        df_db = pd.DataFrame(columns=["time", "code", "value"])
+        for row in data:
+            dt = pd.to_datetime(row["start_time"])
+            if start <= dt < end:
+                df_db.loc[df_db.shape[0]] = [str(dt.timestamp()), "da", row["price_per_kwh"]]
+        logging.info(
+            f"Day ahead prijzen (source: ha_epex_spot, db-records): \n "
+            f"{df_db.to_string(index=False)}"
+        )
+        return df_db
+
 
     def _get_prices_tibber(self, date):
         now_ts = datetime.datetime.now().timestamp()
