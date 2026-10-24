@@ -8,6 +8,7 @@ import math
 from io import BytesIO
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 # from unittest.mock import inplace
 import pandas as pd
@@ -1193,11 +1194,32 @@ class Report(DaBase):
         return df_aggregated
 
     @staticmethod
+    def _label_positions(index: pd.Index, label) -> list | None:
+        """
+        De posities van de rijen met indexwaarde label, in volgorde, of None als
+        label niet in de index staat. Een tijd kan twee keer voorkomen: bij de
+        overgang naar wintertijd is er twee keer een uur van 02:00.
+        """
+        try:
+            loc = index.get_loc(label)
+        except KeyError:
+            return None
+        if isinstance(loc, (int, np.integer)):
+            return [int(loc)]
+        return list(np.arange(len(index))[loc])
+
+    @staticmethod
     def copy_col_df(
             copy_from: pd.DataFrame, copy_to: pd.DataFrame, col_name: str
     ) -> pd.DataFrame:
         """
         kopieert kolom "col_name" van copy_from naar copy_to,
+        op tijd: de "tijd" van copy_from tegen de index van copy_to.
+        Komt een tijd meer keer voor (het dubbele uur aan het einde van de
+        zomertijd), dan gaat de n-de rij van copy_from naar de n-de rij van
+        copy_to; heeft copy_from minder rijen voor die tijd, dan krijgen de
+        overige rijen de waarde van de eerste. Tijden die niet in copy_to staan
+        worden als nieuwe rijen toegevoegd.
         :param copy_from:
         :param copy_to:
         :param col_name:
@@ -1209,9 +1231,36 @@ class Report(DaBase):
             copy_to[col_name] = 0.0
         else:
             copy_to[col_name] = ""
-        # copy_from = copy_from.reset_index()
-        for row in copy_from.itertuples():
-            copy_to.at[row.tijd, col_name] = copy_from.at[row.tijd, col_name]
+        col_pos = copy_to.columns.get_loc(col_name)
+        targets_of = {}
+        copied = {}
+        first_value = {}
+        new_labels = []
+        new_values = []
+        for tijd, value in zip(copy_from["tijd"], copy_from[col_name], strict=True):
+            if tijd not in targets_of:
+                targets_of[tijd] = Report._label_positions(copy_to.index, tijd)
+            targets = targets_of[tijd]
+            if targets is None:
+                new_labels.append(tijd)
+                new_values.append(value)
+                continue
+            n = copied.get(tijd, 0)
+            copied[tijd] = n + 1
+            first_value.setdefault(tijd, value)
+            if n < len(targets):
+                copy_to.iloc[targets[n], col_pos] = value
+        for tijd, n in copied.items():
+            for pos in targets_of[tijd][n:]:
+                copy_to.iloc[pos, col_pos] = first_value[tijd]
+        if new_labels:
+            extra = pd.DataFrame({col_name: new_values}, index=new_labels)
+            if copy_to.empty:
+                copy_to = extra.reindex(
+                    columns=list(dict.fromkeys(list(copy_to.columns) + [col_name]))
+                )
+            else:
+                copy_to = pd.concat([copy_to, extra])
         return copy_to
 
     @staticmethod
@@ -1222,37 +1271,36 @@ class Report(DaBase):
             col_name_to: str = None,
             negation: bool = False,
     ) -> pd.DataFrame:
-        # add_from = add_from.reset_index()
+        """
+        telt kolom "col_name_from" van add_from op bij kolom "col_name_to" van
+        add_to, op tijd: de "tijd" (of "time") van add_from tegen de index van
+        add_to. Komt een tijd meer keer voor (het dubbele uur aan het einde van
+        de zomertijd), dan telt de n-de rij van add_from bij de n-de rij van
+        add_to. Tijden die niet in add_to staan worden overgeslagen.
+        """
         if add_from is None:
             return add_to
         factor = -1 if negation else +1
         if col_name_to is None:
             col_name_to = col_name_from
-        col_index = add_from.columns.get_loc(col_name_from) + 1
-        if "tijd" in add_from.columns:
-            for row in add_from.itertuples():
-                # add_from.at[row.tijd, col_name_from])
-                if row.tijd in add_to.index:
-                    org_value = add_to.at[row.tijd, col_name_to]
-                    try:
-                        if pd.isna(org_value):
-                            org_value = 0
-                    except ValueError:
-                        org_value = 0
-                    if pd.notna(row[col_index]):
-                        add_to.at[row.tijd, col_name_to] = (
-                                org_value + factor * row[col_index]
-                        )
-        else:
-            for row in add_from.itertuples():
-                # add_from.at[row.tijd, col_name_from])
-                if row.time in add_to.index:
-                    org_value = add_to.at[row.tijd, col_name_to]
-                    if pd.isna(org_value):
-                        org_value = 0
-                    add_to.at[row.time, col_name_to] = (
-                            org_value + factor * row[col_index]
-                    )
+        time_col = "tijd" if "tijd" in add_from.columns else "time"
+        targets_of = {}
+        added = {}
+        for tijd, value in zip(add_from[time_col], add_from[col_name_from], strict=True):
+            if tijd not in targets_of:
+                targets_of[tijd] = Report._label_positions(add_to.index, tijd)
+            targets = targets_of[tijd]
+            if targets is None:
+                continue
+            col_pos = add_to.columns.get_loc(col_name_to)
+            n = added.get(tijd, 0)
+            added[tijd] = n + 1
+            if n >= len(targets) or pd.isna(value):
+                continue
+            org_value = add_to.iloc[targets[n], col_pos]
+            if pd.isna(org_value):
+                org_value = 0
+            add_to.iloc[targets[n], col_pos] = org_value + factor * value
         return add_to
 
     def get_latest_present(self, code: str) -> datetime.datetime:
