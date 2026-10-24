@@ -8,11 +8,12 @@ import knmi
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytz
-from requests import get
+from requests import RequestException, get
 from sqlalchemy import Table, and_, func, select
 
 from dao.lib.da_graph import GraphBuilder
 from dao.lib.db_manager import DBmanagerObj
+from dao.prog.utils import HTTP_TIMEOUT
 
 # Stookgrens in oC waarbij geen graaddagen meer worden gerekend (fallback)
 DEFAULT_DEGREE_DAYS_BASE_TEMP = 16.0
@@ -437,7 +438,12 @@ class Meteo:
         else:
             url = "https://data.meteoserver.nl/api/uurverwachting_gfs.php"
         while count <= self.meteoserver_attempts:
-            resp = get(url + parameters)
+            try:
+                resp = get(url + parameters, timeout=HTTP_TIMEOUT)
+            except RequestException as ex:
+                logging.info(f"Meteoserver niet bereikbaar: {ex}")
+                count += 1
+                continue
             logging.debug(resp.text)
             json_object = {}
             try:
