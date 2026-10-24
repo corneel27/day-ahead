@@ -3286,7 +3286,7 @@ class Report(DaBase):
             )
         df_result["time"] = df_result["tijd"]
         df_result["datasoort"] = "expected"
-        # df_result["time_ts"] = df_result["time"].apply(lambda x: int(x.timestamp()))
+        df_result["time_ts"] = df_result["time"].apply(lambda x: int(x.timestamp()))
         df_result.drop("tijd", axis=1, inplace=True)
         df_result["time"] = df_result["time"].dt.tz_localize(None)
         df_result.index = df_result["time"]
@@ -3307,6 +3307,8 @@ class Report(DaBase):
             "netto_cost",
         ]
         tot = self.periodes[periode]["tot"]
+        if periode == "vandaag en morgen" and self.config.prices.prediction.extension>0:
+            tot = tot + datetime.timedelta(hours=self.config.prices.prediction.extension)
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode, _tot=tot)
@@ -3327,7 +3329,7 @@ class Report(DaBase):
         elif field == "da":
             df = self.get_price_data(
                 self.periodes[periode]["vanaf"],
-                self.periodes[periode]["tot"],
+                tot,
                 self.interval,
             )
         elif field[0:3] == "soc":
@@ -3359,8 +3361,8 @@ class Report(DaBase):
             )
             return result
 
-        df["time"] = pd.to_datetime(df["time"])
-        df["time_ts"] = df["time"].dt.tz_localize(self.time_zone)
+        # df["time"] = pd.to_datetime(df["time"])
+        # df["time_ts"] = df["time"].tz_localize(self.time_zone)
         df["time"] = df["time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
         df.rename(columns={"datasoort": "datatype"}, inplace=True)
         cols = df.columns.tolist()
