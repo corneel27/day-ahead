@@ -2,9 +2,14 @@ import datetime
 import logging
 import sys
 import time
-from subprocess import Popen
+from subprocess import Popen, TimeoutExpired
 
 from da_base import DaBase
+
+# maximale looptijd in seconden van een geplande taak; een taak die
+# blijft hangen (bijvoorbeeld op een verbinding die is weggevallen) wordt
+# daarna gestopt, zodat de volgende geplande taken weer kunnen draaien
+TASK_TIMEOUT = 30 * 60
 
 
 class DaScheduler(DaBase):
@@ -20,7 +25,15 @@ class DaScheduler(DaBase):
     def run_task_process(self, key_task):
         run_task = self.tasks[key_task]
         proc = Popen(run_task["cmd"])
-        proc.wait()
+        try:
+            proc.wait(timeout=TASK_TIMEOUT)
+        except TimeoutExpired:
+            proc.kill()
+            proc.wait()
+            logging.error(
+                f"Task {key_task} killed: still running after {TASK_TIMEOUT} sec"
+            )
+            return False
         if proc.returncode != 0 and proc.returncode is not None:
             print(f"Task {key_task} crashed with exit code {proc.returncode}")
             return False
