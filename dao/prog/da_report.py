@@ -29,7 +29,7 @@ from sqlalchemy import (
 
 from dao.lib.da_graph import GraphBuilder
 from dao.prog.da_base import DaBase
-from dao.prog.utils import get_value_from_dict
+from dao.prog.utils import get_value_from_dict, localize_local_times
 
 
 def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
@@ -3360,7 +3360,7 @@ class Report(DaBase):
             return result
 
         df["time"] = pd.to_datetime(df["time"])
-        df["time_ts"] = df["time"].dt.tz_localize(self.time_zone)
+        df["time_ts"] = localize_local_times(df["time"], self.time_zone)
         df["time"] = df["time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
         df.rename(columns={"datasoort": "datatype"}, inplace=True)
         cols = df.columns.tolist()

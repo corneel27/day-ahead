@@ -73,6 +73,28 @@ def calc_adjustment_heatcurve(
     return round(adjustment, 1)
 
 
+def localize_local_times(times: pd.Series, time_zone: str) -> pd.Series:
+    """
+    Zet naieve lokale tijden om naar tijden met tijdzone.
+    Bij de overgang naar wintertijd komt het uur van 02:00 twee keer voor;
+    de eerste keer is dat zomertijd, de tweede keer wintertijd. Een tijd die
+    in dat uur maar een keer voorkomt telt als zomertijd. Bij de overgang naar
+    zomertijd bestaat het uur van 02:00 niet; zo'n tijd schuift door naar 03:00.
+    :param times: series met naieve lokale tijden, in volgorde van voorkomen
+    :param time_zone: de tijdzone, bijvoorbeeld "Europe/Amsterdam"
+    :return: series met dezelfde tijden met tijdzone
+    """
+    local = pd.to_datetime(times).reset_index(drop=True)
+    # de eerste keer dat een tijd voorkomt is zomertijd (alleen van belang
+    # voor de tijden die dubbel kunnen zijn)
+    is_dst = local.groupby(local.to_numpy()).cumcount() == 0
+    result = local.dt.tz_localize(
+        time_zone, ambiguous=is_dst.to_numpy(), nonexistent="shift_forward"
+    )
+    result.index = times.index
+    return result
+
+
 def get_value_from_dict(dag: str, options: dict) -> float:
     """
     Selecteert uit een dict van datum/value paren de juiste value
