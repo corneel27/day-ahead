@@ -15,6 +15,9 @@ from sqlalchemy import Table, and_, select
 
 from dao.prog.version import __version__
 
+# maximale wachttijd in seconden voor een request aan een externe api
+HTTP_TIMEOUT = 60
+
 
 def make_data_path():
     if os.path.lexists("../data"):
@@ -210,7 +213,7 @@ def get_tibber_data():
         year=now.year, month=now.month, day=now.day
     ).timestamp()
     logging.debug(query)
-    resp = post(url, headers=headers, data=query)
+    resp = post(url, headers=headers, data=query, timeout=HTTP_TIMEOUT)
     tibber_dict = json.loads(resp.text)
     production_nodes = tibber_dict["data"]["viewer"]["homes"][0]["production"]["nodes"]
     consumption_nodes = tibber_dict["data"]["viewer"]["homes"][0]["consumption"][

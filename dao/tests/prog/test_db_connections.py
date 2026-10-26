@@ -87,3 +87,17 @@ def test_existing_database_preserves_rows(database, factory):
             assert connection.scalar(text("SELECT value FROM preserved_data")) == 17
     finally:
         manager.engine.dispose()
+
+
+@pytest.mark.parametrize("dialect", ["mysql", "postgresql"])
+def test_network_databases_have_driver_timeouts(dialect):
+    args = DBmanagerObj.connect_args(dialect)
+    assert args["connect_timeout"] > 0
+    if dialect == "mysql":
+        assert args["read_timeout"] > 0 and args["write_timeout"] > 0
+    else:
+        assert args["keepalives"] == 1
+
+
+def test_sqlite_has_no_driver_timeouts():
+    assert DBmanagerObj.connect_args("sqlite") == {}
