@@ -71,46 +71,61 @@ def _log_native_output(text: str) -> None:
             logging.info(line)
 
 
-def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, *, color):
-    """Draw the same bars as ``ax.bar()``, but as one PolyCollection.
+def _area(ax, x, height, bottom=None, label=None, *, color):
+    """Draw a stacked bar series as a filled step area.
 
-    Uses only public matplotlib API. ``color`` is required because taking the
-    next colour from the axes' property cycle has no public API.
+    Each value holds from its own time until the next one; the last value
+    holds for as long as the interval before it. ``bottom`` stacks the area
+    on the series below it, as with ``ax.bar()``, and later areas are drawn
+    on top of earlier ones.
     """
-    import matplotlib as mpl
     import numpy as np
-    from matplotlib.collections import PolyCollection
 
-    ax.xaxis.update_units(x)
-    xs = np.asarray(ax.convert_xunits(x), dtype=float)
-    n = len(xs)
-    h = np.broadcast_to(np.asarray(height, dtype=float), (n,))
-    w = np.broadcast_to(np.asarray(width, dtype=float), (n,))
-    b = np.broadcast_to(np.asarray(0.0 if bottom is None else bottom, dtype=float), (n,))
-    left = xs if align == "edge" else xs - w / 2
-    verts = np.stack(
-        [
-            np.column_stack([left, b]),
-            np.column_stack([left, b + h]),
-            np.column_stack([left + w, b + h]),
-            np.column_stack([left + w, b]),
-        ],
-        axis=1,
-    )
-    rc = mpl.rcParams
-    coll = PolyCollection(
-        verts,
-        facecolors=color,
-        edgecolors=rc["patch.edgecolor"] if rc["patch.force_edgecolor"] else "none",
-        linewidths=rc["patch.linewidth"],
-        antialiaseds=rc["patch.antialiased"],
+    height = np.asarray(height, dtype=float)
+    base = np.zeros_like(height) if bottom is None else np.asarray(bottom, dtype=float)
+    top = base + height
+    edges = list(x) + [x[-1] + (x[-1] - x[-2])]
+    return ax.fill_between(
+        edges,
+        np.append(base, base[-1]),
+        np.append(top, top[-1]),
+        step="post",
+        color=color,
+        linewidth=0,
         label=label if label is not None else "_nolegend_",
     )
-    # like bar(): no autoscale margin below the bars' bottoms
-    coll.sticky_edges.y[:] = np.unique(b).tolist()
-    ax.add_collection(coll, autolim=True)
-    ax.autoscale_view()
-    return coll
+
+
+def _grid(ax, x, over_areas=True):
+    """Draw the style's gridlines of ``ax``, vertical ones every 6 hours.
+
+    Horizontal gridlines follow the y ticks; vertical gridlines are drawn
+    every 6 hours instead of at the x ticks. With ``over_areas`` the
+    gridlines are drawn over the areas, below the lines. Nothing is drawn
+    when the style has no grid.
+    """
+    import matplotlib as mpl
+
+    rc = mpl.rcParams
+    if not rc["axes.grid"]:
+        return
+    if over_areas:
+        ax.set_axisbelow("line")
+    ax.grid(False, axis="x")
+    if rc["axes.grid.axis"] not in ("both", "x"):
+        return
+    t = x[0].replace(hour=x[0].hour - x[0].hour % 6, minute=0, second=0, microsecond=0)
+    end = x[-1] + (x[-1] - x[-2])
+    while t <= end:
+        ax.axvline(
+            t,
+            color=rc["grid.color"],
+            linestyle=rc["grid.linestyle"],
+            linewidth=rc["grid.linewidth"],
+            alpha=rc["grid.alpha"],
+            zorder=1.5 if over_areas else 0.5,
+        )
+        t += dt.timedelta(hours=6)
 
 
 class DaCalc(DaBase):
@@ -4813,97 +4828,75 @@ class DaCalc(DaBase):
         fig, axis = plt.subplots(figsize=(8, 3 * nrows), nrows=nrows)
 
         # volgorde 1 pv_org 2 pv_ac 3 levering
-        breedte = [
-            (tijd[i + 1] - tijd[i]).total_seconds() * 0.9 / 86400
-            for i in range(len(tijd) - 1)
-        ]
-        breedte.append(breedte[-1])
         if solar_num > 0:
-            _bar(axis[0],
+            _area(axis[0],
                 tijd,
                 np.array(pv_p_org),
-                width=breedte,
                 label="PV AC",
                 color="green",
-                align="edge",
             )
         # 2
         if sum(pv_ac_p) > 0:
-            _bar(axis[0],
+            _area(axis[0],
                 tijd,
                 np.array(pv_ac_p),
-                width=breedte,
                 bottom=np.array(pv_p_org),
                 label="PV DC",
                 color="lime",
-                align="edge",
             )
         # 3
-        _bar(axis[0],
+        _area(axis[0],
             tijd,
             np.array(org_l),
-            width=breedte,
             bottom=np.array(pv_p_org) + np.array(pv_ac_p),
             label="Levering",
             color="#00bfff",
-            align="edge",
         )
 
-        _bar(axis[0],
+        _area(axis[0],
             tijd,
             np.array(base_n),
-            width=breedte,
             label="Overig verbr.",
-            color="#f1a603",
-            align="edge"
+            color="#f1a603"
         )
         if self.boiler_present:
-            _bar(axis[0],
+            _area(axis[0],
                 tijd,
                 np.array(boiler_n),
-                width=breedte,
                 bottom=np.array(base_n),
                 label="Boiler",
                 color="#e39ff6",
-                align="edge",
             )
         if self.hp_present:
-            _bar(axis[0],
+            _area(axis[0],
                 tijd,
                 np.array(heatpump_n),
-                width=breedte,
                 bottom=np.array(base_n) + np.array(boiler_n),
                 label="WP",
                 color="#a32cc4",
-                align="edge",
             )
         if EV > 0:
-            _bar(axis[0],
+            _area(axis[0],
                 tijd,
                 np.array(ev_n),
-                width=breedte,
                 bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
                 label="EV laden",
                 color="yellow",
-                align="edge",
             )
         if M > 0:
-            _bar(axis[0],
+            _area(axis[0],
                 tijd,
                 np.array(mach_n),
-                width=breedte,
                 bottom=np.array(base_n)
                 + np.array(boiler_n)
                 + np.array(heatpump_n)
                 + np.array(ev_n),
                 label="Apparatuur",
                 color="brown",
-                align="edge",
             )
-        _bar(axis[0],
+        _area(axis[0],
             tijd,
             np.array(org_t),
-            width=breedte,
             bottom=np.array(base_n)
             + np.array(boiler_n)
             + np.array(heatpump_n)
@@ -4911,7 +4904,6 @@ class DaCalc(DaBase):
             + np.array(mach_n),
             label="Teruglev.",
             color="#0080ff",
-            align="edge",
         )
         axis[0].legend(loc="best", bbox_to_anchor=(1.05, 1.00))
         axis[0].set_ylabel("kW")
@@ -4950,85 +4942,70 @@ class DaCalc(DaBase):
             f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\nNiet geoptimaliseerd"
         )
 
-        _bar(axis[1],
+        _area(axis[1],
             tijd,
             np.array(pv_p_opt),
-            width=breedte,
             label="PV AC",
             color="green",
-            align="edge",
         )
-        _bar(axis[1],
+        _area(axis[1],
             tijd,
             np.array(accu_out_p),
-            width=breedte,
             bottom=np.array(pv_p_opt),
             label="Accu uit",
             color="red",
-            align="edge",
         )
-        _bar(axis[1],
+        _area(axis[1],
             tijd,
             np.array(c_l_p),
-            width=breedte,
             bottom=np.array(pv_p_opt) + np.array(accu_out_p),
             label="Levering",
             color="#00bfff",
-            align="edge",
         )
 
         # axis[1].bar(tijd, np.array(cons_n), label="Verbruik", color='yellow')
-        _bar(axis[1],
-            tijd, np.array(base_n), width=breedte, label="Overig verbr.", color="#f1a603", align="edge"
+        _area(axis[1],
+            tijd, np.array(base_n), label="Overig verbr.", color="#f1a603"
         )
         if self.boiler_present:
-            _bar(axis[1],
+            _area(axis[1],
                 tijd,
                 np.array(boiler_n),
-                width=breedte,
                 bottom=np.array(base_n),
                 label="Boiler",
                 color="#e39ff6",
-                align="edge",
             )
         if self.hp_present:
-            _bar(axis[1],
+            _area(axis[1],
                 tijd,
                 np.array(heatpump_n),
-                width=breedte,
                 bottom=np.array(base_n + np.array(boiler_n)),
                 label="WP",
                 color="#a32cc4",
-                align="edge",
             )
         if EV > 0:
-            _bar(axis[1],
+            _area(axis[1],
                 tijd,
                 np.array(ev_n),
-                width=breedte,
                 bottom=np.array(base_n) + np.array(boiler_n) + np.array(heatpump_n),
                 label="EV laden",
                 color="yellow",
-                align="edge",
             )
         if M > 0:
-            _bar(axis[1],
+            _area(axis[1],
                 tijd,
                 np.array(mach_n),
-                width=breedte,
                 bottom=np.array(base_n)
                 + np.array(boiler_n)
                 + np.array(heatpump_n)
                 + np.array(ev_n),
                 label="Apparatuur",
                 color="brown",
-                align="edge",
             )
         if B > 0:
-            _bar(axis[1],
+            _area(axis[1],
                 tijd,
                 np.array(accu_in_n),
-                width=breedte,
                 bottom=np.array(base_n)
                 + np.array(boiler_n)
                 + np.array(heatpump_n)
@@ -5036,12 +5013,10 @@ class DaCalc(DaBase):
                 + np.array(mach_n),
                 label="Accu in",
                 color="#ff8000",
-                align="edge",
             )
-        _bar(axis[1],
+        _area(axis[1],
             tijd,
             np.array(c_t_n),
-            width=breedte,
             bottom=np.array(base_n)
             + np.array(boiler_n)
             + np.array(heatpump_n)
@@ -5050,7 +5025,6 @@ class DaCalc(DaBase):
             + np.array(accu_in_n),
             label="Teruglev.",
             color="#0080ff",
-            align="edge",
         )
         axis[1].legend(loc="best", bbox_to_anchor=(1.05, 1.00))
         axis[1].set_ylabel("kW")
@@ -5072,12 +5046,13 @@ class DaCalc(DaBase):
             f" winst € {(old_cost_da - cost.x):0.2f}"
         )
         axis[1].sharex(axis[0])
+        _grid(axis[0], tijd)
+        _grid(axis[1], tijd)
 
         # extra tijdstip voor sync aantal uur met laatste soc-waarde
         # eenmalig, de grafieken hieronder verwachten U+1 tijdstippen
         span = tijd[U-1] - tijd[U-2]
         tijd.append(tijd[U-1] + span)
-        breedte.append(breedte[-1])
 
         gr_no = 1
         if show_battery_balance:
@@ -5106,38 +5081,32 @@ class DaCalc(DaBase):
                 pv_p.append(0)
                 bat_p.append(0)
                 bat_n.append(0)
-                leg1 = _bar(axis[gr_no],
-                    tijd, np.array(ac_p), width=breedte, label="AC<->", color="red", align="edge"
+                leg1 = _area(axis[gr_no],
+                    tijd, np.array(ac_p), label="AC<->", color="red"
                 )
-                leg2 = _bar(axis[gr_no],
+                leg2 = _area(axis[gr_no],
                     tijd,
                     np.array(bat_p),
                     label="BAT<->",
-                    width=breedte,
                     bottom=np.array(ac_p),
                     color="blue",
-                    align="edge",
                 )
                 if pv_dc_num[b] > 0:
-                    leg3 = _bar(axis[gr_no],
+                    leg3 = _area(axis[gr_no],
                         tijd,
                         np.array(pv_p),
-                        width=breedte,
                         label="PV->",
                         bottom=np.array(ac_p) + np.array(bat_p),
                         color="lime",
-                        align="edge",
                     )
                 else:
                     leg3 = None
-                _bar(axis[gr_no], tijd, np.array(ac_n), width=breedte, color="red", align="edge")
-                _bar(axis[gr_no],
+                _area(axis[gr_no], tijd, np.array(ac_n), color="red")
+                _area(axis[gr_no],
                     tijd,
                     np.array(bat_n),
-                    width=breedte,
                     bottom=np.array(ac_n),
                     color="blue",
-                    align="edge",
                 )
                 # axis[gr_no].legend(loc='best', bbox_to_anchor=(1.30, 1.00))
                 axis[gr_no].set_ylabel("kW")
@@ -5159,6 +5128,7 @@ class DaCalc(DaBase):
                     f"Energiebalans per uur voor {self.battery_options[b].name}"
                 )
                 axis[gr_no].sharex(axis[0])
+                _grid(axis[gr_no], tijd)
                 axis_20 = axis[gr_no].twinx()
                 leg4 = axis_20.plot(
                     tijd, soc_b[b], label="% SoC", linestyle="solid", color="olive"
@@ -5207,6 +5177,7 @@ class DaCalc(DaBase):
         axis[gr_no].set_ylim([0, 102])
         axis[gr_no].set_title("Verloop SoC en tarieven")
         axis[gr_no].sharex(axis[0])
+        _grid(axis[gr_no], tijd, over_areas=False)
 
         _g = self.config.graphics
         _gx = (_g.model_extra or {}) if _g else {}
