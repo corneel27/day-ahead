@@ -5254,7 +5254,7 @@ class DaCalc(DaBase):
         else:
             ln3 = None
 
-        if str((_g.prices_spot if _g else True) or "true").lower() == "true":
+        if _g is None or _g.prices_spot:
             p_spot.append(p_spot[-1])
             if horizon_extension > 0 :
                 tijd_fixed = [value for value in tijd if value <= start_prediction_dt]
