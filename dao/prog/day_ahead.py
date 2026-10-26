@@ -114,7 +114,10 @@ def _grid(ax, x, over_areas=True):
     ax.grid(False, axis="x")
     if rc["axes.grid.axis"] not in ("both", "x"):
         return
+    # only lines inside the drawn time range, so they don't widen the x axis
     t = x[0].replace(hour=x[0].hour - x[0].hour % 6, minute=0, second=0, microsecond=0)
+    if t < x[0]:
+        t += dt.timedelta(hours=6)
     end = x[-1] + (x[-1] - x[-2])
     while t <= end:
         ax.axvline(
