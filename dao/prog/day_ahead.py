@@ -1024,29 +1024,94 @@ class DaCalc(DaBase):
             for b in range(B)
         ]
 
-        # alle constraints
+        # alle constraints, eerst declaraties
+        # laden, alles uitgedrukt in vermogen kW
+        """
+        # vanaf hier laden zonder sos
+        # declarations
+        # Binare variabele: welk interval is actief
+        ac_to_dc_z = [
+            [
+                [
+                    model.add_var(var_type=BINARY)
+                    for cs in range(CS[b] - 1)
+                ]
+                for u in range(U)
+            ]
+            for b in range(B)
+        ]
+
+        # Continue variabele: positie in het actieve interval
+        ac_to_dc_f = [
+            [
+                model.add_var(var_type=CONTINUOUS, lb=0, ub=1)
+                for u in range(U)
+            ]
+            for b in range(B)
+        ]
+
+        for b in range(B):
+            # Big-M constraints voor ieder mogelijk interval
+            M_power_ac = (
+                max(ac_to_dc_samples[b])
+                - min(ac_to_dc_samples[b])
+            )
+            M_power_dc = (
+                max(dc_from_ac_samples[b])
+                - min(dc_from_ac_samples[b])
+            )
+            # overige constraints
+
+            for u in range(U):
+                # Exact 1 interval is actief
+                model += (
+                    xsum(
+                        ac_to_dc_z[b][u][cs]
+                        for cs in range(CS[b] - 1)
+                    )
+                    == 1
+                )
+
+                for cs in range(CS[b] - 1):
+
+                    p0 = ac_to_dc_samples[b][cs]
+                    p1 = ac_to_dc_samples[b][cs + 1]
+
+                    q0 = dc_from_ac_samples[b][cs]
+                    q1 = dc_from_ac_samples[b][cs + 1]
+
+                    # AC power
+                    model += (
+                        ac_to_dc[b][u]
+                        >= p0 + ac_to_dc_f[b][u] * (p1 - p0)
+                        - M_power_ac * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    model += (
+                        ac_to_dc[b][u]
+                        <= p0 + ac_to_dc_f[b][u] * (p1 - p0)
+                        + M_power_ac * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    # DC power
+                    model += (
+                        dc_from_ac[b][u]
+                        >= q0 + ac_to_dc_f[b][u] * (q1 - q0)
+                        - M_power_dc * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    model += (
+                        dc_from_ac[b][u]
+                        <= q0 + ac_to_dc_f[b][u] * (q1 - q0)
+                        + M_power_dc * (1 - ac_to_dc_z[b][u][cs])
+                    )
+                
+                # tot hier laden zonder sos #######################################
+                
+        """
+        # vanaf hier laden met sos ######################################################
         for b in range(B):
             for u in range(U):
-                # laden, alles uitgedrukt in vermogen kW
-                # vanaf hier laden met aan/uit zonder sos
-                """
-                for cs in range(CS[b]):
-                    model += (ac_to_dc_st[b][cs][u] <=
-                        charge_stages[b][cs]["power"] * 
-                        ac_to_dc_st_on[b][cs][u]/1000)
-                for cs in range(CS[b])[1:]:
-                    model += (ac_to_dc_st[b][cs][u] >=
-                        charge_stages[b][cs - 1]["power"] * 
-                        ac_to_dc_st_on[b][cs][u]/1000)
-
-                model += ac_to_dc[b][u] == xsum(ac_to_dc_st[b][cs][u] for cs in range(CS[b]))
-                model += (xsum(ac_to_dc_st_on[b][cs][u] for cs in range(CS[b]))) <= 1
-                model += dc_from_ac[b][u] == xsum(ac_to_dc_st[b][cs][u] * \
-                                    charge_stages[b][cs]["efficiency"] 
-                                    for cs in range(CS[b]))
-                # tot hier laden met aan/uit zonder sos #######################################
-                """
-                # vanaf hier laden met sos ######################################################
                 model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
                 model += (
                     xsum(
@@ -2195,6 +2260,11 @@ class DaCalc(DaBase):
                     model += ev_boundary_stop[e][u] == 0
                     model += ev_delta_soc[e][u] == 0
                     model += low_soc_penalty_int[e][u] == 0
+                    model += ev_is_off[e][u] == 1
+                    model += ev_is_on[e][u] == 0
+                    stage_on[e][0][u] == 1
+                    for cs in range(ECS[e][1:]):
+                        stage_on[e][cs][u] == 0
 
                 """
                 max_beschikbaar = 0
@@ -2620,10 +2690,6 @@ class DaCalc(DaBase):
                     [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(S)]
                     for _ in range(U)
                 ]
-
-                hp_on = [
-                    model.add_var(var_type=BINARY) for _ in range(U)
-                ]  # If on the pump will run in that hour
 
                 # verbruik per interval
                 for u in range(U):
