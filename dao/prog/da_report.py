@@ -3056,7 +3056,10 @@ class Report(DaBase):
                 "prognoses", "da", start=start, end=end, agg_func=agg_func
             )
             from dao.prog.utils import interpolate
-            if interval == "15min":
+            # alleen uurwaarden worden naar kwartierwaarden geïnterpoleerd,
+            # bronnen met kwartierwaarden worden ongewijzigd gebruikt
+            steps = df_prediction["utc"].diff().dropna()
+            if interval == "15min" and len(steps) > 0 and steps.min() >= 3600:
                 df_prediction["time"]= pd.to_datetime(df_prediction["time"])
                 df_prediction = interpolate(df_prediction, "value", time_field="time", quantity=False)
                 df_prediction["time"] = df_prediction["time"].dt.strftime('%Y-%m-%d %H:%M')
