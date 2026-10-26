@@ -3818,7 +3818,7 @@ class DaCalc(DaBase):
             row = row + [
                 c_l[u].x,
                 c_t[u].x,
-                b_l[u],
+                b_l[u] * interval_fraction[u],
                 c_b[u].x,
                 c_hp[u].x,
                 c_ev_sum[u],
