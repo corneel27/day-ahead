@@ -5304,6 +5304,9 @@ class DaCalc(DaBase):
         labels = [line.get_label() for line in lns]
         axis22.legend(lns, labels, loc="best", bbox_to_anchor=(1.40, 1.00))
 
+        # all charts share the x axis: from the start of the first interval
+        # to the end of the last one, without margins
+        axis[0].set_xlim(tijd[0], tijd[U])
         plt.subplots_adjust(right=0.75)
         fig.tight_layout()
         fig.savefig(
