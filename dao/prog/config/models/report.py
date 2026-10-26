@@ -3,9 +3,239 @@ Reporting configuration models.
 """
 
 
-from pydantic import BaseModel, ConfigDict, Field
+import re
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .base import EntityId
+
+
+class HaSensorsConfig(BaseModel):
+    """Report series that DAO writes to Home Assistant entities."""
+
+    include_price_prediction: bool = Field(
+        default=False,
+        alias="include_price_prediction",
+        description="Include values in the price prediction range",
+        json_schema_extra={
+            "x-help": "When true the series run until the end of the optimization horizon, including the part with predicted prices (prices.prediction.extension). When false they stop at the last known day-ahead price.",
+        },
+    )
+    da_ex: EntityId | None = Field(
+        default=None,
+        description="HA entity for the day-ahead spot price without taxes and markup",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the day-ahead spot price without taxes and markup of today and tomorrow. Not written when not set.",
+            "x-unit": "EUR/kWh",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    da_cons: EntityId | None = Field(
+        default=None,
+        description="HA entity for the price of consumption (spot price with energy tax, supplier markup and VAT)",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the price of consumption (spot price with energy tax, supplier markup and VAT) of today and tomorrow. Not written when not set.",
+            "x-unit": "EUR/kWh",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    da_prod: EntityId | None = Field(
+        default=None,
+        description="HA entity for the price of production (feed-in), including a production bonus",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the price of production (feed-in), including a production bonus of today and tomorrow. Not written when not set.",
+            "x-unit": "EUR/kWh",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    consumption: EntityId | None = Field(
+        default=None,
+        description="HA entity for the grid consumption",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the grid consumption of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    production: EntityId | None = Field(
+        default=None,
+        description="HA entity for the grid production",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the grid production of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    netto_consumption: EntityId | None = Field(
+        default=None,
+        description="HA entity for the netto grid consumption (consumption - production)",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the netto grid consumption (consumption - production) of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    cost: EntityId | None = Field(
+        default=None,
+        description="HA entity for the cost of the grid consumption",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the cost of the grid consumption of today and tomorrow. Not written when not set.",
+            "x-unit": "EUR",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    profit: EntityId | None = Field(
+        default=None,
+        description="HA entity for the profit of the grid production",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the profit of the grid production of today and tomorrow. Not written when not set.",
+            "x-unit": "EUR",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    netto_cost: EntityId | None = Field(
+        default=None,
+        description="HA entity for the netto cost (cost - profit)",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the netto cost (cost - profit) of today and tomorrow. Not written when not set.",
+            "x-unit": "EUR",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    cons: EntityId | None = Field(
+        default=None,
+        description="HA entity for the consumption in the energy balance",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the consumption in the energy balance of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    prod: EntityId | None = Field(
+        default=None,
+        description="HA entity for the production in the energy balance",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the production in the energy balance of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    bat_in: EntityId | None = Field(
+        default=None,
+        description="HA entity for the energy into the batteries",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the energy into the batteries of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    bat_out: EntityId | None = Field(
+        default=None,
+        description="HA entity for the energy out of the batteries",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the energy out of the batteries of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    base: EntityId | None = Field(
+        default=None,
+        description="HA entity for the baseload",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the baseload of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    pv_ac: EntityId | None = Field(
+        default=None,
+        description="HA entity for the AC solar production",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the AC solar production of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    pv_dc: EntityId | None = Field(
+        default=None,
+        description="HA entity for the DC solar production",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the DC solar production of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    ev: EntityId | None = Field(
+        default=None,
+        description="HA entity for the consumption of the electric vehicles",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the consumption of the electric vehicles of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    wp: EntityId | None = Field(
+        default=None,
+        description="HA entity for the consumption of the heat pump",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the consumption of the heat pump of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    boil: EntityId | None = Field(
+        default=None,
+        description="HA entity for the consumption of the boiler",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the consumption of the boiler of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    mach: EntityId | None = Field(
+        default=None,
+        description="HA entity for the consumption of the machines",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the consumption of the machines of today and tomorrow. Not written when not set.",
+            "x-unit": "kW",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    soc: EntityId | None = Field(
+        default=None,
+        description="HA entity for the average state of charge of the batteries",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant entity that receives the average state of charge of the batteries of today and tomorrow. Not written when not set.",
+            "x-unit": "%",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+
+    @model_validator(mode="after")
+    def check_entities(self):
+        # soc per batterij (soc_0, soc_1, ...) staat in de extra velden
+        for key, value in (self.model_extra or {}).items():
+            if re.fullmatch(r"soc_\d+", key) and value is not None:
+                self.model_extra[key] = EntityId._validate(value)
+        entities = [
+            value
+            for key, value in self.model_dump().items()
+            if key != "include_price_prediction" and isinstance(value, str)
+        ]
+        duplicates = sorted({e for e in entities if entities.count(e) > 1})
+        if duplicates:
+            raise ValueError(
+                f"Each ha_sensors entity can receive only one series: {duplicates}"
+            )
+        return self
+
+    model_config = ConfigDict(
+        extra="allow",
+        populate_by_name=True,
+        json_schema_extra={
+            "x-help": "Each entity gets the value of the current interval as state; the attribute 'data' holds today and tomorrow as a list of {time_ts, time, value, datatype} and the attribute 'last_update' the moment of the push (the same for all entities of one push). Entities that are not set are not written. The soc of a single battery is written for extra keys 'soc_0', 'soc_1', ... Each entity can be used for one series only. The entities are written after every optimization and by the task 'push_ha_sensors'.",
+        },
+    )
 
 
 class ReportConfig(BaseModel):
@@ -141,6 +371,16 @@ class ReportConfig(BaseModel):
         },
     )
 
+    ha_sensors: HaSensorsConfig = Field(
+        default_factory=HaSensorsConfig,
+        alias="ha_sensors",
+        description="Report data written to HA entities",
+        json_schema_extra={
+            "x-help": "Optional: write report series (prices, grid, battery, pv, ...) of today and tomorrow directly to Home Assistant entities, instead of polling the api with REST sensors.",
+            "x-ui-section": "HA sensors",
+        },
+    )
+
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
@@ -188,6 +428,21 @@ All entity fields accept lists of HA sensors:
 - **Boiler**: Hot water heating consumption
 - **Battery**: Charge/discharge tracking
 - **Machines**: Appliance consumption
+
+## HA sensors
+
+DAO can write report series directly to Home Assistant entities:
+```json
+"ha_sensors": {
+  "include_price_prediction": false,
+  "da_cons": "sensor.dao_price_consumption",
+  "consumption": "sensor.dao_grid_consumption",
+  "bat_in": "sensor.dao_battery_in"
+}
+```
+Only the entities that are set are written. The state is the value of the
+current interval, the attribute `data` holds today and tomorrow in the
+format of the api. The entities are written after every optimization and by the scheduler task `push_ha_sensors`.
 
 ## Tips
 
