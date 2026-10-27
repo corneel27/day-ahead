@@ -1,0 +1,32 @@
+[
+  {
+    "id": "extension-96h-predicted-dip",
+    "description": "34 h of fixed day-ahead prices plus 62 h of predicted prices (96 h horizon). The predicted 10 Oct has a negative midday dip and a high evening spike - the battery charges in the dip and discharges into the spike, both in the hourly predicted part",
+    "start": "2026-10-07 14:00",
+    "prices": {
+      "cons": [
+          0.24, 0.26, 0.29, 0.33, 0.36, 0.37, 0.34, 0.29, 0.25, 0.23, 0.22, 0.21,
+          0.21, 0.20, 0.21, 0.23, 0.27, 0.31, 0.30, 0.27, 0.25, 0.24, 0.23, 0.23,
+          0.24, 0.26, 0.29, 0.33, 0.36, 0.37, 0.34, 0.29, 0.25, 0.23
+        ],
+      "predicted": {
+        "cons": [
+          0.22, 0.21, 0.21, 0.20, 0.21, 0.23, 0.27, 0.31, 0.30, 0.27, 0.25, 0.24,
+          0.23, 0.23, 0.24, 0.26, 0.29, 0.33, 0.36, 0.37, 0.34, 0.29, 0.25, 0.23,
+          0.22, 0.21, 0.21, 0.20, 0.21, 0.23, 0.27, 0.31, 0.30, 0.27, 0.08, -0.02,
+          -0.06, -0.05, -0.03, 0.06, 0.29, 0.33, 0.48, 0.52, 0.50, 0.41, 0.25, 0.23,
+          0.22, 0.21, 0.21, 0.20, 0.21, 0.23, 0.27, 0.31, 0.30, 0.27, 0.25, 0.24,
+          0.23, 0.23
+        ]
+      }
+    },
+    "states": { "sensor.ess_battery_soc": "50" },
+    "config_patch": { "boiler.boiler_present": false },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_charges_during": { "date": "2026-10-10", "start": "10:00", "end": "16:00", "min_kwh": 15.0 },
+      "battery_discharges_during": { "date": "2026-10-10", "start": "18:00", "end": "22:00", "min_kwh": 15.0 }
+    }
+  }
+]

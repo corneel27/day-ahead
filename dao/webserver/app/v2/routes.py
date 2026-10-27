@@ -352,7 +352,14 @@ def delete_file():
 @v2.route("/tasks")
 def tasks():
     from dao.prog.da_const import tasks
-    return render_template("v2/tasks.html", tasks=tasks)
+
+    ui_tasks = {
+        name: task
+        for name, task in tasks.items()
+        if task.get("ui_enabled") is not False
+    }
+
+    return render_template("v2/tasks.html", tasks=ui_tasks)
 
 @v2.route("/task-cancel")
 def task_cancel():
