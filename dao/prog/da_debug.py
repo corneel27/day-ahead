@@ -582,6 +582,29 @@ def _install_model_capture(patches: _PatchList, target) -> None:
     patches.set(mip.Model, "optimize", _wrapped_optimize)
 
 
+# Onthoudt per variabele-index het bestand en de regel waar add_var() werd aangeroepen, zodat een kolom die niet in de registry staat toch terug te vinden is in day_ahead.py.
+def _install_add_var_capture(patches: _PatchList, target) -> None:
+    """Wraps ``mip.Model.add_var`` so ``target._creation_site`` maps each
+    new ``Var.idx`` to ``"file.py:line"`` of the caller. Indices restart at
+    0 per model, so with more than one model in a run the later model's
+    entries overwrite the earlier ones — same "last model wins" rule as
+    ``_install_model_capture``."""
+    if mip is None:
+        return
+    original_add_var = mip.Model.add_var
+
+    # Maakt de variabele echt aan en legt daarna de aanroeplocatie vast.
+    def _wrapped_add_var(model_self, *args, **kwargs):
+        v = original_add_var(model_self, *args, **kwargs)
+        frame = sys._getframe(1)
+        target._creation_site[v.idx] = (
+            f"{os.path.basename(frame.f_code.co_filename)}:{frame.f_lineno}"
+        )
+        return v
+
+    patches.set(mip.Model, "add_var", _wrapped_add_var)
+
+
 # Zet een opgelost model om naar een result-dict, gedeeld door RecordingIO en ReplayIO zodat beide dezelfde vorm opleveren om te diffen.
 def _build_result_dict(model, cbc_log_chunks: list[str], extra_meta: dict) -> dict | None:
     if model is None:
@@ -674,6 +697,7 @@ class RecordingIO:
         self._solar_calls: dict[str, list[dict]] = {}
         self._captured_at = dt.datetime.now()
         self._model = None  # last mip.Model.optimize() was called on
+        self._creation_site: dict[int, str] = {}  # Var.idx -> "file.py:line"
         self._cbc_log_chunks: list[str] = []
         self.snapshot_path: Path | None = None
         self.result_path: Path | None = None
@@ -888,6 +912,7 @@ class RecordingIO:
             )
 
         _install_model_capture(self._patches, self)
+        _install_add_var_capture(self._patches, self)
 
         # Leest de startwaarden opnieuw op het moment van de solve; dit zijn
         # precies de waarden waarmee het model is opgebouwd.
@@ -1213,6 +1238,7 @@ class ReplayIO:
         self._freeze = None  # freezegun handle, set in _install_patches
         self._restore_tz = None  # set when _install_patches changes the process TZ
         self._model = None  # last mip.Model.optimize() was called on
+        self._creation_site: dict[int, str] = {}  # Var.idx -> "file.py:line"
         self._cbc_log_chunks: list[str] = []
 
         meta = self._snapshot.get("meta", {})
@@ -1395,6 +1421,7 @@ class ReplayIO:
                 "wordt niet vastgelegd"
             )
         _install_model_capture(self._patches, self)
+        _install_add_var_capture(self._patches, self)
 
         original_init = DaBase.__init__
 
