@@ -43,6 +43,7 @@
   - [🏠 HomeAssistantConfig](#homeassistantconfig)
 - [Other](#other)
   - [BatteryStage](#batterystage)
+  - [CopTemperaturePoint](#coptemperaturepoint)
   - [EVChargeScheduler](#evchargescheduler)
   - [EVChargeStage](#evchargestage)
   - [EntityId](#entityid)
@@ -712,6 +713,7 @@ Define power levels and corresponding COP values:
 | `degree_days_base_temperature` | number | No | `16.0` | Base temperature (heating limit) for degree days (Unit: `°C`) _Between 0 and 30, typically 15-18_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | No | `[]` | Heating power/COP stages _Required for 'power' and 'heating curve' adjustment; must be sorted by max_power_ |
+| `cop_temperature_curve` | list[[CopTemperaturePoint](#coptemperaturepoint)] | No | `[]` | COP factor per outdoor temperature _Sorted by temperature (ascending), factors > 0_ |
 | `entity adjust heating curve` | [EntityId](#entityid) (optional) | No | `null` | HA entity to adjust heating curve |
 | `adjustment factor` | number (optional) | No | `null` | Factor for heating curve adjustment (Unit: `factor`) _Typically 0.5-2.0 if specified_ |
 | `min run length` | integer | No | `1` | Minimum run length in time intervals (Unit: `intervals`) _Must be >= 1, typically 2-4 for 1h intervals_ |
@@ -748,6 +750,10 @@ Heat pump control mode: 'on/off' = simple binary control, 'power' = variable pow
 **`stages`**
 
 Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending. When a 0 W stage is missed this is supplied by the program.
+
+**`cop_temperature_curve`**
+
+Optional: how the COP changes with the outdoor temperature. Each point gives a factor on all stage COPs at an outdoor temperature; between points the factor is interpolated linearly, outside them the nearest point's factor is used. The stage COPs are then the COPs at the temperature where the factor is 1.0 (e.g. 7 °C). For every interval the factor at the forecast temperature (meteo) is used, so the heat pump is planned in the warmer hours when the higher COP outweighs the price. Empty: the stage COPs are used for every temperature.
 
 **`entity adjust heating curve`**
 
@@ -1869,6 +1875,29 @@ Power level for this charge/discharge stage. Stages define how battery efficienc
 **`efficiency`**
 
 Energy conversion efficiency at this power level. Value between 0 and 1, where 1 = 100% efficient.
+
+</details>
+
+
+### CopTemperaturePoint
+
+_Point of the COP temperature curve: a COP factor at an outdoor temperature._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `temperature` | number | Yes | — | Outdoor temperature in °C (Unit: `°C`) |
+| `factor` | number | Yes | — | COP factor at this outdoor temperature (Unit: `factor`) _Must be > 0_ |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`temperature`**
+
+Outdoor temperature in °C at which the factor applies.
+
+**`factor`**
+
+Factor applied to every stage COP at this outdoor temperature. 1.0 at the temperature the stage COPs are given for (e.g. 7 °C, the A7 rating point).
 
 </details>
 
