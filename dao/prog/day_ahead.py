@@ -32,6 +32,10 @@ from dao.prog.ev_schedule import format_ev_charge_schedule
 
 _libc = ctypes.CDLL(None)
 
+# testfase: "sos2" (huidige SOS2-sets) of "log" (_link_pwl) voor de stuksgewijs lineaire curves
+PWL_FORMULATION = "sos2"
+assert PWL_FORMULATION in ("sos2", "log"), PWL_FORMULATION
+
 
 @contextmanager
 def _capture_native_stdout():
@@ -70,6 +74,68 @@ def _log_native_output(text: str) -> None:
     for line in text.splitlines():
         if line.strip():
             logging.info(line)
+
+
+def _link_pwl(model, w, exact=True, gate=1):
+    """Kies één stuk van een stuksgewijs lineaire curve, zonder SOS2.
+
+        w heeft één gewicht (0..1) per breekpunt. Het werkpunt is een mengsel van
+        twee naast elkaar liggende breekpunten. Die regel "alleen buren" deed eerst
+        een SOS2-set, maar daarmee zet CBC al zijn heuristieken uit (Cbc0036I).
+        Deze functie doet hetzelfde met een paar aan/uit-schakelaars.
+
+        Voorbeeld met 5 breekpunten, dus 4 stukken en 2 schakelaars:
+
+            breekpunt:      1 ---- 2 ---- 3 ---- 4 ---- 5
+            stuk:              A      B      C      D
+            y2 (bits[1]):      0      0      1      1      0 = links, 1 = rechts
+            y1 (bits[0]):      0      1      1      0      0 = buiten, 1 = binnen
+
+        Elke schakelaar verbiedt de breekpunten die niet bij zijn keuze horen:
+
+            y2 = 0: punt 4 en 5 verboden      y2 = 1: punt 1 en 2 verboden
+            y1 = 0: punt 3 verboden           y1 = 1: punt 1 en 5 verboden
+
+        Bij elke stand blijven precies de twee eindpunten van één stuk over.
+        Voorbeeld: y1 = 1 en y2 = 0 laten alleen punt 2 en 3 over (stuk B).
+
+        De nummering van de stukken (00, 01, 11, 10) is een Gray-code: buurstukken
+        verschillen in één schakelaar. K stukken vragen ceil(log2(K)) schakelaars,
+        bijvoorbeeld 4 schakelaars voor 12 stukken.
+
+        Bron: Vielma & Nemhauser (2011), Mathematical Programming 128:49-72.
+        Gratis uitleg: Huchette & Vielma, arXiv:1708.00050, par. 3.1. Het voorbeeld
+        hierboven is hun vergelijking (3).
+
+        exact=True:  de gewichten tellen op tot gate (werkpunt op de curve).
+        exact=False: de gewichten tellen op tot hoogstens gate (huidig ontladen:
+                    een deel van het interval op de curve, de rest uit).
+        gate:        1, of een binaire variabele (warmtepomp: hp_on).
+        """
+    n = len(w)
+    k_seg = n - 1
+    if exact:
+        model += xsum(w) == gate
+    else:
+        model += xsum(w) <= gate
+    if k_seg <= 1:
+        return
+    n_bits = math.ceil(math.log2(k_seg))
+    gray = [j ^ (j >> 1) for j in range(k_seg)]  # code van segment j (tussen breekpunt j en j+1)
+    bits = [model.add_var(var_type=BINARY) for _ in range(n_bits)]
+    for bit in range(n_bits):
+        ones, zeros = [], []
+        for k in range(n):
+            segs = [j for j in (k - 1, k) if 0 <= j < k_seg]  # segmenten naast breekpunt k
+            vals = {(gray[j] >> bit) & 1 for j in segs}
+            if vals == {1}:
+                ones.append(w[k])
+            elif vals == {0}:
+                zeros.append(w[k])
+        if ones:
+            model += xsum(ones) <= bits[bit]
+        if zeros:
+            model += xsum(zeros) <= 1 - bits[bit]
 
 
 def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, *, color):
@@ -151,6 +217,8 @@ class DaCalc(DaBase):
         if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
+        # testfase: sos2 (standaard) of log (_link_pwl) voor de stuksgewijs lineaire curves
+        logging.info(f"PWL-formulering: {PWL_FORMULATION}")
         if _start_dt is None:
             start_dt = dt.datetime.now()
         else:
@@ -1050,7 +1118,8 @@ class DaCalc(DaBase):
                 # tot hier laden met aan/uit zonder sos #######################################
                 """
                 # vanaf hier laden met sos ######################################################
-                model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
+                if PWL_FORMULATION == "sos2":
+                    model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
                 model += (
                     xsum(
                         ac_to_dc_w[b][u][cs] * ac_to_dc_samples[b][cs]
@@ -1065,13 +1134,16 @@ class DaCalc(DaBase):
                     )
                     == dc_from_ac[b][u]
                 )
-                model.add_sos(
-                    [
-                        (ac_to_dc_w[b][u][cs], ac_to_dc_samples[b][cs])
-                        for cs in range(CS[b])
-                    ],
-                    2,
-                )
+                if PWL_FORMULATION == "sos2":
+                    model.add_sos(
+                        [
+                            (ac_to_dc_w[b][u][cs], ac_to_dc_samples[b][cs])
+                            for cs in range(CS[b])
+                        ],
+                        2,
+                    )
+                else:
+                    _link_pwl(model, ac_to_dc_w[b][u], exact=True)
                 # tot hier constraints laden met sos
 
                 """
@@ -1103,7 +1175,8 @@ class DaCalc(DaBase):
                 """
 
                 # vanaf hier ontladen met sos ######################################################
-                model += xsum(ac_from_dc_w[b][u][ds] for ds in range(DS[b])) <= 1
+                if PWL_FORMULATION == "sos2":
+                    model += xsum(ac_from_dc_w[b][u][ds] for ds in range(DS[b])) <= 1
                 model += (
                     xsum(
                         ac_from_dc_w[b][u][ds] * ac_from_dc_samples[b][ds]
@@ -1118,13 +1191,16 @@ class DaCalc(DaBase):
                     )
                     == dc_to_ac[b][u]
                 )
-                model.add_sos(
-                    [
-                        (ac_from_dc_w[b][u][ds], ac_from_dc_samples[b][ds])
-                        for ds in range(DS[b])
-                    ],
-                    2,
-                )
+                if PWL_FORMULATION == "sos2":
+                    model.add_sos(
+                        [
+                            (ac_from_dc_w[b][u][ds], ac_from_dc_samples[b][ds])
+                            for ds in range(DS[b])
+                        ],
+                        2,
+                    )
+                else:
+                    _link_pwl(model, ac_from_dc_w[b][u], exact=False)
                 # tot hier constraints ontladen met sos
 
         """
@@ -2668,10 +2744,13 @@ class DaCalc(DaBase):
                     # ieder interval/uur maar een aan
                     model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
                     """
-                    model.add_sos(
-                        [(hp_s_w[u][s], hp_stages[s]["max_power"]) for s in range(S)],
-                        2,
-                    )
+                    if PWL_FORMULATION == "sos2":
+                        model.add_sos(
+                            [(hp_s_w[u][s], hp_stages[s]["max_power"]) for s in range(S)],
+                            2,
+                        )
+                    else:
+                        _link_pwl(model, hp_s_w[u][1:], exact=True, gate=hp_on[u])
 
                     # geproduceerde warmte = vermogen in W * COP_schijf /1000 in kWh
                     model += (
