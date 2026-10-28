@@ -2358,6 +2358,8 @@ class DaCalc(DaBase):
             if not self.hp_enabled:
                 logging.info("Warmtepomp staat uit - warmtepomp wordt niet ingepland")
         if self.hp_enabled:
+            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
+            self.hp_adjustment = (self.heating_options.adjustment or "power").lower()
             # degree days
             base_temp = self.heating_options.degree_days_base_temperature
             logging.info(f"Stookgrens (graaddagen): {base_temp:.1f} °C")
@@ -2417,8 +2419,6 @@ class DaCalc(DaBase):
                 model += hp_on[u] == 0
         else:
             # self.hp_enabled == True
-            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
-            self.hp_adjustment = (self.heating_options.adjustment or "power").lower()
             logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
             # heat demand: off, eco, max
@@ -4602,6 +4602,7 @@ class DaCalc(DaBase):
                             f"op {hp_power:<0.3f} kW"
                         )
 
+            if self.hp_present:
                 #  curve adjustment
                 entity_curve_adjustment = (
                     self.heating_options.entity_adjust_heating_curve
