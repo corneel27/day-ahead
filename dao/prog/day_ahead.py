@@ -14,6 +14,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 
+import mip.cbc
 import pandas as pd
 from mip import BINARY, CBC, CONTINUOUS, INTEGER, Model, minimize, xsum
 from pandas.core.dtypes.inference import is_number
@@ -3488,6 +3489,9 @@ class DaCalc(DaBase):
         if self.log_level > logging.DEBUG:
             model.verbose = 1
         model.threads = getattr(self, "_solver_threads", -1)
+        # cbcbox 2.929: de generieke build gebruikt AVX in nauty (symmetrie),
+        # dat geeft SIGILL op CPU's zonder AVX zodra CBC zijn heuristieken draait
+        mip.cbc.cbc_set_parameter(model.solver, "OrbitalBranching", "off")
         if getattr(self, "_debug_capture_vars", False):
             try:
                 from da_debug import build_var_registry
