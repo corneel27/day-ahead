@@ -59,26 +59,66 @@ class PricePrediction(BaseModel):
         },
     )
 
+class HADataSensor(BaseModel):
+    ha_entity: EntityId | None = Field(
+        default="sensor.epex_spot_data_market_price",
+        description="HA sensor where data are available as attribute",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant sensor with data.",
+            "x-ui-section": "Prices",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    ha_attribute: str | None = Field(
+        default="data",
+        description="The name of attribute in the HA sensor where a list of data are available."
+                    "Every item in de list contain at least a datetime field and a value field",
+        json_schema_extra={
+            "x-help": "Home Assistant sensor the name of the attribute with the data. ",
+            "x-ui-section": "Prices",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    ha_datetime_field: str | None = Field(
+        default="start_time",
+        description="The name of datetime field in the list item",
+        json_schema_extra={
+            "x-help": "Home Assistant sensor the name/key of the datetime-field in the list-item. ",
+            "x-ui-section": "Prices",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    ha_value_field: str | None = Field(
+        default="price_per_kwh",
+        description="The name of value field in the list item",
+        json_schema_extra={
+            "x-help": "Home Assistant sensor the name/key of the value-field in the list-item. ",
+            "x-ui-section": "Prices",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+
 
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
 
-    source_day_ahead: Literal["nordpool", "entsoe", "tibber", "ha_epex_spot"] = Field(
+    source_day_ahead: Literal["nordpool", "entsoe", "tibber", "ha"] = Field(
         default="nordpool",
         alias="source day ahead",
         description="Source for day-ahead prices",
         json_schema_extra={
-            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe'"
+                      " for European markets, 'tibber' if using Tibber integration. "
+                      "'ha' for generic solutions",
             "x-ui-section": "Prices",
-        },
+        }
     )
-    entity_epex_spot: EntityId | None = Field(
-        default="sensor.epex_spot_data_market_price",
-        description="HA sensor where market data epex_spot are available as attribute",
+    ha_epex_spot : HADataSensor | None = Field(
+        default_factory = HADataSensor,
+        description="Configuration of getting pricedata from the ha-custom component 'epex spot'.",
         json_schema_extra={
-            "x-help": "Optional: Home Assistant sensor with the market prices. Only used when source = 'ha_epex_spot'.",
-            "x-ui-section": "Power Configuration",
-            "x-ui-widget-filter": "sensor",
+            "x-help": "Configuration of getting the day ahead prices from 'epex spot'.",
+            "x-ui-section": "Prices",
         },
     )
     prediction: PricePrediction | None = Field(

@@ -117,8 +117,8 @@ class DaPrices:
             if source.lower() == "easyenergy":
                 df_db = self._get_prices_easyenergy(start, end)
 
-            if source.lower() == "ha_epex_spot":
-                df_db = self.get_prices_ha_epex_spot(start, end)
+            if source.lower() == "ha":
+                df_db = self.get_prices_ha(start, end)
 
             if source.lower() == "tibber":
                 df_db = self._get_prices_tibber(start)
@@ -171,20 +171,24 @@ class DaPrices:
 
             return df_db
 
-    def get_prices_ha_epex_spot(self, start, end):
+    def get_prices_ha(self, start, end):
         """
         :param start:
         :param end:
         :return: dataframe
         """
         from dao.prog.da_base import DaBase
-        entity = self.config.prices.entity_epex_spot
-        data = DaBase(self.da_base_obj).get_state(entity).attributes["data"]
+        spot_sensor = self.config.prices.ha_epex_spot
+        entity = spot_sensor.ha_entity
+        attribute = spot_sensor.ha_attribute
+        datetime_field = spot_sensor.ha_datetime_field
+        value_field = spot_sensor.ha_value_field
+        data = DaBase(self.da_base_obj).get_state(entity).attributes[attribute]
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         for row in data:
-            dt = pd.to_datetime(row["start_time"])
+            dt = pd.to_datetime(row[datetime_field])
             if start <= dt < end:
-                df_db.loc[df_db.shape[0]] = [str(dt.timestamp()), "da", row["price_per_kwh"]]
+                df_db.loc[df_db.shape[0]] = [str(dt.timestamp()), "da", row[value_field]]
         logging.info(
             f"Day ahead prijzen (source: ha_epex_spot, db-records): \n "
             f"{df_db.to_string(index=False)}"

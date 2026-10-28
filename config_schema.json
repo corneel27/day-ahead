@@ -1384,6 +1384,76 @@
       "x-order": 12,
       "x-ui-group": "Energy"
     },
+    "HADataSensor": {
+      "properties": {
+        "ha_entity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "sensor.epex_spot_data_market_price",
+          "description": "HA sensor where data are available as attribute",
+          "x-help": "Optional: Home Assistant sensor with data.",
+          "x-ui-section": "Prices",
+          "x-ui-widget-filter": "sensor",
+          "title": "Ha Entity"
+        },
+        "ha_attribute": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "data",
+          "description": "The name of attribute in the HA sensor where a list of data are available.Every item in de list contain at least a datetime field and a value field",
+          "title": "Ha Attribute",
+          "x-help": "Home Assistant sensor the name of the attribute with the data. ",
+          "x-ui-section": "Prices",
+          "x-ui-widget-filter": "sensor"
+        },
+        "ha_datetime_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "start_time",
+          "description": "The name of datetime field in the list item",
+          "title": "Ha Datetime Field",
+          "x-help": "Home Assistant sensor the name/key of the datetime-field in the list-item. ",
+          "x-ui-section": "Prices",
+          "x-ui-widget-filter": "sensor"
+        },
+        "ha_value_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "price_per_kwh",
+          "description": "The name of value field in the list item",
+          "title": "Ha Value Field",
+          "x-help": "Home Assistant sensor the name/key of the value-field in the list-item. ",
+          "x-ui-section": "Prices",
+          "x-ui-widget-filter": "sensor"
+        }
+      },
+      "title": "HADataSensor",
+      "type": "object"
+    },
     "HADatabaseConfig": {
       "additionalProperties": true,
       "description": "Home Assistant database connection configuration.",
@@ -2245,28 +2315,26 @@
             "nordpool",
             "entsoe",
             "tibber",
-            "ha_epex_spot"
+            "ha"
           ],
           "title": "Source Day Ahead",
           "type": "string",
-          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration. 'ha' for generic solutions",
           "x-ui-section": "Prices"
         },
-        "entity_epex_spot": {
+        "ha_epex_spot": {
           "anyOf": [
             {
-              "$ref": "#/$defs/EntityId"
+              "$ref": "#/$defs/HADataSensor"
             },
             {
               "type": "null"
             }
           ],
-          "default": "sensor.epex_spot_data_market_price",
-          "description": "HA sensor where market data epex_spot are available as attribute",
-          "x-help": "Optional: Home Assistant sensor with the market prices. Only used when source = 'ha_epex_spot'.",
-          "x-ui-section": "Power Configuration",
-          "x-ui-widget-filter": "sensor",
-          "title": "Entity Epex Spot"
+          "description": "Configuration of getting pricedata from the ha-custom component 'epex spot'.",
+          "x-help": "Configuration of getting the day ahead prices from 'epex spot'.",
+          "x-ui-section": "Prices",
+          "title": "Ha Epex Spot"
         },
         "prediction": {
           "anyOf": [
