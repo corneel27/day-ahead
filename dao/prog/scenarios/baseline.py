@@ -30,9 +30,7 @@ def load_baseline(scenario_id: str, baselines_dir: Path | None = None) -> dict |
     return json.loads(p.read_text())
 
 
-def write_baseline(
-    scenario_id: str, objective: float, *, baselines_dir: Path | None = None
-) -> Path:
+def write_baseline(scenario_id: str, objective: float, *, baselines_dir: Path | None = None) -> Path:
     p = baseline_path(scenario_id, baselines_dir)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps({"objective": objective}, indent=2) + "\n")
@@ -49,10 +47,7 @@ def check_tier_c(
     """Returns (status, detail); status is PASS, FAIL, or PENDING."""
     baseline = load_baseline(scenario_id, baselines_dir)
     if baseline is None:
-        return (
-            STATUS_PENDING,
-            "no baseline committed yet — review then `scenario-bless`",
-        )
+        return STATUS_PENDING, "no baseline committed yet — review then `scenario-bless`"
     if objective is None:
         return STATUS_FAIL, "no objective to compare (solve produced none)"
     old = baseline["objective"]

@@ -2,6 +2,7 @@
 Appliance/machine configuration models (washing machine, dishwasher, etc.).
 """
 
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..base import EntityId

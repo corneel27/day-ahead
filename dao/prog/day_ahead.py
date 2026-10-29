@@ -86,9 +86,7 @@ def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, *, c
     n = len(xs)
     h = np.broadcast_to(np.asarray(height, dtype=float), (n,))
     w = np.broadcast_to(np.asarray(width, dtype=float), (n,))
-    b = np.broadcast_to(
-        np.asarray(0.0 if bottom is None else bottom, dtype=float), (n,)
-    )
+    b = np.broadcast_to(np.asarray(0.0 if bottom is None else bottom, dtype=float), (n,))
     left = xs if align == "edge" else xs - w / 2
     verts = np.stack(
         [
@@ -187,22 +185,16 @@ class DaCalc(DaBase):
         start = dt.datetime.fromtimestamp(start_hour)
         horizon_extension = self.config.prices.prediction.extension
         fixed_price_data = report.get_price_data(
-            dt.datetime.fromtimestamp(start_hour),
-            end=None,
-            interval=self.interval,
-            extension=0,
+            dt.datetime.fromtimestamp(start_hour), end=None, interval=self.interval,
+            extension=0
         )
         if horizon_extension > 0:
-            start_prediction_dt = fixed_price_data["time"].iloc[-1] + dt.timedelta(
-                seconds=self.interval_s
-            )
+            start_prediction_dt = fixed_price_data["time"].iloc[-1] + dt.timedelta(seconds=self.interval_s)
             start_prediction_dt = start_prediction_dt.to_pydatetime()
             start_prediction_ts = start_prediction_dt.timestamp()
             pred_price_data = report.get_price_data(
-                start_prediction_dt,
-                end=None,
-                interval="1hour",
-                extension=horizon_extension,
+                start_prediction_dt, end=None, interval="1hour",
+                extension=horizon_extension
             )
             price_data = pd.concat([fixed_price_data, pred_price_data])
         else:
@@ -227,9 +219,7 @@ class DaCalc(DaBase):
         while price_data.iloc[0]["time"] < start_interval_dt:
             price_data = price_data.iloc[1:]
         price_data.index = pd.to_datetime(price_data["time"])
-        end_fixed_dt = fixed_price_data.iloc[-1]["time"] + dt.timedelta(
-            seconds=self.interval_s
-        )
+        end_fixed_dt = (fixed_price_data.iloc[-1]["time"] + dt.timedelta(seconds=self.interval_s))
         end_fixed_dt = end_fixed_dt.to_pydatetime()
         end_fixed_ts = end_fixed_dt.timestamp()
         fixed_prog_data = self.db_da.get_prognose_data(
@@ -239,9 +229,7 @@ class DaCalc(DaBase):
             logging.error("Er ontbreken meteo waarden, de berekening wordt afgebroken")
             return False
         if horizon_extension > 0:
-            end_prediction_dt = (
-                pred_price_data.iloc[-1]["time"] + dt.timedelta(seconds=3600)
-            ).to_pydatetime()
+            end_prediction_dt = (pred_price_data.iloc[-1]["time"] + dt.timedelta(seconds=3600)).to_pydatetime()
             end_prediction_ts = end_prediction_dt.timestamp()
             pred_prog_data = self.db_da.get_prognose_data(
                 start=start_prediction_ts, end=end_prediction_ts, interval="1hour"
@@ -322,7 +310,9 @@ class DaCalc(DaBase):
             start = dt.datetime(
                 year=start_dt.year, month=start_dt.month, day=start_dt.day
             )
-            base_tijd = [start + dt.timedelta(hours=i) for i in range(len(base_cons))]
+            base_tijd = [
+                start + dt.timedelta(hours=i) for i in range(len(base_cons))
+            ]
             base_cons_df = pd.DataFrame({"tijd": base_tijd, "base_cons": base_cons})
             base_cons_df = interpolate(base_cons_df, "base_cons", quantity=True)
             base_cons = base_cons_df["base_cons"].tolist()
@@ -428,7 +418,7 @@ class DaCalc(DaBase):
                 solar_prog_pred = self.calc_solar_predictions(
                     self.solar[s], start_prediction_dt, end, "1hour"
                 )
-                solar_prog = pd.concat([solar_prog, solar_prog_pred])
+                solar_prog= pd.concat([solar_prog, solar_prog_pred])
                 solar_prog = solar_prog.reset_index(drop=True)
             else:
                 solar_prog = self.calc_solar_predictions(
@@ -441,15 +431,12 @@ class DaCalc(DaBase):
                 solar_option = self.battery_options[b].solar[s]
                 if horizon_extension > 0:
                     solar_prog = self.calc_solar_predictions(
-                        solar_option,
-                        start_interval_dt,
-                        start_prediction_dt,
-                        self.interval,
+                        solar_option, start_interval_dt, start_prediction_dt, self.interval
                     )
                     solar_prog_pred = self.calc_solar_predictions(
                         solar_option, start_prediction_dt, end, "1hour"
                     )
-                    solar_prog = pd.concat([solar_prog, solar_prog_pred])
+                    solar_prog= pd.concat([solar_prog, solar_prog_pred])
                     solar_prog = solar_prog.reset_index(drop=True)
                 else:
                     solar_prog = self.calc_solar_predictions(
@@ -476,7 +463,7 @@ class DaCalc(DaBase):
                 interval_fraction.append(interval_fraction_first_interval)
             else:
                 ts.append(row.time)
-                if horizon_extension > 0 and row.tijd >= start_prediction_dt:
+                if horizon_extension > 0 and row.tijd>= start_prediction_dt:
                     hour_fraction.append(1)
                 else:
                     hour_fraction.append(self.interval_s / 3600)
@@ -513,7 +500,7 @@ class DaCalc(DaBase):
         for u in range(U):
             sum_w_prices += pl[u] * hour_fraction[u]
             sum_hf += hour_fraction[u]
-        p_avg = sum_w_prices / sum_hf
+        p_avg = sum_w_prices/sum_hf
         for _u in range(U):
             pl_avg.append(p_avg)
 
@@ -686,7 +673,8 @@ class DaCalc(DaBase):
             )
             if len(red_power_low_soc) == 1:
                 logging.warning(
-                    "For reduced power at low soc there must be two entries, one found."
+                    "For reduced power at low soc there must be two entries, "
+                    "one found."
                 )
                 red_power_low_soc = []
             for rpl in range(len(red_power_low_soc) - 1):
@@ -712,7 +700,8 @@ class DaCalc(DaBase):
             )
             if len(red_power_high_soc) == 1:
                 logging.warning(
-                    "For reduced power at high soc there must be two entries, one found"
+                    "For reduced power at high soc there must be two entries, "
+                    "one found"
                 )
                 red_power_high_soc = []
             for rph in range(len(red_power_high_soc) - 1):
@@ -748,12 +737,8 @@ class DaCalc(DaBase):
             eff_bat_to_dc.append(float(self.battery_options[b].bat_to_dc_efficiency))
             # fractie van 1
 
-            lower_limit.append(
-                self.battery_options[b].lower_limit.resolve(self.ha_getter)
-            )
-            upper_limit.append(
-                self.battery_options[b].upper_limit.resolve(self.ha_getter)
-            )
+            lower_limit.append(self.battery_options[b].lower_limit.resolve(self.ha_getter))
+            upper_limit.append(self.battery_options[b].upper_limit.resolve(self.ha_getter))
             _opt_lvl_field = self.battery_options[b].optimal_lower_level
             opt_low_lvl = float(
                 _opt_lvl_field.resolve(self.ha_getter)
@@ -981,11 +966,9 @@ class DaCalc(DaBase):
         ]
         dc_to_ac = [
             [
-                model.add_var(
-                    var_type=CONTINUOUS,
-                    lb=0,
-                    ub=max(dc_to_ac_samples[b]) if dc_to_ac_samples[b] else 0,
-                )
+                model.add_var(var_type=CONTINUOUS,
+                              lb=0,
+                              ub=max(dc_to_ac_samples[b]) if dc_to_ac_samples[b] else 0)
                 for _ in range(U)
             ]
             for b in range(B)
@@ -1392,17 +1375,13 @@ class DaCalc(DaBase):
             # 37 °C als boiler onder ondergrens komt moet er worden verwarmd
             boiler_ondergrens = boiler_setpoint - boiler_hysterese
             if boiler_bovengrens <= boiler_ondergrens:
-                logging.warning(
-                    f"Het programma heeft geen speelruimte tussen "
-                    f"heating allowed below {boiler_bovengrens} en de boiler ondergrens"
-                    f" {boiler_ondergrens}"
-                    f"(= setpoint {boiler_setpoint} - hysterese {boiler_hysterese}"
-                )
+                logging.warning(f"Het programma heeft geen speelruimte tussen "
+                                f"heating allowed below {boiler_bovengrens} en de boiler ondergrens"
+                                f" {boiler_ondergrens}"
+                                f"(= setpoint {boiler_setpoint} - hysterese {boiler_hysterese}")
                 boiler_bovengrens = boiler_ondergrens + 1
-                logging.info(
-                    f"De waarde voor heating_allowed_below is verhoogd naar "
-                    f"{boiler_bovengrens}"
-                )
+                logging.info(f"De waarde voor heating_allowed_below is verhoogd naar "
+                             f"{boiler_bovengrens}")
             # volume in  liter
             vol = self.boiler_options.volume
             # spec heat in kJ/K = vol in liter * 4,2 kJ/k.liter + 100 kg boiler * 0,5 kJ/k.kg
@@ -1929,7 +1908,9 @@ class DaCalc(DaBase):
             min_needed = math.ceil((time_needed - hrs_needed) * 60)
             logging.info(f"Tijd nodig om te laden: {hrs_needed}:{min_needed} uur")
             if instant_charge:
-                ready = start_dt + dt.timedelta(hours=hrs_needed, minutes=min_needed)
+                ready = start_dt + dt.timedelta(
+                    hours=hrs_needed, minutes=min_needed
+                )
             old_switch_state = self.get_state(self.ev_options[e].charge_switch).state
             old_ampere_state = self.get_state(
                 self.ev_options[e].entity_set_charging_ampere
@@ -2037,7 +2018,10 @@ class DaCalc(DaBase):
         ]  # load battery in kWh
 
         ev_soc_kwh = [
-            [model.add_var(var_type=CONTINUOUS, lb=0) for _ in range(U)]
+            [
+                model.add_var(var_type=CONTINUOUS, lb=0)
+                for _ in range(U)
+            ]
             for e in range(EV)
         ]  # soc in kWh na ieder interval
 
@@ -2157,7 +2141,9 @@ class DaCalc(DaBase):
                     # stap 0 (0 A) doet hier niet mee: die vangt het deel van
                     # het interval op waarin niet geladen wordt. zo blijft
                     # deellading binnen een interval mogelijk.
-                    model += (xsum(stage_on[e][cs][u] for cs in range(ECS[e])[1:])) <= 1
+                    model += (
+                        xsum(stage_on[e][cs][u] for cs in range(ECS[e])[1:])
+                    ) <= 1
                     model += c_ev[e][u] == xsum(
                         stage_consumption[e][cs][u] for cs in range(ECS[e])
                     )
@@ -2184,14 +2170,10 @@ class DaCalc(DaBase):
                         model += (
                             ev_soc_kwh[e][u] == ev_soc_kwh[e][u - 1] + ev_accu_in[e][u]
                         )
-                    model += (
-                        ev_delta_soc[e][u]
-                        == wished_level[e] * ev_capacity[e] / 100 - ev_soc_kwh[e][u]
-                    )
-                    model += (
-                        low_soc_penalty_int[e][u]
-                        == ev_delta_soc[e][u] * ev_low_soc_cost[e] * hour_fraction[u]
-                    )
+                    model += ev_delta_soc[e][u] == wished_level[e] * ev_capacity[e] / 100 - \
+                             ev_soc_kwh[e][u]
+                    model += low_soc_penalty_int[e][u] == ev_delta_soc[e][u] * ev_low_soc_cost[e] * \
+                                 hour_fraction[u]
 
                 eps = 0.0001
                 for u in range(U)[: ready_u[e] + 1]:
@@ -2308,7 +2290,7 @@ class DaCalc(DaBase):
                     model += ev_boundary_stop[e][u] == 0
                     model += ev_is_off[e][u] == 1
                     model += ev_is_on[e][u] == 0
-                model += ev_boundary_sum[e] == 0
+                model += ev_boundary_sum[e]== 0
                 model += ev_partial_sum[e] == 0
                 model += ev_start_stops_sum[e] == 0
 
@@ -2499,7 +2481,9 @@ class DaCalc(DaBase):
                         avg_temp = avg_temp_today
                     entity_avg_temp = self.heating_options.entity_avg_outside_temp
                     if entity_avg_temp is None:
-                        logging.warning("Geen entity om gem. temperatuur te exporteren")
+                        logging.warning(
+                            "Geen entity om gem. temperatuur te exporteren"
+                        )
                     else:
                         self.set_value(entity_avg_temp, round(avg_temp, 1))
                     logging.info(
@@ -3429,9 +3413,7 @@ class DaCalc(DaBase):
         # sum of all penalty's
 
         for e in range(EV):
-            model += low_soc_penalty[e] == xsum(
-                low_soc_penalty_int[e][u] for u in range(U)
-            )
+            model += low_soc_penalty[e] == xsum(low_soc_penalty_int[e][u] for u in range(U))
 
         if self.salderen:
             p_bat = p_avg
@@ -3603,12 +3585,12 @@ class DaCalc(DaBase):
             sum_old_cons += netto
             if netto >= 0:
                 old_cost_da += netto * pl[u]
-                org_l.append(netto / hour_fraction[u])
+                org_l.append(netto/hour_fraction[u])
                 org_t.append(0)
             else:
                 old_cost_da += netto * pt[u]
                 org_l.append(0)
-                org_t.append(netto / hour_fraction[u])
+                org_t.append(netto/hour_fraction[u])
         if self.boiler_present:
             boiler_at_23 = (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (
                 spec_heat_boiler / (3600 * cop_boiler)
@@ -3959,7 +3941,7 @@ class DaCalc(DaBase):
             total_cycle_cost += cycle_cost[b].x
             total_penalty_cost += penalty_cost[b].x
         total_switch_cost = 0
-        total_low_soc_cost = 0
+        total_low_soc_cost =0
         for e in range(EV):
             total_switch_cost += switch_cost[e].x
             total_low_soc_cost += low_soc_penalty[e].x
@@ -4109,7 +4091,10 @@ class DaCalc(DaBase):
             # logging.info(f"{some_label}   {cols}")            
             """
             for e in range(EV):
-                if (ready_u[e] < U) and (self.log_level <= logging.INFO):
+                if (
+                    (ready_u[e] < U)
+                    and (self.log_level <= logging.INFO)
+                ):
                     logging.info(
                         f"Inzet-factor laden {self.ev_options[e].name} per stop"
                     )
@@ -4166,7 +4151,9 @@ class DaCalc(DaBase):
                 logging.info(f"Totale switch kosten: {switch_cost[e].x:4.2f}")
                 entity_charging_schedule = self.ev_options[e].entity_charging_schedule
                 if entity_charging_schedule is not None:
-                    schedule_intervals = ready_u[e] + 1 if ready_u[e] < U else 0
+                    schedule_intervals = (
+                        ready_u[e] + 1 if ready_u[e] < U else 0
+                    )
                     charging_schedule = format_ev_charge_schedule(
                         timestamps=tijd[:schedule_intervals],
                         stage_energy=[
@@ -4174,10 +4161,12 @@ class DaCalc(DaBase):
                             for u in range(schedule_intervals)
                         ],
                         stage_powers=[
-                            ev_charge_stages[e][cs]["power"] for cs in range(ECS[e])
+                            ev_charge_stages[e][cs]["power"]
+                            for cs in range(ECS[e])
                         ],
                         stage_amperes=[
-                            ev_charge_stages[e][cs]["ampere"] for cs in range(ECS[e])
+                            ev_charge_stages[e][cs]["ampere"]
+                            for cs in range(ECS[e])
                         ],
                         calculation_start=start_dt,
                     )
@@ -4224,7 +4213,9 @@ class DaCalc(DaBase):
                         f"De stap met het grootste aandeel wordt gebruikt."
                     )
                 if len(active_stages) > 0:
-                    cs = max(active_stages, key=lambda k: stage_factor[e][k][0].x)
+                    cs = max(
+                        active_stages, key=lambda k: stage_factor[e][k][0].x
+                    )
                     stage_fraction = stage_factor[e][cs][0].x
                     new_ampere_state = ev_charge_stages[e][cs]["ampere"]
                     if new_ampere_state > 0:
@@ -4269,10 +4260,7 @@ class DaCalc(DaBase):
                                 )
                                 self.set_value(entity_charging_ampere, new_ampere_state)
                                 self.turn_on(entity_charge_switch)
-                                if (
-                                    entity_stop_laden is not None
-                                    and new_state_stop_laden is not None
-                                ):
+                                if entity_stop_laden is not None and new_state_stop_laden is not None:
                                     self.call_service(
                                         "set_datetime",
                                         entity_id=entity_stop_laden,
@@ -4290,10 +4278,7 @@ class DaCalc(DaBase):
                                     f"met {new_ampere_state} A"
                                 )
                                 self.set_value(entity_charging_ampere, new_ampere_state)
-                                if (
-                                    entity_stop_laden is not None
-                                    and new_state_stop_laden is not None
-                                ):
+                                if entity_stop_laden is not None and new_state_stop_laden is not None:
                                     self.call_service(
                                         "set_datetime",
                                         entity_id=entity_stop_laden,
@@ -4307,10 +4292,7 @@ class DaCalc(DaBase):
                                 self.set_value(entity_charging_ampere, 0)
                                 self.turn_off(entity_charge_switch)
                                 logging.info(f"Laden van {ev_name} uitgezet")
-                                if (
-                                    entity_stop_laden is not None
-                                    and new_state_stop_laden is not None
-                                ):
+                                if entity_stop_laden is not None and new_state_stop_laden is not None:
                                     self.call_service(
                                         "set_datetime",
                                         entity_id=entity_stop_laden,
@@ -4548,7 +4530,9 @@ class DaCalc(DaBase):
                 else:
                     # no activity anywhere in the horizon: confirmed idle
                     # until the end of the horizon
-                    next_action_dt = tijd[U - 1] + dt.timedelta(seconds=self.interval_s)
+                    next_action_dt = tijd[U - 1] + dt.timedelta(
+                        seconds=self.interval_s
+                    )
                 next_action_str = next_action_dt.strftime("%Y-%m-%d %H:%M")
                 if found_u is not None:
                     logging.info(
@@ -4580,7 +4564,9 @@ class DaCalc(DaBase):
                 entity_hp_switch = self.heating_options.entity_hp_switch
                 if entity_hp_switch is None:
                     if self.hp_adjustment == "on/off":
-                        logging.warning("Geen entity om warmtepomp in/uit te schakelen")
+                        logging.warning(
+                            "Geen entity om warmtepomp in/uit te schakelen"
+                        )
                 else:
                     logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
                     switch_state = self.get_state(entity_hp_switch).state
@@ -4648,8 +4634,9 @@ class DaCalc(DaBase):
                     for r in range(R[m]):
                         if ma_start[m][r].x == 1:
                             if ma_kw_dt[m][r] == start_dt:
-                                ma_start_time = dt.datetime.now() + dt.timedelta(
-                                    seconds=5
+                                ma_start_time = (
+                                    dt.datetime.now()
+                                    + dt.timedelta(seconds=5)
                                 )
                             else:
                                 ma_start_time = ma_kw_dt[m][r]
@@ -4724,16 +4711,16 @@ class DaCalc(DaBase):
         pv_ac_p = []
         max_y = 0
         for u in range(U):
-            c_t_n.append(-c_t[u].x / hour_fraction[u])
-            c_l_p.append(c_l[u].x / hour_fraction[u])
-            base_n.append(-b_l[u] / hour_fraction[u])
-            boiler_n.append(-c_b[u].x / hour_fraction[u])
-            heatpump_n.append(-c_hp[u].x / hour_fraction[u])
-            ev_n.append(-c_ev_sum[u] / hour_fraction[u])
-            mach_n.append(-c_ma_sum[u] / hour_fraction[u])
-            pv_p_org.append(solar_hour_sum_org[u] / hour_fraction[u])
-            pv_p_opt.append(solar_hour_sum_opt[u] / hour_fraction[u])
-            pv_ac_p.append(pv_ac_hour_sum[u] / hour_fraction[u])
+            c_t_n.append(-c_t[u].x/hour_fraction[u])
+            c_l_p.append(c_l[u].x/hour_fraction[u])
+            base_n.append(-b_l[u]/hour_fraction[u])
+            boiler_n.append(-c_b[u].x/hour_fraction[u])
+            heatpump_n.append(-c_hp[u].x/hour_fraction[u])
+            ev_n.append(-c_ev_sum[u]/hour_fraction[u])
+            mach_n.append(-c_ma_sum[u]/hour_fraction[u])
+            pv_p_org.append(solar_hour_sum_org[u]/hour_fraction[u])
+            pv_p_opt.append(solar_hour_sum_opt[u]/hour_fraction[u])
+            pv_ac_p.append(pv_ac_hour_sum[u]/hour_fraction[u])
             accu_in_sum = 0
             accu_out_sum = 0
             for b in range(B):
@@ -4744,16 +4731,13 @@ class DaCalc(DaBase):
             max_y = max(
                 max_y,
                 c_l_p[u] + pv_p_org[u] + accu_out_p[u],
-                (
-                    abs(c_t[u].x)
-                    + b_l[u]
-                    + c_b[u].x
-                    + c_hp[u].x
-                    + c_ev_sum[u]
-                    + c_ma_sum[u]
-                    + accu_in_sum * hour_fraction[u]
-                )
-                / hour_fraction[u],
+                (abs(c_t[u].x)
+                + b_l[u]
+                + c_b[u].x
+                + c_hp[u].x
+                + c_ev_sum[u]
+                + c_ma_sum[u]
+                + accu_in_sum * hour_fraction[u])/hour_fraction[u],
             )
         soc_t = []
         if B > 0:
@@ -4901,8 +4885,7 @@ class DaCalc(DaBase):
         ]
         breedte.append(breedte[-1])
         if solar_num > 0:
-            _bar(
-                axis[0],
+            _bar(axis[0],
                 tijd,
                 np.array(pv_p_org),
                 width=breedte,
@@ -4912,8 +4895,7 @@ class DaCalc(DaBase):
             )
         # 2
         if sum(pv_ac_p) > 0:
-            _bar(
-                axis[0],
+            _bar(axis[0],
                 tijd,
                 np.array(pv_ac_p),
                 width=breedte,
@@ -4923,8 +4905,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         # 3
-        _bar(
-            axis[0],
+        _bar(axis[0],
             tijd,
             np.array(org_l),
             width=breedte,
@@ -4934,18 +4915,16 @@ class DaCalc(DaBase):
             align="edge",
         )
 
-        _bar(
-            axis[0],
+        _bar(axis[0],
             tijd,
             np.array(base_n),
             width=breedte,
             label="Overig verbr.",
             color="#f1a603",
-            align="edge",
+            align="edge"
         )
         if self.boiler_present:
-            _bar(
-                axis[0],
+            _bar(axis[0],
                 tijd,
                 np.array(boiler_n),
                 width=breedte,
@@ -4955,8 +4934,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if self.hp_present:
-            _bar(
-                axis[0],
+            _bar(axis[0],
                 tijd,
                 np.array(heatpump_n),
                 width=breedte,
@@ -4966,8 +4944,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if EV > 0:
-            _bar(
-                axis[0],
+            _bar(axis[0],
                 tijd,
                 np.array(ev_n),
                 width=breedte,
@@ -4977,8 +4954,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if M > 0:
-            _bar(
-                axis[0],
+            _bar(axis[0],
                 tijd,
                 np.array(mach_n),
                 width=breedte,
@@ -4990,8 +4966,7 @@ class DaCalc(DaBase):
                 color="brown",
                 align="edge",
             )
-        _bar(
-            axis[0],
+        _bar(axis[0],
             tijd,
             np.array(org_t),
             width=breedte,
@@ -5010,22 +4985,10 @@ class DaCalc(DaBase):
         axis[0].set_ylim([-ylim, ylim])
 
         import matplotlib.dates as mdates
-
         maanden = [
-            "jan",
-            "feb",
-            "mrt",
-            "apr",
-            "mei",
-            "jun",
-            "jul",
-            "aug",
-            "sep",
-            "okt",
-            "nov",
-            "dec",
+            "jan", "feb", "mrt", "apr", "mei", "jun",
+            "jul", "aug", "sep", "okt", "nov", "dec"
         ]
-
         def nederlandse_datum(x, pos):
             datum = mdates.num2date(x)
             return f"{datum.day:02d} {maanden[datum.month - 1]}"
@@ -5038,10 +5001,14 @@ class DaCalc(DaBase):
         elif horizon_extension > 0:
             hours = [6, 12, 18]
         else:
-            hours = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
+            hours= [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]
 
-        axis[0].xaxis.set_minor_locator(mdates.HourLocator(byhour=hours))
-        axis[0].xaxis.set_minor_formatter(mdates.DateFormatter("%H"))
+        axis[0].xaxis.set_minor_locator(
+            mdates.HourLocator(byhour=hours)
+        )
+        axis[0].xaxis.set_minor_formatter(
+            mdates.DateFormatter("%H")
+        )
         axis[0].tick_params(axis="x", which="minor", labelsize=10)
         axis[0].tick_params(axis="x", which="major", labelsize=12)
 
@@ -5049,8 +5016,7 @@ class DaCalc(DaBase):
             f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\nNiet geoptimaliseerd"
         )
 
-        _bar(
-            axis[1],
+        _bar(axis[1],
             tijd,
             np.array(pv_p_opt),
             width=breedte,
@@ -5058,8 +5024,7 @@ class DaCalc(DaBase):
             color="green",
             align="edge",
         )
-        _bar(
-            axis[1],
+        _bar(axis[1],
             tijd,
             np.array(accu_out_p),
             width=breedte,
@@ -5068,8 +5033,7 @@ class DaCalc(DaBase):
             color="red",
             align="edge",
         )
-        _bar(
-            axis[1],
+        _bar(axis[1],
             tijd,
             np.array(c_l_p),
             width=breedte,
@@ -5080,18 +5044,11 @@ class DaCalc(DaBase):
         )
 
         # axis[1].bar(tijd, np.array(cons_n), label="Verbruik", color='yellow')
-        _bar(
-            axis[1],
-            tijd,
-            np.array(base_n),
-            width=breedte,
-            label="Overig verbr.",
-            color="#f1a603",
-            align="edge",
+        _bar(axis[1],
+            tijd, np.array(base_n), width=breedte, label="Overig verbr.", color="#f1a603", align="edge"
         )
         if self.boiler_present:
-            _bar(
-                axis[1],
+            _bar(axis[1],
                 tijd,
                 np.array(boiler_n),
                 width=breedte,
@@ -5101,8 +5058,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if self.hp_present:
-            _bar(
-                axis[1],
+            _bar(axis[1],
                 tijd,
                 np.array(heatpump_n),
                 width=breedte,
@@ -5112,8 +5068,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if EV > 0:
-            _bar(
-                axis[1],
+            _bar(axis[1],
                 tijd,
                 np.array(ev_n),
                 width=breedte,
@@ -5123,8 +5078,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if M > 0:
-            _bar(
-                axis[1],
+            _bar(axis[1],
                 tijd,
                 np.array(mach_n),
                 width=breedte,
@@ -5137,8 +5091,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if B > 0:
-            _bar(
-                axis[1],
+            _bar(axis[1],
                 tijd,
                 np.array(accu_in_n),
                 width=breedte,
@@ -5151,8 +5104,7 @@ class DaCalc(DaBase):
                 color="#ff8000",
                 align="edge",
             )
-        _bar(
-            axis[1],
+        _bar(axis[1],
             tijd,
             np.array(c_t_n),
             width=breedte,
@@ -5172,8 +5124,12 @@ class DaCalc(DaBase):
         axis[1].xaxis.set_major_locator(mdates.DayLocator())
         axis[1].xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
 
-        axis[1].xaxis.set_minor_locator(mdates.HourLocator(byhour=hours))
-        axis[1].xaxis.set_minor_formatter(mdates.DateFormatter("%H"))
+        axis[1].xaxis.set_minor_locator(
+            mdates.HourLocator(byhour=hours)
+        )
+        axis[1].xaxis.set_minor_formatter(
+            mdates.DateFormatter("%H")
+        )
         axis[1].tick_params(axis="x", which="minor", labelsize=10)
         axis[1].tick_params(axis="x", which="major", labelsize=12)
 
@@ -5185,8 +5141,8 @@ class DaCalc(DaBase):
 
         # extra tijdstip voor sync aantal uur met laatste soc-waarde
         # eenmalig, de grafieken hieronder verwachten U+1 tijdstippen
-        span = tijd[U - 1] - tijd[U - 2]
-        tijd.append(tijd[U - 1] + span)
+        span = tijd[U-1] - tijd[U-2]
+        tijd.append(tijd[U-1] + span)
         breedte.append(breedte[-1])
 
         gr_no = 1
@@ -5202,31 +5158,24 @@ class DaCalc(DaBase):
                 for u in range(U):
                     # model += (dc_from_ac[b][u] + dc_from_bat[b][u] + pv_prod_dc_sum[b][u] ==
                     #           dc_to_ac[b][u] + dc_to_bat[b][u])
-                    ac_p.append(dc_from_ac[b][u].x)  # * hour_fraction[u])
-                    ac_n.append(-dc_to_ac[b][u].x)  # * hour_fraction[u])
+                    ac_p.append(dc_from_ac[b][u].x) # * hour_fraction[u])
+                    ac_n.append(-dc_to_ac[b][u].x) # * hour_fraction[u])
                     if pv_dc_num[b] > 0:
-                        pv_p.append(pv_prod_dc_sum[b][u].x)  # * hour_fraction[u])
+                        pv_p.append(pv_prod_dc_sum[b][u].x) # * hour_fraction[u])
                     else:
                         pv_p.append(0)
-                    bat_p.append(dc_from_bat[b][u].x)  # * hour_fraction[u])
-                    bat_n.append(-dc_to_bat[b][u].x)  # * hour_fraction[u])
+                    bat_p.append(dc_from_bat[b][u].x) # * hour_fraction[u])
+                    bat_n.append(-dc_to_bat[b][u].x) # * hour_fraction[u])
                 # extra uur voor sync aantal uur met laatste soc-waarde
                 ac_p.append(0)
                 ac_n.append(0)
                 pv_p.append(0)
                 bat_p.append(0)
                 bat_n.append(0)
-                leg1 = _bar(
-                    axis[gr_no],
-                    tijd,
-                    np.array(ac_p),
-                    width=breedte,
-                    label="AC<->",
-                    color="red",
-                    align="edge",
+                leg1 = _bar(axis[gr_no],
+                    tijd, np.array(ac_p), width=breedte, label="AC<->", color="red", align="edge"
                 )
-                leg2 = _bar(
-                    axis[gr_no],
+                leg2 = _bar(axis[gr_no],
                     tijd,
                     np.array(bat_p),
                     label="BAT<->",
@@ -5236,8 +5185,7 @@ class DaCalc(DaBase):
                     align="edge",
                 )
                 if pv_dc_num[b] > 0:
-                    leg3 = _bar(
-                        axis[gr_no],
+                    leg3 = _bar(axis[gr_no],
                         tijd,
                         np.array(pv_p),
                         width=breedte,
@@ -5248,16 +5196,8 @@ class DaCalc(DaBase):
                     )
                 else:
                     leg3 = None
-                _bar(
-                    axis[gr_no],
-                    tijd,
-                    np.array(ac_n),
-                    width=breedte,
-                    color="red",
-                    align="edge",
-                )
-                _bar(
-                    axis[gr_no],
+                _bar(axis[gr_no], tijd, np.array(ac_n), width=breedte, color="red", align="edge")
+                _bar(axis[gr_no],
                     tijd,
                     np.array(bat_n),
                     width=breedte,
@@ -5272,8 +5212,12 @@ class DaCalc(DaBase):
                 axis[gr_no].xaxis.set_major_locator(mdates.DayLocator())
                 axis[gr_no].xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
 
-                axis[gr_no].xaxis.set_minor_locator(mdates.HourLocator(byhour=hours))
-                axis[gr_no].xaxis.set_minor_formatter(mdates.DateFormatter("%H"))
+                axis[gr_no].xaxis.set_minor_locator(
+                    mdates.HourLocator(byhour=hours)
+                )
+                axis[gr_no].xaxis.set_minor_formatter(
+                    mdates.DateFormatter("%H")
+                )
                 axis[gr_no].tick_params(axis="x", which="minor", labelsize=10)
                 axis[gr_no].tick_params(axis="x", which="major", labelsize=12)
 
@@ -5314,8 +5258,12 @@ class DaCalc(DaBase):
         axis[gr_no].xaxis.set_major_locator(mdates.DayLocator())
         axis[gr_no].xaxis.set_major_formatter(mdates.DateFormatter("%d %b"))
 
-        axis[gr_no].xaxis.set_minor_locator(mdates.HourLocator(byhour=hours))
-        axis[gr_no].xaxis.set_minor_formatter(mdates.DateFormatter("%H"))
+        axis[gr_no].xaxis.set_minor_locator(
+            mdates.HourLocator(byhour=hours)
+        )
+        axis[gr_no].xaxis.set_minor_formatter(
+            mdates.DateFormatter("%H")
+        )
         axis[gr_no].tick_params(axis="x", which="minor", labelsize=10)
         axis[gr_no].tick_params(axis="x", which="major", labelsize=12)
 
@@ -5374,25 +5322,25 @@ class DaCalc(DaBase):
 
         if str((_g.prices_spot if _g else True) or "true").lower() == "true":
             p_spot.append(p_spot[-1])
-            if horizon_extension > 0:
+            if horizon_extension > 0 :
                 tijd_fixed = [value for value in tijd if value <= start_prediction_dt]
-                p_spot_fixed = p_spot[: len(tijd_fixed)]
+                p_spot_fixed = p_spot[:len(tijd_fixed)]
                 ln5 = axis22.step(
                     tijd_fixed,
                     np.array(p_spot_fixed),
                     label="Spot prices",
                     color="orange",
-                    where="post",
+                    where="post"
                 )
                 tijd_pred = [value for value in tijd if value >= start_prediction_dt]
-                p_spot_pred = p_spot[-len(tijd_pred) :]
+                p_spot_pred = p_spot[-len(tijd_pred):]
                 ln6 = axis22.step(
                     tijd_pred,
                     np.array(p_spot_pred),
                     label="Pred.spot",
                     color="orange",
                     where="post",
-                    linestyle="dashed",
+                    linestyle="dashed"
                 )
             else:
                 ln5 = axis22.step(
@@ -5524,7 +5472,6 @@ def main():
     da_calc.db_da.log_pool_status()
 
     os._exit(exit_code)
-
 
 if __name__ == "__main__":
     main()

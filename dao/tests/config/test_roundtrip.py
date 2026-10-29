@@ -44,6 +44,7 @@ HEATING_ENABLED = {
 
 
 class TestRoundtrip:
+
     def test_boiler_disabled_roundtrip(self):
         original = parse_boiler({"boiler_present": False})
         roundtripped = parse_boiler(original.model_dump())

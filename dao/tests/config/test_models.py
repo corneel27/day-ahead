@@ -26,10 +26,7 @@ class TestEntityId:
         assert m.entity == "sensor.battery_soc"
 
     def test_underscores_in_object_id(self):
-        assert (
-            _Model(entity="binary_sensor.grid_connected").entity
-            == "binary_sensor.grid_connected"
-        )
+        assert _Model(entity="binary_sensor.grid_connected").entity == "binary_sensor.grid_connected"
 
     def test_domain_starts_with_underscore(self):
         # leading underscore is valid per HA convention
@@ -146,15 +143,10 @@ class TestFlexBool:
 
 class TestFlexStr:
     def test_resolve_literal(self):
-        assert (
-            FlexStr(value="minimize cost").resolve(lambda x: "dummy") == "minimize cost"
-        )
+        assert FlexStr(value="minimize cost").resolve(lambda x: "dummy") == "minimize cost"
 
     def test_resolve_entity_id(self):
-        assert (
-            FlexStr(value="input_select.mode").resolve(lambda x: "minimize consumption")
-            == "minimize consumption"
-        )
+        assert FlexStr(value="input_select.mode").resolve(lambda x: "minimize consumption") == "minimize consumption"
 
     def test_resolve_numeric_literal_coerces(self):
         assert FlexStr(value=42).resolve(lambda x: "dummy") == "42"
@@ -170,10 +162,8 @@ class TestSecretStr:
     def test_serialization_secret_json(self):
         """Pydantic model round-trip serializes as the raw !secret reference."""
         from pydantic import BaseModel as _BM
-
         class _M(_BM):
             password: SecretStr
-
         m = _M(password="!secret db_password")
         assert m.model_dump() == {"password": "!secret db_password"}
         assert m.model_dump_json() == '{"password":"!secret db_password"}'
@@ -213,7 +203,6 @@ class TestSocPowerLimit:
         """day_ahead.py computes a slope and writes it back as ._helling.
         Stored as a Pydantic PrivateAttr so it is invisible to schema/serialization."""
         from dao.prog.config.models.devices.battery import SocPowerLimit
-
         s = SocPowerLimit(soc=95, power=2500)
         s._helling = -125.0  # slope computed by day_ahead.py
         assert s._helling == -125.0
@@ -221,7 +210,6 @@ class TestSocPowerLimit:
     def test_helling_excluded_from_serialization(self):
         """helling is a runtime-only scratch value; it must never be persisted to config."""
         from dao.prog.config.models.devices.battery import SocPowerLimit
-
         s = SocPowerLimit(soc=95, power=2500)
         s._helling = -125.0
         dumped = s.model_dump()

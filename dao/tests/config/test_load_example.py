@@ -27,7 +27,7 @@ def test_load_options_example(options_example_data):
     """Test that options_example.json can be loaded into ConfigurationV0."""
     # Add config_version since example doesn't have it
     options_example_data["config_version"] = 0
-
+    
     # Try to parse with Pydantic
     try:
         config = ConfigurationV0(**options_example_data)
@@ -49,19 +49,19 @@ def test_battery_has_all_fields(options_example_data):
     """Test that battery config has all expected fields including nested solar."""
     options_example_data["config_version"] = 0
     config = ConfigurationV0(**options_example_data)
-
+    
     battery = config.battery[0]
     assert battery.name == "Accu1"
     assert battery.capacity == 28
     assert battery.charge_stages is not None
     assert len(battery.charge_stages) > 0
-
+    
     # Check new fields exist
     assert battery.reduced_hours is not None
     assert battery.minimum_power is not None
     assert battery.dc_to_bat_efficiency is not None
     assert battery.cycle_cost is not None
-
+    
     # Check nested solar
     assert battery.solar is not None
     assert len(battery.solar) > 0
@@ -81,7 +81,7 @@ def test_pricing_date_based_fields(options_example_data):
     """Test that pricing date-based fields are loaded correctly."""
     options_example_data["config_version"] = 0
     config = ConfigurationV0(**options_example_data)
-
+    
     pricing = config.prices
     assert isinstance(pricing.energy_taxes_consumption, dict)
     assert isinstance(pricing.vat_consumption, dict)
@@ -94,14 +94,14 @@ def test_optional_devices(options_example_data):
     """Test that optional devices are handled correctly."""
     options_example_data["config_version"] = 0
     config = ConfigurationV0(**options_example_data)
-
+    
     # Boiler and heating are present in example
     assert config.boiler is not None
     assert config.heating is not None
-
+    
     # Tibber is present in example
     assert config.tibber is not None
-
+    
     print("✅ Optional devices loaded correctly")
 
 
@@ -121,9 +121,9 @@ def test_unknown_keys_preserved(options_example_data):
     # Add a custom unknown key
     options_example_data["custom_unknown_field"] = "test_value"
     options_example_data["config_version"] = 0
-
+    
     config = ConfigurationV0(**options_example_data)
-
+    
     # Pydantic should preserve it with extra='allow'
     # We can check via model_dump()
     config.model_dump()

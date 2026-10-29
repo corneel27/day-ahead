@@ -185,7 +185,9 @@ class ConfigurationLoader:
         except ValidationError as e:
             raise ConfigValidationError(e) from e
 
-    def save(self, config_data: dict[str, Any], save_path: Path | None = None) -> None:
+    def save(
+        self, config_data: dict[str, Any], save_path: Path | None = None
+    ) -> None:
         """
         Save configuration to disk, preserving unknown keys.
 

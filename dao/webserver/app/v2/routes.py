@@ -26,18 +26,18 @@ from dao.prog.version import __version__
 
 v2 = Blueprint("v2", __name__)
 
-
 @v2.context_processor
 def inject_data():
-    return {"version": __version__, "vite_tags": vite_tags("assets/main.js")}
-
+    return {
+        "version": __version__,
+        "vite_tags": vite_tags("assets/main.js")
+    }
 
 # globals
 app_datapath = os.environ.get("DAO_WEB_DATA_DIR", "app/static/data").rstrip("/") + "/"
 
 VITE_DEV_PORT = os.getenv("VITE_DEV_PORT", "5173")
 VITE_MANIFEST = Path("app/static/build/.vite/manifest.json")
-
 
 def vite_dev_server() -> str:
     """
@@ -63,19 +63,14 @@ def vite_dev_server() -> str:
         return f"//{host}:{VITE_DEV_PORT}"
     return f"http://localhost:{VITE_DEV_PORT}"
 
-
 def vite_tags(entry: str) -> str:
     if os.getenv("VITE_DEV") == "1":
         dev_server = vite_dev_server()
-        return (
-            f'<script type="module" src="{dev_server}/@vite/client"></script>'
-            f'<script type="module" src="{dev_server}/{entry}"></script>'
-        )
+        return f'<script type="module" src="{dev_server}/@vite/client"></script>' \
+               f'<script type="module" src="{dev_server}/{entry}"></script>'
 
     if not VITE_MANIFEST.exists():
-        raise RuntimeError(
-            "Vite manifest not found. Run 'npm run build' in the Vite server directory."
-        )
+        raise RuntimeError("Vite manifest not found. Run 'npm run build' in the Vite server directory.")
 
     with VITE_MANIFEST.open() as f:
         manifest = json.load(f)
@@ -88,7 +83,7 @@ def vite_tags(entry: str) -> str:
         href = url_for("static", filename=f"build/{css}")
         tags.append(f'<link rel="stylesheet" href="{href}">')
 
-    src = url_for("static", filename=f"build/{asset['file']}")
+    src = url_for("static", filename=f'build/{asset["file"]}')
     tags.append(f'<script type="module" src="{src}"></script>')
 
     return "\n".join(tags)
@@ -112,33 +107,31 @@ def get_file_list_with_ts(path: str, pattern: str) -> list:
                     dt_str = f"{m.group(1)} {m.group(2)}:{m.group(3)}:{seconds}"
                     dt = datetime.datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
                     timestamp = dt.timestamp()  # Local time as epoch
-                    flist.append(
-                        {
-                            "name": f,
-                            "time": timestamp,
-                        }
-                    )
+                    flist.append({
+                        "name": f,
+                        "time": timestamp,
+                    })
                 except (ValueError, OSError):
                     # Fallback to mtime if filename parsing fails
                     fullname = os.path.join(path, f)
-                    flist.append(
-                        {
-                            "name": f,
-                            "time": int(os.path.getmtime(fullname)),
-                        }
-                    )
+                    flist.append({
+                        "name": f,
+                        "time": int(os.path.getmtime(fullname)),
+                    })
 
     flist.sort(key=lambda x: (x["time"], x["name"].lower()))
     return flist
 
 
 def get_closest_index_from_list(flist: list, ts: float) -> int:
-    return min(range(len(flist)), key=lambda i: abs(flist[i].get("time", 0) - ts))
+    return min(
+        range(len(flist)),
+        key=lambda i: abs(flist[i].get("time", 0) - ts)
+    )
 
 
 STATEFILE = "../data/task_state.json"
 STALE_AFTER = 600
-
 
 def save_task_state(state):
     # Write to tmp file and replace (atomic)
@@ -176,17 +169,16 @@ def get_task_state() -> dict:
 
     last_update = state.get("last_update", 0)
 
-    if state.get("status") == "running" and time.time() - last_update > STALE_AFTER:
+    if (
+        state.get("status") == "running"
+        and time.time() - last_update > STALE_AFTER
+    ):
         return no_state
 
     return state
 
-
 def run_and_log(cmd, state):
-    flist = get_file_list_with_ts(
-        os.path.join(app_datapath, "log"),
-        "*.log",
-    )
+    flist = get_file_list_with_ts(os.path.join(app_datapath, "log"),"*.log",)
 
     last_log_file = None
     if len(flist) > 0:
@@ -271,20 +263,15 @@ def log_chart(datapath: str, pattern: str):
 
     rq_ts = request.args.get("ts")
     if rq_ts is not None:
-        show_index = get_closest_index_from_list(
-            flist, datetime.datetime.fromisoformat(rq_ts).timestamp()
-        )
+        show_index = get_closest_index_from_list(flist, datetime.datetime.fromisoformat(rq_ts).timestamp())
 
     first_index = 0
     prev_index = max(0, show_index - 1)
     next_index = min(last_index, show_index + 1)
-    ffprev_index = max(
-        0, get_closest_index_from_list(flist, flist[show_index]["time"] - (6 * 3600))
-    )  # Subtract 6 hours
-    ffnext_index = min(
-        last_index,
-        get_closest_index_from_list(flist, flist[show_index]["time"] + (6 * 3600)),
-    )  # Add 6 hours
+    ffprev_index = max(0,
+                       get_closest_index_from_list(flist, flist[show_index]["time"] - (6 * 3600)))  # Subtract 6 hours
+    ffnext_index = min(last_index,
+                       get_closest_index_from_list(flist, flist[show_index]["time"] + (6 * 3600)))  # Add 6 hours
     show_ts = datetime.datetime.fromtimestamp(flist[show_index]["time"]).isoformat()
 
     return {
@@ -327,39 +314,39 @@ def get_solar_items_with_ml():
 def chart():
     kwargs = log_chart("images/", "*.png")
     if kwargs is None:
-        return render_template(
-            "v2/no-task.html",
-        )
+        return render_template("v2/no-task.html", )
 
-    kwargs["image"] = url_for("static", filename="data/images/" + kwargs["filename"])
-    return render_template("v2/chart.html", **kwargs)
+    kwargs["image"] = url_for('static', filename="data/images/" + kwargs["filename"])
+    return render_template(
+        "v2/chart.html",
+        **kwargs
+    )
 
 
 @v2.route("/log")
 def log():
     kwargs = log_chart("log/", "*.log")
     if kwargs is None:
-        return render_template(
-            "v2/no-task.html",
-        )
+        return render_template("v2/no-task.html", )
 
     log_file = app_datapath + "log/" + kwargs["filename"]
     with open(log_file) as f:
         kwargs["logdata"] = f.read()
 
-    return render_template("v2/log.html", **kwargs)
+    return render_template(
+        "v2/log.html",
+        **kwargs
+    )
 
 
 @v2.route("/delete-file", methods=["POST"])
 def delete_file():
     post_data = request.form.to_dict(flat=True)
 
-    if post_data["confirm"] == "1" and re.match(
-        r"^(images|log)/[^/]+\.(log|png)$", post_data["file"]
-    ):
+    if post_data["confirm"] == "1" and re.match(r'^(images|log)/[^/]+\.(log|png)$', post_data["file"]):
         os.remove(app_datapath + post_data["file"])
 
-    return redirect(url_for("v2." + post_data["action"], i=post_data["show_index"]))
+    return redirect(url_for('v2.' + post_data["action"], i=post_data["show_index"]))
 
 
 @v2.route("/tasks")
@@ -374,14 +361,13 @@ def tasks():
 
     return render_template("v2/tasks.html", tasks=ui_tasks)
 
-
 @v2.route("/task-cancel")
 def task_cancel():
     try:
         state = get_task_state()
         state["status"] = "cancelled"
         save_task_state(state)
-        return redirect(url_for("v2.task_state"))
+        return redirect(url_for('v2.task_state'))
     except Exception:
         return "Error cancelling task", 500
 
@@ -389,7 +375,6 @@ def task_cancel():
 @v2.route("/task-exec", methods=["POST"])
 def task_exec():
     from dao.prog.da_const import tasks
-
     current_state = get_task_state()
 
     if current_state["status"] == "running":
@@ -416,9 +401,13 @@ def task_exec():
     if task_name == "get_day_ahead_prices":
         cmd.append(datetime.date.today().strftime("%Y-%m-%d"))
 
-    threading.Thread(target=run_and_log, args=(cmd, state), daemon=True).start()
+    threading.Thread(
+        target=run_and_log,
+        args=(cmd, state),
+        daemon=True
+    ).start()
 
-    return redirect(url_for("v2.task_state"))
+    return redirect(url_for('v2.task_state'))
 
 
 @v2.route("/task-state", methods=["GET"])
@@ -439,7 +428,9 @@ def task_state():
         )
 
         last_update = (
-            time.time() if status == "running" else current_state.get("last_update")
+            time.time()
+            if status == "running"
+            else current_state.get("last_update")
         )
 
         seconds_running = None
@@ -469,13 +460,7 @@ def task_state():
     ), headers
 
 
-def reports_gen(
-    subject: str,
-    view: str,
-    period: str,
-    solar_item=None,
-    date: datetime.datetime = None,
-):
+def reports_gen(subject: str, view: str, period: str, solar_item=None, date: datetime.datetime = None):
     report = Report(app_datapath + "/options.json")
     prognose = period in ["vandaag en morgen", "morgen", "today_with_forecast"]
     if period == "today_with_forecast":
@@ -494,10 +479,16 @@ def reports_gen(
 
     if subject == "grid":
         report_df = report.get_grid_data(period, _tot=tot)
-        report_df = report.calc_grid_columns(report_df, interval, view)
+        report_df = report.calc_grid_columns(
+            report_df, interval, view
+        )
     elif subject == "balans":
-        report_df, _lastmoment = report.get_energy_balance_data(period, _tot=tot)
-        report_df = report.calc_balance_columns(report_df, interval, view)
+        report_df, _lastmoment = report.get_energy_balance_data(
+            period, _tot=tot
+        )
+        report_df = report.calc_balance_columns(
+            report_df, interval, view
+        )
     # else:  # co2
     #     report_df = report.calc_co2_emission(
     #         period,
@@ -565,7 +556,7 @@ def reports_gen(
                 report_df,
                 "vandaag",
                 _options=report.solar_graph_options,
-                _title=f"Solar production {date.strftime('%Y-%m-%d')}",
+                _title=f"Solar production {date.strftime('%Y-%m-%d')}"
             )
         else:
             raise Exception("Invalid subject")
@@ -586,10 +577,8 @@ def reports():
         subject=subject,
         view=view,
         report_data=report_data,
-        subject_options=[
-            {"label": "Grid", "value": "grid"},
-            {"label": "Balance", "value": "balans"},
-        ],
+        subject_options=[{"label": "Grid", "value": "grid"},
+                         {"label": "Balance", "value": "balans"}]
     )
 
 
@@ -606,10 +595,8 @@ def savings():
         subject=subject,
         view=view,
         report_data=report_data,
-        subject_options=[
-            {"label": "Consumption", "value": "save_cons"},
-            {"label": "Cost", "value": "save_cost"},
-        ],
+        subject_options=[{"label": "Consumption", "value": "save_cons"},
+                         {"label": "Cost", "value": "save_cost"}]
     )
 
 
@@ -632,9 +619,7 @@ def solar():
 
     date_str = date.strftime("%Y-%m-%d")
 
-    report_data = reports_gen(
-        "solar", view, period, solar_item=solar_items[subject], date=date
-    )
+    report_data = reports_gen("solar", view, period, solar_item=solar_items[subject], date=date)
     return render_template(
         "v2/report.html",
         title="Solar",
@@ -645,13 +630,19 @@ def solar():
         hide_period=True,
         show_datepicker=True,
         date=date_str,
-        subject_options=[{"label": key, "value": key} for key in solar_items],
+        subject_options=[
+            {"label": key, "value": key}
+            for key in solar_items
+        ]
     )
 
 
 @v2.route("/reports-v2", methods=["GET"])
 def reportsv2():
-    today = datetime.datetime.combine(datetime.date.today(), datetime.time.min)
+    today = datetime.datetime.combine(
+        datetime.date.today(),
+        datetime.time.min
+    )
 
     tomorrow = today + datetime.timedelta(days=1)
     start = request.args.get("start", default=today.isoformat())
@@ -680,7 +671,7 @@ def config():
     error = None
     success = None
 
-    tmp_file = Path("/tmp/options_tmp.json")
+    tmp_file = Path('/tmp/options_tmp.json')
 
     if request.method == "POST" and request.form.to_dict()["config"] is not None:
         content = request.form.to_dict()["config"]
@@ -743,7 +734,6 @@ def secrets():
         error=error,
     )
 
-
 @v2.route("/view-file", methods=["GET", "POST"])
 def view_file():
     filename = request.args.get("file")
@@ -775,7 +765,6 @@ def view_file():
         filename=log_file,
     )
 
-
 def _alter_hex(hex_color, factor):
     """
     factor < 1 = darker
@@ -792,7 +781,6 @@ def _alter_hex(hex_color, factor):
 
     return f"#{r:02x}{g:02x}{b:02x}"
 
-
 def _datasets_config():
     report = Report(app_datapath + "/options.json")
     metadata = report.db_da.metadata
@@ -801,24 +789,24 @@ def _datasets_config():
     variabel = Table("variabel", metadata, autoload_with=engine)
 
     with engine.connect() as conn:
-        vars = conn.execute(variabel.select()).fetchall()
+        vars = conn.execute(
+            variabel.select()
+        ).fetchall()
 
     datasets = []
 
     for row in vars:
         color = "#ffffff"
 
-        datasets.append(
-            {
-                "label": row.name,
-                "code": row.code,
-                "borderColor": _alter_hex(color, 0.8),
-                "backgroundColor": color,
-                "type": "bar" if row.dim == "kWh" else "line",
-                "stepped": row.dim == "euro/kWh",
-                "yAxisID": f"y_{row.dim}",
-                "unit": row.dim,
-            }
-        )
+        datasets.append({
+            "label": row.name,
+            "code": row.code,
+            "borderColor": _alter_hex(color, 0.8),
+            "backgroundColor": color,
+            "type": "bar" if row.dim == "kWh" else "line",
+            "stepped": row.dim == "euro/kWh",
+            "yAxisID": f"y_{row.dim}",
+            "unit": row.dim,
+        })
 
     return datasets

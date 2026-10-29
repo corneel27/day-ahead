@@ -2,6 +2,7 @@
 Reporting configuration models.
 """
 
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from .base import EntityId

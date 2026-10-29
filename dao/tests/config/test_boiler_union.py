@@ -31,6 +31,7 @@ ENABLED_PYTHON = {
 
 
 class TestBoilerUnion:
+
     def test_disabled_requires_no_other_fields(self):
         result = parse_boiler({"boiler present": False})
         assert isinstance(result, BoilerDisabled)
@@ -48,10 +49,7 @@ class TestBoilerUnion:
     def test_default_cop_is_validated_and_serializable(self):
         result = parse_boiler(ENABLED_PYTHON)
         assert isinstance(result.cop, FlexFloat)
-        assert (
-            result.cop.resolve(lambda _: pytest.fail("Literal COP must not query HA"))
-            == 3.0
-        )
+        assert result.cop.resolve(lambda _: pytest.fail("Literal COP must not query HA")) == 3.0
         assert result.model_dump()["cop"] == 3.0
 
     def test_enabled_missing_required_field_raises(self):
@@ -63,3 +61,5 @@ class TestBoilerUnion:
 
     def test_routes_true_to_enabled(self):
         assert type(parse_boiler(ENABLED_PYTHON)) is BoilerEnabled
+
+

@@ -5,12 +5,11 @@ Pricing configuration models.
 from datetime import date
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Literal
-
 from .base import SecretStr, EntityId
 
 
 class PricePrediction(BaseModel):
-    extension: int | None = Field(
+    extension: int | None = Field (
         default=0,
         ge=0,
         description="The amount of hours the planninghorizon is extended beyond the horizon of the regular day ahead prices",
@@ -20,9 +19,7 @@ class PricePrediction(BaseModel):
             "x-ui-section": "Prices",
         },
     )
-    source: (
-        Literal["epexpredictor", "energypriceforecast_eu", "dap", "jeroen_nl"] | None
-    ) = Field(
+    source: Literal["epexpredictor", "energypriceforecast_eu", "dap","jeroen_nl"] | None = Field (
         default="dap",
         description="The name of the supplier of prediction data, now there is support for epexpredictor, dap and energypriceforecast_eu",
         json_schema_extra={
@@ -30,15 +27,15 @@ class PricePrediction(BaseModel):
             "x-ui-section": "Prices",
         },
     )
-    api: str | None = Field(
+    api: str | None = Field (
         default="https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
         description="The url of the supplier of prediction data, with which DAO can get the prediction data ",
         json_schema_extra={
             "x-help": "The url of the supplier to get the prediction data"
-            "for Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"
-            "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>"
-            "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"
-            "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json",
+                      "for Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"
+                      "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>"
+                      "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
+                      "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json"
             "x-ui-section": "Prices",
         },
     )
@@ -60,7 +57,6 @@ class PricePrediction(BaseModel):
         },
     )
 
-
 class HADataSensor(BaseModel):
     ha_entity: EntityId | None = Field(
         default="sensor.epex_spot_data_market_price",
@@ -74,7 +70,7 @@ class HADataSensor(BaseModel):
     ha_attribute: str | None = Field(
         default="data",
         description="The name of attribute in the HA sensor where a list of data are available."
-        "Every item in de list contain at least a datetime field and a value field",
+                    "Every item in de list contain at least a datetime field and a value field",
         json_schema_extra={
             "x-help": "Home Assistant sensor the name of the attribute with the data. ",
             "x-ui-section": "Prices",
@@ -110,13 +106,13 @@ class PricingConfig(BaseModel):
         description="Source for day-ahead prices",
         json_schema_extra={
             "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe'"
-            " for European markets, 'tibber' if using Tibber integration. "
-            "'ha' for generic solutions",
+                      " for European markets, 'tibber' if using Tibber integration. "
+                      "'ha' for generic solutions",
             "x-ui-section": "Prices",
-        },
+        }
     )
-    ha_epex_spot: HADataSensor | None = Field(
-        default_factory=HADataSensor,
+    ha_epex_spot : HADataSensor | None = Field(
+        default_factory = HADataSensor,
         description="Configuration of getting pricedata from the ha-custom component 'epex spot'.",
         json_schema_extra={
             "x-help": "Configuration of getting the day ahead prices from 'epex spot'.",
@@ -124,7 +120,7 @@ class PricingConfig(BaseModel):
         },
     )
     prediction: PricePrediction | None = Field(
-        default_factory=PricePrediction,
+        default_factory = PricePrediction,
         description="Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
         json_schema_extra={
             "x-help": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
@@ -184,11 +180,11 @@ class PricingConfig(BaseModel):
     cost_supplier_production: dict[str, float] = Field(
         alias="cost supplier production",
         description="Supplier costs for production (feed-in) by date (YYYY-MM-DD -> euro/kWh ex VAT) "
-        "negative if you must pay for feed-in, positive if you get income for feed-in ",
+                    "negative if you must pay for feed-in, positive if you get income for feed-in ",
         json_schema_extra={
             "x-help": "Supplier fees for feed-in/production (excluding VAT) indexed by effective date. "
-            "Negative if you must pay for feed-in, positive if you get income for feed-in. "
-            "Format: {'2024-01-01': -0.02}.",
+                      "Negative if you must pay for feed-in, positive if you get income for feed-in. "
+                      "Format: {'2024-01-01': -0.02}.",
             "x-unit": "€/kWh",
             "x-ui-section": "Cost",
             "x-validation-hint": "Dict with YYYY-MM-DD keys, float values (ex VAT)",

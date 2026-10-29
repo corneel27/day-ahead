@@ -5,4 +5,4 @@ from . import app
 
 @app.route("/", methods=["GET"])
 def index():
-    return redirect(url_for("v2.chart"))
+    return redirect(url_for('v2.chart'))

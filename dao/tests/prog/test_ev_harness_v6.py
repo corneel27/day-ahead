@@ -360,16 +360,13 @@ def _with_stop_entity_removed(da_calc: DaCalc, ev_index: int):
     original = ev.entity_stop_charging
     try:
         ev.entity_stop_charging = None
-
         def restore():
             ev.entity_stop_charging = original
     except Exception:
         new_ev = ev.model_copy(update={"entity_stop_charging": None})
         da_calc.ev_options[ev_index] = new_ev
-
         def restore():
             da_calc.ev_options[ev_index] = ev
-
     try:
         yield
     finally:
@@ -520,7 +517,6 @@ class ResolvedEvInput:
     concrete datetime (or None), so it can be reused both for building
     overrides and for verifying the log echo without calling a
     now()-dependent factory twice."""
-
     plugged_in: bool | None
     position: str | None
     actual_soc: float | None
@@ -560,9 +556,7 @@ class TestCase:
     # target_input.ready_dt, and target_input.ready_override_str at run
     # time. Third tuple element is None to leave ready_override_str as
     # whatever target_input already had.
-    dynamic_setup: (
-        Callable[[DaCalc], tuple[dt.datetime, dt.datetime, str | None]] | None
-    ) = None
+    dynamic_setup: Callable[[DaCalc], tuple[dt.datetime, dt.datetime, str | None]] | None = None
     remove_stop_entity_on_target: bool = False
     # Computes (actual_soc, wished_level) for the TARGET ev from its real
     # config at run time, overriding whatever target_input carried. Needed by
@@ -637,10 +631,8 @@ def _top_stage_accu_kw(da_calc: DaCalc, ev_index: int) -> float:
     ampere = float(getattr(top, "ampere", 0.0))
     efficiency = float(getattr(top, "efficiency", 1.0) or 1.0)
     try:
-
         def ha_getter(eid):
             return da_calc.get_state(eid).state
-
         three_phase = bool(ev.charge_three_phase.resolve(ha_getter))
     except Exception:  # noqa: BLE001 - config shape varies, see docstring
         three_phase = False
@@ -700,12 +692,8 @@ CASES: list[TestCase] = [
         description="Golf blend trap: 30->63%, ready +4h, ~3.00 kW avg",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
-            ready_dt=_now_plus(hours=4),
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0, ready_dt=_now_plus(hours=4),
         ),
         expect_scheduled=True,
     ),
@@ -714,12 +702,8 @@ CASES: list[TestCase] = [
         description="Golf near 16A ceiling: 30->67%, ready +4h",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=67.0,
-            ready_dt=_now_plus(hours=4),
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=67.0, ready_dt=_now_plus(hours=4),
         ),
         expect_scheduled=True,
     ),
@@ -728,12 +712,8 @@ CASES: list[TestCase] = [
         description="Golf below 10A capacity: 30->63%, ready +8h",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
-            ready_dt=_now_plus(hours=8),
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0, ready_dt=_now_plus(hours=8),
         ),
         expect_scheduled=True,
     ),
@@ -742,12 +722,8 @@ CASES: list[TestCase] = [
         description="Golf small job, lots of slack: 30->40%, ready +2h",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=40.0,
-            ready_dt=_now_plus(hours=2),
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=40.0, ready_dt=_now_plus(hours=2),
         ),
         expect_scheduled=True,
     ),
@@ -756,101 +732,71 @@ CASES: list[TestCase] = [
         description="Golf above max power: 30->63%, ready +3h20m -> auto-adjusted",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0,
             ready_dt=_now_plus(hours=3, minutes=20),
         ),
         expect_scheduled=True,
     ),
     # --- Section 2: scheduling decision branches ---
     TestCase(
-        id="2.1",
-        description="Already at target level",
+        id="2.1", description="Already at target level",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=80.0,
-            instant_charge=False,
-            wished_level=80.0,
-            ready_dt=_now_plus(hours=2),
+            plugged_in=True, position="home", actual_soc=80.0,
+            instant_charge=False, wished_level=80.0, ready_dt=_now_plus(hours=2),
         ),
         expect_scheduled=False,
         expect_reason_substr="hoger is of gelijk aan",
     ),
     TestCase(
-        id="2.2",
-        description="Car away",
+        id="2.2", description="Car away",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="away",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
-            ready_dt=_now_plus(hours=4),
+            plugged_in=True, position="away", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0, ready_dt=_now_plus(hours=4),
         ),
         expect_scheduled=False,
         expect_reason_substr="auto is niet huis",
     ),
     TestCase(
-        id="2.3",
-        description="Not plugged in",
+        id="2.3", description="Not plugged in",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=False,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
-            ready_dt=_now_plus(hours=4),
+            plugged_in=False, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0, ready_dt=_now_plus(hours=4),
         ),
         expect_scheduled=False,
         expect_reason_substr="auto is niet ingeplugd",
     ),
     TestCase(
-        id="2.4",
-        description="Ready time in the past",
+        id="2.4", description="Ready time in the past",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0,
             ready_dt=_now_plus(hours=-24),
         ),
         expect_scheduled=False,
         expect_reason_substr="is verouderd",
     ),
     TestCase(
-        id="2.5",
-        description="Ready beyond horizon",
+        id="2.5", description="Ready beyond horizon",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0,
             ready_dt=_now_plus(hours=30),
         ),
         expect_scheduled=False,
         expect_reason_substr="ligt voorbij de planningshorizon",
     ),
     TestCase(
-        id="2.6",
-        description="Combine away + unplugged + stale ready",
+        id="2.6", description="Combine away + unplugged + stale ready",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=False,
-            position="away",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
+            plugged_in=False, position="away", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0,
             ready_dt=_now_plus(hours=-24),
         ),
         expect_scheduled=False,
@@ -861,26 +807,18 @@ CASES: list[TestCase] = [
         description="Ready near end of current interval -> ready_u == 0",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=60.0,
-            instant_charge=False,
-            wished_level=63.0,
+            plugged_in=True, position="home", actual_soc=60.0,
+            instant_charge=False, wished_level=63.0,
         ),
         dynamic_setup=ready_u_zero_full_window(45),
         expect_scheduled=True,
     ),
     TestCase(
-        id="4.4",
-        description="No stop entity, blend-trap case -> interval 0 must be 0/1",
+        id="4.4", description="No stop entity, blend-trap case -> interval 0 must be 0/1",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
-            ready_dt=_now_plus(hours=4),
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0, ready_dt=_now_plus(hours=4),
         ),
         remove_stop_entity_on_target=True,
         expect_scheduled=True,
@@ -891,12 +829,8 @@ CASES: list[TestCase] = [
         description="Instant charge on, Golf 30%, generous deadline (baseline)",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=True,
-            wished_level=100.0,
-            ready_dt=_now_plus(hours=8),
+            plugged_in=True, position="home", actual_soc=30.0, instant_charge=True, wished_level=100.0,
+	    ready_dt=_now_plus(hours=8),
         ),
         expect_scheduled=True,
         expect_wished_level_clipped=False,
@@ -917,12 +851,8 @@ CASES: list[TestCase] = [
         ),
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=True,
-            wished_level=100.0,
-            ready_dt=_now_plus(minutes=15),
+            plugged_in=True, position="home", actual_soc=30.0, instant_charge=True,
+            wished_level=100.0, ready_dt=_now_plus(minutes=15),
         ),
         expect_scheduled=True,
         expect_wished_level_clipped=False,
@@ -935,11 +865,8 @@ CASES: list[TestCase] = [
         ),
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=90.0,
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=90.0,
             ready_dt=_now_plus(hours=1, minutes=50),
         ),
         expect_scheduled=True,
@@ -950,11 +877,8 @@ CASES: list[TestCase] = [
         description="Day rollover: short HH:MM:SS ready time, earlier than start -> next day",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0,
         ),
         dynamic_setup=day_rollover_ready_time(hour=1, minute=0),
         expect_scheduled=True,
@@ -966,36 +890,23 @@ CASES: list[TestCase] = [
         description="Two EVs simultaneously: Golf 30->63% + Tesla 35->80%, both ready +4h",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=30.0,
-            instant_charge=False,
-            wished_level=63.0,
-            ready_dt=_now_plus(hours=4),
+            plugged_in=True, position="home", actual_soc=30.0,
+            instant_charge=False, wished_level=63.0, ready_dt=_now_plus(hours=4),
         ),
         other_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=35.0,
-            instant_charge=False,
-            wished_level=80.0,
-            ready_dt=_now_plus(hours=4),
+            plugged_in=True, position="home", actual_soc=35.0,
+            instant_charge=False, wished_level=80.0, ready_dt=_now_plus(hours=4),
         ),
         expect_scheduled=True,
         other_expect_scheduled=True,
     ),
     # --- Section 1, Tesla control case (should NOT need to blend) ---
     TestCase(
-        id="1.T",
-        description="Tesla control: monotone curve, should single-stage trivially",
+        id="1.T", description="Tesla control: monotone curve, should single-stage trivially",
         target="tesla",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=35.0,
-            instant_charge=False,
-            wished_level=80.0,
-            ready_dt=_now_plus(hours=3),
+            plugged_in=True, position="home", actual_soc=35.0,
+            instant_charge=False, wished_level=80.0, ready_dt=_now_plus(hours=3),
         ),
         expect_scheduled=True,
     ),
@@ -1020,10 +931,8 @@ CASES: list[TestCase] = [
         description="Golf duty sliver, slack window: 6 full intervals + 0.22 kWh, ready +6h",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            instant_charge=False,
-            ready_dt=_now_plus(hours=6),
+            plugged_in=True, position="home",
+            instant_charge=False, ready_dt=_now_plus(hours=6),
         ),
         # v4 used 0.02 kWh here. Empirically (min_duty_s=0 run) that let the
         # Golf's non-monotonic curve resolve the remainder via stage
@@ -1040,10 +949,8 @@ CASES: list[TestCase] = [
         description="Golf duty sliver, near-saturated window: 10 full intervals + 0.24 kWh, ready +3h",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            instant_charge=False,
-            ready_dt=_now_plus(hours=3),
+            plugged_in=True, position="home",
+            instant_charge=False, ready_dt=_now_plus(hours=3),
         ),
         # ~10 of ~12 available intervals must be full, so the optimizer has
         # almost no freedom about WHERE to put the remainder — a different
@@ -1060,18 +967,14 @@ CASES: list[TestCase] = [
         description="Tesla duty sliver (monotone curve control): 6 full intervals + 0.02 kWh, ready +5h",
         target="tesla",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            instant_charge=False,
-            ready_dt=_now_plus(hours=5),
+            plugged_in=True, position="home",
+            instant_charge=False, ready_dt=_now_plus(hours=5),
         ),
         # The Tesla's curve is monotone, so unlike the Golf there is never a
         # cost reason to blend stages. If a sliver shows up HERE it is purely
         # the energy-band remainder, with the non-monotonic-curve explanation
         # ruled out.
-        soc_factory=remainder_soc_factory(
-            full_intervals=6, remainder_kwh=0.02, base_soc=35.0
-        ),
+        soc_factory=remainder_soc_factory(full_intervals=6, remainder_kwh=0.02, base_soc=35.0),
         expect_scheduled=True,
         expect_partial_at_least=1,
     ),
@@ -1080,10 +983,8 @@ CASES: list[TestCase] = [
         description="Golf duty sliver with no stop entity: 4 full intervals + 0.20 kWh, ready +4h",
         target="golf",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            instant_charge=False,
-            ready_dt=_now_plus(hours=4),
+            plugged_in=True, position="home",
+            instant_charge=False, ready_dt=_now_plus(hours=4),
         ),
         # v4's 0.02 kWh remainder was absorbed by substitution (min factor
         # 0.3949 with min_duty_s=0 — barely below the bound, not the clear
@@ -1102,12 +1003,8 @@ CASES: list[TestCase] = [
         description="Tesla small top-up near the min-duty feasibility guard: 60->61.2%",
         target="tesla",
         target_input=EvCaseInput(
-            plugged_in=True,
-            position="home",
-            actual_soc=60.0,
-            instant_charge=False,
-            wished_level=61.2,
-            ready_dt=_now_plus(hours=2),
+            plugged_in=True, position="home", actual_soc=60.0,
+            instant_charge=False, wished_level=61.2, ready_dt=_now_plus(hours=2),
         ),
         # ~0.66 kWh total. Whether this trips day_ahead.py's guard (skip the
         # minimum-duty constraint when energy_needed is below one switching
@@ -1135,9 +1032,7 @@ PAIR_RE = re.compile(r"(-?[\d.]+)\((-?[\d.]+)\)")
 ROW_RE = re.compile(r"^(\d{2}:\d{2})\s{2}(.*)$")
 
 _ECHO_INSTANT_RE = re.compile(r"Direct laden is (aan|uit)")
-_ECHO_READY_RE = re.compile(
-    r"Klaar met laden op: (\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2})"
-)
+_ECHO_READY_RE = re.compile(r"Klaar met laden op: (\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2})")
 _ECHO_ACTUAL_RE = re.compile(r"Huidig laadniveau: ([\d.]+) %")
 _ECHO_WISHED_RE = re.compile(r"Gewenst laadniveau:([\d.]+) %")
 _ECHO_POSITION_RE = re.compile(r"Locatie: (\S+)")
@@ -1214,34 +1109,39 @@ def verify_setup_echo(resolved: ResolvedEvInput, echo: SetupEcho) -> list[str]:
     override silently didn't take effect (usually: the entity_id it should
     have targeted is None/unconfigured for this EV) — see case 5.1."""
     mismatches = []
-    if (resolved.plugged_in is not None and echo.plugged_in is not None) and (
-        resolved.plugged_in != echo.plugged_in
+    if (
+        (resolved.plugged_in is not None and echo.plugged_in is not None)
+        and (resolved.plugged_in != echo.plugged_in)
     ):
         mismatches.append(
             f"plugged_in: requested {resolved.plugged_in}, log shows {echo.plugged_in}"
         )
-    if (resolved.position is not None and echo.position is not None) and (
-        resolved.position.lower() != echo.position.lower()
+    if (
+        (resolved.position is not None and echo.position is not None)
+        and (resolved.position.lower() != echo.position.lower())
     ):
         mismatches.append(
             f"position: requested {resolved.position!r}, log shows {echo.position!r}"
         )
-    if (resolved.actual_soc is not None and echo.actual_soc is not None) and (
-        abs(resolved.actual_soc - echo.actual_soc) > 0.05
+    if (
+        (resolved.actual_soc is not None and echo.actual_soc is not None)
+        and (abs(resolved.actual_soc - echo.actual_soc) > 0.05)
     ):
         mismatches.append(
             f"actual_soc: requested {resolved.actual_soc}, log shows {echo.actual_soc}"
         )
-    if (resolved.instant_charge is not None and echo.instant_charge is not None) and (
-        resolved.instant_charge != echo.instant_charge
+    if (
+        (resolved.instant_charge is not None and echo.instant_charge is not None)
+        and (resolved.instant_charge != echo.instant_charge)
     ):
         mismatches.append(
             f"instant_charge: requested {resolved.instant_charge}, log shows "
             f"{echo.instant_charge} (entity_instant_start is likely None/"
             f"unconfigured for this EV — override had nothing to write to)"
         )
-    if (resolved.wished_level is not None and echo.wished_level is not None) and (
-        abs(resolved.wished_level - echo.wished_level) > 0.05
+    if (
+        (resolved.wished_level is not None and echo.wished_level is not None)
+        and (abs(resolved.wished_level - echo.wished_level) > 0.05)
     ):
         mismatches.append(
             f"wished_level: requested {resolved.wished_level}, log shows "
@@ -1283,7 +1183,9 @@ _STATS_NODES_RE = re.compile(r"took \d+ iterations and (\d+) nodes")
 _STATS_GAP_RE = re.compile(r"Exiting as integer gap of ([\-\d.eE]+) less than")
 _STATS_OBJ_RE = re.compile(r"Search completed - best objective ([\-\d.eE]+),")
 _STATS_COST_RE = re.compile(r"Cost after optimize\s+([\-\d.]+)")
-_STATS_SUCCESS_RE = re.compile(r"Het programma heeft een optimale oplossing gevonden\.")
+_STATS_SUCCESS_RE = re.compile(
+    r"Het programma heeft een optimale oplossing gevonden\."
+)
 _STATS_FAILURE_RE = re.compile(
     r"(Geen oplossing(?: in na herberekening)? voor: [^\n]*"
     r"|Kies een strategie in options"
@@ -1397,21 +1299,12 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
                         "stage_on": [float(p[1]) for p in pairs],
                     }
                     if len(nums) >= 9:
-                        (
-                            row["cons"],
-                            row["power"],
-                            row["on"],
-                            row["off"],
-                            row["part"],
-                            row["bound"],
-                            row["soc"],
-                            row["delta"],
-                            row["cost"],
-                        ) = nums[:9]
+                        (row["cons"], row["power"], row["on"], row["off"],
+                         row["part"], row["bound"], row["soc"], row["delta"],
+                         row["cost"]) = nums[:9]
                     result.rows.append(row)
                     real_active = [
-                        k
-                        for k, f in enumerate(row["stage_factors"])
+                        k for k, f in enumerate(row["stage_factors"])
                         if k >= 1 and f > 1e-6
                     ]
                     if len(real_active) > 1:
@@ -1424,10 +1317,8 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
                     for k, f in enumerate(row["stage_factors"]):
                         if k < 1 or f <= DUTY_ZERO_TOL:
                             continue
-                        if (
-                            result.min_nonzero_factor is None
-                            or f < result.min_nonzero_factor
-                        ):
+                        if (result.min_nonzero_factor is None
+                                or f < result.min_nonzero_factor):
                             result.min_nonzero_factor = f
                         if min_duty > 0 and f < min_duty - DUTY_COMPARE_TOL:
                             result.duty_slivers.append((uur, k, f))
@@ -1443,11 +1334,9 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
     # runs after ALL the setup echo blocks, so this is scoped by EV name
     # rather than by position in the log.
     for line in lines:
-        if (
-            f"EV {ev_name}:" in line
-            and "minimale schakelduur" in line
-            and "niet toegepast" in line
-        ):
+        if (f"EV {ev_name}:" in line
+                and "minimale schakelduur" in line
+                and "niet toegepast" in line):
             result.min_duty_guard_fired = True
             break
 
@@ -1455,14 +1344,12 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
     # ingepland" for this ev, before the next ev's such line
     anchor_idx = None
     for i, line in enumerate(lines):
-        if (
-            line.startswith(f"{ev_name} wordt geladen tussen")
-            or line == f"Laden van {ev_name} is niet ingepland"
-        ):
+        if (line.startswith(f"{ev_name} wordt geladen tussen")
+                or line == f"Laden van {ev_name} is niet ingepland"):
             anchor_idx = i
             break
     if anchor_idx is not None:
-        for line in lines[anchor_idx : anchor_idx + 6]:
+        for line in lines[anchor_idx:anchor_idx + 6]:
             m = re.search(r"Aantal partial stops:\s*([\d.]+)", line)
             if m:
                 result.partial_stops = int(float(m.group(1)))
@@ -1498,9 +1385,7 @@ def build_overrides(da_calc: DaCalc, ev_index: int, resolved: ResolvedEvInput) -
         elif ev.charge_scheduler is not None:
             overrides[ev.charge_scheduler.entity_set_level] = resolved.wished_level
     if resolved.ready_override_str is not None and ev.charge_scheduler is not None:
-        overrides[ev.charge_scheduler.entity_ready_datetime] = (
-            resolved.ready_override_str
-        )
+        overrides[ev.charge_scheduler.entity_ready_datetime] = resolved.ready_override_str
     elif resolved.ready_dt is not None and ev.charge_scheduler is not None:
         overrides[ev.charge_scheduler.entity_ready_datetime] = (
             resolved.ready_dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -1526,9 +1411,8 @@ class CaseResult:
     stats: SolveStats
 
 
-def run_case(
-    da_calc: DaCalc, case: TestCase, ev_index_tesla: int, ev_index_golf: int
-) -> CaseResult:
+def run_case(da_calc: DaCalc, case: TestCase, ev_index_tesla: int,
+             ev_index_golf: int) -> CaseResult:
     target_index = ev_index_tesla if case.target == "tesla" else ev_index_golf
     other_index = ev_index_golf if case.target == "tesla" else ev_index_tesla
     target_name = da_calc.ev_options[target_index].name
@@ -1543,8 +1427,8 @@ def run_case(
         # build_overrides AND before verify_setup_echo reads resolved_target
         # — the echo check is what catches a factory that silently computed
         # something the model then didn't use.
-        resolved_target.actual_soc, resolved_target.wished_level = case.soc_factory(
-            da_calc, target_index
+        resolved_target.actual_soc, resolved_target.wished_level = (
+            case.soc_factory(da_calc, target_index)
         )
 
     effective_start_dt = case.start_dt
@@ -1565,12 +1449,8 @@ def run_case(
         else _null_ctx()
     )
 
-    with (
-        stop_entity_ctx,
-        get_state_overrides(da_calc, overrides),
-        capture_log() as buf,
-        capture_native_stdout() as native,
-    ):
+    with (stop_entity_ctx, get_state_overrides(da_calc, overrides),
+          capture_log() as buf, capture_native_stdout() as native):
         try:
             da_calc.debug = True  # see module docstring: not optional
             da_calc.calc_optimum(_start_dt=effective_start_dt)
@@ -1578,13 +1458,9 @@ def run_case(
             log_text = buf.getvalue()
             stats_text = log_text + "\n" + native["text"]
             return CaseResult(
-                id=case.id,
-                description=case.description,
-                status=STATUS_ERROR,
-                failures=[f"EXCEPTION during solve: {ex!r}"],
-                mismatches=[],
-                parsed=ParsedEvRun(),
-                stats=parse_solve_stats(stats_text),
+                id=case.id, description=case.description, status=STATUS_ERROR,
+                failures=[f"EXCEPTION during solve: {ex!r}"], mismatches=[],
+                parsed=ParsedEvRun(), stats=parse_solve_stats(stats_text),
             )
 
     log_text = buf.getvalue()
@@ -1596,21 +1472,15 @@ def run_case(
 
     if not stats.solved:
         return CaseResult(
-            id=case.id,
-            description=case.description,
-            status=STATUS_INFEASIBLE,
+            id=case.id, description=case.description, status=STATUS_INFEASIBLE,
             failures=[
-                (
-                    f"model did not reach an optimal solution "
-                    f"({stats.failure_reason or 'no success line found in log'}) "
-                    f"— calc_optimum() returns None before any EV dispatch "
-                    f"logging runs, so 'scheduled' and multi-stage checks below "
-                    f"would be misleadingly clean; this is checked first"
-                )
+                (f"model did not reach an optimal solution "
+                f"({stats.failure_reason or 'no success line found in log'}) "
+                f"— calc_optimum() returns None before any EV dispatch "
+                f"logging runs, so 'scheduled' and multi-stage checks below "
+                f"would be misleadingly clean; this is checked first")
             ],
-            mismatches=[],
-            parsed=parsed,
-            stats=stats,
+            mismatches=[], parsed=parsed, stats=stats,
         )
 
     mismatches = verify_setup_echo(resolved_target, parsed.setup_echo)
@@ -1623,13 +1493,8 @@ def run_case(
 
     if mismatches:
         return CaseResult(
-            id=case.id,
-            description=case.description,
-            status=STATUS_MISMATCH,
-            failures=[],
-            mismatches=mismatches,
-            parsed=parsed,
-            stats=stats,
+            id=case.id, description=case.description, status=STATUS_MISMATCH,
+            failures=[], mismatches=mismatches, parsed=parsed, stats=stats,
         )
 
     failures: list[str] = []
@@ -1656,10 +1521,8 @@ def run_case(
             f"OTHER EV ({other_name}) MULTIPLE REAL STAGES ACTIVE at: "
             f"{parsed_other.multi_stage_intervals}"
         )
-    if (
-        case.other_expect_scheduled is not None
-        and parsed_other.scheduled != case.other_expect_scheduled
-    ):
+    if (case.other_expect_scheduled is not None
+            and parsed_other.scheduled != case.other_expect_scheduled):
         failures.append(
             f"other EV ({other_name}): expected scheduled="
             f"{case.other_expect_scheduled}, got {parsed_other.scheduled}"
@@ -1687,18 +1550,14 @@ def run_case(
                 f"nothing — retune the engineered remainder rather than "
                 f"relaxing this bound."
             )
-    if (
-        case.expect_min_duty_guard is not None
-        and parsed.min_duty_guard_fired != case.expect_min_duty_guard
-    ):
+    if (case.expect_min_duty_guard is not None
+            and parsed.min_duty_guard_fired != case.expect_min_duty_guard):
         failures.append(
             f"expected min-duty feasibility guard fired="
             f"{case.expect_min_duty_guard}, got {parsed.min_duty_guard_fired}"
         )
-    if (
-        case.expect_wished_level_clipped is not None
-        and parsed.wished_level_clipped != case.expect_wished_level_clipped
-    ):
+    if (case.expect_wished_level_clipped is not None
+            and parsed.wished_level_clipped != case.expect_wished_level_clipped):
         failures.append(
             f"wished_level_clipped: expected "
             f"{case.expect_wished_level_clipped}, got "
@@ -1707,13 +1566,8 @@ def run_case(
 
     status = STATUS_FAIL if failures else STATUS_PASS
     return CaseResult(
-        id=case.id,
-        description=case.description,
-        status=status,
-        failures=failures,
-        mismatches=[],
-        parsed=parsed,
-        stats=stats,
+        id=case.id, description=case.description, status=status,
+        failures=failures, mismatches=[], parsed=parsed, stats=stats,
     )
 
 
@@ -1722,9 +1576,7 @@ def run_case(
 # ---------------------------------------------------------------------------
 
 
-def write_reports(
-    results: list[CaseResult], out_dir: Path = REPORT_DIR
-) -> tuple[Path, Path]:
+def write_reports(results: list[CaseResult], out_dir: Path = REPORT_DIR) -> tuple[Path, Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     timestamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     md_path = out_dir / f"ev_test_report_{timestamp}.md"
@@ -1732,21 +1584,14 @@ def write_reports(
     md_latest = out_dir / "ev_test_report_latest.md"
     csv_latest = out_dir / "ev_test_report_latest.csv"
 
-    counts = {
-        STATUS_PASS: 0,
-        STATUS_FAIL: 0,
-        STATUS_MISMATCH: 0,
-        STATUS_ERROR: 0,
-        STATUS_INFEASIBLE: 0,
-    }
+    counts = {STATUS_PASS: 0, STATUS_FAIL: 0, STATUS_MISMATCH: 0,
+              STATUS_ERROR: 0, STATUS_INFEASIBLE: 0}
     for r in results:
         counts[r.status] = counts.get(r.status, 0) + 1
 
     # --- Markdown ---
     lines = []
-    lines.append(
-        f"# EV charging test report — {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    )
+    lines.append(f"# EV charging test report — {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("")
     lines.append(
         f"**{counts[STATUS_PASS]} passed, {counts[STATUS_FAIL]} failed, "
@@ -1762,21 +1607,14 @@ def write_reports(
     lines.append("|---|---|---|---|---|---|---|---|")
     for r in results:
         sched = "—" if r.parsed.scheduled is None else str(r.parsed.scheduled)
-        energy = (
-            "—"
-            if r.parsed.energy_needed_kwh is None
-            else f"{r.parsed.energy_needed_kwh:.3f}"
-        )
-        psb = (
-            f"{r.parsed.partial_stops}/{r.parsed.boundary_stops}/{r.parsed.start_stops}"
-        )
+        energy = "—" if r.parsed.energy_needed_kwh is None else f"{r.parsed.energy_needed_kwh:.3f}"
+        psb = f"{r.parsed.partial_stops}/{r.parsed.boundary_stops}/{r.parsed.start_stops}"
         solve = (
             f"{r.stats.wall_time_sec or '—'} / {r.stats.nodes or '—'} / "
             f"{r.stats.gap if r.stats.gap is not None else '—'}"
         )
         minf = (
-            "—"
-            if r.parsed.min_nonzero_factor is None
+            "—" if r.parsed.min_nonzero_factor is None
             else f"{r.parsed.min_nonzero_factor:.4f}"
         )
         lines.append(
@@ -1792,9 +1630,7 @@ def write_reports(
         for r in detail_needed:
             lines.append(f"### {r.id} — {r.description} ({r.status})")
             if r.mismatches:
-                lines.append(
-                    "Setup-echo mismatches (override likely didn't take effect):"
-                )
+                lines.append("Setup-echo mismatches (override likely didn't take effect):")
                 for m in r.mismatches:
                     lines.append(f"- {m}")
             if r.failures:
@@ -1810,57 +1646,39 @@ def write_reports(
 
     # --- CSV ---
     fieldnames = [
-        "id",
-        "status",
-        "description",
-        "scheduled",
-        "reason",
-        "energy_needed_kwh",
-        "partial_stops",
-        "boundary_stops",
-        "start_stops",
-        "multi_stage_intervals",
-        "duty_slivers",
-        "min_nonzero_factor",
-        "min_duty_guard_fired",
-        "wished_level_clipped",
-        "failures",
-        "mismatches",
-        "wall_time_sec",
-        "nodes",
-        "gap",
-        "objective",
-        "cost_after_optimize",
+        "id", "status", "description", "scheduled", "reason",
+        "energy_needed_kwh", "partial_stops", "boundary_stops", "start_stops",
+        "multi_stage_intervals", "duty_slivers", "min_nonzero_factor",
+        "min_duty_guard_fired", "wished_level_clipped", "failures", "mismatches",
+        "wall_time_sec", "nodes", "gap", "objective", "cost_after_optimize",
     ]
     rows = []
     for r in results:
-        rows.append(
-            {
-                "id": r.id,
-                "status": r.status,
-                "description": r.description,
-                "scheduled": r.parsed.scheduled,
-                "reason": r.parsed.reason or "",
-                "energy_needed_kwh": r.parsed.energy_needed_kwh,
-                "partial_stops": r.parsed.partial_stops,
-                "boundary_stops": r.parsed.boundary_stops,
-                "start_stops": r.parsed.start_stops,
-                "multi_stage_intervals": ";".join(r.parsed.multi_stage_intervals),
-                "duty_slivers": ";".join(
-                    f"{uur}/s{k}/{f:.4f}" for uur, k, f in r.parsed.duty_slivers
-                ),
-                "min_nonzero_factor": r.parsed.min_nonzero_factor,
-                "min_duty_guard_fired": r.parsed.min_duty_guard_fired,
-                "wished_level_clipped": r.parsed.wished_level_clipped,
-                "failures": " | ".join(r.failures),
-                "mismatches": " | ".join(r.mismatches),
-                "wall_time_sec": r.stats.wall_time_sec,
-                "nodes": r.stats.nodes,
-                "gap": r.stats.gap,
-                "objective": r.stats.objective,
-                "cost_after_optimize": r.stats.cost_after_optimize,
-            }
-        )
+        rows.append({
+            "id": r.id,
+            "status": r.status,
+            "description": r.description,
+            "scheduled": r.parsed.scheduled,
+            "reason": r.parsed.reason or "",
+            "energy_needed_kwh": r.parsed.energy_needed_kwh,
+            "partial_stops": r.parsed.partial_stops,
+            "boundary_stops": r.parsed.boundary_stops,
+            "start_stops": r.parsed.start_stops,
+            "multi_stage_intervals": ";".join(r.parsed.multi_stage_intervals),
+            "duty_slivers": ";".join(
+                f"{uur}/s{k}/{f:.4f}" for uur, k, f in r.parsed.duty_slivers
+            ),
+            "min_nonzero_factor": r.parsed.min_nonzero_factor,
+            "min_duty_guard_fired": r.parsed.min_duty_guard_fired,
+            "wished_level_clipped": r.parsed.wished_level_clipped,
+            "failures": " | ".join(r.failures),
+            "mismatches": " | ".join(r.mismatches),
+            "wall_time_sec": r.stats.wall_time_sec,
+            "nodes": r.stats.nodes,
+            "gap": r.stats.gap,
+            "objective": r.stats.objective,
+            "cost_after_optimize": r.stats.cost_after_optimize,
+        })
     for path in (csv_path, csv_latest):
         with path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -1892,12 +1710,10 @@ def main():
             for f in r.failures:
                 print(f"        - {f}")
         if r.parsed.energy_needed_kwh is not None:
-            print(
-                f"        energy_needed={r.parsed.energy_needed_kwh:.3f} kWh, "
-                f"partial_stops={r.parsed.partial_stops}, "
-                f"boundary_stops={r.parsed.boundary_stops}, "
-                f"start_stops={r.parsed.start_stops}"
-            )
+            print(f"        energy_needed={r.parsed.energy_needed_kwh:.3f} kWh, "
+                  f"partial_stops={r.parsed.partial_stops}, "
+                  f"boundary_stops={r.parsed.boundary_stops}, "
+                  f"start_stops={r.parsed.start_stops}")
 
     n_pass = sum(1 for r in results if r.status == STATUS_PASS)
     print(f"\n{n_pass}/{len(results)} passed.")

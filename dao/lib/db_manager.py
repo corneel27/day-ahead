@@ -244,9 +244,7 @@ class DBmanagerObj:
             values_table = Table(tablename, self.metadata, autoload_with=self.engine)
             variabel_table = Table("variabel", self.metadata, autoload_with=self.engine)
             records = []
-            for code, time, value in zip(
-                df["code"], df["time"], df["value"], strict=False
-            ):
+            for code, time, value in zip(df["code"], df["time"], df["value"], strict=False):
                 if not isinstance(value, (int, float)):
                     continue
                 if pd.isna(value):
@@ -378,8 +376,7 @@ class DBmanagerObj:
         )
         if end is not None:
             query = query.where(
-                t1.c.time
-                < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
+                t1.c.time < end  # self.unix_timestamp(end.strftime("%Y-%m-%d %H:%M:%S"))
             )
         else:
             start_dt = datetime.datetime.fromtimestamp(start)
@@ -435,8 +432,7 @@ class DBmanagerObj:
             if end is not None:
                 end_dt = datetime.datetime.fromtimestamp(end)
                 query = query.where(
-                    t1.c.time
-                    < end  # self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
+                    t1.c.time < end  # self.unix_timestamp(end_dt.strftime("%Y-%m-%d %H:%M:%S"))
                 )
             else:
                 start_dt = datetime.datetime.fromtimestamp(start)

@@ -44,28 +44,21 @@ def _build_db_da(
         "db_name": db.database,
         "db_server": db.server,
         "db_user": db.username,
-        "db_password": db.password.resolve(secrets)
-        if db.password is not None
-        else None,
+        "db_password": db.password.resolve(secrets) if db.password is not None else None,
         "db_port": db.port,
         "db_path": db.db_path,
     }
 
     import sqlalchemy_utils
-
     db_url = DBmanagerObj.db_url(**kwargs)
     if not sqlalchemy_utils.database_exists(db_url):
         if check_create:
             sqlalchemy_utils.create_database(db_url)
         else:
             if db.engine == "sqlite":
-                logger.error(
-                    f"day_ahead database not found: {db.db_path}/{db.database}"
-                )
+                logger.error(f"day_ahead database not found: {db.db_path}/{db.database}")
             else:
-                logger.error(
-                    f"day_ahead database does not exist ({db.engine} / {db.server})"
-                )
+                logger.error(f"day_ahead database does not exist ({db.engine} / {db.server})")
             return None
     return DBmanagerObj(**kwargs, db_time_zone=config.time_zone)
 
@@ -81,9 +74,7 @@ def _build_db_ha(
         "db_name": db.database,
         "db_server": db.server,
         "db_user": db.username,
-        "db_password": db.password.resolve(secrets)
-        if db.password is not None
-        else None,
+        "db_password": db.password.resolve(secrets) if db.password is not None else None,
         "db_port": db.port,
         "db_path": db.db_path,
     }

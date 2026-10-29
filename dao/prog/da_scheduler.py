@@ -34,9 +34,7 @@ class DaScheduler(DaBase):
         while True:
             t = datetime.datetime.now()
             logging.debug(f"Entry loop at {t}")
-            next_min = t.replace(second=0, microsecond=0) + datetime.timedelta(
-                minutes=1
-            )
+            next_min = t.replace(second=0, microsecond=0) + datetime.timedelta(minutes=1)
             if next_min.minute == last_minute:
                 time.sleep(max(0, (next_min - t).total_seconds()))
                 continue

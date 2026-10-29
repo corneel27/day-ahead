@@ -261,16 +261,11 @@ class Meteo:
         lat1, long1, lat2, long2 = map(math.radians, (lat1, long1, lat2, long2))
         dlat = lat2 - lat1
         dlong = long2 - long1
-        a = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(lat1) * math.cos(lat2) * (math.sin(dlong / 2)) ** 2
-        )
+        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * (math.sin(dlong / 2))**2
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return 6371 * c
 
-    def which_station(
-        self, _latitude: float | None = None, _longitude: float | None = None
-    ) -> str:
+    def which_station(self, _latitude:float|None = None, _longitude: float|None = None) -> str:
         """
         berekent welk weerstation het dichtst bij is
         :param latitude:
@@ -285,9 +280,7 @@ class Meteo:
         for key in stations:
             if self.is_aws(key):
                 station = stations[key]
-                afstand = self.afstand_km(
-                    latitude, longitude, station.latitude, station.longitude
-                )
+                afstand = self.afstand_km(latitude, longitude, station.latitude, station.longitude)
                 """
                 afstand = (latitude - station.latitude) ** 2 + (
                     longitude - station.longitude
@@ -745,7 +738,6 @@ class Meteo:
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot
 
-
 def test_afstand_km(meteo):
     # Amsterdam -> Rotterdam (ongeveer 57 km)
     d1 = meteo.afstand_km(52.3676, 4.9041, 51.9244, 4.4777)
@@ -762,21 +754,19 @@ def test_afstand_km(meteo):
     print(f"Zelfde punt: {d3:.2f} km")
     assert abs(d3) < 1e-9
 
-    station = meteo.which_station()
+    station=meteo.which_station()
     print(station)
 
     print("Alle tests geslaagd.")
 
-
 def main():
     from dao.prog.da_base import DaBase
-
     dbase = DaBase("../data/options.json")
     meteo = dbase.meteo
     station = meteo.which_station()
     print(station)
     test_afstand_km(meteo)
 
-
 if __name__ == "__main__":
     main()
+

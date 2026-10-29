@@ -14,21 +14,10 @@ from .model import KNOWN_EXPECT_KEYS, Scenario
 from .vocabulary import VocabularyError, parse_start
 
 _TOP_KEYS = {
-    "id",
-    "description",
-    "start",
-    "prices",
-    "solar",
-    "baseload",
-    "temp",
-    "heatpump_hours",
-    "states",
-    "config_patch",
-    "options",
-    "ev",
-    "expect",
-    "skip",
-    "skip_reason",
+    "id", "description", "start",
+    "prices", "solar", "baseload", "temp", "heatpump_hours",
+    "states", "config_patch", "options", "ev", "expect",
+    "skip", "skip_reason",
 }
 
 
@@ -42,18 +31,13 @@ def _require(cond: bool, msg: str) -> None:
 
 
 def parse_scenario(obj: dict, *, source_file: str = "") -> Scenario:
-    _require(
-        isinstance(obj, dict),
-        f"scenario must be a JSON object, got {type(obj).__name__}",
-    )
+    _require(isinstance(obj, dict), f"scenario must be a JSON object, got {type(obj).__name__}")
     unknown = set(obj) - _TOP_KEYS
     _require(not unknown, f"unknown scenario key(s): {sorted(unknown)}")
 
     for k in ("id", "description", "start"):
-        _require(
-            k in obj and isinstance(obj[k], str) and obj[k],
-            f"scenario is missing required string field {k!r}",
-        )
+        _require(k in obj and isinstance(obj[k], str) and obj[k],
+                 f"scenario is missing required string field {k!r}")
 
     sid = obj["id"]
     try:
@@ -62,53 +46,33 @@ def parse_scenario(obj: dict, *, source_file: str = "") -> Scenario:
         raise ScenarioLoadError(f"[{sid}] {ex}") from ex
 
     prices = obj.get("prices", {})
-    _require(
-        isinstance(prices, dict) and "cons" in prices,
-        f"[{sid}] prices must be an object with a 'cons' array",
-    )
+    _require(isinstance(prices, dict) and "cons" in prices,
+             f"[{sid}] prices must be an object with a 'cons' array")
     cons = prices["cons"]
-    _require(
-        isinstance(cons, list)
-        and len(cons) >= 2
-        and all(isinstance(x, (int, float)) for x in cons),
-        f"[{sid}] prices.cons must be a list of >=2 numbers",
-    )
+    _require(isinstance(cons, list) and len(cons) >= 2
+             and all(isinstance(x, (int, float)) for x in cons),
+             f"[{sid}] prices.cons must be a list of >=2 numbers")
     prod = prices.get("prod")
-    _require(
-        prod is None or (isinstance(prod, list) and len(prod) == len(cons)),
-        f"[{sid}] prices.prod, if given, must match prices.cons length ({len(cons)})",
-    )
+    _require(prod is None or (isinstance(prod, list) and len(prod) == len(cons)),
+             f"[{sid}] prices.prod, if given, must match prices.cons length ({len(cons)})")
     unknown_prices = set(prices) - {"cons", "prod", "predicted"}
-    _require(
-        not unknown_prices, f"[{sid}] unknown prices key(s): {sorted(unknown_prices)}"
-    )
+    _require(not unknown_prices, f"[{sid}] unknown prices key(s): {sorted(unknown_prices)}")
     predicted = prices.get("predicted", {})
-    _require(
-        isinstance(predicted, dict) and set(predicted) <= {"cons", "prod"},
-        f"[{sid}] prices.predicted must be an object with 'cons' and optional 'prod'",
-    )
+    _require(isinstance(predicted, dict) and set(predicted) <= {"cons", "prod"},
+             f"[{sid}] prices.predicted must be an object with 'cons' and optional 'prod'")
     pred_cons = predicted.get("cons", [])
-    _require(
-        isinstance(pred_cons, list)
-        and all(isinstance(x, (int, float)) for x in pred_cons)
-        and (pred_cons or not predicted),
-        f"[{sid}] prices.predicted.cons must be a non-empty list of numbers",
-    )
+    _require(isinstance(pred_cons, list) and all(isinstance(x, (int, float)) for x in pred_cons)
+             and (pred_cons or not predicted),
+             f"[{sid}] prices.predicted.cons must be a non-empty list of numbers")
     pred_prod = predicted.get("prod")
-    _require(
-        pred_prod is None
-        or (isinstance(pred_prod, list) and len(pred_prod) == len(pred_cons)),
-        f"[{sid}] prices.predicted.prod, if given, must match prices.predicted.cons "
-        f"length ({len(pred_cons)})",
-    )
+    _require(pred_prod is None or (isinstance(pred_prod, list) and len(pred_prod) == len(pred_cons)),
+             f"[{sid}] prices.predicted.prod, if given, must match prices.predicted.cons "
+             f"length ({len(pred_cons)})")
 
     for arr_key in ("solar", "baseload", "temp"):
         v = obj.get(arr_key)
-        _require(
-            v is None
-            or (isinstance(v, list) and all(isinstance(x, (int, float)) for x in v)),
-            f"[{sid}] {arr_key}, if given, must be a list of numbers",
-        )
+        _require(v is None or (isinstance(v, list) and all(isinstance(x, (int, float)) for x in v)),
+                 f"[{sid}] {arr_key}, if given, must be a list of numbers")
 
     hph = obj.get("heatpump_hours", 0.0)
     _require(isinstance(hph, (int, float)), f"[{sid}] heatpump_hours must be a number")
@@ -119,48 +83,32 @@ def parse_scenario(obj: dict, *, source_file: str = "") -> Scenario:
     _require(isinstance(config_patch, dict), f"[{sid}] config_patch must be an object")
 
     options = obj.get("options")
-    _require(
-        options is None or isinstance(options, str), f"[{sid}] options must be a string"
-    )
+    _require(options is None or isinstance(options, str), f"[{sid}] options must be a string")
 
     ev = obj.get("ev")
     if ev is not None:
         _require(isinstance(ev, dict), f"[{sid}] ev must be an object")
-        _require(
-            "target" in ev and isinstance(ev["target"], str) and ev["target"],
-            f"[{sid}] ev.target is required (e.g. 'golf', 'tesla')",
-        )
+        _require("target" in ev and isinstance(ev["target"], str) and ev["target"],
+                  f"[{sid}] ev.target is required (e.g. 'golf', 'tesla')")
         other = ev.get("other")
-        _require(
-            other is None or isinstance(other, dict),
-            f"[{sid}] ev.other must be an object",
-        )
+        _require(other is None or isinstance(other, dict), f"[{sid}] ev.other must be an object")
         soc_plugin = ev.get("soc_plugin")
-        _require(
-            soc_plugin is None
-            or (isinstance(soc_plugin, dict) and "name" in soc_plugin),
-            f"[{sid}] ev.soc_plugin must be an object with a 'name'",
-        )
+        _require(soc_plugin is None or (isinstance(soc_plugin, dict) and "name" in soc_plugin),
+                  f"[{sid}] ev.soc_plugin must be an object with a 'name'")
         ready = ev.get("ready")
-        _require(
-            ready is None or isinstance(ready, (str, dict)),
-            f"[{sid}] ev.ready must be a string offset or a plugin object",
-        )
+        _require(ready is None or isinstance(ready, (str, dict)),
+                  f"[{sid}] ev.ready must be a string offset or a plugin object")
         other_ready = (other or {}).get("ready")
-        _require(
-            other_ready is None or isinstance(other_ready, (str, dict)),
-            f"[{sid}] ev.other.ready must be a string offset or a plugin object",
-        )
+        _require(other_ready is None or isinstance(other_ready, (str, dict)),
+                  f"[{sid}] ev.other.ready must be a string offset or a plugin object")
 
     expect = obj.get("expect", {})
     _require(isinstance(expect, dict), f"[{sid}] expect must be an object")
     unknown_expect = set(expect) - KNOWN_EXPECT_KEYS
-    _require(
-        not unknown_expect,
-        f"[{sid}] unsupported expect key(s) {sorted(unknown_expect)}; "
-        f"supported: {sorted(KNOWN_EXPECT_KEYS)} (the Tier A "
-        f"invariants always run and are not listed here)",
-    )
+    _require(not unknown_expect,
+             f"[{sid}] unsupported expect key(s) {sorted(unknown_expect)}; "
+             f"supported: {sorted(KNOWN_EXPECT_KEYS)} (the Tier A "
+             f"invariants always run and are not listed here)")
 
     return Scenario(
         id=sid,
@@ -169,15 +117,9 @@ def parse_scenario(obj: dict, *, source_file: str = "") -> Scenario:
         prices_cons=[float(x) for x in cons],
         prices_prod=[float(x) for x in prod] if prod is not None else None,
         prices_pred_cons=[float(x) for x in pred_cons],
-        prices_pred_prod=[float(x) for x in pred_prod]
-        if pred_prod is not None
-        else None,
-        solar=[float(x) for x in obj["solar"]]
-        if obj.get("solar") is not None
-        else None,
-        baseload=[float(x) for x in obj["baseload"]]
-        if obj.get("baseload") is not None
-        else None,
+        prices_pred_prod=[float(x) for x in pred_prod] if pred_prod is not None else None,
+        solar=[float(x) for x in obj["solar"]] if obj.get("solar") is not None else None,
+        baseload=[float(x) for x in obj["baseload"]] if obj.get("baseload") is not None else None,
         temp=[float(x) for x in obj["temp"]] if obj.get("temp") is not None else None,
         heatpump_hours=float(hph),
         states={str(k): v for k, v in states.items()},
@@ -196,10 +138,7 @@ def load_cases_file(path: Path) -> list[Scenario]:
         raw = json.loads(Path(path).read_text())
     except json.JSONDecodeError as ex:
         raise ScenarioLoadError(f"{path.name}: invalid JSON — {ex}") from ex
-    _require(
-        isinstance(raw, list),
-        f"{path.name}: top level must be a JSON array of scenarios",
-    )
+    _require(isinstance(raw, list), f"{path.name}: top level must be a JSON array of scenarios")
     return [parse_scenario(obj, source_file=path.name) for obj in raw]
 
 
@@ -219,7 +158,6 @@ def load_cases_dir(cases_dir: Path) -> list[Scenario]:
 
 
 # --- dotted-path config patching ---
-
 
 def set_dotted(tree: dict, path: str, value: Any) -> None:
     """Set a.b.c or a.b[0].c inside a nested dict/list structure, the

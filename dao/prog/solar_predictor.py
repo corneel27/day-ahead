@@ -728,6 +728,7 @@ class SolarPredictor(DaBase):
         self.model = joblib.load(model_path)
         self.is_trained = True
 
+
     def get_feature_importance(self) -> dict[str, float]:
         """
         Get feature importance from the trained model.
@@ -738,9 +739,7 @@ class SolarPredictor(DaBase):
         if not self.is_trained or self.model is None:
             raise ValueError("Model must be trained before getting feature importance")
 
-        return dict(
-            zip(self.feature_columns, self.model.feature_importances_, strict=False)
-        )
+        return dict(zip(self.feature_columns, self.model.feature_importances_, strict=False))
 
     def import_weatherdata(self, filename: str):
         """
@@ -1050,7 +1049,9 @@ class SolarPredictor(DaBase):
             raise FileNotFoundError(
                 f"Er is geen model aanwezig voor {self.solar_name},svp eerst trainen."
             )
-        self.db_da.get_time_border_record("gr", latest=True, table_name="prognoses")
+        self.db_da.get_time_border_record(
+            "gr", latest=True, table_name="prognoses"
+        )
         prognose = True  # latest_dt < end
         weather_data = self.get_weatherdata(start, end, prognose=prognose)
         prediction = self.predict(weather_data)

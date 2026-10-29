@@ -8,9 +8,7 @@ from app import app
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--debug", action="store_true", help="Start Flask in debug mode"
-    )
+    parser.add_argument("--debug", action="store_true", help="Start Flask in debug mode")
     args = parser.parse_args()
 
     port = int(os.environ.get("FLASK_PORT", 5000))

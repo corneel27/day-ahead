@@ -15,11 +15,11 @@ def test_migrate_unversioned_to_v0():
     old_config = {
         "latitude": 52.0,
         "longitude": 5.0,
-        "battery": [{"name": "Test", "capacity": 10}],
+        "battery": [{"name": "Test", "capacity": 10}]
     }
-
+    
     new_config = migrate_unversioned_to_v0(old_config)
-
+    
     assert new_config["config_version"] == 0
     assert new_config["latitude"] == 52.0
     assert new_config["longitude"] == 5.0
@@ -37,17 +37,17 @@ def test_migrate_unversioned_to_v0_with_vat():
             "cost supplier consumption": {},
             "cost supplier production": {},
             "last invoice": "2024-01-01",
-            "vat": {"2024-01-01": 21},
-        },
+            "vat": {"2024-01-01": 21}
+        }
     }
-
+    
     new_config = migrate_unversioned_to_v0(old_config)
-
+    
     assert new_config["config_version"] == 0
     assert "vat" not in new_config["prices"]
     assert new_config["prices"]["vat consumption"] == {"2024-01-01": 21}
     assert new_config["prices"]["vat production"] == {"2024-01-01": 21}
-
+    
     # Validate that PricingConfig still works with migrated prices data
     pricing = PricingConfig(**new_config["prices"])
     assert pricing.vat_consumption == {"2024-01-01": 21}
@@ -59,11 +59,11 @@ def test_migrate_unversioned_to_v0_database_engines():
     old_config = {
         "latitude": 52.0,
         "database ha": {"password": "secret"},
-        "database da": {"password": "secret"},
+        "database da": {"password": "secret"}
     }
-
+    
     new_config = migrate_unversioned_to_v0(old_config)
-
+    
     assert new_config["config_version"] == 0
     assert new_config["database ha"]["engine"] == "mysql"
     assert new_config["database da"]["engine"] == "mysql"
@@ -75,6 +75,7 @@ def test_migrate_unversioned_to_v0_database_engines():
     da_db = DatabaseConfig(**new_config["database da"])
     assert da_db.engine == "mysql"
     assert da_db.username == "day_ahead"
+
 
 
 def test_migrate_unversioned_to_v0_scheduler():
@@ -108,10 +109,10 @@ def test_migrate_config_with_target_version():
         "latitude": 52.0,
         "longitude": 5.0,
     }
-
+    
     # Migrate to v0 (adds version field)
     migrated = migrate_config(config, target_version=0)
-
+    
     assert migrated["config_version"] == 0
     assert migrated["latitude"] == 52.0
 
@@ -122,11 +123,12 @@ def test_migrate_config_already_at_target():
         "config_version": 0,
         "latitude": 52.0,
     }
-
+    
     migrated = migrate_config(config, target_version=0)
-
+    
     assert migrated["config_version"] == 0
     assert migrated["latitude"] == 52.0
+
 
 
 class TestGraphicsKeyMigration:
@@ -149,14 +151,12 @@ class TestGraphicsKeyMigration:
         assert result["graphics"]["average consumption"] is True
 
     def test_all_three_renamed_together(self):
-        config = {
-            "graphics": {
-                "prices delivery": True,
-                "prices redelivery": False,
-                "average delivery": True,
-                "style": "dark_background",
-            }
-        }
+        config = {"graphics": {
+            "prices delivery": True,
+            "prices redelivery": False,
+            "average delivery": True,
+            "style": "dark_background",
+        }}
         result = migrate_unversioned_to_v0(config)
         g = result["graphics"]
         assert "prices delivery" not in g
@@ -182,10 +182,7 @@ class TestGraphicsKeyMigration:
     def test_graphics_without_old_keys(self):
         config = {"graphics": {"prices consumption": True, "style": "dark_background"}}
         result = migrate_unversioned_to_v0(config)
-        assert result["graphics"] == {
-            "prices consumption": True,
-            "style": "dark_background",
-        }
+        assert result["graphics"] == {"prices consumption": True, "style": "dark_background"}
 
 
 class TestSolarOrientationMigration:
@@ -195,30 +192,19 @@ class TestSolarOrientationMigration:
         assert result["solar"][0]["orientation"] == -90
 
     def test_top_level_solar_string_orientation_normalized(self):
-        config = {
-            "solar": [{"name": "roof", "strings": [{"orientation": 270, "tilt": 35}]}]
-        }
+        config = {"solar": [{"name": "roof", "strings": [{"orientation": 270, "tilt": 35}]}]}
         result = migrate_unversioned_to_v0(config)
         assert result["solar"][0]["strings"][0]["orientation"] == -90
 
     def test_battery_dc_solar_flat_orientation_normalized(self):
-        config = {
-            "battery": [{"name": "bat", "solar": [{"name": "dc", "orientation": 315}]}]
-        }
+        config = {"battery": [{"name": "bat", "solar": [{"name": "dc", "orientation": 315}]}]}
         result = migrate_unversioned_to_v0(config)
         assert result["battery"][0]["solar"][0]["orientation"] == -45
 
     def test_battery_dc_solar_string_orientation_normalized(self):
-        config = {
-            "battery": [
-                {
-                    "name": "bat",
-                    "solar": [
-                        {"name": "dc", "strings": [{"orientation": 225, "tilt": 30}]}
-                    ],
-                }
-            ]
-        }
+        config = {"battery": [{"name": "bat", "solar": [
+            {"name": "dc", "strings": [{"orientation": 225, "tilt": 30}]}
+        ]}]}
         result = migrate_unversioned_to_v0(config)
         assert result["battery"][0]["solar"][0]["strings"][0]["orientation"] == -135
 
@@ -238,22 +224,15 @@ class TestSolarOrientationMigration:
         assert result["solar"][0]["orientation"] == -90
 
     def test_multiple_strings_all_normalized(self):
-        config = {
-            "solar": [
-                {
-                    "name": "roof",
-                    "strings": [
-                        {"orientation": 270, "tilt": 35},
-                        {"orientation": 90, "tilt": 35},
-                        {"orientation": 181, "tilt": 35},
-                    ],
-                }
-            ]
-        }
+        config = {"solar": [{"name": "roof", "strings": [
+            {"orientation": 270, "tilt": 35},
+            {"orientation": 90, "tilt": 35},
+            {"orientation": 181, "tilt": 35},
+        ]}]}
         result = migrate_unversioned_to_v0(config)
         strings = result["solar"][0]["strings"]
         assert strings[0]["orientation"] == -90
-        assert strings[1]["orientation"] == 90  # <= 180, untouched
+        assert strings[1]["orientation"] == 90   # <= 180, untouched
         assert strings[2]["orientation"] == -179
 
     def test_no_solar_section(self):
@@ -269,10 +248,10 @@ class TestSolarOrientationMigration:
 #         "config_version": 0,
 #         "battery": [{"name": "Test", "capacity": 10, "max_charge_power": 5}]
 #     }
-#
+#     
 #     from dao.prog.config.migrations.v0_to_v1 import migrate_v0_to_v1
 #     new_config = migrate_v0_to_v1(old_config)
-#
+#     
 #     assert new_config['config_version'] == 1
 #     assert new_config['battery'][0]['efficiency'] == 0.95
 #
@@ -283,25 +262,28 @@ class TestSolarOrientationMigration:
 #         "config_version": 0,
 #         "battery": [{"name": "Test", "capacity": 10, "max_charge_power": 5}]
 #     }
-#
+#     
 #     migrated = migrate_config(old_config, target_version=1)
-#
+#     
 #     assert migrated['config_version'] == 1
 #     assert migrated['battery'][0]['efficiency'] == 0.95
-
 
 def test_migrate_v1_to_v2():
     old_config = {
         "config_version": 1,
         "battery": [
-            {"name": "Test1", "entity_balance_switch": "input_boolean.nom"},
-            {"name": "Test2", "entity_grid_setpoint": "input_number.grid_setpoint"},
+            {"name": "Test1",
+             "entity_balance_switch": "input_boolean.nom"},
+            {"name": "Test2",
+             "entity_grid_setpoint": "input_number.grid_setpoint"}
         ],
-        "grid": {"max_power": 17.0},
+        "grid": {
+            "max_power": 17.0
+        },
     }
 
     new_config = migrate_v1_to_v2(old_config)
 
-    assert new_config["config_version"] == 2
-    assert new_config["grid"]["entity_balance_switch"] == "input_boolean.nom"
-    assert new_config["grid"]["entity_grid_setpoint"] == "input_number.grid_setpoint"
+    assert new_config['config_version'] == 2
+    assert new_config['grid']["entity_balance_switch"] == "input_boolean.nom"
+    assert new_config['grid']["entity_grid_setpoint"] == "input_number.grid_setpoint"

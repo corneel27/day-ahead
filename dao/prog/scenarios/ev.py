@@ -28,7 +28,6 @@ def find_ev_index(config: dict, target: str) -> int:
             return i
     raise KeyError(f"no EV in this config matches target {target!r}")
 
-
 def _three_phase(cfg_ev: dict) -> bool:
     raw = cfg_ev.get("charge_three_phase")
     val = raw.get("value") if isinstance(raw, dict) else raw
@@ -68,9 +67,7 @@ class ResolvedEvInput:
     ready_override_str: str | None = None
 
 
-def _resolve_ready(
-    spec: Any, *, ctx: PluginContext
-) -> tuple[dt.datetime | None, str | None]:
+def _resolve_ready(spec: Any, *, ctx: PluginContext) -> tuple[dt.datetime | None, str | None]:
     if spec is None:
         return None, None
     if isinstance(spec, str):
@@ -78,15 +75,11 @@ def _resolve_ready(
     if isinstance(spec, dict):
         name = spec.get("plugin")
         if not name:
-            raise VocabularyError(
-                f"ev ready plugin object is missing 'plugin': {spec!r}"
-            )
+            raise VocabularyError(f"ev ready plugin object is missing 'plugin': {spec!r}")
         kwargs = {k: v for k, v in spec.items() if k != "plugin"}
         result = plugins.get_plugin(name)(ctx, **kwargs)
         return result.get("ready_dt"), result.get("ready_override_str")
-    raise VocabularyError(
-        f"ev ready must be a string offset or a plugin object, got {spec!r}"
-    )
+    raise VocabularyError(f"ev ready must be a string offset or a plugin object, got {spec!r}")
 
 
 def _resolve_input(car: dict, *, ctx: PluginContext) -> ResolvedEvInput:
@@ -128,27 +121,18 @@ def build_overrides(config: dict, ev_index: int, resolved: ResolvedEvInput) -> d
         overrides[cfg_ev["entity_position"]] = resolved.position
     if resolved.actual_soc is not None:
         overrides[cfg_ev["entity_actual_level"]] = resolved.actual_soc
-    if (
-        resolved.instant_charge is not None
-        and cfg_ev.get("entity_instant_start") is not None
-    ):
-        overrides[cfg_ev["entity_instant_start"]] = (
-            "on" if resolved.instant_charge else "off"
-        )
+    if resolved.instant_charge is not None and cfg_ev.get("entity_instant_start") is not None:
+        overrides[cfg_ev["entity_instant_start"]] = "on" if resolved.instant_charge else "off"
     if resolved.wished_level is not None:
         if resolved.instant_charge and cfg_ev.get("entity_instant_level") is not None:
             overrides[cfg_ev["entity_instant_level"]] = resolved.wished_level
         elif cfg_ev.get("charge_scheduler") is not None:
-            overrides[cfg_ev["charge_scheduler"]["entity_set_level"]] = (
-                resolved.wished_level
-            )
+            overrides[cfg_ev["charge_scheduler"]["entity_set_level"]] = resolved.wished_level
     sched = cfg_ev.get("charge_scheduler")
     if resolved.ready_override_str is not None and sched is not None:
         overrides[sched["entity_ready_datetime"]] = resolved.ready_override_str
     elif resolved.ready_dt is not None and sched is not None:
-        overrides[sched["entity_ready_datetime"]] = resolved.ready_dt.strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        overrides[sched["entity_ready_datetime"]] = resolved.ready_dt.strftime("%Y-%m-%d %H:%M:%S")
     return overrides
 
 
@@ -166,9 +150,7 @@ class ExpandedEv:
     resolved_other: ResolvedEvInput | None = None
 
 
-def expand_ev_block(
-    ev_block: dict, *, config: dict, start: dt.datetime, interval_s: int
-) -> ExpandedEv:
+def expand_ev_block(ev_block: dict, *, config: dict, start: dt.datetime, interval_s: int) -> ExpandedEv:
     """The scenario's ev block to HA-state overrides and a config patch
     for both the target car and, if present, ev.other. Called once per
     scenario, on the already scenario.config_patch-applied config, so
@@ -177,9 +159,7 @@ def expand_ev_block(
     target_index = find_ev_index(config, target)
     target_name = config["electric_vehicle"][target_index]["name"]
     target_capacity = float(config["electric_vehicle"][target_index]["capacity"])
-    ctx = PluginContext(
-        start=start, interval_s=interval_s, config=config, ev_index=target_index
-    )
+    ctx = PluginContext(start=start, interval_s=interval_s, config=config, ev_index=target_index)
 
     car = dict(ev_block)
     soc_plugin = ev_block.get("soc_plugin")
@@ -199,32 +179,23 @@ def expand_ev_block(
     other_index = other_name = other_capacity = resolved_other = None
     other_block = ev_block.get("other")
     if other_block is not None:
-        candidates = [
-            i for i in range(len(config["electric_vehicle"])) if i != target_index
-        ]
+        candidates = [i for i in range(len(config["electric_vehicle"])) if i != target_index]
         if len(candidates) != 1:
             raise VocabularyError(
                 f"ev.other needs exactly one other EV configured, found {len(candidates)} "
-                f'(use "options": "options_2ev")'
+                f"(use \"options\": \"options_2ev\")"
             )
         other_index = candidates[0]
         other_name = config["electric_vehicle"][other_index]["name"]
         other_capacity = float(config["electric_vehicle"][other_index]["capacity"])
-        other_ctx = PluginContext(
-            start=start, interval_s=interval_s, config=config, ev_index=other_index
-        )
+        other_ctx = PluginContext(start=start, interval_s=interval_s, config=config, ev_index=other_index)
         resolved_other = _resolve_input(other_block, ctx=other_ctx)
         states.update(build_overrides(config, other_index, resolved_other))
 
     return ExpandedEv(
-        states=states,
-        config_patch=config_patch,
-        target_index=target_index,
-        target_name=target_name,
-        target_capacity_kwh=target_capacity,
+        states=states, config_patch=config_patch,
+        target_index=target_index, target_name=target_name, target_capacity_kwh=target_capacity,
         resolved_target=resolved_target,
-        other_index=other_index,
-        other_name=other_name,
-        other_capacity_kwh=other_capacity,
+        other_index=other_index, other_name=other_name, other_capacity_kwh=other_capacity,
         resolved_other=resolved_other,
     )
