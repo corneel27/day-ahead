@@ -5,6 +5,7 @@ Pricing configuration models.
 from datetime import date
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Literal
+
 from .base import SecretStr, EntityId
 
 
@@ -34,8 +35,8 @@ class PricePrediction(BaseModel):
             "x-help": "The url of the supplier to get the prediction data"
                       "for Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"
                       "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>"
-                      "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
-                      "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json"
+                      "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"
+                      "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json",
             "x-ui-section": "Prices",
         },
     )
@@ -112,7 +113,7 @@ class PricingConfig(BaseModel):
         }
     )
     ha_epex_spot : HADataSensor | None = Field(
-        default_factory = HADataSensor,
+        default_factory=HADataSensor,
         description="Configuration of getting pricedata from the ha-custom component 'epex spot'.",
         json_schema_extra={
             "x-help": "Configuration of getting the day ahead prices from 'epex spot'.",
@@ -120,7 +121,7 @@ class PricingConfig(BaseModel):
         },
     )
     prediction: PricePrediction | None = Field(
-        default_factory = PricePrediction,
+        default_factory=PricePrediction,
         description="Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
         json_schema_extra={
             "x-help": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
