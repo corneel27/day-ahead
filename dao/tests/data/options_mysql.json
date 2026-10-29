@@ -1,327 +1,605 @@
-{ "homeassistant": {
-    "protocol api": "http",
-    "ip adress": "192.168.178.36",
-    "ip port": 8123,
-    "token": "!secret ha_api_token"
+{
+  "config_version": 2,
+  "homeassistant": {
+    "ip_address": "supervisor",
+    "ip_port": 8123,
+    "hasstoken": "!secret ha_api_token",
+    "protocol_api": "http",
+    "ip adress": "192.168.178.36"
   },
-  "database da": {
-    "engine" : "mysql",
-    "server": "192.168.178.36",
-    "port": 3306,
-    "database": "day_ahead",
-    "username": "day_ahead",
-    "password": "!secret db_da_password"
-  },
-  "database ha": {
-    "engine" : "mysql",
+  "database_ha": {
+    "engine": "mysql",
     "server": "192.168.178.36",
     "port": 3306,
     "database": "homeassistant",
     "username": "homeassistant",
     "password": "!secret db_ha_password"
   },
-
-  "meteoserver-key": "!secret meteoserver-key",
+  "database_da": {
+    "engine": "mysql",
+    "database": "day_ahead",
+    "server": "192.168.178.36",
+    "port": 3306,
+    "username": "day_ahead",
+    "password": "!secret db_da_password"
+  },
+  "meteoserver_key": "!secret meteoserver-key",
+  "meteoserver_model": "harmonie",
+  "meteoserver_attemps": 2,
   "prices": {
-    "\\source day ahead" : "tibber",
-    "source day ahead" : "nordpool",
-    "//source day ahead" : "entsoe",
-    "/source day ahead" : "easyenergy",
-    "entsoe-api-key": "!secret entsoe-api-key",
-    "regular high" : 0.40,
-    "regular low" : 0.35,
-    "switch to low": 23,
-    "energy taxes delivery": {
-      "2022-01-01": 0.06729,
-      "2023-01-01" : 0.12599,
-      "2024-01-01" : 0.10880
+    "source_day_ahead": "nordpool",
+    "ha_epex_spot": {
+      "ha_entity": "sensor.epex_spot_data_market_price",
+      "ha_attribute": "data",
+      "ha_datetime_field": "start_time",
+      "ha_value_field": "price_per_kwh"
     },
-    "energy taxes redelivery": {
+    "prediction": {
+      "extension": 0,
+      "source": "dap",
+      "api": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"
+    },
+    "entsoe_api_key": "!secret entsoe-api-key",
+    "energy_taxes_consumption": {
       "2022-01-01": 0.06729,
       "2023-01-01": 0.12599,
-      "2024-01-01" : 0.10880
+      "2024-01-01": 0.1088
     },
-    "cost supplier delivery": {
+    "energy_taxes_production": {
+      "2022-01-01": 0.06729,
+      "2023-01-01": 0.12599,
+      "2024-01-01": 0.1088
+    },
+    "cost_supplier_consumption": {
       "2022-01-01": 0.002,
       "2023-03-01": 0.018,
       "2024-04-01": 0.0175,
       "2024-08-01": 0.020496
     },
-    "cost supplier redelivery": {
+    "cost_supplier_production": {
       "2022-01-01": 0.002,
       "2023-03-01": 0.018,
       "2024-04-01": 0.0175,
       "2024-08-01": 0.020496
     },
-    "vat": {
-      "2022-01-01": 21,
-      "2022-07-01": 9,
-      "2023-01-01": 21
+    "vat_consumption": {
+      "2022-01-01": 21.0,
+      "2022-07-01": 9.0,
+      "2023-01-01": 21.0
     },
-    "last invoice": "2023-09-01",
-    "tax refund": "True"
+    "vat_production": {
+      "2022-01-01": 21.0,
+      "2022-07-01": 9.0,
+      "2023-01-01": 21.0
+    },
+    "multiplier_consumption": {
+      "2000-01-01": 1.0
+    },
+    "multiplier_production": {
+      "2000-01-01": 1.0
+    },
+    "last_invoice": "2023-09-01",
+    "tax_refund": true,
+    "\\source day ahead": "tibber",
+    "//source day ahead": "entsoe",
+    "/source day ahead": "easyenergy",
+    "regular high": 0.4,
+    "regular low": 0.35,
+    "switch to low": 23
   },
-  "logging level": "info",
-  "use_calc_baseload": "True",
-  "baseload calc periode": 56,
-  "baseload":
-  [0.175,
- 0.361,
- 0.173,
- 0.495,
- 0.137,
- 0.142,
- 0.13,
- 0.167,
- 0.21,
- 0.29,
- 0.447,
- 0.261,
- 0.204,
- 0.187,
- 0.189,
- 0.186,
- 0.207,
- 0.783,
- 0.31,
- 0.251,
- 0.225,
- 0.203,
- 0.182,
- 0.173],
-
-  "graphical backend": "",
+  "logging_level": "info",
+  "use_calc_baseload": true,
+  "baseload_calc_periode": 56,
+  "baseload": [
+    0.175,
+    0.361,
+    0.173,
+    0.495,
+    0.137,
+    0.142,
+    0.13,
+    0.167,
+    0.21,
+    0.29,
+    0.447,
+    0.261,
+    0.204,
+    0.187,
+    0.189,
+    0.186,
+    0.207,
+    0.783,
+    0.31,
+    0.251,
+    0.225,
+    0.203,
+    0.182,
+    0.173
+  ],
+  "graphical_backend": "",
   "graphics": {
     "style": "Solarize_Light2",
-    "show" : "False",
-    "prices delivery": "True",
-    "prices redelivery": "True",
-    "average delivery": "True"
+    "battery_balance": true,
+    "prices_consumption": true,
+    "prices_production": true,
+    "prices_spot": true,
+    "average_consumption": true,
+    "show": "False"
   },
+  "interval": "1hour",
   "strategy": "minimize cost",
-  "//strategy options": "minimize cost | minimize consumption",
-  "trigger entity": "input_button.day_ahead_berekening_uitvoeren",
+  "max_gap": 0.005,
   "notifications": {
-    "//notification entity": "input_text.notification_dao",
-    "opstarten": "False",
-    "berekening": "False",
-    "last activity entity": "input_datetime.dao_laatste_activiteit"
+    "opstarten": false,
+    "berekening": false,
+    "last_activity_entity": "input_datetime.dao_laatste_activiteit",
+    "//notification entity": "input_text.notification_dao"
   },
   "grid": {
-    "max_power": 17
+    "max_power": 17.0
   },
   "history": {
-    "save days": 7
+    "save_days": 7
   },
   "dashboard": {
     "port": 5000
   },
-  "boiler": {
-    "boiler present": "True",
-    "entity actual temp.": "sensor.boiler_gemeten",
-    "entity setpoint": "sensor.boiler_ingesteld",
-    "entity hysterese": "sensor.hysterese_hot_water",
-    "cop": 2.9,
-    "cooling rate": 0.4,
-    "volume": 180,
-    "heating allowed below": 44,
-    "elec. power": 1500,
-    "activate service": "press",
-    "activate entity": "input_button.hw_trigger"
-  },
-  "heating": {
-    "heater present" : "True",
-    "degree days factor" : 3.6,
-    "stages": [
-        {"max_power":  225, "cop": 7.1},
-        {"max_power":  300, "cop": 7.0},
-        {"max_power":  400, "cop": 6.5},
-        {"max_power":  500, "cop": 6.0},
-        {"max_power":  600, "cop": 5.5},
-        {"max_power":  750, "cop": 5.0},
-        {"max_power": 1000, "cop": 4.5},
-        {"max_power": 1250, "cop": 4.0}
-    ],
-    "entity adjust heating curve": "input_number.stooklijn_verschuiving_day_ahead",
-    "adjustment factor": 0.04
-  },
   "battery": [
-    {"name" : "Accu1",
-     "entity actual level": "sensor.ess_battery_soc",
-     "capacity": 30,
-     "upper limit": 98,
-     "lower limit": 17.5,
-     "optimal lower level": 18,
-     "entity min soc end opt": "input_number.min_soc_einde_opt",
-     "entity max soc end opt": "input_number.max_soc_einde_opt",
-     "charge stages" : [
-        {"power": 0.0, "efficiency": 1},
-        {"power": 30.0, "efficiency": 0.949},
-        {"power": 60.0, "efficiency": 0.950},
-        {"power": 90.0, "efficiency": 0.951},
-        {"power": 150.0, "efficiency": 0.952},
-        {"power": 300.0, "efficiency": 0.953},
-        {"power": 600.0, "efficiency": 0.954},
-        {"power": 1200.0, "efficiency": 0.955},
-        {"power": 2400.0, "efficiency": 0.949},
-        {"power": 3600.0, "efficiency": 0.934},
-        {"power": 4800.0, "efficiency": 0.92},
-        {"power": 5500.0, "efficiency": 0.905}
-    ],
-     "discharge stages" : [
-        {"power": 0.0, "efficiency": 1},
-        {"power": 30.0, "efficiency": 0.949},
-        {"power": 60.0, "efficiency": 0.950},
-        {"power": 90.0, "efficiency": 0.951},
-        {"power": 150.0, "efficiency": 0.952},
-        {"power": 300.0, "efficiency": 0.953},
-        {"power": 600.0, "efficiency": 0.954},
-        {"power": 1200.0, "efficiency": 0.955},
-        {"power": 2400.0, "efficiency": 0.949},
-        {"power": 3600.0, "efficiency": 0.934},
-        {"power": 4800.0, "efficiency": 0.92}
-    ],
-     "minimum power" : 1200,
-     "dc_to_bat efficiency" : 0.98,
-     "bat_to_dc efficiency": 0.98,
-     "cycle cost" : 0.0,
-     "entity set power feedin": "input_number.feedin_grid",
-     "entity set operating mode": "input_select.ess_operating_mode",
-     "entity set operating mode on": "Aan",
-     "entity set operating mode off": "Uit",
-     "entity stop victron": "input_datetime.stop_victron",
-     "entity balance switch": "input_boolean.balanceer_grid",
-     "solar": [
-       {"name": "tuinkamer",
-        "tilt": 45,
-        "orientation": 5,
-        "capacity": 1.8,
-        "yield": 0.001,
-        "entity pv switch": "input_boolean.pv_woning_aan_uit"
-       }
-     ]
+    {
+      "name": "Accu1",
+      "entity_actual_level": "sensor.ess_battery_soc",
+      "capacity": 30.0,
+      "upper_limit": 98,
+      "lower_limit": 17.5,
+      "optimal_lower_level": 18,
+      "penalty_low_soc": 0.0025,
+      "entity_min_soc_end_opt": "input_number.min_soc_einde_opt",
+      "entity_max_soc_end_opt": "input_number.max_soc_einde_opt",
+      "charge_stages": [
+        {
+          "power": 0.0,
+          "efficiency": 1.0
+        },
+        {
+          "power": 30.0,
+          "efficiency": 0.949
+        },
+        {
+          "power": 60.0,
+          "efficiency": 0.95
+        },
+        {
+          "power": 90.0,
+          "efficiency": 0.951
+        },
+        {
+          "power": 150.0,
+          "efficiency": 0.952
+        },
+        {
+          "power": 300.0,
+          "efficiency": 0.953
+        },
+        {
+          "power": 600.0,
+          "efficiency": 0.954
+        },
+        {
+          "power": 1200.0,
+          "efficiency": 0.955
+        },
+        {
+          "power": 2400.0,
+          "efficiency": 0.949
+        },
+        {
+          "power": 3600.0,
+          "efficiency": 0.934
+        },
+        {
+          "power": 4800.0,
+          "efficiency": 0.92
+        },
+        {
+          "power": 5500.0,
+          "efficiency": 0.905
+        }
+      ],
+      "discharge_stages": [
+        {
+          "power": 0.0,
+          "efficiency": 1.0
+        },
+        {
+          "power": 30.0,
+          "efficiency": 0.949
+        },
+        {
+          "power": 60.0,
+          "efficiency": 0.95
+        },
+        {
+          "power": 90.0,
+          "efficiency": 0.951
+        },
+        {
+          "power": 150.0,
+          "efficiency": 0.952
+        },
+        {
+          "power": 300.0,
+          "efficiency": 0.953
+        },
+        {
+          "power": 600.0,
+          "efficiency": 0.954
+        },
+        {
+          "power": 1200.0,
+          "efficiency": 0.955
+        },
+        {
+          "power": 2400.0,
+          "efficiency": 0.949
+        },
+        {
+          "power": 3600.0,
+          "efficiency": 0.934
+        },
+        {
+          "power": 4800.0,
+          "efficiency": 0.92
+        }
+      ],
+      "reduce_power_low_soc": [],
+      "reduce_power_high_soc": [],
+      "minimum_power": 1200,
+      "dc_to_bat_efficiency": 0.98,
+      "bat_to_dc_efficiency": 0.98,
+      "cycle_cost": 0.0,
+      "entity_set_power_feedin": "input_number.feedin_grid",
+      "entity_set_operating_mode": "input_select.ess_operating_mode",
+      "entity_set_operating_mode_on": "Aan",
+      "entity_set_operating_mode_off": "Uit",
+      "entity_stop_inverter": "input_datetime.stop_victron",
+      "solar": [
+        {
+          "name": "tuinkamer",
+          "entity_pv_switch": "input_boolean.pv_woning_aan_uit",
+          "tilt": 45.0,
+          "orientation": 5.0,
+          "capacity": 1.8,
+          "yield_factor": 0.001,
+          "strings": [],
+          "ml_prediction": false,
+          "ml_training_start_date": "2000-01-01",
+          "entities_sensors": []
+        }
+      ],
+      "entity balance switch": "input_boolean.balanceer_grid"
     }
   ],
   "solar": [
-    { "name" : "woning",
-      "tilt": 35,
-      "orientation": 5,
+    {
+      "name": "woning",
+      "entity_pv_switch": "input_boolean.pv_woning_aan_uit",
+      "tilt": 35.0,
+      "orientation": 5.0,
       "capacity": 4.2,
-      "yield": 0.009,
-      "entity pv switch": "input_boolean.pv_woning_aan_uit"
+      "yield_factor": 0.009,
+      "strings": [],
+      "ml_prediction": false,
+      "ml_training_start_date": "2000-01-01",
+      "entities_sensors": []
     },
-    { "name": "garage",
-      "tilt": 45,
-      "orientation": 5,
+    {
+      "name": "garage",
+      "entity_pv_switch": "input_boolean.pv_garage_aan_uit",
+      "tilt": 45.0,
+      "orientation": 5.0,
       "capacity": 1.8,
-      "yield": 0.004,
-      "entity pv switch": "input_boolean.pv_garage_aan_uit"
-    }],
-  "electric vehicle" : [{
+      "yield_factor": 0.004,
+      "strings": [],
+      "ml_prediction": false,
+      "ml_training_start_date": "2000-01-01",
+      "entities_sensors": []
+    }
+  ],
+  "electric_vehicle": [
+    {
       "name": "Golf GTE",
       "capacity": 6.3,
-      "entity position": "device_tracker.wvwzzzauzfw117301_position",
-      "//entity position": "input_select.auto_position",
-      "charge stages" : [
-        {"ampere": 0, "efficiency": 1},
-        {"ampere": 6, "efficiency": 0.95},
-        {"ampere": 10, "efficiency": 1},
-        {"ampere": 13, "efficiency": 0.90},
-        {"ampere": 16, "efficiency": 0.80}
+      "switch_cost": 0.0,
+      "low_soc_cost": 0.0,
+      "entity_position": "device_tracker.wvwzzzauzfw117301_position",
+      "charge_three_phase": "False",
+      "charge_stages": [
+        {
+          "ampere": 0.0,
+          "efficiency": 1.0
+        },
+        {
+          "ampere": 6.0,
+          "efficiency": 0.95
+        },
+        {
+          "ampere": 10.0,
+          "efficiency": 1.0
+        },
+        {
+          "ampere": 13.0,
+          "efficiency": 0.9
+        },
+        {
+          "ampere": 16.0,
+          "efficiency": 0.8
+        }
       ],
-
-      "charge three phase": "False",
-      "entity actual level": "sensor.wvwzzzauzfw117301_battery_level",
+      "entity_actual_level": "sensor.wvwzzzauzfw117301_battery_level",
+      "entity_plugged_in": "binary_sensor.fritz_dect_200_laadpunt_button_lock_on_device",
+      "charge_scheduler": {
+        "entity_set_level": "input_number.gewenst_laad_niveau",
+        "level_margin": 2,
+        "entity_ready_datetime": "input_datetime.tijdstip_klaar_met_laden"
+      },
+      "charge_switch": "input_boolean.auto_laden",
+      "entity_set_charging_ampere": "input_number.set_car_charging_ampere",
+      "entity_stop_charging": "input_datetime.stop_laden_ev",
+      "//entity position": "input_select.auto_position",
       "//entity actual level": "sensor.auto_calculated_soc",
       "//entity plugged in": "binary_sensor.wvwzzzauzfw117301_external_power",
-      "entity plugged in": "binary_sensor.fritz_dect_200_laadpunt_button_lock_on_device",
-      "charge scheduler": {
-        "entity set level": "input_number.gewenst_laad_niveau",
-        "level margin": 2,
-        "entity ready datetime": "input_datetime.tijdstip_klaar_met_laden"
-      },
       "//charge switch": "switch.wvwzzzauzfw117301_charging",
-      "/charge switch": "switch.fritz_dect_200_laadpunt",
-      "charge switch": "input_boolean.auto_laden",
-      "entity set charging ampere" : "input_number.set_car_charging_ampere",
-      "entity stop charging": "input_datetime.stop_laden_ev"
-  }
+      "/charge switch": "switch.fritz_dect_200_laadpunt"
+    }
   ],
-  "machines" : [
-      { "name": "wasmachine",
-        "programs":[
-          {"name": "uit",
-           "power": []},
-          {"name": "kleur 30 graden",
-           "power": [2000, 1500, 500, 400, 200, 300]
-           },
-          {"name": "wolwas",
-           "power": [1500, 1000, 500, 400, 200, 300,200, 300]
-          }
-        ],
-        "entity start window": "input_datetime.start_window_wasmachine",
-        "entity end window": "input_datetime.end_window_wasmachine",
-        "entity selected program": "input_select.program_wasmachine",
-        "entity calculated start": "input_datetime.calculated_start_wasmachine",
-        "entity calculated end": "input_datetime.calculated_stop_wasmachine"
-      },
-      { "name": "vaatwasser",
-        "programs":[
-          {"name": "off",
-           "power": []},
-          {"name": "eco",
-           "power": [2000, 2000, 1500, 1000, 500, 500, 1000, 1000]
-           }
+  "machines": [
+    {
+      "name": "wasmachine",
+      "programs": [
+        {
+          "name": "uit",
+          "power": []
+        },
+        {
+          "name": "kleur 30 graden",
+          "power": [
+            2000.0,
+            1500.0,
+            500.0,
+            400.0,
+            200.0,
+            300.0
+          ]
+        },
+        {
+          "name": "wolwas",
+          "power": [
+            1500.0,
+            1000.0,
+            500.0,
+            400.0,
+            200.0,
+            300.0,
+            200.0,
+            300.0
+          ]
+        }
       ],
-      "entity start window": "input_datetime.start_window_vaatwasser",
-      "entity end window": "input_datetime.end_window_vaatwasser",
-      "entity selected program": "input_select.program_vaatwasser",
-      "entity calculated start": "input_datetime.calculated_start_vaatwasser",
-      "entity calculated end": "input_datetime.calculated_stop_vaatwasser"
-      }
+      "entity_start_window": "input_datetime.start_window_wasmachine",
+      "entity_end_window": "input_datetime.end_window_wasmachine",
+      "entity_selected_program": "input_select.program_wasmachine",
+      "entity_calculated_start": "input_datetime.calculated_start_wasmachine",
+      "entity_calculated_end": "input_datetime.calculated_stop_wasmachine"
+    },
+    {
+      "name": "vaatwasser",
+      "programs": [
+        {
+          "name": "off",
+          "power": []
+        },
+        {
+          "name": "eco",
+          "power": [
+            2000.0,
+            2000.0,
+            1500.0,
+            1000.0,
+            500.0,
+            500.0,
+            1000.0,
+            1000.0
+          ]
+        }
+      ],
+      "entity_start_window": "input_datetime.start_window_vaatwasser",
+      "entity_end_window": "input_datetime.end_window_vaatwasser",
+      "entity_selected_program": "input_select.program_vaatwasser",
+      "entity_calculated_start": "input_datetime.calculated_start_vaatwasser",
+      "entity_calculated_end": "input_datetime.calculated_stop_vaatwasser"
+    }
   ],
-  "tibber" : {
-    "api_token" : "!secret tibber_api_token"
+  "boiler": {
+    "boiler_present": true,
+    "entity_actual_temp": "sensor.boiler_gemeten",
+    "entity_setpoint": "sensor.boiler_ingesteld",
+    "entity_hysterese": "sensor.hysterese_hot_water",
+    "cop": 2.9,
+    "cooling_rate": 0.4,
+    "volume": 180.0,
+    "heating_allowed_below": 44,
+    "elec_power": 1500.0,
+    "activate_service": "press",
+    "activate_entity": "input_button.hw_trigger",
+    "boiler_heated_by_heatpump": true
   },
-  "report":{
-    "entities grid consumption" : [
+  "heating": {
+    "heater_present": true,
+    "degree_days_factor": 3.6,
+    "degree_days_base_temperature": 16.0,
+    "adjustment": "power",
+    "stages": [
+      {
+        "max_power": 0.0,
+        "cop": 8.0
+      },
+      {
+        "max_power": 225.0,
+        "cop": 7.1
+      },
+      {
+        "max_power": 300.0,
+        "cop": 7.0
+      },
+      {
+        "max_power": 400.0,
+        "cop": 6.5
+      },
+      {
+        "max_power": 500.0,
+        "cop": 6.0
+      },
+      {
+        "max_power": 600.0,
+        "cop": 5.5
+      },
+      {
+        "max_power": 750.0,
+        "cop": 5.0
+      },
+      {
+        "max_power": 1000.0,
+        "cop": 4.5
+      },
+      {
+        "max_power": 1250.0,
+        "cop": 4.0
+      }
+    ],
+    "entity_adjust_heating_curve": "input_number.stooklijn_verschuiving_day_ahead",
+    "adjustment_factor": 0.04,
+    "min_run_length": 1
+  },
+  "tibber": {
+    "api_token": "!secret tibber_api_token",
+    "api_url": "https://api.tibber.com/v1-beta/gql"
+  },
+  "xgboost": {
+    "tune_hyperparameters": true
+  },
+  "report": {
+    "entities_grid_consumption": [
       "sensor.grid_consumption_low",
       "sensor.grid_consumption_high"
     ],
-    "entities grid production" : [
+    "entities_grid_production": [
       "sensor.grid_production_low",
       "sensor.grid_production_high"
     ],
-    "entities solar production ac": [
+    "entities_solar_production_ac": [
       "sensor.solaredge_woning_ac_energy_kwh",
       "sensor.solaredge_garage_ac_energy_kwh_2"
     ],
-    "entities solar production dc": [],
-    "entities ev consumption" : ["sensor.fritz_dect_200_laadpunt_total_energy"],
-    "entities wp consumption" : ["sensor.youless_meterstand"],
-    "entities boiler consumption": [],
-    "entities battery consumption": ["sensor.ess_grid_consumption"],
-    "entities battery production": ["sensor.ess_grid_production"]
+    "entities_solar_production_dc": [],
+    "entities_ev_consumption": [
+      "sensor.fritz_dect_200_laadpunt_total_energy"
+    ],
+    "entities_wp_consumption": [
+      "sensor.youless_meterstand"
+    ],
+    "entities_boiler_consumption": [],
+    "entities_battery_consumption": [
+      "sensor.ess_grid_consumption"
+    ],
+    "entities_battery_production": [
+      "sensor.ess_grid_production"
+    ],
+    "entities_machine_consumption": [],
+    "co2_intensity_sensor": []
   },
-  "scheduler" : {
-    "0355": "get_meteo_data",
-    "0955": "get_meteo_data",
-    "1555": "get_meteo_data",
-    "2155": "get_meteo_data",
-    "0950": "get_tibber_data",
-    "1050": "get_tibber_data",
-    "1150": "get_tibber_data",
-    "1250": "get_tibber_data",
-    "1350": "get_tibber_data",
-    "1450": "get_tibber_data",
-    "1255": "get_day_ahead_prices",
-    "1355": "get_day_ahead_prices",
-    "1455": "get_day_ahead_prices",
-    "1554": "get_day_ahead_prices",
-    "1655": "get_day_ahead_prices",
-    "xx00": "calc_optimum",
-    "1444": "clean_data",
-    "1505": "get_meteo_data",
-    "2258": "clean_data"
-  }
+  "scheduler": {
+    "active": true,
+    "offset": 10,
+    "schedule": [
+      {
+        "time": "0355",
+        "action": "get_meteo_data"
+      },
+      {
+        "time": "0955",
+        "action": "get_meteo_data"
+      },
+      {
+        "time": "1555",
+        "action": "get_meteo_data"
+      },
+      {
+        "time": "2155",
+        "action": "get_meteo_data"
+      },
+      {
+        "time": "0950",
+        "action": "get_tibber_data"
+      },
+      {
+        "time": "1050",
+        "action": "get_tibber_data"
+      },
+      {
+        "time": "1150",
+        "action": "get_tibber_data"
+      },
+      {
+        "time": "1250",
+        "action": "get_tibber_data"
+      },
+      {
+        "time": "1350",
+        "action": "get_tibber_data"
+      },
+      {
+        "time": "1450",
+        "action": "get_tibber_data"
+      },
+      {
+        "time": "1255",
+        "action": "get_day_ahead_prices"
+      },
+      {
+        "time": "1355",
+        "action": "get_day_ahead_prices"
+      },
+      {
+        "time": "1455",
+        "action": "get_day_ahead_prices"
+      },
+      {
+        "time": "1554",
+        "action": "get_day_ahead_prices"
+      },
+      {
+        "time": "1655",
+        "action": "get_day_ahead_prices"
+      },
+      {
+        "time": "xx00",
+        "action": "calc_optimum"
+      },
+      {
+        "time": "1444",
+        "action": "clean_data"
+      },
+      {
+        "time": "1505",
+        "action": "get_meteo_data"
+      },
+      {
+        "time": "2258",
+        "action": "clean_data"
+      }
+    ]
+  },
+  "meteoserver_attempts": 2,
+  "//strategy options": "minimize cost | minimize consumption",
+  "trigger entity": "input_button.day_ahead_berekening_uitvoeren"
 }

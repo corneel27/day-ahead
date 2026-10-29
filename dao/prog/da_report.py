@@ -2267,6 +2267,7 @@ class Report(DaBase):
                         df_prices = pd.concat([df_prices, df_prog_prices])
 
             df_prices.rename(columns={"time": "tijd"}, inplace=True)
+            """
             df_prices = df_prices.groupby(["tijd"], as_index=False).agg(
                 {
                     "da_ex": "mean",
@@ -2274,6 +2275,7 @@ class Report(DaBase):
                     "da_prod": "mean",
                 }
             )
+            """
             df_prices.index = pd.to_datetime(df_prices["tijd"])
             df_ha = self.copy_col_df(df_prices, df_ha, "da_cons")
             df_ha = self.copy_col_df(df_prices, df_ha, "da_prod")
