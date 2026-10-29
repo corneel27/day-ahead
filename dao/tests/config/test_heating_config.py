@@ -28,7 +28,6 @@ def heating_with(base_temperature) -> dict:
 
 
 class TestDegreeDaysBaseTemperature:
-
     def test_defaults_to_16_when_not_configured(self):
         result = parse_heating({"heater present": True, "stages": STAGES})
         assert isinstance(result, HeatingEnabled)

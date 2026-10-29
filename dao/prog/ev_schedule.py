@@ -37,14 +37,11 @@ def format_ev_charge_schedule(
             if energy_kwh <= tolerance or power_kw <= tolerance or ampere <= 0:
                 continue
 
-            segment_end = segment_start + dt.timedelta(
-                hours=energy_kwh / power_kw
-            )
+            segment_end = segment_start + dt.timedelta(hours=energy_kwh / power_kw)
             if (
                 charge_periods
                 and charge_periods[-1][2] == ampere
-                and abs((segment_start - charge_periods[-1][1]).total_seconds())
-                <= 1
+                and abs((segment_start - charge_periods[-1][1]).total_seconds()) <= 1
             ):
                 previous_start, _, previous_ampere = charge_periods[-1]
                 charge_periods[-1] = (previous_start, segment_end, previous_ampere)

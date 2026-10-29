@@ -2,7 +2,6 @@
 Electric Vehicle configuration models.
 """
 
-
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..base import EntityId, FlexBool
@@ -246,8 +245,8 @@ class EVConfig(BaseModel):
         json_schema_extra={
             "x-help": "Optional Home Assistant text entity where DAO writes all planned EV charging periods, including their amperage and partial-interval end times, after each optimization.",
             "x-ui-section": "General",
-            "x-ui-widget-filter": "input_text,text"
-        }
+            "x-ui-widget-filter": "input_text,text",
+        },
     )
 
     @model_validator(mode="after")

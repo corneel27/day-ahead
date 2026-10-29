@@ -29,7 +29,6 @@ JULY = datetime.datetime(2026, 7, 15)
 
 
 class TestCalcGraaddagen:
-
     def test_fallback_base_temperature_is_16(self):
         assert DEFAULT_DEGREE_DAYS_BASE_TEMP == 16.0
 

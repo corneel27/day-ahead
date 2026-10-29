@@ -35,6 +35,8 @@ def test_knmi_explicit_empty_variables_are_preserved(monkeypatch):
 
     monkeypatch.setattr(solar_predictor.knmi, "get_hour_data_dataframe", fetch)
     variables = []
-    predictor.get_and_save_knmi_data(dt.datetime(2026, 1, 14), dt.datetime(2026, 1, 15), variables)
+    predictor.get_and_save_knmi_data(
+        dt.datetime(2026, 1, 14), dt.datetime(2026, 1, 15), variables
+    )
     assert requested == [[]]
     assert requested[0] is variables

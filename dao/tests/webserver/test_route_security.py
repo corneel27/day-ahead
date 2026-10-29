@@ -1,4 +1,5 @@
 """Exercise the reported route vulnerabilities through Flask requests."""
+
 import importlib
 import json
 import logging
@@ -11,8 +12,15 @@ from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
 
 # V1 reads configuration and opens a log at import time. Keep those startup
 # effects isolated from the route tests and the user's actual data.
-with patch("dao.prog.config.loader.ConfigurationLoader.load_and_validate", return_value=None), \
-        patch("logging.handlers.TimedRotatingFileHandler", return_value=logging.NullHandler()):
+with (
+    patch(
+        "dao.prog.config.loader.ConfigurationLoader.load_and_validate",
+        return_value=None,
+    ),
+    patch(
+        "logging.handlers.TimedRotatingFileHandler", return_value=logging.NullHandler()
+    ),
+):
     from dao.webserver.app import app
 
 api_routes = importlib.import_module("dao.webserver.app.api.routes")
@@ -23,8 +31,12 @@ v1_routes = importlib.import_module("dao.webserver.app.v1.routes")
 @pytest.mark.parametrize("age", [599, 600, 601])
 def test_running_task_expires_only_after_cutoff(monkeypatch, tmp_path, age):
     state_file = tmp_path / "task_state.json"
-    state = {"status": "running", "task": "calculate", "logfile": "test.log",
-             "last_update": 1000 - age}
+    state = {
+        "status": "running",
+        "task": "calculate",
+        "logfile": "test.log",
+        "last_update": 1000 - age,
+    }
     state_file.write_text(json.dumps(state), encoding="utf-8")
     monkeypatch.setattr(v1_routes, "STATEFILE", str(state_file))
     monkeypatch.setattr(v1_routes, "STALE_AFTER", 600)
@@ -35,7 +47,9 @@ def test_running_task_expires_only_after_cutoff(monkeypatch, tmp_path, age):
 
 
 @pytest.mark.parametrize("status", ["idle", "done", "failed"])
-def test_non_running_state_does_not_evaluate_missing_timestamp(monkeypatch, tmp_path, status):
+def test_non_running_state_does_not_evaluate_missing_timestamp(
+    monkeypatch, tmp_path, status
+):
     state_file = tmp_path / "task_state.json"
     state = {"status": status, "task": "calculate", "last_update": None}
     state_file.write_text(json.dumps(state), encoding="utf-8")
@@ -72,7 +86,9 @@ def test_solar_menu_can_be_removed_repeatedly_and_restored(monkeypatch, solar_pr
     for _ in range(2):
         assert v1_routes.generate_solar_items() == {"roof": solar}
         assert tuple(v1_routes.web_menu) == keys
-        assert {key: value for key, value in v1_routes.web_menu.items() if key != "solar"} == other_items
+        assert {
+            key: value for key, value in v1_routes.web_menu.items() if key != "solar"
+        } == other_items
 
 
 @pytest.fixture
@@ -85,13 +101,19 @@ def test_datasets_config_reflects_variable_table(monkeypatch, dim, stepped):
     engine = create_engine("sqlite:///:memory:")
     metadata = MetaData()
     variables = Table(
-        "variabel", metadata,
+        "variabel",
+        metadata,
         Column("id", Integer, primary_key=True),
-        Column("name", String), Column("code", String), Column("dim", String),
+        Column("name", String),
+        Column("code", String),
+        Column("dim", String),
     )
     metadata.create_all(engine)
     with engine.begin() as connection:
-        connection.execute(variables.insert(), {"id": 1, "name": "Consumption", "code": "cons", "dim": dim})
+        connection.execute(
+            variables.insert(),
+            {"id": 1, "name": "Consumption", "code": "cons", "dim": dim},
+        )
     report = Mock()
     report.db_da.metadata = MetaData()
     report.db_da.engine = engine
@@ -108,7 +130,9 @@ def test_datasets_config_reflects_variable_table(monkeypatch, dim, stepped):
 
 @pytest.mark.parametrize("method", ["GET", "POST"])
 @pytest.mark.parametrize("task", ["calc_optimum", "calc", "calc_zonder_debug"])
-def test_api_task_and_aliases_execute_exactly_once(client, monkeypatch, tmp_path, method, task):
+def test_api_task_and_aliases_execute_exactly_once(
+    client, monkeypatch, tmp_path, method, task
+):
     program_dir = tmp_path / "prog"
     program_dir.mkdir()
     log_dir = tmp_path / "data" / "log"
@@ -116,7 +140,9 @@ def test_api_task_and_aliases_execute_exactly_once(client, monkeypatch, tmp_path
     monkeypatch.chdir(program_dir)
     monkeypatch.setitem(app.config, "DAO_WEB_PREVIEW", False)
     monkeypatch.setattr(api_routes, "PROG_DIR", program_dir)
-    runner = Mock(return_value=SimpleNamespace(stdout="task output\n", stderr="task warning\n"))
+    runner = Mock(
+        return_value=SimpleNamespace(stdout="task output\n", stderr="task warning\n")
+    )
     monkeypatch.setattr(api_routes, "subprocess_run", runner)
 
     response = client.open(f"/api/run/{task}", method=method)
@@ -125,7 +151,10 @@ def test_api_task_and_aliases_execute_exactly_once(client, monkeypatch, tmp_path
     assert response.mimetype == "text/plain"
     assert response.data == b"task output\ntask warning\n"
     runner.assert_called_once_with(
-        api_routes.tasks["calc_optimum"]["cmd"], cwd=program_dir, capture_output=True, text=True,
+        api_routes.tasks["calc_optimum"]["cmd"],
+        cwd=program_dir,
+        capture_output=True,
+        text=True,
     )
     logs = list(log_dir.glob("calc_*.log"))
     assert len(logs) == 1
@@ -136,16 +165,23 @@ def test_api_task_and_aliases_execute_exactly_once(client, monkeypatch, tmp_path
 def test_unknown_task_is_escaped_plain_text(client, monkeypatch, method):
     runner = Mock(side_effect=AssertionError("Unknown task must not execute a command"))
     monkeypatch.setattr(api_routes, "subprocess_run", runner)
-    response = client.open("/api/run/%3Cimg%20src=x%20onerror=alert(1)%3E", method=method)
+    response = client.open(
+        "/api/run/%3Cimg%20src=x%20onerror=alert(1)%3E", method=method
+    )
     assert response.status_code == 400
     assert response.mimetype == "text/plain"
     assert b"<img" not in response.data
     runner.assert_not_called()
 
 
-@pytest.mark.parametrize("filename", [None, "../options.json", "/tmp/private.log", "..\\private.log", "file\x00.log"])
+@pytest.mark.parametrize(
+    "filename",
+    [None, "../options.json", "/tmp/private.log", "..\\private.log", "file\x00.log"],
+)
 def test_log_rejects_invalid_paths(client, filename):
-    response = client.get("/v2/view-file", query_string={} if filename is None else {"file": filename})
+    response = client.get(
+        "/v2/view-file", query_string={} if filename is None else {"file": filename}
+    )
     assert response.status_code == 400
 
 
@@ -165,7 +201,9 @@ def test_log_valid_and_missing_files(client, monkeypatch, tmp_path):
     (tmp_path / "log").mkdir()
     (tmp_path / "log" / "task.log").write_text("normal log")
     monkeypatch.setattr(v2_routes, "app_datapath", str(tmp_path))
-    monkeypatch.setattr(v2_routes, "render_template", lambda template, **kwargs: kwargs["content"])
+    monkeypatch.setattr(
+        v2_routes, "render_template", lambda template, **kwargs: kwargs["content"]
+    )
     assert client.get("/v2/view-file?file=task.log").data == b"normal log"
     assert client.get("/v2/view-file?file=missing.log").status_code == 404
 
@@ -180,28 +218,40 @@ def test_data_errors_hide_exception_details(client, monkeypatch):
     assert response.json == {"error": "Gegevens konden niet worden opgehaald"}
 
 
-@pytest.mark.parametrize("query", ["", "start=bad&end=2026-01-15", "start=2026-01-14&end=2026-01-15&timezone=invalid"])
+@pytest.mark.parametrize(
+    "query",
+    [
+        "",
+        "start=bad&end=2026-01-15",
+        "start=2026-01-14&end=2026-01-15&timezone=invalid",
+    ],
+)
 def test_bad_data_dates_are_client_errors(client, query):
     response = client.get("/api/data/?aggregate=hour&" + query)
     assert response.status_code == 400
 
 
-@pytest.mark.parametrize("method,path,data", [
-    ("POST", "/v2/task-exec", {"task": "clean_data"}),
-    ("GET", "/v2/task-cancel", {}),
-    ("GET", "/v2/task-state", {}),
-    ("GET", "/v2/tasks", {}),
-    ("GET", "/api/run/clean_data", {}),
-    ("POST", "/api/run/clean_data", {}),
-    ("POST", "/v1/run", {"current_bewerking": "clean_data"}),
-    ("GET", "/v1/run", {"current_bewerking": "clean_data"}),
-    ("POST", "/v1/", {"current_menu": "run", "current_bewerking": "clean_data"}),
-    ("POST", "/v1/", {"current_menu": "run"}),
-    ("POST", "/v1/", {"menu_run": "Run"}),
-    ("GET", "/v1/status", {}),
-    ("GET", "/v1/log", {}),
-])
-def test_preview_blocks_live_tasks_and_shared_state(client, monkeypatch, method, path, data):
+@pytest.mark.parametrize(
+    "method,path,data",
+    [
+        ("POST", "/v2/task-exec", {"task": "clean_data"}),
+        ("GET", "/v2/task-cancel", {}),
+        ("GET", "/v2/task-state", {}),
+        ("GET", "/v2/tasks", {}),
+        ("GET", "/api/run/clean_data", {}),
+        ("POST", "/api/run/clean_data", {}),
+        ("POST", "/v1/run", {"current_bewerking": "clean_data"}),
+        ("GET", "/v1/run", {"current_bewerking": "clean_data"}),
+        ("POST", "/v1/", {"current_menu": "run", "current_bewerking": "clean_data"}),
+        ("POST", "/v1/", {"current_menu": "run"}),
+        ("POST", "/v1/", {"menu_run": "Run"}),
+        ("GET", "/v1/status", {}),
+        ("GET", "/v1/log", {}),
+    ],
+)
+def test_preview_blocks_live_tasks_and_shared_state(
+    client, monkeypatch, method, path, data
+):
     v1_routes = importlib.import_module("dao.webserver.app.v1.routes")
     monkeypatch.setitem(app.config, "DAO_WEB_PREVIEW", True)
     live_calls = [
@@ -213,7 +263,9 @@ def test_preview_blocks_live_tasks_and_shared_state(client, monkeypatch, method,
     ]
     mocks = []
     for module, name in live_calls:
-        blocked = Mock(side_effect=AssertionError("Preview accessed live task execution/state"))
+        blocked = Mock(
+            side_effect=AssertionError("Preview accessed live task execution/state")
+        )
         monkeypatch.setattr(module, name, blocked)
         mocks.append(blocked)
     response = client.open(path, method=method, data=data)

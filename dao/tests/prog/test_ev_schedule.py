@@ -16,7 +16,10 @@ def test_formats_each_separate_charging_period():
         dt.datetime(2026, 7, 26),
     )
 
-    assert result == "26-07 01:00\N{EN DASH}03:00 (10 A), 26-07 04:00\N{EN DASH}05:00 (10 A)"
+    assert (
+        result
+        == "26-07 01:00\N{EN DASH}03:00 (10 A), 26-07 04:00\N{EN DASH}05:00 (10 A)"
+    )
 
 
 def test_formats_a_period_across_midnight_with_both_dates():

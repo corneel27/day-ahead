@@ -1,4 +1,3 @@
-
 import collections
 import datetime
 import fnmatch
@@ -435,7 +434,9 @@ def home():
     ]
     flatpickr_default_ts = float(active_time) if active_time else None
     flatpickr_default = (
-        datetime.datetime.fromtimestamp(float(active_time)).strftime("%Y-%m-%d %H:%M::%S")
+        datetime.datetime.fromtimestamp(float(active_time)).strftime(
+            "%Y-%m-%d %H:%M::%S"
+        )
         if active_time
         else ""
     )
@@ -489,10 +490,7 @@ def load_state():
 
         # 🔥 check op "stale" state
         last = state.get("last_update", 0)
-        if (
-            (state.get("status") == "running")
-            and (time.time() - last > STALE_AFTER)
-        ):
+        if (state.get("status") == "running") and (time.time() - last > STALE_AFTER):
             # taak is waarschijnlijk dood
             return {"status": "idle", "task": None, "logfile": None}
         return state

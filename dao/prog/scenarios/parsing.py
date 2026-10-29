@@ -52,7 +52,9 @@ class SetupEcho:
 
 
 _ECHO_INSTANT_RE = re.compile(r"Direct laden is (aan|uit)")
-_ECHO_READY_RE = re.compile(r"Klaar met laden op: (\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2})")
+_ECHO_READY_RE = re.compile(
+    r"Klaar met laden op: (\d{2}-\d{2}-\d{4} \d{2}:\d{2}:\d{2})"
+)
 _ECHO_ACTUAL_RE = re.compile(r"Huidig laadniveau: ([\d.]+) %")
 _ECHO_WISHED_RE = re.compile(r"Gewenst laadniveau:([\d.]+) %")
 _ECHO_POSITION_RE = re.compile(r"Locatie: (\S+)")
@@ -87,7 +89,9 @@ def parse_setup_echo(block_lines: list[str]) -> SetupEcho:
     return echo
 
 
-def check_capacity(expected_kwh: float | None, echo: SetupEcho, *, label: str) -> str | None:
+def check_capacity(
+    expected_kwh: float | None, echo: SetupEcho, *, label: str
+) -> str | None:
     """Cheap cross-EV-leak sanity check: does this car's log block show its
     own configured capacity? A mismatch means the wrong EV's config got
     read into this block. Unlike the v6 original, a hardcoded
@@ -112,39 +116,34 @@ def verify_setup_echo(resolved, echo: SetupEcho) -> list[str]:
     because the entity_id it should have targeted is None or unconfigured
     for this EV; see case 5.1."""
     mismatches = []
-    if (
-        (resolved.plugged_in is not None and echo.plugged_in is not None)
-        and (resolved.plugged_in != echo.plugged_in)
+    if (resolved.plugged_in is not None and echo.plugged_in is not None) and (
+        resolved.plugged_in != echo.plugged_in
     ):
         mismatches.append(
             f"plugged_in: requested {resolved.plugged_in}, log shows {echo.plugged_in}"
         )
-    if (
-        (resolved.position is not None and echo.position is not None)
-        and (resolved.position.lower() != echo.position.lower())
+    if (resolved.position is not None and echo.position is not None) and (
+        resolved.position.lower() != echo.position.lower()
     ):
         mismatches.append(
             f"position: requested {resolved.position!r}, log shows {echo.position!r}"
         )
-    if (
-        (resolved.actual_soc is not None and echo.actual_soc is not None)
-        and (abs(resolved.actual_soc - echo.actual_soc) > 0.05)
+    if (resolved.actual_soc is not None and echo.actual_soc is not None) and (
+        abs(resolved.actual_soc - echo.actual_soc) > 0.05
     ):
         mismatches.append(
             f"actual_soc: requested {resolved.actual_soc}, log shows {echo.actual_soc}"
         )
-    if (
-        (resolved.instant_charge is not None and echo.instant_charge is not None)
-        and (resolved.instant_charge != echo.instant_charge)
+    if (resolved.instant_charge is not None and echo.instant_charge is not None) and (
+        resolved.instant_charge != echo.instant_charge
     ):
         mismatches.append(
             f"instant_charge: requested {resolved.instant_charge}, log shows "
             f"{echo.instant_charge} (entity_instant_start is likely None/"
             f"unconfigured for this EV — override had nothing to write to)"
         )
-    if (
-        (resolved.wished_level is not None and echo.wished_level is not None)
-        and (abs(resolved.wished_level - echo.wished_level) > 0.05)
+    if (resolved.wished_level is not None and echo.wished_level is not None) and (
+        abs(resolved.wished_level - echo.wished_level) > 0.05
     ):
         mismatches.append(
             f"wished_level: requested {resolved.wished_level}, log shows "
@@ -282,12 +281,21 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
                         "stage_on": [float(p[1]) for p in pairs],
                     }
                     if len(nums) >= 9:
-                        (row["cons"], row["power"], row["on"], row["off"],
-                         row["part"], row["bound"], row["soc"], row["delta"],
-                         row["cost"]) = nums[:9]
+                        (
+                            row["cons"],
+                            row["power"],
+                            row["on"],
+                            row["off"],
+                            row["part"],
+                            row["bound"],
+                            row["soc"],
+                            row["delta"],
+                            row["cost"],
+                        ) = nums[:9]
                     result.rows.append(row)
                     real_active = [
-                        k for k, f in enumerate(row["stage_factors"])
+                        k
+                        for k, f in enumerate(row["stage_factors"])
                         if k >= 1 and f > 1e-6
                     ]
                     if len(real_active) > 1:
@@ -299,8 +307,10 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
                     for k, f in enumerate(row["stage_factors"]):
                         if k < 1 or f <= DUTY_ZERO_TOL:
                             continue
-                        if (result.min_nonzero_factor is None
-                                or f < result.min_nonzero_factor):
+                        if (
+                            result.min_nonzero_factor is None
+                            or f < result.min_nonzero_factor
+                        ):
                             result.min_nonzero_factor = f
                         if min_duty > 0 and f < min_duty - DUTY_COMPARE_TOL:
                             result.duty_slivers.append((uur, k, f))
@@ -315,9 +325,11 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
     # min-duty feasibility guard, scoped by EV name (logged from the
     # model-building loop, which runs after all the setup echo blocks).
     for line in lines:
-        if (f"EV {ev_name}:" in line
-                and "minimale schakelduur" in line
-                and "niet toegepast" in line):
+        if (
+            f"EV {ev_name}:" in line
+            and "minimale schakelduur" in line
+            and "niet toegepast" in line
+        ):
             result.min_duty_guard_fired = True
             break
 
@@ -325,12 +337,14 @@ def parse_ev_log(log_text: str, ev_name: str, min_duty: float = 0.0) -> ParsedEv
     # ingepland" for this ev, before the next ev's such line
     anchor_idx = None
     for i, line in enumerate(lines):
-        if (line.startswith(f"{ev_name} wordt geladen tussen")
-                or line == f"Laden van {ev_name} is niet ingepland"):
+        if (
+            line.startswith(f"{ev_name} wordt geladen tussen")
+            or line == f"Laden van {ev_name} is niet ingepland"
+        ):
             anchor_idx = i
             break
     if anchor_idx is not None:
-        for line in lines[anchor_idx:anchor_idx + 6]:
+        for line in lines[anchor_idx : anchor_idx + 6]:
             m = re.search(r"Aantal partial stops:\s*([\d.]+)", line)
             if m:
                 result.partial_stops = int(float(m.group(1)))

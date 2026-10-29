@@ -2,7 +2,6 @@
 Battery configuration models.
 """
 
-
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from ..base import EntityId, FlexFloat, FlexInt

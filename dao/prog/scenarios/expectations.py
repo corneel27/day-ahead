@@ -117,7 +117,9 @@ class NoSimultaneousChargeDischarge(Invariant):
             if disc > 0.5 and charge.get((b, u), 0.0) > 0.5
         ]
         if bad:
-            return self._fail(f"battery charging AND discharging at: {', '.join(bad[:8])}")
+            return self._fail(
+                f"battery charging AND discharging at: {', '.join(bad[:8])}"
+            )
         return self._ok()
 
 
@@ -226,7 +228,11 @@ class EvSingleRealStagePerInterval(Invariant):
             for (ee, ecs, u), val in mv.items("stage_factor"):
                 if ee == e and ecs >= 1:
                     per_u.setdefault(u, []).append(val)
-            hot = [u for u, fs in per_u.items() if sum(1 for f in fs if f > _DUTY_ZERO_TOL) > 1]
+            hot = [
+                u
+                for u, fs in per_u.items()
+                if sum(1 for f in fs if f > _DUTY_ZERO_TOL) > 1
+            ]
             if hot:
                 failures.append(f"e{e}: multiple real stages at u={sorted(hot)[:8]}")
         if failures:
@@ -272,7 +278,9 @@ def run_tier_a(rc: ResultContext) -> list[CheckResult]:
 
 # --- Setup checks --------------------------------------------------------
 
-_SETUP_CHECKS: dict[str, Callable[[CaseContext], CheckResult | None | list[CheckResult]]] = {}
+_SETUP_CHECKS: dict[
+    str, Callable[[CaseContext], CheckResult | None | list[CheckResult]]
+] = {}
 
 
 def setup_check(name: str) -> Callable[[Callable], Callable]:
@@ -296,7 +304,8 @@ def _check_overrides_were_read(ctx: CaseContext) -> CheckResult | None:
     unread = sorted(names - ctx.reads)
     if unread:
         return CheckResult(
-            "overrides_were_read", False,
+            "overrides_were_read",
+            False,
             f"override(s) named an entity the solve never read (SETUP_MISMATCH): {unread}",
         )
     return CheckResult("overrides_were_read", True)
@@ -312,14 +321,22 @@ def _check_setup_echo(ctx: CaseContext) -> CheckResult | None:
         return None
     from .parsing import check_capacity, verify_setup_echo
 
-    mismatches = verify_setup_echo(ctx.expanded_ev.resolved_target, ctx.parsed_target.setup_echo)
-    note = check_capacity(ctx.expanded_ev.target_capacity_kwh, ctx.parsed_target.setup_echo,
-                           label=ctx.expanded_ev.target_name)
+    mismatches = verify_setup_echo(
+        ctx.expanded_ev.resolved_target, ctx.parsed_target.setup_echo
+    )
+    note = check_capacity(
+        ctx.expanded_ev.target_capacity_kwh,
+        ctx.parsed_target.setup_echo,
+        label=ctx.expanded_ev.target_name,
+    )
     if note:
         mismatches.append(note)
     if ctx.parsed_other is not None and ctx.expanded_ev.other_name:
-        note2 = check_capacity(ctx.expanded_ev.other_capacity_kwh, ctx.parsed_other.setup_echo,
-                                label=ctx.expanded_ev.other_name)
+        note2 = check_capacity(
+            ctx.expanded_ev.other_capacity_kwh,
+            ctx.parsed_other.setup_echo,
+            label=ctx.expanded_ev.other_name,
+        )
         if note2:
             mismatches.append(note2)
     if mismatches:
@@ -347,11 +364,16 @@ def _check_duty_slivers(ctx: CaseContext) -> list[CheckResult]:
     for label, parsed in (("target", ctx.parsed_target), ("other", ctx.parsed_other)):
         if parsed is None or not parsed.duty_slivers or parsed.min_duty_guard_fired:
             continue
-        detail = ", ".join(f"{uur} stage {k} factor {f:.4f}" for uur, k, f in parsed.duty_slivers)
-        out.append(CheckResult(
-            f"no_duty_slivers[{label}]", False,
-            f"DUTY SLIVER below minimum duty {NOMINAL_MIN_DUTY:.4f} ({EV_MIN_DUTY_S:.0f}s) at: {detail}",
-        ))
+        detail = ", ".join(
+            f"{uur} stage {k} factor {f:.4f}" for uur, k, f in parsed.duty_slivers
+        )
+        out.append(
+            CheckResult(
+                f"no_duty_slivers[{label}]",
+                False,
+                f"DUTY SLIVER below minimum duty {NOMINAL_MIN_DUTY:.4f} ({EV_MIN_DUTY_S:.0f}s) at: {detail}",
+            )
+        )
     return out
 
 
@@ -438,10 +460,14 @@ def _check_reason_contains(value: str, ctx: CaseContext) -> CheckResult:
 def _check_partial_at_least(value: int, ctx: CaseContext) -> CheckResult:
     got = ctx.parsed_target.partial_stops if ctx.parsed_target else None
     ok = got is not None and got >= value
-    detail = "" if ok else (
-        f"expected at least {value} partial interval(s), got {got} — this is a "
-        f"NEGATIVE test (asserts no duty slivers), so without a partial "
-        f"interval it passes while testing nothing"
+    detail = (
+        ""
+        if ok
+        else (
+            f"expected at least {value} partial interval(s), got {got} — this is a "
+            f"NEGATIVE test (asserts no duty slivers), so without a partial "
+            f"interval it passes while testing nothing"
+        )
     )
     return CheckResult("partial_at_least", ok, detail)
 
@@ -458,19 +484,21 @@ def _check_wished_level_clipped(value: bool, ctx: CaseContext) -> CheckResult:
     return _ev_check("wished_level_clipped", got, value)
 
 
-
-
 def _window_range(ctx: CaseContext, params: dict) -> range:
     from .vocabulary import window_indices
 
-    return window_indices(ctx.start, ctx.grid, params["start"], params["end"], params.get("date"))
+    return window_indices(
+        ctx.start, ctx.grid, params["start"], params["end"], params.get("date")
+    )
 
 
 def _battery_flow_kwh(ctx: CaseContext, container: str, window: range) -> float:
     mv = ctx.mv
     if mv is None or not mv.has(container):
         return 0.0
-    return sum(v * ctx.row_hours[u] for (_b, u), v in mv.items(container) if u in window)
+    return sum(
+        v * ctx.row_hours[u] for (_b, u), v in mv.items(container) if u in window
+    )
 
 
 @case_check("battery_charges_during")
@@ -478,7 +506,11 @@ def _check_battery_charges_during(value: dict, ctx: CaseContext) -> CheckResult:
     window = _window_range(ctx, value)
     kwh = _battery_flow_kwh(ctx, "dc_to_bat", window)
     ok = kwh >= value["min_kwh"]
-    detail = "" if ok else f"{kwh:.3f} kWh charged in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    detail = (
+        ""
+        if ok
+        else f"{kwh:.3f} kWh charged in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    )
     return CheckResult("battery_charges_during", ok, detail)
 
 
@@ -487,22 +519,33 @@ def _check_battery_discharges_during(value: dict, ctx: CaseContext) -> CheckResu
     window = _window_range(ctx, value)
     kwh = _battery_flow_kwh(ctx, "dc_from_bat", window)
     ok = kwh >= value["min_kwh"]
-    detail = "" if ok else f"{kwh:.3f} kWh discharged in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    detail = (
+        ""
+        if ok
+        else f"{kwh:.3f} kWh discharged in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    )
     return CheckResult("battery_discharges_during", ok, detail)
 
 
 @case_check("battery_flat_during")
 def _check_battery_flat_during(value: dict, ctx: CaseContext) -> CheckResult:
     window = _window_range(ctx, value)
-    kwh = (_battery_flow_kwh(ctx, "dc_to_bat", window)
-           + _battery_flow_kwh(ctx, "dc_from_bat", window))
+    kwh = _battery_flow_kwh(ctx, "dc_to_bat", window) + _battery_flow_kwh(
+        ctx, "dc_from_bat", window
+    )
     ok = kwh <= value["max_kwh"]
-    detail = "" if ok else f"{kwh:.3f} kWh of battery activity in {value['start']}-{value['end']}, wanted <= {value['max_kwh']}"
+    detail = (
+        ""
+        if ok
+        else f"{kwh:.3f} kWh of battery activity in {value['start']}-{value['end']}, wanted <= {value['max_kwh']}"
+    )
     return CheckResult("battery_flat_during", ok, detail)
 
 
 @case_check("no_cross_battery_charge_discharge")
-def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> CheckResult:
+def _check_no_cross_battery_charge_discharge(
+    value: bool, ctx: CaseContext
+) -> CheckResult:
     """No interval has one battery charging on the AC side while a
     different battery discharges on the AC side. Unlike
     NoSimultaneousChargeDischarge (Tier A, per-battery, backed by the real
@@ -532,7 +575,9 @@ def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> C
         if u in discharging
     ]
     if bad:
-        return CheckResult(name, False, f"cross-battery charge/discharge at: {'; '.join(bad[:6])}")
+        return CheckResult(
+            name, False, f"cross-battery charge/discharge at: {'; '.join(bad[:6])}"
+        )
     return CheckResult(name, True)
 
 
@@ -546,16 +591,24 @@ def _check_heatpump_runs(value: dict, ctx: CaseContext) -> CheckResult:
         # missing-model error. Only fail this branch when the scenario
         # actually expected it to run.
         ok = not value.get("runs", True)
-        return CheckResult("heatpump_runs", ok, "" if ok else "no heat pump in this model")
+        return CheckResult(
+            "heatpump_runs", ok, "" if ok else "no heat pump in this model"
+        )
     watts = sum(v for (_s, u), v in mv.items("p_hp") if u in window)
     ran = watts > 1.0
     expected = bool(value.get("runs", True))
     ok = ran == expected
-    detail = "" if ok else f"heat pump power in {value['start']}-{value['end']} sums to {watts:.1f} W, expected runs={expected}"
+    detail = (
+        ""
+        if ok
+        else f"heat pump power in {value['start']}-{value['end']} sums to {watts:.1f} W, expected runs={expected}"
+    )
     return CheckResult("heatpump_runs", ok, detail)
 
 
-def _resolve_machine_index(spec: Any, config: dict[str, Any]) -> tuple[int | None, list[str]]:
+def _resolve_machine_index(
+    spec: Any, config: dict[str, Any]
+) -> tuple[int | None, list[str]]:
     """spec is the scenario's expect.machine_runs_in_window.machine,
     normally a name matching config["machines"][*]["name"] (for example
     "wasmachine"), case-insensitively. A numeric index is also accepted as
@@ -582,16 +635,21 @@ def _check_machine_runs_in_window(value: dict, ctx: CaseContext) -> CheckResult:
     m_idx, names = _resolve_machine_index(value["machine"], ctx.config)
     if m_idx is None:
         return CheckResult(
-            "machine_runs_in_window", False,
+            "machine_runs_in_window",
+            False,
             f"unknown machine {value['machine']!r}; configured machines: {names}",
         )
     ran = any(
         v > 1e-6 for (m, u), v in mv.items("c_ma_u") if m == m_idx and u in window
     )
     ok = ran == bool(value.get("runs", True))
-    detail = "" if ok else (
-        f"machine {value['machine']!r} (index {m_idx}) runs in "
-        f"{value['start']}-{value['end']}: {ran}, expected {value.get('runs', True)}"
+    detail = (
+        ""
+        if ok
+        else (
+            f"machine {value['machine']!r} (index {m_idx}) runs in "
+            f"{value['start']}-{value['end']}: {ran}, expected {value.get('runs', True)}"
+        )
     )
     return CheckResult("machine_runs_in_window", ok, detail)
 
@@ -602,7 +660,9 @@ def _check_objective_within_baseline(value: bool, ctx: CaseContext) -> CheckResu
 
     if not value:
         return CheckResult("objective_within_baseline", True, "explicitly unchecked")
-    status, detail = baseline.check_tier_c(ctx.scenario_id, ctx.objective, tolerance=ctx.max_gap)
+    status, detail = baseline.check_tier_c(
+        ctx.scenario_id, ctx.objective, tolerance=ctx.max_gap
+    )
     ok = status != baseline.STATUS_FAIL
     return CheckResult("objective_within_baseline", ok, f"{status}: {detail}")
 
@@ -615,7 +675,9 @@ def run_case_checks(expect: dict[str, Any], ctx: CaseContext) -> list[CheckResul
             continue
         handler = _CASE_CHECKS.get(key)
         if handler is None:
-            results.append(CheckResult(key, False, f"no case check registered for {key!r}"))
+            results.append(
+                CheckResult(key, False, f"no case check registered for {key!r}")
+            )
             continue
         results.append(handler(value, ctx))
     return results

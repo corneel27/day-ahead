@@ -87,7 +87,9 @@ def _solar_patch(scenario: Scenario):
     # day_ahead reads "prediction" as kWh per interval, not kW.
     row_hours = model_row_hours(scenario.fixed_hours, scenario.predicted_hours)
 
-    def calc_solar_predictions(self, solar_option, vanaf, tot, interval=None, _ml_prediction=None):
+    def calc_solar_predictions(
+        self, solar_option, vanaf, tot, interval=None, _ml_prediction=None
+    ):
         caps = []
         for so in list(getattr(self, "solar", []) or []):
             caps.append(_capacity_of(so))
@@ -132,7 +134,13 @@ def _expected_png_path(module_dir: Path, start) -> Path:
     replay commands make. run_scenario chdirs there for the duration of
     the solve when keep_png=True, so this resolves correctly regardless of
     where the caller invoked it from."""
-    return (module_dir / ".." / "data" / "images" / f"calc_{start.strftime('%Y-%m-%d__%H-%M')}.png").resolve()
+    return (
+        module_dir
+        / ".."
+        / "data"
+        / "images"
+        / f"calc_{start.strftime('%Y-%m-%d__%H-%M')}.png"
+    ).resolve()
 
 
 def run_scenario(
@@ -156,20 +164,35 @@ def run_scenario(
     write_log on the CLI; see da_debug.cmd_scenario_run.
     """
     if scenario.skip:
-        return ScenarioResult(scenario.id, scenario.description, STATUS_SKIP,
-                              failures=[scenario.skip_reason or "skip: true"], threads=threads)
+        return ScenarioResult(
+            scenario.id,
+            scenario.description,
+            STATUS_SKIP,
+            failures=[scenario.skip_reason or "skip: true"],
+            threads=threads,
+        )
 
     from dao.prog import da_debug
 
     try:
         config = build_config(scenario)
-        expanded_ev = resolve_ev(scenario, config)  # may patch config in place (remove_stop_entity)
-        snapshot = build_snapshot(scenario, config=config,
-                                  ev_states=(expanded_ev.states if expanded_ev else None))
+        expanded_ev = resolve_ev(
+            scenario, config
+        )  # may patch config in place (remove_stop_entity)
+        snapshot = build_snapshot(
+            scenario,
+            config=config,
+            ev_states=(expanded_ev.states if expanded_ev else None),
+        )
         solar_quarter_series(scenario)  # validate the solar array length up front
     except Exception as ex:  # noqa: BLE001 - reported, not swallowed
-        return ScenarioResult(scenario.id, scenario.description, STATUS_ERROR,
-                              failures=[f"snapshot build failed: {ex}"], threads=threads)
+        return ScenarioResult(
+            scenario.id,
+            scenario.description,
+            STATUS_ERROR,
+            failures=[f"snapshot build failed: {ex}"],
+            threads=threads,
+        )
 
     max_gap_raw = (config.get("max_gap") or {}).get("value", 0.005)
     try:
@@ -211,7 +234,9 @@ def run_scenario(
         tmp_opts = Path(tempfile.mkdtemp(prefix="dao-scenario-")) / "options.json"
         tmp_opts.write_text("{}")
 
-        with da_debug.ReplayIO(snapshot, solver_threads=threads, png=keep_png) as replay:
+        with da_debug.ReplayIO(
+            snapshot, solver_threads=threads, png=keep_png
+        ) as replay:
             from dao.prog.da_base import DaBase
 
             replay._patches.set(
@@ -223,14 +248,18 @@ def run_scenario(
                 dacalc.calc_optimum(_start_dt=start)
             except da_debug.SnapshotMiss as miss:
                 return ScenarioResult(
-                    scenario.id, scenario.description, STATUS_ERROR,
+                    scenario.id,
+                    scenario.description,
+                    STATUS_ERROR,
                     failures=[f"replay hit a gap in the synthetic snapshot: {miss}"],
                     threads=threads,
                 )
             model = replay._model
             registry = getattr(dacalc, "_debug_vars", None)
             num_solutions = model.num_solutions if model is not None else 0
-            result_dict = replay.build_result()  # after calc_optimum() returns, per its own docstring
+            result_dict = (
+                replay.build_result()
+            )  # after calc_optimum() returns, per its own docstring
             cbc_log = (result_dict or {}).get("cbc_log") or ""
             reads = set(replay.reads)
     except BaseException as ex:  # noqa: BLE001
@@ -242,8 +271,11 @@ def run_scenario(
 
     if exc is not None:
         return ScenarioResult(
-            scenario.id, scenario.description, STATUS_ERROR,
-            failures=[f"solve raised {type(exc).__name__}: {exc}"], threads=threads,
+            scenario.id,
+            scenario.description,
+            STATUS_ERROR,
+            failures=[f"solve raised {type(exc).__name__}: {exc}"],
+            threads=threads,
         )
 
     objective = None
@@ -272,41 +304,68 @@ def run_scenario(
         )
         body = (
             header
-            + "-- python log " + "-" * 58 + "\n" + log_text
-            + "\n-- cbc log " + "-" * 61 + "\n" + (cbc_log or "(not captured)")
+            + "-- python log "
+            + "-" * 58
+            + "\n"
+            + log_text
+            + "\n-- cbc log "
+            + "-" * 61
+            + "\n"
+            + (cbc_log or "(not captured)")
         )
         dest.write_text(body)
         log_path = str(dest)
 
-    rc = ResultContext(model=model, registry=registry, log_text=log_text,
-                       num_solutions=num_solutions)
+    rc = ResultContext(
+        model=model, registry=registry, log_text=log_text, num_solutions=num_solutions
+    )
     tier_a_checks = run_tier_a(rc)
 
     solved = next(c for c in tier_a_checks if c.name == "solved")
     if not solved.ok:
-        return ScenarioResult(scenario.id, scenario.description, STATUS_INFEASIBLE,
-                              objective=objective, checks=tier_a_checks,
-                              failures=[f"[Tier A] solved: {solved.detail}"],
-                              threads=threads, log_path=log_path, png_path=png_path)
+        return ScenarioResult(
+            scenario.id,
+            scenario.description,
+            STATUS_INFEASIBLE,
+            objective=objective,
+            checks=tier_a_checks,
+            failures=[f"[Tier A] solved: {solved.detail}"],
+            threads=threads,
+            log_path=log_path,
+            png_path=png_path,
+        )
 
     parsed_target = parsed_other = None
     if expanded_ev is not None:
         from .parsing import NOMINAL_MIN_DUTY, parse_ev_log
 
-        parsed_target = parse_ev_log(log_text, expanded_ev.target_name, NOMINAL_MIN_DUTY)
+        parsed_target = parse_ev_log(
+            log_text, expanded_ev.target_name, NOMINAL_MIN_DUTY
+        )
         if expanded_ev.other_name:
-            parsed_other = parse_ev_log(log_text, expanded_ev.other_name, NOMINAL_MIN_DUTY)
+            parsed_other = parse_ev_log(
+                log_text, expanded_ev.other_name, NOMINAL_MIN_DUTY
+            )
 
     requested_states = dict(scenario.states)
     if expanded_ev is not None:
         requested_states.update(expanded_ev.states)
 
     case_ctx = CaseContext(
-        mv=rc.mv, scenario_id=scenario.id, start=start, horizon_hours=scenario.horizon_hours,
+        mv=rc.mv,
+        scenario_id=scenario.id,
+        start=start,
+        horizon_hours=scenario.horizon_hours,
         grid=model_grid(start, scenario.fixed_hours, scenario.predicted_hours),
         row_hours=model_row_hours(scenario.fixed_hours, scenario.predicted_hours),
-        objective=objective, max_gap=max_gap, reads=reads, requested_states=requested_states,
-        config=config, expanded_ev=expanded_ev, parsed_target=parsed_target, parsed_other=parsed_other,
+        objective=objective,
+        max_gap=max_gap,
+        reads=reads,
+        requested_states=requested_states,
+        config=config,
+        expanded_ev=expanded_ev,
+        parsed_target=parsed_target,
+        parsed_other=parsed_other,
     )
     setup_checks = run_setup_checks(case_ctx)
     case_checks = run_case_checks(scenario.expect, case_ctx)
@@ -328,7 +387,18 @@ def run_scenario(
     from .parsing import parse_solve_stats
 
     stats = parse_solve_stats(log_text + "\n" + cbc_log)
-    return ScenarioResult(scenario.id, scenario.description, status,
-                          objective=objective, checks=checks, setup_checks=setup_checks,
-                          failures=failures, threads=threads, log_path=log_path, png_path=png_path,
-                          parsed_target=parsed_target, parsed_other=parsed_other, stats=stats)
+    return ScenarioResult(
+        scenario.id,
+        scenario.description,
+        status,
+        objective=objective,
+        checks=checks,
+        setup_checks=setup_checks,
+        failures=failures,
+        threads=threads,
+        log_path=log_path,
+        png_path=png_path,
+        parsed_target=parsed_target,
+        parsed_other=parsed_other,
+        stats=stats,
+    )

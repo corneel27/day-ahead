@@ -11,6 +11,7 @@ from dao.prog.da_const import tasks
 # Valid scheduler actions
 SchedulerAction = Literal[*tasks.keys()]
 
+
 class ScheduleEntry(BaseModel):
     """A single scheduled task entry."""
 
@@ -58,7 +59,7 @@ class SchedulerConfig(BaseModel):
         },
     )
     offset: int | None = Field(
-        default = 10,
+        default=10,
         ge=0,
         le=60,
         description="Number of seconds the task is started before schedule-time (due to time in task start overhead)",

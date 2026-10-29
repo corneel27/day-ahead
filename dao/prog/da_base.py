@@ -162,10 +162,10 @@ class DaBase(hass.Hass):
 
         self.db_da = make_db_da(self.config, self.loader.secrets)
         if self.db_da is None:
-            raise RuntimeError('No database connection for Day Ahead')
+            raise RuntimeError("No database connection for Day Ahead")
         self.db_ha = make_db_ha(self.config, self.loader.secrets)
         if self.db_ha is None:
-            raise RuntimeError('No database connection for Home Assistant')
+            raise RuntimeError("No database connection for Home Assistant")
 
         self.meteo = Meteo(
             self.config,
@@ -186,7 +186,7 @@ class DaBase(hass.Hass):
             country=self.ha_context.country,
             secrets=self.loader.secrets,
             time_zone=self.ha_context.time_zone,
-            da_base_obj=self
+            da_base_obj=self,
         )
         self.prices_options = self.config.prices
         # eb + ode levering
@@ -653,9 +653,7 @@ class DaBase(hass.Hass):
 
         # oude task
         if task not in self.tasks:
-            logging.error(
-                f"Taak niet gedefinieerd \"{task}\" "
-            )
+            logging.error(f'Taak niet gedefinieerd "{task}" ')
             return False
         run_task = self.tasks[task]
         file_handler = None

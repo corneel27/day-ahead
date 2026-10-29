@@ -98,7 +98,7 @@ class RecordedReadError(RuntimeError):
 # ---------------------------------------------------------------------------
 
 
-# Zet een pydantic-configwaarde recursief om naar JSON-veilige data en 
+# Zet een pydantic-configwaarde recursief om naar JSON-veilige data en
 # vervangt elk SecretStr-veld door een redactiemarkering, zodat geheimen nooit in een snapshot belanden.
 def _sanitize_config_value(value: Any) -> Any:
     """Recursively convert a pydantic config object graph into a
@@ -137,13 +137,13 @@ def _sanitize_config_value(value: Any) -> Any:
     return str(value)
 
 
-# Kleine wrapper rond _sanitize_config_value voor het hele configobject, 
+# Kleine wrapper rond _sanitize_config_value voor het hele configobject,
 # apart gehouden zodat het aanroeppunt een eigen naam heeft.
 def _sanitize_config(config: Any) -> dict:
     return _sanitize_config_value(config)
 
 
-# Bouwt uit een gesaneerde snapshot-dict weer een gevalideerd pydantic-configobject, 
+# Bouwt uit een gesaneerde snapshot-dict weer een gevalideerd pydantic-configobject,
 # nodig om DaBase te kunnen construeren zonder een echte options.json.
 def _rehydrate_config(sanitized: dict):
     """Reconstruct a validated pydantic config object from a sanitised
@@ -161,14 +161,14 @@ def _rehydrate_config(sanitized: dict):
     return model_class(**sanitized)
 
 
-# Berekent een sha256-hash over de gesaneerde config, 
+# Berekent een sha256-hash over de gesaneerde config,
 # gebruikt om drift tussen een snapshot en de actuele config te detecteren.
 def _config_hash(sanitized: dict) -> str:
     blob = json.dumps(sanitized, sort_keys=True, default=str).encode("utf-8")
     return "sha256:" + hashlib.sha256(blob).hexdigest()
 
 
-# Weigert de snapshot te schrijven als een echte geheime waarde uit secrets.json 
+# Weigert de snapshot te schrijven als een echte geheime waarde uit secrets.json
 # letterlijk in de inhoud voorkomt; vangt lekken die de typecontrole mist.
 def _assert_no_secret_leak(blob: str, secret_values: list[str]) -> None:
     """Defence in depth alongside type-based exclusion above: a raw key
@@ -203,7 +203,7 @@ def _dataframe_to_payload(df: pd.DataFrame) -> dict:
     }
 
 
-# Herstelt een DataFrame exact uit een payload: dtypes terugzetten 
+# Herstelt een DataFrame exact uit een payload: dtypes terugzetten
 # en de index alleen naar datetime converteren als die dat origineel ook was.
 def _dataframe_from_payload(payload: dict) -> pd.DataFrame:
     df = pd.read_json(io.StringIO(payload["data"]), orient="split")
@@ -224,7 +224,9 @@ def _dataframe_from_payload(payload: dict) -> pd.DataFrame:
             else:
                 df[col] = df[col].astype(dtype)
         except (TypeError, ValueError) as ex:
-            logger.warning("Kon dtype %s van kolom %s niet herstellen: %s", dtype, col, ex)
+            logger.warning(
+                "Kon dtype %s van kolom %s niet herstellen: %s", dtype, col, ex
+            )
     # Only coerce the index to datetime if it genuinely was one — blindly
     # doing this for every non-empty frame (the original bug) silently
     # corrupted plain integer/RangeIndex frames, e.g. the ML solar
@@ -235,7 +237,7 @@ def _dataframe_from_payload(payload: dict) -> pd.DataFrame:
     return df
 
 
-# Maakt een stabiele, JSON-veilige sleutel van functieargumenten, 
+# Maakt een stabiele, JSON-veilige sleutel van functieargumenten,
 # nodig om meerdere opnames van dezelfde aanroep (per weekdag, per entity) uit elkaar te houden.
 def _call_key(args: tuple, kwargs: dict) -> str:
     """Stable, JSON-safe key for a recorded call, used where a channel can
@@ -267,7 +269,13 @@ class _CallSequence:
     A schema-1 snapshot holds one frame per channel. That frame is served
     for every call, which is what replay always did before schema 2."""
 
-    def __init__(self, channel: str, source: str, records: list | None, legacy: pd.DataFrame | None = None):
+    def __init__(
+        self,
+        channel: str,
+        source: str,
+        records: list | None,
+        legacy: pd.DataFrame | None = None,
+    ):
         self._channel = channel
         self._source = source
         self._records = [
@@ -288,7 +296,9 @@ class _CallSequence:
     def serve(self, **args) -> pd.DataFrame:
         if not self._records:
             if self._legacy is None:
-                raise SnapshotMiss(f"ReplayIO ({self._source}): snapshot has no {self._channel}.")
+                raise SnapshotMiss(
+                    f"ReplayIO ({self._source}): snapshot has no {self._channel}."
+                )
             return self._legacy.copy()
         n = self._next
         if n >= len(self._records):
@@ -299,7 +309,9 @@ class _CallSequence:
             )
         recorded_args, frame = self._records[n]
         for name in _SEQUENCE_MATCH_ARGS:
-            if name in recorded_args and str(recorded_args[name]) != str(args.get(name)):
+            if name in recorded_args and str(recorded_args[name]) != str(
+                args.get(name)
+            ):
                 raise SnapshotMiss(
                     f"ReplayIO ({self._source}): {self._channel} call #{n + 1} "
                     f"has {name}={args.get(name)!r}, the recording has "
@@ -333,7 +345,10 @@ def _solar_call_sequences(snapshot: dict, source: str) -> dict[str, _CallSequenc
         name = json.loads(key)[0][0]
         if name not in sequences:
             sequences[name] = _CallSequence(
-                f"solar prediction {name!r}", source, None, _dataframe_from_payload(payload)
+                f"solar prediction {name!r}",
+                source,
+                None,
+                _dataframe_from_payload(payload),
             )
     return sequences
 
@@ -383,7 +398,7 @@ class _FakeHttpResponse:
 
     __slots__ = ("_payload", "ok", "status_code", "text")
 
-    # Bouwt een minimale requests.Response-imitatie met .text/.ok/.status_code, 
+    # Bouwt een minimale requests.Response-imitatie met .text/.ok/.status_code,
     # nodig om zowel da_base.py's eigen HA-aanroep als hassapi's interne verzoek te kunnen bedienen.
     def __init__(self, payload: dict):
         self._payload = payload
@@ -391,7 +406,7 @@ class _FakeHttpResponse:
         self.ok = True
         self.status_code = 200
 
-    # Geeft de payload terug zoals requests.Response.json() dat zou doen, 
+    # Geeft de payload terug zoals requests.Response.json() dat zou doen,
     # want hassapi's interne verwerking roept dit aan.
     def json(self):
         return self._payload
@@ -419,7 +434,7 @@ class _FakeDbManager:
     def log_pool_status(self):
         return None
 
-    # Laat elke niet-nagebouwde databaseaanroep direct hard falen, 
+    # Laat elke niet-nagebouwde databaseaanroep direct hard falen,
     # zodat een ongedekt kanaal opvalt in plaats van stilzwijgend een verkeerd resultaat te geven.
     def __getattr__(self, name):
         raise SnapshotMiss(
@@ -455,7 +470,7 @@ class _PatchList:
     def __init__(self):
         self._entries: list[tuple[Any, str, bool, Any]] = []
 
-    # Vervangt een attribuut en onthoudt de oorspronkelijke waarde (of het ontbreken ervan), 
+    # Vervangt een attribuut en onthoudt de oorspronkelijke waarde (of het ontbreken ervan),
     # nodig om later exact te kunnen herstellen.
     def set(self, target: Any, name: str, new_value: Any) -> None:
         had_attr = name in vars(target)
@@ -463,7 +478,7 @@ class _PatchList:
         self._entries.append((target, name, had_attr, old_value))
         setattr(target, name, new_value)
 
-    # Zet alle patches in omgekeerde volgorde terug, inclusief delattr voor attributen die er origineel niet waren, 
+    # Zet alle patches in omgekeerde volgorde terug, inclusief delattr voor attributen die er origineel niet waren,
     # zoals een geërfde methode.
     def restore(self) -> None:
         for target, name, had_attr, old_value in reversed(self._entries):
@@ -477,7 +492,7 @@ class _PatchList:
         self._entries.clear()
 
 
-# Importeert alle te patchen klassen via hetzelfde dotted pad als day_ahead.py zelf, 
+# Importeert alle te patchen klassen via hetzelfde dotted pad als day_ahead.py zelf,
 # anders ontstaat een tweede, ongepatchte kopie van de module.
 def _import_targets():
     """All patch targets, imported via the exact same dotted path
@@ -539,7 +554,7 @@ def _make_noop_savefig(label: str):
 # ---------------------------------------------------------------------------
 
 
-# Omwikkelt day_ahead.py's fd-omleiding zodat de CBC-solverlog altijd wordt vastgelegd, 
+# Omwikkelt day_ahead.py's fd-omleiding zodat de CBC-solverlog altijd wordt vastgelegd,
 # ook als self.debug uit staat.
 def _install_cbc_log_capture(patches: _PatchList, day_ahead_module, target) -> None:
     """Wraps day_ahead.py's fd-redirecting ``_capture_native_stdout()`` so
@@ -553,14 +568,16 @@ def _install_cbc_log_capture(patches: _PatchList, day_ahead_module, target) -> N
     original = day_ahead_module._capture_native_stdout
 
     @contextlib.contextmanager
-    # Roept de echte fd-omleiding aan en leest het logresultaat pas uit nadat 
+    # Roept de echte fd-omleiding aan en leest het logresultaat pas uit nadat
     # de originele implementatie het heeft gevuld.
     def _wrapped_capture_native_stdout():
         with original() as native:
             yield native
         target._cbc_log_chunks.append(native.get("cbc_log", ""))
 
-    patches.set(day_ahead_module, "_capture_native_stdout", _wrapped_capture_native_stdout)
+    patches.set(
+        day_ahead_module, "_capture_native_stdout", _wrapped_capture_native_stdout
+    )
 
 
 # Onthoudt een referentie naar het opgeloste mip.Model na elke optimize()-aanroep, want buiten calc_optimum() is dat model anders nergens meer te zien.
@@ -583,7 +600,9 @@ def _install_model_capture(patches: _PatchList, target) -> None:
 
 
 # Zet een opgelost model om naar een result-dict, gedeeld door RecordingIO en ReplayIO zodat beide dezelfde vorm opleveren om te diffen.
-def _build_result_dict(model, cbc_log_chunks: list[str], extra_meta: dict) -> dict | None:
+def _build_result_dict(
+    model, cbc_log_chunks: list[str], extra_meta: dict
+) -> dict | None:
     if model is None:
         return None
     try:
@@ -701,7 +720,9 @@ class RecordingIO:
 
     # Zet alle class- en module-patches voor deze opnamesessie neer; dekt samen alle kanalen uit sectie 1 van het ontwerp.
     def _install_patches(self) -> None:
-        DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, _da_base_module = _import_targets()
+        DaBase, Report, DBmanagerObj, SolarPredictor, Meteo, _da_base_module = (
+            _import_targets()
+        )
 
         original_init = DaBase.__init__
 
@@ -772,17 +793,26 @@ class RecordingIO:
 
         # Roept Report.get_price_data echt aan en bewaart elke aanroep op volgorde:
         # met een prijsvoorspelling (extension > 0) zijn het er twee.
-        def _wrapped_get_price_data(instance, start, end=None, interval="1hour", extension=0):
+        def _wrapped_get_price_data(
+            instance, start, end=None, interval="1hour", extension=0
+        ):
             # Vroege meting: de prijzen zijn het eerste invoerkanaal, dus ook
             # een run die vóór de solve afbreekt heeft dan zijn startwaarden.
             self._record_calc_overrides()
             result = original_get_price_data(
                 instance, start, end=end, interval=interval, extension=extension
             )
-            self._price_calls.append(_sequence_record(
-                {"start": start, "end": end, "interval": interval, "extension": extension},
-                result,
-            ))
+            self._price_calls.append(
+                _sequence_record(
+                    {
+                        "start": start,
+                        "end": end,
+                        "interval": interval,
+                        "extension": extension,
+                    },
+                    result,
+                )
+            )
             return result
 
         self._patches.set(Report, "get_price_data", _wrapped_get_price_data)
@@ -821,11 +851,17 @@ class RecordingIO:
 
         # Roept de echte prognosedata-query aan en bewaart elke aanroep op volgorde
         # (vast deel, voorspeld deel, en per zonnepaneel uit calc_solar_predictions).
-        def _wrapped_get_prognose_data(instance, start=None, end=None, interval="1hour"):
-            result = original_get_prognose_data(instance, start=start, end=end, interval=interval)
-            self._prog_calls.append(_sequence_record(
-                {"start": start, "end": end, "interval": interval}, result
-            ))
+        def _wrapped_get_prognose_data(
+            instance, start=None, end=None, interval="1hour"
+        ):
+            result = original_get_prognose_data(
+                instance, start=start, end=end, interval=interval
+            )
+            self._prog_calls.append(
+                _sequence_record(
+                    {"start": start, "end": end, "interval": interval}, result
+                )
+            )
             return result
 
         self._patches.set(DBmanagerObj, "get_prognose_data", _wrapped_get_prognose_data)
@@ -856,7 +892,9 @@ class RecordingIO:
             )
             return result
 
-        self._patches.set(SolarPredictor, "predict_solar_device", _wrapped_predict_solar_device)
+        self._patches.set(
+            SolarPredictor, "predict_solar_device", _wrapped_predict_solar_device
+        )
 
         # Re-anchor _captured_at to the moment calc_optimum() is actually
         # invoked, not construction time. The __init__ default (set before
@@ -1083,7 +1121,9 @@ def _calc_overrides_from_stack() -> dict | None:
     try:
         while frame is not None:
             code = frame.f_code
-            if code.co_name == "calc_optimum" and code.co_filename.endswith("day_ahead.py"):
+            if code.co_name == "calc_optimum" and code.co_filename.endswith(
+                "day_ahead.py"
+            ):
                 values = frame.f_locals
                 return {
                     name: values[name]
@@ -1136,8 +1176,14 @@ def _patch_fake_datetime_local(patches: _PatchList) -> None:
     def timestamp(self):
         if self.tzinfo is None:
             return real_datetime(
-                self.year, self.month, self.day, self.hour, self.minute,
-                self.second, self.microsecond, fold=self.fold,
+                self.year,
+                self.month,
+                self.day,
+                self.hour,
+                self.minute,
+                self.second,
+                self.microsecond,
+                fold=self.fold,
             ).timestamp()
         return original_timestamp(self)
 
@@ -1147,7 +1193,9 @@ def _patch_fake_datetime_local(patches: _PatchList) -> None:
 
     # freezegun's eigen versie trekt alleen time.timezone af en negeert zomertijd.
     def fake_localtime(t=None):
-        return freezegun_api.real_localtime(freezegun_api.fake_time() if t is None else t)
+        return freezegun_api.real_localtime(
+            freezegun_api.fake_time() if t is None else t
+        )
 
     patches.set(FakeDatetime, "timestamp", timestamp)
     patches.set(FakeDatetime, "fromtimestamp", classmethod(fromtimestamp))
@@ -1235,19 +1283,23 @@ class ReplayIO:
             )
 
         self._price_calls = _CallSequence(
-            "price_data", self._source,
+            "price_data",
+            self._source,
             self._snapshot.get("price_data_calls"),
             _legacy_frame(self._snapshot, "price_data"),
         )
         self._prog_calls = _CallSequence(
-            "prog_data", self._source,
+            "prog_data",
+            self._source,
             self._snapshot.get("prog_data_calls"),
             _legacy_frame(self._snapshot, "prog_data"),
         )
         # Vaste deel van de prijsdata, voor de dump-header.
         self._price_data = self._price_calls.first
         self._ha_states: dict[str, str] = self._snapshot.get("ha_states", {})
-        self._ha_state_errors: dict[str, str] = self._snapshot.get("ha_state_errors", {})
+        self._ha_state_errors: dict[str, str] = self._snapshot.get(
+            "ha_state_errors", {}
+        )
         self._calc_overrides: dict = _overrides_from_payload(
             self._snapshot.get("calc_overrides")
         )
@@ -1360,7 +1412,9 @@ class ReplayIO:
 
     # Zet alle class- en module-patches voor deze replaysessie neer: config, reads, writes en de klok.
     def _install_patches(self) -> None:
-        DaBase, Report, _DBmanagerObj, SolarPredictor, Meteo, da_base_module = _import_targets()
+        DaBase, Report, _DBmanagerObj, SolarPredictor, Meteo, da_base_module = (
+            _import_targets()
+        )
 
         if self._config_dict is None:
             raise SnapshotMiss(
@@ -1461,10 +1515,14 @@ class ReplayIO:
                 )
             return self._baseload[key]
 
-        self._patches.set(DaBase, "get_calculated_baseload", staticmethod(_replay_baseload))
+        self._patches.set(
+            DaBase, "get_calculated_baseload", staticmethod(_replay_baseload)
+        )
 
         # Levert de opgeslagen prijsdata terug in plaats van een databasequery uit te voeren.
-        def _replay_get_price_data(instance, start, end=None, interval="1hour", extension: int = 0):
+        def _replay_get_price_data(
+            instance, start, end=None, interval="1hour", extension: int = 0
+        ):
             return self._price_calls.serve(
                 start=start, end=end, interval=interval, extension=extension
             )
@@ -1510,7 +1568,9 @@ class ReplayIO:
                 )
             return self._solar_calls[name].serve(start=start, end=end)
 
-        self._patches.set(SolarPredictor, "predict_solar_device", _replay_predict_solar_device)
+        self._patches.set(
+            SolarPredictor, "predict_solar_device", _replay_predict_solar_device
+        )
 
         fake_db = _FakeDbManager(self._prog_calls, self._source)
         self._patches.set(da_base_module, "make_db_da", lambda *a, **k: fake_db)
@@ -1582,7 +1642,9 @@ class ReplayIO:
                 # datetimes are read as UTC and every timestamp shifts by the
                 # UTC offset (2 h in CEST).
                 anchor = dt.datetime.fromisoformat(captured_at)
-                tz_name = self.meta.get("tz_name") or (self._ha_context or {}).get("time_zone")
+                tz_name = self.meta.get("tz_name") or (self._ha_context or {}).get(
+                    "time_zone"
+                )
                 if tz_name and anchor.tzinfo is None:
                     from zoneinfo import ZoneInfo
 
@@ -1590,7 +1652,8 @@ class ReplayIO:
                         zone = ZoneInfo(tz_name)
                     except Exception:  # noqa: BLE001 - unknown zone: keep the old UTC behaviour
                         logger.warning(
-                            "ReplayIO: onbekende tijdzone %r; replay rekent in UTC", tz_name
+                            "ReplayIO: onbekende tijdzone %r; replay rekent in UTC",
+                            tz_name,
                         )
                     else:
                         self._restore_tz = _set_process_tz(tz_name)
@@ -1601,7 +1664,9 @@ class ReplayIO:
                         "ReplayIO: snapshot bevat geen tijdzone; replay rekent in UTC"
                     )
                 tz_offset = anchor.utcoffset() or dt.timedelta(0)
-                self._freeze = freezegun.freeze_time(anchor, tick=True, tz_offset=tz_offset)
+                self._freeze = freezegun.freeze_time(
+                    anchor, tick=True, tz_offset=tz_offset
+                )
                 self._freeze.start()
         except ImportError:
             logger.warning(
@@ -2056,8 +2121,22 @@ def render_constraint(c, registry_by_idx: dict) -> str:
 # "power"/"heating curve" — de "on/off"-tak gebruikt hp_bl_on zonder SOS2).
 # De heat pump heeft geen sample-arrays.
 _SOS2_CURVES = (
-    ("battery charge", "ac_to_dc_w", "cs", "ac_to_dc", "ac_to_dc_samples", "dc_from_ac_samples"),
-    ("battery discharge", "ac_from_dc_w", "ds", "ac_from_dc", "ac_from_dc_samples", "dc_to_ac_samples"),
+    (
+        "battery charge",
+        "ac_to_dc_w",
+        "cs",
+        "ac_to_dc",
+        "ac_to_dc_samples",
+        "dc_from_ac_samples",
+    ),
+    (
+        "battery discharge",
+        "ac_from_dc_w",
+        "ds",
+        "ac_from_dc",
+        "ac_from_dc_samples",
+        "dc_to_ac_samples",
+    ),
     ("heat pump", "hp_s_w", "s_hp", "h_hp", None, None),
 )
 
@@ -2070,7 +2149,14 @@ _SOS2_CURVES = (
 def _sos2_reports(model, registry_by_idx: dict, samples: dict, u: int) -> list[dict]:
     by_container = _group_by_container(registry_by_idx)
     reports: list[dict] = []
-    for label, weight_name, stage_axis, power_name, ac_samples_name, dc_samples_name in _SOS2_CURVES:
+    for (
+        label,
+        weight_name,
+        stage_axis,
+        power_name,
+        ac_samples_name,
+        dc_samples_name,
+    ) in _SOS2_CURVES:
         entries = by_container.get(weight_name)
         if not entries:
             continue  # this run didn't build this curve (e.g. hp on/off mode)
@@ -2192,7 +2278,9 @@ def _find_scalar_idx(registry_by_idx: dict, name: str) -> int | None:
 # blijkt daarbij zelf geen interval-as te bevatten (het hangt af van
 # ev_start_stops_sum, een teller zonder u-as) en draagt dus terecht niets
 # bij aan geen enkel interval.
-def _objective_attribution(model, registry_by_idx: dict, u: int) -> tuple[list[dict], float]:
+def _objective_attribution(
+    model, registry_by_idx: dict, u: int
+) -> tuple[list[dict], float]:
     cost_idx = _find_scalar_idx(registry_by_idx, "cost")
     if cost_idx is None:
         return [], 0.0
@@ -2274,7 +2362,9 @@ def _objective_attribution(model, registry_by_idx: dict, u: int) -> tuple[list[d
             iaxis_pos, _iis_boundary = iaxis
             if iidx[iaxis_pos] != u:  # same exact-u reasoning as _direct() above
                 continue
-            effective_coef = (coef / cost_coef) * (icoef / inner_coef_for_var) + 0.0  # normalise -0.0
+            effective_coef = (coef / cost_coef) * (
+                icoef / inner_coef_for_var
+            ) + 0.0  # normalise -0.0
             contributions.append(
                 {
                     "label": label_for_var(ivar, registry_by_idx),
@@ -2330,12 +2420,15 @@ def _try_sigma_collapse(c, registry_by_idx: dict) -> str | None:
     dim_names = _dims(name)
     axis_pos = _interval_axis(dim_names)[0]
     rest_dims = [d for pos, d in enumerate(dim_names) if pos != axis_pos]
-    label = name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest, strict=False)) + "[u]"
+    label = (
+        name
+        + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest, strict=False))
+        + "[u]"
+    )
     rhs = -c.expr.const + 0.0
     sense = _SENSE_SYMBOLS.get(c.expr.sense, c.expr.sense)
     return (
-        f"Σ_{{u={u_values[0]}..{u_values[-1]}}} {sign}{coef_str}{label} "
-        f"{sense} {rhs:g}"
+        f"Σ_{{u={u_values[0]}..{u_values[-1]}}} {sign}{coef_str}{label} {sense} {rhs:g}"
     )
 
 
@@ -2353,23 +2446,37 @@ _CONSTRAINT_PATTERNS: dict[frozenset, str] = {
     frozenset({"soc", "soc_low", "soc_mid"}): "SoC low/mid split",
     frozenset({"ac_to_dc_w"}): "SOS2 convexity (battery charge)",
     frozenset({"ac_to_dc", "ac_to_dc_w"}): "SOS2 AC power definition (battery charge)",
-    frozenset({"ac_to_dc_w", "dc_from_ac"}): "SOS2 DC power definition (battery charge)",
+    frozenset(
+        {"ac_to_dc_w", "dc_from_ac"}
+    ): "SOS2 DC power definition (battery charge)",
     frozenset({"ac_from_dc_w"}): "SOS2 convexity (battery discharge, <=1)",
-    frozenset({"ac_from_dc", "ac_from_dc_w"}): "SOS2 AC power definition (battery discharge)",
-    frozenset({"ac_from_dc_w", "dc_to_ac"}): "SOS2 DC power definition (battery discharge)",
+    frozenset(
+        {"ac_from_dc", "ac_from_dc_w"}
+    ): "SOS2 AC power definition (battery discharge)",
+    frozenset(
+        {"ac_from_dc_w", "dc_to_ac"}
+    ): "SOS2 DC power definition (battery discharge)",
     frozenset({"dc_from_bat", "dc_to_bat", "soc"}): "SoC balance u→u+1",
     frozenset({"pv_dc_on_off", "pv_prod_dc_sum"}): "DC-coupled PV production sum",
-    frozenset({"dc_from_ac", "dc_from_bat", "dc_to_ac", "dc_to_bat", "pv_prod_dc_sum"}): "DC bus balance",
+    frozenset(
+        {"dc_from_ac", "dc_from_bat", "dc_to_ac", "dc_to_bat", "pv_prod_dc_sum"}
+    ): "DC bus balance",
     frozenset({"ac_to_dc_on", "dc_from_ac"}): "charge power <= on*max",
     frozenset({"ac_from_dc", "ac_from_dc_on"}): "discharge power <= on*max",
     frozenset({"ac_from_dc_on", "ac_to_dc_on"}): "charge/discharge mutual exclusion",
     frozenset({"c_l", "c_l_on"}): "grid import <= on*max",
     frozenset({"c_t", "c_t_on"}): "grid export <= on*max",
     frozenset({"c_l_on", "c_t_on"}): "grid import/export exclusion",
-    frozenset({"ac_from_dc", "ac_to_dc", "c_b", "c_ev", "c_hp", "c_l", "c_ma_u", "c_t"}): "AC energy balance",
+    frozenset(
+        {"ac_from_dc", "ac_to_dc", "c_b", "c_ev", "c_hp", "c_l", "c_ma_u", "c_t"}
+    ): "AC energy balance",
     frozenset({"ev_start_stops_sum", "switch_cost"}): "EV switch-cost definition",
-    frozenset({"low_soc_penalty", "low_soc_penalty_int"}): "EV low-SoC penalty definition",
-    frozenset({"cycle_cost", "dc_from_bat", "dc_to_bat"}): "battery cycle-cost definition",
+    frozenset(
+        {"low_soc_penalty", "low_soc_penalty_int"}
+    ): "EV low-SoC penalty definition",
+    frozenset(
+        {"cycle_cost", "dc_from_bat", "dc_to_bat"}
+    ): "battery cycle-cost definition",
     frozenset({"penalty_cost", "soc_low"}): "battery low-SoC penalty definition",
 }
 
@@ -2503,7 +2610,10 @@ def dump_interval(
                 delta = (value_out - value_in) if value_out is not None else None
                 row = {
                     "kind": "boundary",
-                    "label": name + "".join(f"[{d}={v}]" for d, v in zip(rest_dims, rest, strict=False)),
+                    "label": name
+                    + "".join(
+                        f"[{d}={v}]" for d, v in zip(rest_dims, rest, strict=False)
+                    ),
                     "container": name,
                     "unit": unit,
                     "value_in": value_in,
@@ -2529,7 +2639,8 @@ def dump_interval(
                 sections.setdefault(section_key, []).append(
                     {
                         "kind": "scalar",
-                        "label": name + "".join(
+                        "label": name
+                        + "".join(
                             f"[{d}={v}]" for d, v in zip(dims, idx_tuple, strict=False)
                         ),
                         "container": name,
@@ -2554,17 +2665,15 @@ def dump_interval(
     price_cons = header.get("price_cons")
     price_prod = header.get("price_prod")
     for contrib in objective_contributions:
-        if (
-            (contrib["label"].startswith("c_l[") and price_cons is not None)
-            and (abs(contrib["coef"] - price_cons) > 1e-4)
+        if (contrib["label"].startswith("c_l[") and price_cons is not None) and (
+            abs(contrib["coef"] - price_cons) > 1e-4
         ):
             price_mismatch = (
                 f"c_l coefficient {contrib['coef']:.6f} != header price_cons "
                 f"{price_cons:.6f}"
             )
-        if (
-            (contrib["label"].startswith("c_t[") and price_prod is not None)
-            and (abs(contrib["coef"] - (-price_prod)) > 1e-4)
+        if (contrib["label"].startswith("c_t[") and price_prod is not None) and (
+            abs(contrib["coef"] - (-price_prod)) > 1e-4
         ):
             price_mismatch = (
                 f"c_t coefficient {contrib['coef']:.6f} != -header price_prod "
@@ -2641,7 +2750,8 @@ def dump_interval(
                 section_key = _section_key(name, dims, idx_tuple)
                 neighbour_sections.setdefault(section_key, []).append(
                     {
-                        "label": name + "".join(
+                        "label": name
+                        + "".join(
                             f"[{d}={v}]" for d, v in zip(dims, idx_tuple, strict=False)
                         ),
                         "unit": _unit(name),
@@ -2688,7 +2798,9 @@ def _format_dump_text(data: dict, show_all: bool = False) -> str:
             if e["kind"] == "scalar":
                 if not show_all and abs(e["value"]) < 1e-9:
                     continue
-                rendered_rows.append(f"    {e['label']:<28} {e['value']:.4f} {e['unit']}")
+                rendered_rows.append(
+                    f"    {e['label']:<28} {e['value']:.4f} {e['unit']}"
+                )
             else:  # boundary
                 is_trivial = abs(e["value_in"]) < 1e-9 and (
                     e["value_out"] is None or abs(e["value_out"]) < 1e-9
@@ -2696,7 +2808,11 @@ def _format_dump_text(data: dict, show_all: bool = False) -> str:
                 if not show_all and is_trivial:
                     continue
                 out_str = f"{e['value_out']:.4f}" if e["value_out"] is not None else "?"
-                delta_str = f"  Δ{e['delta']:+.4f} {e['unit']}" if e["delta"] is not None else ""
+                delta_str = (
+                    f"  Δ{e['delta']:+.4f} {e['unit']}"
+                    if e["delta"] is not None
+                    else ""
+                )
                 kwh_str = f"  ≈ {e['delta_kwh']:+.4f} kWh" if "delta_kwh" in e else ""
                 rendered_rows.append(
                     f"    {e['label']:<12} {e['value_in']:.4f} → {out_str} {e['unit']}"
@@ -2704,7 +2820,9 @@ def _format_dump_text(data: dict, show_all: bool = False) -> str:
                 )
         if not rendered_rows:
             if not show_all and entries:
-                lines.append(f"  {section_name}: idle ({len(entries)} variables, all zero)")
+                lines.append(
+                    f"  {section_name}: idle ({len(entries)} variables, all zero)"
+                )
             continue
         lines.append(f"  {section_name}")
         lines.extend(rendered_rows)
@@ -2734,8 +2852,12 @@ def _format_dump_text(data: dict, show_all: bool = False) -> str:
                 sum_note = f"  (Σw={r['total_weight']:.4f} < 1)"
             interp = ""
             if r["interpolated"] is not None:
-                interp = f"  interpolated={r['interpolated']:.4f} {r['interpolated_unit']}"
-            lines.append(f"    {r['curve']}{asset}: {case_label}: {stages}{sum_note}{interp}")
+                interp = (
+                    f"  interpolated={r['interpolated']:.4f} {r['interpolated_unit']}"
+                )
+            lines.append(
+                f"    {r['curve']}{asset}: {case_label}: {stages}{sum_note}{interp}"
+            )
 
     if data["local_constraints"]:
         lines.append(f"  local constraints ({len(data['local_constraints'])})")
@@ -2744,14 +2866,22 @@ def _format_dump_text(data: dict, show_all: bool = False) -> str:
             lines.append(f"    {prefix}{lc['text']}")
 
     if data["global_constraints"]:
-        lines.append(f"  global constraints touching u={data['interval']} ({len(data['global_constraints'])})")
+        lines.append(
+            f"  global constraints touching u={data['interval']} ({len(data['global_constraints'])})"
+        )
         for gc in data["global_constraints"]:
             if gc["sigma"]:
                 lines.append(f"    {gc['sigma']}")
             else:
                 label = gc["pattern"] or f"constraint {gc['index']}"
-                coef_str = f"{gc['own_term_coef']:g}" if gc["own_term_coef"] is not None else "?"
-                lines.append(f"    [{label}]  coef on u={data['interval']} term: {coef_str}")
+                coef_str = (
+                    f"{gc['own_term_coef']:g}"
+                    if gc["own_term_coef"] is not None
+                    else "?"
+                )
+                lines.append(
+                    f"    [{label}]  coef on u={data['interval']} term: {coef_str}"
+                )
 
     if data["pinned_zero"]:
         shown = data["pinned_zero"][:12]
@@ -2782,6 +2912,7 @@ def _format_dump_text(data: dict, show_all: bool = False) -> str:
                 lines.append(f"    {e['label']:<28} {e['value']:.4f} {e['unit']}")
 
     return "\n".join(lines)
+
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -3019,10 +3150,14 @@ def _offline_unguard(saved) -> None:
 
 # Voert een echte calc_optimum()-run uit binnen RecordingIO en schrijft de snapshot en het resultaat weg.
 def cmd_capture(args: argparse.Namespace, data_dir: Path) -> int:
-    config_path = Path(args.config).resolve() if args.config else data_dir / "options.json"
+    config_path = (
+        Path(args.config).resolve() if args.config else data_dir / "options.json"
+    )
     if not config_path.exists():
         raise UsageError(f"Config not found: {config_path}")
-    out_dir = Path(args.out_dir).resolve() if args.out_dir else data_dir / "debug_snapshots"
+    out_dir = (
+        Path(args.out_dir).resolve() if args.out_dir else data_dir / "debug_snapshots"
+    )
 
     _ensure_day_ahead_importable()
     from dao.prog.day_ahead import DaCalc
@@ -3055,14 +3190,25 @@ def cmd_capture(args: argparse.Namespace, data_dir: Path) -> int:
 
     # Toont het capture-resultaat leesbaar op het scherm.
     def render(d):
-        print(f"snapshot: {d['snapshot']}" if d["snapshot"] else "capture: nothing written (see log)")
+        print(
+            f"snapshot: {d['snapshot']}"
+            if d["snapshot"]
+            else "capture: nothing written (see log)"
+        )
         if d["result"]:
             print(f"result:   {d['result']}")
         print(
             f"debug:    {d['debug']}"
-            + ("" if d["debug"] else " (this run wrote real settings to HA/DB — pass --debug to suppress that)")
+            + (
+                ""
+                if d["debug"]
+                else " (this run wrote real settings to HA/DB — pass --debug to suppress that)"
+            )
         )
-        print(f"png:      {d['png']}" + ("" if d["png"] else " (pass --png to keep the chart)"))
+        print(
+            f"png:      {d['png']}"
+            + ("" if d["png"] else " (pass --png to keep the chart)")
+        )
         if d["error"]:
             print(f"error during calc_optimum(): {d['error']}")
 
@@ -3084,7 +3230,9 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
 
     guard = _offline_guard() if args.offline else None
     try:
-        with ReplayIO(snapshot_path, solver_threads=args.threads, png=args.png) as replay:
+        with ReplayIO(
+            snapshot_path, solver_threads=args.threads, png=args.png
+        ) as replay:
             file_name = str(snapshot_path)
             dacalc = DaCalc(file_name)
             # calc_optimum()'s return value is not a usable success signal —
@@ -3128,15 +3276,29 @@ def cmd_replay(args: argparse.Namespace, data_dir: Path) -> int:
     def render(d):
         print(f"replayed: {d['snapshot']}")
         print(f"offline:  {d['offline']}")
-        print(f"threads:  {d['threads']}" + (" (all cores — pass --threads 1 for reproducibility)" if d["threads"] == -1 else ""))
-        print(f"png:      {d['png']}" + ("" if d["png"] else " (pass --png to keep the chart)"))
+        print(
+            f"threads:  {d['threads']}"
+            + (
+                " (all cores — pass --threads 1 for reproducibility)"
+                if d["threads"] == -1
+                else ""
+            )
+        )
+        print(
+            f"png:      {d['png']}"
+            + ("" if d["png"] else " (pass --png to keep the chart)")
+        )
         print(f"entities read: {len(d['reads'])}")
         if d["post_solve_misses"]:
             print(
                 "not in snapshot, read after the solve (placeholder '0'): "
                 + ", ".join(d["post_solve_misses"])
             )
-        print(f"result:   {d['result']}" if d["result"] else "result:   not written (solve never reached model.optimize())")
+        print(
+            f"result:   {d['result']}"
+            if d["result"]
+            else "result:   not written (solve never reached model.optimize())"
+        )
 
     _emit(args, data, render)
     return EXIT_OK if solved else EXIT_SOLVER_FAILURE
@@ -3170,8 +3332,12 @@ def cmd_inspect(args: argparse.Namespace, data_dir: Path) -> int:
     # Formatteert de samenvatting voor tekstweergave.
     def render(d):
         m = d["meta"]
-        print(f"dao {m.get('dao_version')} | mip {m.get('mip_version')} | schema {m.get('schema_version')}")
-        print(f"captured  {m.get('captured_at')}   interval {m.get('interval')}   strategy {m.get('strategy')}")
+        print(
+            f"dao {m.get('dao_version')} | mip {m.get('mip_version')} | schema {m.get('schema_version')}"
+        )
+        print(
+            f"captured  {m.get('captured_at')}   interval {m.get('interval')}   strategy {m.get('strategy')}"
+        )
         print(
             f"ha_states {d['ha_states_count']} entities | "
             f"price_data {d['price_data_shape']} | "
@@ -3191,10 +3357,18 @@ def cmd_inspect(args: argparse.Namespace, data_dir: Path) -> int:
             if cbc_log:
                 lines = cbc_log.count("\n") + 1
                 partial = "Exiting on maximum nodes" in cbc_log
-                flag = " — PARTIAL SEARCH, node cap hit, not proven optimal" if partial else ""
-                print(f"cbc_log   {lines} lines captured{flag} (full text in the .result.json)")
+                flag = (
+                    " — PARTIAL SEARCH, node cap hit, not proven optimal"
+                    if partial
+                    else ""
+                )
+                print(
+                    f"cbc_log   {lines} lines captured{flag} (full text in the .result.json)"
+                )
             else:
-                print("cbc_log   not captured (older snapshot, or model.optimize() never ran)")
+                print(
+                    "cbc_log   not captured (older snapshot, or model.optimize() never ran)"
+                )
         else:
             print("result    (no .result.json next to this snapshot)")
 
@@ -3264,7 +3438,12 @@ def cmd_verify(args: argparse.Namespace, data_dir: Path) -> int:
                 f"snapshot's config (hash differs)"
             )
 
-    data = {"path": str(snapshot_path), "ok": not problems, "problems": problems, "config_drift": drift}
+    data = {
+        "path": str(snapshot_path),
+        "ok": not problems,
+        "problems": problems,
+        "config_drift": drift,
+    }
 
     # Toont OK of FAILED plus de gevonden problemen.
     def render(d):
@@ -3296,7 +3475,13 @@ def cmd_diff(args: argparse.Namespace, data_dir: Path) -> int:
         # walks a real entry.
         field_changes = {
             key: {"first": first.get(key), "second": second.get(key)}
-            for key in ("objective_value", "objective_bound", "status", "gap", "num_solutions")
+            for key in (
+                "objective_value",
+                "objective_bound",
+                "status",
+                "gap",
+                "num_solutions",
+            )
             if first.get(key) != second.get(key)
         }
         if field_changes:
@@ -3427,7 +3612,7 @@ def _lookup_price_at_interval(
 # zonder dat de CLI U apart hoeft te kennen.
 def _max_known_interval(registry_by_idx: dict) -> int:
     max_u = -1
-    for (name, idx_tuple) in registry_by_idx.values():
+    for name, idx_tuple in registry_by_idx.values():
         if name not in SHAPES:
             continue
         dims = _dims(name)
@@ -3540,7 +3725,10 @@ def cmd_dangling(args: argparse.Namespace, data_dir: Path) -> int:
             f"binary variables:  {d['binary_count']}  "
             f"(dangling: {len(d['dangling_binary'])})"
         )
-        for key, kind_label in (("dangling_integer", "INTEGER"), ("dangling_binary", "BINARY")):
+        for key, kind_label in (
+            ("dangling_integer", "INTEGER"),
+            ("dangling_binary", "BINARY"),
+        ):
             entries = d[key]
             if not entries:
                 continue
@@ -3713,36 +3901,100 @@ def _build_synthetic_sos2_model():
     dc_to_ac_samples = [[0.0, 3.3]]
 
     model = Model()
-    ac_to_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=5) for _ in range(U)] for _ in range(B)]
+    ac_to_dc = [
+        [model.add_var(var_type=CONTINUOUS, lb=0, ub=5) for _ in range(U)]
+        for _ in range(B)
+    ]
     ac_to_dc_on = [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(B)]
-    ac_to_dc_w = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(CS)] for _ in range(U)] for _ in range(B)]
-    ac_from_dc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=3) for _ in range(U)] for _ in range(B)]
-    ac_from_dc_on = [[model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(B)]
-    ac_from_dc_w = [[[model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(DS)] for _ in range(U)] for _ in range(B)]
-    dc_from_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=4.5) for _ in range(U)] for _ in range(B)]
-    dc_to_ac = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=3.3) for _ in range(U)] for _ in range(B)]
-    dc_from_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=3.3) for _ in range(U)] for _ in range(B)]
-    dc_to_bat = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=4.5) for _ in range(U)] for _ in range(B)]
-    soc = [[model.add_var(var_type=CONTINUOUS, lb=0, ub=100) for _ in range(U + 1)] for _ in range(B)]
+    ac_to_dc_w = [
+        [
+            [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(CS)]
+            for _ in range(U)
+        ]
+        for _ in range(B)
+    ]
+    ac_from_dc = [
+        [model.add_var(var_type=CONTINUOUS, lb=0, ub=3) for _ in range(U)]
+        for _ in range(B)
+    ]
+    ac_from_dc_on = [
+        [model.add_var(var_type=BINARY) for _ in range(U)] for _ in range(B)
+    ]
+    ac_from_dc_w = [
+        [
+            [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(DS)]
+            for _ in range(U)
+        ]
+        for _ in range(B)
+    ]
+    dc_from_ac = [
+        [model.add_var(var_type=CONTINUOUS, lb=0, ub=4.5) for _ in range(U)]
+        for _ in range(B)
+    ]
+    dc_to_ac = [
+        [model.add_var(var_type=CONTINUOUS, lb=0, ub=3.3) for _ in range(U)]
+        for _ in range(B)
+    ]
+    dc_from_bat = [
+        [model.add_var(var_type=CONTINUOUS, lb=0, ub=3.3) for _ in range(U)]
+        for _ in range(B)
+    ]
+    dc_to_bat = [
+        [model.add_var(var_type=CONTINUOUS, lb=0, ub=4.5) for _ in range(U)]
+        for _ in range(B)
+    ]
+    soc = [
+        [model.add_var(var_type=CONTINUOUS, lb=0, ub=100) for _ in range(U + 1)]
+        for _ in range(B)
+    ]
 
     for b in range(B):
         model += soc[b][0] == 50
         for u in range(U):
             model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS)) == 1
-            model += xsum(ac_to_dc_w[b][u][cs] * ac_to_dc_samples[b][cs] for cs in range(CS)) == ac_to_dc[b][u]
-            model += xsum(ac_to_dc_w[b][u][cs] * dc_from_ac_samples[b][cs] for cs in range(CS)) == dc_from_ac[b][u]
-            model.add_sos([(ac_to_dc_w[b][u][cs], ac_to_dc_samples[b][cs]) for cs in range(CS)], 2)
+            model += (
+                xsum(ac_to_dc_w[b][u][cs] * ac_to_dc_samples[b][cs] for cs in range(CS))
+                == ac_to_dc[b][u]
+            )
+            model += (
+                xsum(
+                    ac_to_dc_w[b][u][cs] * dc_from_ac_samples[b][cs] for cs in range(CS)
+                )
+                == dc_from_ac[b][u]
+            )
+            model.add_sos(
+                [(ac_to_dc_w[b][u][cs], ac_to_dc_samples[b][cs]) for cs in range(CS)], 2
+            )
 
             model += xsum(ac_from_dc_w[b][u][ds] for ds in range(DS)) <= 1
-            model += xsum(ac_from_dc_w[b][u][ds] * ac_from_dc_samples[b][ds] for ds in range(DS)) == ac_from_dc[b][u]
-            model += xsum(ac_from_dc_w[b][u][ds] * dc_to_ac_samples[b][ds] for ds in range(DS)) == dc_to_ac[b][u]
-            model.add_sos([(ac_from_dc_w[b][u][ds], ac_from_dc_samples[b][ds]) for ds in range(DS)], 2)
+            model += (
+                xsum(
+                    ac_from_dc_w[b][u][ds] * ac_from_dc_samples[b][ds]
+                    for ds in range(DS)
+                )
+                == ac_from_dc[b][u]
+            )
+            model += (
+                xsum(
+                    ac_from_dc_w[b][u][ds] * dc_to_ac_samples[b][ds] for ds in range(DS)
+                )
+                == dc_to_ac[b][u]
+            )
+            model.add_sos(
+                [
+                    (ac_from_dc_w[b][u][ds], ac_from_dc_samples[b][ds])
+                    for ds in range(DS)
+                ],
+                2,
+            )
 
             model += dc_from_ac[b][u] <= ac_to_dc_on[b][u] * 5
             model += ac_from_dc[b][u] <= ac_from_dc_on[b][u] * 3
             model += ac_to_dc_on[b][u] + ac_from_dc_on[b][u] <= 1
 
-            model += dc_from_ac[b][u] + dc_from_bat[b][u] == dc_to_ac[b][u] + dc_to_bat[b][u]
+            model += (
+                dc_from_ac[b][u] + dc_from_bat[b][u] == dc_to_ac[b][u] + dc_to_bat[b][u]
+            )
             model += soc[b][u + 1] == soc[b][u] + dc_to_bat[b][u] - dc_from_bat[b][u]
 
     # Force interval 1 idle so a dump of it is a small, quiet contrast to
@@ -3832,14 +4084,23 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         fixed = pd.DataFrame({"value": [1.0, 2.0]})
         pred = pd.DataFrame({"value": [3.0]})
         records = [
-            _sequence_record({"start": "a", "interval": "15min", "extension": 0}, fixed),
-            _sequence_record({"start": "b", "interval": "1hour", "extension": 60}, pred),
+            _sequence_record(
+                {"start": "a", "interval": "15min", "extension": 0}, fixed
+            ),
+            _sequence_record(
+                {"start": "b", "interval": "1hour", "extension": 60}, pred
+            ),
         ]
         seq = _CallSequence("price_data", "selftest", records)
         # start differs from the recording on purpose: timestamps are not matched
-        if seq.serve(start="x", interval="15min", extension=0)["value"].tolist() != [1.0, 2.0]:
+        if seq.serve(start="x", interval="15min", extension=0)["value"].tolist() != [
+            1.0,
+            2.0,
+        ]:
             raise AssertionError("first call did not get the first recording")
-        if seq.serve(start="y", interval="1hour", extension=60)["value"].tolist() != [3.0]:
+        if seq.serve(start="y", interval="1hour", extension=60)["value"].tolist() != [
+            3.0
+        ]:
             raise AssertionError("second call did not get the second recording")
         try:
             seq.serve(start="z", interval="1hour", extension=60)
@@ -3847,7 +4108,9 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         except SnapshotMiss:
             pass
         try:
-            _CallSequence("price_data", "selftest", records).serve(interval="1hour", extension=60)
+            _CallSequence("price_data", "selftest", records).serve(
+                interval="1hour", extension=60
+            )
             raise AssertionError("an interval mismatch did not raise SnapshotMiss")
         except SnapshotMiss:
             pass
@@ -3876,7 +4139,9 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
     # Controleert dat vastgelegde startwaarden heel terugkomen, inclusief de datetime.
     def _calc_overrides_roundtrip():
         start = dt.datetime(2026, 10, 4, 14, 15)
-        payload = json.loads(json.dumps(_overrides_to_payload({"_start_dt": start, "_start_soc": 25.35})))
+        payload = json.loads(
+            json.dumps(_overrides_to_payload({"_start_dt": start, "_start_soc": 25.35}))
+        )
         back = _overrides_from_payload(payload)
         if back != {"_start_dt": start, "_start_soc": 25.35}:
             raise AssertionError(f"calc_overrides roundtrip changed the values: {back}")
@@ -3887,7 +4152,9 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
             try:
                 raise SnapshotMiss("probe")
             except Exception:
-                raise AssertionError("SnapshotMiss was caught by 'except Exception'") from None
+                raise AssertionError(
+                    "SnapshotMiss was caught by 'except Exception'"
+                ) from None
         except SnapshotMiss:
             pass
 
@@ -3932,7 +4199,9 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         except VarRegistryError:
             pass
         else:
-            raise AssertionError("completeness assertion did not fire on an unknown container")
+            raise AssertionError(
+                "completeness assertion did not fire on an unknown container"
+            )
         _assert_shapes_complete({0: ("soc", (0, 0))})  # must not raise on a known one
 
     # End-to-end: los het synthetische SOS2-model op en controleer dat
@@ -3952,22 +4221,35 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         if abs(scalars["ac_to_dc[b=0][u=0]"] - 5.0) > 1e-6:
             raise AssertionError("charging interval did not reach full charge power")
         soc_row = boundaries["soc[b=0]"]
-        if abs(soc_row["value_in"] - 50.0) > 1e-6 or abs(soc_row["value_out"] - 54.5) > 1e-6:
+        if (
+            abs(soc_row["value_in"] - 50.0) > 1e-6
+            or abs(soc_row["value_out"] - 54.5) > 1e-6
+        ):
             raise AssertionError("soc in/out did not match the forced charge")
         if abs(soc_row["delta"] - 4.5) > 1e-6:
             raise AssertionError("soc delta did not match value_out - value_in")
         charge_curve = next(r for r in data["sos2"] if r["curve"] == "battery charge")
         if not charge_curve["adjacent"] or charge_curve["case"] != "single":
-            raise AssertionError("SOS2 charge curve should report a single adjacent active stage")
+            raise AssertionError(
+                "SOS2 charge curve should report a single adjacent active stage"
+            )
         if abs(charge_curve["interpolated"] - scalars["ac_to_dc[b=0][u=0]"]) > 1e-6:
-            raise AssertionError("SOS2 interpolated power should equal ac_to_dc[b=0][u=0]")
+            raise AssertionError(
+                "SOS2 interpolated power should equal ac_to_dc[b=0][u=0]"
+            )
         if not data["local_constraints"] and not data["global_constraints"]:
-            raise AssertionError("a forced-charge interval should have binding constraints")
+            raise AssertionError(
+                "a forced-charge interval should have binding constraints"
+            )
         all_text = " ".join(lc["text"] for lc in data["local_constraints"])
         if "var(" in all_text:
-            raise AssertionError("a local constraint fell back to var(N) — a registered var wasn't labelled")
+            raise AssertionError(
+                "a local constraint fell back to var(N) — a registered var wasn't labelled"
+            )
         if _contains_negative_zero(data):
-            raise AssertionError("dump_interval() returned a -0.0 float (negative-zero formatting bug)")
+            raise AssertionError(
+                "dump_interval() returned a -0.0 float (negative-zero formatting bug)"
+            )
         # objective attribution: net at u=0 must equal cost.x,
         # since u=1 is forced fully idle in the synthetic model — see
         # _build_synthetic_sos2_model's comment.
@@ -3986,7 +4268,9 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         # alongside the direct term, proving the one-hop walk fired.
         contrib_labels = {c["label"] for c in data["objective_contributions"]}
         if "dc_to_bat[b=0][u=0]" not in contrib_labels:
-            raise AssertionError("expected dc_to_bat[b=0][u=0] in the objective attribution")
+            raise AssertionError(
+                "expected dc_to_bat[b=0][u=0] in the objective attribution"
+            )
 
     # Idle interval (dwongen tot 0 laden/ontladen): moet nog steeds netjes
     # dumpen zonder te crashen. Met onderdrukking aan moet de uitvoer korter
@@ -3998,14 +4282,21 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         data = dump_interval(model, registry, 1)
         rows = data["sections"]["battery 0"]
         scalars = {r["label"]: r["value"] for r in rows if r["kind"] == "scalar"}
-        if abs(scalars["ac_to_dc[b=0][u=1]"]) > 1e-6 or abs(scalars["ac_from_dc[b=0][u=1]"]) > 1e-6:
+        if (
+            abs(scalars["ac_to_dc[b=0][u=1]"]) > 1e-6
+            or abs(scalars["ac_from_dc[b=0][u=1]"]) > 1e-6
+        ):
             raise AssertionError("forced-idle interval should show zero flow")
         if not data["context"].get("0"):
-            raise AssertionError("interval 1 should carry reduced context for its u=0 neighbour")
+            raise AssertionError(
+                "interval 1 should carry reduced context for its u=0 neighbour"
+            )
         suppressed = _format_dump_text(data, show_all=False)
         full = _format_dump_text(data, show_all=True)
         if len(suppressed.splitlines()) >= len(full.splitlines()):
-            raise AssertionError("--all should show fewer or equal lines suppressed than with --all")
+            raise AssertionError(
+                "--all should show fewer or equal lines suppressed than with --all"
+            )
         # a known-zero row (forced idle) must vanish under suppression but
         # still appear with --all — the actual suppression behaviour, not
         # just "fewer lines" in the abstract. Matched against the exact
@@ -4033,7 +4324,11 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         model += cost == delivery - production
         registry = build_var_registry(locals())
         by_name = {n: idx for idx, (n, path) in registry.by_idx.items() if path == ()}
-        for name, var in (("cost", cost), ("delivery", delivery), ("production", production)):
+        for name, var in (
+            ("cost", cost),
+            ("delivery", delivery),
+            ("production", production),
+        ):
             if by_name.get(name) != var.idx:
                 raise AssertionError(f"{name} was not registered as a bare scalar var")
             label = label_for_var(var, registry.by_idx)
@@ -4065,7 +4360,9 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         registry_by_idx2 = build_var_registry(locals()).by_idx
         sigma2 = _try_sigma_collapse(c_sparse, registry_by_idx2)
         if sigma2 is not None:
-            raise AssertionError(f"three non-contiguous intervals should not collapse, got {sigma2!r}")
+            raise AssertionError(
+                f"three non-contiguous intervals should not collapse, got {sigma2!r}"
+            )
 
     # Every named pattern matches a constraint with exactly its
     # signature; an unmatched signature falls back to None without
@@ -4105,7 +4402,9 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         except VarRegistryError:
             pass
         else:
-            raise AssertionError("completeness assertion did not fire on a unit-less SHAPES entry")
+            raise AssertionError(
+                "completeness assertion did not fire on a unit-less SHAPES entry"
+            )
         finally:
             SHAPES["soc"] = original
 
@@ -4130,9 +4429,13 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         if "dangling_int" not in dangling_int_labels:
             raise AssertionError("failed to detect a genuinely dangling INTEGER var")
         if "used_int" in dangling_int_labels:
-            raise AssertionError("false positive: used_int is referenced in a constraint")
+            raise AssertionError(
+                "false positive: used_int is referenced in a constraint"
+            )
         if any(e["label"] == "used_bin" for e in dangling["B"]):
-            raise AssertionError("false positive: used_bin is referenced in a constraint")
+            raise AssertionError(
+                "false positive: used_bin is referenced in a constraint"
+            )
 
     for name, fn in [
         ("dataframe_roundtrip", _dataframe_roundtrip),
@@ -4144,7 +4447,10 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         ("snapshot_miss_escapes_broad_except", _snapshot_miss_escapes_broad_except),
         ("patch_list_restore", _patch_list_restore_check),
         ("var_registry_nested_containers", _var_registry_nested_containers),
-        ("shapes_completeness_fires_on_unknown_container", _shapes_completeness_fires_on_unknown_container),
+        (
+            "shapes_completeness_fires_on_unknown_container",
+            _shapes_completeness_fires_on_unknown_container,
+        ),
         ("shapes_completeness_requires_unit", _shapes_completeness_requires_unit),
         ("scalar_vars_labelled_by_name", _scalar_vars_labelled_by_name),
         ("sigma_collapse_contiguity", _sigma_collapse_contiguity),
@@ -4189,8 +4495,13 @@ def _scenario_pkg():
 def cmd_scenario_list(args: argparse.Namespace, data_dir: Path) -> int:
     scenarios = _scenario_pkg()
     rows = [
-        {"id": s.id, "description": s.description, "source": s.source_file,
-         "horizon_h": s.horizon_hours, "skip": s.skip}
+        {
+            "id": s.id,
+            "description": s.description,
+            "source": s.source_file,
+            "horizon_h": s.horizon_hours,
+            "skip": s.skip,
+        }
         for s in scenarios.load_all()
     ]
 
@@ -4235,7 +4546,9 @@ def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
         print(f"  prices.cons {dd['prices_cons']}")
         if dd["prices_prod"] is not None:
             print(f"  prices.prod {dd['prices_prod']}")
-        print(f"  solar      {dd['solar'] if dd['solar'] is not None else '(none — all zero)'}")
+        print(
+            f"  solar      {dd['solar'] if dd['solar'] is not None else '(none — all zero)'}"
+        )
         print(f"  options    {dd['options'] or 'options_example (default)'}")
         if dd["states"]:
             print("  states")
@@ -4250,11 +4563,17 @@ def cmd_scenario_show(args: argparse.Namespace, data_dir: Path) -> int:
         print(f"  expect     {dd['expect']}  (+ the Tier A invariants, always)")
         if dd["baseline"] is not None:
             b = dd["baseline"]
-            note = "" if b["checked"] else "  (objective_within_baseline: false — not checked)"
+            note = (
+                ""
+                if b["checked"]
+                else "  (objective_within_baseline: false — not checked)"
+            )
             if b["objective"] is not None:
                 print(f"  baseline   {b['objective']:.6f}  ({b['path']}){note}")
             else:
-                print(f"  baseline   none yet — reports PENDING until `scenario-bless {dd['id']}`{note}")
+                print(
+                    f"  baseline   none yet — reports PENDING until `scenario-bless {dd['id']}`{note}"
+                )
 
     _emit(args, d, render)
     return EXIT_OK
@@ -4271,18 +4590,21 @@ def cmd_scenario_validate(args: argparse.Namespace, data_dir: Path) -> int:
     # base_states.json must parse and the base config must be buildable
     try:
         from dao.prog.scenarios.build_snapshot import load_base_states
+
         n_states = len(load_base_states())
     except Exception as ex:  # noqa: BLE001
         problems.append(f"base_states.json: {ex}")
         n_states = 0
     try:
         from dao.prog.scenarios.base_config import base_config
+
         base_config("options_example")
     except Exception as ex:  # noqa: BLE001
         problems.append(f"options_example config does not load: {ex}")
     if any(sc.options == "options_2ev" for sc in loaded):
         try:
             from dao.prog.scenarios.base_config import base_config
+
             base_config("options_2ev")
         except Exception as ex:  # noqa: BLE001
             problems.append(f"options_2ev config does not load: {ex}")
@@ -4314,20 +4636,31 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
     except KeyError as ex:
         raise UsageError(str(ex)) from ex
 
-    report_dir = (data_dir / "scenario_reports") if (args.log or args.png or args.report) else None
+    report_dir = (
+        (data_dir / "scenario_reports")
+        if (args.log or args.png or args.report)
+        else None
+    )
 
     results = []
     for sc in selected:
-        r = run_scenario(sc, threads=args.threads, keep_png=args.png, report_dir=report_dir)
+        r = run_scenario(
+            sc, threads=args.threads, keep_png=args.png, report_dir=report_dir
+        )
         results.append(r)
         if not getattr(args, "json", False):
             st = r.stats
-            print(f"[{r.status}] {r.id}: {r.description}"
-                  + (f"   objective {r.objective:.6f}" if r.objective is not None else "")
-                  + (f"   threads={r.threads}" if r.threads != 1 else "")
-                  + (f"   solve {st.wall_time_sec or '—'}s / {st.nodes or '—'} nodes"
-                     f" / gap {st.gap if st.gap is not None else '—'}"
-                     if st is not None else ""))
+            print(
+                f"[{r.status}] {r.id}: {r.description}"
+                + (f"   objective {r.objective:.6f}" if r.objective is not None else "")
+                + (f"   threads={r.threads}" if r.threads != 1 else "")
+                + (
+                    f"   solve {st.wall_time_sec or '—'}s / {st.nodes or '—'} nodes"
+                    f" / gap {st.gap if st.gap is not None else '—'}"
+                    if st is not None
+                    else ""
+                )
+            )
             for f in r.failures:
                 print(f"        - {f}")
             if r.log_path:
@@ -4348,14 +4681,25 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
 
     data = {
         "results": [
-            {"id": r.id, "status": r.status, "objective": r.objective,
-             "threads": r.threads, "log_path": r.log_path, "png_path": r.png_path,
-             "failures": r.failures,
-             "wall_time_sec": r.stats.wall_time_sec if r.stats else None,
-             "nodes": r.stats.nodes if r.stats else None,
-             "gap": r.stats.gap if r.stats else None,
-             "checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.checks],
-             "setup_checks": [{"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.setup_checks]}
+            {
+                "id": r.id,
+                "status": r.status,
+                "objective": r.objective,
+                "threads": r.threads,
+                "log_path": r.log_path,
+                "png_path": r.png_path,
+                "failures": r.failures,
+                "wall_time_sec": r.stats.wall_time_sec if r.stats else None,
+                "nodes": r.stats.nodes if r.stats else None,
+                "gap": r.stats.gap if r.stats else None,
+                "checks": [
+                    {"name": c.name, "ok": c.ok, "detail": c.detail} for c in r.checks
+                ],
+                "setup_checks": [
+                    {"name": c.name, "ok": c.ok, "detail": c.detail}
+                    for c in r.setup_checks
+                ],
+            }
             for r in results
         ],
         "passed": n_ok,
@@ -4365,7 +4709,11 @@ def cmd_scenario_run(args: argparse.Namespace, data_dir: Path) -> int:
 
     def render(d):
         print(f"\n{d['passed']}/{d['total']} passed.")
-        bad = [r["id"] for r in d["results"] if r["status"] not in (STATUS_PASS, STATUS_SKIP)]
+        bad = [
+            r["id"]
+            for r in d["results"]
+            if r["status"] not in (STATUS_PASS, STATUS_SKIP)
+        ]
         if bad:
             print("needs a look:", bad)
 
@@ -4391,20 +4739,36 @@ def cmd_scenario_bless(args: argparse.Namespace, data_dir: Path) -> int:
     for sc in selected:
         r = run_scenario(sc, threads=args.threads)
         if r.status != STATUS_PASS:
-            rows.append({"id": sc.id, "blessed": False, "objective": r.objective,
-                         "reason": f"{r.status}: not blessing a non-passing scenario"})
+            rows.append(
+                {
+                    "id": sc.id,
+                    "blessed": False,
+                    "objective": r.objective,
+                    "reason": f"{r.status}: not blessing a non-passing scenario",
+                }
+            )
             continue
         if r.objective is None:
-            rows.append({"id": sc.id, "blessed": False, "objective": None,
-                         "reason": "solve produced no objective"})
+            rows.append(
+                {
+                    "id": sc.id,
+                    "blessed": False,
+                    "objective": None,
+                    "reason": "solve produced no objective",
+                }
+            )
             continue
         path = baseline.write_baseline(sc.id, r.objective)
-        rows.append({"id": sc.id, "blessed": True, "objective": r.objective, "path": str(path)})
+        rows.append(
+            {"id": sc.id, "blessed": True, "objective": r.objective, "path": str(path)}
+        )
 
     def render(d):
         for row in d["rows"]:
             if row["blessed"]:
-                print(f"blessed {row['id']}: objective {row['objective']:.6f} -> {row['path']}")
+                print(
+                    f"blessed {row['id']}: objective {row['objective']:.6f} -> {row['path']}"
+                )
             else:
                 print(f"NOT blessed {row['id']}: {row['reason']}")
 
@@ -4429,7 +4793,9 @@ def _common_parser() -> argparse.ArgumentParser:
         help="Base data directory (default: <module dir>/../data, matching "
         "day_ahead.py's own convention). All other paths resolve from here.",
     )
-    common.add_argument("--json", action="store_true", help="Emit machine-readable JSON only.")
+    common.add_argument(
+        "--json", action="store_true", help="Emit machine-readable JSON only."
+    )
     return common
 
 
@@ -4452,7 +4818,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("capture", parents=[common], help="Run a real optimisation; write snapshot + result.")
+    p = sub.add_parser(
+        "capture",
+        parents=[common],
+        help="Run a real optimisation; write snapshot + result.",
+    )
     p.add_argument(
         "--config",
         default=None,
@@ -4463,8 +4833,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "config file; every other command that reads a config does so via "
         "a disposable copy.",
     )
-    p.add_argument("--out-dir", default=None, help="Where to write the snapshot (default: <data-dir>/debug_snapshots).")
-    p.add_argument("--label", default=None, help="Optional label suffix for the snapshot filename.")
+    p.add_argument(
+        "--out-dir",
+        default=None,
+        help="Where to write the snapshot (default: <data-dir>/debug_snapshots).",
+    )
+    p.add_argument(
+        "--label", default=None, help="Optional label suffix for the snapshot filename."
+    )
     p.add_argument(
         "--debug",
         action="store_true",
@@ -4487,14 +4863,36 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "capture runs don't need one and it's one more file per run — "
         "but a chart can help spot dispatch patterns a table doesn't.",
     )
-    p.add_argument("--start-dt", default=None, help="ISO datetime, forwarded to calc_optimum(_start_dt=...).")
+    p.add_argument(
+        "--start-dt",
+        default=None,
+        help="ISO datetime, forwarded to calc_optimum(_start_dt=...).",
+    )
     p.add_argument("--start-soc", type=float, default=None)
     p.add_argument("--start-ev-soc", type=float, default=None)
 
-    p = sub.add_parser("replay", parents=[common], help="Re-solve from a snapshot; needs no live HA/DB.")
-    p.add_argument("snapshot", help="Snapshot file (bare filename resolves against <data-dir>/debug_snapshots/).")
-    p.add_argument("--offline", dest="offline", action="store_true", default=True, help="Block all network access during replay (default).")
-    p.add_argument("--allow-network", dest="offline", action="store_false", help="Disable the network block (escape hatch).")
+    p = sub.add_parser(
+        "replay",
+        parents=[common],
+        help="Re-solve from a snapshot; needs no live HA/DB.",
+    )
+    p.add_argument(
+        "snapshot",
+        help="Snapshot file (bare filename resolves against <data-dir>/debug_snapshots/).",
+    )
+    p.add_argument(
+        "--offline",
+        dest="offline",
+        action="store_true",
+        default=True,
+        help="Block all network access during replay (default).",
+    )
+    p.add_argument(
+        "--allow-network",
+        dest="offline",
+        action="store_false",
+        help="Disable the network block (escape hatch).",
+    )
     p.add_argument(
         "--png",
         action="store_true",
@@ -4527,28 +4925,73 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "don't overwrite each other). Compare with `diff`.",
     )
 
-    p = sub.add_parser("inspect", parents=[common], help="Print snapshot meta and a content summary; no solve.")
+    p = sub.add_parser(
+        "inspect",
+        parents=[common],
+        help="Print snapshot meta and a content summary; no solve.",
+    )
     p.add_argument("snapshot")
 
-    p = sub.add_parser("verify", parents=[common], help="Schema version, config hash, secret scan, integrity.")
+    p = sub.add_parser(
+        "verify",
+        parents=[common],
+        help="Schema version, config hash, secret scan, integrity.",
+    )
     p.add_argument("snapshot")
-    p.add_argument("--config", default=None, help="Optionally compare against a live options.json (copy-then-load; never mutates it).")
-    p.add_argument("--secrets", default=None, help="Optionally scan the snapshot for literal secret values from this secrets.json.")
+    p.add_argument(
+        "--config",
+        default=None,
+        help="Optionally compare against a live options.json (copy-then-load; never mutates it).",
+    )
+    p.add_argument(
+        "--secrets",
+        default=None,
+        help="Optionally scan the snapshot for literal secret values from this secrets.json.",
+    )
 
-    p = sub.add_parser("diff", parents=[common], help="Compare two snapshots (inputs) or two .result.json files.")
+    p = sub.add_parser(
+        "diff",
+        parents=[common],
+        help="Compare two snapshots (inputs) or two .result.json files.",
+    )
     p.add_argument("first")
     p.add_argument("second")
 
-    p = sub.add_parser("set", parents=[common], help="Derive a new snapshot with overridden entity state(s).")
+    p = sub.add_parser(
+        "set",
+        parents=[common],
+        help="Derive a new snapshot with overridden entity state(s).",
+    )
     p.add_argument("snapshot")
-    p.add_argument("--state", action="append", default=[], metavar="entity_id=value", help="Repeatable.")
+    p.add_argument(
+        "--state",
+        action="append",
+        default=[],
+        metavar="entity_id=value",
+        help="Repeatable.",
+    )
     p.add_argument("--out", required=True)
 
-    p = sub.add_parser("dump", parents=[common], help="Replay a snapshot and print everything the solved model knew about one interval.")
+    p = sub.add_parser(
+        "dump",
+        parents=[common],
+        help="Replay a snapshot and print everything the solved model knew about one interval.",
+    )
     p.add_argument("--snapshot", default=None, required=True)
     p.add_argument("--interval", type=int, default=None, required=True, metavar="U")
-    p.add_argument("--offline", dest="offline", action="store_true", default=True, help="Block all network access during the replay this needs (default).")
-    p.add_argument("--allow-network", dest="offline", action="store_false", help="Disable the network block (escape hatch).")
+    p.add_argument(
+        "--offline",
+        dest="offline",
+        action="store_true",
+        default=True,
+        help="Block all network access during the replay this needs (default).",
+    )
+    p.add_argument(
+        "--allow-network",
+        dest="offline",
+        action="store_false",
+        help="Disable the network block (escape hatch).",
+    )
     p.add_argument(
         "--threads",
         type=int,
@@ -4571,8 +5014,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Replay a snapshot and report INTEGER/BINARY columns used in no constraint (a known CBC crash trigger on some solver builds when combined with an active SOS2 curve).",
     )
     p.add_argument("--snapshot", default=None, required=True)
-    p.add_argument("--offline", dest="offline", action="store_true", default=True, help="Block all network access during the replay this needs (default).")
-    p.add_argument("--allow-network", dest="offline", action="store_false", help="Disable the network block (escape hatch).")
+    p.add_argument(
+        "--offline",
+        dest="offline",
+        action="store_true",
+        default=True,
+        help="Block all network access during the replay this needs (default).",
+    )
+    p.add_argument(
+        "--allow-network",
+        dest="offline",
+        action="store_false",
+        help="Disable the network block (escape hatch).",
+    )
     p.add_argument(
         "--threads",
         type=int,
@@ -4581,20 +5035,34 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="CBC thread count for the replay this reads from (same semantics as `replay --threads`). Default -1.",
     )
 
-    sub.add_parser("selftest", parents=[common], help="Run da_debug's own offline checks.")
+    sub.add_parser(
+        "selftest", parents=[common], help="Run da_debug's own offline checks."
+    )
 
-    p = sub.add_parser("scenario-list", parents=[common],
-                       help="List the declarative scenarios in dao/prog/scenarios/cases/.")
+    p = sub.add_parser(
+        "scenario-list",
+        parents=[common],
+        help="List the declarative scenarios in dao/prog/scenarios/cases/.",
+    )
 
-    p = sub.add_parser("scenario-show", parents=[common],
-                       help="Print one scenario's resolved deltas and expectations (no solve).")
+    p = sub.add_parser(
+        "scenario-show",
+        parents=[common],
+        help="Print one scenario's resolved deltas and expectations (no solve).",
+    )
     p.add_argument("id", help="scenario id (see `scenario-list`)")
 
-    p = sub.add_parser("scenario-validate", parents=[common],
-                       help="Check the scenario corpus, base_states.json and the base config load. No solve.")
+    p = sub.add_parser(
+        "scenario-validate",
+        parents=[common],
+        help="Check the scenario corpus, base_states.json and the base config load. No solve.",
+    )
 
-    p = sub.add_parser("scenario-run", parents=[common],
-                       help="Build a synthetic snapshot per scenario, solve it hermetically, run the Tier A invariants.")
+    p = sub.add_parser(
+        "scenario-run",
+        parents=[common],
+        help="Build a synthetic snapshot per scenario, solve it hermetically, run the Tier A invariants.",
+    )
     p.add_argument("ids", nargs="*", help="scenario ids to run (default: all)")
     p.add_argument(
         "--threads",
@@ -4625,9 +5093,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "<data-dir>/scenario_reports/.",
     )
 
-    p = sub.add_parser("scenario-bless", parents=[common],
-                       help="Solve the given scenario(s) and, if they PASS, write/overwrite their Tier C baseline. "
-                            "Never done implicitly by scenario-run.")
+    p = sub.add_parser(
+        "scenario-bless",
+        parents=[common],
+        help="Solve the given scenario(s) and, if they PASS, write/overwrite their Tier C baseline. "
+        "Never done implicitly by scenario-run.",
+    )
     p.add_argument("ids", nargs="+", help="scenario ids to bless")
     p.add_argument(
         "--threads",

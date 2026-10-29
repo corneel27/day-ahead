@@ -64,7 +64,12 @@ def _fake_predict_solar_device(instance, solar_option, start, end):
     # Afgerond op 3 decimalen: cos(±pi/2) geeft 6e-17 in plaats van 0, en zo'n
     # bijna-nul opwekking maakt het model voor CBC infeasible.
     values = [
-        round(0.2 * max(0.0, math.cos((h.hour - 13) / 6 * math.pi / 2)) * (1.0 + offset + h.day / 10), 3)
+        round(
+            0.2
+            * max(0.0, math.cos((h.hour - 13) / 6 * math.pi / 2))
+            * (1.0 + offset + h.day / 10),
+            3,
+        )
         for h in hours
     ]
     return pd.DataFrame(
@@ -110,9 +115,20 @@ def _install_live_db(live) -> None:
 def _spy_calc_solar_predictions(original, seen: list):
     def spy(self, solar_option, vanaf, tot, interval=None, _ml_prediction=None):
         result = original(
-            self, solar_option, vanaf, tot, interval=interval, _ml_prediction=_ml_prediction
+            self,
+            solar_option,
+            vanaf,
+            tot,
+            interval=interval,
+            _ml_prediction=_ml_prediction,
         )
-        seen.append((solar_option.name, interval, result["prediction"].astype(float).round(6).tolist()))
+        seen.append(
+            (
+                solar_option.name,
+                interval,
+                result["prediction"].astype(float).round(6).tolist(),
+            )
+        )
         return result
 
     return spy
@@ -142,7 +158,9 @@ def test_payload_keeps_timezone():
 
     frame = pd.DataFrame(
         {
-            "date_time": pd.date_range("2026-10-24 13:00", periods=3, freq="h", tz="Europe/Amsterdam"),
+            "date_time": pd.date_range(
+                "2026-10-24 13:00", periods=3, freq="h", tz="Europe/Amsterdam"
+            ),
             "tijd": pd.date_range("2026-10-24 13:00", periods=3, freq="h"),
             "prediction": pd.Series([0.1, 0.2, 0.3], dtype="float32"),
         }
@@ -173,14 +191,20 @@ def test_capture_then_replay_reproduces_the_run(tmp_path):
     seen_live: list = []
     with da_debug.ReplayIO(live_snapshot, solver_threads=1) as live:
         _install_live_db(live)
-        live._patches.set(SolarPredictor, "predict_solar_device", _fake_predict_solar_device)
         live._patches.set(
-            DaBase, "calc_solar_predictions", _spy_calc_solar_predictions(original_calc_solar, seen_live)
+            SolarPredictor, "predict_solar_device", _fake_predict_solar_device
+        )
+        live._patches.set(
+            DaBase,
+            "calc_solar_predictions",
+            _spy_calc_solar_predictions(original_calc_solar, seen_live),
         )
         with da_debug.RecordingIO(out_dir=tmp_path / "snapshots") as rec:
             DaCalc(str(options)).calc_optimum(_start_dt=parse_start(scenario.start))
         live_model = live._model
-    assert live_model is not None and live_model.num_solutions > 0, "recorded run did not solve"
+    assert live_model is not None and live_model.num_solutions > 0, (
+        "recorded run did not solve"
+    )
     assert rec.snapshot_path is not None and rec.snapshot_path.exists()
 
     # Drie panelen, elk twee vensters (vast deel en voorspeld deel).
@@ -191,15 +215,26 @@ def test_capture_then_replay_reproduces_the_run(tmp_path):
     seen_replay: list = []
     with da_debug.ReplayIO(rec.snapshot_path, solver_threads=1) as replay:
         replay._patches.set(
-            DaBase, "calc_solar_predictions", _spy_calc_solar_predictions(original_calc_solar, seen_replay)
+            DaBase,
+            "calc_solar_predictions",
+            _spy_calc_solar_predictions(original_calc_solar, seen_replay),
         )
         DaCalc(str(options)).calc_optimum()
         replay_model = replay._model
-    assert replay_model is not None and replay_model.num_solutions > 0, "replay did not solve"
+    assert replay_model is not None and replay_model.num_solutions > 0, (
+        "replay did not solve"
+    )
 
-    assert seen_replay == seen_live, "replay served different solar forecasts than the recorded run"
-    assert (replay_model.num_cols, replay_model.num_rows) == (live_model.num_cols, live_model.num_rows)
-    assert replay_model.objective_value == pytest.approx(live_model.objective_value, abs=1e-6)
+    assert seen_replay == seen_live, (
+        "replay served different solar forecasts than the recorded run"
+    )
+    assert (replay_model.num_cols, replay_model.num_rows) == (
+        live_model.num_cols,
+        live_model.num_rows,
+    )
+    assert replay_model.objective_value == pytest.approx(
+        live_model.objective_value, abs=1e-6
+    )
 
 
 if __name__ == "__main__":

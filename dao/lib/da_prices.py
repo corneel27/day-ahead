@@ -15,12 +15,13 @@ from dao.lib.db_manager import DBmanagerObj
 
 class DaPrices:
     def __init__(
-        self, config,
-            db_da: DBmanagerObj,
-            country: str = None,
-            secrets: dict = None,
-            time_zone: str = "CET",
-            da_base_obj: object = None,
+        self,
+        config,
+        db_da: DBmanagerObj,
+        country: str = None,
+        secrets: dict = None,
+        time_zone: str = "CET",
+        da_base_obj: object = None,
     ):
         self.config = config
         self.db_da = db_da
@@ -31,7 +32,10 @@ class DaPrices:
         self.da_base_obj = da_base_obj
 
     def get_prices(
-        self, source, _start: datetime.datetime|None = None, _end: datetime.datetime|None = None
+        self,
+        source,
+        _start: datetime.datetime | None = None,
+        _end: datetime.datetime | None = None,
     ):
         if self.interval == "1hour":
             resolution = 60
@@ -40,16 +44,12 @@ class DaPrices:
         now = datetime.datetime.now()
         # start
         if _start is None:
-            start = pd.Timestamp(
-                year=now.year, month=now.month, day=now.day, tz="CET"
-            )
+            start = pd.Timestamp(year=now.year, month=now.month, day=now.day, tz="CET")
         else:
             start = _start
         # end
         if _end is None:
-            end = pd.Timestamp(
-                year=now.year, month=now.month, day=now.day, tz="CET"
-            )
+            end = pd.Timestamp(year=now.year, month=now.month, day=now.day, tz="CET")
             if now.hour < 12:
                 end = end + datetime.timedelta(days=1)
             else:
@@ -99,7 +99,9 @@ class DaPrices:
                             df_db = pd.concat([df_db, daily_df], ignore_index=True)
 
                 except Exception as ex:
-                    logging.error(f"Error fetching data for {current_date.date()}: {ex}")
+                    logging.error(
+                        f"Error fetching data for {current_date.date()}: {ex}"
+                    )
 
                 current_date = current_end
 
@@ -178,6 +180,7 @@ class DaPrices:
         :return: dataframe
         """
         from dao.prog.da_base import DaBase
+
         spot_sensor = self.config.prices.ha_epex_spot
         entity = spot_sensor.ha_entity
         attribute = spot_sensor.ha_attribute
@@ -188,13 +191,16 @@ class DaPrices:
         for row in data:
             dt = pd.to_datetime(row[datetime_field])
             if start <= dt < end:
-                df_db.loc[df_db.shape[0]] = [str(dt.timestamp()), "da", row[value_field]]
+                df_db.loc[df_db.shape[0]] = [
+                    str(dt.timestamp()),
+                    "da",
+                    row[value_field],
+                ]
         logging.info(
             f"Day ahead prijzen (source: ha_epex_spot, db-records): \n "
             f"{df_db.to_string(index=False)}"
         )
         return df_db
-
 
     def _get_prices_tibber(self, date):
         now_ts = datetime.datetime.now().timestamp()
@@ -207,42 +213,40 @@ class DaPrices:
             count = count * 4
             if count > 674:
                 count = 674
-                logging.warning(
-                    "Je kunt met Tibber maximaal 7 dagen terug opvragen"
-                )
+                logging.warning("Je kunt met Tibber maximaal 7 dagen terug opvragen")
         count = max(1, min(674, count))
         query = (
-                "{ "
-                '"query": '
-                ' "{ '
-                "  viewer { "
-                "    homes { "
-                "      currentSubscription { "
-                "        priceInfo(resolution: " + resolution + "){ "
-                                                                "          today { "
-                                                                "            energy "
-                                                                "            startsAt "
-                                                                "          } "
-                                                                "          tomorrow { "
-                                                                "            energy "
-                                                                "            startsAt "
-                                                                "          } "
-                                                                "        } "
-                                                                "        priceInfoRange(resolution: "
-                + resolution
-                + ", last: "
-                + str(count)
-                + ") { "
-                  "          nodes { "
-                  "            energy "
-                  "            startsAt "
-                  "          } "
-                  "        } "
-                  "      } "
-                  "    } "
-                  "  } "
-                  '}" '
-                  "}"
+            "{ "
+            '"query": '
+            ' "{ '
+            "  viewer { "
+            "    homes { "
+            "      currentSubscription { "
+            "        priceInfo(resolution: " + resolution + "){ "
+            "          today { "
+            "            energy "
+            "            startsAt "
+            "          } "
+            "          tomorrow { "
+            "            energy "
+            "            startsAt "
+            "          } "
+            "        } "
+            "        priceInfoRange(resolution: "
+            + resolution
+            + ", last: "
+            + str(count)
+            + ") { "
+            "          nodes { "
+            "            energy "
+            "            startsAt "
+            "          } "
+            "        } "
+            "      } "
+            "    } "
+            "  } "
+            '}" '
+            "}"
         )
 
         logging.debug(query)
@@ -256,15 +260,15 @@ class DaPrices:
         }
         resp = post(url, headers=headers, data=query)
         tibber_dict = json.loads(resp.text)
-        today_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-            "currentSubscription"
-        ]["priceInfo"]["today"]
+        today_nodes = tibber_dict["data"]["viewer"]["homes"][0]["currentSubscription"][
+            "priceInfo"
+        ]["today"]
         tomorrow_nodes = tibber_dict["data"]["viewer"]["homes"][0][
             "currentSubscription"
         ]["priceInfo"]["tomorrow"]
-        range_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-            "currentSubscription"
-        ]["priceInfoRange"]["nodes"]
+        range_nodes = tibber_dict["data"]["viewer"]["homes"][0]["currentSubscription"][
+            "priceInfoRange"
+        ]["nodes"]
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         for lst in [today_nodes, tomorrow_nodes, range_nodes]:
             for node in lst:
@@ -287,31 +291,26 @@ class DaPrices:
         startstr = start.strftime("%Y-%m-%dT%H:%M:%S")
         endstr = end.strftime("%Y-%m-%dT%H:%M:%S")
         url = (
-                "https://mijn.easyenergy.com/nl/api/tariff/getapxtariffs?startTimestamp="
-                + startstr
-                + "&endTimestamp="
-                + endstr
+            "https://mijn.easyenergy.com/nl/api/tariff/getapxtariffs?startTimestamp="
+            + startstr
+            + "&endTimestamp="
+            + endstr
         )
         resp = get(url)
         logging.debug(resp.text)
         json_object = json.loads(resp.text)
         df = pd.DataFrame.from_records(json_object)
-        logging.info(
-            f"Day ahead prijzen van Easyenergy:\n {df.to_string(index=False)}"
-        )
+        logging.info(f"Day ahead prijzen van Easyenergy:\n {df.to_string(index=False)}")
         # datetime.datetime.strptime('Tue Jun 22 12:10:20 2010 EST', '%a %b %d %H:%M:%S %Y %Z')
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         df = df.reset_index()  # make sure indexes pair with number of rows
         for row in df.itertuples():
-            dtime = str(
-                int(datetime.datetime.fromisoformat(row.Timestamp).timestamp())
-            )
+            dtime = str(int(datetime.datetime.fromisoformat(row.Timestamp).timestamp()))
             df_db.loc[df_db.shape[0]] = [dtime, "da", row.TariffReturn]
 
         return df_db
 
     def _get_prices_nordpool(self, resolution, date):
-
         # ophalen bij Nordpool
         prices_spot = NordpoolPrices()
 
@@ -353,11 +352,9 @@ class DaPrices:
             )
         return df_db
 
-    def extract_data_epexpredictor(self,
-                                   data:dict,
-                                   know_at:datetime.datetime,
-                                   new_horizon:datetime.datetime
-                                   )->pd.DataFrame:
+    def extract_data_epexpredictor(
+        self, data: dict, know_at: datetime.datetime, new_horizon: datetime.datetime
+    ) -> pd.DataFrame:
         """
         :param data:
         {
@@ -387,16 +384,14 @@ class DaPrices:
             dt = datetime.datetime.strptime(row["startsAt"], "%Y-%m-%dT%H:%M:%S%f%z")
             if know_at < dt <= new_horizon:
                 time_stamp = int(dt.timestamp())
-                value = float(row["total"])/100
+                value = float(row["total"]) / 100
                 logging.info(f"{row} {dt} {time_stamp} {value}")
                 df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
         return df_db
 
-    def extract_data_energypriceforecast_eu(self,
-                                            data:dict,
-                                            know_at:datetime.datetime,
-                                            new_horizon:datetime.datetime
-                                            )->pd.DataFrame:
+    def extract_data_energypriceforecast_eu(
+        self, data: dict, know_at: datetime.datetime, new_horizon: datetime.datetime
+    ) -> pd.DataFrame:
         """
         {
           "api_version": "v1",
@@ -417,13 +412,13 @@ class DaPrices:
             },
 
         """
-        rows = data.get('entries')
+        rows = data.get("entries")
         df_db = pd.DataFrame(columns=["time", "tijd", "code", "value"])
         tz = pytz.timezone(self.time_zone)
         for row in rows:
             utc_dt_str = row["start"].replace("Z", "+00:00")
             utc_dt = datetime.datetime.fromisoformat(utc_dt_str)
-            dt = utc_dt.astimezone(tz)   # tz.localize(dt)
+            dt = utc_dt.astimezone(tz)  # tz.localize(dt)
             if know_at < dt <= new_horizon:
                 time_stamp = int(dt.timestamp())
                 value = float(row["value"])
@@ -431,11 +426,9 @@ class DaPrices:
                 df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
         return df_db
 
-    def extract_data_dap(self,
-                         data:dict,
-                         know_at:datetime.datetime,
-                         new_horizon:datetime.datetime
-                         )->pd.DataFrame:
+    def extract_data_dap(
+        self, data: dict, know_at: datetime.datetime, new_horizon: datetime.datetime
+    ) -> pd.DataFrame:
         """
         :param data:
         [
@@ -458,18 +451,18 @@ class DaPrices:
         """
         df = pd.DataFrame.from_records(data)
         df["time"] = pd.to_datetime(df["time"])
-        df = df.loc[df['time'] > know_at]
-        df = df.loc[df['time'] <= new_horizon]
-        df.rename(columns={"time":"time_dt", "time_ts":"time", "prediction":"value"}, inplace=True)
+        df = df.loc[df["time"] > know_at]
+        df = df.loc[df["time"] <= new_horizon]
+        df.rename(
+            columns={"time": "time_dt", "time_ts": "time", "prediction": "value"},
+            inplace=True,
+        )
         df["code"] = "da"
         return df
 
-    def extract_data_jeroen_nl(self,
-                               data:dict,
-                               know_at:datetime.datetime,
-                               new_horizon:datetime.datetime
-                               )->pd.DataFrame:
-
+    def extract_data_jeroen_nl(
+        self, data: dict, know_at: datetime.datetime, new_horizon: datetime.datetime
+    ) -> pd.DataFrame:
         """
         [
           {
@@ -502,12 +495,12 @@ class DaPrices:
         df_db = pd.DataFrame(columns=["time", "tijd", "code", "value"])
         tz = pytz.timezone(self.time_zone)
         for row in data:
-            utc_dt_str = row["datum_utc"]+"+00:00"
+            utc_dt_str = row["datum_utc"] + "+00:00"
             utc_dt = datetime.datetime.fromisoformat(utc_dt_str)
             dt = utc_dt.astimezone(tz)
             if know_at < dt <= new_horizon:
                 time_stamp = int(dt.timestamp())
-                value_str=row["prijs_excl_belastingen"]
+                value_str = row["prijs_excl_belastingen"]
                 value = float(value_str.replace(",", "."))
                 logging.info(f"{row} {dt} {time_stamp} {value}")
                 df_db.loc[df_db.shape[0]] = [time_stamp, dt, "da", value]
@@ -520,25 +513,29 @@ class DaPrices:
         key = _key.resolve(self._secrets) if _key is not None else None
         extension = 96
         if extension == 0:
-            logging.warning("predicted horizon extension is 0, no predicted prices are returned")
+            logging.warning(
+                "predicted horizon extension is 0, no predicted prices are returned"
+            )
             return
         known_at = self.db_da.get_time_border_record("da").astimezone()
         new_horizon = known_at + datetime.timedelta(hours=extension)
         now = datetime.datetime.now().astimezone()
-        fetch_hours = math.ceil((new_horizon - now).total_seconds()/3600)
-        api_url= api_url.replace("<hours>", str(fetch_hours))
-        api_url= api_url.replace("<region>", self.country)
+        fetch_hours = math.ceil((new_horizon - now).total_seconds() / 3600)
+        api_url = api_url.replace("<hours>", str(fetch_hours))
+        api_url = api_url.replace("<region>", self.country)
         if key is not None:
-            api_url= api_url.replace("<key>", key)
+            api_url = api_url.replace("<key>", key)
         resp = get(api_url)
         if resp.status_code != 200:
-            logging.error(f"No data from {source} off predict prices, "
-                          f"statuscode: {resp.status_code},"
-                          f"message: {resp.text}")
+            logging.error(
+                f"No data from {source} off predict prices, "
+                f"statuscode: {resp.status_code},"
+                f"message: {resp.text}"
+            )
             return resp.status_code
         logging.debug(resp.text)
         json_object = json.loads(resp.text)
-        extract_data_f = "extract_data_"+source
+        extract_data_f = "extract_data_" + source
         df_db = getattr(self, extract_data_f)(json_object, known_at, new_horizon)
         logging.info(
             f"Day ahead prediction prijzen (source: {source}, db-records): \n "

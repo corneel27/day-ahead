@@ -1,4 +1,3 @@
-
 tasks: dict[str, dict[str, str | list[str] | bool]] = {
     "calc_optimum_met_debug": {
         "name": "Optimaliseringsberekening met debug",

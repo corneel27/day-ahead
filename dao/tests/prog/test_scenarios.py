@@ -67,16 +67,16 @@ def test_parse_start_grid_and_errors():
     assert parse_start("2026-01-14 07:00").hour == 7
     assert parse_start("2026-01-14T07:15:00").minute == 15
     with pytest.raises(VocabularyError):
-        parse_start("2026-01-14 07:07")          # off the 15-min grid
+        parse_start("2026-01-14 07:07")  # off the 15-min grid
     with pytest.raises(VocabularyError):
         parse_start("not a date")
 
 
 def test_upsample_repeats_and_truncates():
     out = upsample([1.0, 2.0, 3.0], horizon_hours=2, label="x")
-    assert out == [1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0]   # ×4, truncated to 2 h
+    assert out == [1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0]  # ×4, truncated to 2 h
     with pytest.raises(VocabularyError):
-        upsample([1.0], horizon_hours=3, label="x")           # too short
+        upsample([1.0], horizon_hours=3, label="x")  # too short
     with pytest.raises(VocabularyError):
         upsample([], horizon_hours=1, label="x")
 
@@ -89,25 +89,64 @@ def test_set_dotted_nested_and_indexed():
 
 
 def test_loader_accepts_a_minimal_scenario():
-    s = parse_scenario({
-        "id": "u1", "description": "d", "start": "2026-01-14 07:00",
-        "prices": {"cons": [0.3, 0.3]},
-        "expect": {"solved": True},
-    }, source_file="unit.json")
+    s = parse_scenario(
+        {
+            "id": "u1",
+            "description": "d",
+            "start": "2026-01-14 07:00",
+            "prices": {"cons": [0.3, 0.3]},
+            "expect": {"solved": True},
+        },
+        source_file="unit.json",
+    )
     assert s.horizon_hours == 2 and s.prices_prod is None and s.solar is None
 
 
-@pytest.mark.parametrize("bad, needle", [
-    ({"id": "x", "description": "d", "start": "2026-01-14 07:00"}, "prices"),
-    ({"id": "x", "description": "d", "start": "2026-01-14 07:00",
-      "prices": {"cons": [0.3, 0.3]}, "expect": {"bogus_key": True}}, "expect key"),
-    ({"id": "x", "description": "d", "start": "2026-01-14 07:07",
-      "prices": {"cons": [0.3, 0.3]}}, "15-minute"),
-    ({"id": "x", "description": "d", "start": "2026-01-14 07:00",
-      "prices": {"cons": [0.3, 0.3]}, "solar": ["sunny"]}, "list of numbers"),
-    ({"id": "x", "description": "d", "start": "2026-01-14 07:00",
-      "prices": {"cons": [0.3, 0.3]}, "nope": 1}, "unknown scenario key"),
-])
+@pytest.mark.parametrize(
+    "bad, needle",
+    [
+        ({"id": "x", "description": "d", "start": "2026-01-14 07:00"}, "prices"),
+        (
+            {
+                "id": "x",
+                "description": "d",
+                "start": "2026-01-14 07:00",
+                "prices": {"cons": [0.3, 0.3]},
+                "expect": {"bogus_key": True},
+            },
+            "expect key",
+        ),
+        (
+            {
+                "id": "x",
+                "description": "d",
+                "start": "2026-01-14 07:07",
+                "prices": {"cons": [0.3, 0.3]},
+            },
+            "15-minute",
+        ),
+        (
+            {
+                "id": "x",
+                "description": "d",
+                "start": "2026-01-14 07:00",
+                "prices": {"cons": [0.3, 0.3]},
+                "solar": ["sunny"],
+            },
+            "list of numbers",
+        ),
+        (
+            {
+                "id": "x",
+                "description": "d",
+                "start": "2026-01-14 07:00",
+                "prices": {"cons": [0.3, 0.3]},
+                "nope": 1,
+            },
+            "unknown scenario key",
+        ),
+    ],
+)
 def test_loader_rejects_malformed(bad, needle):
     with pytest.raises(ScenarioLoadError) as ei:
         parse_scenario(bad)
@@ -116,9 +155,11 @@ def test_loader_rejects_malformed(bad, needle):
 
 def test_loader_rejects_duplicate_ids(tmp_path):
     (tmp_path / "a.json").write_text(
-        '[{"id":"dup","description":"d","start":"2026-01-14 07:00","prices":{"cons":[0.3,0.3]}}]')
+        '[{"id":"dup","description":"d","start":"2026-01-14 07:00","prices":{"cons":[0.3,0.3]}}]'
+    )
     (tmp_path / "b.json").write_text(
-        '[{"id":"dup","description":"d","start":"2026-01-14 07:00","prices":{"cons":[0.3,0.3]}}]')
+        '[{"id":"dup","description":"d","start":"2026-01-14 07:00","prices":{"cons":[0.3,0.3]}}]'
+    )
     with pytest.raises(ScenarioLoadError) as ei:
         loader.load_cases_dir(tmp_path)
     assert "duplicate scenario id 'dup'" in str(ei.value)

@@ -1,4 +1,5 @@
 """Exercise database startup with SQLite and explicitly enabled disposable servers."""
+
 import os
 from types import SimpleNamespace
 from uuid import uuid4
@@ -15,8 +16,15 @@ from dao.lib.db_manager import DBmanagerObj
 @pytest.fixture(params=["sqlite", "mariadb", "postgresql"])
 def database(request, tmp_path):
     backend = request.param
-    options = {"engine": "sqlite", "database": "review.db", "db_path": str(tmp_path),
-               "server": None, "username": None, "password": None, "port": 0}
+    options = {
+        "engine": "sqlite",
+        "database": "review.db",
+        "db_path": str(tmp_path),
+        "server": None,
+        "username": None,
+        "password": None,
+        "port": 0,
+    }
     if backend != "sqlite":
         value = os.getenv(f"DAO_TEST_{backend.upper()}_URL")
         if not value or os.getenv("DAO_TEST_ALLOW_SCHEMA_RESET") != "1":
@@ -24,17 +32,30 @@ def database(request, tmp_path):
         server = make_url(value)
         dialect = "mysql" if backend == "mariadb" else "postgresql"
         if server.database != "dao_query_test" or server.get_backend_name() != dialect:
-            raise ValueError("Database fixtures require the dedicated dao_query_test configuration")
+            raise ValueError(
+                "Database fixtures require the dedicated dao_query_test configuration"
+            )
         # Only this test's uniquely named database may be created or dropped.
-        options.update(engine=dialect, database="dao_dependency_" + uuid4().hex,
-                       server=server.host, port=server.port or (3306 if dialect == "mysql" else 5432),
-                       username=server.username,
-                       password=SimpleNamespace(resolve=lambda secrets: server.password))
-    config = SimpleNamespace(database_da=SimpleNamespace(**options),
-                             database_ha=SimpleNamespace(**options), time_zone="Europe/Amsterdam")
+        options.update(
+            engine=dialect,
+            database="dao_dependency_" + uuid4().hex,
+            server=server.host,
+            port=server.port or (3306 if dialect == "mysql" else 5432),
+            username=server.username,
+            password=SimpleNamespace(resolve=lambda secrets: server.password),
+        )
+    config = SimpleNamespace(
+        database_da=SimpleNamespace(**options),
+        database_ha=SimpleNamespace(**options),
+        time_zone="Europe/Amsterdam",
+    )
     url = DBmanagerObj.db_url(
-        db_dialect=options["engine"], db_name=options["database"], db_path=options["db_path"],
-        db_server=options["server"], db_user=options["username"], db_port=options["port"],
+        db_dialect=options["engine"],
+        db_name=options["database"],
+        db_path=options["db_path"],
+        db_server=options["server"],
+        db_user=options["username"],
+        db_port=options["port"],
         db_password=options["password"].resolve({}) if options["password"] else None,
     )
     try:

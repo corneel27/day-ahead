@@ -28,7 +28,12 @@ def parse_start(value: str) -> dt.datetime:
     silent round, because the price and solar arrays are indexed from here."""
     if not isinstance(value, str):
         raise VocabularyError(f"start must be a string, got {value!r}")
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M",
+    ):
         try:
             parsed = dt.datetime.strptime(value, fmt)
             break
@@ -75,7 +80,9 @@ def interval_grid(start: dt.datetime, horizon_hours: int) -> list[dt.datetime]:
     return [start + dt.timedelta(minutes=INTERVAL_MIN * i) for i in range(n)]
 
 
-def model_grid(start: dt.datetime, fixed_hours: int, predicted_hours: int = 0) -> list[dt.datetime]:
+def model_grid(
+    start: dt.datetime, fixed_hours: int, predicted_hours: int = 0
+) -> list[dt.datetime]:
     """Start time of every model interval u. The fixed part is on the
     15-minute grid. With a price prediction, day_ahead.py continues on an
     hourly grid for the predicted hours."""
@@ -85,10 +92,14 @@ def model_grid(start: dt.datetime, fixed_hours: int, predicted_hours: int = 0) -
 
 def model_row_hours(fixed_hours: int, predicted_hours: int = 0) -> list[float]:
     """Length in hours of every model interval u, matching model_grid."""
-    return [INTERVAL_MIN / 60] * (fixed_hours * STEPS_PER_HOUR) + [1.0] * predicted_hours
+    return [INTERVAL_MIN / 60] * (fixed_hours * STEPS_PER_HOUR) + [
+        1.0
+    ] * predicted_hours
 
 
-def expand_to_model_grid(hourly: list[float], fixed_hours: int, predicted_hours: int, *, label: str) -> list[float]:
+def expand_to_model_grid(
+    hourly: list[float], fixed_hours: int, predicted_hours: int, *, label: str
+) -> list[float]:
     """An hourly array over the whole horizon, expanded to model_grid: each
     fixed hour repeats STEPS_PER_HOUR times, each predicted hour once."""
     horizon_hours = fixed_hours + predicted_hours
@@ -111,7 +122,9 @@ def parse_offset(spec: str, start: dt.datetime) -> dt.datetime:
         raise VocabularyError(f"offset must be a string like '+8h', got {spec!r}")
     m = _OFFSET_RE.match(spec.strip())
     if not m or (m.group("hours") is None and m.group("minutes") is None):
-        raise VocabularyError(f"offset {spec!r} is not '[+-]NhNm' (e.g. '+8h', '+3h20m', '-24h')")
+        raise VocabularyError(
+            f"offset {spec!r} is not '[+-]NhNm' (e.g. '+8h', '+3h20m', '-24h')"
+        )
     sign = -1 if m.group("sign") == "-" else 1
     hours = float(m.group("hours") or 0)
     minutes = float(m.group("minutes") or 0)
@@ -127,7 +140,9 @@ def parse_time_of_day(hhmm: str, *, on_or_after: dt.datetime) -> dt.datetime:
         t = dt.datetime.strptime(hhmm.strip(), "%H:%M")
     except (ValueError, AttributeError) as ex:
         raise VocabularyError(f"window time {hhmm!r} is not 'HH:MM'") from ex
-    candidate = on_or_after.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
+    candidate = on_or_after.replace(
+        hour=t.hour, minute=t.minute, second=0, microsecond=0
+    )
     if candidate < on_or_after:
         candidate += dt.timedelta(days=1)
     return candidate
@@ -153,7 +168,9 @@ def window_indices(
         except (TypeError, ValueError) as ex:
             raise VocabularyError(f"window date {date!r} is not 'YYYY-MM-DD'") from ex
     w_start = parse_time_of_day(window_start, on_or_after=anchor)
-    w_end = parse_time_of_day(window_end, on_or_after=w_start + dt.timedelta(minutes=INTERVAL_MIN))
+    w_end = parse_time_of_day(
+        window_end, on_or_after=w_start + dt.timedelta(minutes=INTERVAL_MIN)
+    )
     n = len(grid)
     if n == 0:
         return range(0)

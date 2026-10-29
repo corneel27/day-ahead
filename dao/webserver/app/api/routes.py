@@ -50,7 +50,6 @@ def api_report(fld: str, periode: str):
 
 @api.route("/run/<string:task>", methods=["GET", "POST"])
 def run_api(task: str):
-
     def find_task(cmd: str) -> str | None:
         for key, task in tasks.items():
             if cmd == key or cmd in task.get("aliases", []):
@@ -67,20 +66,17 @@ def run_api(task: str):
         )
 
     proc = subprocess_run(
-        tasks[matched_task]["cmd"],
-        cwd=PROG_DIR,
-        capture_output=True,
-        text=True
+        tasks[matched_task]["cmd"], cwd=PROG_DIR, capture_output=True, text=True
     )
     data = proc.stdout
     err = proc.stderr
     log_content = data + err
     filename = (
-            "../data/log/"
-            + tasks[matched_task]["file_name"]
-            + "_"
-            + datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
-            + ".log"
+        "../data/log/"
+        + tasks[matched_task]["file_name"]
+        + "_"
+        + datetime.now().strftime("%Y-%m-%d__%H:%M:%S")
+        + ".log"
     )
     with open(filename, "w") as f:
         f.write(log_content)
@@ -97,10 +93,12 @@ def data():
     Retourneert in json de data
     :return: de gevraagde data in json formaat
     """
-    start = request.args.get('start', )
-    end = request.args.get('end')
-    aggregate = request.args.get('aggregate')
-    fields = request.args.get('fields')
+    start = request.args.get(
+        "start",
+    )
+    end = request.args.get("end")
+    aggregate = request.args.get("aggregate")
+    fields = request.args.get("fields")
 
     if aggregate not in {"15min", "hour", "day", "week", "month"}:
         return {"error": "Ongeldig aggregate interval"}, 400
@@ -108,7 +106,7 @@ def data():
     if fields:
         fields = fields.split(",")
 
-    timezone_raw = request.args.get('timezone', 'Europe/Amsterdam')
+    timezone_raw = request.args.get("timezone", "Europe/Amsterdam")
 
     try:
         timezone = ZoneInfo(timezone_raw)
@@ -116,11 +114,13 @@ def data():
         end_dt = datetime.fromisoformat(end)
         start_dt = (
             start_dt.replace(tzinfo=timezone)
-            if start_dt.tzinfo is None else start_dt.astimezone(timezone)
+            if start_dt.tzinfo is None
+            else start_dt.astimezone(timezone)
         )
         end_dt = (
             end_dt.replace(tzinfo=timezone)
-            if end_dt.tzinfo is None else end_dt.astimezone(timezone)
+            if end_dt.tzinfo is None
+            else end_dt.astimezone(timezone)
         )
         if end_dt <= start_dt:
             raise ValueError("End must follow start")
@@ -148,12 +148,10 @@ def data():
         else:
             return dt.strftime("%Y-%m-%d")
 
-    data = [
-        {**row, "ts": format_ts(row["ts"], aggregate)}
-        for row in data
-    ]
+    data = [{**row, "ts": format_ts(row["ts"], aggregate)} for row in data]
 
     return data
+
 
 # @api.route("/data-sql-ha/")
 # def data_sql_ha():

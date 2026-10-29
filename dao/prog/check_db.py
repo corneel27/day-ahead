@@ -330,9 +330,9 @@ class CheckDB:
         """
 
         # Create aggregate column if it does not exist
-        if self.ensure_column('variabel', 'aggregate', 'VARCHAR(3) NOT NULL', 'avg'):
+        if self.ensure_column("variabel", "aggregate", "VARCHAR(3) NOT NULL", "avg"):
             with self.engine.begin() as connection:
-                qagg = self.engine.dialect.identifier_preparer.quote('aggregate')
+                qagg = self.engine.dialect.identifier_preparer.quote("aggregate")
                 connection.execute(
                     text(
                         f"""
@@ -388,8 +388,7 @@ class CheckDB:
                 existing_indexes = inspector.get_indexes(table_name)
 
                 has_time_index = any(
-                    index.get("column_names") == ["time"]
-                    for index in existing_indexes
+                    index.get("column_names") == ["time"] for index in existing_indexes
                 )
 
                 if not has_time_index:
@@ -409,11 +408,11 @@ class CheckDB:
                         bind=connection,
                         checkfirst=True,
                     )
-                    print(
-                        f"Index '{index_name}' toegevoegd aan tabel '{table_name}'."
-                    )
+                    print(f"Index '{index_name}' toegevoegd aan tabel '{table_name}'.")
 
-    def ensure_column(self, table_name: str, column_name: str, type: String, default: String = None) -> bool:
+    def ensure_column(
+        self, table_name: str, column_name: str, type: String, default: String = None
+    ) -> bool:
         """
         Create a column on a table if it does not exist
         :return: Boolean indicating whether the column was created
@@ -425,21 +424,23 @@ class CheckDB:
         if not has_column:
             with self.engine.begin() as connection:
                 quoted_table = self.engine.dialect.identifier_preparer.quote(table_name)
-                quoted_column = self.engine.dialect.identifier_preparer.quote(column_name)
+                quoted_column = self.engine.dialect.identifier_preparer.quote(
+                    column_name
+                )
 
                 if default is not None:
                     quoted_default = literal(default).compile(
                         dialect=self.engine.dialect,
                         compile_kwargs={"literal_binds": True},
                     )
-                    default_expr = f'DEFAULT {quoted_default}'
+                    default_expr = f"DEFAULT {quoted_default}"
                 else:
-                    default_expr = ''
+                    default_expr = ""
 
                 connection.execute(
                     text(
-                        f'ALTER TABLE {quoted_table} '
-                        f'ADD COLUMN {quoted_column} {type} {default_expr}'
+                        f"ALTER TABLE {quoted_table} "
+                        f"ADD COLUMN {quoted_column} {type} {default_expr}"
                     )
                 )
 
