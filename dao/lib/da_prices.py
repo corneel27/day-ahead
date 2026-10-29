@@ -176,7 +176,6 @@ class DaPrices:
         :param end:
         :return: dataframe
         """
-        from dao.prog.da_base import DaBase
         spot_sensor = self.config.prices.ha_epex_spot
         entity = spot_sensor.ha_entity
         ha_attribute = spot_sensor.ha_attribute

@@ -6,7 +6,7 @@ from datetime import date
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import Literal
 
-from .base import SecretStr, EntityId
+from .base import EntityId, SecretStr
 
 
 class PricePrediction(BaseModel):
