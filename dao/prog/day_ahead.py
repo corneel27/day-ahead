@@ -3531,7 +3531,7 @@ class DaCalc(DaBase):
                 solar_hour_sum_org[u] += solar_prod[s][u]  # pv_ac[s][u].x
                 solar_hour_sum_opt[u] += pv_ac[s][u].x
             netto = (
-                b_l[u]
+                b_l[u] * interval_fraction[u]
                 + c_b[u].x
                 + c_hp[u].x
                 + c_ev_sum[u]
@@ -3840,7 +3840,7 @@ class DaCalc(DaBase):
             row = row + [
                 c_l[u].x,
                 c_t[u].x,
-                b_l[u],
+                b_l[u] * interval_fraction[u],
                 c_b[u].x,
                 c_hp[u].x,
                 c_ev_sum[u],
@@ -4669,7 +4669,7 @@ class DaCalc(DaBase):
         for u in range(U):
             c_t_n.append(-c_t[u].x/hour_fraction[u])
             c_l_p.append(c_l[u].x/hour_fraction[u])
-            base_n.append(-b_l[u]/hour_fraction[u])
+            base_n.append(-b_l[u] * interval_fraction[u] / hour_fraction[u])
             boiler_n.append(-c_b[u].x/hour_fraction[u])
             heatpump_n.append(-c_hp[u].x/hour_fraction[u])
             ev_n.append(-c_ev_sum[u]/hour_fraction[u])
@@ -4688,7 +4688,7 @@ class DaCalc(DaBase):
                 max_y,
                 c_l_p[u] + pv_p_org[u] + accu_out_p[u],
                 (abs(c_t[u].x)
-                + b_l[u]
+                + b_l[u] * interval_fraction[u]
                 + c_b[u].x
                 + c_hp[u].x
                 + c_ev_sum[u]
