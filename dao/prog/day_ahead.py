@@ -2262,9 +2262,9 @@ class DaCalc(DaBase):
                     model += low_soc_penalty_int[e][u] == 0
                     model += ev_is_off[e][u] == 1
                     model += ev_is_on[e][u] == 0
-                    stage_on[e][0][u] == 1
+                    model += stage_on[e][0][u] == 1
                     for cs in range(ECS[e][1:]):
-                        stage_on[e][cs][u] == 0
+                        model += stage_on[e][cs][u] == 0
 
                 """
                 max_beschikbaar = 0
