@@ -51,6 +51,7 @@
   - [FlexEnum](#flexenum)
   - [FlexFloat](#flexfloat)
   - [FlexInt](#flexint)
+  - [HADataSensor](#hadatasensor)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
   - [PricePrediction](#priceprediction)
@@ -1337,7 +1338,8 @@ System uses tariff active on optimization date.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
+| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber`, `ha` |
+| `ha_epex_spot` | [HADataSensor](#hadatasensor) (optional) | No | `null` | Configuration of getting pricedata from the ha-custom component 'epex spot'. |
 | `prediction` | [PricePrediction](#priceprediction) (optional) | No | `null` | Configuration of getting and using priceprediction beyond the day ahead spotprices of epex. |
 | `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
@@ -1356,7 +1358,11 @@ System uses tariff active on optimization date.
 
 **`source day ahead`**
 
-Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.
+Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration. 'ha' for generic solutions
+
+**`ha_epex_spot`**
+
+Configuration of getting the day ahead prices from 'epex spot'.
 
 **`prediction`**
 
@@ -1992,6 +1998,37 @@ FlexValue enables dynamic configuration using Home Assistant entities. Instead o
 *No configuration fields.*
 
 
+### HADataSensor
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `ha_entity` | [EntityId](#entityid) (optional) | No | `"sensor.epex_spot_data_market_price"` | HA sensor where data are available as attribute |
+| `ha_attribute` | string (optional) | No | `"data"` | The name of attribute in the HA sensor where a list of data are available.Every item in de list contain at least a datetime field and a value field |
+| `ha_datetime_field` | string (optional) | No | `"start_time"` | The name of datetime field in the list item |
+| `ha_value_field` | string (optional) | No | `"price_per_kwh"` | The name of value field in the list item |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`ha_entity`**
+
+Optional: Home Assistant sensor with data.
+
+**`ha_attribute`**
+
+Home Assistant sensor the name of the attribute with the data. 
+
+**`ha_datetime_field`**
+
+Home Assistant sensor the name/key of the datetime-field in the list-item. 
+
+**`ha_value_field`**
+
+Home Assistant sensor the name/key of the value-field in the list-item. 
+
+</details>
+
+
 ### HeatingStage
 
 _Single heating stage with power and COP._
@@ -2064,7 +2101,7 @@ The name of the supplier of prediction data, now there is support for epexpredic
 
 **`api`**
 
-The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json
+The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.jsonfor jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json
 
 **`api_key`**
 
