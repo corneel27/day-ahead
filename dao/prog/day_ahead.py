@@ -271,7 +271,6 @@ class DaCalc(DaBase):
         prog_data["da_ex"] = price_data["da_ex"]
         prog_data["da_cons"] = price_data["da_cons"]
         prog_data["da_prod"] = price_data["da_prod"]
-
         logging.debug(f"Prognose data:\n{prog_data.to_string()}")
         pd.options.display.float_format = "{:.3f}".format
 
