@@ -7,6 +7,7 @@ This is the last testrelease before the next stable release (unless some finds a
 - Implemented ha_epex_spot as day ahead source (via generic ha-datasource)
 - Further implementation of CI/CD (thanks @Dogooder)
 - Speed up runs and PNG generation (thanks @dewi-ny-je)
+- Make cop of your hp dependent of the outdoor temperature (thanks @llevering)
 
 ## Fixes
 - Heat pump curve adjustment is also performed when no heat is needed
