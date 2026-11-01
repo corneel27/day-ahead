@@ -1,6 +1,6 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# 2026.10.0.rc3
+# 2026.11.0.rc1
 This is the last testrelease before the next stable release (unless some finds an error that must be fixed and tested).
 
 ## Changes
