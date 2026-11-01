@@ -1,8 +1,12 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
-# 2026.11.0.rc1
+# 2026.11.0.rc2
 This is the last testrelease before the next stable release (unless some finds an error that must be fixed and tested).
 
+## Fixes
+Fixed dt-error in several report/api requests
+
+# 2026.11.0.rc1
 ## Changes
 - Implemented ha_epex_spot as day ahead source (via generic ha-datasource)
 - Further implementation of CI/CD (thanks @Dogooder)
