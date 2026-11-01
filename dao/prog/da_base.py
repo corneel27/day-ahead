@@ -185,7 +185,8 @@ class DaBase(hass.Hass):
             self.db_da,
             country=self.ha_context.country,
             secrets=self.loader.secrets,
-            time_zone=self.ha_context.time_zone
+            time_zone=self.ha_context.time_zone,
+            da_base_obj=self
         )
         self.prices_options = self.config.prices
         # eb + ode levering
