@@ -3556,6 +3556,11 @@ class DaCalc(DaBase):
         # cbcbox 2.929: de generieke build gebruikt AVX in nauty (symmetrie),
         # dat geeft SIGILL op CPU's zonder AVX zodra CBC zijn heuristieken draait
         mip.cbc.cbc_set_parameter(model.solver, "OrbitalBranching", "off")
+        if PWL_FORMULATION == "log":
+            # cbcbox 2.929: met de log-formulering zet CBC's preprocessing
+            # (CglPreProcess) de oplossing verkeerd terug naar het model:
+            # status OPTIMAL, maar SoC buiten 0..100% en rendementen > 100%
+            model.preprocess = 0
         if getattr(self, "_debug_capture_vars", False):
             try:
                 from da_debug import build_var_registry
@@ -3565,7 +3570,6 @@ class DaCalc(DaBase):
                 logging.warning(
                     "Kon debug variabele-registry niet opbouwen", exc_info=True
                 )
-        # model.check_optimization_results()
 
         # kosten optimalisering
         if self.strategy == "minimize cost":
@@ -3634,6 +3638,14 @@ class DaCalc(DaBase):
             logging.error(
                 "Er is helaas geen oplossing gevonden, kijk naar je instellingen."
             )
+            return False
+
+        # controleer of de oplossing aan alle constraints en grenzen voldoet,
+        # zodat een onmogelijke planning nooit naar HA gaat
+        try:
+            model.check_optimization_results()
+        except (mip.InfeasibleSolution, AssertionError) as ex:
+            logging.error(f"De oplossing van de solver is ongeldig: {ex}")
             return False
 
         # er is een oplossing
