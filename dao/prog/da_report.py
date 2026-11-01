@@ -3370,8 +3370,7 @@ class Report(DaBase):
             )
             return result
 
-        # df["time"] = pd.to_datetime(df["time"])
-        df["time_ts"] = df["time"].dt.tz_localize(self.time_zone)
+        df["time_ts"] = pd.to_datetime(df["time"]).dt.tz_localize(self.time_zone)
         df["time"] = df["time"].apply(
             lambda x: x if isinstance(x, str) else x.strftime("%Y-%m-%d %H:%M")
         )
