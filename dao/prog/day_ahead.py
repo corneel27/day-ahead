@@ -496,6 +496,7 @@ class DaCalc(DaBase):
             b_l = b_l[:-1]
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
+        b_l[0] *= interval_fraction_first_interval
         # p_avg1 = sum(pl) / U  # max(pl) #
         sum_w_prices = 0
         sum_hf = 0
