@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .base import SecretStr
+from .base import EntityId, SecretStr
 
 
 class PricePrediction(BaseModel):
@@ -36,8 +36,8 @@ class PricePrediction(BaseModel):
             "x-help": "The url of the supplier to get the prediction data"
                       "for Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>"
                       "for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>"
-                      "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
-                      "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json"
+                      "for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"
+                      "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json",
             "x-ui-section": "Prices",
         },
     )
@@ -59,21 +59,70 @@ class PricePrediction(BaseModel):
         },
     )
 
+class HADataSensor(BaseModel):
+    ha_entity: EntityId | None = Field(
+        default="sensor.epex_spot_data_market_price",
+        description="HA sensor where data are available as attribute",
+        json_schema_extra={
+            "x-help": "Optional: Home Assistant sensor with data.",
+            "x-ui-section": "Prices",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    ha_attribute: str | None = Field(
+        default="data",
+        description="The name of attribute in the HA sensor where a list of data are available."
+                    "Every item in de list contain at least a datetime field and a value field",
+        json_schema_extra={
+            "x-help": "Home Assistant sensor the name of the attribute with the data. ",
+            "x-ui-section": "Prices",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    ha_datetime_field: str | None = Field(
+        default="start_time",
+        description="The name of datetime field in the list item",
+        json_schema_extra={
+            "x-help": "Home Assistant sensor the name/key of the datetime-field in the list-item. ",
+            "x-ui-section": "Prices",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+    ha_value_field: str | None = Field(
+        default="price_per_kwh",
+        description="The name of value field in the list item",
+        json_schema_extra={
+            "x-help": "Home Assistant sensor the name/key of the value-field in the list-item. ",
+            "x-ui-section": "Prices",
+            "x-ui-widget-filter": "sensor",
+        },
+    )
+
 
 class PricingConfig(BaseModel):
     """Day-ahead pricing and tariff configuration."""
 
-    source_day_ahead: Literal["nordpool", "entsoe", "tibber"] = Field(
+    source_day_ahead: Literal["nordpool", "entsoe", "tibber", "ha"] = Field(
         default="nordpool",
         alias="source day ahead",
         description="Source for day-ahead prices",
         json_schema_extra={
-            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+            "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe'"
+                      " for European markets, 'tibber' if using Tibber integration. "
+                      "'ha' for generic solutions",
+            "x-ui-section": "Prices",
+        }
+    )
+    ha_epex_spot : HADataSensor | None = Field(
+        default_factory=HADataSensor,
+        description="Configuration of getting pricedata from the ha-custom component 'epex spot'.",
+        json_schema_extra={
+            "x-help": "Configuration of getting the day ahead prices from 'epex spot'.",
             "x-ui-section": "Prices",
         },
     )
     prediction: PricePrediction | None = Field(
-        default_factory = PricePrediction,
+        default_factory=PricePrediction,
         description="Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",
         json_schema_extra={
             "x-help": "Configuration of getting and using priceprediction beyond the day ahead spotprices of epex.",

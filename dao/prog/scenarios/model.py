@@ -39,10 +39,18 @@ class Scenario:
     # clock is pinned here and every hourly array starts here.
     start: str
 
-    # hourly €/kWh. cons length defines the horizon in hours. prod
-    # defaults to cons.
+    # hourly €/kWh. cons length defines the fixed (day-ahead) part of the
+    # horizon in hours. prod defaults to cons.
     prices_cons: list[float] = field(default_factory=list)
     prices_prod: list[float] | None = None
+    # hourly €/kWh predicted beyond the fixed part (prices.predicted). Its
+    # length becomes prices.prediction.extension, and day_ahead.py solves
+    # these hours on an hourly grid after the 15-minute fixed part.
+    prices_pred_cons: list[float] = field(default_factory=list)
+    prices_pred_prod: list[float] | None = None
+
+    # The solar, baseload and temp arrays below are hourly and cover the
+    # whole horizon, fixed plus predicted hours.
 
     # hourly kW total house PV. Defaults to all-zero across the horizon.
     solar: list[float] | None = None
@@ -77,5 +85,13 @@ class Scenario:
     source_file: str = ""
 
     @property
-    def horizon_hours(self) -> int:
+    def fixed_hours(self) -> int:
         return len(self.prices_cons)
+
+    @property
+    def predicted_hours(self) -> int:
+        return len(self.prices_pred_cons)
+
+    @property
+    def horizon_hours(self) -> int:
+        return self.fixed_hours + self.predicted_hours

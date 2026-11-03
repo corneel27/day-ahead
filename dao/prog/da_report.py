@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from pandas.core.dtypes.inference import is_number
-from sklearn.metrics import r2_score
 from sqlalchemy import (
     BigInteger,
     String,
@@ -36,6 +35,9 @@ from dao.prog.utils import get_value_from_dict
 def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
     if serie_x.count() < 24 or serie_y.count() < 24:
         return pd.NA
+    # imported here to speed up the runs which don't need it
+    from sklearn.metrics import r2_score
+
     return r2_score(serie_x, serie_y)
 
 
@@ -2265,6 +2267,15 @@ class Report(DaBase):
                         df_prices = pd.concat([df_prices, df_prog_prices])
 
             df_prices.rename(columns={"time": "tijd"}, inplace=True)
+            """
+            df_prices = df_prices.groupby(["tijd"], as_index=False).agg(
+                {
+                    "da_ex": "mean",
+                    "da_cons": "mean",
+                    "da_prod": "mean",
+                }
+            )
+            """
             df_prices.index = pd.to_datetime(df_prices["tijd"])
             df_ha = self.copy_col_df(df_prices, df_ha, "da_cons")
             df_ha = self.copy_col_df(df_prices, df_ha, "da_prod")
@@ -3091,7 +3102,7 @@ class Report(DaBase):
                         1 + btw_t / 100
                 )
             else:
-                da_prod = (row.value + ol_t) * (1 + btw_t / 100)
+                da_prod = (row.value * multiplier_t + ol_t) * (1 + btw_t / 100)
             df.loc[df.shape[0]] = [
                 datetime.datetime.strptime(row.time, "%Y-%m-%d %H:%M"),
                 row.value,
@@ -3284,7 +3295,7 @@ class Report(DaBase):
             )
         df_result["time"] = df_result["tijd"]
         df_result["datasoort"] = "expected"
-        # df_result["time_ts"] = df_result["time"].apply(lambda x: int(x.timestamp()))
+        df_result["time_ts"] = df_result["time"].apply(lambda x: int(x.timestamp()))
         df_result.drop("tijd", axis=1, inplace=True)
         df_result["time"] = df_result["time"].dt.tz_localize(None)
         df_result.index = df_result["time"]
@@ -3330,7 +3341,12 @@ class Report(DaBase):
             "profit",
             "netto_cost",
         ]
-        tot = self.periodes[periode]["tot"] if _tot is None else _tot
+        if _tot is not None:
+            tot = _tot
+        else:
+            tot = self.periodes[periode]["tot"]
+            if periode == "vandaag en morgen" and self.config.prices.prediction.extension>0:
+                tot = tot + datetime.timedelta(hours=self.config.prices.prediction.extension)
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode, _tot=tot)
@@ -3388,7 +3404,9 @@ class Report(DaBase):
         if _tot is not None:
             df = df[df["time"] < _tot].copy()
         df["time_ts"] = df["time"].dt.tz_localize(self.time_zone)
-        df["time"] = df["time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+        df["time"] = df["time"].apply(
+            lambda x: x if isinstance(x, str) else x.strftime("%Y-%m-%d %H:%M")
+        )
         df.rename(columns={"datasoort": "datatype"}, inplace=True)
         cols = df.columns.tolist()
         cols = cols[-1:] + cols[:-1]

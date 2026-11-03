@@ -45,6 +45,50 @@ class HeatingStage(BaseModel):
     )
 
 
+class CopTemperaturePoint(BaseModel):
+    """Point of the COP temperature curve: a COP factor at an outdoor temperature."""
+
+    temperature: float = Field(
+        description="Outdoor temperature in °C",
+        json_schema_extra={
+            "x-help": "Outdoor temperature in °C at which the factor applies.",
+            "x-unit": "°C",
+            "x-ui-section": "General",
+        },
+    )
+    factor: float = Field(
+        gt=0,
+        description="COP factor at this outdoor temperature",
+        json_schema_extra={
+            "x-help": "Factor applied to every stage COP at this outdoor temperature. "
+            "1.0 at the temperature the stage COPs are given for (e.g. 7 °C, the A7 rating point).",
+            "x-unit": "factor",
+            "x-ui-section": "General",
+            "x-validation-hint": "Must be > 0",
+        },
+    )
+
+    model_config = ConfigDict(populate_by_name=True, loc_by_alias=False)
+
+
+def cop_temperature_factor(
+    curve: list["CopTemperaturePoint"], temperature: float
+) -> float:
+    """COP factor at an outdoor temperature: linear between the curve points,
+    the nearest end point's factor outside them, 1.0 without a curve."""
+    if not curve:
+        return 1.0
+    if temperature <= curve[0].temperature:
+        return curve[0].factor
+    for lo, hi in zip(curve, curve[1:], strict=False):
+        if temperature <= hi.temperature:
+            fraction = (temperature - lo.temperature) / (
+                hi.temperature - lo.temperature
+            )
+            return lo.factor + fraction * (hi.factor - lo.factor)
+    return curve[-1].factor
+
+
 class HeatingDisabled(BaseModel):
     """Heating system disabled — only heater_present is required."""
 
@@ -138,6 +182,21 @@ class HeatingEnabled(BaseModel):
             "When a 0 W stage is missed this is supplied by the program.",
             "x-ui-section": "Power Stages",
             "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power",
+        },
+    )
+    cop_temperature_curve: list[CopTemperaturePoint] = Field(
+        default=[],
+        description="COP factor per outdoor temperature",
+        json_schema_extra={
+            "x-help": "Optional: how the COP changes with the outdoor temperature. "
+            "Each point gives a factor on all stage COPs at an outdoor temperature; "
+            "between points the factor is interpolated linearly, outside them the nearest point's factor is used. "
+            "The stage COPs are then the COPs at the temperature where the factor is 1.0 (e.g. 7 °C). "
+            "For every interval the factor at the forecast temperature (meteo) is used, "
+            "so the heat pump is planned in the warmer hours when the higher COP outweighs the price. "
+            "Empty: the stage COPs are used for every temperature.",
+            "x-ui-section": "Power Stages",
+            "x-validation-hint": "Sorted by temperature (ascending), factors > 0",
         },
     )
     entity_adjust_heating_curve: EntityId | None = Field(
@@ -284,7 +343,15 @@ Define power levels and corresponding COP values:
 
     @model_validator(mode="after")
     def validate_stages(self) -> "HeatingEnabled":
-        """Validate stages: required for 'power' adjustment, must be sorted, and get a zero-power sentinel."""
+        """Validate stages: required for 'power' adjustment, must be sorted, and get a zero-power sentinel.
+        The COP temperature curve must be sorted by temperature."""
+        temperatures = [point.temperature for point in self.cop_temperature_curve]
+        if len(set(temperatures)) != len(temperatures) or temperatures != sorted(
+            temperatures
+        ):
+            raise ValueError(
+                "cop_temperature_curve must be sorted by temperature (ascending), without duplicates"
+            )
         if len(self.stages) == 0:
             if self.adjustment in ("power", "heating curve"):
                 raise ValueError(

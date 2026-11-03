@@ -356,7 +356,7 @@ def tasks():
     ui_tasks = {
         name: task
         for name, task in tasks.items()
-        if task.get("ui_enabled") is True
+        if task.get("ui_enabled") is not False
     }
 
     return render_template("v2/tasks.html", tasks=ui_tasks)

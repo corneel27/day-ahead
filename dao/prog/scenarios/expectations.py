@@ -384,6 +384,9 @@ class CaseContext:
     scenario_id: str
     start: dt.datetime
     horizon_hours: int
+    # start time and length in hours of every interval u (vocabulary.model_grid)
+    grid: list[dt.datetime]
+    row_hours: list[float]
     objective: float | None
     max_gap: float
     reads: set[str]
@@ -455,25 +458,25 @@ def _check_wished_level_clipped(value: bool, ctx: CaseContext) -> CheckResult:
     return _ev_check("wished_level_clipped", got, value)
 
 
-_INTERVAL_H = 0.25  # the fixed 15-minute model grid every scenario solves on
 
 
 def _window_range(ctx: CaseContext, params: dict) -> range:
     from .vocabulary import window_indices
 
-    return window_indices(ctx.start, ctx.horizon_hours, params["start"], params["end"])
+    return window_indices(ctx.start, ctx.grid, params["start"], params["end"], params.get("date"))
 
 
-def _battery_flow_kwh(mv, container: str, window: range) -> float:
+def _battery_flow_kwh(ctx: CaseContext, container: str, window: range) -> float:
+    mv = ctx.mv
     if mv is None or not mv.has(container):
         return 0.0
-    return sum(v * _INTERVAL_H for (_b, u), v in mv.items(container) if u in window)
+    return sum(v * ctx.row_hours[u] for (_b, u), v in mv.items(container) if u in window)
 
 
 @case_check("battery_charges_during")
 def _check_battery_charges_during(value: dict, ctx: CaseContext) -> CheckResult:
     window = _window_range(ctx, value)
-    kwh = _battery_flow_kwh(ctx.mv, "dc_to_bat", window)
+    kwh = _battery_flow_kwh(ctx, "dc_to_bat", window)
     ok = kwh >= value["min_kwh"]
     detail = "" if ok else f"{kwh:.3f} kWh charged in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
     return CheckResult("battery_charges_during", ok, detail)
@@ -482,7 +485,7 @@ def _check_battery_charges_during(value: dict, ctx: CaseContext) -> CheckResult:
 @case_check("battery_discharges_during")
 def _check_battery_discharges_during(value: dict, ctx: CaseContext) -> CheckResult:
     window = _window_range(ctx, value)
-    kwh = _battery_flow_kwh(ctx.mv, "dc_from_bat", window)
+    kwh = _battery_flow_kwh(ctx, "dc_from_bat", window)
     ok = kwh >= value["min_kwh"]
     detail = "" if ok else f"{kwh:.3f} kWh discharged in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
     return CheckResult("battery_discharges_during", ok, detail)
@@ -491,8 +494,8 @@ def _check_battery_discharges_during(value: dict, ctx: CaseContext) -> CheckResu
 @case_check("battery_flat_during")
 def _check_battery_flat_during(value: dict, ctx: CaseContext) -> CheckResult:
     window = _window_range(ctx, value)
-    kwh = (_battery_flow_kwh(ctx.mv, "dc_to_bat", window)
-           + _battery_flow_kwh(ctx.mv, "dc_from_bat", window))
+    kwh = (_battery_flow_kwh(ctx, "dc_to_bat", window)
+           + _battery_flow_kwh(ctx, "dc_from_bat", window))
     ok = kwh <= value["max_kwh"]
     detail = "" if ok else f"{kwh:.3f} kWh of battery activity in {value['start']}-{value['end']}, wanted <= {value['max_kwh']}"
     return CheckResult("battery_flat_during", ok, detail)

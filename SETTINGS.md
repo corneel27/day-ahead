@@ -43,6 +43,7 @@
   - [🏠 HomeAssistantConfig](#homeassistantconfig)
 - [Other](#other)
   - [BatteryStage](#batterystage)
+  - [CopTemperaturePoint](#coptemperaturepoint)
   - [EVChargeScheduler](#evchargescheduler)
   - [EVChargeStage](#evchargestage)
   - [EntityId](#entityid)
@@ -50,6 +51,7 @@
   - [FlexEnum](#flexenum)
   - [FlexFloat](#flexfloat)
   - [FlexInt](#flexint)
+  - [HADataSensor](#hadatasensor)
   - [HaSensorsConfig](#hasensorsconfig)
   - [HeatingStage](#heatingstage)
   - [MachineProgram](#machineprogram)
@@ -713,6 +715,7 @@ Define power levels and corresponding COP values:
 | `degree_days_base_temperature` | number | No | `16.0` | Base temperature (heating limit) for degree days (Unit: `°C`) _Between 0 and 30, typically 15-18_ |
 | `adjustment` | string | No | `"power"` | Adjustment mode. Options: `on/off`, `power`, `heating curve` |
 | `stages` | list[[HeatingStage](#heatingstage)] | No | `[]` | Heating power/COP stages _Required for 'power' and 'heating curve' adjustment; must be sorted by max_power_ |
+| `cop_temperature_curve` | list[[CopTemperaturePoint](#coptemperaturepoint)] | No | `[]` | COP factor per outdoor temperature _Sorted by temperature (ascending), factors > 0_ |
 | `entity adjust heating curve` | [EntityId](#entityid) (optional) | No | `null` | HA entity to adjust heating curve |
 | `adjustment factor` | number (optional) | No | `null` | Factor for heating curve adjustment (Unit: `factor`) _Typically 0.5-2.0 if specified_ |
 | `min run length` | integer | No | `1` | Minimum run length in time intervals (Unit: `intervals`) _Must be >= 1, typically 2-4 for 1h intervals_ |
@@ -749,6 +752,10 @@ Heat pump control mode: 'on/off' = simple binary control, 'power' = variable pow
 **`stages`**
 
 Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending. When a 0 W stage is missed this is supplied by the program.
+
+**`cop_temperature_curve`**
+
+Optional: how the COP changes with the outdoor temperature. Each point gives a factor on all stage COPs at an outdoor temperature; between points the factor is interpolated linearly, outside them the nearest point's factor is used. The stage COPs are then the COPs at the temperature where the factor is 1.0 (e.g. 7 °C). For every interval the factor at the forecast temperature (meteo) is used, so the heat pump is planned in the warmer hours when the higher COP outweighs the price. Empty: the stage COPs are used for every temperature.
 
 **`entity adjust heating curve`**
 
@@ -1332,7 +1339,8 @@ System uses tariff active on optimization date.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber` |
+| `source day ahead` | string | No | `"nordpool"` | Source for day-ahead prices. Options: `nordpool`, `entsoe`, `tibber`, `ha` |
+| `ha_epex_spot` | [HADataSensor](#hadatasensor) (optional) | No | `null` | Configuration of getting pricedata from the ha-custom component 'epex spot'. |
 | `prediction` | [PricePrediction](#priceprediction) (optional) | No | `null` | Configuration of getting and using priceprediction beyond the day ahead spotprices of epex. |
 | `entsoe-api-key` | [SecretStr](#secretstr) (optional) | No | `null` | ENTSO-E API key (can use !secret) _Required for entsoe source, use !secret_ |
 | `energy taxes consumption` | object | Yes | — | Energy taxes for consumption by date (YYYY-MM-DD -> euro/kWh ex VAT) (Unit: `€/kWh`) _Dict with YYYY-MM-DD keys, float values (ex VAT)_ |
@@ -1351,7 +1359,11 @@ System uses tariff active on optimization date.
 
 **`source day ahead`**
 
-Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.
+Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration. 'ha' for generic solutions
+
+**`ha_epex_spot`**
+
+Configuration of getting the day ahead prices from 'epex spot'.
 
 **`prediction`**
 
@@ -1897,6 +1909,29 @@ Energy conversion efficiency at this power level. Value between 0 and 1, where 1
 </details>
 
 
+### CopTemperaturePoint
+
+_Point of the COP temperature curve: a COP factor at an outdoor temperature._
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `temperature` | number | Yes | — | Outdoor temperature in °C (Unit: `°C`) |
+| `factor` | number | Yes | — | COP factor at this outdoor temperature (Unit: `factor`) _Must be > 0_ |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`temperature`**
+
+Outdoor temperature in °C at which the factor applies.
+
+**`factor`**
+
+Factor applied to every stage COP at this outdoor temperature. 1.0 at the temperature the stage COPs are given for (e.g. 7 °C, the A7 rating point).
+
+</details>
+
+
 ### EVChargeScheduler
 
 _EV charge scheduling configuration._
@@ -1985,6 +2020,37 @@ FlexValue enables dynamic configuration using Home Assistant entities. Instead o
 FlexValue enables dynamic configuration using Home Assistant entities. Instead of hardcoding values, reference HA entities that can change at runtime. System automatically detects and resolves entity IDs.
 
 *No configuration fields.*
+
+
+### HADataSensor
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `ha_entity` | [EntityId](#entityid) (optional) | No | `"sensor.epex_spot_data_market_price"` | HA sensor where data are available as attribute |
+| `ha_attribute` | string (optional) | No | `"data"` | The name of attribute in the HA sensor where a list of data are available.Every item in de list contain at least a datetime field and a value field |
+| `ha_datetime_field` | string (optional) | No | `"start_time"` | The name of datetime field in the list item |
+| `ha_value_field` | string (optional) | No | `"price_per_kwh"` | The name of value field in the list item |
+
+<details>
+<summary><b>📖 Field Details</b> (click to expand)</summary>
+
+**`ha_entity`**
+
+Optional: Home Assistant sensor with data.
+
+**`ha_attribute`**
+
+Home Assistant sensor the name of the attribute with the data. 
+
+**`ha_datetime_field`**
+
+Home Assistant sensor the name/key of the datetime-field in the list-item. 
+
+**`ha_value_field`**
+
+Home Assistant sensor the name/key of the value-field in the list-item. 
+
+</details>
 
 
 ### HaSensorsConfig
@@ -2184,7 +2250,7 @@ The name of the supplier of prediction data, now there is support for epexpredic
 
 **`api`**
 
-The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json
+The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.jsonfor jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json
 
 **`api_key`**
 

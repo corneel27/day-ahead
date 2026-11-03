@@ -55,6 +55,19 @@ def parse_scenario(obj: dict, *, source_file: str = "") -> Scenario:
     prod = prices.get("prod")
     _require(prod is None or (isinstance(prod, list) and len(prod) == len(cons)),
              f"[{sid}] prices.prod, if given, must match prices.cons length ({len(cons)})")
+    unknown_prices = set(prices) - {"cons", "prod", "predicted"}
+    _require(not unknown_prices, f"[{sid}] unknown prices key(s): {sorted(unknown_prices)}")
+    predicted = prices.get("predicted", {})
+    _require(isinstance(predicted, dict) and set(predicted) <= {"cons", "prod"},
+             f"[{sid}] prices.predicted must be an object with 'cons' and optional 'prod'")
+    pred_cons = predicted.get("cons", [])
+    _require(isinstance(pred_cons, list) and all(isinstance(x, (int, float)) for x in pred_cons)
+             and (pred_cons or not predicted),
+             f"[{sid}] prices.predicted.cons must be a non-empty list of numbers")
+    pred_prod = predicted.get("prod")
+    _require(pred_prod is None or (isinstance(pred_prod, list) and len(pred_prod) == len(pred_cons)),
+             f"[{sid}] prices.predicted.prod, if given, must match prices.predicted.cons "
+             f"length ({len(pred_cons)})")
 
     for arr_key in ("solar", "baseload", "temp"):
         v = obj.get(arr_key)
@@ -103,6 +116,8 @@ def parse_scenario(obj: dict, *, source_file: str = "") -> Scenario:
         start=obj["start"],
         prices_cons=[float(x) for x in cons],
         prices_prod=[float(x) for x in prod] if prod is not None else None,
+        prices_pred_cons=[float(x) for x in pred_cons],
+        prices_pred_prod=[float(x) for x in pred_prod] if pred_prod is not None else None,
         solar=[float(x) for x in obj["solar"]] if obj.get("solar") is not None else None,
         baseload=[float(x) for x in obj["baseload"]] if obj.get("baseload") is not None else None,
         temp=[float(x) for x in obj["temp"]] if obj.get("temp") is not None else None,

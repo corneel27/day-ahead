@@ -26,7 +26,9 @@ scenario, see [`testing.md`](testing.md). For how the pieces fit together, see
 files, not only within one file. `start` is the frozen-clock anchor, in the
 format `"YYYY-MM-DD HH:MM"`. It must fall on a 15-minute boundary (`07:00`,
 `07:15`, not `07:07`), because every array is indexed from it. The horizon is
-the number of hours in `prices.cons`. No separate horizon field exists.
+the number of hours in `prices.cons`, plus the number of hours in
+`prices.predicted.cons` when the scenario has one. No separate horizon field
+exists.
 
 ## 2. Fields and their defaults
 
@@ -34,6 +36,8 @@ the number of hours in `prices.cons`. No separate horizon field exists.
 |---|---|---|
 | `prices.cons` | *(required)* | €/kWh import, one value per hour |
 | `prices.prod` | equals `prices.cons` | €/kWh export. Real feed-in tariffs are usually well under the import price. If the battery must prefer *storing* solar over *exporting* it, set this lower than `cons` (see §6) |
+| `prices.predicted.cons` | *(none)* | €/kWh import predicted after the last `prices.cons` hour, one value per hour. Its length becomes `prices.prediction.extension` in the config, so the horizon extends past the day-ahead prices |
+| `prices.predicted.prod` | equals `prices.predicted.cons` | €/kWh export for the predicted hours |
 | `solar` | all zero | total house PV in kW, one value per hour (equal to kWh per hour slot). Split across the configured PV arrays by installed-capacity share |
 | `baseload` | flat 0.25 kW | hourly kW. Real households have an evening bump. Set it explicitly if the battery or grid needs demand to discharge into (§6) |
 | `temp` | flat 6.0 °C | hourly outside temperature. Feeds the heat pump's degree-days demand calculation (§7) and `prog_data.temp` |
@@ -48,6 +52,14 @@ Every hourly array is upsampled ×4 onto the model's 15-minute grid. Always
 write scenarios in hours, whatever the solver's own `interval` config says. An
 array shorter than the horizon is a load-time error that says how many more
 values it needs. A longer array is silently truncated.
+
+With `prices.predicted`, the model grid has two parts: the `prices.cons` hours
+on the 15-minute grid, then the predicted hours on an hourly grid, as
+day_ahead.py solves them. `solar`, `baseload` and `temp` cover the whole
+horizon, fixed plus predicted hours. `extension-96h-predicted-dip` in
+`cases/extension.json` is the worked example. It also sets
+`boiler.boiler_present` to `false`, because the boiler is infeasible on
+synthetic horizons longer than about 36 hours.
 
 ## 3. A worked example
 
@@ -147,6 +159,11 @@ to the next day. So `{"start": "00:00", "end": "00:00"}` means the whole
 horizon, not an empty window. `heatpump-cold-day-runs` and
 `battery-flat-no-incentive` use this to check the full day without computing
 the clock time of the horizon's end.
+
+A window can also carry `"date": "YYYY-MM-DD"`. `start` then resolves on that
+date instead of at its first occurrence after the scenario's start. On a
+horizon longer than a day this is the only way to reach the second or later
+occurrence of a clock time, for example a predicted day in an extended horizon.
 
 The `machine` value is matched case-insensitively against
 `config["machines"][*].name` (`"wasmachine"` and `"vaatwasser"` in
