@@ -51,6 +51,7 @@ In this version you can:
 - Heat pump curve adjustment is also performed when no heat is needed
 - Fixed dst-issues in grid-reports and api get pv_ac/pv_dc
 - updates of several modules
+- Fixed error calculating da_prod with multiplier_production!=1
 
 # 2026.9.1
 - removed us of pipe, let the child inherit the scheduler's stdout/stderr: (#812)
