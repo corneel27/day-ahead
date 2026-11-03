@@ -25,6 +25,7 @@ class BoilerDisabled(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-ui-group": "Heating",
             "x-icon": "water-boiler",
@@ -207,6 +208,7 @@ class BoilerEnabled(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "title": "BoilerConfig",
             "x-ui-group": "Heating",

@@ -14,6 +14,9 @@ from sqlalchemy import Table, and_, func, select
 from dao.lib.da_graph import GraphBuilder
 from dao.lib.db_manager import DBmanagerObj
 
+# Stookgrens in oC waarbij geen graaddagen meer worden gerekend (fallback)
+DEFAULT_DEGREE_DAYS_BASE_TEMP = 16.0
+
 
 # noinspection PyUnresolvedReferences
 class Meteo:
@@ -245,7 +248,24 @@ class Meteo:
         ]
         return station in list_aws
 
-    def which_station(self) -> str:
+    @staticmethod
+    def afstand_km(lat1, long1, lat2, long2):
+        """
+        berekent de afstand in km tussen locatie 1 en locatie 2
+        :param lat1: latitude locatie 1
+        :param long1: longitude locatie 1
+        :param lat2: latitude locatie 2
+        :param long2: longitude locatie 2
+        :return:
+        """
+        lat1, long1, lat2, long2 = map(math.radians, (lat1, long1, lat2, long2))
+        dlat = lat2 - lat1
+        dlong = long2 - long1
+        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * (math.sin(dlong / 2))**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return 6371 * c
+
+    def which_station(self, _latitude:float|None = None, _longitude: float|None = None) -> str:
         """
         berekent welk weerstation het dichtst bij is
         :param latitude:
@@ -255,12 +275,17 @@ class Meteo:
         stations = knmi.stations
         distance = None
         result = None
+        latitude = _latitude if _latitude else self.latitude
+        longitude = _longitude if _longitude else self.longitude
         for key in stations:
             if self.is_aws(key):
                 station = stations[key]
-                afstand = (self.latitude - station.latitude) ** 2 + (
-                    self.longitude - station.longitude
+                afstand = self.afstand_km(latitude, longitude, station.latitude, station.longitude)
+                """
+                afstand = (latitude - station.latitude) ** 2 + (
+                    longitude - station.longitude
                 ) ** 2
+                """
                 if result is None or afstand < distance:
                     distance = afstand
                     result = key
@@ -596,10 +621,10 @@ class Meteo:
 
     def get_avg_temperature(self, date: datetime.datetime = None) -> float:
         """
-        Berekent gewogen met temperatuur grens van 16 oC
+        Berekent de gemiddelde buitentemperatuur over 24 uur vanaf het begin van de dag
         :param date: de datum waarvoor de berekening wordt gevraagd
         als None: vandaag
-        :return: berekende gewogen graaddagen
+        :return: de gemiddelde temperatuur in oC
         """
         if date is None:
             date = datetime.datetime.combine(
@@ -661,13 +686,16 @@ class Meteo:
         date: datetime.datetime = None,
         avg_temp: float | None = None,
         weighted: bool = False,
+        base_temp: float = DEFAULT_DEGREE_DAYS_BASE_TEMP,
     ) -> float:
         """
-        Berekent graaddagen met temperatuur grens van 16 oC
+        Berekent graaddagen met een instelbare temperatuurgrens (stookgrens)
         :param date: de datum waarvoor de berekening wordt gevraagd
                     als None: vandaag
         :param avg_temp: de gemiddelde temperatuur, default None
         :param weighted: boolean, gewogen als true, default false
+        :param base_temp: de stookgrens in oC: vanaf deze gemiddelde
+                    temperatuur zijn er geen graaddagen, default 16 oC
         :return: berekende eventueel gewogen graaddagen
         """
         if date is None:
@@ -683,10 +711,10 @@ class Meteo:
                 weight_factor = 1.1
             elif 4 <= mon <= 9:
                 weight_factor = 0.8
-        if avg_temp >= 16:
+        if avg_temp >= base_temp:
             result = 0
         else:
-            result = weight_factor * (16 - avg_temp)
+            result = weight_factor * (base_temp - avg_temp)
         return result
 
     def calc_solar_rad(
@@ -710,14 +738,35 @@ class Meteo:
         q_tot = self.solar_rad(float(utc_time), global_rad, hcol, acol)
         return q_tot
 
+def test_afstand_km(meteo):
+    # Amsterdam -> Rotterdam (ongeveer 57 km)
+    d1 = meteo.afstand_km(52.3676, 4.9041, 51.9244, 4.4777)
+    print(f"Amsterdam -> Rotterdam: {d1:.2f} km")
+    assert 50 < d1 < 70
 
-"""
+    # Parijs -> Londen (ongeveer 344 km)
+    d2 = meteo.afstand_km(48.8566, 2.3522, 51.5074, -0.1278)
+    print(f"Parijs -> Londen: {d2:.2f} km")
+    assert 300 < d2 < 400
+
+    # Zelfde punt -> 0
+    d3 = meteo.afstand_km(52.0, 5.0, 52.0, 5.0)
+    print(f"Zelfde punt: {d3:.2f} km")
+    assert abs(d3) < 1e-9
+
+    station=meteo.which_station()
+    print(station)
+
+    print("Alle tests geslaagd.")
+
 def main():
     from dao.prog.da_base import DaBase
     dbase = DaBase("../data/options.json")
-    meteo = Meteo(dbase.config, dbase.db_da)
+    meteo = dbase.meteo
     station = meteo.which_station()
+    print(station)
+    test_afstand_km(meteo)
 
 if __name__ == "__main__":
     main()
-"""
+

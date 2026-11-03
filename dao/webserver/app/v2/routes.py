@@ -352,7 +352,14 @@ def delete_file():
 @v2.route("/tasks")
 def tasks():
     from dao.prog.da_const import tasks
-    return render_template("v2/tasks.html", tasks=tasks)
+
+    ui_tasks = {
+        name: task
+        for name, task in tasks.items()
+        if task.get("ui_enabled") is not False
+    }
+
+    return render_template("v2/tasks.html", tasks=ui_tasks)
 
 @v2.route("/task-cancel")
 def task_cancel():
@@ -664,16 +671,30 @@ def config():
     error = None
     success = None
 
+    tmp_file = Path('/tmp/options_tmp.json')
+
     if request.method == "POST" and request.form.to_dict()["config"] is not None:
         content = request.form.to_dict()["config"]
         try:
             # try loading json
             json.loads(content)
+
+            with open(tmp_file, "w") as tmp_f:
+                tmp_f.write(content)
+
+            loader = ConfigurationLoader(tmp_file)
+            loader.load_and_validate()
+
             with open(path, "w") as f:
                 f.write(content)
             success = "Config updated successfully"
+            Path.unlink(tmp_file)
         except Exception as err:
             error = f"Error: {err}"
+
+            if Path.exists(tmp_file):
+                Path.unlink(tmp_file)
+
     else:
         with open(path) as file:
             content = file.read()

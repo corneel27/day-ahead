@@ -41,7 +41,7 @@ jobs:
         run: python -m dao.prog.da_debug scenario-validate
 
       - name: Run solver-free unit tests
-        run: pytest dao/tests/prog/test_scenarios.py -q
+        run: pytest dao/tests/prog/test_scenarios.py dao/tests/prog/test_capture_replay_roundtrip.py -q
 
   scenarios:
     name: Scenario suite (solve)
@@ -97,6 +97,16 @@ jobs:
           TZ: UTC
         run: python -m dao.prog.da_debug scenario-run --report
 
+      - name: Capture and replay round trip
+        # Records a real calc_optimum() with RecordingIO, replays the
+        # snapshot and checks the replay saw the same inputs and objective.
+        timeout-minutes: 5
+        env:
+          TZ: UTC
+          MPLBACKEND: Agg
+          DAO_RUN_SCENARIOS: "1"
+        run: pytest dao/tests/prog/test_capture_replay_roundtrip.py -q
+
       - name: Run isolated regression tests
         timeout-minutes: 5
         env:
@@ -110,11 +120,13 @@ jobs:
           pytest -q \
             dao/tests/config/test_models.py \
             dao/tests/config/test_boiler_union.py \
+            dao/tests/config/test_heating_config.py \
             dao/tests/config/test_migrations.py \
             dao/tests/config/test_roundtrip.py \
             dao/tests/config/test_loader_contracts.py \
             dao/tests/prog/test_db_consumption.py \
             dao/tests/prog/test_db_connections.py \
+            dao/tests/prog/test_degree_days.py \
             dao/tests/prog/test_ev_schedule.py \
             dao/tests/prog/test_ha_data_query.py \
             dao/tests/prog/test_solar_defaults.py \

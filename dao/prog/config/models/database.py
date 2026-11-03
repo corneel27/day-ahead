@@ -113,6 +113,7 @@ class HADatabaseConfig(BaseModel):
     model_config = ConfigDict(
         extra="allow",  # Preserve unknown keys
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-help": "Home Assistant database connection for reading historical sensor data (prices, solar, baseload).",
             "x-ui-group": "Integration",
@@ -284,6 +285,7 @@ class DatabaseConfig(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-ui-group": "Integration",
             "x-icon": "database",

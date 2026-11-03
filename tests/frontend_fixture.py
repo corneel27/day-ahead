@@ -63,8 +63,8 @@ def main():
         routes.run_and_log = forbid_process
         routes.Popen = forbid_process
         constants.tasks = {
-            "complete": {"name": "Run synthetic task", "cmd": ["never", "never"]},
-            "waiting": {"name": "Run cancellable task", "cmd": ["never", "never"]},
+            "complete": {"name": "Run synthetic task", "cmd": ["never", "never"], "ui_enabled": True},
+            "waiting": {"name": "Run cancellable task", "cmd": ["never", "never"], "ui_enabled": True},
         }
         # Only this isolated fixture enables task routes; all task IO above is
         # replaced before serving. Production preview protections stay intact.

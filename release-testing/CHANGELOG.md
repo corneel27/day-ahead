@@ -1,5 +1,39 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.11.0.rc2
+This is the last testrelease before the next stable release (unless some finds an error that must be fixed and tested).
+
+## Fixes
+Fixed dt-error in several report/api requests
+
+# 2026.11.0.rc1
+## Changes
+- Implemented ha_epex_spot as day ahead source (via generic ha-datasource)
+- Further implementation of CI/CD (thanks @Dogooder)
+- Speed up runs and PNG generation (thanks @dewi-ny-je)
+- Make cop of your hp dependent of the outdoor temperature (thanks @llevering)
+
+## Fixes
+- Heat pump curve adjustment is also performed when no heat is needed
+- Fixed dst-issues in grid-reports and api get pv_ac/pv_dc
+- updates of several modules
+
+# 2026.10.0.rc2
+## Breaking change
+The scheduler task for retrieving predicted prices is renamed to: **get_predicted_prices**
+and works now
+## Changes
+- Fix error calculate distance to weather station (reported by @buiter)
+- Fixed error in the graph "not optimized": consumption and production in the "not predicted part" where in kWh this is changed to kW.
+- Make the degree-days base temperature (stookgrens) configurable (thanks @voogel)
+- Validate and load the json before storing it: prevents DAO from crashing (thanks @storeman)
+- Introducting of Ruff as linter (@thanks @Lasoul) 
+- Heat pump (power mode): size blocks from hours needed, not hours available (thanks @llevering)
+- clean-up and centralication of task (with aliases) now rest-api works again (thanks @storeman, reported by @Dabit)
+- added .devcontainer to help development on system with VS (see DEVELOPMENT.md, thanks @Lasoul)
+- added jeroen_nl (jeroen.nl) as source for predicted prices
+- update several python modules
+
 # 2026.10.0.rc1
 ## Changes
 - The new V2 UI from @storeman is now the default user interface

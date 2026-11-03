@@ -185,8 +185,14 @@ docs/scenario-suite-architecture.md   this document
 `replay`. They handle every DB, HA and network call that day_ahead.py makes, in one
 of two ways:
 
-- They serve the call from the snapshot dict (`price_data`, `prog_data`,
-  `baseload`, `ha_states`, `config`, `ha_context`).
+- They serve the call from the snapshot dict (`price_data_calls`,
+  `prog_data_calls`, `baseload`, `ha_states`, `config`, `ha_context`). The two
+  `*_calls` lists hold one recording per call, in call order, because a run with
+  `prices.prediction.extension > 0` calls each method once for the fixed part and
+  once for the predicted part. `ReplayIO` serves them by position and checks
+  `interval` and `extension`, not the timestamps. A schema-1 snapshot has a single
+  `price_data`/`prog_data` frame instead, and replay serves that frame for every
+  call.
 - They wrap the one leaf method that makes the call (`get_heatpump_run_hours`,
   `predict_solar_device`). `RecordingIO` calls the real implementation and records
   the result under a call key. `ReplayIO` serves the recording back. If a
@@ -232,8 +238,11 @@ mirrors `get_heatpump_run_hours`:
 day_ahead.py normally calls a trained ML model to predict the production of each
 solar array. `predict_solar_device`, the ML call one level below
 `calc_solar_predictions`, already has a `da_debug.py` channel
-(`solar_predictions`, recorded and replayed like the heat-pump channel). So real
-capture and replay of a solar installation worked before this suite existed.
+(`solar_prediction_calls`, one call sequence per device, recorded and replayed
+like the price and meteo channels). With a horizon extension each device is
+asked twice, once for the fixed part and once for the predicted part. The
+round trip in `dao/tests/prog/test_capture_replay_roundtrip.py` records a run
+with ML solar and checks that the replay sees the same forecasts.
 
 A synthetic scenario has no trained model file and no real capture that could have
 recorded one. `options_example.json` sets `solar[*].ml_prediction: false` (§3),

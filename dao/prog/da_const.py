@@ -1,12 +1,13 @@
 
-tasks: dict[str, dict[str, str | list[str]]] = {
+tasks: dict[str, dict[str, str | list[str] | bool]] = {
     "calc_optimum_met_debug": {
         "name": "Optimaliseringsberekening met debug",
         "cmd": ["python3", "day_ahead.py", "calc", "--debug"],
         "object": "DaCalc",
         "function": "calc_optimum_met_debug",
         "file_name": "calc_debug",
-        "aliases": ["calc_debug", "calc_met_debug"]
+        "aliases": ["calc_debug", "calc_met_debug"],
+        "ui_enabled": True,
     },
     "calc_optimum": {
         "name": "Optimaliseringsberekening zonder debug",
@@ -15,6 +16,7 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "function": "calc_optimum",
         "file_name": "calc",
         "aliases": ["calc", "calc_zonder_debug"],
+        "ui_enabled": True,
     },
     "get_tibber_data": {
         "name": "Verbruiksgegevens bij Tibber ophalen",
@@ -22,6 +24,7 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "function": "get_tibber_data",
         "file_name": "tibber",
         "aliases": ["tibber", "get_tibber"],
+        "ui_enabled": True,
     },
     "get_meteo_data": {
         "name": "Meteoprognoses ophalen",
@@ -29,6 +32,7 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "function": "get_meteo_data",
         "file_name": "meteo",
         "aliases": ["meteo", "get_meteo"],
+        "ui_enabled": True,
     },
     "get_day_ahead_prices": {
         "name": "Day ahead prijzen ophalen",
@@ -36,18 +40,22 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "function": "get_day_ahead_prices",
         "file_name": "prices",
         "aliases": ["prices", "get_prices"],
+        "ui_enabled": True,
     },
     "get_predicted_prices": {
         "name": "Day ahead prijsvoorspelling ophalen",
         "cmd": ["python3", "day_ahead.py", "get_predicted_prices"],
         "function": "get_predicted_prices",
         "file_name": "pred_prices",
+        "aliases": ["predicted_prices"],
+        "ui_enabled": True,
     },
     "calc_baseloads": {
         "name": "Bereken de baseloads",
         "cmd": ["python3", "day_ahead.py", "calc_baseloads"],
         "function": "calc_baseloads",
         "file_name": "baseloads",
+        "ui_enabled": True,
     },
     "clean_data": {
         "name": "Bestanden opschonen",
@@ -55,6 +63,7 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "function": "clean_data",
         "file_name": "clean",
         "aliases": ["clean"],
+        "ui_enabled": True,
     },
     "train_ml_predictions": {
         "name": "ML modellen trainen",
@@ -62,11 +71,13 @@ tasks: dict[str, dict[str, str | list[str]]] = {
         "function": "train_ml_predictions",
         "file_name": "train",
         "aliases": ["train"],
+        "ui_enabled": True,
     },
     "consolidate": {
         "name": "Verbruik/productie consolideren",
         "cmd": ["python3", "day_ahead.py", "consolidate"],
         "function": "consolidate_data",
         "file_name": "consolidate",
+        "ui_enabled": False,
     },
 }

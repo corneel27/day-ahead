@@ -37,11 +37,56 @@ class HeatingStage(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-help": "Define heat pump performance curve by power stages and corresponding COP values. Multiple stages allow accurate modeling of variable-speed compressors.",
             "x-ui-section": "General",
         },
     )
+
+
+class CopTemperaturePoint(BaseModel):
+    """Point of the COP temperature curve: a COP factor at an outdoor temperature."""
+
+    temperature: float = Field(
+        description="Outdoor temperature in °C",
+        json_schema_extra={
+            "x-help": "Outdoor temperature in °C at which the factor applies.",
+            "x-unit": "°C",
+            "x-ui-section": "General",
+        },
+    )
+    factor: float = Field(
+        gt=0,
+        description="COP factor at this outdoor temperature",
+        json_schema_extra={
+            "x-help": "Factor applied to every stage COP at this outdoor temperature. "
+            "1.0 at the temperature the stage COPs are given for (e.g. 7 °C, the A7 rating point).",
+            "x-unit": "factor",
+            "x-ui-section": "General",
+            "x-validation-hint": "Must be > 0",
+        },
+    )
+
+    model_config = ConfigDict(populate_by_name=True, loc_by_alias=False)
+
+
+def cop_temperature_factor(
+    curve: list["CopTemperaturePoint"], temperature: float
+) -> float:
+    """COP factor at an outdoor temperature: linear between the curve points,
+    the nearest end point's factor outside them, 1.0 without a curve."""
+    if not curve:
+        return 1.0
+    if temperature <= curve[0].temperature:
+        return curve[0].factor
+    for lo, hi in zip(curve, curve[1:], strict=False):
+        if temperature <= hi.temperature:
+            fraction = (temperature - lo.temperature) / (
+                hi.temperature - lo.temperature
+            )
+            return lo.factor + fraction * (hi.factor - lo.factor)
+    return curve[-1].factor
 
 
 class HeatingDisabled(BaseModel):
@@ -60,6 +105,7 @@ class HeatingDisabled(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-ui-group": "Heating",
             "x-icon": "heat-pump",
@@ -101,6 +147,22 @@ class HeatingEnabled(BaseModel):
             "x-validation-hint": "Must be > 0, typically 0.5-10.0",
         },
     )
+    degree_days_base_temperature: float = Field(
+        default=16.0,
+        ge=0.0,
+        le=30.0,
+        description="Base temperature (heating limit) for degree days",
+        json_schema_extra={
+            "x-help": "Average daily outdoor temperature in °C at and above which no heating is needed (the heating limit). "
+            "Heat demand is calculated from the degree days below this temperature: "
+            "(base temperature - average outdoor temperature) per day. "
+            "Raise it if your heating starts at a higher outdoor temperature, lower it for a well-insulated house. "
+            "Default: 16 °C.",
+            "x-unit": "°C",
+            "x-ui-section": "Configuration",
+            "x-validation-hint": "Between 0 and 30, typically 15-18",
+        },
+    )
     adjustment: Literal["on/off", "power", "heating curve"] = Field(
         default="power",
         description="Adjustment mode",
@@ -120,6 +182,21 @@ class HeatingEnabled(BaseModel):
             "When a 0 W stage is missed this is supplied by the program.",
             "x-ui-section": "Power Stages",
             "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power",
+        },
+    )
+    cop_temperature_curve: list[CopTemperaturePoint] = Field(
+        default=[],
+        description="COP factor per outdoor temperature",
+        json_schema_extra={
+            "x-help": "Optional: how the COP changes with the outdoor temperature. "
+            "Each point gives a factor on all stage COPs at an outdoor temperature; "
+            "between points the factor is interpolated linearly, outside them the nearest point's factor is used. "
+            "The stage COPs are then the COPs at the temperature where the factor is 1.0 (e.g. 7 °C). "
+            "For every interval the factor at the forecast temperature (meteo) is used, "
+            "so the heat pump is planned in the warmer hours when the higher COP outweighs the price. "
+            "Empty: the stage COPs are used for every temperature.",
+            "x-ui-section": "Power Stages",
+            "x-validation-hint": "Sorted by temperature (ascending), factors > 0",
         },
     )
     entity_adjust_heating_curve: EntityId | None = Field(
@@ -224,6 +301,7 @@ class HeatingEnabled(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "title": "HeatingConfig",
             "x-ui-group": "Heating",
@@ -265,7 +343,15 @@ Define power levels and corresponding COP values:
 
     @model_validator(mode="after")
     def validate_stages(self) -> "HeatingEnabled":
-        """Validate stages: required for 'power' adjustment, must be sorted, and get a zero-power sentinel."""
+        """Validate stages: required for 'power' adjustment, must be sorted, and get a zero-power sentinel.
+        The COP temperature curve must be sorted by temperature."""
+        temperatures = [point.temperature for point in self.cop_temperature_curve]
+        if len(set(temperatures)) != len(temperatures) or temperatures != sorted(
+            temperatures
+        ):
+            raise ValueError(
+                "cop_temperature_curve must be sorted by temperature (ascending), without duplicates"
+            )
         if len(self.stages) == 0:
             if self.adjustment in ("power", "heating curve"):
                 raise ValueError(

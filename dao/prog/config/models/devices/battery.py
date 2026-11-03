@@ -36,6 +36,7 @@ class BatteryStage(BaseModel):
 
     model_config = ConfigDict(
         extra="allow",
+        loc_by_alias=False,
         json_schema_extra={
             "x-help": "Defines power and efficiency at a specific operating point. Multiple stages create a power/efficiency curve.",
             "x-ui-section": "Power Configuration",
@@ -432,6 +433,7 @@ class BatteryConfig(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        loc_by_alias=False,
         json_schema_extra={
             "x-ui-group": "Energy",
             "x-icon": "battery-charging",

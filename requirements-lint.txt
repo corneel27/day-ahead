@@ -1,2 +1,2 @@
 # Single source of truth for the Ruff version used by CI and developer tools.
-ruff==0.17.0
+ruff==0.17.1

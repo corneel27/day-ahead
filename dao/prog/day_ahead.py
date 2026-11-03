@@ -15,7 +15,7 @@ import time
 from contextlib import contextmanager
 
 import pandas as pd
-from mip import BINARY, CONTINUOUS, INTEGER, Model, minimize, xsum
+from mip import BINARY, CBC, CONTINUOUS, INTEGER, Model, minimize, xsum
 from pandas.core.dtypes.inference import is_number
 from utils import (
     calc_adjustment_heatcurve,
@@ -25,6 +25,7 @@ from utils import (
     interpolate,
 )
 
+from dao.prog.config.models.devices.heating import cop_temperature_factor
 from dao.prog.da_base import DaBase
 from dao.prog.da_report import Report
 from dao.prog.ev_schedule import format_ev_charge_schedule
@@ -69,6 +70,48 @@ def _log_native_output(text: str) -> None:
     for line in text.splitlines():
         if line.strip():
             logging.info(line)
+
+
+def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, *, color):
+    """Draw the same bars as ``ax.bar()``, but as one PolyCollection.
+
+    Uses only public matplotlib API. ``color`` is required because taking the
+    next colour from the axes' property cycle has no public API.
+    """
+    import matplotlib as mpl
+    import numpy as np
+    from matplotlib.collections import PolyCollection
+
+    ax.xaxis.update_units(x)
+    xs = np.asarray(ax.convert_xunits(x), dtype=float)
+    n = len(xs)
+    h = np.broadcast_to(np.asarray(height, dtype=float), (n,))
+    w = np.broadcast_to(np.asarray(width, dtype=float), (n,))
+    b = np.broadcast_to(np.asarray(0.0 if bottom is None else bottom, dtype=float), (n,))
+    left = xs if align == "edge" else xs - w / 2
+    verts = np.stack(
+        [
+            np.column_stack([left, b]),
+            np.column_stack([left, b + h]),
+            np.column_stack([left + w, b + h]),
+            np.column_stack([left + w, b]),
+        ],
+        axis=1,
+    )
+    rc = mpl.rcParams
+    coll = PolyCollection(
+        verts,
+        facecolors=color,
+        edgecolors=rc["patch.edgecolor"] if rc["patch.force_edgecolor"] else "none",
+        linewidths=rc["patch.linewidth"],
+        antialiaseds=rc["patch.antialiased"],
+        label=label if label is not None else "_nolegend_",
+    )
+    # like bar(): no autoscale margin below the bars' bottoms
+    coll.sticky_edges.y[:] = np.unique(b).tolist()
+    ax.add_collection(coll, autolim=True)
+    ax.autoscale_view()
+    return coll
 
 
 class DaCalc(DaBase):
@@ -228,7 +271,6 @@ class DaCalc(DaBase):
         prog_data["da_ex"] = price_data["da_ex"]
         prog_data["da_cons"] = price_data["da_cons"]
         prog_data["da_prod"] = price_data["da_prod"]
-
         logging.debug(f"Prognose data:\n{prog_data.to_string()}")
         pd.options.display.float_format = "{:.3f}".format
 
@@ -237,12 +279,14 @@ class DaCalc(DaBase):
         p_spot = []  # prijs op de spot markt
         pl_avg = []  # prijs levering day_ahead gemiddeld
         uur = []  # datum_tijd van het betreffende uur
+        temp_out = []  # voorspelde buitentemperatuur per interval (meteo)
         # prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
         for row in prog_data.itertuples():
             if math.isnan(row.da_ex):
                 break
             uur.append(row.tijd)
+            temp_out.append(row.temp)
             p_spot.append(row.da_ex)
             pl.append(row.da_cons)
             pt.append(row.da_prod)
@@ -489,7 +533,8 @@ class DaCalc(DaBase):
             logging.info(f"pv_ac: {len(pv_org_ac)}")
             logging.info(f"pv_dc: {len(pv_org_dc)}")
 
-        model = Model()
+        # Name the solver explicitly to avoid trying Gurobi first
+        model = Model(solver_name=CBC)
 
         ##############################################################
         #                          pv ac
@@ -981,29 +1026,94 @@ class DaCalc(DaBase):
             for b in range(B)
         ]
 
-        # alle constraints
+        # alle constraints, eerst declaraties
+        # laden, alles uitgedrukt in vermogen kW
+        """
+        # vanaf hier laden zonder sos
+        # declarations
+        # Binare variabele: welk interval is actief
+        ac_to_dc_z = [
+            [
+                [
+                    model.add_var(var_type=BINARY)
+                    for cs in range(CS[b] - 1)
+                ]
+                for u in range(U)
+            ]
+            for b in range(B)
+        ]
+
+        # Continue variabele: positie in het actieve interval
+        ac_to_dc_f = [
+            [
+                model.add_var(var_type=CONTINUOUS, lb=0, ub=1)
+                for u in range(U)
+            ]
+            for b in range(B)
+        ]
+
+        for b in range(B):
+            # Big-M constraints voor ieder mogelijk interval
+            M_power_ac = (
+                max(ac_to_dc_samples[b])
+                - min(ac_to_dc_samples[b])
+            )
+            M_power_dc = (
+                max(dc_from_ac_samples[b])
+                - min(dc_from_ac_samples[b])
+            )
+            # overige constraints
+
+            for u in range(U):
+                # Exact 1 interval is actief
+                model += (
+                    xsum(
+                        ac_to_dc_z[b][u][cs]
+                        for cs in range(CS[b] - 1)
+                    )
+                    == 1
+                )
+
+                for cs in range(CS[b] - 1):
+
+                    p0 = ac_to_dc_samples[b][cs]
+                    p1 = ac_to_dc_samples[b][cs + 1]
+
+                    q0 = dc_from_ac_samples[b][cs]
+                    q1 = dc_from_ac_samples[b][cs + 1]
+
+                    # AC power
+                    model += (
+                        ac_to_dc[b][u]
+                        >= p0 + ac_to_dc_f[b][u] * (p1 - p0)
+                        - M_power_ac * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    model += (
+                        ac_to_dc[b][u]
+                        <= p0 + ac_to_dc_f[b][u] * (p1 - p0)
+                        + M_power_ac * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    # DC power
+                    model += (
+                        dc_from_ac[b][u]
+                        >= q0 + ac_to_dc_f[b][u] * (q1 - q0)
+                        - M_power_dc * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    model += (
+                        dc_from_ac[b][u]
+                        <= q0 + ac_to_dc_f[b][u] * (q1 - q0)
+                        + M_power_dc * (1 - ac_to_dc_z[b][u][cs])
+                    )
+                
+                # tot hier laden zonder sos #######################################
+                
+        """
+        # vanaf hier laden met sos ######################################################
         for b in range(B):
             for u in range(U):
-                # laden, alles uitgedrukt in vermogen kW
-                # vanaf hier laden met aan/uit zonder sos
-                """
-                for cs in range(CS[b]):
-                    model += (ac_to_dc_st[b][cs][u] <=
-                        charge_stages[b][cs]["power"] * 
-                        ac_to_dc_st_on[b][cs][u]/1000)
-                for cs in range(CS[b])[1:]:
-                    model += (ac_to_dc_st[b][cs][u] >=
-                        charge_stages[b][cs - 1]["power"] * 
-                        ac_to_dc_st_on[b][cs][u]/1000)
-
-                model += ac_to_dc[b][u] == xsum(ac_to_dc_st[b][cs][u] for cs in range(CS[b]))
-                model += (xsum(ac_to_dc_st_on[b][cs][u] for cs in range(CS[b]))) <= 1
-                model += dc_from_ac[b][u] == xsum(ac_to_dc_st[b][cs][u] * \
-                                    charge_stages[b][cs]["efficiency"] 
-                                    for cs in range(CS[b]))
-                # tot hier laden met aan/uit zonder sos #######################################
-                """
-                # vanaf hier laden met sos ######################################################
                 model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
                 model += (
                     xsum(
@@ -2152,6 +2262,10 @@ class DaCalc(DaBase):
                     model += ev_boundary_stop[e][u] == 0
                     model += ev_delta_soc[e][u] == 0
                     model += low_soc_penalty_int[e][u] == 0
+                    model += ev_is_off[e][u] == 1
+                    model += ev_is_on[e][u] == 0
+                    for cs in range(ECS[e]):
+                        model += stage_on[e][cs][u] == 0
 
                 """
                 max_beschikbaar = 0
@@ -2245,8 +2359,14 @@ class DaCalc(DaBase):
             if not self.hp_enabled:
                 logging.info("Warmtepomp staat uit - warmtepomp wordt niet ingepland")
         if self.hp_enabled:
+            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
+            self.hp_adjustment = (self.heating_options.adjustment or "power").lower()
             # degree days
-            degree_days_today = self.meteo.calc_graaddagen(weighted=True)
+            base_temp = self.heating_options.degree_days_base_temperature
+            logging.info(f"Stookgrens (graaddagen): {base_temp:.1f} °C")
+            degree_days_today = self.meteo.calc_graaddagen(
+                weighted=True, base_temp=base_temp
+            )
             logging.info(f"Gewogen graaddagen vandaag: {degree_days_today:.1f} K.day")
             if U > self.steps_day:
                 degree_days_tomorrow = self.meteo.calc_graaddagen(
@@ -2254,6 +2374,7 @@ class DaCalc(DaBase):
                         dt.date.today() + dt.timedelta(days=1), dt.datetime.min.time()
                     ),
                     weighted=True,
+                    base_temp=base_temp,
                 )
                 logging.info(
                     f"Gewogen graaddagen morgen: {degree_days_tomorrow:.1f} K.day"
@@ -2299,8 +2420,6 @@ class DaCalc(DaBase):
                 model += hp_on[u] == 0
         else:
             # self.hp_enabled == True
-            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
-            self.hp_adjustment = (self.heating_options.adjustment or "power").lower()
             logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
             # heat demand: off, eco, max
@@ -2550,6 +2669,20 @@ class DaCalc(DaBase):
                 # HeatingConfig.validate_stages_sorted.
                 hp_stages = [s.model_dump() for s in self.heating_options.stages]
                 S = len(hp_stages)
+                # COP factor per interval from the forecast outdoor temperature
+                # (1.0 without a cop_temperature_curve, or when the forecast is missing)
+                cop_curve = self.heating_options.cop_temperature_curve
+                cop_factor = [
+                    1.0
+                    if t is None or math.isnan(t)
+                    else cop_temperature_factor(cop_curve, t)
+                    for t in temp_out
+                ]
+                if cop_curve:
+                    logging.info(
+                        f"COP-factor buitentemperatuur: {min(cop_factor):.2f} - "
+                        f"{max(cop_factor):.2f}"
+                    )
                 # p_hp[s][u]: het gevraagde vermogen in W in dat uur
                 p_hp = [
                     [
@@ -2572,10 +2705,6 @@ class DaCalc(DaBase):
                     [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(S)]
                     for _ in range(U)
                 ]
-
-                hp_on = [
-                    model.add_var(var_type=BINARY) for _ in range(U)
-                ]  # If on the pump will run in that hour
 
                 # verbruik per interval
                 for u in range(U):
@@ -2612,31 +2741,36 @@ class DaCalc(DaBase):
                     model += (
                         h_hp[u]
                         == xsum(
-                            (p_hp[s][u] * hp_stages[s]["cop"] / 1000) for s in range(S)
+                            (p_hp[s][u] * hp_stages[s]["cop"] * cop_factor[u] / 1000)
+                            for s in range(S)
                         )
                         * hour_fraction[u]
                     )
 
-                # max heat power in kW
-                max_heat_power = (
-                    hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
-                )
-                logging.info(
-                    f"Maximaal warmteproducerend vermogen: {max_heat_power} kW"
-                )
-
+                # max/min te produceren warmte per interval, met de COP-factor
+                # van dat interval (extensie-intervallen tellen voor een heel uur)
+                nom_max_power = hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
+                nom_min_power = hp_stages[1]["max_power"] * hp_stages[1]["cop"] / 1000
+                avail = range(U - boiler_int)
+                hours_prod = sum(hour_fraction[u] for u in avail)
                 max_heat_prod = sum(
-                    max_heat_power * hour_fraction[u] for u in range(U - boiler_int)
-                )
-                # logging.info(
-                #    f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh"
-                # )
-                min_heat_power = hp_stages[1]["max_power"] * hp_stages[1]["cop"] / 1000
-                logging.info(
-                    f"Minimaal warmteproducerend vermogen: {min_heat_power} kW"
+                    nom_max_power * cop_factor[u] * hour_fraction[u] for u in avail
                 )
                 min_heat_prod = sum(
-                    min_heat_power * hour_fraction[u] for u in range(U - boiler_int)
+                    nom_min_power * cop_factor[u] * hour_fraction[u] for u in avail
+                )
+                # gemiddeld vermogen over de beschikbare uren
+                if hours_prod > 0:
+                    max_heat_power = max_heat_prod / hours_prod
+                    min_heat_power = min_heat_prod / hours_prod
+                else:
+                    max_heat_power = nom_max_power
+                    min_heat_power = nom_min_power
+                logging.info(
+                    f"Maximaal warmteproducerend vermogen: {max_heat_power:.2f} kW"
+                )
+                logging.info(
+                    f"Minimaal warmteproducerend vermogen: {min_heat_power:.2f} kW"
                 )
                 hours_avail = (U - boiler_int) * self.interval_s / 3600
                 logging.info(f"Aantal beschikbare uren: {hours_avail:.2f}")
@@ -3472,12 +3606,12 @@ class DaCalc(DaBase):
             sum_old_cons += netto
             if netto >= 0:
                 old_cost_da += netto * pl[u]
-                org_l.append(netto)
+                org_l.append(netto/hour_fraction[u])
                 org_t.append(0)
             else:
                 old_cost_da += netto * pt[u]
                 org_l.append(0)
-                org_t.append(netto)
+                org_t.append(netto/hour_fraction[u])
         if self.boiler_present:
             boiler_at_23 = (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (
                 spec_heat_boiler / (3600 * cop_boiler)
@@ -4488,6 +4622,7 @@ class DaCalc(DaBase):
                             f"op {hp_power:<0.3f} kW"
                         )
 
+            if self.hp_present:
                 #  curve adjustment
                 entity_curve_adjustment = (
                     self.heating_options.entity_adjust_heating_curve
@@ -4771,7 +4906,7 @@ class DaCalc(DaBase):
         ]
         breedte.append(breedte[-1])
         if solar_num > 0:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(pv_p_org),
                 width=breedte,
@@ -4781,7 +4916,7 @@ class DaCalc(DaBase):
             )
         # 2
         if sum(pv_ac_p) > 0:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(pv_ac_p),
                 width=breedte,
@@ -4791,7 +4926,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         # 3
-        axis[0].bar(
+        _bar(axis[0],
             tijd,
             np.array(org_l),
             width=breedte,
@@ -4801,7 +4936,7 @@ class DaCalc(DaBase):
             align="edge",
         )
 
-        axis[0].bar(
+        _bar(axis[0],
             tijd,
             np.array(base_n),
             width=breedte,
@@ -4810,7 +4945,7 @@ class DaCalc(DaBase):
             align="edge"
         )
         if self.boiler_present:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(boiler_n),
                 width=breedte,
@@ -4820,7 +4955,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if self.hp_present:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(heatpump_n),
                 width=breedte,
@@ -4830,7 +4965,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if EV > 0:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(ev_n),
                 width=breedte,
@@ -4840,7 +4975,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if M > 0:
-            axis[0].bar(
+            _bar(axis[0],
                 tijd,
                 np.array(mach_n),
                 width=breedte,
@@ -4852,7 +4987,7 @@ class DaCalc(DaBase):
                 color="brown",
                 align="edge",
             )
-        axis[0].bar(
+        _bar(axis[0],
             tijd,
             np.array(org_t),
             width=breedte,
@@ -4902,7 +5037,7 @@ class DaCalc(DaBase):
             f"Berekend op: {start_dt.strftime('%d-%m-%Y %H:%M')}\nNiet geoptimaliseerd"
         )
 
-        axis[1].bar(
+        _bar(axis[1],
             tijd,
             np.array(pv_p_opt),
             width=breedte,
@@ -4910,7 +5045,7 @@ class DaCalc(DaBase):
             color="green",
             align="edge",
         )
-        axis[1].bar(
+        _bar(axis[1],
             tijd,
             np.array(accu_out_p),
             width=breedte,
@@ -4919,7 +5054,7 @@ class DaCalc(DaBase):
             color="red",
             align="edge",
         )
-        axis[1].bar(
+        _bar(axis[1],
             tijd,
             np.array(c_l_p),
             width=breedte,
@@ -4930,11 +5065,11 @@ class DaCalc(DaBase):
         )
 
         # axis[1].bar(tijd, np.array(cons_n), label="Verbruik", color='yellow')
-        axis[1].bar(
+        _bar(axis[1],
             tijd, np.array(base_n), width=breedte, label="Overig verbr.", color="#f1a603", align="edge"
         )
         if self.boiler_present:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(boiler_n),
                 width=breedte,
@@ -4944,7 +5079,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if self.hp_present:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(heatpump_n),
                 width=breedte,
@@ -4954,7 +5089,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if EV > 0:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(ev_n),
                 width=breedte,
@@ -4964,7 +5099,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if M > 0:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(mach_n),
                 width=breedte,
@@ -4977,7 +5112,7 @@ class DaCalc(DaBase):
                 align="edge",
             )
         if B > 0:
-            axis[1].bar(
+            _bar(axis[1],
                 tijd,
                 np.array(accu_in_n),
                 width=breedte,
@@ -4990,7 +5125,7 @@ class DaCalc(DaBase):
                 color="#ff8000",
                 align="edge",
             )
-        axis[1].bar(
+        _bar(axis[1],
             tijd,
             np.array(c_t_n),
             width=breedte,
@@ -5058,10 +5193,10 @@ class DaCalc(DaBase):
                 pv_p.append(0)
                 bat_p.append(0)
                 bat_n.append(0)
-                leg1 = axis[gr_no].bar(
+                leg1 = _bar(axis[gr_no],
                     tijd, np.array(ac_p), width=breedte, label="AC<->", color="red", align="edge"
                 )
-                leg2 = axis[gr_no].bar(
+                leg2 = _bar(axis[gr_no],
                     tijd,
                     np.array(bat_p),
                     label="BAT<->",
@@ -5071,7 +5206,7 @@ class DaCalc(DaBase):
                     align="edge",
                 )
                 if pv_dc_num[b] > 0:
-                    leg3 = axis[gr_no].bar(
+                    leg3 = _bar(axis[gr_no],
                         tijd,
                         np.array(pv_p),
                         width=breedte,
@@ -5082,8 +5217,8 @@ class DaCalc(DaBase):
                     )
                 else:
                     leg3 = None
-                axis[gr_no].bar(tijd, np.array(ac_n), width=breedte, color="red", align="edge")
-                axis[gr_no].bar(
+                _bar(axis[gr_no], tijd, np.array(ac_n), width=breedte, color="red", align="edge")
+                _bar(axis[gr_no],
                     tijd,
                     np.array(bat_n),
                     width=breedte,
@@ -5284,7 +5419,7 @@ class DaCalc(DaBase):
 
         plt.subplots_adjust(right=0.75)
         fig.tight_layout()
-        plt.savefig(
+        fig.savefig(
             "../data/images/calc_" + start_dt.strftime("%Y-%m-%d__%H-%M") + ".png"
         )
         plt.close("all")

@@ -289,4 +289,5 @@ class ConfigurationV0(DAOConfigBaseModel):
     model_config = ConfigDict(
         extra="allow",  # Preserve unknown keys
         populate_by_name=True,  # Allow both snake_case and aliases
+        loc_by_alias=False,
     )
