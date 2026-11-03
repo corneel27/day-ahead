@@ -3102,7 +3102,7 @@ class Report(DaBase):
                         1 + btw_t / 100
                 )
             else:
-                da_prod = (row.value + ol_t) * (1 + btw_t / 100)
+                da_prod = (row.value * multiplier_t + ol_t) * (1 + btw_t / 100)
             df.loc[df.shape[0]] = [
                 datetime.datetime.strptime(row.time, "%Y-%m-%d %H:%M"),
                 row.value,
