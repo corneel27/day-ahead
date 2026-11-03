@@ -697,6 +697,35 @@
       "x-ui-group": "Heating",
       "x-ui-section": "Boiler"
     },
+    "CopTemperaturePoint": {
+      "description": "Point of the COP temperature curve: a COP factor at an outdoor temperature.",
+      "properties": {
+        "temperature": {
+          "description": "Outdoor temperature in °C",
+          "title": "Temperature",
+          "type": "number",
+          "x-help": "Outdoor temperature in °C at which the factor applies.",
+          "x-ui-section": "General",
+          "x-unit": "°C"
+        },
+        "factor": {
+          "description": "COP factor at this outdoor temperature",
+          "exclusiveMinimum": 0,
+          "title": "Factor",
+          "type": "number",
+          "x-help": "Factor applied to every stage COP at this outdoor temperature. 1.0 at the temperature the stage COPs are given for (e.g. 7 °C, the A7 rating point).",
+          "x-ui-section": "General",
+          "x-unit": "factor",
+          "x-validation-hint": "Must be > 0"
+        }
+      },
+      "required": [
+        "temperature",
+        "factor"
+      ],
+      "title": "CopTemperaturePoint",
+      "type": "object"
+    },
     "DashboardConfig": {
       "additionalProperties": true,
       "description": "Dashboard web UI configuration.",
@@ -1384,6 +1413,76 @@
       "x-order": 12,
       "x-ui-group": "Energy"
     },
+    "HADataSensor": {
+      "properties": {
+        "ha_entity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "sensor.epex_spot_data_market_price",
+          "description": "HA sensor where data are available as attribute",
+          "x-help": "Optional: Home Assistant sensor with data.",
+          "x-ui-section": "Prices",
+          "x-ui-widget-filter": "sensor",
+          "title": "Ha Entity"
+        },
+        "ha_attribute": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "data",
+          "description": "The name of attribute in the HA sensor where a list of data are available.Every item in de list contain at least a datetime field and a value field",
+          "title": "Ha Attribute",
+          "x-help": "Home Assistant sensor the name of the attribute with the data. ",
+          "x-ui-section": "Prices",
+          "x-ui-widget-filter": "sensor"
+        },
+        "ha_datetime_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "start_time",
+          "description": "The name of datetime field in the list item",
+          "title": "Ha Datetime Field",
+          "x-help": "Home Assistant sensor the name/key of the datetime-field in the list-item. ",
+          "x-ui-section": "Prices",
+          "x-ui-widget-filter": "sensor"
+        },
+        "ha_value_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "price_per_kwh",
+          "description": "The name of value field in the list item",
+          "title": "Ha Value Field",
+          "x-help": "Home Assistant sensor the name/key of the value-field in the list-item. ",
+          "x-ui-section": "Prices",
+          "x-ui-widget-filter": "sensor"
+        }
+      },
+      "title": "HADataSensor",
+      "type": "object"
+    },
     "HADatabaseConfig": {
       "additionalProperties": true,
       "description": "Home Assistant database connection configuration.",
@@ -1678,6 +1777,18 @@
           "x-help": "Power and efficiency stages for heat pump. Required (at least 1) when adjustment is 'power' or 'heating curve'. Multiple stages model variable-speed compressors. Must be sorted by power ascending. When a 0 W stage is missed this is supplied by the program.",
           "x-ui-section": "Power Stages",
           "x-validation-hint": "Required for 'power' and 'heating curve' adjustment; must be sorted by max_power"
+        },
+        "cop_temperature_curve": {
+          "default": [],
+          "description": "COP factor per outdoor temperature",
+          "items": {
+            "$ref": "#/$defs/CopTemperaturePoint"
+          },
+          "title": "Cop Temperature Curve",
+          "type": "array",
+          "x-help": "Optional: how the COP changes with the outdoor temperature. Each point gives a factor on all stage COPs at an outdoor temperature; between points the factor is interpolated linearly, outside them the nearest point's factor is used. The stage COPs are then the COPs at the temperature where the factor is 1.0 (e.g. 7 °C). For every interval the factor at the forecast temperature (meteo) is used, so the heat pump is planned in the warmer hours when the higher COP outweighs the price. Empty: the stage COPs are used for every temperature.",
+          "x-ui-section": "Power Stages",
+          "x-validation-hint": "Sorted by temperature (ascending), factors > 0"
         },
         "entity adjust heating curve": {
           "anyOf": [
@@ -2200,9 +2311,9 @@
           ],
           "default": "https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json",
           "description": "The url of the supplier of prediction data, with which DAO can get the prediction data ",
-          "for jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=jsonx-ui-section": "Prices",
           "title": "Api",
-          "x-help": "The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.json"
+          "x-help": "The url of the supplier to get the prediction datafor Epexpredictor: https://epexpredictor.batzill.com/prices?region=<region>&hours=<hours>for energypriceforecast.eu: https://api.energypriceforecast.eu/api/v1/dao/prices?country=<region>&hours=<hours>for da_prediction: https://raw.githubusercontent.com/corneel27/day-ahead-prediction/main/dap/data/prediction.jsonfor jeroen_nl: https://jeroen.nl/api/dynamische-energieprijzen/v2/?key=<key>&period=voorspelling&type=json",
+          "x-ui-section": "Prices"
         },
         "api_key": {
           "anyOf": [
@@ -2244,12 +2355,27 @@
           "enum": [
             "nordpool",
             "entsoe",
-            "tibber"
+            "tibber",
+            "ha"
           ],
           "title": "Source Day Ahead",
           "type": "string",
-          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration.",
+          "x-help": "Data source for day-ahead electricity market prices. 'nordpool' and 'entsoe' for European markets, 'tibber' if using Tibber integration. 'ha' for generic solutions",
           "x-ui-section": "Prices"
+        },
+        "ha_epex_spot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HADataSensor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Configuration of getting pricedata from the ha-custom component 'epex spot'.",
+          "x-help": "Configuration of getting the day ahead prices from 'epex spot'.",
+          "x-ui-section": "Prices",
+          "title": "Ha Epex Spot"
         },
         "prediction": {
           "anyOf": [

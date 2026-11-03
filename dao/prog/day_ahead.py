@@ -25,6 +25,7 @@ from utils import (
     interpolate,
 )
 
+from dao.prog.config.models.devices.heating import cop_temperature_factor
 from dao.prog.da_base import DaBase
 from dao.prog.da_report import Report
 from dao.prog.ev_schedule import format_ev_charge_schedule
@@ -270,7 +271,6 @@ class DaCalc(DaBase):
         prog_data["da_ex"] = price_data["da_ex"]
         prog_data["da_cons"] = price_data["da_cons"]
         prog_data["da_prod"] = price_data["da_prod"]
-
         logging.debug(f"Prognose data:\n{prog_data.to_string()}")
         pd.options.display.float_format = "{:.3f}".format
 
@@ -279,12 +279,14 @@ class DaCalc(DaBase):
         p_spot = []  # prijs op de spot markt
         pl_avg = []  # prijs levering day_ahead gemiddeld
         uur = []  # datum_tijd van het betreffende uur
+        temp_out = []  # voorspelde buitentemperatuur per interval (meteo)
         # prog_data = prog_data.reset_index()
         # make sure indexes pair with number of rows
         for row in prog_data.itertuples():
             if math.isnan(row.da_ex):
                 break
             uur.append(row.tijd)
+            temp_out.append(row.temp)
             p_spot.append(row.da_ex)
             pl.append(row.da_cons)
             pt.append(row.da_prod)
@@ -1024,29 +1026,94 @@ class DaCalc(DaBase):
             for b in range(B)
         ]
 
-        # alle constraints
+        # alle constraints, eerst declaraties
+        # laden, alles uitgedrukt in vermogen kW
+        """
+        # vanaf hier laden zonder sos
+        # declarations
+        # Binare variabele: welk interval is actief
+        ac_to_dc_z = [
+            [
+                [
+                    model.add_var(var_type=BINARY)
+                    for cs in range(CS[b] - 1)
+                ]
+                for u in range(U)
+            ]
+            for b in range(B)
+        ]
+
+        # Continue variabele: positie in het actieve interval
+        ac_to_dc_f = [
+            [
+                model.add_var(var_type=CONTINUOUS, lb=0, ub=1)
+                for u in range(U)
+            ]
+            for b in range(B)
+        ]
+
+        for b in range(B):
+            # Big-M constraints voor ieder mogelijk interval
+            M_power_ac = (
+                max(ac_to_dc_samples[b])
+                - min(ac_to_dc_samples[b])
+            )
+            M_power_dc = (
+                max(dc_from_ac_samples[b])
+                - min(dc_from_ac_samples[b])
+            )
+            # overige constraints
+
+            for u in range(U):
+                # Exact 1 interval is actief
+                model += (
+                    xsum(
+                        ac_to_dc_z[b][u][cs]
+                        for cs in range(CS[b] - 1)
+                    )
+                    == 1
+                )
+
+                for cs in range(CS[b] - 1):
+
+                    p0 = ac_to_dc_samples[b][cs]
+                    p1 = ac_to_dc_samples[b][cs + 1]
+
+                    q0 = dc_from_ac_samples[b][cs]
+                    q1 = dc_from_ac_samples[b][cs + 1]
+
+                    # AC power
+                    model += (
+                        ac_to_dc[b][u]
+                        >= p0 + ac_to_dc_f[b][u] * (p1 - p0)
+                        - M_power_ac * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    model += (
+                        ac_to_dc[b][u]
+                        <= p0 + ac_to_dc_f[b][u] * (p1 - p0)
+                        + M_power_ac * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    # DC power
+                    model += (
+                        dc_from_ac[b][u]
+                        >= q0 + ac_to_dc_f[b][u] * (q1 - q0)
+                        - M_power_dc * (1 - ac_to_dc_z[b][u][cs])
+                    )
+
+                    model += (
+                        dc_from_ac[b][u]
+                        <= q0 + ac_to_dc_f[b][u] * (q1 - q0)
+                        + M_power_dc * (1 - ac_to_dc_z[b][u][cs])
+                    )
+                
+                # tot hier laden zonder sos #######################################
+                
+        """
+        # vanaf hier laden met sos ######################################################
         for b in range(B):
             for u in range(U):
-                # laden, alles uitgedrukt in vermogen kW
-                # vanaf hier laden met aan/uit zonder sos
-                """
-                for cs in range(CS[b]):
-                    model += (ac_to_dc_st[b][cs][u] <=
-                        charge_stages[b][cs]["power"] * 
-                        ac_to_dc_st_on[b][cs][u]/1000)
-                for cs in range(CS[b])[1:]:
-                    model += (ac_to_dc_st[b][cs][u] >=
-                        charge_stages[b][cs - 1]["power"] * 
-                        ac_to_dc_st_on[b][cs][u]/1000)
-
-                model += ac_to_dc[b][u] == xsum(ac_to_dc_st[b][cs][u] for cs in range(CS[b]))
-                model += (xsum(ac_to_dc_st_on[b][cs][u] for cs in range(CS[b]))) <= 1
-                model += dc_from_ac[b][u] == xsum(ac_to_dc_st[b][cs][u] * \
-                                    charge_stages[b][cs]["efficiency"] 
-                                    for cs in range(CS[b]))
-                # tot hier laden met aan/uit zonder sos #######################################
-                """
-                # vanaf hier laden met sos ######################################################
                 model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
                 model += (
                     xsum(
@@ -2195,6 +2262,10 @@ class DaCalc(DaBase):
                     model += ev_boundary_stop[e][u] == 0
                     model += ev_delta_soc[e][u] == 0
                     model += low_soc_penalty_int[e][u] == 0
+                    model += ev_is_off[e][u] == 1
+                    model += ev_is_on[e][u] == 0
+                    for cs in range(ECS[e]):
+                        model += stage_on[e][cs][u] == 0
 
                 """
                 max_beschikbaar = 0
@@ -2288,6 +2359,8 @@ class DaCalc(DaBase):
             if not self.hp_enabled:
                 logging.info("Warmtepomp staat uit - warmtepomp wordt niet ingepland")
         if self.hp_enabled:
+            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
+            self.hp_adjustment = (self.heating_options.adjustment or "power").lower()
             # degree days
             base_temp = self.heating_options.degree_days_base_temperature
             logging.info(f"Stookgrens (graaddagen): {base_temp:.1f} °C")
@@ -2347,8 +2420,6 @@ class DaCalc(DaBase):
                 model += hp_on[u] == 0
         else:
             # self.hp_enabled == True
-            # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
-            self.hp_adjustment = (self.heating_options.adjustment or "power").lower()
             logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
             # heat demand: off, eco, max
@@ -2598,6 +2669,20 @@ class DaCalc(DaBase):
                 # HeatingConfig.validate_stages_sorted.
                 hp_stages = [s.model_dump() for s in self.heating_options.stages]
                 S = len(hp_stages)
+                # COP factor per interval from the forecast outdoor temperature
+                # (1.0 without a cop_temperature_curve, or when the forecast is missing)
+                cop_curve = self.heating_options.cop_temperature_curve
+                cop_factor = [
+                    1.0
+                    if t is None or math.isnan(t)
+                    else cop_temperature_factor(cop_curve, t)
+                    for t in temp_out
+                ]
+                if cop_curve:
+                    logging.info(
+                        f"COP-factor buitentemperatuur: {min(cop_factor):.2f} - "
+                        f"{max(cop_factor):.2f}"
+                    )
                 # p_hp[s][u]: het gevraagde vermogen in W in dat uur
                 p_hp = [
                     [
@@ -2620,10 +2705,6 @@ class DaCalc(DaBase):
                     [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in range(S)]
                     for _ in range(U)
                 ]
-
-                hp_on = [
-                    model.add_var(var_type=BINARY) for _ in range(U)
-                ]  # If on the pump will run in that hour
 
                 # verbruik per interval
                 for u in range(U):
@@ -2660,31 +2741,36 @@ class DaCalc(DaBase):
                     model += (
                         h_hp[u]
                         == xsum(
-                            (p_hp[s][u] * hp_stages[s]["cop"] / 1000) for s in range(S)
+                            (p_hp[s][u] * hp_stages[s]["cop"] * cop_factor[u] / 1000)
+                            for s in range(S)
                         )
                         * hour_fraction[u]
                     )
 
-                # max heat power in kW
-                max_heat_power = (
-                    hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
-                )
-                logging.info(
-                    f"Maximaal warmteproducerend vermogen: {max_heat_power} kW"
-                )
-
+                # max/min te produceren warmte per interval, met de COP-factor
+                # van dat interval (extensie-intervallen tellen voor een heel uur)
+                nom_max_power = hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
+                nom_min_power = hp_stages[1]["max_power"] * hp_stages[1]["cop"] / 1000
+                avail = range(U - boiler_int)
+                hours_prod = sum(hour_fraction[u] for u in avail)
                 max_heat_prod = sum(
-                    max_heat_power * hour_fraction[u] for u in range(U - boiler_int)
-                )
-                # logging.info(
-                #    f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh"
-                # )
-                min_heat_power = hp_stages[1]["max_power"] * hp_stages[1]["cop"] / 1000
-                logging.info(
-                    f"Minimaal warmteproducerend vermogen: {min_heat_power} kW"
+                    nom_max_power * cop_factor[u] * hour_fraction[u] for u in avail
                 )
                 min_heat_prod = sum(
-                    min_heat_power * hour_fraction[u] for u in range(U - boiler_int)
+                    nom_min_power * cop_factor[u] * hour_fraction[u] for u in avail
+                )
+                # gemiddeld vermogen over de beschikbare uren
+                if hours_prod > 0:
+                    max_heat_power = max_heat_prod / hours_prod
+                    min_heat_power = min_heat_prod / hours_prod
+                else:
+                    max_heat_power = nom_max_power
+                    min_heat_power = nom_min_power
+                logging.info(
+                    f"Maximaal warmteproducerend vermogen: {max_heat_power:.2f} kW"
+                )
+                logging.info(
+                    f"Minimaal warmteproducerend vermogen: {min_heat_power:.2f} kW"
                 )
                 hours_avail = (U - boiler_int) * self.interval_s / 3600
                 logging.info(f"Aantal beschikbare uren: {hours_avail:.2f}")
@@ -4536,6 +4622,7 @@ class DaCalc(DaBase):
                             f"op {hp_power:<0.3f} kW"
                         )
 
+            if self.hp_present:
                 #  curve adjustment
                 entity_curve_adjustment = (
                     self.heating_options.entity_adjust_heating_curve
