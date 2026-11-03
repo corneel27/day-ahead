@@ -1937,10 +1937,12 @@ class DaCalc(DaBase):
                     f"gewenst niveau ({wished_level[e]:.1f}% minus de marge "
                     f"{level_margin[e]}%),"
                 )
+            """
             if not (ev_position[e] == "home"):
                 reden = reden + " auto is niet huis,"
             if not ev_plugged_in[e]:
                 reden = reden + " auto is niet ingeplugd,"
+            """
             if not (tijd[0] < ready):
                 reden = reden + f" opgegeven tijdstip ({ready!s}) is verouderd,"
             if tijd[U - 1] < ready:
@@ -1949,9 +1951,9 @@ class DaCalc(DaBase):
                     f"planningshorizon ({tijd[U - 1]}),"
                 )
             if (
-                ev_plugged_in[e]
-                and (ev_position[e] == "home")
-                and (wished_level[e] - level_margin[e] > actual_soc[e])
+                # ev_plugged_in[e]
+                # and (ev_position[e] == "home")
+                (wished_level[e] - level_margin[e] > actual_soc[e])
                 and (tijd[0] < ready)
             ):
                 if instant_charge:
@@ -4265,7 +4267,9 @@ class DaCalc(DaBase):
                     logging.info(f"- stop laden op {new_state_stop_laden}")
                 logging.info(f"- positie: {ev_position[e]}")
                 logging.info(f"- ingeplugd: {ev_plugged_in[e]}")
-
+                if (float(new_ampere_state) > 0.0) and (ev_position[e] != "home" or not ev_plugged_in[e]):
+                    logging.warning(f"Laden van {ev_name} kan niet worden aangezet, want "
+                                    f"deze is niet thuis en/of ingeplugged")
                 if ev_position[e] == "home" and ev_plugged_in[e]:
                     if float(new_ampere_state) > 0.0:
                         if old_switch_state == "off":
