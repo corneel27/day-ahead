@@ -1,5 +1,23 @@
 # Changelog 刀 DAO
 # Day Ahead Optimizer
+# 2026.11.0.rc2
+This is the last testrelease before the next stable release (unless some finds an error that must be fixed and tested).
+
+## Fixes
+Fixed dt-error in several report/api requests
+
+# 2026.11.0.rc1
+## Changes
+- Implemented ha_epex_spot as day ahead source (via generic ha-datasource)
+- Further implementation of CI/CD (thanks @Dogooder)
+- Speed up runs and PNG generation (thanks @dewi-ny-je)
+- Make cop of your hp dependent of the outdoor temperature (thanks @llevering)
+
+## Fixes
+- Heat pump curve adjustment is also performed when no heat is needed
+- Fixed dst-issues in grid-reports and api get pv_ac/pv_dc
+- updates of several modules
+
 # 2026.10.0.rc2
 ## Breaking change
 The scheduler task for retrieving predicted prices is renamed to: **get_predicted_prices**
