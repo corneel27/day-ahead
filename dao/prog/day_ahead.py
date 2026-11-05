@@ -1891,7 +1891,7 @@ class DaCalc(DaBase):
                 max_power[e] * hours_avail * ev_charge_stages[e][-1]["efficiency"]
             )
             if (
-                (ready > start_dt)
+                (ready >= start_dt)
                 and (e_needed > max_possible)
                 and ev_plugged_in[e]
                 and (ev_position[e] == "home")
@@ -1945,7 +1945,7 @@ class DaCalc(DaBase):
             if not ev_plugged_in[e]:
                 reden = reden + " auto is niet ingeplugd,"
             """
-            if not (tijd[0] < ready):
+            if ready <= start_dt:
                 reden = reden + f" opgegeven tijdstip ({ready!s}) is verouderd,"
             if tijd[U - 1] < ready:
                 reden = reden + (
