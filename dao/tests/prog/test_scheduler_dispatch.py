@@ -38,3 +38,26 @@ def test_schedule_patterns_preserve_dispatch_order_and_multiplicity(monkeypatch,
         scheduler.scheduler()
 
     assert [call.args[0] for call in scheduler.run_task_process.call_args_list] == expected
+
+
+def test_hanging_task_is_killed_after_timeout(monkeypatch):
+    proc = Mock()
+    proc.wait.side_effect = [da_scheduler.TimeoutExpired("task", 1), None]
+    monkeypatch.setattr(da_scheduler, "Popen", Mock(return_value=proc))
+    scheduler = da_scheduler.DaScheduler.__new__(da_scheduler.DaScheduler)
+    scheduler.tasks = {"calc": {"cmd": ["python3", "day_ahead.py", "calc"]}}
+
+    assert scheduler.run_task_process("calc") is False
+    proc.kill.assert_called_once_with()
+    assert proc.wait.call_args_list[0].kwargs == {"timeout": da_scheduler.TASK_TIMEOUT}
+
+
+@pytest.mark.parametrize(("returncode", "expected"), [(0, True), (1, False)])
+def test_finished_task_reports_exit_code(monkeypatch, returncode, expected):
+    proc = Mock(returncode=returncode)
+    monkeypatch.setattr(da_scheduler, "Popen", Mock(return_value=proc))
+    scheduler = da_scheduler.DaScheduler.__new__(da_scheduler.DaScheduler)
+    scheduler.tasks = {"calc": {"cmd": ["python3", "day_ahead.py", "calc"]}}
+
+    assert scheduler.run_task_process("calc") is expected
+    proc.kill.assert_not_called()

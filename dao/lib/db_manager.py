@@ -71,6 +71,7 @@ class DBmanagerObj:
             ),
             pool_recycle=3600,
             pool_pre_ping=True,
+            connect_args=self.connect_args(self.db_dialect),
         )
 
         # Postgres: set timezone
@@ -83,6 +84,33 @@ class DBmanagerObj:
         with self.engine.connect():
             pass
         self.metadata = MetaData()
+
+    @staticmethod
+    def connect_args(db_dialect: str) -> dict:
+        """
+        Timeouts voor de database-driver, zodat een verbinding waarvan de
+        server niet meer antwoordt (bijvoorbeeld na het wegvallen van het
+        netwerk) een fout geeft in plaats van blijft wachten.
+        De pool_pre_ping op een dode verbinding valt hier ook onder.
+        Args:
+            db_dialect: mysql(=mariadb), sqlite, postgresql
+        Returns:
+            de connect_args voor create_engine
+        """
+        if db_dialect == "mysql":
+            # read_timeout geldt per leesactie, dus ook voor het wachten op
+            # het resultaat van een lange query
+            return {"connect_timeout": 10, "read_timeout": 300, "write_timeout": 60}
+        elif db_dialect == "postgresql":
+            # TCP keepalives detecteren een server die niet meer antwoordt
+            return {
+                "connect_timeout": 10,
+                "keepalives": 1,
+                "keepalives_idle": 30,
+                "keepalives_interval": 10,
+                "keepalives_count": 3,
+            }
+        return {}
 
     @staticmethod
     def db_url(

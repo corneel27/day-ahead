@@ -7,7 +7,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
+import requests
+from hassapi.exceptions import ClientError as HassClientError
 from sqlalchemy import Column, Integer, MetaData, String, Table, create_engine
+from sqlalchemy.exc import OperationalError
 
 # V1 reads configuration and opens a log at import time. Keep those startup
 # effects isolated from the route tests and the user's actual data.
@@ -222,3 +225,29 @@ def test_preview_blocks_live_tasks_and_shared_state(client, monkeypatch, method,
     assert b"synthetic scenario" in response.data
     for blocked in mocks:
         blocked.assert_not_called()
+
+
+@pytest.mark.parametrize(("error", "status"), [
+    (requests.ConnectionError("no route to host"), 503),
+    (OperationalError("SELECT 1", {}, Exception("lost connection")), 503),
+    (HassClientError("Home Assistant API is not running."), 503),
+    (KeyError("secret database path"), 500),
+])
+def test_report_errors_are_json(client, monkeypatch, error, status):
+    monkeypatch.setattr(api_routes, "Report", Mock(side_effect=error))
+    response = client.get("/api/report/consumption/vandaag_en_morgen")
+    assert response.status_code == status
+    assert response.json["message"] == "Failed"
+    assert b"secret" not in response.data
+
+
+def test_report_returns_data(client, monkeypatch):
+    report = Mock()
+    report.get_api_data.return_value = '{ "message":"Success", "data": [] }'
+    monkeypatch.setattr(api_routes, "Report", Mock(return_value=report))
+    response = client.get("/api/report/consumption/vandaag_en_morgen?cumulate=1")
+    assert response.status_code == 200
+    assert response.json == {"message": "Success", "data": []}
+    report.get_api_data.assert_called_once_with(
+        "consumption", "vandaag_en_morgen", cumulate=True
+    )

@@ -5,7 +5,10 @@ from subprocess import run as subprocess_run
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from flask import Blueprint, current_app, request
+from hassapi.exceptions import ClientError as HassClientError
 from markupsafe import escape
+from requests import RequestException
+from sqlalchemy.exc import OperationalError
 
 from dao.prog.da_const import tasks
 from dao.prog.da_report import Report
@@ -27,7 +30,6 @@ def api_report(fld: str, periode: str):
     :return: de gevraagde data in json formaat
     """
     cumulate = request.args.get("cumulate", type=int)
-    report = Report(app_datapath + "/options.json")
     # start = request.args.get('start')
     # end = request.args.get('end')
     if cumulate is None:
@@ -40,11 +42,25 @@ def api_report(fld: str, periode: str):
             cumulate = False
     fld = str(escape(fld))
     periode = str(escape(periode))
-    result = report.get_api_data(fld, periode, cumulate=cumulate)
-
     headers = {
         "Content-Type": "application/json",
     }
+    # bij een fout een json-antwoord met de oorzaak in plaats van een html-pagina,
+    # zodat de rest-sensoren in Home Assistant een bruikbare melding geven
+    try:
+        report = Report(app_datapath + "/options.json")
+        result = report.get_api_data(fld, periode, cumulate=cumulate)
+    except (RequestException, OperationalError, HassClientError):
+        current_app.logger.exception(f"API report {fld}/{periode}: geen verbinding")
+        result = {
+            "message": "Failed",
+            "reason": "Home Assistant of database niet bereikbaar",
+        }
+        return result, 503
+    except Exception:
+        current_app.logger.exception(f"API report {fld}/{periode} mislukt")
+        result = {"message": "Failed", "reason": "Gegevens konden niet worden opgehaald"}
+        return result, 500
     return result, headers
 
 
