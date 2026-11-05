@@ -197,6 +197,7 @@ class DaCalc(DaBase):
                 start_prediction_dt, end=None, interval="1hour",
                 extension=horizon_extension
             )
+            horizon_extension = len(pred_price_data)
             price_data = pd.concat([fixed_price_data, pred_price_data])
         else:
             price_data = fixed_price_data
@@ -1890,7 +1891,8 @@ class DaCalc(DaBase):
                 max_power[e] * hours_avail * ev_charge_stages[e][-1]["efficiency"]
             )
             if (
-                (e_needed > max_possible)
+                (ready > start_dt)
+                and (e_needed > max_possible)
                 and ev_plugged_in[e]
                 and (ev_position[e] == "home")
             ):
