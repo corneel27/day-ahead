@@ -306,7 +306,7 @@ class DaCalc(DaBase):
         else:
             logging.info("Baseload uit instellingen")
             base_cons = self.config.baseload
-            if len(fixed_price_data) >= self.steps_day:
+            if len(fixed_price_data) > self.steps_day:
                 base_cons = base_cons + base_cons
         if self.interval == "15min":
             start = dt.datetime(
