@@ -1,7 +1,6 @@
 import base64
 import calendar
 import datetime
-import itertools
 import json
 import logging
 import math
@@ -1288,12 +1287,12 @@ class Report(DaBase):
                     t1.c.variabel == v1.c.id,
                 )
             )
-            .order_by(t1.c.time)
+            .order_by(t1.c.time.desc())
         )
         with self.db_da.engine.connect() as connection:
             result_row = connection.execute(query).first()
         if result_row is not None:
-            result = datetime.datetime.fromtimestamp(dict(result_row)["time"])
+            result = datetime.datetime.fromtimestamp(result_row.time)
         else:
             result = datetime.datetime(year=2020, month=1, day=1)
         return result
@@ -1326,62 +1325,88 @@ class Report(DaBase):
         return result
 
     def calc_cost(
-            self, vanaf: datetime.datetime, tot: datetime.datetime
-    ) -> pd.DataFrame:
-        cons_df = self.get_sensor_sum(
-            self.grid_dict["cons"]["sensors"], vanaf, tot, "cons"
+            self, vanaf: datetime.datetime, tot: datetime.datetime, code: str
+    ) -> pd.DataFrame | None:
+        """
+        Berekent per uur de kosten (code "cost") of de opbrengst (code "profit")
+        uit de netsensoren in HA en de day-ahead prijzen in de da-database
+        :param vanaf: berekenen vanaf
+        :param tot: berekenen tot
+        :param code: "cost" of "profit"
+        :return: dataframe met de kolommen "tijd" en "value", of None
+        """
+        if code == "cost":
+            energy_code, price_col = "cons", "da_cons"
+        else:
+            energy_code, price_col = "prod", "da_prod"
+        energy_df = self.get_sensor_sum(
+            self.grid_dict[energy_code]["sensors"], vanaf, tot, energy_code
         )
-        prod_df = self.get_sensor_sum(
-            self.grid_dict["prod"]["sensors"], vanaf, tot, "prod"
-        )
-
+        if energy_df is None or len(energy_df) == 0:
+            return None
         da_df = self.get_price_data(vanaf, tot)
+        if len(da_df) == 0:
+            return None
         da_df.index = pd.to_datetime(da_df["time"])
-        data = self.copy_col_df(cons_df, da_df, "cons")
-        data = self.copy_col_df(prod_df, data, "prod")
-        result = pd.DataFrame(columns=["time", "code", "value"])
-        for row in data.itertuples():
-            cost = row.cons * row.da_cons
-            db_row = [str(int(row.time.timestamp())), "cost", cost]
-            result.loc[result.shape[0]] = db_row
-            profit = row.prod * row.da_prod
-            db_row = [str(int(row.time.timestamp())), "profit", profit]
-            result.loc[result.shape[0]] = db_row
-            print(result)
-        return data
+        energy_df.index = pd.to_datetime(energy_df["tijd"])
+        # bij de wintertijdovergang geldt de eerste prijs van 02:00 voor beide uren
+        da_df = da_df[~da_df.index.duplicated()]
+        data = energy_df[["tijd", energy_code]].join(da_df[[price_col]], how="inner")
+        missing = energy_df.index.difference(data.index)
+        if len(missing) > 0:
+            logging.warning(
+                f"Consolidatie {code}: geen day-ahead prijs voor {len(missing)} "
+                f"uur, o.a. {missing.min()}; deze uren worden overgeslagen"
+            )
+        data["value"] = data[energy_code] * data[price_col]
+        return data[["tijd", "value"]]
 
     def consolidate_data(self, _start=None, _end=None) -> None:
+        """
+        Slaat de uurwaarden van de netsensoren (verbruik en productie) uit HA op
+        in de tabel "values" van de da-database, met de daaruit berekende
+        kosten en opbrengst
+        :param _start: vanaf; None: vanaf het uur na het laatst opgeslagen record
+        :param _end: tot; None: tot het begin van vandaag
+        """
         if _end is None:
             now = datetime.datetime.now()
             tot = datetime.datetime(now.year, now.month, now.day)
         else:
             tot = _end
-        for code, categorie in itertools.chain(self.grid_dict.items()):
+        for code, categorie in self.grid_dict.items():
             if _start is None:
                 start = self.get_latest_present(code) + datetime.timedelta(hours=1)
             else:
                 start = _start
-            if categorie["sensors"] == "calc":
-                function = categorie["function"]
-                data = getattr(self, function)(start, tot, code)
+            if start >= tot:
                 continue
+            if categorie["sensors"] == "calc":
+                data = getattr(self, categorie["function"])(start, tot, code)
             else:
                 data = self.get_sensor_sum(categorie["sensors"], start, tot, code)
-                if data is None:
-                    continue
-                df_db = pd.DataFrame(columns=["time", "code", "value", "tijd"])
-                data = data.rename(columns={code: "value"})
-                data["tijd"] = pd.to_datetime(data["tijd"])
-            for row in data.itertuples():
-                db_row = [
-                    str(int(row.tijd.timestamp())),
-                    code,
-                    float(row.value),
-                    row.tijd,
-                ]
-                # print(db_row)
-                df_db.loc[df_db.shape[0]] = db_row
-            print(df_db)
+                if data is not None:
+                    data = data.rename(columns={code: "value"})
+            if data is None or len(data) == 0:
+                continue
+            tijd = pd.to_datetime(data["tijd"])
+            # lokale tijd; bij de wintertijdovergang is het tweede uur 02:00 fold=1
+            repeated = tijd.duplicated().to_numpy()
+            df_db = pd.DataFrame(
+                {
+                    "time": [
+                        str(int(t.to_pydatetime().replace(fold=int(r)).timestamp()))
+                        for t, r in zip(tijd, repeated, strict=True)
+                    ],
+                    "code": code,
+                    "value": data["value"].astype(float).to_numpy(),
+                    "tijd": tijd.to_numpy(),
+                }
+            )
+            logging.info(
+                f"Consolidatie {code}: {len(df_db)} uurwaarden van "
+                f"{tijd.min()} tot en met {tijd.max()}"
+            )
             self.db_da.savedata(df_db, tablename="values")
 
     def recalc_df_ha(self, org_data_df: pd.DataFrame, interval: str) -> pd.DataFrame:
