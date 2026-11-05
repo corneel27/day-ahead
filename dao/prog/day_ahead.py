@@ -611,6 +611,12 @@ class DaCalc(DaBase):
 
         # Name the solver explicitly to avoid trying Gurobi first
         model = Model(solver_name=HIGHS if SOLVER == "highs" else CBC)
+        if SOLVER == "highs":
+            # HiGHS schrijft zijn openingsregels bij de eerste add_var direct naar
+            # stdout, buiten de capture rond optimize() (en voor de JSON-uitvoer
+            # van da_debug): uitvoer uit tot vlak voor de solve
+            highs_verbose = model.verbose
+            model.verbose = 0
 
         ##############################################################
         #                          pv ac
@@ -3492,6 +3498,8 @@ class DaCalc(DaBase):
         model.max_mip_gap_abs = max_gap
         model.max_nodes = 1500
         # model.max_seconds = 20
+        if SOLVER == "highs":
+            model.verbose = highs_verbose
         if self.log_level > logging.DEBUG:
             model.verbose = 1
         threads = getattr(self, "_solver_threads", -1)
