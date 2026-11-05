@@ -1,7 +1,7 @@
 pandas~=3.0.6
 pydantic~=2.14.1
-pydantic-settings~=2.16.1
-pytz~=2026.5
+pydantic-settings~=2.16.2
+pytz~=2026.6
 requests~=2.34.2
 matplotlib~=3.11.2
 numpy~=2.5.4
@@ -28,5 +28,5 @@ scipy~=1.18.1
 joblib~=1.6.0
 knmi-py~=0.2.0
 asteval~=1.0.10
-tzdata~=2026.5
+tzdata~=2026.6
 freezegun~=1.5.5
