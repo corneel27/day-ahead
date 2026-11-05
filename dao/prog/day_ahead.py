@@ -16,7 +16,7 @@ from contextlib import contextmanager
 
 import mip.cbc
 import pandas as pd
-from mip import BINARY, CBC, CONTINUOUS, INTEGER, Model, minimize, xsum
+from mip import BINARY, CBC, CONTINUOUS, HIGHS, INTEGER, Model, minimize, xsum
 from pandas.core.dtypes.inference import is_number
 from utils import (
     calc_adjustment_heatcurve,
@@ -34,8 +34,14 @@ from dao.prog.ev_schedule import format_ev_charge_schedule
 _libc = ctypes.CDLL(None)
 
 # testfase: "sos2" (huidige SOS2-sets) of "log" (_link_pwl) voor de stuksgewijs lineaire curves
-PWL_FORMULATION = "sos2"
+PWL_FORMULATION = "log"
 assert PWL_FORMULATION in ("sos2", "log"), PWL_FORMULATION
+
+# testfase: "cbc" of "highs" (pip install mip[highs]); HiGHS kent geen SOS2,
+# dus alleen samen met PWL_FORMULATION = "log"
+SOLVER = "highs"
+assert SOLVER in ("cbc", "highs"), SOLVER
+assert SOLVER == "cbc" or PWL_FORMULATION == "log", "HiGHS kent geen SOS2"
 
 
 @contextmanager
@@ -603,7 +609,7 @@ class DaCalc(DaBase):
             logging.info(f"pv_dc: {len(pv_org_dc)}")
 
         # Name the solver explicitly to avoid trying Gurobi first
-        model = Model(solver_name=CBC)
+        model = Model(solver_name=HIGHS if SOLVER == "highs" else CBC)
 
         ##############################################################
         #                          pv ac
@@ -3552,15 +3558,21 @@ class DaCalc(DaBase):
         # model.max_seconds = 20
         if self.log_level > logging.DEBUG:
             model.verbose = 1
-        model.threads = getattr(self, "_solver_threads", -1)
-        # cbcbox 2.929: de generieke build gebruikt AVX in nauty (symmetrie),
-        # dat geeft SIGILL op CPU's zonder AVX zodra CBC zijn heuristieken draait
-        mip.cbc.cbc_set_parameter(model.solver, "OrbitalBranching", "off")
-        if PWL_FORMULATION == "log":
-            # cbcbox 2.929: met de log-formulering zet CBC's preprocessing
-            # (CglPreProcess) de oplossing verkeerd terug naar het model:
-            # status OPTIMAL, maar SoC buiten 0..100% en rendementen > 100%
-            model.preprocess = 0
+        threads = getattr(self, "_solver_threads", -1)
+        if SOLVER == "highs":
+            # HiGHS weigert -1 (0 = automatisch) en legt het aantal threads per
+            # proces vast bij de eerste solve: een andere waarde daarna faalt
+            threads = max(threads, 0)
+        model.threads = threads
+        if SOLVER == "cbc":
+            # cbcbox 2.929: de generieke build gebruikt AVX in nauty (symmetrie),
+            # dat geeft SIGILL op CPU's zonder AVX zodra CBC zijn heuristieken draait
+            mip.cbc.cbc_set_parameter(model.solver, "OrbitalBranching", "off")
+            if PWL_FORMULATION == "log":
+                # cbcbox 2.929: met de log-formulering zet CBC's preprocessing
+                # (CglPreProcess) de oplossing verkeerd terug naar het model:
+                # status OPTIMAL, maar SoC buiten 0..100% en rendementen > 100%
+                model.preprocess = 0
         if getattr(self, "_debug_capture_vars", False):
             try:
                 from da_debug import build_var_registry
