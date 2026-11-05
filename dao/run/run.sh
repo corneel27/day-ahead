@@ -48,8 +48,9 @@ if [ -d /config/miplib/lib ]; then
   cp -a /config/miplib miplib
   # A build from an older image can link system libraries (e.g. nauty) that
   # the image no longer ships: install them again when any is missing.
-  if LD_LIBRARY_PATH="/root/dao/prog/miplib/lib" ldd miplib/lib/*.so* 2>/dev/null | grep -q "not found"; then
-    bashio::log.info "Installing the libraries the saved miplib-binaries need"
+  missing=$(LD_LIBRARY_PATH="/root/dao/prog/miplib/lib" ldd miplib/lib/*.so* 2>/dev/null | awk '/not found/{print $1}' | sort -u | tr '\n' ' ' || true)
+  if [ -n "${missing}" ]; then
+    bashio::log.info "Installing the libraries the saved miplib-binaries need: ${missing}"
     apt-get -o APT::Sandbox::User=root update -y && apt-get -o APT::Sandbox::User=root install -y --no-install-recommends \
       libnauty-dev coinor-libcgl-dev \
       || bashio::log.warning "Installing the miplib libraries failed"
