@@ -297,7 +297,9 @@ class DaCalc(DaBase):
         # base load
         if self.use_calc_baseload:
             logging.info("Zelf berekende baseload")
-            weekday = dt.datetime.weekday(dt.datetime.now())
+            # de dag van de berekening, niet de klok: de run van 00:00 start
+            # een paar seconden eerder en hoort al bij de nieuwe dag
+            weekday = start_dt.weekday()
             base_cons = self.get_calculated_baseload(weekday)
             if len(fixed_price_data) > self.steps_day:
                 # volgende dag ophalen
