@@ -2360,6 +2360,8 @@ class DaCalc(DaBase):
             )
             if not self.hp_enabled:
                 logging.info("Warmtepomp staat uit - warmtepomp wordt niet ingepland")
+        # de dag van de berekening, niet de klok (zie de baseload)
+        calc_day = dt.datetime.combine(start_dt.date(), dt.datetime.min.time())
         if self.hp_enabled:
             # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
             self.hp_adjustment = (self.heating_options.adjustment or "power").lower()
@@ -2367,14 +2369,12 @@ class DaCalc(DaBase):
             base_temp = self.heating_options.degree_days_base_temperature
             logging.info(f"Stookgrens (graaddagen): {base_temp:.1f} °C")
             degree_days_today = self.meteo.calc_graaddagen(
-                weighted=True, base_temp=base_temp
+                date=calc_day, weighted=True, base_temp=base_temp
             )
             logging.info(f"Gewogen graaddagen vandaag: {degree_days_today:.1f} K.day")
             if U > self.steps_day:
                 degree_days_tomorrow = self.meteo.calc_graaddagen(
-                    date=dt.datetime.combine(
-                        dt.date.today() + dt.timedelta(days=1), dt.datetime.min.time()
-                    ),
+                    date=calc_day + dt.timedelta(days=1),
                     weighted=True,
                     base_temp=base_temp,
                 )
@@ -2466,16 +2466,13 @@ class DaCalc(DaBase):
                 logging.info(f"Beschikbaar zijn: {hours_avail} uur")
                 if heat_needed > 0:
                     logging.info("On/off warmtepomp wordt ingepland")
-                    avg_temp_today = self.meteo.get_avg_temperature()
+                    avg_temp_today = self.meteo.get_avg_temperature(calc_day)
                     logging.info(
                         f"Gem. buitentemperatuur vandaag: {avg_temp_today:.1f} °C"
                     )
                     if U > self.steps_day:
                         avg_temp_tomorrow = self.meteo.get_avg_temperature(
-                            date=dt.datetime.combine(
-                                dt.date.today() + dt.timedelta(days=1),
-                                dt.datetime.min.time(),
-                            )
+                            date=calc_day + dt.timedelta(days=1)
                         )
                         logging.info(
                             f"Gem. buitentemperatuur morgen: {avg_temp_tomorrow:.1f} °C"
