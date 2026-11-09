@@ -3560,8 +3560,10 @@ class DaCalc(DaBase):
         max_gap = max(0.00001, min(max_gap, 1.0))  # clamp to [0.00001, 1.0]
 
         model.max_mip_gap_abs = max_gap
-        model.max_nodes = 1500
-        # model.max_seconds = 20
+        if SOLVER == "highs":
+            model.max_seconds = 240
+        else:
+            model.max_nodes = 1500
         if SOLVER == "highs":
             model.verbose = highs_verbose
         if self.log_level > logging.DEBUG:
