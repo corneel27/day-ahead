@@ -6,6 +6,8 @@ import 'bootstrap-icons/font/bootstrap-icons.css'
 import htmx from 'htmx.org'
 
 window.htmx = htmx
+htmx.config.implicitInheritance = true
+htmx.config.noSwap = [204, 304, '4xx', '5xx']
 
 if (document.getElementById('data-chart')) {
     import('./charts.js')
@@ -34,12 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 });
 
-document.body.addEventListener("htmx:responseError", function (event) {
+document.body.addEventListener("htmx:response:error", function (event) {
     const errorElement = document.getElementById("htmx-error");
     const messageElement = document.getElementById("htmx-error-message");
 
-    const response = event.detail.xhr.responseText;
-    const status = event.detail.xhr.status;
+    const response = event.detail.ctx.text;
+    const status = event.detail.ctx.response.status;
 
     messageElement.textContent =
         response || `Er is een fout opgetreden (${status}).`;
@@ -47,7 +49,7 @@ document.body.addEventListener("htmx:responseError", function (event) {
     errorElement.classList.remove("d-none");
 });
 
-document.body.addEventListener("htmx:sendError", function () {
+document.body.addEventListener("htmx:error", function () {
     const errorElement = document.getElementById("htmx-error");
     const messageElement = document.getElementById("htmx-error-message");
 

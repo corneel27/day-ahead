@@ -14,7 +14,7 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.2",
     "chart.js": "^4.6.1",
-    "htmx.org": "^2.0.11",
+    "htmx.org": "^4.0.1",
     "prismjs": "^1.30.0",
     "sass": "^1.107.1",
     "vite": "^8.3.5"
