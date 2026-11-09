@@ -1,0 +1,10 @@
+<div class="btn-group col-8 col-sm-4 col-lg-3 col-xl-2"
+     hx-get="{{ url_for('v2.navigation', kind=kind, filename=filename) }}"
+     hx-trigger="every 5s" hx-swap="outerHTML" hx-push-url="false">
+    <a class="btn btn-outline-secondary {{ 'disabled' if show_index == last_index else '' }}"
+       href="{{ url_for('v2.' + kind, i=next_index) }}">Next</a>
+    <a class="btn btn-outline-secondary {{ 'disabled' if ffnext_index >= last_index - 1 else '' }}"
+       href="{{ url_for('v2.' + kind, i=ffnext_index) }}">+6h</a>
+    <a class="btn btn-outline-secondary {{ 'disabled' if show_index > last_index - 1 else '' }}"
+       href="{{ url_for('v2.' + kind) }}">Last</a>
+</div>
