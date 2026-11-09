@@ -1,20 +1,19 @@
 
 @import "prismjs/themes/prism.css";
-
-
 code-input {
   --padding: 0.75rem;
 
   width: 100%;
   min-height: 15rem;
 
-  font-family: var(--bs-font-monospace);
+  font-family: var(--bs-font-mono);
   font-size: 0.875rem;
   line-height: 1.5;
+  color: var(--bs-fg-body);
 
-  background-color: var(--bs-body-bg);
+  background-color: var(--bs-bg-body);
   border: var(--bs-border-width) solid var(--bs-border-color);
-  border-radius: var(--bs-border-radius);
+  border-radius: var(--bs-radius-5);
   overflow: hidden;
 
   --code-comment: #6c757d;
@@ -43,15 +42,15 @@ code-input code[class*="language-"] {
   margin: 0;
   font: inherit;
   line-height: inherit;
-  color: var(--bs-body-color);
-  background: var(--bs-body-bg);
+  color: var(--bs-fg-body);
+  background: var(--bs-bg-body);
   text-shadow: none;
 }
 
 code-input textarea {
   font: inherit;
   line-height: inherit;
-  caret-color: var(--bs-body-color);
+  caret-color: var(--bs-fg-body);
 }
 
 code-input:has(textarea:focus) {
@@ -62,7 +61,7 @@ code-input:has(textarea:focus) {
 
 code-input:has(textarea:disabled),
 code-input:has(textarea:disabled) pre[class*="language-"] {
-  background-color: var(--bs-secondary-bg);
+  background-color: var(--bs-bg-3);
 }
 
 code-input .token.comment,
@@ -139,9 +138,5 @@ code-input .line-numbers-rows {
 }
 
 code-input .line-numbers-rows > span::before {
-  color: var(--bs-secondary-color);
-}
-
-code-input .code-input_dialog-container input {
-  color: var(--bs-secondary-color);
+  color: var(--bs-secondary-fg);
 }

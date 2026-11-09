@@ -19,18 +19,18 @@
 <h1>{{title}}</h1>
 <form method="GET" id="report-form">
     <div class="row">
-        <div class="col-4 col-md-3 col-lg-3 pt-2">
+        <div class="col-4 md:col-3 lg:col-3 pt-2">
             {% for o in subject_options %}
             {{radio("subject", o.label, o.value, subject)}}
             {% endfor %}
         </div>
-        <div class="col-4 col-md-3 col-lg-2 pt-2">
+        <div class="col-4 md:col-3 lg:col-2 pt-2">
             {{radio("view", "Table", "tabel", view)}}
             {{radio("view", "Chart", "grafiek", view)}}
         </div>
         {% if not hide_period %}
-        <div class="col-6 col-md-4 col-lg-3">
-            <select name="period" class="form-select">
+        <div class="col-6 md:col-4 lg:col-3">
+            <select name="period" class="form-control">
                 {{option("Today", "vandaag", period)}}
                 {{option("Today with forecast", "today_with_forecast", period)}}
                 {{option("Tomorrow", "morgen", period)}}
@@ -49,12 +49,12 @@
         {% endif %}
 
         {% if show_datepicker %}
-            <div class="col-6 col-md-4 col-lg-3">
+            <div class="col-6 md:col-4 lg:col-3">
                 <div class="input-group">
-                    <a class="btn btn-outline-secondary" href="javascript: alterDate('-1d')">- 1d</a>
+                    <a class="btn-subtle theme-secondary" href="javascript: alterDate('-1d')">- 1d</a>
                     <input type="date" name="date" id="date" class="form-control"
                            value="{{ date|default('') }}">
-                    <a class="btn btn-outline-secondary" href="javascript: alterDate('+1d')">+ 1d</a>
+                    <a class="btn-subtle theme-secondary" href="javascript: alterDate('+1d')">+ 1d</a>
                 </div>
             </div>
         {% endif %}

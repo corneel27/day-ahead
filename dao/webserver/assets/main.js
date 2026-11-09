@@ -60,7 +60,7 @@ document.body.addEventListener("htmx:error", function () {
 });
 
 import TomSelect from "tom-select";
-import "tom-select/dist/css/tom-select.bootstrap5.css";
+import "./tom-select.bootstrap6.css";
 
 document.querySelectorAll('.tom-select').forEach((el) => {
     let settings = {plugins: ['change_listener'],};

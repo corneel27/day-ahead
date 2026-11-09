@@ -1,5 +1,19 @@
-@import "bootstrap/scss/bootstrap";
+@use "bootstrap/scss/bootstrap";
 @import "bootstrap-icons/font/bootstrap-icons.css";
+
+@layer components {
+
+  .navbar-toggler-icon {
+    mask-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath stroke='black' stroke-linecap='round' stroke-width='1' d='M1 3.5h14M1 8h14M1 12.5h14'/%3e%3c/svg%3e");
+    height: 1.25rem;
+    width: 1.25rem;
+    background-color: currentColor;
+    display: inline-block;
+    mask-position: 50%;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+  }
+}
 
 .icon-nav {
   .bi {
@@ -67,10 +81,26 @@ h1 {
   }
 }
 
+
 [data-bs-theme="dark"] .theme-dark-hidden,
 [data-bs-theme="light"] .theme-light-hidden,
 [data-bs-stored-theme="auto"] .theme-stored-auto-hidden,
 [data-bs-stored-theme="dark"] .theme-stored-dark-hidden,
 [data-bs-stored-theme="light"] .theme-stored-light-hidden {
   display: none;
+}
+
+.icon-nav {
+  &:after {
+    vertical-align: .255em;
+    content: "";
+    border: .3em solid #0000;
+    border-top-color: currentColor;
+    border-bottom: 0;
+    margin-top: .5em;
+    display: inline-block;
+  }
+  &:empty:after {
+    margin-left:0
+  }
 }
