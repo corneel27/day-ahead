@@ -198,7 +198,11 @@ class DaCalc(DaBase):
                 extension=horizon_extension
             )
             horizon_extension = len(pred_price_data)
-            price_data = pd.concat([fixed_price_data, pred_price_data])
+            if horizon_extension > 0:
+                price_data = pd.concat([fixed_price_data, pred_price_data])
+            else:
+                logging.warning("Er zijn geen prijsvoorspellingen in de database, zijn ze wel opgehaald?")
+                price_data = fixed_price_data
         else:
             price_data = fixed_price_data
         if len(price_data) <= 5:
