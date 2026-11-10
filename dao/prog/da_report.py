@@ -3302,6 +3302,32 @@ class Report(DaBase):
         return df_result
 
     def get_api_data(self, field: str, _periode: str, cumulate: bool = False):
+        df = self.get_api_df(field, _periode, cumulate=cumulate)
+        if isinstance(df, str):
+            return df
+        data_json = df.to_json(orient="records")
+        result = '{ "message":"Success", "data": ' + data_json + " }"
+        return result
+
+    def get_api_df(
+            self,
+            field: str,
+            _periode: str,
+            cumulate: bool = False,
+            _tot: datetime.datetime | None = None,
+            extension: int = 0,
+    ) -> pd.DataFrame | str:
+        """
+        De data van de api als dataframe
+        :param field: de code van de gevraagde data
+        :param _periode: de periode van de gevraagde data
+        :param cumulate: True: cumulatieve waarden
+        :param _tot: als != None het einde van de data in plaats van het einde
+            van de periode; latere rijen worden weggelaten
+        :param extension: aantal uren voorspelde prijzen na de bekende day-ahead
+            prijzen (alleen voor "da")
+        :return: dataframe of bij een fout een json-foutmelding (str)
+        """
         periode = _periode.replace("_", " ")
         if periode not in self.periodes:
             result = f'{{"message": "Failed", "reason": "Periode: \'{_periode}\' is not allowed"}}'
@@ -3315,9 +3341,12 @@ class Report(DaBase):
             "profit",
             "netto_cost",
         ]
-        tot = self.periodes[periode]["tot"]
-        if periode == "vandaag en morgen" and self.config.prices.prediction.extension>0:
-            tot = tot + datetime.timedelta(hours=self.config.prices.prediction.extension)
+        if _tot is not None:
+            tot = _tot
+        else:
+            tot = self.periodes[periode]["tot"]
+            if periode == "vandaag en morgen" and self.config.prices.prediction.extension>0:
+                tot = tot + datetime.timedelta(hours=self.config.prices.prediction.extension)
         df = pd.DataFrame()
         if field in ["grid"] + grid_fields:  # grid data
             df_grid = self.get_grid_data(periode, _tot=tot)
@@ -3340,6 +3369,7 @@ class Report(DaBase):
                 self.periodes[periode]["vanaf"],
                 tot,
                 self.interval,
+                extension=extension,
             )
         elif field[0:3] == "soc":
             df = self.get_soc_data(field, self.periodes[periode]["vanaf"], tot)
@@ -3370,7 +3400,10 @@ class Report(DaBase):
             )
             return result
 
-        df["time_ts"] = pd.to_datetime(df["time"]).dt.tz_localize(self.time_zone)
+        df["time"] = pd.to_datetime(df["time"])
+        if _tot is not None:
+            df = df[df["time"] < _tot].copy()
+        df["time_ts"] = df["time"].dt.tz_localize(self.time_zone)
         df["time"] = df["time"].apply(
             lambda x: x if isinstance(x, str) else x.strftime("%Y-%m-%d %H:%M")
         )
@@ -3378,8 +3411,162 @@ class Report(DaBase):
         cols = df.columns.tolist()
         cols = cols[-1:] + cols[:-1]
         df = df[cols]
-        data_json = df.to_json(orient="records")
-        result = '{ "message":"Success", "data": ' + data_json + " }"
+        return df
+
+    def get_price_prediction_range(
+            self, vanaf: datetime.datetime
+    ) -> tuple[datetime.datetime | None, datetime.datetime | None]:
+        """
+        Bepaalt het deel van de horizon met voorspelde prijzen.
+        :param vanaf: begin van de gevraagde periode
+        :return: (einde van de bekende day-ahead prijzen, einde van de voorspelde
+            prijzen); het tweede is gelijk aan het eerste als er geen voorspelde
+            prijzen worden gebruikt; (None, None) als er geen prijzen zijn
+        """
+        df_da = self.db_da.get_column_data("values", "da", start=vanaf)
+        if df_da is None or len(df_da) == 0:
+            return None, None
+        moments = [int(ts) for ts in df_da["utc"]]
+        step = moments[-1] - moments[-2] if len(moments) > 1 else self.interval_s
+        end_known = datetime.datetime.fromtimestamp(moments[-1] + step)
+        prediction = self.config.prices.prediction
+        extension = (prediction.extension if prediction else 0) or 0
+        if extension <= 0:
+            return end_known, end_known
+        df_pred = self.db_da.get_column_data(
+            "prognoses",
+            "da",
+            start=end_known,
+            end=end_known + datetime.timedelta(hours=extension),
+        )
+        if df_pred is None or len(df_pred) == 0:
+            return end_known, end_known
+        end_pred = datetime.datetime.fromtimestamp(int(df_pred["utc"].iloc[-1]) + 3600)
+        return end_known, end_pred
+
+    # sensor in report: ha_sensors -> (veld van de api, kolom met de waarde)
+    HA_SENSOR_FIELDS = {
+        "da_ex": ("da", "da_ex"),
+        "da_cons": ("da", "da_cons"),
+        "da_prod": ("da", "da_prod"),
+        **{
+            key: (key, "value")
+            for key in [
+                "consumption", "production", "netto_consumption",
+                "cost", "profit", "netto_cost",
+                "cons", "prod", "bat_in", "bat_out", "base",
+                "pv_ac", "pv_dc", "ev", "wp", "boil", "mach", "soc",
+            ]
+        },
+    }
+
+    @staticmethod
+    def ha_sensor_unit(key: str) -> str:
+        """
+        De eenheid van de state van een ha-sensor
+        :param key: de naam van de sensor in report: ha_sensors
+        :return: de eenheid
+        """
+        if key[0:3] == "da_":
+            return "EUR/kWh"
+        if key[0:3] == "soc":
+            return "%"
+        if key in ["cost", "profit", "netto_cost"]:
+            return "EUR"
+        # de energie per uur is gelijk aan het gemiddelde vermogen in dat uur
+        return "kW"
+
+    def ha_sensor_entities(self, sensors_options) -> dict:
+        """
+        De ingestelde ha-sensoren
+        :param sensors_options: report: ha_sensors
+        :return: dict naam -> (entity, veld van de api, kolom met de waarde)
+        """
+        result = {}
+        for key, (field, value_column) in self.HA_SENSOR_FIELDS.items():
+            entity = getattr(sensors_options, key)
+            if entity is not None:
+                result[key] = (entity, field, value_column)
+        # soc per batterij: soc_0, soc_1, ...
+        for key, entity in (sensors_options.model_extra or {}).items():
+            if key[0:4] == "soc_" and key[4:].isdigit() and entity:
+                result[key] = (entity, key, "value")
+        return result
+
+    @staticmethod
+    def current_row(df: pd.DataFrame, now: datetime.datetime) -> pd.Series | None:
+        """
+        De rij van het interval waarin "now" valt
+        :param df: dataframe van get_api_df, oplopend in tijd
+        :param now: het moment
+        :return: de laatste rij die op of voor "now" begint, None als die er niet is
+        """
+        times = pd.to_datetime(df["time"])
+        past = df[times <= now]
+        if len(past) == 0:
+            return None
+        return past.iloc[-1]
+
+    def push_ha_sensors(self) -> bool:
+        """
+        Schrijft de data van "vandaag en morgen" naar de entiteiten die in
+        report: ha_sensors zijn ingesteld.
+        De state is de waarde van het huidige interval, het attribuut "data"
+        bevat de hele reeks als {time_ts, time, value, datatype}.
+        :return: False als een of meer entiteiten niet zijn geschreven
+        """
+        sensors_options = self.report_options.ha_sensors if self.report_options else None
+        entities = self.ha_sensor_entities(sensors_options) if sensors_options else {}
+        if len(entities) == 0:
+            logging.info("Er zijn geen ha_sensors ingesteld")
+            return True
+        periode = "vandaag en morgen"
+        vanaf = self.periodes[periode]["vanaf"]
+        tot = self.periodes[periode]["tot"]
+        end_known, end_pred = self.get_price_prediction_range(vanaf)
+        extension = 0
+        if end_known is not None:
+            if sensors_options.include_price_prediction:
+                tot = max(tot, end_pred)
+                extension = round((end_pred - end_known).total_seconds() / 3600)
+            else:
+                tot = min(tot, end_known)
+        now = datetime.datetime.now()
+        # zelfde tijdstempel voor alle entiteiten van deze push
+        last_update = now.astimezone().isoformat(timespec="seconds")
+        # de prijzen worden maar een keer opgehaald voor da_ex, da_cons en da_prod
+        api_dfs = {}
+        result = True
+        for key, (entity, field, value_column) in entities.items():
+            try:
+                if field not in api_dfs:
+                    api_dfs[field] = self.get_api_df(
+                        field, periode, _tot=tot, extension=extension
+                    )
+                df = api_dfs[field]
+                if isinstance(df, str):
+                    logging.error(f"ha_sensors {key} ({entity}): {df}")
+                    result = False
+                    continue
+                df = df[["time_ts", "time", value_column, "datatype"]].rename(
+                    columns={value_column: "value"}
+                )
+                row = self.current_row(df, now)
+                if row is None or pd.isnull(row["value"]):
+                    state = "unknown"
+                else:
+                    state = round(float(row["value"]), 5)
+                attributes = {
+                    "friendly_name": f"DAO {key}",
+                    "unit_of_measurement": self.ha_sensor_unit(key),
+                    "last_update": last_update,
+                    "data": json.loads(df.to_json(orient="records")),
+                }
+                self.set_state(entity, state, attributes=attributes)
+                logging.info(f"ha_sensors {key} ({entity}): {state}, {len(df)} waarden")
+            except Exception:
+                logging.exception(f"Fout bij schrijven van ha_sensors {key} ({entity})")
+                result = False
         return result
 
     def make_graph(self, df, period, _options=None, _title: str | None = None):
