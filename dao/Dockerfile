@@ -1,4 +1,4 @@
-ARG BUILD_ARCH
+ARG BUILD_ARCH=amd64
 ARG BUILD_VERSION
 FROM ghcr.io/hassio-addons/debian-base/${BUILD_ARCH}:9.3.0 AS builder
 ARG BUILD_ARCH
