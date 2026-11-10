@@ -3603,14 +3603,25 @@ class Report(DaBase):
             .cte("filtered_statistics")
         )
 
+        # HA stores energy statistics in the sensor's own unit; the report
+        # works in kWh.
+        unit_factor = case(
+            (statistics_meta.c.unit_of_measurement == "Wh", 0.001),
+            (statistics_meta.c.unit_of_measurement == "MWh", 1000.0),
+            else_=1.0,
+        )
+
         sensor_values_cte = (
             select(
                 intervals_cte.c.ts_start.label("ts"),
                 sensors_cte.c.code.label("code"),
                 sensors_cte.c.sensor.label("sensor"),
                 (
-                    func.max(filtered_statistics.c.sum)
-                    - func.min(filtered_statistics.c.sum)
+                    (
+                        func.max(filtered_statistics.c.sum)
+                        - func.min(filtered_statistics.c.sum)
+                    )
+                    * unit_factor
                 ).label("sensor_value"),
             )
             .select_from(
@@ -3635,6 +3646,7 @@ class Report(DaBase):
                 intervals_cte.c.ts_start,
                 sensors_cte.c.code,
                 sensors_cte.c.sensor,
+                statistics_meta.c.unit_of_measurement,
             )
             .cte("sensor_values")
         )

@@ -48,16 +48,19 @@ def database(request, tmp_path, monkeypatch):
                        Column('metadata_id', Integer), Column('start_ts', Double),
                        Column('sum', Double))
     metadata = Table('statistics_meta', md, Column('id', Integer, primary_key=True),
-                     Column('statistic_id', String(255)))
+                     Column('statistic_id', String(255)),
+                     Column('unit_of_measurement', String(255)))
     Index('meter_time', statistics.c.metadata_id, statistics.c.start_ts, unique=True)
     try:
         md.drop_all(engine)
         md.create_all(engine)
         with engine.begin() as connection:
             connection.execute(metadata.insert(), [
-                {'id': 1, 'statistic_id': 'sensor.a'},
-                {'id': 2, 'statistic_id': 'sensor.b'},
-                {'id': 3, 'statistic_id': 'sensor.unrelated'},
+                {'id': 1, 'statistic_id': 'sensor.a', 'unit_of_measurement': 'kWh'},
+                {'id': 2, 'statistic_id': 'sensor.b', 'unit_of_measurement': None},
+                {'id': 3, 'statistic_id': 'sensor.unrelated', 'unit_of_measurement': 'kWh'},
+                {'id': 4, 'statistic_id': 'sensor.wh', 'unit_of_measurement': 'Wh'},
+                {'id': 5, 'statistic_id': 'sensor.mwh', 'unit_of_measurement': 'MWh'},
             ])
         # Follow test_dao.py's options-file/Report construction, using only
         # temporary fixture databases. Stub HA startup, not database execution.
@@ -236,6 +239,16 @@ def test_decimal_energy_values(database, start):
     populate(database, [(1, t, 0.1), (1, t+3600, 0.4)])
     assert_expected(database, start, [(int(t), 'cons', 0.3), (int(t+3600), 'cons', 0.0)], fields=['cons'])
 
+def test_sensor_units_are_converted_to_kwh(database, start):
+    database.report.energy_balance_dict['boil']['sensors'] = ['sensor.wh', 'sensor.a']
+    database.report.energy_balance_dict['wp']['sensors'] = ['sensor.mwh']
+    t = start.timestamp()
+    populate(database, [(4, t, 1000), (4, t+3600, 1500), (1, t, 2), (1, t+3600, 2.25),
+                        (5, t, 0.001), (5, t+3600, 0.003)])
+    assert_expected(database, start, [
+        (int(t), 'boil', 0.75), (int(t), 'wp', 2.0),
+        (int(t+3600), 'boil', 0.0), (int(t+3600), 'wp', 0.0),
+    ], fields=['boil', 'wp'])
 
 def test_requested_sources_exclude_other_sources(database, start):
     t = start.timestamp()
