@@ -1,6 +1,6 @@
 ARG BUILD_ARCH
 ARG BUILD_VERSION
-FROM ghcr.io/hassio-addons/debian-base/${BUILD_ARCH}:9.3.0 AS builder
+FROM ghcr.io/hassio-addons/debian-base/${BUILD_ARCH}:9.5.2 AS builder
 ARG BUILD_ARCH
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -32,7 +32,7 @@ WORKDIR /root/dao/webserver
 RUN  npm ci \
      && npm run build
 
-FROM ghcr.io/hassio-addons/debian-base/${BUILD_ARCH}:9.3.0
+FROM ghcr.io/hassio-addons/debian-base/${BUILD_ARCH}:9.5.2
 ARG BUILD_ARCH
 ENV ENV_BUILD_ARCH=$BUILD_ARCH
 
