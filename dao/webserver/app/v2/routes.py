@@ -299,7 +299,7 @@ def navigation(kind):
     kwargs = log_chart(*sources[kind], filename=request.args["filename"])
     if kwargs is None:
         return "", 204
-    return render_template("v2/forward-navigation.html", kind=kind, **kwargs)
+    return render_template("v2/chart-log-navigation.html", kind=kind, **kwargs)
 
 
 def get_solar_items_with_ml():

@@ -8,27 +8,10 @@
     <div class="overflow-x-auto col-12 lg:col-8 xl:col-7 2xl:col-6">
         <div class="col-8 sm:col-7 md:col-4 lg:col-4 xl:col-3" style="min-width:590px;">
             <form action="{{url_for('v2.log')}}" method="get">
-                <div class="input-group">
-                    <a class="btn-subtle theme-secondary {{ 'disabled' if show_index <= 1 else '' }}"
-                       href="{{url_for('v2.log', i=first_index)}}">
-                        First
-                    </a>
-                    <a class="btn-subtle theme-secondary {{ 'disabled' if ffprev_index == 0 or ffprev_index == show_index else '' }}"
-                       href="{{url_for('v2.log', i=ffprev_index)}}">
-                        -6h
-                    </a>
-                    <a class="btn-subtle theme-secondary {{ 'disabled' if show_index == 0 else '' }}"
-                       href="{{url_for('v2.log', i=prev_index)}}">
-                        Prev
-                    </a>
-                    <input type="datetime-local" name="ts" value="{{show_ts}}" class="form-control m-0"
-                           aria-label="Timestamp for log">
-                    <button class="btn-subtle theme-secondary" id="button-addon2" type="submit"><i class="bi bi-search"
-                                                                                                   style="font-size:100%"></i>
-                    </button>
-                    {% set kind = "log" %}
-                    {% include "v2/forward-navigation.html" %}
-                </div>
+                <form action="{{url_for('v2.log')}}" method="get">
+                {% set kind = "log" %}
+                {% include "v2/chart-log-navigation.html" %}
+                </form>
             </form>
         </div>
     </div>

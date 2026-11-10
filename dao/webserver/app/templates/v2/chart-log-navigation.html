@@ -1,0 +1,36 @@
+
+    <div class="input-group"
+      hx-get="{{ url_for('v2.navigation', kind=kind, filename=filename) }}"
+      hx-trigger="every 5s" hx-swap="outerHTML" hx-push-url="false">
+        <a class="btn-subtle theme-secondary {{ 'disabled' if show_index <= 0 else '' }}"
+           href="{{url_for('v2.' + kind, i=first_index)}}">
+            First
+        </a>
+        <a class="btn-subtle theme-secondary {{ 'disabled' if ffprev_index == 0 or ffprev_index == show_index else '' }}"
+           href="{{url_for('v2.' + kind, i=ffprev_index)}}">
+            -6h
+        </a>
+        <a class="btn-subtle theme-secondary {{ 'disabled' if show_index == 0 else '' }}"
+           href="{{url_for('v2.' + kind, i=prev_index)}}">
+            Prev
+        </a>
+        <input type="datetime-local" name="ts" value="{{show_ts}}"
+               class="form-control m-0 col-3"
+               aria-label="Timestamp for chart">
+        <button class="btn-subtle theme-secondary" id="button-addon2" type="submit"><i class="bi bi-search"
+                                                                                       style="font-size:100%"></i>
+        </button>
+        <a class="btn-subtle theme-secondary {{ 'disabled' if show_index == last_index  else '' }}"
+           href="{{url_for('v2.' + kind, i=next_index)}}">
+            Next
+        </a>
+        <a class="btn-subtle theme-secondary {{ 'disabled' if ffnext_index >= last_index - 1 or ffnext_index == show_index  else '' }}"
+           href="{{url_for('v2.' + kind, i=ffnext_index)}}">
+            +6h
+        </a>
+        <a class="btn-subtle theme-secondary {{ 'disabled' if show_index >= last_index else ''}}"
+           href="{{url_for('v2.' + kind)}}">
+            Last
+        </a>
+    </div>
+</form>
