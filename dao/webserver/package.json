@@ -11,7 +11,7 @@
     "@playwright/test": "1.64.1",
     "@popperjs/core": "^2.11.8",
     "@webcoder49/code-input": "^2.9.0",
-    "bootstrap": "^5.3.8",
+    "bootstrap": "6.0.0-alpha.1",
     "bootstrap-icons": "^1.13.2",
     "chart.js": "^4.6.1",
     "htmx.org": "^4.0.1",
