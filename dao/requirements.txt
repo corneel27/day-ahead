@@ -24,7 +24,7 @@ gunicorn~=26.2.0
 cryptography~=50.0.2
 tzlocal~=5.4.5
 cbcbox==2.929
-mip==1.17.6
+mip==2.0.1
 scikit-learn~=1.9.1
 xgboost~=3.4.1
 scipy~=1.18.1
