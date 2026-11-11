@@ -17,6 +17,9 @@
 
 {% block content %}
 <h1>{{title}}</h1>
+{% if co2_warning %}
+<div class="alert alert-warning">Multiple CO2 intensity sensors are summed, which can produce incorrect emissions. Configure one sensor.</div>
+{% endif %}
 <form method="GET" id="report-form">
     <div class="row">
         <div class="col-4 md:col-3 lg:col-3 pt-2">
@@ -32,9 +35,11 @@
         <div class="col-6 md:col-4 lg:col-3">
             <select name="period" class="form-control">
                 {{option("Today", "vandaag", period)}}
+                {% if subject not in ["co2", "save_co2"] %}
                 {{option("Today with forecast", "today_with_forecast", period)}}
                 {{option("Tomorrow", "morgen", period)}}
                 {{option("Today and tomorrow", "vandaag en morgen", period)}}
+                {% endif %}
                 {{option("Yesterday", "gisteren", period)}}
                 {{option("This week", "deze week", period)}}
                 {{option("Last week", "vorige week", period)}}

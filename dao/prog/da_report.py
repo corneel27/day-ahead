@@ -41,6 +41,12 @@ def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
     return r2_score(serie_x, serie_y)
 
 
+def normalize_co2_sensors(value):
+    if isinstance(value, str):
+        return [value] if value else []
+    return value if isinstance(value, list) else []
+
+
 class Report(DaBase):
     periodes = {}
 
@@ -62,7 +68,9 @@ class Report(DaBase):
         self.battery_consumption_sensors = _r.entities_battery_consumption if _r else []
         self.solar_production_ac_sensors = _r.entities_solar_production_ac if _r else []
         _co2 = _r.co2_intensity_sensor if _r else []
-        self.co2_intensity_sensor = [_co2] if type(_co2) is str else _co2 if type(_co2) is list else []
+        self.co2_intensity_sensor = normalize_co2_sensors(_co2)
+        if len(self.co2_intensity_sensor) > 1:
+            logging.warning("Multiple CO2 intensity sensors are summed; configure one sensor to avoid incorrect emissions")
         self.ev_consumption_sensors = _r.entities_ev_consumption if _r else []
         self.wp_consumption_sensors = _r.entities_wp_consumption if _r else []
         self.boiler_consumption_sensors = _r.entities_boiler_consumption if _r else []

@@ -1,3 +1,6 @@
+from unittest.mock import Mock
+
+import pandas as pd
 import pytest
 from pydantic import BaseModel, ValidationError
 
@@ -9,6 +12,8 @@ from dao.prog.config.models.base import (
     FlexStr,
     SecretStr,
 )
+from dao.prog.config.models.report import ReportConfig
+from dao.prog.da_report import Report, normalize_co2_sensors
 
 
 class _Model(BaseModel):
@@ -215,3 +220,34 @@ class TestSocPowerLimit:
         dumped = s.model_dump()
         assert dumped == {"soc": 95, "power": 2500}
         assert "helling" not in dumped
+
+
+@pytest.mark.parametrize("key,value,expected", [
+    ("co2_intensity_sensor", "sensor.co2", "sensor.co2"),
+    ("co2_intensity_sensor", ["sensor.co2"], ["sensor.co2"]),
+    ("entity co2-intensity", ["sensor.co2"], ["sensor.co2"]),
+    ("co2_intensity_sensor", "", None),
+    ("co2_intensity_sensor", None, None),
+    ("co2_intensity_sensor", ["sensor.one", "sensor.two"], ["sensor.one", "sensor.two"]),
+])
+def test_co2_sensor_config_compatibility(key, value, expected):
+    parsed = ReportConfig.model_validate({key: value}).co2_intensity_sensor
+    assert parsed == expected
+    assert normalize_co2_sensors(parsed) == ([expected] if isinstance(expected, str) else expected or [])
+
+
+def test_co2_emission_and_savings_calculations():
+    report = Report.__new__(Report)
+    report.periodes = {"vandaag": {"interval": "uur"}}
+    report.calc_co2_emission_dict = {}
+    report.saving_co2_dict = {}
+    report.get_columns = Mock(side_effect=lambda *args: pd.DataFrame({
+        "cons": [3.0], "prod": [1.0], "bat_in": [0.5],
+        "bat_out": [1.0], "co2_intensity": [400.0],
+    }))
+    report.clean_df = lambda config, df, *args: df
+    emission = report.calc_co2_emission("vandaag")
+    saving = report.calc_saving_co2("vandaag")
+    assert emission["emissie"].iloc[0] == pytest.approx(0.8)
+    assert saving["emissie_zonder"].iloc[0] == pytest.approx(1.0)
+    assert saving["saving"].iloc[0] == pytest.approx(0.2)
