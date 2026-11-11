@@ -9,6 +9,7 @@ import pytz
 from entsoe import EntsoePandasClient
 from nordpool.elspot import Prices as NordpoolPrices
 from requests import get, post
+from requests.exceptions import RequestException
 
 from dao.lib.db_manager import DBmanagerObj
 
@@ -255,25 +256,52 @@ class DaPrices:
             "Authorization": "Bearer " + api_token,
             "content-type": "application/json",
         }
-        resp = post(url, headers=headers, data=query)
-        tibber_dict = json.loads(resp.text)
-        today_nodes = tibber_dict["data"]["viewer"]["homes"][0]["currentSubscription"][
-            "priceInfo"
-        ]["today"]
-        tomorrow_nodes = tibber_dict["data"]["viewer"]["homes"][0][
-            "currentSubscription"
-        ]["priceInfo"]["tomorrow"]
-        range_nodes = tibber_dict["data"]["viewer"]["homes"][0]["currentSubscription"][
-            "priceInfoRange"
-        ]["nodes"]
+        try:
+            resp = post(url, headers=headers, data=query, timeout=30)
+            resp.raise_for_status()
+        except RequestException as ex:
+            status = ex.response.status_code if ex.response is not None else None
+            detail = f"HTTP {status}" if status is not None else type(ex).__name__
+            raise RuntimeError(f"Tibber price request failed ({detail})") from ex
+
+        if not resp.text.strip():
+            raise RuntimeError("Tibber returned an empty price response")
+        try:
+            tibber_dict = json.loads(resp.text)
+        except json.JSONDecodeError as ex:
+            raise RuntimeError("Tibber returned invalid JSON for prices") from ex
+
+        if not isinstance(tibber_dict, dict):
+            raise RuntimeError("Tibber returned an invalid price response")
+        if tibber_dict.get("errors"):
+            raise RuntimeError("Tibber returned GraphQL errors fetching prices")
+        try:
+            subscription = tibber_dict["data"]["viewer"]["homes"][0][
+                "currentSubscription"
+            ]
+            today_nodes = subscription["priceInfo"]["today"]
+            tomorrow_nodes = subscription["priceInfo"]["tomorrow"]
+            range_nodes = subscription["priceInfoRange"]["nodes"]
+        except (KeyError, IndexError, TypeError) as ex:
+            raise RuntimeError("Tibber price response is missing subscription or price data") from ex
+        price_lists = [today_nodes, tomorrow_nodes, range_nodes]
+        if not all(isinstance(nodes, list) for nodes in price_lists):
+            raise RuntimeError("Tibber price response contains invalid price lists")
+        if not any(price_lists):
+            raise RuntimeError("Tibber returned no prices")
         df_db = pd.DataFrame(columns=["time", "code", "value"])
-        for lst in [today_nodes, tomorrow_nodes, range_nodes]:
+        for lst in price_lists:
             for node in lst:
-                dt = datetime.datetime.strptime(
-                    node["startsAt"], "%Y-%m-%dT%H:%M:%S.%f%z"
-                )
+                try:
+                    dt = datetime.datetime.strptime(
+                        node["startsAt"], "%Y-%m-%dT%H:%M:%S.%f%z"
+                    )
+                    value = float(node["energy"])
+                    if not math.isfinite(value):
+                        raise ValueError("Non-finite price")
+                except (KeyError, TypeError, ValueError, OverflowError) as ex:
+                    raise RuntimeError("Tibber price response contains an invalid price entry") from ex
                 time_stamp = int(dt.timestamp())
-                value = float(node["energy"])
                 logging.info(f"{node} {dt} {time_stamp} {value}")
                 df_db.loc[df_db.shape[0]] = [time_stamp, "da", value]
         logging.debug(
