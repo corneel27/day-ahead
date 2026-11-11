@@ -3211,7 +3211,7 @@ class Report(DaBase):
             ]
             row = ["R²", "", r2_radiation, "", r2_dao, r2_ml]
             result.loc[result.shape[0]] = row
-            result.fillna("", inplace=True)
+            result = result.astype(object).fillna("")
 
         return result
 
