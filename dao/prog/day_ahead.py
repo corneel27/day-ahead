@@ -796,9 +796,10 @@ class DaCalc(DaBase):
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u, in kWh
                     prod_dc = max(0.0, solar_series[u]) * interval_fraction[u]
-                    eff = 1
+                    prod_power = prod_dc / hour_fraction[u]
+                    eff = discharge_stages[b][-1]["efficiency"]
                     for ds in range(DS[b]):
-                        if discharge_stages[b][ds]["power"] / 1000 > prod_dc:
+                        if discharge_stages[b][ds]["power"] / 1000 > prod_power:
                             eff = discharge_stages[b][ds]["efficiency"]
                             break
                     prod_ac = prod_dc * eff
