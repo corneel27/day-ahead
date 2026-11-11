@@ -102,9 +102,11 @@ class DaBase(hass.Hass):
                     DaBase._config = DaBase._loader.load_and_validate()
                 except FileNotFoundError as e:
                     logging.error(f"Configuratiebestand niet gevonden: {e}")
+                    self.config = None
                     return
                 except (ValueError, RuntimeError) as e:
                     logging.error(f"Configuratie kon niet worden geladen: {e}")
+                    self.config = None
                     return
 
         self.config = DaBase._config
