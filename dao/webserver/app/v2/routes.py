@@ -17,6 +17,8 @@ from flask import (
     request,
     url_for,
 )
+from hassapi.exceptions import ClientError, Unauthorised
+from requests.exceptions import Timeout
 from sqlalchemy import Table
 from werkzeug.security import safe_join
 
@@ -25,6 +27,32 @@ from dao.prog.da_report import Report
 from dao.prog.version import __version__
 
 v2 = Blueprint("v2", __name__)
+
+
+@v2.errorhandler(Unauthorised)
+def home_assistant_unauthorised(_error):
+    return render_template(
+        "v2/home-assistant-error.html",
+        error_message=("Home Assistant rejected the API credentials. Check the Home Assistant "
+                       "access token in the configuration, then try again."),
+    ), 503
+
+
+@v2.errorhandler(ClientError)
+def home_assistant_client_error(_error):
+    return render_template(
+        "v2/home-assistant-error.html",
+        error_message=("The Home Assistant API request failed. Check the Home Assistant "
+                       "address and availability, then try again."),
+    ), 503
+
+
+def create_report():
+    try:
+        return Report(app_datapath + "/options.json")
+    except Timeout as error:
+        raise ClientError("Home Assistant API connection timed out") from error
+
 
 @v2.context_processor
 def inject_data():
@@ -476,7 +504,7 @@ def task_state():
 
 
 def reports_gen(subject: str, view: str, period: str, solar_item=None, date: datetime.datetime = None):
-    report = Report(app_datapath + "/options.json")
+    report = create_report()
     prognose = period in ["vandaag en morgen", "morgen", "today_with_forecast"]
     if period == "today_with_forecast":
         period = "vandaag"
@@ -667,7 +695,7 @@ def reportsv2():
 
     fields = fields.split(",")
 
-    report = Report(app_datapath + "/options.json")
+    report = create_report()
     vars = report.get_vars()
 
     return render_template(
