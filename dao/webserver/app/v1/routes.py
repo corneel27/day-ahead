@@ -226,7 +226,7 @@ if config is not None:
 else:
     sensor_co2_intensity = []
 
-if sensor_co2_intensity == []:
+if not sensor_co2_intensity:
     del web_menu["reports"]["submenu"]["co2"]
     del web_menu["savings"]["submenu"]["co2"]
 else:

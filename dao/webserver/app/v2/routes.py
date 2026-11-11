@@ -504,13 +504,10 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
         report_df = report.calc_balance_columns(
             report_df, interval, view
         )
-    # else:  # co2
-    #     report_df = report.calc_co2_emission(
-    #         period,
-    #         _tot=tot,
-    #         active_interval="uur",
-    #         active_view=view,
-    #     )
+    elif subject == "co2":
+        report_df = report.calc_co2_emission(period, _tot=tot, active_interval=interval, active_view=view)
+    elif subject == "save_co2":
+        report_df = report.calc_saving_co2(period, _tot=tot, active_interval=interval, active_view=view)
     elif subject == "save_cons":
         report_df = report.calc_saving_consumption(
             active_period=period,
@@ -554,10 +551,10 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
             report_data = report.make_graph(
                 report_df, period, report.balance_graph_options
             )
-        # else:  # co2
-        #     report_data = report.make_graph(
-        #         report_df, period, report.co2_graph_options
-        #     )
+        elif subject == "co2":
+            report_data = report.make_graph(report_df, period, report.co2_graph_options)
+        elif subject == "save_co2":
+            report_data = report.make_graph(report_df, period, report.saving_co2_graph_options)
         elif subject == "save_cons":
             report_data = report.make_graph(
                 report_df, period, report.saving_cons_graph_options
@@ -579,11 +576,21 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
     return report_data
 
 
+def co2_sensor_config():
+    config = ConfigurationLoader(Path(app_datapath) / "options.json").load_and_validate()
+    return config.report.co2_intensity_sensor if config and config.report else None
+
+
 @v2.route("/reports", methods=["GET"])
 def reports():
     subject = request.args.get("subject", default="grid")
     view = request.args.get("view", default="tabel")
     period = request.args.get("period", default="vandaag")
+    sensor = co2_sensor_config()
+    if subject == "co2" and not sensor:
+        abort(404)
+    if subject == "co2" and period in ("today_with_forecast", "morgen", "vandaag en morgen"):
+        period = "vandaag"
     report_data = reports_gen(subject, view, period)
     return render_template(
         "v2/report.html",
@@ -592,8 +599,9 @@ def reports():
         subject=subject,
         view=view,
         report_data=report_data,
+        co2_warning=isinstance(sensor, list) and len(sensor) > 1,
         subject_options=[{"label": "Grid", "value": "grid"},
-                         {"label": "Balance", "value": "balans"}]
+                         {"label": "Balance", "value": "balans"}] + ([{"label": "CO2", "value": "co2"}] if sensor else [])
     )
 
 
@@ -602,6 +610,11 @@ def savings():
     subject = request.args.get("subject", default="save_cons")
     view = request.args.get("view", default="tabel")
     period = request.args.get("period", default="vandaag")
+    sensor = co2_sensor_config()
+    if subject == "save_co2" and not sensor:
+        abort(404)
+    if subject == "save_co2" and period in ("today_with_forecast", "morgen", "vandaag en morgen"):
+        period = "vandaag"
     report_data = reports_gen(subject, view, period)
     return render_template(
         "v2/report.html",
@@ -610,8 +623,9 @@ def savings():
         subject=subject,
         view=view,
         report_data=report_data,
+        co2_warning=isinstance(sensor, list) and len(sensor) > 1,
         subject_options=[{"label": "Consumption", "value": "save_cons"},
-                         {"label": "Cost", "value": "save_cost"}]
+                         {"label": "Cost", "value": "save_cost"}] + ([{"label": "CO2 emissions", "value": "save_co2"}] if sensor else [])
     )
 
 
