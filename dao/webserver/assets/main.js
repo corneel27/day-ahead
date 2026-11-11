@@ -15,7 +15,6 @@ if (document.getElementById('data-chart')) {
 
 if (document.querySelector('code-input')) {
     import('./code-editor.js')
-    import('./code-editor.scss')
 }
 
 
