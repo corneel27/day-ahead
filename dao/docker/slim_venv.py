@@ -1,4 +1,6 @@
 """Remove dead weight from the add-on venv before it is copied into the image.
+SPDX-License-Identifier: Apache-2.0
+Copyright 2026 Olaf Marzocchi
 
 Runs in the builder stage only. Two things in the cbcbox wheel are never used:
 
