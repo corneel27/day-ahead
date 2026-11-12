@@ -23,7 +23,7 @@ ephem~=4.2
 gunicorn~=26.2.0
 cryptography~=50.0.2
 tzlocal~=5.4.5
-cbcbox==2.929
+cbcbox==2.937
 mip==1.17.6
 scikit-learn~=1.9.1
 xgboost~=3.4.1
