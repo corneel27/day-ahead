@@ -8,10 +8,8 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update -y && \
-    apt-get install -y pkgconf file \
-      libmariadb-dev postgresql-client libjpeg-dev libffi-dev \
-      libnauty-dev coinor-libcgl-dev gcc g++ libmariadb3 mariadb-client \
-      python3 python3-venv python3-pip npm
+    apt-get install -y --no-install-recommends \
+      ca-certificates python3 python3-venv python3-pip npm
 
 WORKDIR /root/dao
 ENV VIRTUAL_ENV=/root/dao/venv/day_ahead
@@ -19,11 +17,14 @@ RUN python3 -m venv $VIRTUAL_ENV
 
 COPY requirements.txt /root/dao/requirements.txt
 
-RUN if [ "x${BUILD_ARCH}" = "xaarch64" ]; then ln -s `which mariadb_config` /usr/local/bin/mariadb_config; fi
+COPY docker/slim_venv.py /root/dao/slim_venv.py
+
+# Every requirement ships a wheel, so no compiler is needed here
 RUN source $VIRTUAL_ENV/bin/activate \
     && pip3 install uv \
     && uv pip install  -r /root/dao/requirements.txt \
-    && pip3 uninstall -y uv
+    && pip3 uninstall -y uv \
+    && python3 /root/dao/slim_venv.py "$(python3 -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
 
 COPY webserver/package.json webserver/package-lock.json webserver/vite.config.mjs /root/dao/webserver/
 COPY webserver/assets /root/dao/webserver/assets
@@ -43,11 +44,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update -y && \
   apt-get upgrade -y && \
-  apt-get install -y file mariadb-client inotify-tools procps \
-    gunicorn libmariadb3 postgresql-client sqlite3 wget nano git\
-    libmariadb-dev libjpeg-dev libffi-dev \
-    libnauty-dev coinor-libcgl-dev gcc g++ \
-    python3 python3-venv python3-pip npm 
+  apt-get install -y --no-install-recommends \
+    file mariadb-client inotify-tools procps \
+    postgresql-client sqlite3 wget nano git ca-certificates \
+    python3 python3-venv
+
+# The compiler toolchain for use_self_compiled_miplib is installed on demand
+# by prog/build_miplib.sh, so it is not part of the image
 
 # Copy software for add-on
 RUN mkdir /root/dao
