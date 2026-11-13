@@ -3247,7 +3247,7 @@ class Report(DaBase):
         count = 0
         df = sensor_data.iloc[::-1]
         for row in df.itertuples():
-            if row.hp > 0:
+            if row.hp > 0.05:    # Standby usage of <50 W is not considered an indication that the pump is running
                 count += 1
             else:
                 break
