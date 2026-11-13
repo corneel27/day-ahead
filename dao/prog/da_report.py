@@ -899,6 +899,34 @@ class Report(DaBase):
                 result = datetime.datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
         return result
 
+    @staticmethod
+    def statistics_delta(t1, t2):
+        """
+        Builds the energy used between two consecutive HA statistics rows
+        :param t1: alias of the statistics row of the previous hour
+        :param t2: alias of the statistics row of the hour itself
+        :return: tuple (delta, valid): delta is the SQL expression of the
+            increase of the meter, never negative; valid is the SQL condition
+            that selects row pairs for which delta can be calculated.
+            The "sum" column is used when both rows have it, because HA keeps it
+            growing across meter resets (state_class total_increasing, or total
+            with last_reset). Otherwise the "state" column is used.
+        """
+        state_valid = t1.c.state.isnot(None) & t2.c.state.isnot(None)
+        state_delta = case(
+            (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
+        )
+        if "sum" not in t1.c:
+            return state_delta, state_valid
+        sum_valid = t1.c.sum.isnot(None) & t2.c.sum.isnot(None)
+        delta = case(
+            (sum_valid & (t2.c.sum > t1.c.sum), t2.c.sum - t1.c.sum),
+            (sum_valid, 0),
+            (t2.c.state > t1.c.state, t2.c.state - t1.c.state),
+            else_=0,
+        )
+        return delta, sum_valid | state_valid
+
     def get_sensor_data(
             self,
             sensor: str,
@@ -982,6 +1010,7 @@ class Report(DaBase):
         start_ts_param2 = tot.strftime("%Y-%m-%d %H:%M:%S")  # '2024-05-23 00:00:00'
         if sensor_type == "quantity":
             t2 = statistics.alias("t2")
+            delta, valid = self.statistics_delta(t1, t2)
             if agg == "maand":
                 column = self.db_ha.month(t2.c.start_ts).label("maand")
                 column2 = func.min(self.db_ha.month_start(t2.c.start_ts)).label("tijd")
@@ -998,9 +1027,7 @@ class Report(DaBase):
                     column2,
                     self.db_ha.from_unixtime(t2.c.start_ts).label("tot"),
                     t2.c.start_ts.label("utc"),
-                    case(
-                        (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
-                    ).label(col_name),
+                    delta.label(col_name),
                     v1.c.unit_of_measurement.label("dim"),
                 ]
             else:
@@ -1009,11 +1036,7 @@ class Report(DaBase):
                     column2,
                     func.max(self.db_ha.from_unixtime(t2.c.start_ts)).label("tot"),
                     t2.c.start_ts.label("utc"),
-                    func.sum(
-                        case(
-                            (t2.c.state > t1.c.state, t2.c.state - t1.c.state), else_=0
-                        )
-                    ).label(col_name),
+                    func.sum(delta).label(col_name),
                     v1.c.unit_of_measurement.label("dim"),
                 ]
 
@@ -1028,8 +1051,7 @@ class Report(DaBase):
                 )
                 .where(
                     (v1.c.statistic_id == sensor)
-                    & (t1.c.state.isnot(None))
-                    & (t2.c.state.isnot(None))
+                    & valid
                     & (
                             t1.c.start_ts
                             >= self.db_ha.unix_timestamp(start_ts_param1) - 3600
@@ -2770,12 +2792,13 @@ class Report(DaBase):
         start_ts_param1 = vanaf.strftime("%Y-%m-%d %H:%M:%S")  # '2024-01-01 00:00:00'
         tot_ts_param1 = tot.strftime("%Y-%m-%d %H:%M:%S")
 
+        delta, valid = self.statistics_delta(t1, t2)
+
         # Build the query to retrieve raw data
         query = (
             select(
                 t2.c.start_ts.label("tijd"),
-                t1.c.state.label("state_t1"),
-                t2.c.state.label("state_t2"),
+                delta.label("delta"),
                 statistics_meta.c.unit_of_measurement.label("dim"),
             )
             .select_from(
@@ -2787,8 +2810,7 @@ class Report(DaBase):
             )
             .where(
                 (statistics_meta.c.statistic_id == sensor)
-                & (t1.c.state.isnot(None))
-                & (t2.c.state.isnot(None))
+                & valid
                 & (t1.c.start_ts >= self.db_ha.unix_timestamp(start_ts_param1) - 3600)
                 & (t1.c.start_ts < self.db_ha.unix_timestamp(tot_ts_param1) - 3600)
             )
@@ -2812,9 +2834,7 @@ class Report(DaBase):
             )
             # Calculate the value
             df_raw[col_name] = df_raw.apply(
-                lambda row: round(
-                    max(row["state_t2"] - row["state_t1"], 0) * factor, 3
-                ),
+                lambda row: round(row["delta"] * factor, 3),
                 axis=1,
             )
             df_raw["weekdag"] = df_raw.apply(
