@@ -163,16 +163,15 @@ solar_web_menu = {
 
 def generate_solar_items():
     global web_menu
-    solar_options = config.solar if config else []
+    solar_options = list(config.solar) if config else []
     battery_options = config.battery if config else []
     for battery_option in battery_options:
         for sol_opt in battery_option.solar:
             solar_options.append(sol_opt)
     result = {}
     for solar_option in solar_options:
-        if solar_option.ml_prediction:
-            key = solar_option.name or "default"
-            result[key] = solar_option
+        key = solar_option.name or "default"
+        result[key] = solar_option
     if len(result) == 0:
         web_menu.pop("solar", None)
     else:

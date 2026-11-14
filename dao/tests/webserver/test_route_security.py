@@ -62,15 +62,17 @@ def test_solar_menu_can_be_removed_repeatedly_and_restored(monkeypatch, solar_pr
     monkeypatch.setattr(v1_routes, "web_menu", menu)
     monkeypatch.setattr(v1_routes, "solar_web_menu", deepcopy(v1_routes.solar_web_menu))
     solar = SimpleNamespace(name="roof", ml_prediction=False)
-    monkeypatch.setattr(v1_routes, "config", SimpleNamespace(solar=[solar], battery=[]))
+    config = SimpleNamespace(solar=[], battery=[])
+    monkeypatch.setattr(v1_routes, "config", config)
 
     for _ in range(2):
         assert v1_routes.generate_solar_items() == {}
         assert v1_routes.web_menu == other_items
 
-    solar.ml_prediction = True
+    config.solar = [solar]
     for _ in range(2):
         assert v1_routes.generate_solar_items() == {"roof": solar}
+        assert config.solar == [solar]
         assert tuple(v1_routes.web_menu) == keys
         assert {key: value for key, value in v1_routes.web_menu.items() if key != "solar"} == other_items
 
