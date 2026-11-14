@@ -43,6 +43,10 @@ def test_solar_report_without_ml_fills_only_dao_columns(view):
         assert (hours[("Productie", "prognose dao", "kWh")] == 0.4).all()
         assert (hours[("Productie", "gemeten", "kWh")] == 0.5).all()
         assert (hours[("Productie", "prognose ml", "kWh")] == "").all()
+        total = result.iloc[24]
+        assert total[("", "uur", "")] == "Totaal"
+        assert total[("Productie", "prognose dao", "kWh")] == pytest.approx(9.6)
+        assert total[("Productie", "prognose ml", "kWh")] == ""
     else:
         assert (result["prognose_dao"] == 0.4).all()
         assert (result["gemeten_prod"] == 0.5).all()

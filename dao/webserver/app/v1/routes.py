@@ -170,7 +170,11 @@ def generate_solar_items():
             solar_options.append(sol_opt)
     result = {}
     for solar_option in solar_options:
-        key = solar_option.name or "default"
+        base_key = key = solar_option.name or "default"
+        count = 2
+        while key in result:
+            key = f"{base_key} ({count})"
+            count += 1
         result[key] = solar_option
     if len(result) == 0:
         web_menu.pop("solar", None)

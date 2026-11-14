@@ -3200,7 +3200,7 @@ class Report(DaBase):
             )
             r2_dao = calc_r2(result["gemeten_prod"], result["prognose_dao"])
             r2_ml = calc_r2(result["gemeten_prod"], result["prognose_ml"])
-            result.loc["Total"] = result.sum(axis=0)
+            result.loc["Total"] = result.sum(axis=0, min_count=1)
             result.at[result.index[-1], "uur"] = "Totaal"
             result.columns = [
                 ["", "Straling", "Straling", "Productie", "Productie", "Productie"],

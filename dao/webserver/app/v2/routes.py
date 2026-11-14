@@ -345,10 +345,15 @@ def get_solar_items():
         ),
     ]
 
-    return {
-        solar_option.name or "default": solar_option
-        for solar_option in solar_options
-    }
+    result = {}
+    for solar_option in solar_options:
+        base_key = key = solar_option.name or "default"
+        count = 2
+        while key in result:
+            key = f"{base_key} ({count})"
+            count += 1
+        result[key] = solar_option
+    return result
 
 
 @v2.route("/")
