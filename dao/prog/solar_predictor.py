@@ -341,9 +341,10 @@ class SolarPredictor(DaBase):
         # Remove negative values
         solar_df = solar_df[solar_df["solar_kwh"] >= 0]
 
-        # Resample to hourly if needed
+        # Resample to hourly if needed. An hour without any record stays
+        # empty (NaN) instead of becoming 0 kWh, so it can be dropped later.
         if len(solar_df) > 0:
-            solar_df = solar_df[["solar_kwh"]].resample("h").sum()
+            solar_df = solar_df[["solar_kwh"]].resample("h").sum(min_count=1)
 
         return solar_df
 
@@ -946,6 +947,9 @@ class SolarPredictor(DaBase):
     def get_solar_data(self, start: dt.datetime, entities: list) -> pd.DataFrame:
         """
         haalt solardata op uit HA database
+        Uren waarvoor HA geen statistieken heeft ontbreken in het resultaat:
+        een gat in de historie is geen uur zonder productie en mag het model
+        niet als 0 kWh aangeleerd worden.
         :param start: begindatum
         :param entities: list van sensoren van ha
         :return:
@@ -958,7 +962,12 @@ class SolarPredictor(DaBase):
         df_solar = pd.DataFrame()
         for sensor in entities:
             df_sensor = report.get_sensor_data(
-                sensor, col_name="solar_kwh", vanaf=start, tot=tot, agg="uur"
+                sensor,
+                col_name="solar_kwh",
+                vanaf=start,
+                tot=tot,
+                agg="uur",
+                fill_missing=False,
             )
             if count == 0:
                 df_solar = df_sensor
