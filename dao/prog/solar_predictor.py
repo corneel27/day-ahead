@@ -458,6 +458,15 @@ class SolarPredictor(DaBase):
                             ratio_outliers
                         )
 
+        # Identify suspicious zero-production values
+        missing_values_outliers = (clean_data["solar_kwh"] == 0) & (clean_data["irradiance"] > 5)
+
+        # count them
+        logging.info(f"Missing values {missing_values_outliers.sum()} suspicious records")
+
+        # Remove them
+        clean_data = clean_data.loc[~missing_values_outliers].copy()
+
         # Apply season outlier removal
         final_clean_data = clean_data[~seasonal_outlier_mask]
 
