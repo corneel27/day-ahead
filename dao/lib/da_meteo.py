@@ -465,12 +465,14 @@ class Meteo:
         hourly_precipitation = hourly.Variables(1).ValuesAsNumpy()
         hourly_wind_speed_10m = hourly.Variables(2).ValuesAsNumpy()
         hourly_shortwave_radiation = hourly.Variables(3).ValuesAsNumpy()
-        hourly_data = {"time": pd.date_range(
-            start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
-            end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
-            freq=pd.Timedelta(seconds=hourly.Interval()),
-            inclusive="left"
-        )}
+        hourly_data = {
+            "time": pd.date_range(
+                start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
+                end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
+                freq=pd.Timedelta(seconds=hourly.Interval()),
+                inclusive="left"
+            )
+        }
         # correct time is at the end of hour, switch to at the beginning
         hourly_data["time"] = hourly_data["time"] - pd.Timedelta(hours = 1)
         hourly_data["temp"] = hourly_temperature_2m
