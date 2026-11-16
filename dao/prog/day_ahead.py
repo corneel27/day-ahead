@@ -302,7 +302,9 @@ class DaCalc(DaBase):
         # base load
         if self.use_calc_baseload:
             logging.info("Zelf berekende baseload")
-            weekday = dt.datetime.weekday(dt.datetime.now())
+            # de dag van de berekening, niet de klok: de run van 00:00 start
+            # een paar seconden eerder en hoort al bij de nieuwe dag
+            weekday = start_dt.weekday()
             base_cons = self.get_calculated_baseload(weekday)
             if len(fixed_price_data) > self.steps_day:
                 # volgende dag ophalen
@@ -311,7 +313,7 @@ class DaCalc(DaBase):
         else:
             logging.info("Baseload uit instellingen")
             base_cons = self.config.baseload
-            if len(fixed_price_data) >= self.steps_day:
+            if len(fixed_price_data) > self.steps_day:
                 base_cons = base_cons + base_cons
         if self.interval == "15min":
             start = dt.datetime(
@@ -800,9 +802,10 @@ class DaCalc(DaBase):
                 for u in range(U):
                     # pv_prod productie van batterij b van solar s in uur u, in kWh
                     prod_dc = max(0.0, solar_series[u]) * interval_fraction[u]
-                    eff = 1
+                    prod_power = prod_dc / hour_fraction[u]
+                    eff = discharge_stages[b][-1]["efficiency"]
                     for ds in range(DS[b]):
-                        if discharge_stages[b][ds]["power"] / 1000 > prod_dc:
+                        if discharge_stages[b][ds]["power"] / 1000 > prod_power:
                             eff = discharge_stages[b][ds]["efficiency"]
                             break
                     prod_ac = prod_dc * eff
@@ -2333,6 +2336,8 @@ class DaCalc(DaBase):
             )
             if not self.hp_enabled:
                 logging.info("Warmtepomp staat uit - warmtepomp wordt niet ingepland")
+        # de dag van de berekening, niet de klok (zie de baseload)
+        calc_day = dt.datetime.combine(start_dt.date(), dt.datetime.min.time())
         if self.hp_enabled:
             # "adjustment" : keuze uit "on/off" | "power" | "heating curve", default "power"
             self.hp_adjustment = (self.heating_options.adjustment or "power").lower()
@@ -2340,14 +2345,12 @@ class DaCalc(DaBase):
             base_temp = self.heating_options.degree_days_base_temperature
             logging.info(f"Stookgrens (graaddagen): {base_temp:.1f} °C")
             degree_days_today = self.meteo.calc_graaddagen(
-                weighted=True, base_temp=base_temp
+                date=calc_day, weighted=True, base_temp=base_temp
             )
             logging.info(f"Gewogen graaddagen vandaag: {degree_days_today:.1f} K.day")
             if U > self.steps_day:
                 degree_days_tomorrow = self.meteo.calc_graaddagen(
-                    date=dt.datetime.combine(
-                        dt.date.today() + dt.timedelta(days=1), dt.datetime.min.time()
-                    ),
+                    date=calc_day + dt.timedelta(days=1),
                     weighted=True,
                     base_temp=base_temp,
                 )
@@ -2439,16 +2442,13 @@ class DaCalc(DaBase):
                 logging.info(f"Beschikbaar zijn: {hours_avail} uur")
                 if heat_needed > 0:
                     logging.info("On/off warmtepomp wordt ingepland")
-                    avg_temp_today = self.meteo.get_avg_temperature()
+                    avg_temp_today = self.meteo.get_avg_temperature(calc_day)
                     logging.info(
                         f"Gem. buitentemperatuur vandaag: {avg_temp_today:.1f} °C"
                     )
                     if U > self.steps_day:
                         avg_temp_tomorrow = self.meteo.get_avg_temperature(
-                            date=dt.datetime.combine(
-                                dt.date.today() + dt.timedelta(days=1),
-                                dt.datetime.min.time(),
-                            )
+                            date=calc_day + dt.timedelta(days=1)
                         )
                         logging.info(
                             f"Gem. buitentemperatuur morgen: {avg_temp_tomorrow:.1f} °C"
@@ -4557,7 +4557,7 @@ class DaCalc(DaBase):
             ##################################################
             # heatpump
             ##################################################
-            if self.hp_present and self.hp_enabled:
+            if self.hp_present: # and self.hp_enabled:  Also switch when hp_enabled has been disabled when required heat has been generated
                 # als aan/uit entity er is altijd schakelen
                 entity_hp_switch = self.heating_options.entity_hp_switch
                 if entity_hp_switch is None:

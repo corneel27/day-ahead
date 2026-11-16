@@ -1,4 +1,4 @@
-<div class="col-12 p-1 sticky-top {% if task_state["status"] == "running" or task_state["status"] == "cancelled" %}bg-warning-subtle{% elif task_state["status"] == "error" %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
+<div class="col-12 p-1 sticky-top {% if task_state["status"] == "running" or task_state["status"] == "cancelled" %}theme-subtle theme-warning{% elif task_state["status"] == "error" %}theme-subtle theme-danger{% else %}theme-subtle theme-success{% endif %}">
 <h2>
     {{task_state["task"]}}: {{task_state["status"]}}
 </h2>

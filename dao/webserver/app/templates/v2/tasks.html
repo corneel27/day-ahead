@@ -8,25 +8,23 @@
           hx-push-url="false" hx-replace-url="false">
         <div class="btn-group">
             <div class="dropdown" style="z-index: 1050">
-                <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                <button class="btn-solid theme-secondary icon-nav" type="button" data-bs-toggle="menu"
                         aria-expanded="false">
                     Pick action
                 </button>
-                <ul class="dropdown-menu">
+                <div class="menu">
                     {% for key, value in tasks.items() %}
-                    <li>
                         <button type="submit" name="task" value="{{key}}"
-                                class="btn btn-outline-secondary dropdown-item">
+                                class="menu-item">
                             {{value["name"]}}
                         </button>
-                    </li>
                     {% endfor %}
-                </ul>
+                </div>
             </div>
         </div>
         <div class="btn-group">
             <a href="{{url_for('v2.task_cancel')}}" hx-boost="false" hx-get="{{url_for('v2.task_cancel')}}"
-               hx-target="#status-target" class="btn btn-outline-danger disabled" id="run-cancel">Cancel</a>
+               hx-target="#status-target" class="btn-subtle theme-danger disabled" id="run-cancel">Cancel</a>
         </div>
     </form>
 </div>

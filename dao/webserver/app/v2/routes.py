@@ -17,6 +17,8 @@ from flask import (
     request,
     url_for,
 )
+from hassapi.exceptions import ClientError, Unauthorised
+from requests.exceptions import Timeout
 from sqlalchemy import Table
 from werkzeug.security import safe_join
 
@@ -25,6 +27,32 @@ from dao.prog.da_report import Report
 from dao.prog.version import __version__
 
 v2 = Blueprint("v2", __name__)
+
+
+@v2.errorhandler(Unauthorised)
+def home_assistant_unauthorised(_error):
+    return render_template(
+        "v2/home-assistant-error.html",
+        error_message=("Home Assistant rejected the API credentials. Check the Home Assistant "
+                       "access token in the configuration, then try again."),
+    ), 503
+
+
+@v2.errorhandler(ClientError)
+def home_assistant_client_error(_error):
+    return render_template(
+        "v2/home-assistant-error.html",
+        error_message=("The Home Assistant API request failed. Check the Home Assistant "
+                       "address and availability, then try again."),
+    ), 503
+
+
+def create_report():
+    try:
+        return Report(app_datapath + "/options.json")
+    except Timeout as error:
+        raise ClientError("Home Assistant API connection timed out") from error
+
 
 @v2.context_processor
 def inject_data():
@@ -246,7 +274,7 @@ def run_and_log(cmd, state):
         save_task_state(state)
 
 
-def log_chart(datapath: str, pattern: str):
+def log_chart(datapath: str, pattern: str, filename: str | None = None):
     #  By design; the get_file_list() is called over and over again to ensure an accurate reflection of the files
     flist = get_file_list_with_ts(app_datapath + datapath, pattern)
     last_index = len(flist) - 1
@@ -254,7 +282,11 @@ def log_chart(datapath: str, pattern: str):
         return None
 
     show_index = request.args.get("i")
-    if show_index is None:
+    if filename is not None:
+        show_index = next((i for i, item in enumerate(flist) if item["name"] == filename), None)
+        if show_index is None:
+            return None
+    elif show_index is None:
         show_index = last_index
     else:
         show_index = int(show_index)
@@ -262,7 +294,7 @@ def log_chart(datapath: str, pattern: str):
     show_index = max(0, min(show_index, last_index))
 
     rq_ts = request.args.get("ts")
-    if rq_ts is not None:
+    if rq_ts is not None and filename is None:
         show_index = get_closest_index_from_list(flist, datetime.datetime.fromisoformat(rq_ts).timestamp())
 
     first_index = 0
@@ -285,6 +317,17 @@ def log_chart(datapath: str, pattern: str):
         "last_index": last_index,
         "show_ts": show_ts,
     }
+
+
+@v2.route("/navigation/<kind>")
+def navigation(kind):
+    sources = {"chart": ("images/", "*.png"), "log": ("log/", "*.log")}
+    if kind not in sources or not request.args.get("filename"):
+        abort(404)
+    kwargs = log_chart(*sources[kind], filename=request.args["filename"])
+    if kwargs is None:
+        return "", 204
+    return render_template("v2/chart-log-navigation.html", kind=kind, **kwargs)
 
 
 def get_solar_items_with_ml():
@@ -461,7 +504,7 @@ def task_state():
 
 
 def reports_gen(subject: str, view: str, period: str, solar_item=None, date: datetime.datetime = None):
-    report = Report(app_datapath + "/options.json")
+    report = create_report()
     prognose = period in ["vandaag en morgen", "morgen", "today_with_forecast"]
     if period == "today_with_forecast":
         period = "vandaag"
@@ -489,13 +532,10 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
         report_df = report.calc_balance_columns(
             report_df, interval, view
         )
-    # else:  # co2
-    #     report_df = report.calc_co2_emission(
-    #         period,
-    #         _tot=tot,
-    #         active_interval="uur",
-    #         active_view=view,
-    #     )
+    elif subject == "co2":
+        report_df = report.calc_co2_emission(period, _tot=tot, active_interval=interval, active_view=view)
+    elif subject == "save_co2":
+        report_df = report.calc_saving_co2(period, _tot=tot, active_interval=interval, active_view=view)
     elif subject == "save_cons":
         report_df = report.calc_saving_consumption(
             active_period=period,
@@ -539,10 +579,10 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
             report_data = report.make_graph(
                 report_df, period, report.balance_graph_options
             )
-        # else:  # co2
-        #     report_data = report.make_graph(
-        #         report_df, period, report.co2_graph_options
-        #     )
+        elif subject == "co2":
+            report_data = report.make_graph(report_df, period, report.co2_graph_options)
+        elif subject == "save_co2":
+            report_data = report.make_graph(report_df, period, report.saving_co2_graph_options)
         elif subject == "save_cons":
             report_data = report.make_graph(
                 report_df, period, report.saving_cons_graph_options
@@ -564,11 +604,21 @@ def reports_gen(subject: str, view: str, period: str, solar_item=None, date: dat
     return report_data
 
 
+def co2_sensor_config():
+    config = ConfigurationLoader(Path(app_datapath) / "options.json").load_and_validate()
+    return config.report.co2_intensity_sensor if config and config.report else None
+
+
 @v2.route("/reports", methods=["GET"])
 def reports():
     subject = request.args.get("subject", default="grid")
     view = request.args.get("view", default="tabel")
     period = request.args.get("period", default="vandaag")
+    sensor = co2_sensor_config()
+    if subject == "co2" and not sensor:
+        abort(404)
+    if subject == "co2" and period in ("today_with_forecast", "morgen", "vandaag en morgen"):
+        period = "vandaag"
     report_data = reports_gen(subject, view, period)
     return render_template(
         "v2/report.html",
@@ -577,8 +627,9 @@ def reports():
         subject=subject,
         view=view,
         report_data=report_data,
+        co2_warning=isinstance(sensor, list) and len(sensor) > 1,
         subject_options=[{"label": "Grid", "value": "grid"},
-                         {"label": "Balance", "value": "balans"}]
+                         {"label": "Balance", "value": "balans"}] + ([{"label": "CO2", "value": "co2"}] if sensor else [])
     )
 
 
@@ -587,6 +638,11 @@ def savings():
     subject = request.args.get("subject", default="save_cons")
     view = request.args.get("view", default="tabel")
     period = request.args.get("period", default="vandaag")
+    sensor = co2_sensor_config()
+    if subject == "save_co2" and not sensor:
+        abort(404)
+    if subject == "save_co2" and period in ("today_with_forecast", "morgen", "vandaag en morgen"):
+        period = "vandaag"
     report_data = reports_gen(subject, view, period)
     return render_template(
         "v2/report.html",
@@ -595,8 +651,9 @@ def savings():
         subject=subject,
         view=view,
         report_data=report_data,
+        co2_warning=isinstance(sensor, list) and len(sensor) > 1,
         subject_options=[{"label": "Consumption", "value": "save_cons"},
-                         {"label": "Cost", "value": "save_cost"}]
+                         {"label": "Cost", "value": "save_cost"}] + ([{"label": "CO2 emissions", "value": "save_co2"}] if sensor else [])
     )
 
 
@@ -652,7 +709,7 @@ def reportsv2():
 
     fields = fields.split(",")
 
-    report = Report(app_datapath + "/options.json")
+    report = create_report()
     vars = report.get_vars()
 
     return render_template(

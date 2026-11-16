@@ -6,39 +6,39 @@
 <form id="report-form" method="GET">
     <input type="hidden" name="timezone" data-current-tz>
     <div class="row">
-        <div class="col-12 col-lg-3">
+        <div class="col-12 lg:col-3">
             <div class="row">
                 <div class="dropdown col-6">
-                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                    <a class="btn-solid theme-secondary icon-nav" href="#" role="button" data-bs-toggle="menu"
                        aria-expanded="false">
                         <i class="bi bi-calendar"> </i>Periods
                     </a>
 
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="javascript: setDataRange('today')">Today per hour</a></li>
-                        <li><a class="dropdown-item" href="javascript: setDataRange('today and tomorrow')">Today &amp;
+                    <ul class="menu">
+                        <li><a class="menu-item" href="javascript: setDataRange('today')">Today per hour</a></li>
+                        <li><a class="menu-item" href="javascript: setDataRange('today and tomorrow')">Today &amp;
                             tomorrow per hour</a></li>
-                        <li><a class="dropdown-item" href="javascript: setDataRange('yesterday')">Yesterday per hour</a>
+                        <li><a class="menu-item" href="javascript: setDataRange('yesterday')">Yesterday per hour</a>
                         </li>
-                        <li><a class="dropdown-item" href="javascript: setDataRange('this week')">This week per day</a>
+                        <li><a class="menu-item" href="javascript: setDataRange('this week')">This week per day</a>
                         </li>
-                        <li><a class="dropdown-item" href="javascript: setDataRange('this month')">This month per
+                        <li><a class="menu-item" href="javascript: setDataRange('this month')">This month per
                             day</a>
                         </li>
                     </ul>
                 </div>
 
                 <div class="dropdown col-6">
-                    <a class="btn btn-secondary dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                    <a class="btn-solid theme-secondary icon-nav" href="#" role="button" data-bs-toggle="menu"
                        aria-expanded="false">
                         <i class="bi bi-bar-chart"> </i>Presets
                     </a>
 
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="javascript:selectValues('fields', '')">All</a></li>
-                        <li><a class="dropdown-item" href="javascript:selectValues('fields', 'cons,prod,cost,profit')">Grid</a>
+                    <ul class="menu">
+                        <li><a class="menu-item" href="javascript:selectValues('fields', '')">All</a></li>
+                        <li><a class="menu-item" href="javascript:selectValues('fields', 'cons,prod,cost,profit')">Grid</a>
                         </li>
-                        <li><a class="dropdown-item"
+                        <li><a class="menu-item"
                                href="javascript:selectValues('fields', 'pv_ac,pv_dc,ev,bat_in,bat_out,boil,wp')">Balance</a>
                         </li>
                     </ul>
@@ -51,26 +51,26 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-12 col-sm-8 col-lg-8 overflow-x-auto">
+        <div class="col-12 sm:col-8 lg:col-8 overflow-x-auto">
             <div class="row">
                 <div class="input-group">
-                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1m')">- 1m</a>
-                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1w')">- 1w</a>
-                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('-1d')">- 1d</a>
+                    <a class="btn-subtle theme-secondary" href="javascript: setDataRange('-1m')">- 1m</a>
+                    <a class="btn-subtle theme-secondary" href="javascript: setDataRange('-1w')">- 1w</a>
+                    <a class="btn-subtle theme-secondary" href="javascript: setDataRange('-1d')">- 1d</a>
                     <input type="datetime-local" name="start" id="start" class="form-control col-6"
                            value="{{ start|default('') }}">
                     <span class="input-group-text"> - </span>
                     <input type="datetime-local" name="end" id="end" class="form-control" value="{{ end|default('') }}">
-                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1d')">+ 1d</a>
-                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1w')">+ 1w</a>
-                    <a class="btn btn-outline-secondary" href="javascript: setDataRange('+1m')">+ 1m</a>
+                    <a class="btn-subtle theme-secondary" href="javascript: setDataRange('+1d')">+ 1d</a>
+                    <a class="btn-subtle theme-secondary" href="javascript: setDataRange('+1w')">+ 1w</a>
+                    <a class="btn-subtle theme-secondary" href="javascript: setDataRange('+1m')">+ 1m</a>
                 </div>
             </div>
             <div class="row">
-                <div class="col-12 col-md-6 mt-2">
+                <div class="col-12 md:col-6 mt-2">
                     <div class="input-group">
                         <span class="input-group-text">Aggregate: </span>
-                        <select name="aggregate" id="aggregate" class="form-select">
+                        <select name="aggregate" id="aggregate" class="form-control">
                             <option value="15min" {% if aggregate==
                             '15min' %}selected{% endif %}>15 min</option>
                             <option value="hour" {% if aggregate==
@@ -105,10 +105,10 @@
     </li>
 </ul>
 <div class="tab-content flex-grow-1 d-flex flex-column pt-4" id="tab-report-data">
-    <div role="status" class="spinner spinner-border text-secondary mt-5">
+    <div role="status" class="spinner spinner-border fg-secondary mt-5">
         <span class="visually-hidden">Loading...</span>
     </div>
-    <div role="status" class="error text-danger text-center h1 mt-5">
+    <div role="status" class="error fg-danger text-center h1 mt-5">
         <i class="bi bi-exclamation-triangle-fill"></i>
         <div id="chart-error-message" class="h4"></div>
     </div>
