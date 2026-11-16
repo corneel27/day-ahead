@@ -7,11 +7,13 @@ hourly solar production based on weather data and historical solar output.
 
 import copy
 import datetime as dt
+import json
 import logging
 import math
 import os
 import sys
 import warnings
+from pathlib import Path
 from typing import Any
 
 import joblib
@@ -86,6 +88,8 @@ class SolarPredictor(DaBase):
         self.training_stats = {}
         self.ml_training_start_date = dt.date(2000, 1, 1)
         self.solar_entities = []
+        self.meteo_history_source = self.config.meteo_history_source
+        self.meteosource_filename = Path("../data/prediction/") / "meteo_history_source.json"
         """
         # Set default physics-based constraints for typical residential system
         # Uses 5kW system at 45°N latitude (mid-latitude) as reasonable default
@@ -454,7 +458,7 @@ class SolarPredictor(DaBase):
                             ratio_outliers
                         )
 
-        # Apply outlier removal
+        # Apply season outlier removal
         final_clean_data = clean_data[~seasonal_outlier_mask]
 
         outliers_removed = original_size - len(final_clean_data)
@@ -782,6 +786,46 @@ class SolarPredictor(DaBase):
         self.db_da.savedata(save_df, tablename="values")
         os.remove(filename)
 
+    def get_and_save_openmeteo_data(
+        self, start: dt.datetime, end: dt.datetime, variables: list[str] | None = None
+    ):
+        """
+        haalt data op en bewaart ze in dao-db
+        :param start: datetime
+        :param end: datetime
+        :return: None
+        """
+        if variables is None:
+            variables = ["temp", "gr", "winds"]
+        meteo_df = self.meteo.get_from_openmeteo(history=True, start=start, end=end)
+
+        if len(meteo_df) == 0:
+            logging.info(
+                f"Er zijn geen aanvullende historische data van Openmeteo beschikbaar vanaf {start}-{end}"
+            )
+            return
+
+        meteo_df["utc"] = meteo_df.index
+        eerste = pd.to_datetime(meteo_df["time"].iloc[0]).tz_convert(self.time_zone)
+        laatste = pd.to_datetime(meteo_df["time"].iloc[-1]).tz_convert(self.time_zone)
+
+        logging.info(
+            f"Er zijn data van Openmeteo binnengekomen vanaf {eerste} tot en met {laatste}"
+        )
+
+        columns = ["temp", "gr", "winds"]
+        save_df = (
+            meteo_df[["utc"] + columns]
+            .rename(columns={"utc": "time"})
+            .melt(
+                id_vars="time",
+                var_name="code",
+                value_name="value"
+            )
+        )
+        self.db_da.savedata(save_df, tablename="values")
+        return
+
     def get_and_save_knmi_data(
         self, start: dt.datetime, end: dt.datetime, variables: list[str] | None = None
     ):
@@ -815,24 +859,58 @@ class SolarPredictor(DaBase):
             f"{knmi_laatste}"
         )
         knmi_df = knmi_df.rename(columns={"T": "temp", "Q": "gr", "FH": "winds"})
-        knmi_df["utc"] = pd.to_datetime(
-            knmi_df["utc"], utc=True
-        )  # , format='%Y-%m-%d %H:%M:%S')
-        save_df = pd.DataFrame(columns=["time", "code", "value"])
-        for row in knmi_df.itertuples():
-            utc = int(row.utc.timestamp())
-            if "temp" in knmi_df.columns:
-                save_df.loc[save_df.shape[0]] = [utc, "temp", row.temp / 10]
-            if "gr" in knmi_df.columns:
-                save_df.loc[save_df.shape[0]] = [utc, "gr", row.gr]
-            if "winds" in knmi_df.columns:
-                save_df.loc[save_df.shape[0]] = [utc, "winds", row.winds / 10]
+        knmi_df["time"] = pd.to_datetime(knmi_df["utc"], utc=True, unit="s")
+        knmi_df["time"] = knmi_df["time"].astype(int)
+        knmi_df["time"] = knmi_df["time"] / 1000000
+        knmi_df["time"] = knmi_df["time"].astype(int)
+        knmi_df["temp"] = knmi_df["temp"] / 10
+        knmi_df["winds"] = knmi_df["winds"] / 10
+
+        columns = ["temp", "gr", "winds"]
+        save_df = (
+            knmi_df[["time"] + columns]
+            .melt(
+                id_vars="time",
+                var_name="code",
+                value_name="value"
+            )
+        )
         self.db_da.savedata(save_df, tablename="values")
         return
 
-    def import_knmi_df(self, start: dt.datetime, end: dt.datetime):
+    def get_and_save_meteo_data(self, start, end, variables=None):
+        if self.meteo_history_source == "knmi":
+            self.get_and_save_knmi_data(start, end, variables)
+        else:
+            self.get_and_save_openmeteo_data(start, end, variables)
+
+    def check_changed_meteosource(self):
         """
-        haalt data op bij knmi en slaat deze op in dao-database
+        :return: booelan true: meteosource is changed
+        """
+        current_source = self.config.meteo_history_source
+        if self.meteosource_filename.exists():
+            with open(self.meteosource_filename) as f:
+                previous_source = json.load(f).get("source")
+        else:
+            previous_source = "knmi"
+        changed = previous_source != current_source
+        if changed:
+            logging.info(
+                "Meteo histpry source changed from %s to %s. "
+                "Reimporting historical meteodata.",
+                previous_source,
+                current_source
+            )
+        return changed
+
+    def save_meteo_history_source(self):
+        with open(self.meteosource_filename, "w") as f:
+            json.dump({"source": self.config.meteo_history_source}, f, indent=2)
+
+    def import_meteo(self, start: dt.datetime, end: dt.datetime):
+        """
+        haalt data op bij knmi/openmeteo en slaat deze op in dao-database
         :param start: begin-datum waarvan data aanwezig moeten zijn
         :param end: datum tot data aanwezig meten zijn
         :return:
@@ -849,39 +927,42 @@ class SolarPredictor(DaBase):
         """
         # get dataframe with knmi-py
         # datetime of latest data-reord
-        logging.info(
-            f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}"
-        )
 
         latest_wind_dt = self.db_da.get_time_border_record("winds", latest=True)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         if latest_wind_dt is None and latest_dt is not None:
-            logging.info("Er zijn nog geen winddata van knmi aanwezig")
-            self.get_and_save_knmi_data(start, latest_dt, ["FH"])
+            logging.info("Er zijn nog geen winddata van aanwezig")
+            self.get_and_save_meteo_data(start, latest_dt, ["FH"])
         else:
             if (
                 latest_dt is not None
                 and latest_wind_dt is not None
                 and latest_wind_dt < latest_dt
             ):
-                self.get_and_save_knmi_data(latest_wind_dt, latest_dt, ["FH"])
+                self.get_and_save_meteo_data(latest_wind_dt, latest_dt, ["FH"])
 
         first_dt = self.db_da.get_time_border_record("gr", latest=False)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
-        if latest_dt is None:  # er zijn nog geen data
-            logging.info("Er zijn nog geen knmi-data aanwezig")
-            self.get_and_save_knmi_data(start, end)
+        latest_dt = latest_dt - dt.timedelta(days=4)
+        if (latest_dt is None) or self.check_changed_meteosource():
+            # er zijn nog geen data of source is gewijzigd
+            logging.info("Er zijn nog geen meteo-data aanwezig of source is gewijzigd")
+            self.get_and_save_meteo_data(start, end)
+            self.save_meteo_history_source()
             first_dt = self.db_da.get_time_border_record("gr", latest=False)
             latest_dt = self.db_da.get_time_border_record("gr", latest=True)
         else:
-            logging.info(f"Er zijn knmi-data aanwezig vanaf {first_dt} tot {latest_dt}")
+            logging.info(f"Er zijn meteo-data aanwezig vanaf {first_dt} tot {latest_dt}")
         if first_dt <= start and latest_dt >= end:
-            logging.info("Er worden geen knmi-data opgehaald")
+            logging.info("Er worden verder geen meteo-data opgehaald")
             return
+        logging.info(
+            f"KNMI-weerstation: {self.knmi_station} {knmi.stations[int(self.knmi_station)].name}"
+        )
         if first_dt > start:
-            self.get_and_save_knmi_data(start, first_dt)
+            self.get_and_save_meteo_data(start, first_dt)
         if latest_dt < end:
-            self.get_and_save_knmi_data(latest_dt, end)
+            self.get_and_save_meteo_data(latest_dt, end)
         return
 
     def get_weatherdata(
@@ -906,8 +987,8 @@ class SolarPredictor(DaBase):
         else:
             end = _end
         if not prognose:
-            # knmi data evt aanvullen
-            self.import_knmi_df(start, end)
+            # gemeten meteo data evt aanvullen
+            self.import_meteo(start, end)
 
         start = dt.datetime(start.year, start.month, start.day, start.hour)
         # get weather-dataframe from database
