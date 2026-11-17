@@ -4239,9 +4239,13 @@ class DaCalc(DaBase):
                     logging.info(f"- stop laden op {new_state_stop_laden}")
                 logging.info(f"- positie: {ev_position[e]}")
                 logging.info(f"- ingeplugd: {ev_plugged_in[e]}")
-                if (float(new_ampere_state) > 0.0) and (ev_position[e] != "home" or not ev_plugged_in[e]):
-                    logging.warning(f"Laden van {ev_name} kan niet worden aangezet, want "
-                                    f"deze is niet thuis en/of ingeplugged")
+                if float(new_ampere_state) > 0.0:
+                    if ev_position[e] != "home":
+                        logging.warning(f"Laden van {ev_name} kan niet worden aangezet, want "
+                                    f"deze is niet thuis")
+                    if not ev_plugged_in[e]:
+                        logging.warning(f"Laden van {ev_name} kan niet worden aangezet, want "
+                                    f"deze is niet ingeplugged")
                 if ev_position[e] == "home" and ev_plugged_in[e]:
                     if float(new_ampere_state) > 0.0:
                         if old_switch_state == "off":
