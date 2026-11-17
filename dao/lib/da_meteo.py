@@ -488,7 +488,7 @@ class Meteo:
         hourly_df["tijd"] = hourly_df["tijd"]/1000000
         hourly_df["tijd"] = hourly_df["tijd"].astype(int)
         hourly_df = hourly_df.set_index("tijd")
-        logging.info("\nHourly data form Openmeteo\n", hourly_df.to_string())
+        logging.info(f"\nHourly data from Openmeteo\n{hourly_df.to_string()}")
         return hourly_df
 
     def get_from_meteoserver(self, model: str) -> pd.DataFrame:
