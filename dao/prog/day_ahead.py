@@ -1537,7 +1537,7 @@ class DaCalc(DaBase):
                     for j in range(num_intervals + 1):
                         use = min(
                             max(0, est_needed_elec[u] - used),
-                            cons_interval[u+j],
+                            cons_interval[min(u + j, U - 1)],
                         )
                         est_elec_cost[u] += use * pl[min(u + j, U - 1)]
                         est_needed_elec_st[u].append(use)
