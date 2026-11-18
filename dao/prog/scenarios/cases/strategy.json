@@ -15,5 +15,44 @@
       "objective_within_baseline": true,
       "battery_flat_during": { "start": "11:00", "end": "15:00", "max_kwh": 0.1 }
     }
+  },
+  {
+    "id": "strategy-minimize-consumption-surplus-sold-at-peak",
+    "description": "Strategy 'minimize consumption' with a large PV surplus and an evening feed-in spike - nothing is imported all day, and the battery sells its surplus in the spike instead of at the low midday feed-in price",
+    "start": "2026-06-21 00:00",
+    "prices": {
+      "cons": [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
+               0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
+      "prod": [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05,
+               0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.40, 0.40, 0.40, 0.05, 0.05, 0.05]
+    },
+    "solar": [0.0, 0.0, 0.3, 1.1, 2.3, 3.6, 4.7, 5.4, 5.8, 5.9, 5.7, 5.1,
+              4.2, 3.1, 1.9, 0.9, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    "states": { "sensor.ess_battery_soc": "50" },
+    "config_patch": { "strategy.value": "minimize consumption" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "grid_import_at_most": { "start": "00:00", "end": "00:00", "max_kwh": 0.1 },
+      "grid_export_during": { "start": "18:00", "end": "21:00", "min_kwh": 8.0 },
+      "battery_discharges_during": { "start": "18:00", "end": "21:00", "min_kwh": 8.0 }
+    }
+  },
+  {
+    "id": "strategy-minimize-consumption-shortfall-cheapest-hours",
+    "description": "Strategy 'minimize consumption' without PV and too little battery for the day - the battery covers the expensive evening, and the battery stays idle in the cheap night hours where the import that is left goes",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.10, 0.10, 0.10, 0.10, 0.10, 0.10, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25,
+               0.25, 0.25, 0.25, 0.25, 0.25, 0.45, 0.45, 0.45, 0.45, 0.25, 0.25, 0.25]
+    },
+    "states": { "sensor.ess_battery_soc": "40" },
+    "config_patch": { "strategy.value": "minimize consumption" },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "grid_import_at_most": { "start": "17:00", "end": "21:00", "max_kwh": 0.1 },
+      "battery_flat_during": { "start": "00:00", "end": "06:00", "max_kwh": 0.1 }
+    }
   }
 ]

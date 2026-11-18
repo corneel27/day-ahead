@@ -501,6 +501,32 @@ def _check_battery_flat_during(value: dict, ctx: CaseContext) -> CheckResult:
     return CheckResult("battery_flat_during", ok, detail)
 
 
+def _grid_kwh(ctx: CaseContext, container: str, window: range) -> float:
+    # c_l / c_t are already kWh per interval (bounded by max_power * hour_fraction)
+    mv = ctx.mv
+    if mv is None or not mv.has(container):
+        return 0.0
+    return sum(v for (u,), v in mv.items(container) if u in window)
+
+
+@case_check("grid_import_at_most")
+def _check_grid_import_at_most(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = _grid_kwh(ctx, "c_l", window)
+    ok = kwh <= value["max_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh imported in {value['start']}-{value['end']}, wanted <= {value['max_kwh']}"
+    return CheckResult("grid_import_at_most", ok, detail)
+
+
+@case_check("grid_export_during")
+def _check_grid_export_during(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = _grid_kwh(ctx, "c_t", window)
+    ok = kwh >= value["min_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh exported in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    return CheckResult("grid_export_during", ok, detail)
+
+
 @case_check("no_cross_battery_charge_discharge")
 def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> CheckResult:
     """No interval has one battery charging on the AC side while a

@@ -43,6 +43,12 @@ SOLVER = "highs"
 assert SOLVER in ("cbc", "highs"), SOLVER
 assert SOLVER == "cbc" or PWL_FORMULATION == "log", "HiGHS kent geen SOS2"
 
+# strategie "minimize consumption": weging in euro per kWh levering van het
+# net, alleen voor de solver (geen echte kosten). 10 ligt ruim boven de
+# prijsverschillen en de straffen per kWh, dus eerst de laagste levering en
+# dan de laagste kosten.
+CONSUMPTION_WEIGHT = 10.0
+
 
 @contextmanager
 def _capture_native_stdout():
@@ -3568,74 +3574,47 @@ class DaCalc(DaBase):
                     "Kon debug variabele-registry niet opbouwen", exc_info=True
                 )
 
-        # kosten optimalisering
         if self.strategy == "minimize cost":
             strategie = "minimale kosten"
-            logging.info(f"Strategie: {strategie}")
-            logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
-            model.objective = minimize(cost)
-            start_calc = time.perf_counter()
-            with _capture_native_stdout() as native:
-                status = model.optimize()
-            if self.debug or self.log_level <= logging.DEBUG:
-                _log_native_output(native["cbc_log"])
-            end_calc = time.perf_counter()
-            logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
-            logging.info(f"Model status: {status}")
-            if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing voor: {self.strategy}")
-                return False
+            objective = cost
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
-            logging.info(f"Strategie: {strategie}")
-            model.objective = minimize(delivery)
-            with _capture_native_stdout() as native:
-                status = model.optimize()
-            if self.debug or self.log_level <= logging.DEBUG:
-                _log_native_output(native["cbc_log"])
-            if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing voor: {self.strategy}")
-                return False
-            min_delivery = max(0.0, delivery.x)
-            logging.info("Eerste berekening")
-            logging.info(f"Kosten (euro): {cost.x:<6.2f}")
-            logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
-            model += delivery <= min_delivery
-            model.objective = minimize(cost)
-            with _capture_native_stdout() as native:
-                status = model.optimize()
-            if self.debug or self.log_level <= logging.DEBUG:
-                _log_native_output(native["cbc_log"])
-            if model.num_solutions == 0:
-                model.objective = minimize(delivery)
-                with _capture_native_stdout() as native:
-                    status = model.optimize()
-                if self.debug or self.log_level <= logging.DEBUG:
-                    _log_native_output(native["cbc_log"])
-                if model.num_solutions == 0:
-                    logging.warning(
-                        f"Geen oplossing in na herberekening voor: {self.strategy}"
-                    )
-                    return False
-            logging.info(f"Model status: {status}")
-            logging.info("Herberekening")
-            logging.info(f"Kosten (euro): {cost.x:<6.2f}")
-            logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
+            # één berekening: de kosten plus een weging per kWh van het net.
+            # Eerst zo min mogelijk levering; bij gelijke levering het
+            # goedkoopste plan, en een overschot gaat naar de duurste uren.
+            # De weging zit alleen in de doelfunctie, niet in cost, dus niet
+            # in de kosten, de winst of het overzicht.
+            objective = cost + CONSUMPTION_WEIGHT * delivery
         else:
             logging.error("Kies een strategie in options")
             # strategie = 'niet gekozen'
+            return False
+        logging.info(f"Strategie: {strategie}")
+        if self.strategy == "minimize consumption":
+            logging.info(
+                f"Weging levering (alleen voor de solver, geen kosten): "
+                f"{CONSUMPTION_WEIGHT} euro/kWh"
+            )
+        logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
+        model.objective = minimize(objective)
+        start_calc = time.perf_counter()
+        with _capture_native_stdout() as native:
+            status = model.optimize()
+        if self.debug or self.log_level <= logging.DEBUG:
+            _log_native_output(native["cbc_log"])
+        end_calc = time.perf_counter()
+        logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
+        logging.info(f"Model status: {status}")
+        if model.num_solutions == 0:
+            logging.warning(
+                f"Geen oplossing voor: {self.strategy}, kijk naar je instellingen."
+            )
             return False
 
         # Suppress FutureWarning messages
         # import warnings
 
         # warnings.simplefilter(action="ignore", category=FutureWarning)
-
-        if model.num_solutions == 0:
-            logging.error(
-                "Er is helaas geen oplossing gevonden, kijk naar je instellingen."
-            )
-            return False
 
         # controleer of de oplossing aan alle constraints en grenzen voldoet,
         # zodat een onmogelijke planning nooit naar HA gaat
