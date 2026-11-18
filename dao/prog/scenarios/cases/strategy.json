@@ -17,6 +17,29 @@
     }
   },
   {
+    "id": "strategy-minimize-consumption-weight-zero-is-minimize-cost",
+    "description": "Same inputs as price-negative-window, but strategy 'minimize consumption' with consumption weight 0, read from an HA entity (flex setting) - that is plain 'minimize cost', so the battery hoards the free energy again and the objective equals price-negative-window's baseline",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20,
+               -0.01, -0.03, -0.03, -0.01,
+               0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
+    },
+    "states": {
+      "sensor.ess_battery_soc": "30",
+      "input_number.dao_consumption_weight": "0"
+    },
+    "config_patch": {
+      "strategy.value": "minimize consumption",
+      "consumption_weight.value": "input_number.dao_consumption_weight"
+    },
+    "expect": {
+      "solved": true,
+      "objective_within_baseline": true,
+      "battery_charges_during": { "start": "11:00", "end": "15:00", "min_kwh": 15.0 }
+    }
+  },
+  {
     "id": "strategy-minimize-consumption-surplus-sold-at-peak",
     "description": "Strategy 'minimize consumption' with a large PV surplus and an evening feed-in spike - nothing is imported all day, and the battery sells its surplus in the spike instead of at the low midday feed-in price",
     "start": "2026-06-21 00:00",

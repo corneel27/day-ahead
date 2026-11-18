@@ -43,12 +43,6 @@ SOLVER = "highs"
 assert SOLVER in ("cbc", "highs"), SOLVER
 assert SOLVER == "cbc" or PWL_FORMULATION == "log", "HiGHS kent geen SOS2"
 
-# strategie "minimize consumption": weging in euro per kWh levering van het
-# net, alleen voor de solver (geen echte kosten). 10 ligt ruim boven de
-# prijsverschillen en de straffen per kWh, dus eerst de laagste levering en
-# dan de laagste kosten.
-CONSUMPTION_WEIGHT = 10.0
-
 
 @contextmanager
 def _capture_native_stdout():
@@ -3584,7 +3578,25 @@ class DaCalc(DaBase):
             # goedkoopste plan, en een overschot gaat naar de duurste uren.
             # De weging zit alleen in de doelfunctie, niet in cost, dus niet
             # in de kosten, de winst of het overzicht.
-            objective = cost + CONSUMPTION_WEIGHT * delivery
+            try:
+                weight = float(self.config.consumption_weight.resolve(self.ha_getter))
+            except (AttributeError, TypeError, ValueError):
+                # entity bestaat niet, of staat op "unavailable"/"unknown"
+                weight = math.nan
+            if math.isnan(weight):
+                logging.warning(
+                    f"'consumption weight' ({self.config.consumption_weight.value}) "
+                    f"is geen getal, er wordt gerekend met 10"
+                )
+                weight = 10.0
+            elif not 0.0 <= weight <= 100.0:
+                clamped = max(0.0, min(weight, 100.0))
+                logging.warning(
+                    f"'consumption weight' ({weight}) valt buiten 0 - 100, "
+                    f"er wordt gerekend met {clamped}"
+                )
+                weight = clamped
+            objective = cost + weight * delivery
         else:
             logging.error("Kies een strategie in options")
             # strategie = 'niet gekozen'
@@ -3593,7 +3605,7 @@ class DaCalc(DaBase):
         if self.strategy == "minimize consumption":
             logging.info(
                 f"Weging levering (alleen voor de solver, geen kosten): "
-                f"{CONSUMPTION_WEIGHT} euro/kWh"
+                f"{weight} euro/kWh"
             )
         logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
         model.objective = minimize(objective)
