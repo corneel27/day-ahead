@@ -14,9 +14,9 @@ import tempfile
 import time
 from contextlib import contextmanager
 
-import mip.cbc
+import mip
 import pandas as pd
-from mip import BINARY, CBC, CONTINUOUS, HIGHS, INTEGER, Model, minimize, xsum
+from mip import BINARY, CONTINUOUS, HIGHS, INTEGER, Model, minimize, xsum
 from pandas.core.dtypes.inference import is_number
 from utils import (
     calc_adjustment_heatcurve,
@@ -33,29 +33,21 @@ from dao.prog.ev_schedule import format_ev_charge_schedule
 
 _libc = ctypes.CDLL(None)
 
-# testfase: "sos2" (huidige SOS2-sets) of "log" (_link_pwl) voor de stuksgewijs lineaire curves
-PWL_FORMULATION = "log"
-assert PWL_FORMULATION in ("sos2", "log"), PWL_FORMULATION
-
-# testfase: "cbc" of "highs" (pip install mip[highs]); HiGHS kent geen SOS2,
-# dus alleen samen met PWL_FORMULATION = "log"
-SOLVER = "highs"
-assert SOLVER in ("cbc", "highs"), SOLVER
-assert SOLVER == "cbc" or PWL_FORMULATION == "log", "HiGHS kent geen SOS2"
-
 
 @contextmanager
 def _capture_native_stdout():
     """Redirects the OS-level stdout file descriptor (fd 1) for the
-    duration of a CBC solve. CBC writes its "Search completed...", "Exiting
-    as integer gap..." etc. lines via native C-level stdio, never through
-    Python's `logging` module, so they normally land on the console (or
-    wherever fd 1 points) but never in the log file. Plain
-    `contextlib.redirect_stdout` would not catch this, since it only
-    reassigns Python's `sys.stdout` object and native stdio bypasses that
-    entirely. `fflush(NULL)` is called before restoring the fd so CBC's own
-    buffered output isn't left sitting unflushed past the point we read it
-    back.
+    duration of a solve. The solver (HiGHS) writes its progress lines via
+    native C-level stdio, never through Python's `logging` module, so they
+    normally land on the console (or wherever fd 1 points) but never in the
+    log file. Plain `contextlib.redirect_stdout` would not catch this, since
+    it only reassigns Python's `sys.stdout` object and native stdio bypasses
+    that entirely. `fflush(NULL)` is called before restoring the fd so the
+    solver's own buffered output isn't left sitting unflushed past the point
+    we read it back.
+
+    The key is still "cbc_log" (the solver used to be CBC): da_debug and the
+    scenario reports read it under that name from saved result files.
     """
     stdout_fd = 1
     saved_fd = os.dup(stdout_fd)
@@ -75,7 +67,7 @@ def _capture_native_stdout():
 
 
 def _log_native_output(text: str) -> None:
-    """Feeds captured CBC stdout output through logging.info, line by
+    """Feeds captured solver stdout output through logging.info, line by
     line, so it ends up in the log file (and console, via the stream
     handler) instead of only on raw stdout."""
     for line in text.splitlines():
@@ -88,8 +80,9 @@ def _link_pwl(model, w, exact=True, gate=1):
 
         w heeft één gewicht (0..1) per breekpunt. Het werkpunt is een mengsel van
         twee naast elkaar liggende breekpunten. Die regel "alleen buren" deed eerst
-        een SOS2-set, maar daarmee zet CBC al zijn heuristieken uit (Cbc0036I).
-        Deze functie doet hetzelfde met een paar aan/uit-schakelaars.
+        een SOS2-set, maar daarmee zette CBC al zijn heuristieken uit (Cbc0036I),
+        en HiGHS kent geen SOS2. Deze functie doet hetzelfde met een paar
+        aan/uit-schakelaars.
 
         Voorbeeld met 5 breekpunten, dus 4 stukken en 2 schakelaars:
 
@@ -224,8 +217,6 @@ class DaCalc(DaBase):
         if _start_dt is not None or _start_soc is not None or _start_ev_soc is not None:
             self.debug = True
         logging.info(f"Debug = {self.debug}")
-        # testfase: sos2 (standaard) of log (_link_pwl) voor de stuksgewijs lineaire curves
-        logging.info(f"PWL-formulering: {PWL_FORMULATION}")
         if _start_dt is None:
             start_dt = dt.datetime.now()
         else:
@@ -617,13 +608,12 @@ class DaCalc(DaBase):
             logging.info(f"pv_dc: {len(pv_org_dc)}")
 
         # Name the solver explicitly to avoid trying Gurobi first
-        model = Model(solver_name=HIGHS if SOLVER == "highs" else CBC)
-        if SOLVER == "highs":
-            # HiGHS schrijft zijn openingsregels bij de eerste add_var direct naar
-            # stdout, buiten de capture rond optimize() (en voor de JSON-uitvoer
-            # van da_debug): uitvoer uit tot vlak voor de solve
-            highs_verbose = model.verbose
-            model.verbose = 0
+        model = Model(solver_name=HIGHS)
+        # HiGHS schrijft zijn openingsregels bij de eerste add_var direct naar
+        # stdout, buiten de capture rond optimize() (en voor de JSON-uitvoer
+        # van da_debug): uitvoer uit tot vlak voor de solve
+        highs_verbose = model.verbose
+        model.verbose = 0
 
         ##############################################################
         #                          pv ac
@@ -1201,11 +1191,9 @@ class DaCalc(DaBase):
                 # tot hier laden zonder sos #######################################
                 
         """
-        # vanaf hier laden met sos ######################################################
+        # vanaf hier laden met een stuksgewijs lineaire curve (_link_pwl) ##############
         for b in range(B):
             for u in range(U):
-                if PWL_FORMULATION == "sos2":
-                    model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
                 model += (
                     xsum(
                         ac_to_dc_w[b][u][cs] * ac_to_dc_samples[b][cs]
@@ -1220,17 +1208,8 @@ class DaCalc(DaBase):
                     )
                     == dc_from_ac[b][u]
                 )
-                if PWL_FORMULATION == "sos2":
-                    model.add_sos(
-                        [
-                            (ac_to_dc_w[b][u][cs], ac_to_dc_samples[b][cs])
-                            for cs in range(CS[b])
-                        ],
-                        2,
-                    )
-                else:
-                    _link_pwl(model, ac_to_dc_w[b][u], exact=True)
-                # tot hier constraints laden met sos
+                _link_pwl(model, ac_to_dc_w[b][u], exact=True)
+                # tot hier constraints laden met _link_pwl
 
                 """
                 # vanaf hier ontladen met aan/uit
@@ -1260,9 +1239,7 @@ class DaCalc(DaBase):
                 #tot hier ontladen met aan/uit
                 """
 
-                # vanaf hier ontladen met sos ######################################################
-                if PWL_FORMULATION == "sos2":
-                    model += xsum(ac_from_dc_w[b][u][ds] for ds in range(DS[b])) <= 1
+                # vanaf hier ontladen met _link_pwl ################################################
                 model += (
                     xsum(
                         ac_from_dc_w[b][u][ds] * ac_from_dc_samples[b][ds]
@@ -1277,17 +1254,8 @@ class DaCalc(DaBase):
                     )
                     == dc_to_ac[b][u]
                 )
-                if PWL_FORMULATION == "sos2":
-                    model.add_sos(
-                        [
-                            (ac_from_dc_w[b][u][ds], ac_from_dc_samples[b][ds])
-                            for ds in range(DS[b])
-                        ],
-                        2,
-                    )
-                else:
-                    _link_pwl(model, ac_from_dc_w[b][u], exact=False)
-                # tot hier constraints ontladen met sos
+                _link_pwl(model, ac_from_dc_w[b][u], exact=False)
+                # tot hier constraints ontladen met _link_pwl
 
         """
         constraints reduced charging power at low or high soc
@@ -2796,13 +2764,7 @@ class DaCalc(DaBase):
                     # ieder interval/uur maar een aan
                     model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
                     """
-                    if PWL_FORMULATION == "sos2":
-                        model.add_sos(
-                            [(hp_s_w[u][s], hp_stages[s]["max_power"]) for s in range(S)],
-                            2,
-                        )
-                    else:
-                        _link_pwl(model, hp_s_w[u][1:], exact=True, gate=hp_on[u])
+                    _link_pwl(model, hp_s_w[u][1:], exact=True, gate=hp_on[u])
 
                     # geproduceerde warmte = vermogen in W * COP_schijf /1000 in kWh
                     model += (
@@ -3535,29 +3497,14 @@ class DaCalc(DaBase):
         max_gap = max(0.00001, min(max_gap, 1.0))  # clamp to [0.00001, 1.0]
 
         model.max_mip_gap_abs = max_gap
-        if SOLVER == "highs":
-            model.max_seconds = 240
-        else:
-            model.max_nodes = 1500
-        if SOLVER == "highs":
-            model.verbose = highs_verbose
+        # na 240 s geeft HiGHS de beste oplossing tot dan toe (status FEASIBLE)
+        model.max_seconds = 240
+        model.verbose = highs_verbose
         if self.log_level > logging.DEBUG:
             model.verbose = 1
-        threads = getattr(self, "_solver_threads", -1)
-        if SOLVER == "highs":
-            # HiGHS weigert -1 (0 = automatisch) en legt het aantal threads per
-            # proces vast bij de eerste solve: een andere waarde daarna faalt
-            threads = max(threads, 0)
-        model.threads = threads
-        if SOLVER == "cbc":
-            # cbcbox 2.929: de generieke build gebruikt AVX in nauty (symmetrie),
-            # dat geeft SIGILL op CPU's zonder AVX zodra CBC zijn heuristieken draait
-            mip.cbc.cbc_set_parameter(model.solver, "OrbitalBranching", "off")
-            if PWL_FORMULATION == "log":
-                # cbcbox 2.929: met de log-formulering zet CBC's preprocessing
-                # (CglPreProcess) de oplossing verkeerd terug naar het model:
-                # status OPTIMAL, maar SoC buiten 0..100% en rendementen > 100%
-                model.preprocess = 0
+        # HiGHS weigert -1 (0 = automatisch) en legt het aantal threads per
+        # proces vast bij de eerste solve: een andere waarde daarna faalt
+        model.threads = max(getattr(self, "_solver_threads", -1), 0)
         if getattr(self, "_debug_capture_vars", False):
             try:
                 from da_debug import build_var_registry

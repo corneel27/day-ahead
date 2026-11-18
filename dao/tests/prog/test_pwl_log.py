@@ -4,8 +4,9 @@ SOS2 sets in ``calc_optimum``.
 * the rows for 5 breakpoints are exactly Huchette & Vielma,
   arXiv:1708.00050, eq. (3);
 * for several curves, fixing x and minimising / maximising y gives the same
-  result with ``add_sos`` and with ``_link_pwl``, for ``sum(w) == 1`` and
-  ``sum(w) <= 1``;
+  result with ``_link_pwl`` as with the SOS2 definition itself (only two
+  neighbouring weights nonzero, solved per pair of neighbours), for
+  ``sum(w) == 1`` and ``sum(w) <= 1``;
 * a gate fixed to 0 forces every weight to 0.
 
 Skipped when ``mip`` is not installed.
@@ -28,7 +29,7 @@ for _p in (str(_REPO_ROOT), str(_PROG_DIR)):
         sys.path.insert(0, _p)
 
 mip = pytest.importorskip("mip")
-from mip import BINARY, CBC, CONTINUOUS, Model, OptimizationStatus, xsum  # noqa: E402
+from mip import BINARY, CONTINUOUS, HIGHS, INTEGER, Model, OptimizationStatus, xsum  # noqa: E402
 
 from dao.prog.day_ahead import _link_pwl  # noqa: E402
 
@@ -36,8 +37,11 @@ _OPTIONS_EXAMPLE = _REPO_ROOT / "dao" / "data" / "options_example.json"
 
 
 def _new_model() -> Model:
-    model = Model(solver_name=CBC)
+    model = Model(solver_name=HIGHS)
     model.verbose = 0
+    # HiGHS fixes its thread count per process at the first solve; day_ahead
+    # and the scenario tests use 0 (automatic) or 1, so pin 1 here as well
+    model.threads = 1
     return model
 
 
@@ -86,7 +90,8 @@ def test_rows_match_huchette_vielma_eq3():
     _link_pwl(model, lam, exact=True)
     extra = [v for v in model.vars if v.name not in {x.name for x in lam}]
     assert len(extra) == 2
-    assert all(v.var_type == BINARY for v in extra)
+    # HiGHS has no binary type: python-mip reads a BINARY back as INTEGER 0..1
+    assert all(v.var_type in (BINARY, INTEGER) and (v.lb, v.ub) == (0, 1) for v in extra)
     y1, y2 = extra[0].name, extra[1].name
 
     # LogE rows, normalised to "expr <= rhs" with all variables on the left
@@ -107,21 +112,27 @@ def test_rows_match_huchette_vielma_eq3():
 # --- equivalence with SOS2 ---------------------------------------------------
 
 
-def _build(curve, exact: bool, use_sos: bool):
+def _build(curve, exact: bool, pair: int | None):
+    """pair=None: the weights linked by _link_pwl. pair=j: the SOS2 reference
+    for one pair of neighbours, every weight except w[j] and w[j + 1] fixed
+    to 0. HiGHS has no SOS2, so the reference takes the best result over all
+    pairs instead of an add_sos set."""
     model = _new_model()
     w = [model.add_var(var_type=CONTINUOUS, lb=0, ub=1) for _ in curve]
     x = model.add_var(lb=-1e3, ub=1e3)
     y = model.add_var(lb=-1e3, ub=1e3)
     model += xsum(w[k] * curve[k][0] for k in range(len(curve))) == x
     model += xsum(w[k] * curve[k][1] for k in range(len(curve))) == y
-    if use_sos:
+    if pair is None:
+        _link_pwl(model, w, exact=exact)
+    else:
         if exact:
             model += xsum(w) == 1
         else:
             model += xsum(w) <= 1
-        model.add_sos([(w[k], curve[k][0]) for k in range(len(curve))], 2)
-    else:
-        _link_pwl(model, w, exact=exact)
+        for k in range(len(curve)):
+            if k not in (pair, pair + 1):
+                w[k].ub = 0
     return model, x, y
 
 
@@ -132,19 +143,31 @@ def _interpolate(curve, x_val: float) -> float:
     raise ValueError(x_val)
 
 
+def _solve_y(curve, exact: bool, pair: int | None, x_val: float, sense: str) -> float | None:
+    model, x, y = _build(curve, exact, pair)
+    x.lb = x.ub = x_val
+    model.objective = y
+    model.sense = sense
+    status = model.optimize()
+    if pair is not None and status == OptimizationStatus.INFEASIBLE:
+        return None  # x_val is not reachable on this pair of neighbours
+    assert status == OptimizationStatus.OPTIMAL, (x_val, pair, sense, status)
+    return y.x
+
+
 def _y_range(curve, exact: bool, use_sos: bool, x_val: float) -> tuple[float, float]:
-    # a fresh model per solve: a second optimize() on the same CBC model
-    # ignores its SOS2 sets (python-mip 1.17.6, cbcbox 2.929)
-    result = []
-    for sense in (mip.MINIMIZE, mip.MAXIMIZE):
-        model, x, y = _build(curve, exact, use_sos)
-        x.lb = x.ub = x_val
-        model.objective = y
-        model.sense = sense
-        status = model.optimize()
-        assert status == OptimizationStatus.OPTIMAL, (x_val, sense, status)
-        result.append(y.x)
-    return result[0], result[1]
+    if not use_sos:
+        return (
+            _solve_y(curve, exact, None, x_val, mip.MINIMIZE),
+            _solve_y(curve, exact, None, x_val, mip.MAXIMIZE),
+        )
+    pairs = range(len(curve) - 1) if len(curve) > 1 else [0]
+    lows = [_solve_y(curve, exact, j, x_val, mip.MINIMIZE) for j in pairs]
+    highs = [_solve_y(curve, exact, j, x_val, mip.MAXIMIZE) for j in pairs]
+    lows = [v for v in lows if v is not None]
+    highs = [v for v in highs if v is not None]
+    assert lows and highs, x_val
+    return min(lows), max(highs)
 
 
 @pytest.mark.parametrize("exact", [True, False], ids=["eq1", "le1"])
