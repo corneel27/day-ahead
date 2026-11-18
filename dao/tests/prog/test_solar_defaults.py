@@ -1,6 +1,7 @@
 """KNMI request defaults must not leak mutations between calls."""
 
 import datetime as dt
+from unittest.mock import Mock
 
 import pandas as pd
 
@@ -38,3 +39,31 @@ def test_knmi_explicit_empty_variables_are_preserved(monkeypatch):
     predictor.get_and_save_knmi_data(dt.datetime(2026, 1, 14), dt.datetime(2026, 1, 15), variables)
     assert requested == [[]]
     assert requested[0] is variables
+
+
+def test_initial_weather_import_populates_empty_database():
+    predictor = solar_predictor.SolarPredictor.__new__(solar_predictor.SolarPredictor)
+    start, end = dt.datetime(2026, 1, 14), dt.datetime(2026, 1, 15)
+    predictor.db_da = Mock()
+    predictor.db_da.get_time_border_record.side_effect = [None, None, None, None, start, end]
+    predictor.get_and_save_meteo_data = Mock()
+    predictor.save_meteo_history_source = Mock()
+
+    predictor.import_meteo(start, end)
+
+    predictor.get_and_save_meteo_data.assert_called_once_with(start, end)
+    predictor.save_meteo_history_source.assert_called_once_with()
+
+
+def test_initial_weather_import_handles_empty_response():
+    predictor = solar_predictor.SolarPredictor.__new__(solar_predictor.SolarPredictor)
+    predictor.db_da = Mock()
+    predictor.db_da.get_time_border_record.return_value = None
+    predictor.get_and_save_meteo_data = Mock()
+    predictor.save_meteo_history_source = Mock()
+    start, end = dt.datetime(2026, 1, 14), dt.datetime(2026, 1, 15)
+
+    predictor.import_meteo(start, end)
+
+    predictor.get_and_save_meteo_data.assert_called_once_with(start, end)
+    predictor.save_meteo_history_source.assert_not_called()
