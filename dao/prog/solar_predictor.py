@@ -872,10 +872,13 @@ class SolarPredictor(DaBase):
         knmi_df["time"] = knmi_df["time"].astype(int)
         knmi_df["time"] = knmi_df["time"] / 1000000
         knmi_df["time"] = knmi_df["time"].astype(int)
-        knmi_df["temp"] = knmi_df["temp"] / 10
-        knmi_df["winds"] = knmi_df["winds"] / 10
+        for column in ("temp", "winds"):
+            if column in knmi_df.columns:
+                knmi_df[column] = knmi_df[column] / 10
 
-        columns = ["temp", "gr", "winds"]
+        columns = [column for column in ("temp", "gr", "winds") if column in knmi_df.columns]
+        if not columns:
+            return
         save_df = (
             knmi_df[["time"] + columns]
             .melt(
