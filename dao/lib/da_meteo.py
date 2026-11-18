@@ -6,6 +6,7 @@ import math
 import ephem
 import knmi
 import matplotlib.pyplot as plt
+import openmeteo_requests
 import pandas as pd
 import pytz
 from requests import get
@@ -30,13 +31,16 @@ class Meteo:
     ):
         self.config = config
         self.db_da = db_da
-        _secrets = secrets or {}
-        mk = config.meteoserver_key
-        self.meteoserver_key = mk.resolve(_secrets) if mk is not None else None
-        self.meteoserver_model = config.meteoserver_model
-        self.meteoserver_attempts = config.meteoserver_attempts
+        self.meteo_forecast_source = config.meteo_forecast_source
+        if self.meteo_forecast_source == "meteoserver":
+            _secrets = secrets or {}
+            mk = config.meteoserver_key
+            self.meteoserver_key = mk.resolve(_secrets) if mk is not None else None
+            self.meteoserver_model = config.meteoserver_model
+            self.meteoserver_attempts = config.meteoserver_attempts
         self.latitude = latitude
         self.longitude = longitude
+        self.timezone = pytz.timezone(config.time_zone)
         self.solar = config.solar
         self.bat = config.battery
         self.graphics_style = config.graphics.style
@@ -375,7 +379,7 @@ class Meteo:
     def make_graph_meteo(self, df, file=None, show=False):
         df["uur"] = df.tijd_nl.apply(lambda x: x[11:13])
         meteo_options = {
-            "title": f"Opgehaalde meteodata vanaf {df.iloc[0, 2]}",
+            "title": f"Opgehaalde meteodata vanaf {df['tijd_nl'].iloc[0]}",
             "style": self.graphics_style,
             "graphs": [
                 {
@@ -421,6 +425,72 @@ class Meteo:
         return
         """
 
+    def get_from_openmeteo(self,
+                           history:bool=False,
+                           start:datetime.datetime|None = None,
+                           end:datetime.datetime|None = None) -> pd.DataFrame:
+        """
+        :param history: boolean, default false if history get measured values
+        :param start: if history: start date
+        :param end: if history: end date
+        :return: dataframe with catched values
+        """
+        openmeteo = openmeteo_requests.Client()
+        if history:
+            url = "https://archive-api.open-meteo.com/v1/archive"
+        else:
+            url = "https://api.open-meteo.com/v1/forecast"
+
+        parameters = {
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "hourly": ["temperature_2m", "precipitation", "wind_speed_10m", "shortwave_radiation"],
+        }
+        if history:
+            now = datetime.datetime.now()
+            if start is None:
+                start = datetime.datetime(now.year-3, now.month, now.day)
+            start = start.strftime("%Y-%m-%d")
+            if end is None:
+                end = datetime.datetime(now.year, now.month, now.day)
+            end = end.strftime("%Y-%m-%d")
+            parameters["start_date"] = start
+            parameters["end_date"] = end
+        responses = openmeteo.weather_api(url, params = parameters)
+        # Process first and only location.
+        response = responses[0]
+        logging.debug(f"Timezone verschil met GMT+0: {response.UtcOffsetSeconds()}s")
+        hourly = response.Hourly()
+        hourly_temperature_2m = hourly.Variables(0).ValuesAsNumpy()
+        hourly_precipitation = hourly.Variables(1).ValuesAsNumpy()
+        hourly_wind_speed_10m = hourly.Variables(2).ValuesAsNumpy()
+        hourly_shortwave_radiation = hourly.Variables(3).ValuesAsNumpy()
+        hourly_data = {
+            "time": pd.date_range(
+                start=pd.to_datetime(hourly.Time(), unit="s", utc=True),
+                end=pd.to_datetime(hourly.TimeEnd(), unit="s", utc=True),
+                freq=pd.Timedelta(seconds=hourly.Interval()),
+                inclusive="left"
+            )
+        }
+        # correct time is at the end of hour, switch to at the beginning
+        hourly_data["time"] = hourly_data["time"] - pd.Timedelta(hours = 1)
+        hourly_data["temp"] = hourly_temperature_2m
+        hourly_data["winds"] = hourly_wind_speed_10m
+        hourly_data["neersl"] = hourly_precipitation
+        # omrekenen van W/m2 -> J/cm2
+        hourly_data["gr"] = hourly_shortwave_radiation * 0.36
+        hourly_df = pd.DataFrame(data = hourly_data)
+        hourly_df['time'] = pd.to_datetime(hourly_df['time'], unit="s", utc=True)
+        hourly_df['tijd'] = hourly_df['time'].dt.tz_convert(self.timezone)
+        hourly_df["tijd_nl"] = hourly_df["tijd"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M"))
+        hourly_df["tijd"] = hourly_df["tijd"].astype(int)
+        hourly_df["tijd"] = hourly_df["tijd"]/1000000
+        hourly_df["tijd"] = hourly_df["tijd"].astype(int)
+        hourly_df = hourly_df.set_index("tijd")
+        logging.info(f"\nHourly data from Openmeteo\n{hourly_df.to_string()}")
+        return hourly_df
+
     def get_from_meteoserver(self, model: str) -> pd.DataFrame:
         parameters = (
             "?lat="
@@ -456,20 +526,27 @@ class Meteo:
         df1 = df[["tijd", "tijd_nl", "gr", "temp", "winds", "neersl"]]
         df1["tijd"] = df1["tijd"].astype(int)
         df1 = df1[df1["tijd"].diff().fillna(0) <= 3600]
+        df1 = df1.set_index("tijd")
         logging.info(f"Meteodata model {model}")
         logging.info(
             f"Aantal uitgevoerde ophaalpogingen: {count + 1} van maximaal: {self.meteoserver_attempts}"
         )
         logging.info(f"Aantal records: {len(df1)}")
-        logging.info(f"Data {model}: \n{df1.to_string(index=True)}")
+        logging.info(f"Data van Meteoserver met {model}: \n{df1.to_string(index=True)}")
         return df1
 
     def get_meteo_data(self, show_graph=False):
-        df1 = self.get_from_meteoserver(self.meteoserver_model)
+        if self.meteo_forecast_source == "meteoserver":
+            df1 = self.get_from_meteoserver(self.meteoserver_model)
+        else:
+            df1 = self.get_from_openmeteo()
         df_db = pd.DataFrame(columns=["time", "code", "value"])
         count = len(df1)
         if count == 0:
-            logging.error(f"No {self.meteoserver_model}-data recieved from meteoserver")
+            if self.meteo_forecast_source == "meteoserver":
+                logging.error(f"No {self.meteoserver_model}-data recieved from meteoserver")
+            else:
+                logging.error("No data recieved from openmeteo")
         else:
             df1 = df1.reset_index()  # make sure indexes pair with number of rows
             for row in df1.itertuples():
@@ -766,6 +843,18 @@ def main():
     station = meteo.which_station()
     print(station)
     test_afstand_km(meteo)
+    print("meteoserver gfs")
+    gfs_df = meteo.get_from_meteoserver("gfs")
+    print("meteoserver gfs")
+    harmonie_df = meteo.get_from_meteoserver("harmonie")
+    print("openmeteo")
+    open_meteo_df = meteo.get_from_openmeteo()
+    print('together')
+    open_meteo_df.rename(columns={'gr': 'gr_opm', 'temp': 'temp_opm', 'winds': 'winds_opm'}, inplace=True)
+    open_meteo_df[['temp_gfs','winds_gfs','gr_gfs']] = gfs_df[['temp','winds', 'gr']]
+    open_meteo_df[['temp_har','winds_har', 'gr_har']] = harmonie_df[['temp','winds', 'gr']]
+    print(open_meteo_df.to_string())
+
 
 if __name__ == "__main__":
     main()
