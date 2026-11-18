@@ -952,15 +952,18 @@ class SolarPredictor(DaBase):
 
         first_dt = self.db_da.get_time_border_record("gr", latest=False)
         latest_dt = self.db_da.get_time_border_record("gr", latest=True)
-        latest_dt = latest_dt - dt.timedelta(days=4)
         if (latest_dt is None) or self.check_changed_meteosource():
             # er zijn nog geen data of source is gewijzigd
             logging.info("Er zijn nog geen meteo-data aanwezig of source is gewijzigd")
             self.get_and_save_meteo_data(start, end)
-            self.save_meteo_history_source()
             first_dt = self.db_da.get_time_border_record("gr", latest=False)
             latest_dt = self.db_da.get_time_border_record("gr", latest=True)
+            if first_dt is None or latest_dt is None:
+                logging.warning("Geen historische meteodata beschikbaar na ophalen")
+                return
+            self.save_meteo_history_source()
         else:
+            latest_dt = latest_dt - dt.timedelta(days=4)
             logging.info(f"Er zijn meteo-data aanwezig vanaf {first_dt} tot {latest_dt}")
         if first_dt <= start and latest_dt >= end:
             logging.info("Er worden verder geen meteo-data opgehaald")
