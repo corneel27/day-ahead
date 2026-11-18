@@ -1445,7 +1445,9 @@ class DaCalc(DaBase):
                     b_temp -= boiler_cooling[boiler_end_index]
                     boiler_end_index += 1
                     if boiler_end_index >= U:
-                        boiler_plan = False
+                        # The lower limit is beyond the horizon; allow starts
+                        # within it and let the heating duration narrow the window.
+                        boiler_end_index = U - 1
                         break
 
             boiler_temp = [
