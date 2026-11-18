@@ -1445,7 +1445,9 @@ class DaCalc(DaBase):
                     b_temp -= boiler_cooling[boiler_end_index]
                     boiler_end_index += 1
                     if boiler_end_index >= U:
-                        boiler_plan = False
+                        # The lower limit is beyond the horizon; allow starts
+                        # within it and let the heating duration narrow the window.
+                        boiler_end_index = U - 1
                         break
 
             boiler_temp = [
@@ -1537,7 +1539,7 @@ class DaCalc(DaBase):
                     for j in range(num_intervals + 1):
                         use = min(
                             max(0, est_needed_elec[u] - used),
-                            cons_interval[u+j],
+                            cons_interval[min(u + j, U - 1)],
                         )
                         est_elec_cost[u] += use * pl[min(u + j, U - 1)]
                         est_needed_elec_st[u].append(use)
