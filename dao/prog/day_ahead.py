@@ -197,7 +197,12 @@ class DaCalc(DaBase):
                 start_prediction_dt, end=None, interval="1hour",
                 extension=horizon_extension
             )
-            price_data = pd.concat([fixed_price_data, pred_price_data])
+            horizon_extension = len(pred_price_data)
+            if horizon_extension > 0:
+                price_data = pd.concat([fixed_price_data, pred_price_data])
+            else:
+                logging.warning("Er zijn geen prijsvoorspellingen in de database, zijn ze wel opgehaald?")
+                price_data = fixed_price_data
         else:
             price_data = fixed_price_data
         if len(price_data) <= 5:
@@ -498,6 +503,7 @@ class DaCalc(DaBase):
             b_l = b_l[:-1]
         while len(b_l) < len(uur):
             b_l.append(b_l[-1])
+        b_l[0] *= interval_fraction_first_interval
         # p_avg1 = sum(pl) / U  # max(pl) #
         sum_w_prices = 0
         sum_hf = 0
@@ -1346,6 +1352,7 @@ class DaCalc(DaBase):
             boiler_act_temp = float(
                 self.get_state(self.boiler_options.entity_actual_temp).state
             )
+            logging.info(f"Boiler actuele temperatuur {boiler_act_temp} °C")
             boiler_setpoint = float(
                 self.get_state(self.boiler_options.entity_setpoint).state
             )
@@ -1367,7 +1374,9 @@ class DaCalc(DaBase):
                 self.ha_getter
             )  # FlexFloat
             logging.info(f"Boiler cooling rate {cooling_rate} K/uur")
-            boiler_cooling = cooling_rate * self.interval_s / 3600
+            boiler_cooling = [] # K/interval
+            for u in range(U):
+                boiler_cooling.append(cooling_rate * hour_fraction[u])
 
             # 45 °C grens daaronder kan worden verwarmd
             boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(
@@ -1402,59 +1411,54 @@ class DaCalc(DaBase):
             boiler_heated_by_heatpump = self.boiler_options.boiler_heated_by_heatpump
             # delta t in een step
             # heat rate = power * cop * sec.p.interval /spec vermogen in K/step
-            heat_rate = (
-                power_boiler * cop_boiler * self.interval_s / (spec_heat_boiler * 1000)
-            )
+            cooling = 0
+            for u in range(U):
+                cooling += cooling + boiler_cooling[u]
             boiler_end_temp = max(
-                boiler_ondergrens, boiler_act_temp - U * boiler_cooling
+                boiler_ondergrens, boiler_act_temp - cooling
             )
-            max_steps = math.ceil((boiler_setpoint - boiler_end_temp) / heat_rate)
+            boiler_plan = True
+            est_boiler_temp = [boiler_act_temp]
+            for u in range(U)[1:]:
+                est_boiler_temp.append(est_boiler_temp[u-1] - boiler_cooling[u])
             # interval-index waarop boiler kan worden verwarmd
             if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
                 boiler_start_index = 0
                 boiler_start = 0
-            else:
-                boiler_start_index = int(
-                    max(
-                        0,
-                        min(
-                            U - 1 - max_steps,
-                            math.floor(
-                                (boiler_act_temp - boiler_bovengrens) / boiler_cooling
-                            ),
-                        ),
-                    )
-                )
-
-            # interval-index waarop boiler nog aan kan
-            # (41-40)/0.4=2.5
-            boiler_end_temp = boiler_act_temp - U * boiler_cooling
-            if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
                 boiler_end_index = 1
             else:
-                boiler_end_index = int(
-                    min(
-                        U - max_steps,
-                        max(
-                            boiler_start_index + 1,
-                            math.floor(
-                                (boiler_act_temp - boiler_ondergrens) / boiler_cooling
-                            ),
-                        ),
-                    )
-                )
+                boiler_start_index = 0
+                b_temp = boiler_act_temp
+                while b_temp > boiler_bovengrens:
+                    b_temp -= boiler_cooling[boiler_start_index]
+                    boiler_start_index += 1
+                    if boiler_start_index >= U:
+                        boiler_plan = False
+                        break
+
+                # laatste interval-index voordat boiler door ondergrens zakt
+                # (41-40)/0.4=2.5
+                # boiler_end_temp = boiler_act_temp - U * boiler_cooling
+                boiler_end_index = boiler_start_index
+
+                while boiler_end_index < U and b_temp > boiler_ondergrens:
+                    b_temp -= boiler_cooling[boiler_end_index]
+                    boiler_end_index += 1
+                    if boiler_end_index >= U:
+                        boiler_plan = False
+                        break
+
             boiler_temp = [
                 model.add_var(
                     var_type=CONTINUOUS,
-                    lb=min(boiler_act_temp, boiler_setpoint - boiler_hysterese - 10),
+                    lb=min(boiler_act_temp, boiler_setpoint - boiler_hysterese - 30),
                     ub=boiler_setpoint + 10,
                 )
                 for _ in range(U + 1)
             ]  # end temp boiler
 
-            if (boiler_start_index > boiler_end_index) or (
-                boiler_end_temp >= boiler_bovengrens
-            ):  # geen boiler opwarming in deze periode
+            if not boiler_plan:
+                # geen boiler opwarming in deze periode
                 logging.info(
                     f"Boiler wordt niet ingepland, omdat de verwachte "
                     f"eindtemperatuur {boiler_end_temp} °C hoger is dan de "
@@ -1466,23 +1470,21 @@ class DaCalc(DaBase):
                 model += xsum(boiler_on[j] for j in range(U)) == 0
                 model += xsum(boiler_st[j] for j in range(U)) == 0
                 logging.debug("Boiler: er  wordt geen opwarming inpland")
-                boiler_end_temp = boiler_act_temp - boiler_cooling * U
+                boiler_end_temp = est_boiler_temp[U-1]
                 logging.debug(
                     f"Boiler eind temperatuur zonder opwarmen: {boiler_end_temp:.2f}"
                 )
                 model += boiler_temp[0] == boiler_act_temp
                 for u in range(U):
                     # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
-                    model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling
+                    model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling[u]
             else:
                 logging.info(
                     f"Boiler opwarmen wordt ingepland tussen: "
                     f"{tijd[boiler_start_index].strftime('%Y-%m-%d %H:%M')} en "
                     f"{tijd[min(boiler_end_index, U - 1)].strftime('%Y-%m-%d %H:%M')}"
                 )
-                est_boiler_temp = [
-                    (boiler_act_temp - boiler_cooling * u) for u in range(U)
-                ]
+
                 est_needed_heat = [0.0 for _ in range(U)]
                 est_needed_elec = [0.0 for _ in range(U)]
                 est_needed_elec_st = []
@@ -1495,11 +1497,13 @@ class DaCalc(DaBase):
                 # needed_heat = sp * (setpoint - act_temp - 4 - cooling*plan_periode)/3600 in kWh
 
                 # consumption in one interval = kWh per uur of per 15min
-                cons_interval = power_boiler * self.interval_s / 3600000
+                cons_interval = []
+                for u in range(U):
+                    cons_interval.append(power_boiler * hour_fraction[u] / 1000)
                 # tempverlies door menging bij starten opwarmen in K
                 # mix_los = 1.2
                 logging.info(
-                    f"Boiler verbruik in 1 {self.interval_name}: {cons_interval} kWh"
+                    f"Boiler verbruik in 1 {self.interval_name}: {cons_interval[1]} kWh"
                 )
                 boiler_netto_cost = None
                 for u in range(U):
@@ -1521,8 +1525,7 @@ class DaCalc(DaBase):
                     # benodigde aantallen intervallen
                     num_intervals = math.ceil(
                         (est_needed_elec[u] * 1000 / power_boiler)
-                        * 3600
-                        / self.interval_s
+                        / hour_fraction[max(u,1)]
                     )
                     # verdelen van benodigde elektra over de intervallen
                     est_needed_intv[u] = num_intervals
@@ -1534,7 +1537,7 @@ class DaCalc(DaBase):
                     for j in range(num_intervals + 1):
                         use = min(
                             max(0, est_needed_elec[u] - used),
-                            cons_interval * interval_fraction[min(u + j, U - 1)],
+                            cons_interval[u+j],
                         )
                         est_elec_cost[u] += use * pl[min(u + j, U - 1)]
                         est_needed_elec_st[u].append(use)
@@ -1543,9 +1546,10 @@ class DaCalc(DaBase):
                         used += use
                         if used >= est_needed_elec[u]:
                             break
-                    est_boiler_endtemp[u] = boiler_setpoint - boiler_cooling * (
-                        U - u - est_needed_intv[u]
-                    )
+                    end_temp = boiler_setpoint
+                    for j in range(U)[u + est_needed_intv[u]:]:
+                        end_temp -= boiler_cooling[j]
+                    est_boiler_endtemp[u] = end_temp
                     est_boiler_endvalue[u] = (
                         (est_boiler_endtemp[u] - boiler_act_temp)  # boiler_ondergrens)
                         * (spec_heat_boiler / (3600 * cop_boiler))
@@ -1588,42 +1592,10 @@ class DaCalc(DaBase):
 
                 # c_b = consumption boiler in kWh per interval
                 c_b = [
-                    model.add_var(var_type=CONTINUOUS, lb=0, ub=cons_interval)
+                    model.add_var(var_type=CONTINUOUS, lb=0, ub=max(cons_interval))
                     for _ in range(U)
                 ]
                 model += xsum(boiler_st[u] for u in range(U)) == 1
-
-                # korte bocht oplossing
-                """
-                if boiler_start is None:
-                    for u in range(U):
-                        model += c_b[u] == 0.0
-                        model += boiler_on[u] == 1
-                else:
-                    logging.info(
-                        f"Boiler start wordt ingezet op {tijd[boiler_start]} met "
-                        f"{est_needed_intv[boiler_start]} intervallen"
-                    )
-                    for u in range(U):
-                        if u == boiler_start:
-                            model += boiler_st[u] == 1
-                        else:
-                            model += boiler_st[u] == 0
-                        if (
-                            boiler_start
-                            <= u
-                            < boiler_start + est_needed_intv[boiler_start]
-                        ):
-                            model += (
-                                c_b[u]
-                                == est_needed_elec_st[boiler_start][u - boiler_start]
-                            )
-                            model += boiler_on[u] == 1
-                        else:
-                            model += c_b[u] == 0.0
-                            model += boiler_on[u] == 0
-                """
-                # beste oplossing
 
                 for u in range(U)[0:boiler_start_index]:
                     model += c_b[u] == 0
@@ -1716,7 +1688,7 @@ class DaCalc(DaBase):
                         boiler_temp[u + 1]
                         == boiler_temp[u]
                         # - mix_los * boiler_st[u]
-                        - boiler_cooling
+                        - boiler_cooling[u]
                         + c_b[u] * cop_boiler * 3600 / spec_heat_boiler
                     )
 
@@ -1822,7 +1794,7 @@ class DaCalc(DaBase):
             if instant_charge:
                 # instant charge has no real deadline, so bound hours_avail by the
                 # planning horizon instead of the (possibly stale) configured ready time
-                horizon_end = tijd[U - 1] + dt.timedelta(seconds=self.interval_s)
+                horizon_end = tijd[U - 1] + dt.timedelta(seconds=hour_fraction[U-1] * 3600)
                 hours_avail = max(0, (horizon_end - start_dt).total_seconds() / 3600)
             # model_dump() is required here: after building the list, two computed
             # keys ("power" and "accu_power") are injected into each dict at runtime
@@ -1892,7 +1864,8 @@ class DaCalc(DaBase):
                 max_power[e] * hours_avail * ev_charge_stages[e][-1]["efficiency"]
             )
             if (
-                (e_needed > max_possible)
+                (ready >= start_dt)
+                and (e_needed > max_possible)
                 and ev_plugged_in[e]
                 and (ev_position[e] == "home")
             ):
@@ -1939,11 +1912,13 @@ class DaCalc(DaBase):
                     f"gewenst niveau ({wished_level[e]:.1f}% minus de marge "
                     f"{level_margin[e]}%),"
                 )
+            """
             if not (ev_position[e] == "home"):
                 reden = reden + " auto is niet huis,"
             if not ev_plugged_in[e]:
                 reden = reden + " auto is niet ingeplugd,"
-            if not (tijd[0] < ready):
+            """
+            if ready <= start_dt:
                 reden = reden + f" opgegeven tijdstip ({ready!s}) is verouderd,"
             if tijd[U - 1] < ready:
                 reden = reden + (
@@ -1951,9 +1926,9 @@ class DaCalc(DaBase):
                     f"planningshorizon ({tijd[U - 1]}),"
                 )
             if (
-                ev_plugged_in[e]
-                and (ev_position[e] == "home")
-                and (wished_level[e] - level_margin[e] > actual_soc[e])
+                # ev_plugged_in[e]
+                # and (ev_position[e] == "home")
+                (wished_level[e] - level_margin[e] > actual_soc[e])
                 and (tijd[0] < ready)
             ):
                 if instant_charge:
@@ -4264,7 +4239,13 @@ class DaCalc(DaBase):
                     logging.info(f"- stop laden op {new_state_stop_laden}")
                 logging.info(f"- positie: {ev_position[e]}")
                 logging.info(f"- ingeplugd: {ev_plugged_in[e]}")
-
+                if float(new_ampere_state) > 0.0:
+                    if ev_position[e] != "home":
+                        logging.warning(f"Laden van {ev_name} kan niet worden aangezet, want "
+                                    f"deze is niet thuis")
+                    if not ev_plugged_in[e]:
+                        logging.warning(f"Laden van {ev_name} kan niet worden aangezet, want "
+                                    f"deze is niet ingeplugged")
                 if ev_position[e] == "home" and ev_plugged_in[e]:
                     if float(new_ampere_state) > 0.0:
                         if old_switch_state == "off":

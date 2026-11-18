@@ -30,6 +30,7 @@ xgboost~=3.4.1
 scipy~=1.18.1
 joblib~=1.6.0
 knmi-py~=0.2.0
+openmeteo_requests~=1.7.5
 asteval~=1.0.10
 tzdata~=2026.6
 freezegun~=1.5.5

@@ -21,7 +21,7 @@ from typing import Any
 # Ensure the repo root is on sys.path so `dao` package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from dao.prog.config.versions.v0 import ConfigurationV0
+from dao.prog.config.versions.v2 import ConfigurationV2
 
 # Icon mapping for x-icon values
 ICON_MAP = {
@@ -388,7 +388,7 @@ def main():
     print("Generating JSON schema from Pydantic models...")
     schema_path = repo_root / 'config_schema.json'
     
-    schema = ConfigurationV0.model_json_schema(
+    schema = ConfigurationV2.model_json_schema(
         mode='serialization',
         by_alias=True,
     )

@@ -2017,17 +2017,16 @@ class Report(DaBase):
                         table="prognoses",
                     )
                     self.add_col_df(df_column, result, key)
-            elif calc_dict["series"][key]["source"] == "prices":
-                if key not in result.columns:
-                    df_prices = self.get_price_data(vanaf, tot)
-                    df_prices.reset_index(drop=True, inplace=True)
-                    result.reset_index(drop=True, inplace=True)
-                    # df_prices.rename(columns={'time': 'tijd'}, inplace=True)
-                    # df_prices["tijd"] = pd.to_datetime(df_prices["tijd"])
-                    # df_prices.index = df_prices["tijd"]
-                    result["da_cons"] = df_prices["da_cons"]
-                    result["da_prod"] = df_prices["da_prod"]
-                    result.index = result["tijd"]
+            elif calc_dict["series"][key]["source"] == "prices" and key not in result.columns:
+                df_prices = self.get_price_data(vanaf, tot)
+                df_prices.reset_index(drop=True, inplace=True)
+                result.reset_index(drop=True, inplace=True)
+                # df_prices.rename(columns={'time': 'tijd'}, inplace=True)
+                # df_prices["tijd"] = pd.to_datetime(df_prices["tijd"])
+                # df_prices.index = df_prices["tijd"]
+                result["da_cons"] = df_prices["da_cons"]
+                result["da_prod"] = df_prices["da_prod"]
+                result.index = result["tijd"]
         return result
 
     def get_grid_data(

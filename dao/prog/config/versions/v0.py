@@ -8,7 +8,7 @@ get migrated to this version with no format changes.
 
 from typing import Literal
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict, Field, ValidationInfo, field_validator
 
 from ..models.base import DAOConfigBaseModel, FlexEnum, FlexFloat, SecretStr
 from ..models.dashboard import DashboardConfig
@@ -72,16 +72,43 @@ class ConfigurationV0(DAOConfigBaseModel):
     )
 
     # Meteoserver
-    meteoserver_key: SecretStr = Field(
+    meteo_forecast_source: Literal["meteoserver", "openmeteo"] = Field(
+        default="meteoserver",
+        description="where do you get the forecast meteodata from: 'meteoserver' (default) or 'openmeteo'",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Weather",
+            "x-help": "For Meteoserver you need an API access key (fill in at 'meteoserver_key'), "
+                      "you have max 500 requests free each month"
+                      "Openmeteo is total free (non commercial) with practical no limitations",
+            "x-validation-hint": "Use !secret for API keys",
+        },
+    )
+
+    meteo_history_source: Literal["knmi", "openmeteo"] = Field(
+        default="knmi",
+        description="where do you get the history meteodata from: 'knmi' (default) or 'openmeteo'",
+        json_schema_extra={
+            "x-ui-group": "DAO",
+            "x-ui-section": "Weather",
+            "x-help": "Both source are free (non commercial) , with no practical limits",
+            "x-validation-hint": "Use !secret for API keys",
+        },
+    )
+
+    meteoserver_key: SecretStr | None = Field(
+        default=None,
+        validate_default=True,
         alias="meteoserver-key",
         description="Meteoserver API key (can use !secret)",
         json_schema_extra={
             "x-ui-group": "DAO",
             "x-ui-section": "Weather",
-            "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. Use !secret for security. Required for weather forecasts.",
-            "x-validation-hint": "Use !secret for API keys",
+            "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. "
+                      "Use !secret for security. Required for weather forecasts.",
         },
     )
+
     meteoserver_model: Literal["harmonie", "gfs"] = Field(
         default="harmonie",
         alias="meteoserver-model",
@@ -291,3 +318,12 @@ class ConfigurationV0(DAOConfigBaseModel):
         populate_by_name=True,  # Allow both snake_case and aliases
         loc_by_alias=False,
     )
+
+    @field_validator("meteoserver_key", mode="after")
+    @classmethod
+    def validate_meteoserver_key(cls, v:str, info: ValidationInfo)-> str:
+        # Ensure meteoserver_key is present when source is meteoserver
+        if info.data["meteo_forecast_source"] == "meteoserver" and v is None:
+            raise ValueError("When using meteoserver, you need to specify meteoserver_key")
+        else:
+            return v
