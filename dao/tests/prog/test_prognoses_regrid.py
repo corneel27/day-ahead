@@ -32,11 +32,12 @@ def db():
         "variabel", metadata,
         Column("id", Integer, primary_key=True), Column("code", String),
     )
-    Table(
-        "prognoses", metadata,
-        Column("id", Integer, primary_key=True), Column("variabel", Integer),
-        Column("time", Integer), Column("value", Float),
-    )
+    for name in ("prognoses", "values"):
+        Table(
+            name, metadata,
+            Column("id", Integer, primary_key=True), Column("variabel", Integer),
+            Column("time", Integer), Column("value", Float),
+        )
     metadata.create_all(manager.engine)
     with manager.engine.begin() as connection:
         connection.execute(
@@ -47,15 +48,15 @@ def db():
     manager.engine.dispose()
 
 
-def save(db, code, rows, regrid=None):
+def save(db, code, rows, regrid=None, tablename="prognoses"):
     df = pd.DataFrame(
         [[str(t), code, v] for t, v in rows], columns=["time", "code", "value"]
     )
-    db.savedata(df, tablename="prognoses", regrid=regrid)
+    db.savedata(df, tablename=tablename, regrid=regrid)
 
 
-def stored(db, code):
-    table = Table("prognoses", MetaData(), autoload_with=db.engine)
+def stored(db, code, tablename="prognoses"):
+    table = Table(tablename, MetaData(), autoload_with=db.engine)
     variabel = Table("variabel", MetaData(), autoload_with=db.engine)
     query = (
         select(table.c.time, table.c.value)
@@ -150,3 +151,28 @@ def test_without_regrid_nothing_is_deleted(db):
     save(db, "da", quarters(T12, 1))
     save(db, "da", hours(T12, 1, 0.3))
     assert len(stored(db, "da")) == 4
+
+
+def test_regrid_is_ignored_for_values(db):
+    save(db, "da", quarters(T12, 1), tablename="values")
+    save(db, "da", hours(T12, 1, 0.3), regrid={}, tablename="values")
+    assert len(stored(db, "da", tablename="values")) == 4
+
+
+def test_each_code_uses_its_own_times(db):
+    save(db, "cons", quarters(T12, 1), regrid={})
+    save(db, "soc", quarters(T12, 1, 50.0), regrid={})
+    # cons has no value at 13:00, soc has: the stale cons quarters still go
+    df = pd.DataFrame(
+        [[str(T12), "cons", 1.0], [str(T12 + H), "cons", float("nan")],
+         [str(T12), "soc", 40.0], [str(T12 + H), "soc", 41.0]],
+        columns=["time", "code", "value"],
+    )
+    db.savedata(df, tablename="prognoses", regrid={})
+    assert stored(db, "cons") == {T12: 1.0}
+
+
+def test_single_time_keeps_later_rows(db):
+    save(db, "cons", quarters(T12, 1), regrid={})
+    save(db, "cons", [(T12, 0.3)], regrid={})
+    assert len(stored(db, "cons")) == 4

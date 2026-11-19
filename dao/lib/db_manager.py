@@ -239,7 +239,7 @@ class DBmanagerObj:
                time	timestamp in sec
                value	float
             tablename: values or prognoses
-            regrid: None (default) or a dict that makes the saved times the only
+            regrid: (prognoses only) None (default) or a dict that makes the saved times the only
                times of the saved codes within the span of a calculation,
                see regrid_rows(). Keys:
                first_start: utc start of the first (partial) interval of the
@@ -279,7 +279,18 @@ class DBmanagerObj:
             for code in codes - variabel_ids.keys():
                 logging.error(f"Onbekende code opslaan data: {code}")
             times = [time for _, time, _ in records]
+            if regrid is not None and tablename != "prognoses":
+                logging.error(
+                    f"Regrid is alleen bedoeld voor prognoses, niet voor {tablename}"
+                )
+                regrid = None
             if regrid is not None:
+                # per code de eigen tijden: een gefilterde waarde (nan, inf)
+                # mag geen oude rij van die code laten staan
+                code_times = {}
+                for code, time, _ in records:
+                    if code in variabel_ids:
+                        code_times.setdefault(variabel_ids[code], set()).add(time)
                 self.regrid_rows(
                     connection,
                     values_table,
@@ -287,6 +298,7 @@ class DBmanagerObj:
                     sorted(set(times)),
                     first_start=regrid.get("first_start"),
                     state=regrid.get("state", False),
+                    code_times=code_times,
                 )
             select_value = select(
                 values_table.c.id, values_table.c.variabel, values_table.c.time
@@ -339,6 +351,7 @@ class DBmanagerObj:
         grid: list,
         first_start: int | None = None,
         state: bool = False,
+        code_times: dict | None = None,
     ):
         """
         Brengt de aanwezige rijen van een berekening in lijn met de tijden die
@@ -360,6 +373,8 @@ class DBmanagerObj:
             None als dat gelijk is aan grid[0]
         :param state: True voor toestanden (soc): de span eindigt op grid[-1]
             en er wordt niets opgeteld of verdeeld
+        :param code_times: per variabel-id de tijden die van die code worden
+            opgeslagen; zonder code_times geldt grid voor alle codes
         :return: None
         """
         if len(grid) == 0 or len(variabel_ids) == 0:
@@ -371,7 +386,10 @@ class DBmanagerObj:
             first_step = grid[1] - grid[0]
             last_step = grid[-1] - grid[-2]
         else:
-            first_step = last_step = max(first_saved - first_start, 3600)
+            # zonder tweede tijd is de lengte van het interval onbekend:
+            # alleen de rij op die tijd zelf hoort bij de span
+            first_step = first_saved - first_start if first_saved > first_start else 3600
+            last_step = 1
         if state:
             span_end = grid[-1] + 1
         else:
@@ -394,6 +412,10 @@ class DBmanagerObj:
         for row in rows:
             by_code.setdefault(row.variabel, []).append(row)
         for variabel_id, code_rows in by_code.items():
+            if code_times is not None:
+                code_grid = code_times.get(variabel_id, set())
+            else:
+                code_grid = grid_set
             handled = set()
             if not state and first_step < 3600:
                 # een uurwaarde in het uur waarin de kwartier-berekening begint
@@ -441,7 +463,7 @@ class DBmanagerObj:
             for r in code_rows:
                 if r.id in handled or r.time < first_saved:
                     continue
-                if r.time not in grid_set:
+                if r.time not in code_grid:
                     delete_ids.append(r.id)
         if delete_ids:
             connection.execute(delete(table).where(table.c.id.in_(delete_ids)))
