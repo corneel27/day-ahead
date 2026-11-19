@@ -34,6 +34,26 @@ from dao.prog.ev_schedule import format_ev_charge_schedule
 _libc = ctypes.CDLL(None)
 
 
+def _boiler_heating_intervals(temperature, setpoint, spec_heat, cop, power, hour_fraction):
+    """Estimate the intervals needed to heat the boiler, including startup energy."""
+    heat = max(0.0, spec_heat * (setpoint - temperature) / 3600)
+    energy = 0.1 + heat / cop
+    return math.ceil((energy * 1000 / power) / hour_fraction)
+
+
+def _boiler_has_start(start, end, temperatures, setpoint, spec_heat, cop, power, fractions):
+    """Check for a start in the half-open window using the scheduler's horizon cutoff."""
+    horizon = len(temperatures)
+    for u in range(start + 1):
+        intervals = _boiler_heating_intervals(
+            temperatures[u], setpoint, spec_heat, cop, power, fractions[max(u, 1)]
+        )
+        if u + intervals >= horizon:
+            end = min(end, u)
+            break
+    return start < end
+
+
 @contextmanager
 def _capture_native_stdout():
     """Redirects the OS-level stdout file descriptor (fd 1) for the
@@ -1507,6 +1527,18 @@ class DaCalc(DaBase):
                         boiler_end_index = U - 1
                         break
 
+            if (boiler_plan
+                and not _boiler_has_start(
+                    boiler_start_index, boiler_end_index, est_boiler_temp,
+                    boiler_setpoint, spec_heat_boiler, cop_boiler, power_boiler,
+                    hour_fraction,
+                )
+            ):
+                # The later constraints require a start in the half-open window.
+                # Match the estimate loop's horizon cutoff before building them.
+                logging.warning("Geen geschikte start voor boiler binnen de planningshorizon")
+                boiler_plan = False
+
             boiler_temp = [
                 model.add_var(
                     var_type=CONTINUOUS,
@@ -1582,9 +1614,9 @@ class DaCalc(DaBase):
                         start_needed_elec + est_needed_heat[u] / cop_boiler
                     )
                     # benodigde aantallen intervallen
-                    num_intervals = math.ceil(
-                        (est_needed_elec[u] * 1000 / power_boiler)
-                        / hour_fraction[max(u,1)]
+                    num_intervals = _boiler_heating_intervals(
+                        est_boiler_temp[u], boiler_setpoint, spec_heat_boiler,
+                        cop_boiler, power_boiler, hour_fraction[max(u, 1)],
                     )
                     # verdelen van benodigde elektra over de intervallen
                     est_needed_intv[u] = num_intervals
