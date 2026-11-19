@@ -3848,7 +3848,10 @@ class DaCalc(DaBase):
                 df_soc.at[row[0], "soc"] = round(100 * sum_soc / sum_cap, 1)
 
             if not self.debug:
-                self.save_df(tablename="prognoses", tijd=tijd_soc, df=df_soc)
+                self.save_df(
+                    tablename="prognoses", tijd=tijd_soc, df=df_soc,
+                    regrid=True, state=True,
+                )
 
         # voorspelling pv_dc opslaan.
         if B > 0:
@@ -3862,7 +3865,9 @@ class DaCalc(DaBase):
                 row_pv_dc = [tijd_pv[u], prod_pc_sum]
                 df_pv_dc.loc[df_pv_dc.shape[0]] = row_pv_dc
             if not self.debug:
-                self.save_df(tablename="prognoses", tijd=tijd_pv, df=df_pv_dc)
+                self.save_df(
+                    tablename="prognoses", tijd=tijd_pv, df=df_pv_dc, regrid=True
+                )
 
         """
         # voorspellingen van pv opslaan
@@ -3922,7 +3927,10 @@ class DaCalc(DaBase):
             if interval_fraction_first_interval < 0.99:  # drop first row
                 d_f_save = d_f_save.iloc[1:]
                 save_tijd = save_tijd[1:]
-            self.save_df(tablename="prognoses", tijd=save_tijd, df=d_f_save)
+            self.save_df(
+                tablename="prognoses", tijd=save_tijd, df=d_f_save,
+                regrid=True, first_start=tijd[0],
+            )
         else:
             logging.info("Berekende prognoses zijn niet opgeslagen.")
 

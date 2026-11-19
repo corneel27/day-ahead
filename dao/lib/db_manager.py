@@ -10,6 +10,7 @@ from sqlalchemy import (
     and_,
     bindparam,
     create_engine,
+    delete,
     func,
     insert,
     select,
@@ -221,7 +222,12 @@ class DBmanagerObj:
         else:  # mysql/mariadb
             return func.date_format(func.from_unixtime(column), "%Y-%m-%d %H:00")
 
-    def savedata(self, df: pd.DataFrame, tablename: str = "values"):
+    def savedata(
+        self,
+        df: pd.DataFrame,
+        tablename: str = "values",
+        regrid: dict | None = None,
+    ):
         """
         save data in dateframe,
         if id exist then update else insert
@@ -233,6 +239,12 @@ class DBmanagerObj:
                time	timestamp in sec
                value	float
             tablename: values or prognoses
+            regrid: None (default) or a dict that makes the saved times the only
+               times of the saved codes within the span of a calculation,
+               see regrid_rows(). Keys:
+               first_start: utc start of the first (partial) interval of the
+                   calculation, also when that interval is not saved
+               state: True for state values (e.g. soc), which are not summed
         """
         logging.debug(f"Opslaan dataframe:\n{df.to_string()}")
 
@@ -267,6 +279,15 @@ class DBmanagerObj:
             for code in codes - variabel_ids.keys():
                 logging.error(f"Onbekende code opslaan data: {code}")
             times = [time for _, time, _ in records]
+            if regrid is not None:
+                self.regrid_rows(
+                    connection,
+                    values_table,
+                    list(variabel_ids.values()),
+                    sorted(set(times)),
+                    first_start=regrid.get("first_start"),
+                    state=regrid.get("state", False),
+                )
             select_value = select(
                 values_table.c.id, values_table.c.variabel, values_table.c.time
             ).where(
@@ -309,6 +330,135 @@ class DBmanagerObj:
         finally:
             connection.close()
         self.log_pool_status()
+
+    @staticmethod
+    def regrid_rows(
+        connection,
+        values_table: Table,
+        variabel_ids: list,
+        grid: list,
+        first_start: int | None = None,
+        state: bool = False,
+    ):
+        """
+        Brengt de aanwezige rijen van een berekening in lijn met de tijden die
+        worden opgeslagen, zodat per uur optellen niets dubbel telt als het
+        interval (15min/1hour) is gewijzigd. Zonder wijziging van het interval
+        liggen alle aanwezige rijen al op deze tijden en verandert er niets.
+        - Rijen binnen de span van de berekening die niet op een opgeslagen tijd
+          liggen worden verwijderd.
+        - Hoeveelheden (state=False) in het eerste, deels verstreken interval
+          dat niet wordt opgeslagen ([first_start, grid[0])), worden opgeteld
+          in een rij op first_start.
+        - Een kwartier-berekening die begint in een uur met alleen een uurwaarde
+          verdeelt die uurwaarde over de kwartieren van dat uur vóór grid[0].
+        :param connection: open connectie, de aanroeper doet de commit
+        :param values_table: tabel met kolommen id, variabel, time, value
+        :param variabel_ids: id's van de codes die worden opgeslagen
+        :param grid: gesorteerde utc-tijden die worden opgeslagen
+        :param first_start: utc begin van het eerste interval van de berekening,
+            None als dat gelijk is aan grid[0]
+        :param state: True voor toestanden (soc): de span eindigt op grid[-1]
+            en er wordt niets opgeteld of verdeeld
+        :return: None
+        """
+        if len(grid) == 0 or len(variabel_ids) == 0:
+            return
+        first_saved = grid[0]
+        if first_start is None or first_start > first_saved:
+            first_start = first_saved
+        if len(grid) > 1:
+            first_step = grid[1] - grid[0]
+            last_step = grid[-1] - grid[-2]
+        else:
+            first_step = last_step = max(first_saved - first_start, 3600)
+        if state:
+            span_end = grid[-1] + 1
+        else:
+            span_end = grid[-1] + last_step
+        hour_start = first_start - first_start % 3600
+        window_start = min(hour_start, first_start)
+        table = values_table
+        rows = connection.execute(
+            select(table.c.id, table.c.variabel, table.c.time, table.c.value).where(
+                table.c.variabel.in_(variabel_ids)
+                & (table.c.time >= window_start)
+                & (table.c.time < span_end)
+            )
+        ).fetchall()
+        grid_set = set(grid)
+        delete_ids = []
+        inserts = []
+        updates = []
+        by_code = {}
+        for row in rows:
+            by_code.setdefault(row.variabel, []).append(row)
+        for variabel_id, code_rows in by_code.items():
+            handled = set()
+            if not state and first_step < 3600:
+                # een uurwaarde in het uur waarin de kwartier-berekening begint
+                hour_rows = [
+                    r for r in code_rows if hour_start <= r.time < hour_start + 3600
+                ]
+                if (
+                    len(hour_rows) == 1
+                    and hour_rows[0].time == hour_start
+                    and hour_start < first_saved
+                ):
+                    hourly = hour_rows[0]
+                    quarters = list(range(hour_start, first_saved, 900))
+                    share = hourly.value / 4
+                    updates.append({"value_id": hourly.id, "new_value": share})
+                    for moment in quarters[1:]:
+                        inserts.append(
+                            {"variabel": variabel_id, "time": moment, "value": share}
+                        )
+                    handled.add(hourly.id)
+            if not state and first_start < first_saved:
+                # het niet opgeslagen eerste interval op de nieuwe resolutie
+                part_rows = [
+                    r
+                    for r in code_rows
+                    if first_start <= r.time < first_saved and r.id not in handled
+                ]
+                if len(part_rows) > 0 and not (
+                    len(part_rows) == 1 and part_rows[0].time == first_start
+                ):
+                    total = sum(r.value for r in part_rows)
+                    keep = next(
+                        (r for r in part_rows if r.time == first_start), None
+                    )
+                    for r in part_rows:
+                        if r is not keep:
+                            delete_ids.append(r.id)
+                    if keep is not None:
+                        updates.append({"value_id": keep.id, "new_value": total})
+                    else:
+                        inserts.append(
+                            {"variabel": variabel_id, "time": first_start, "value": total}
+                        )
+                handled.update(r.id for r in part_rows)
+            for r in code_rows:
+                if r.id in handled or r.time < first_saved:
+                    continue
+                if r.time not in grid_set:
+                    delete_ids.append(r.id)
+        if delete_ids:
+            connection.execute(delete(table).where(table.c.id.in_(delete_ids)))
+        if updates:
+            connection.execute(
+                update(table)
+                .where(table.c.id == bindparam("value_id"))
+                .values(value=bindparam("new_value")),
+                updates,
+            )
+        if inserts:
+            connection.execute(insert(table), inserts)
+        if delete_ids or updates or inserts:
+            logging.info(
+                f"Prognoses aangepast aan het interval: {len(delete_ids)} verwijderd, "
+                f"{len(updates)} aangepast, {len(inserts)} toegevoegd"
+            )
 
     def get_time_border_record(
         self, code: str, latest: bool = True, table_name: str = "values"

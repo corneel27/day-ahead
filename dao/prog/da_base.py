@@ -341,12 +341,27 @@ class DaBase(hass.Hass):
     def get_predicted_prices(self):
         self.prices.get_predicted_prices()
 
-    def save_df(self, tablename: str, tijd: list, df: pd.DataFrame):
+    def save_df(
+        self,
+        tablename: str,
+        tijd: list,
+        df: pd.DataFrame,
+        regrid: bool = False,
+        first_start: datetime.datetime | None = None,
+        state: bool = False,
+    ):
         """
         Slaat de data in het dataframe op in de tabel "table"
         :param tablename: de naam van de tabel waarin de data worden opgeslagen
         :param tijd: de datum tijd van de rijen in het dataframe
         :param df: het dataframe met de code van de variabelen in de kolomheader
+        :param regrid: True: binnen de span van "tijd" blijven van de opgeslagen
+            codes alleen rijen op de tijden van "tijd" over (zie
+            DBmanagerObj.regrid_rows), zodat na een wijziging van het interval
+            geen oude kwartier- of uurwaarden blijven staan
+        :param first_start: begin van het eerste (deels verstreken) interval van
+            de berekening als dat niet in "tijd" staat
+        :param state: True als de codes toestanden zijn (soc) en geen hoeveelheden
         :return: None
         """
         df = df.reset_index(drop=True)
@@ -363,7 +378,14 @@ class DaBase(hass.Hass):
         # bijna een milliseconde
         df_db = pd.DataFrame(rows, columns=["time", "code", "value"])
         logging.debug(f"Save calculated data:\n{df_db.to_string()}")
-        self.db_da.savedata(df_db, tablename=tablename)
+        regrid_options = None
+        if regrid:
+            regrid_options = {"state": state}
+            if first_start is not None:
+                regrid_options["first_start"] = int(
+                    tz.localize(pd.to_datetime(first_start)).timestamp()
+                )
+        self.db_da.savedata(df_db, tablename=tablename, regrid=regrid_options)
 
     @staticmethod
     def get_calculated_baseload(weekday: int) -> list:
