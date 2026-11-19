@@ -146,6 +146,8 @@ wrong, so the report gives it a line of its own:
 | `battery_charges_during` | `{"start": "HH:MM", "end": "HH:MM", "min_kwh": N}` | `dc_to_bat` | total kWh charged in the clock-time window ≥ `min_kwh` |
 | `battery_discharges_during` | same shape, `min_kwh` | `dc_from_bat` | total kWh discharged in the window ≥ `min_kwh` |
 | `battery_flat_during` | `{"start", "end", "max_kwh": N}` | both | combined charge and discharge activity in the window ≤ `max_kwh` |
+| `grid_import_at_most` | `{"start", "end", "max_kwh": N}` | `c_l` | total kWh imported from the grid in the window ≤ `max_kwh` |
+| `grid_export_during` | `{"start", "end", "min_kwh": N}` | `c_t` | total kWh exported to the grid in the window ≥ `min_kwh` |
 | `heatpump_runs` | `{"start", "end", "runs": bool}` (`runs` default `true`) | `p_hp` | heat pump's summed power in the window is `>1 W` iff `runs` |
 | `machine_runs_in_window` | `{"machine": "name", "start", "end", "runs": bool}` | `c_ma_u` | the named machine's consumption in the window is `>0` iff `runs` |
 | `scheduled` / `other_scheduled` | `bool` | parsed EV log | EV-specific, see `cases/ev.json` |

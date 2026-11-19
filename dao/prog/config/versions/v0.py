@@ -246,6 +246,33 @@ class ConfigurationV0(DAOConfigBaseModel):
             "x-order": 3,
         },
     )
+    consumption_weight: FlexFloat = Field(
+        default=FlexFloat(value=10.0),
+        alias="consumption weight",
+        description=(
+            "Weight per kWh of grid consumption for strategy 'minimize consumption' "
+            "(or HA entity ID returning the weight)"
+        ),
+        json_schema_extra={
+            "x-help": (
+                "Only used with strategy 'minimize consumption'. The amount in euro per kWh "
+                "you are willing to give up to avoid consumption from the grid: the "
+                "optimizer only takes extra energy from the grid when that gains more than "
+                "this per kWh. The weight is for the optimizer only; it is not a cost and "
+                "does not appear in costs, profit or reports. 10 (default): first as little "
+                "grid consumption as possible, then the lowest cost. 1: takes a little more "
+                "from the grid to avoid the penalty for a low battery or EV level. "
+                "0.05-0.5: partial, still trades when it pays well. 0: the same as "
+                "'minimize cost'. Valid range: 0-100."
+            ),
+            "x-unit": "euro/kWh",
+            "x-validation-hint": "0-100, or HA entity ID",
+            "x-ui-group": "DAO",
+            "x-ui-section": "Optimization",
+            "x-order": 4,
+            "x-ui-widget-filter": "input_number,number,sensor",
+        },
+    )
 
     # User Interface
     notifications: NotificationsConfig = Field(

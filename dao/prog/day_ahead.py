@@ -14,8 +14,9 @@ import tempfile
 import time
 from contextlib import contextmanager
 
+import mip
 import pandas as pd
-from mip import BINARY, CBC, CONTINUOUS, INTEGER, Model, minimize, xsum
+from mip import BINARY, CONTINUOUS, HIGHS, INTEGER, Model, minimize, xsum
 from pandas.core.dtypes.inference import is_number
 from utils import (
     calc_adjustment_heatcurve,
@@ -36,15 +37,17 @@ _libc = ctypes.CDLL(None)
 @contextmanager
 def _capture_native_stdout():
     """Redirects the OS-level stdout file descriptor (fd 1) for the
-    duration of a CBC solve. CBC writes its "Search completed...", "Exiting
-    as integer gap..." etc. lines via native C-level stdio, never through
-    Python's `logging` module, so they normally land on the console (or
-    wherever fd 1 points) but never in the log file. Plain
-    `contextlib.redirect_stdout` would not catch this, since it only
-    reassigns Python's `sys.stdout` object and native stdio bypasses that
-    entirely. `fflush(NULL)` is called before restoring the fd so CBC's own
-    buffered output isn't left sitting unflushed past the point we read it
-    back.
+    duration of a solve. The solver (HiGHS) writes its progress lines via
+    native C-level stdio, never through Python's `logging` module, so they
+    normally land on the console (or wherever fd 1 points) but never in the
+    log file. Plain `contextlib.redirect_stdout` would not catch this, since
+    it only reassigns Python's `sys.stdout` object and native stdio bypasses
+    that entirely. `fflush(NULL)` is called before restoring the fd so the
+    solver's own buffered output isn't left sitting unflushed past the point
+    we read it back.
+
+    The key is still "cbc_log" (the solver used to be CBC): da_debug and the
+    scenario reports read it under that name from saved result files.
     """
     stdout_fd = 1
     saved_fd = os.dup(stdout_fd)
@@ -64,12 +67,75 @@ def _capture_native_stdout():
 
 
 def _log_native_output(text: str) -> None:
-    """Feeds captured CBC stdout output through logging.info, line by
+    """Feeds captured solver stdout output through logging.info, line by
     line, so it ends up in the log file (and console, via the stream
     handler) instead of only on raw stdout."""
     for line in text.splitlines():
         if line.strip():
             logging.info(line)
+
+
+def _link_pwl(model, w, exact=True, gate=1):
+    """Kies één stuk van een stuksgewijs lineaire curve, zonder SOS2.
+
+        w heeft één gewicht (0..1) per breekpunt. Het werkpunt is een mengsel van
+        twee naast elkaar liggende breekpunten. Die regel "alleen buren" deed eerst
+        een SOS2-set, maar daarmee zette CBC al zijn heuristieken uit (Cbc0036I),
+        en HiGHS kent geen SOS2. Deze functie doet hetzelfde met een paar
+        aan/uit-schakelaars.
+
+        Voorbeeld met 5 breekpunten, dus 4 stukken en 2 schakelaars:
+
+            breekpunt:      1 ---- 2 ---- 3 ---- 4 ---- 5
+            stuk:              A      B      C      D
+            y2 (bits[1]):      0      0      1      1      0 = links, 1 = rechts
+            y1 (bits[0]):      0      1      1      0      0 = buiten, 1 = binnen
+
+        Elke schakelaar verbiedt de breekpunten die niet bij zijn keuze horen:
+
+            y2 = 0: punt 4 en 5 verboden      y2 = 1: punt 1 en 2 verboden
+            y1 = 0: punt 3 verboden           y1 = 1: punt 1 en 5 verboden
+
+        Bij elke stand blijven precies de twee eindpunten van één stuk over.
+        Voorbeeld: y1 = 1 en y2 = 0 laten alleen punt 2 en 3 over (stuk B).
+
+        De nummering van de stukken (00, 01, 11, 10) is een Gray-code: buurstukken
+        verschillen in één schakelaar. K stukken vragen ceil(log2(K)) schakelaars,
+        bijvoorbeeld 4 schakelaars voor 12 stukken.
+
+        Bron: Vielma & Nemhauser (2011), Mathematical Programming 128:49-72.
+        Gratis uitleg: Huchette & Vielma, arXiv:1708.00050, par. 3.1. Het voorbeeld
+        hierboven is hun vergelijking (3).
+
+        exact=True:  de gewichten tellen op tot gate (werkpunt op de curve).
+        exact=False: de gewichten tellen op tot hoogstens gate (huidig ontladen:
+                    een deel van het interval op de curve, de rest uit).
+        gate:        1, of een binaire variabele (warmtepomp: hp_on).
+        """
+    n = len(w)
+    k_seg = n - 1
+    if exact:
+        model += xsum(w) == gate
+    else:
+        model += xsum(w) <= gate
+    if k_seg <= 1:
+        return
+    n_bits = math.ceil(math.log2(k_seg))
+    gray = [j ^ (j >> 1) for j in range(k_seg)]  # code van segment j (tussen breekpunt j en j+1)
+    bits = [model.add_var(var_type=BINARY) for _ in range(n_bits)]
+    for bit in range(n_bits):
+        ones, zeros = [], []
+        for k in range(n):
+            segs = [j for j in (k - 1, k) if 0 <= j < k_seg]  # segmenten naast breekpunt k
+            vals = {(gray[j] >> bit) & 1 for j in segs}
+            if vals == {1}:
+                ones.append(w[k])
+            elif vals == {0}:
+                zeros.append(w[k])
+        if ones:
+            model += xsum(ones) <= bits[bit]
+        if zeros:
+            model += xsum(zeros) <= 1 - bits[bit]
 
 
 def _bar(ax, x, height, width=0.8, bottom=None, align="center", label=None, *, color):
@@ -542,7 +608,12 @@ class DaCalc(DaBase):
             logging.info(f"pv_dc: {len(pv_org_dc)}")
 
         # Name the solver explicitly to avoid trying Gurobi first
-        model = Model(solver_name=CBC)
+        model = Model(solver_name=HIGHS)
+        # HiGHS schrijft zijn openingsregels bij de eerste add_var direct naar
+        # stdout, buiten de capture rond optimize() (en voor de JSON-uitvoer
+        # van da_debug): uitvoer uit tot vlak voor de solve
+        highs_verbose = model.verbose
+        model.verbose = 0
 
         ##############################################################
         #                          pv ac
@@ -1120,10 +1191,9 @@ class DaCalc(DaBase):
                 # tot hier laden zonder sos #######################################
                 
         """
-        # vanaf hier laden met sos ######################################################
+        # vanaf hier laden met een stuksgewijs lineaire curve (_link_pwl) ##############
         for b in range(B):
             for u in range(U):
-                model += xsum(ac_to_dc_w[b][u][cs] for cs in range(CS[b])) == 1
                 model += (
                     xsum(
                         ac_to_dc_w[b][u][cs] * ac_to_dc_samples[b][cs]
@@ -1138,14 +1208,8 @@ class DaCalc(DaBase):
                     )
                     == dc_from_ac[b][u]
                 )
-                model.add_sos(
-                    [
-                        (ac_to_dc_w[b][u][cs], ac_to_dc_samples[b][cs])
-                        for cs in range(CS[b])
-                    ],
-                    2,
-                )
-                # tot hier constraints laden met sos
+                _link_pwl(model, ac_to_dc_w[b][u], exact=True)
+                # tot hier constraints laden met _link_pwl
 
                 """
                 # vanaf hier ontladen met aan/uit
@@ -1175,8 +1239,7 @@ class DaCalc(DaBase):
                 #tot hier ontladen met aan/uit
                 """
 
-                # vanaf hier ontladen met sos ######################################################
-                model += xsum(ac_from_dc_w[b][u][ds] for ds in range(DS[b])) <= 1
+                # vanaf hier ontladen met _link_pwl ################################################
                 model += (
                     xsum(
                         ac_from_dc_w[b][u][ds] * ac_from_dc_samples[b][ds]
@@ -1191,14 +1254,8 @@ class DaCalc(DaBase):
                     )
                     == dc_to_ac[b][u]
                 )
-                model.add_sos(
-                    [
-                        (ac_from_dc_w[b][u][ds], ac_from_dc_samples[b][ds])
-                        for ds in range(DS[b])
-                    ],
-                    2,
-                )
-                # tot hier constraints ontladen met sos
+                _link_pwl(model, ac_from_dc_w[b][u], exact=False)
+                # tot hier constraints ontladen met _link_pwl
 
         """
         constraints reduced charging power at low or high soc
@@ -2709,10 +2766,7 @@ class DaCalc(DaBase):
                     # ieder interval/uur maar een aan
                     model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
                     """
-                    model.add_sos(
-                        [(hp_s_w[u][s], hp_stages[s]["max_power"]) for s in range(S)],
-                        2,
-                    )
+                    _link_pwl(model, hp_s_w[u][1:], exact=True, gate=hp_on[u])
 
                     # geproduceerde warmte = vermogen in W * COP_schijf /1000 in kWh
                     model += (
@@ -3445,11 +3499,14 @@ class DaCalc(DaBase):
         max_gap = max(0.00001, min(max_gap, 1.0))  # clamp to [0.00001, 1.0]
 
         model.max_mip_gap_abs = max_gap
-        model.max_nodes = 1500
-        # model.max_seconds = 20
+        # na 240 s geeft HiGHS de beste oplossing tot dan toe (status FEASIBLE)
+        model.max_seconds = 240
+        model.verbose = highs_verbose
         if self.log_level > logging.DEBUG:
             model.verbose = 1
-        model.threads = getattr(self, "_solver_threads", -1)
+        # HiGHS weigert -1 (0 = automatisch) en legt het aantal threads per
+        # proces vast bij de eerste solve: een andere waarde daarna faalt
+        model.threads = max(getattr(self, "_solver_threads", -1), 0)
         if getattr(self, "_debug_capture_vars", False):
             try:
                 from da_debug import build_var_registry
@@ -3459,64 +3516,60 @@ class DaCalc(DaBase):
                 logging.warning(
                     "Kon debug variabele-registry niet opbouwen", exc_info=True
                 )
-        # model.check_optimization_results()
 
-        # kosten optimalisering
         if self.strategy == "minimize cost":
             strategie = "minimale kosten"
-            logging.info(f"Strategie: {strategie}")
-            logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
-            model.objective = minimize(cost)
-            start_calc = time.perf_counter()
-            with _capture_native_stdout() as native:
-                status = model.optimize()
-            if self.debug or self.log_level <= logging.DEBUG:
-                _log_native_output(native["cbc_log"])
-            end_calc = time.perf_counter()
-            logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
-            logging.info(f"Model status: {status}")
-            if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing voor: {self.strategy}")
-                return False
+            objective = cost
         elif self.strategy == "minimize consumption":
             strategie = "minimale levering"
-            logging.info(f"Strategie: {strategie}")
-            model.objective = minimize(delivery)
-            with _capture_native_stdout() as native:
-                status = model.optimize()
-            if self.debug or self.log_level <= logging.DEBUG:
-                _log_native_output(native["cbc_log"])
-            if model.num_solutions == 0:
-                logging.warning(f"Geen oplossing voor: {self.strategy}")
-                return False
-            min_delivery = max(0.0, delivery.x)
-            logging.info("Eerste berekening")
-            logging.info(f"Kosten (euro): {cost.x:<6.2f}")
-            logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
-            model += delivery <= min_delivery
-            model.objective = minimize(cost)
-            with _capture_native_stdout() as native:
-                status = model.optimize()
-            if self.debug or self.log_level <= logging.DEBUG:
-                _log_native_output(native["cbc_log"])
-            if model.num_solutions == 0:
-                model.objective = minimize(delivery)
-                with _capture_native_stdout() as native:
-                    status = model.optimize()
-                if self.debug or self.log_level <= logging.DEBUG:
-                    _log_native_output(native["cbc_log"])
-                if model.num_solutions == 0:
-                    logging.warning(
-                        f"Geen oplossing in na herberekening voor: {self.strategy}"
-                    )
-                    return False
-            logging.info(f"Model status: {status}")
-            logging.info("Herberekening")
-            logging.info(f"Kosten (euro): {cost.x:<6.2f}")
-            logging.info(f"Levering (kWh): {delivery.x:<6.2f}")
+            # één berekening: de kosten plus een weging per kWh van het net.
+            # Eerst zo min mogelijk levering; bij gelijke levering het
+            # goedkoopste plan, en een overschot gaat naar de duurste uren.
+            # De weging zit alleen in de doelfunctie, niet in cost, dus niet
+            # in de kosten, de winst of het overzicht.
+            try:
+                weight = float(self.config.consumption_weight.resolve(self.ha_getter))
+            except (AttributeError, TypeError, ValueError):
+                # entity bestaat niet, of staat op "unavailable"/"unknown"
+                weight = math.nan
+            if math.isnan(weight):
+                logging.warning(
+                    f"'consumption weight' ({self.config.consumption_weight.value}) "
+                    f"is geen getal, er wordt gerekend met 10"
+                )
+                weight = 10.0
+            elif not 0.0 <= weight <= 100.0:
+                clamped = max(0.0, min(weight, 100.0))
+                logging.warning(
+                    f"'consumption weight' ({weight}) valt buiten 0 - 100, "
+                    f"er wordt gerekend met {clamped}"
+                )
+                weight = clamped
+            objective = cost + weight * delivery
         else:
             logging.error("Kies een strategie in options")
             # strategie = 'niet gekozen'
+            return False
+        logging.info(f"Strategie: {strategie}")
+        if self.strategy == "minimize consumption":
+            logging.info(
+                f"Weging levering (alleen voor de solver, geen kosten): "
+                f"{weight} euro/kWh"
+            )
+        logging.info(f"Maximale fout (maximal gap): {max_gap:<8.6f} euro")
+        model.objective = minimize(objective)
+        start_calc = time.perf_counter()
+        with _capture_native_stdout() as native:
+            status = model.optimize()
+        if self.debug or self.log_level <= logging.DEBUG:
+            _log_native_output(native["cbc_log"])
+        end_calc = time.perf_counter()
+        logging.info(f"Rekentijd: {end_calc - start_calc:<5.2f} sec")
+        logging.info(f"Model status: {status}")
+        if model.num_solutions == 0:
+            logging.warning(
+                f"Geen oplossing voor: {self.strategy}, kijk naar je instellingen."
+            )
             return False
 
         # Suppress FutureWarning messages
@@ -3524,10 +3577,12 @@ class DaCalc(DaBase):
 
         # warnings.simplefilter(action="ignore", category=FutureWarning)
 
-        if model.num_solutions == 0:
-            logging.error(
-                "Er is helaas geen oplossing gevonden, kijk naar je instellingen."
-            )
+        # controleer of de oplossing aan alle constraints en grenzen voldoet,
+        # zodat een onmogelijke planning nooit naar HA gaat
+        try:
+            model.check_optimization_results()
+        except (mip.InfeasibleSolution, AssertionError) as ex:
+            logging.error(f"De oplossing van de solver is ongeldig: {ex}")
             return False
 
         # er is een oplossing

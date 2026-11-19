@@ -501,6 +501,32 @@ def _check_battery_flat_during(value: dict, ctx: CaseContext) -> CheckResult:
     return CheckResult("battery_flat_during", ok, detail)
 
 
+def _grid_kwh(ctx: CaseContext, container: str, window: range) -> float:
+    # c_l / c_t are already kWh per interval (bounded by max_power * hour_fraction)
+    mv = ctx.mv
+    if mv is None or not mv.has(container):
+        return 0.0
+    return sum(v for (u,), v in mv.items(container) if u in window)
+
+
+@case_check("grid_import_at_most")
+def _check_grid_import_at_most(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = _grid_kwh(ctx, "c_l", window)
+    ok = kwh <= value["max_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh imported in {value['start']}-{value['end']}, wanted <= {value['max_kwh']}"
+    return CheckResult("grid_import_at_most", ok, detail)
+
+
+@case_check("grid_export_during")
+def _check_grid_export_during(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = _grid_kwh(ctx, "c_t", window)
+    ok = kwh >= value["min_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh exported in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    return CheckResult("grid_export_during", ok, detail)
+
+
 @case_check("no_cross_battery_charge_discharge")
 def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> CheckResult:
     """No interval has one battery charging on the AC side while a
@@ -511,20 +537,24 @@ def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> C
     battery's charge into another's discharge is only ever sub-optimal
     (AC/DC conversion losses, cycle cost), never infeasible. So this is a
     Tier B case check, opt-in per multi-battery scenario, not a structural
-    invariant."""
+    invariant.
+
+    Reads the AC flows (ac_to_dc / ac_from_dc), not the on/off binaries:
+    nothing forces ac_to_dc_on[b][u] to 0 when no energy flows, so a solver
+    may leave it at 1 with a zero flow (HiGHS does), which is not charging."""
     name = "no_cross_battery_charge_discharge"
     if not value:
         return CheckResult(name, True, "explicitly unchecked")
     mv = ctx.mv
-    if mv is None or not (mv.has("ac_to_dc_on") and mv.has("ac_from_dc_on")):
+    if mv is None or not (mv.has("ac_to_dc") and mv.has("ac_from_dc")):
         return CheckResult(name, True, "no AC-coupled battery in this model")
     charging: dict[int, set[int]] = {}
-    for (b, u), on in mv.items("ac_to_dc_on"):
-        if on > 0.5:
+    for (b, u), flow in mv.items("ac_to_dc"):
+        if flow > 1e-6:
             charging.setdefault(u, set()).add(b)
     discharging: dict[int, set[int]] = {}
-    for (b, u), on in mv.items("ac_from_dc_on"):
-        if on > 0.5:
+    for (b, u), flow in mv.items("ac_from_dc"):
+        if flow > 1e-6:
             discharging.setdefault(u, set()).add(b)
     bad = [
         f"u{u}: charging b{sorted(charging[u])}, discharging b{sorted(discharging[u])}"
