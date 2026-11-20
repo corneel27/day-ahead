@@ -62,17 +62,36 @@ def test_solar_menu_can_be_removed_repeatedly_and_restored(monkeypatch, solar_pr
     monkeypatch.setattr(v1_routes, "web_menu", menu)
     monkeypatch.setattr(v1_routes, "solar_web_menu", deepcopy(v1_routes.solar_web_menu))
     solar = SimpleNamespace(name="roof", ml_prediction=False)
-    monkeypatch.setattr(v1_routes, "config", SimpleNamespace(solar=[solar], battery=[]))
+    config = SimpleNamespace(solar=[], battery=[])
+    monkeypatch.setattr(v1_routes, "config", config)
 
     for _ in range(2):
         assert v1_routes.generate_solar_items() == {}
         assert v1_routes.web_menu == other_items
 
-    solar.ml_prediction = True
+    config.solar = [solar]
     for _ in range(2):
         assert v1_routes.generate_solar_items() == {"roof": solar}
+        assert config.solar == [solar]
         assert tuple(v1_routes.web_menu) == keys
         assert {key: value for key, value in v1_routes.web_menu.items() if key != "solar"} == other_items
+
+
+def test_solar_items_keep_installations_with_the_same_name(monkeypatch):
+    first = SimpleNamespace(name="roof")
+    second = SimpleNamespace(name="roof")
+    on_battery = SimpleNamespace(name="")
+    config = SimpleNamespace(
+        solar=[first, second], battery=[SimpleNamespace(solar=[on_battery])]
+    )
+    expected = {"roof": first, "roof (2)": second, "default": on_battery}
+    monkeypatch.setattr(v1_routes, "config", config)
+    assert v1_routes.generate_solar_items() == expected
+
+    loader = Mock()
+    loader.return_value.load_and_validate.return_value = config
+    monkeypatch.setattr(v2_routes, "ConfigurationLoader", loader)
+    assert v2_routes.get_solar_items() == expected
 
 
 @pytest.fixture
