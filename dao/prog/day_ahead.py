@@ -1490,7 +1490,7 @@ class DaCalc(DaBase):
             # heat rate = power * cop * sec.p.interval /spec vermogen in K/step
             cooling = 0
             for u in range(U):
-                cooling += cooling + boiler_cooling[u]
+                cooling += boiler_cooling[u]
             boiler_end_temp = max(
                 boiler_ondergrens, boiler_act_temp - cooling
             )
