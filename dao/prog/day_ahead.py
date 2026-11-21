@@ -3689,9 +3689,9 @@ class DaCalc(DaBase):
                 logging.info("Blokken:")
             for j in range(blocks_num):
                 logging.info(
-                    f"Bloknr {j} start {int(hp_start_index[j].x)} "
+                    f"Bloknr {j} start {round(hp_start_index[j].x)} "
                     f"lengte {block_len[j]}"
-                    f" laatste {int(hp_start_index[j].x) + block_len[j] - 1}"
+                    f" laatste {round(hp_start_index[j].x) + block_len[j] - 1}"
                 )
             logging.info("u   uur   tar    hp_s_on hp_on heat cons")
             for u in range(U):
@@ -3699,7 +3699,7 @@ class DaCalc(DaBase):
                 for j in range(blocks_num):
                     sum_hp_bl_on += hp_bl_on[j][u].x
                 logging.info(
-                    f"{u}   {uur[u]} {pl[u]:6.4f}  {sum_hp_bl_on:6.2f} {int(hp_on[u].x)}"
+                    f"{u}   {uur[u]} {pl[u]:6.4f}  {sum_hp_bl_on:6.2f} {round(hp_on[u].x)}"
                     f"   {h_hp[u].x:6.2f}  {c_hp[u].x:6.2f}"
                 )
             if self.hp_adjustment != "on/off":
@@ -4092,7 +4092,8 @@ class DaCalc(DaBase):
 
         try:
             if self.boiler_present:
-                if float(c_b[0].x) > 0.0:
+                # 1e-4 kWh: een continue 0 kan als rekenruis (bv. 1e-16) terugkomen
+                if float(c_b[0].x) > 1e-4:
                     if self.debug:
                         logging.info("Boiler opwarmen zou zijn geactiveerd")
                     else:
@@ -4118,7 +4119,8 @@ class DaCalc(DaBase):
                     logging.info("Boiler opwarmen niet geactiveerd")
                 boiler_st_index = -1
                 for u in range(U):
-                    if boiler_st[u].x == 1:
+                    # binair: HiGHS geeft bv. 0.9999999999999999, niet exact 1
+                    if boiler_st[u].x > 0.5:
                         boiler_st_index = u
                         break
                 if boiler_st_index >= 0:
@@ -4210,11 +4212,12 @@ class DaCalc(DaBase):
 
                 start_ev_laden = stop_ev_laden = None
                 for u in range(U):
-                    if c_ev[e][u].x > 0:
+                    # 1e-4 kWh: een continue 0 kan als rekenruis (bv. 1e-14) terugkomen
+                    if c_ev[e][u].x > 1e-4:
                         if start_ev_laden is None:
                             start_ev_laden = tijd[u]
                     else:
-                        if start_ev_laden is not None and c_ev[e][u - 1].x > 0:
+                        if start_ev_laden is not None and c_ev[e][u - 1].x > 1e-4:
                             stop_ev_laden = tijd[u]
                 if start_ev_laden is not None:
                     if stop_ev_laden is None:
@@ -4411,7 +4414,8 @@ class DaCalc(DaBase):
                     entity_pv_switch = entity_pv_ac_switch[s]
                     switch_state = self.get_state(entity_pv_switch).state
                     pv_name = self.solar[s].name
-                    if (pv_ac_on_off[s][0].x == 1.0) or (solar_prod[s][0] == 0.0):
+                    # binair: HiGHS geeft bv. 0.9999999999999999, niet exact 1
+                    if (pv_ac_on_off[s][0].x > 0.5) or (solar_prod[s][0] == 0.0):
                         if switch_state == "off":
                             if self.debug:
                                 logging.info(f"PV {pv_name} zou zijn aangezet")
@@ -4576,7 +4580,8 @@ class DaCalc(DaBase):
                     if entity_pv_switch is not None:
                         switch_state = self.get_state(entity_pv_switch).state
                         pv_name = self.battery_options[b].solar[s].name
-                        if pv_dc_on_off[b][s][0].x == 1 or pv_prod_dc[b][s][0] == 0.0:
+                        # binair: HiGHS geeft bv. 0.9999999999999999, niet exact 1
+                        if pv_dc_on_off[b][s][0].x > 0.5 or pv_prod_dc[b][s][0] == 0.0:
                             if switch_state == "off":
                                 if self.debug:
                                     logging.info(f"PV {pv_name} zou zijn aangezet")
@@ -4661,7 +4666,8 @@ class DaCalc(DaBase):
                 else:
                     logging.debug(f"Warmtepomp entity: {entity_hp_switch}")
                     switch_state = self.get_state(entity_hp_switch).state
-                    if hp_on[0].x == 1:
+                    # binair: HiGHS geeft bv. 0.9999999999999999, niet exact 1
+                    if hp_on[0].x > 0.5:
                         if switch_state == "off":
                             if self.debug:
                                 logging.info("Warmtepomp zou zijn ingeschakeld")
@@ -4723,7 +4729,8 @@ class DaCalc(DaBase):
                 if RL[m] > 0:
                     start_machine_str = ""
                     for r in range(R[m]):
-                        if ma_start[m][r].x == 1:
+                        # binair: HiGHS geeft bv. 0.9999999999999999, niet exact 1
+                        if ma_start[m][r].x > 0.5:
                             if ma_kw_dt[m][r] == start_dt:
                                 ma_start_time = (
                                     dt.datetime.now()

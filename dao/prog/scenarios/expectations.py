@@ -2,8 +2,10 @@
 
 The Tier A structural invariants are properties that hold for any optimal
 solution, so they survive solver-version, CPU, and tie-breaking changes.
-They read the model through ModelView, the variable registry, never
-through log text. Hard fail, always run, never listed in expect.
+They read the model through ModelView, the variable registry. Two read the
+log too: Solved (the success line) and PlannedMachinesReported, which
+checks that day_ahead.py reports the machine starts the model chose. Hard
+fail, always run, never listed in expect.
 
 The setup checks are the always-on SETUP_MISMATCH, echo, and duty-sliver
 checks on a scenario's own overrides. Their own registry (@setup_check,
@@ -255,6 +257,37 @@ class EvChargeNonNegative(Invariant):
         return self._ok()
 
 
+class PlannedMachinesReported(Invariant):
+    """A machine the solver starts (an ma_start > 0.5) is not reported as
+    "Niet ingepland" after the solve. day_ahead.py writes the planned start
+    and end to HA from that same reading, so a mismatch means they never
+    reach HA. HiGHS returns binaries within its tolerance (0.9999999999999999),
+    which an exact == 1 comparison missed."""
+
+    name = "planned_machines_reported"
+
+    def check(self, rc):
+        mv = rc.mv
+        if mv is None or not mv.has("ma_start"):
+            return self._ok("no machines in this model")
+        planned = {m for (m, _kw), v in mv.items("ma_start") if v > 0.5}
+        # the post-solve report: one "Apparaat: <name>" section per machine, in order m
+        sections: list[tuple[str, list[str]]] = []
+        for line in rc.log_text.splitlines():
+            if "Apparaat: " in line:
+                sections.append((line.split("Apparaat: ", 1)[1].strip(), []))
+            elif sections:
+                sections[-1][1].append(line)
+        bad = [
+            f"{name} (m{m})"
+            for m, (name, lines) in enumerate(sections)
+            if m in planned and any("Niet ingepland" in line for line in lines)
+        ]
+        if bad:
+            return self._fail(f"planned by the solver, reported as 'Niet ingepland': {', '.join(bad)}")
+        return self._ok()
+
+
 TIER_A_INVARIANTS: list[Invariant] = [
     Solved(),
     NoSimultaneousChargeDischarge(),
@@ -263,6 +296,7 @@ TIER_A_INVARIANTS: list[Invariant] = [
     SocWithinLimits(),
     EvSingleRealStagePerInterval(),
     EvChargeNonNegative(),
+    PlannedMachinesReported(),
 ]
 
 
