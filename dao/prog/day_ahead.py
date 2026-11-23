@@ -1419,7 +1419,7 @@ class DaCalc(DaBase):
                 f"Boiler direct opwarmen staat {'aan' if boiler_instant_start else 'uit'}"
             )
 
-            # 50 huidige boilertemperatuur [°C] ophalen uit ha
+            # huidige boilertemperatuur [°C] ophalen uit ha
             boiler_act_temp = float(
                 self.get_state(self.boiler_options.entity_actual_temp).state
             )
@@ -2421,18 +2421,6 @@ class DaCalc(DaBase):
                 max(min_run_length, 1), 5
             )  # Alleen waarde tussen 1 en 5 uur mogelijk
             logging.info(f"Minimale runlengte {min_run_length} uur")
-
-            """
-            # een of meer intervallen minder als boiler via wp gaat
-            if (
-                boiler_heated_by_heatpump
-                and boiler_start is not None
-                and boiler_start < U
-            ):
-                boiler_int = est_needed_intv[boiler_start] + 1
-            else:
-                boiler_int = 0
-            """
 
             # geproduceerde warmte kWh per uur
             h_hp = [
