@@ -2791,13 +2791,13 @@ class DaCalc(DaBase):
 
                 # beschikbaar vermogen x aan/uit, want p_hpx[u] X hpx_on[u] kan niet
                 for u in range(U):
-                    model += hp_on[u] == xsum(hp_s_w[u][s] for s in range(S)[1:])
                     for s in range(S):
                         model += p_hp[s][u] == hp_stages[s]["max_power"] * hp_s_w[u][s]
                     """
                     # ieder interval/uur maar een aan
                     model += (xsum(hp_s_on[s][u] for s in range(S))) == 1
                     """
+                    # _link_pwl legt ook sum(hp_s_w[u][1:]) == hp_on[u] vast
                     _link_pwl(model, hp_s_w[u][1:], exact=True, gate=hp_on[u])
 
                     # geproduceerde warmte = vermogen in W * COP_schijf /1000 in kWh
