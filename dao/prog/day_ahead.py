@@ -1572,14 +1572,14 @@ class DaCalc(DaBase):
             for u in range(U)
         ]
 
-            # instant start
-            if boiler_instant_start:
-                model += boiler_start[0] == 1
+        # instant start
+        if boiler_instant_start:
+            model += boiler_start[0] == 1
 
-            # LOGICA VAN DE OPWARMINGSCYCLUS
-            for u in range(U):
-                # Een boiler_start betekent dat de boiler dit interval verwarmt
-                model += boiler_heat[u] >= boiler_start[u]
+        # LOGICA VAN DE OPWARMINGSCYCLUS
+        for u in range(U):
+            # Een boiler_start betekent dat de boiler dit interval verwarmt
+            model += boiler_heat[u] >= boiler_start[u]
 
             if u == 0:
                 # In het eerste interval kan alleen een start verwarming activeren
@@ -1646,12 +1646,12 @@ class DaCalc(DaBase):
                     <= boiler_max_temp + M * (1 - boiler_finish[u])
             )
 
-            # alleen opwarmen starten onder de stookgrens of bij instant_start
-            for u in range(U):
-                if not boiler_instant_start or u > 0:
-                    model += (
-                            boiler_temp[u] <= boiler_stook_grens + M * (1 - boiler_start[u])
-                    )
+        # alleen opwarmen starten onder de stookgrens of bij instant_start
+        for u in range(U):
+            if not boiler_instant_start or u > 0:
+                model += (
+                        boiler_temp[u] <= boiler_stook_grens + M * (1 - boiler_start[u])
+                )
 
         # boiler_end_value
         # gewaardeerd tegen gemiddelde elektriciteitsprijs.
