@@ -1405,6 +1405,8 @@ class DaCalc(DaBase):
                 "Boiler niet aanwezig of staat uit, boiler wordt niet ingepland"
             )
             boiler_heated_by_heatpump = False
+            boiler_end_value = model.add_var(var_type=CONTINUOUS, lb=0, ub=0)
+            model += boiler_end_value == 0
 
         else:
             #  boiler wordt geoptimaliseerd
