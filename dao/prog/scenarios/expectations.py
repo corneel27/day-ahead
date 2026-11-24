@@ -301,7 +301,14 @@ TIER_A_INVARIANTS: list[Invariant] = [
 
 
 def run_tier_a(rc: ResultContext) -> list[CheckResult]:
-    return [inv.check(rc) for inv in TIER_A_INVARIANTS]
+    """Run Solved first. If it fails, stop there: the other invariants read
+    solution values, and var.x is None when the solve found no solution, so
+    they would raise instead of reporting the INFEASIBLE result."""
+    solved, *rest = TIER_A_INVARIANTS
+    first = solved.check(rc)
+    if not first.ok:
+        return [first]
+    return [first] + [inv.check(rc) for inv in rest]
 
 
 # --- Setup checks --------------------------------------------------------

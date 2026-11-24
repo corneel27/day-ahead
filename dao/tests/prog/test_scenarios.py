@@ -142,6 +142,30 @@ def test_corpus_loads_with_unique_ids():
     assert ids and len(ids) == len(set(ids))
 
 
+def test_tier_a_stops_after_solved_fails_on_no_solution():
+    """An infeasible solve leaves var.x as None. Tier A must report the
+    'solved' failure and not run the invariants that compare var.x."""
+    from types import SimpleNamespace
+
+    from dao.prog.scenarios.expectations import ResultContext, run_tier_a
+
+    names = ["ac_to_dc_on", "ac_from_dc_on", "soc"]
+    by_idx = {i: (name, (0, 0)) for i, name in enumerate(names)}
+    model = SimpleNamespace(vars=[SimpleNamespace(x=None, lb=0.0, ub=1.0) for _ in names])
+    rc = ResultContext(
+        model=model,
+        registry=SimpleNamespace(by_idx=by_idx, samples={}),
+        log_text="",
+        num_solutions=0,
+    )
+
+    checks = run_tier_a(rc)
+
+    assert [c.name for c in checks] == ["solved"]
+    assert not checks[0].ok
+    assert "model has no solution" in checks[0].detail
+
+
 # ---------------------------------------------------------------------------
 # solving scenarios (opt-in)
 # ---------------------------------------------------------------------------
