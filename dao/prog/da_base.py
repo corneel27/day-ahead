@@ -1,3 +1,4 @@
+import calendar
 import datetime
 import fnmatch
 import json
@@ -300,6 +301,17 @@ class DaBase(hass.Hass):
                 datetime=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             )
 
+    @staticmethod
+    def check_neg_baseloads(weekday : int, baseload : list) -> list:
+        #check on negative values
+        neg_hours = [u for u, value in enumerate(baseload) if value < 0]
+        if neg_hours:
+            logging.warning(
+                f"Negative baseload on {calendar.day_name[weekday]} at hour(s) "
+                f"{', '.join(map(str, neg_hours))}; set to 0"
+            )
+        return [max(0, value) for value in baseload]
+
     def get_meteo_data(self, show_graph: bool = False):
         self.meteo.get_meteo_data(show_graph)
 
@@ -377,6 +389,7 @@ class DaBase(hass.Hass):
         in_file = "../data/baseload/baseload_" + str(weekday) + ".json"
         with open(in_file) as f:
             result = json.load(f)
+        result = DaBase.check_neg_baseloads(weekday, result)
         return result
 
     def calc_prod_solar(
