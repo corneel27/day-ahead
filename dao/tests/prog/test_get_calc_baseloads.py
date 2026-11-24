@@ -31,9 +31,9 @@ def test_check_neg_baseloads_warning(caplog):
     assert result == [100, 0, 50, 0, 0, 200]
 
     assert len(caplog.records) == 1
-    assert "There is a negative value in the baseload" in caplog.text
+    assert "Negative baseload on" in caplog.text
     assert "Monday" in caplog.text
-    assert "1 hour" in caplog.text
+    assert "hour(s) 1, 3, 4" in caplog.text
 
 
 def test_get_calculated_baseload(tmp_path, monkeypatch, caplog):
