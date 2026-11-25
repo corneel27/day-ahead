@@ -40,6 +40,29 @@ def test_full_configuration_file_roundtrip_preserves_private_and_unknown_values(
     assert persisted["boiler"]["entity actual temp."] == data["boiler"]["entity actual temp."]
 
 
+@pytest.mark.parametrize(
+    ("setting", "state", "expected"),
+    [
+        (None, None, 10.0),
+        (2.5, None, 2.5),
+        ("input_number.dao_consumption_weight", "0.5", 0.5),
+    ],
+)
+def test_consumption_weight_default_literal_and_entity(tmp_path, setting, state, expected):
+    data = json.loads(EXAMPLE.read_text())
+    data.pop("consumption weight", None)
+    if setting is not None:
+        data["consumption weight"] = setting
+    options = tmp_path / "options.json"
+    secrets = tmp_path / "secrets.json"
+    options.write_text(json.dumps(data))
+    secrets.write_text(json.dumps({}))
+    config = ConfigurationLoader(options, secrets).load_and_validate()
+
+    states = {setting: state} if state is not None else {}
+    assert config.consumption_weight.resolve(states.__getitem__) == expected
+
+
 def test_full_ui_schema_retains_aliases_discriminators_defaults_and_references():
     schema = VERSION_MODELS[CURRENT_VERSION].model_json_schema(by_alias=True)
     definitions = schema["$defs"]

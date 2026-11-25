@@ -2,8 +2,10 @@
 
 The Tier A structural invariants are properties that hold for any optimal
 solution, so they survive solver-version, CPU, and tie-breaking changes.
-They read the model through ModelView, the variable registry, never
-through log text. Hard fail, always run, never listed in expect.
+They read the model through ModelView, the variable registry. Two read the
+log too: Solved (the success line) and PlannedMachinesReported, which
+checks that day_ahead.py reports the machine starts the model chose. Hard
+fail, always run, never listed in expect.
 
 The setup checks are the always-on SETUP_MISMATCH, echo, and duty-sliver
 checks on a scenario's own overrides. Their own registry (@setup_check,
@@ -255,6 +257,37 @@ class EvChargeNonNegative(Invariant):
         return self._ok()
 
 
+class PlannedMachinesReported(Invariant):
+    """A machine the solver starts (an ma_start > 0.5) is not reported as
+    "Niet ingepland" after the solve. day_ahead.py writes the planned start
+    and end to HA from that same reading, so a mismatch means they never
+    reach HA. HiGHS returns binaries within its tolerance (0.9999999999999999),
+    which an exact == 1 comparison missed."""
+
+    name = "planned_machines_reported"
+
+    def check(self, rc):
+        mv = rc.mv
+        if mv is None or not mv.has("ma_start"):
+            return self._ok("no machines in this model")
+        planned = {m for (m, _kw), v in mv.items("ma_start") if v > 0.5}
+        # the post-solve report: one "Apparaat: <name>" section per machine, in order m
+        sections: list[tuple[str, list[str]]] = []
+        for line in rc.log_text.splitlines():
+            if "Apparaat: " in line:
+                sections.append((line.split("Apparaat: ", 1)[1].strip(), []))
+            elif sections:
+                sections[-1][1].append(line)
+        bad = [
+            f"{name} (m{m})"
+            for m, (name, lines) in enumerate(sections)
+            if m in planned and any("Niet ingepland" in line for line in lines)
+        ]
+        if bad:
+            return self._fail(f"planned by the solver, reported as 'Niet ingepland': {', '.join(bad)}")
+        return self._ok()
+
+
 TIER_A_INVARIANTS: list[Invariant] = [
     Solved(),
     NoSimultaneousChargeDischarge(),
@@ -263,11 +296,19 @@ TIER_A_INVARIANTS: list[Invariant] = [
     SocWithinLimits(),
     EvSingleRealStagePerInterval(),
     EvChargeNonNegative(),
+    PlannedMachinesReported(),
 ]
 
 
 def run_tier_a(rc: ResultContext) -> list[CheckResult]:
-    return [inv.check(rc) for inv in TIER_A_INVARIANTS]
+    """Run Solved first. If it fails, stop there: the other invariants read
+    solution values, and var.x is None when the solve found no solution, so
+    they would raise instead of reporting the INFEASIBLE result."""
+    solved, *rest = TIER_A_INVARIANTS
+    first = solved.check(rc)
+    if not first.ok:
+        return [first]
+    return [first] + [inv.check(rc) for inv in rest]
 
 
 # --- Setup checks --------------------------------------------------------
@@ -501,6 +542,32 @@ def _check_battery_flat_during(value: dict, ctx: CaseContext) -> CheckResult:
     return CheckResult("battery_flat_during", ok, detail)
 
 
+def _grid_kwh(ctx: CaseContext, container: str, window: range) -> float:
+    # c_l / c_t are already kWh per interval (bounded by max_power * hour_fraction)
+    mv = ctx.mv
+    if mv is None or not mv.has(container):
+        return 0.0
+    return sum(v for (u,), v in mv.items(container) if u in window)
+
+
+@case_check("grid_import_at_most")
+def _check_grid_import_at_most(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = _grid_kwh(ctx, "c_l", window)
+    ok = kwh <= value["max_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh imported in {value['start']}-{value['end']}, wanted <= {value['max_kwh']}"
+    return CheckResult("grid_import_at_most", ok, detail)
+
+
+@case_check("grid_export_during")
+def _check_grid_export_during(value: dict, ctx: CaseContext) -> CheckResult:
+    window = _window_range(ctx, value)
+    kwh = _grid_kwh(ctx, "c_t", window)
+    ok = kwh >= value["min_kwh"]
+    detail = "" if ok else f"{kwh:.3f} kWh exported in {value['start']}-{value['end']}, wanted >= {value['min_kwh']}"
+    return CheckResult("grid_export_during", ok, detail)
+
+
 @case_check("no_cross_battery_charge_discharge")
 def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> CheckResult:
     """No interval has one battery charging on the AC side while a
@@ -511,20 +578,24 @@ def _check_no_cross_battery_charge_discharge(value: bool, ctx: CaseContext) -> C
     battery's charge into another's discharge is only ever sub-optimal
     (AC/DC conversion losses, cycle cost), never infeasible. So this is a
     Tier B case check, opt-in per multi-battery scenario, not a structural
-    invariant."""
+    invariant.
+
+    Reads the AC flows (ac_to_dc / ac_from_dc), not the on/off binaries:
+    nothing forces ac_to_dc_on[b][u] to 0 when no energy flows, so a solver
+    may leave it at 1 with a zero flow (HiGHS does), which is not charging."""
     name = "no_cross_battery_charge_discharge"
     if not value:
         return CheckResult(name, True, "explicitly unchecked")
     mv = ctx.mv
-    if mv is None or not (mv.has("ac_to_dc_on") and mv.has("ac_from_dc_on")):
+    if mv is None or not (mv.has("ac_to_dc") and mv.has("ac_from_dc")):
         return CheckResult(name, True, "no AC-coupled battery in this model")
     charging: dict[int, set[int]] = {}
-    for (b, u), on in mv.items("ac_to_dc_on"):
-        if on > 0.5:
+    for (b, u), flow in mv.items("ac_to_dc"):
+        if flow > 1e-6:
             charging.setdefault(u, set()).add(b)
     discharging: dict[int, set[int]] = {}
-    for (b, u), on in mv.items("ac_from_dc_on"):
-        if on > 0.5:
+    for (b, u), flow in mv.items("ac_from_dc"):
+        if flow > 1e-6:
             discharging.setdefault(u, set()).add(b)
     bad = [
         f"u{u}: charging b{sorted(charging[u])}, discharging b{sorted(discharging[u])}"

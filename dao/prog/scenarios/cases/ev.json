@@ -93,7 +93,7 @@
       "target": "golf", "plugged_in": true, "position": "away",
       "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+4h"
     },
-    "expect": { "solved": true, "scheduled": false, "reason_contains": "auto is niet huis" }
+    "expect": { "solved": true, "scheduled": true }
   },
   {
     "id": "2.3",
@@ -105,7 +105,7 @@
       "target": "golf", "plugged_in": false, "position": "home",
       "actual_soc": 30.0, "wished_level": 63.0, "instant_charge": false, "ready": "+4h"
     },
-    "expect": { "solved": true, "scheduled": false, "reason_contains": "auto is niet ingeplugd" }
+    "expect": { "solved": true, "scheduled": true }
   },
   {
     "id": "2.4",

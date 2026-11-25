@@ -150,9 +150,8 @@ class HADatabaseConfig(BaseModel):
                 )
             if self.port is None:
                 self.port = 3306 if self.engine == "mysql" else 5432
-        elif self.engine == "sqlite":
-            if self.db_path is None:
-                self.db_path = "/homeassistant"
+        elif self.engine == "sqlite" and self.db_path is None:
+            self.db_path = "/homeassistant"
 
         if self.database is None:
             self.database = (
@@ -364,9 +363,8 @@ Then in options.json:
             if self.port is None:
                 self.port = 3306 if self.engine == "mysql" else 5432
 
-        elif self.engine == "sqlite":
-            if self.db_path is None and self.database is None:
-                self.db_path = "../data"
+        elif self.engine == "sqlite" and self.db_path is None and self.database is None:
+            self.db_path = "../data"
 
         if self.database is None:
             self.database = "day_ahead.db" if self.engine == "sqlite" else "day_ahead"

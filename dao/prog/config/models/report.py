@@ -3,7 +3,7 @@ Reporting configuration models.
 """
 
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .base import EntityId
 
@@ -121,7 +121,7 @@ class ReportConfig(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
-    co2_intensity_sensor: list[EntityId] | None | EntityId | None = Field(
+    co2_intensity_sensor: list[EntityId] | EntityId | None = Field(
         default=[],
         alias="entity co2-intensity",
         description="HA entity for CO2 intensity",
@@ -132,6 +132,12 @@ class ReportConfig(BaseModel):
             "x-ui-widget-filter": "sensor",
         },
     )
+
+    @field_validator("co2_intensity_sensor", mode="before")
+    @classmethod
+    def empty_co2_sensor_is_unset(cls, value):
+        return None if value == "" else value
+
     sensors: dict | None = Field(
         default=None,
         description="Additional sensors configuration",

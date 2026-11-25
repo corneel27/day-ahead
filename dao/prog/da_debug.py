@@ -3475,7 +3475,9 @@ def _max_known_interval(registry_by_idx: dict) -> int:
 # interval je opvraagt. Hergebruikt dezelfde inverse index als
 # dump_interval's binding-constraints-check, alleen nu over het hele model
 # in plaats van gefilterd op één u.
-def _find_dangling_int_columns(model, registry_by_idx: dict) -> dict:
+def _find_dangling_int_columns(
+    model, registry_by_idx: dict, creation_site: dict[int, str]
+) -> dict:
     inv = _inverse_var_constraint_index(model)
     dangling: dict[str, list[dict]] = {"I": [], "B": []}
     for v in model.vars:
@@ -3489,19 +3491,22 @@ def _find_dangling_int_columns(model, registry_by_idx: dict) -> dict:
                 "idx": v.idx,
                 "label": label_for_var(v, registry_by_idx),
                 "container": entry[0] if entry else None,
+                "site": creation_site.get(v.idx),
             }
         )
     return dangling
 
 
-# Groepeert een lijst dangling-vermeldingen per containernaam, met een
-# kleine steekproef van labels per groep — een platte lijst van
-# duizenden losse namen (zoals stage_on bij een echte config) is niet
-# leesbaar, een telling per container wel.
+# Telt de ongebruikte variabelen per groep (naam + regel van aanmaak), met
+# een paar namen als voorbeeld. Zo blijft de uitvoer leesbaar, en komen
+# variabelen zonder naam niet allemaal op één regel terecht.
 def _group_dangling(entries: list[dict]) -> dict[str, list[str]]:
     groups: dict[str, list[str]] = {}
     for e in entries:
-        groups.setdefault(e["container"] or "(unregistered)", []).append(e["label"])
+        key = e["container"] or "(unregistered)"
+        if e["site"]:
+            key = f"{key} from {e['site']}"
+        groups.setdefault(key, []).append(e["label"])
     return groups
 
 
@@ -3544,7 +3549,7 @@ def cmd_dangling(args: argparse.Namespace, data_dir: Path) -> int:
     if not registry:
         raise UsageError("no variable registry was captured")
 
-    dangling = _find_dangling_int_columns(model, registry.by_idx)
+    dangling = _find_dangling_int_columns(model, registry.by_idx, replay._creation_site)
     integer_count = sum(1 for v in model.vars if v.var_type == "I")
     binary_count = sum(1 for v in model.vars if v.var_type == "B")
 
@@ -3556,8 +3561,8 @@ def cmd_dangling(args: argparse.Namespace, data_dir: Path) -> int:
         "dangling_binary": dangling["B"],
     }
 
-    # Toont de dangling-kolommen gegroepeerd per container, met een
-    # steekproef van labels per groep.
+    # Toont de dangling-kolommen gegroepeerd per container en
+    # aanmaaklocatie.
     def render(d):
         print(
             f"integer variables: {d['integer_count']}  "
@@ -3574,12 +3579,12 @@ def cmd_dangling(args: argparse.Namespace, data_dir: Path) -> int:
             groups = _group_dangling(entries)
             print(
                 f"dangling {kind_label} columns ({len(entries)} total, "
-                f"{len(groups)} container(s)):"
+                f"{len(groups)} group(s)):"
             )
-            for container, labels in sorted(groups.items()):
+            for group, labels in sorted(groups.items()):
                 sample = ", ".join(labels[:3])
                 more = f", +{len(labels) - 3} more" if len(labels) > 3 else ""
-                print(f"  {container}: {len(labels)}  ({sample}{more})")
+                print(f"  {group}: {len(labels)}  ({sample}{more})")
         if not d["dangling_integer"] and not d["dangling_binary"]:
             print("no dangling integer/binary columns found")
         if d["dangling_integer"]:
@@ -4152,7 +4157,10 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
         c = model.add_var(var_type=CONTINUOUS)
         model += c == used_int + used_bin
         registry = build_var_registry(locals())
-        dangling = _find_dangling_int_columns(model, registry.by_idx)
+        site = "day_ahead.py:123"
+        dangling = _find_dangling_int_columns(
+            model, registry.by_idx, {dangling_int.idx: site}
+        )
         dangling_int_labels = {e["label"] for e in dangling["I"]}
         if "dangling_int" not in dangling_int_labels:
             raise AssertionError("failed to detect a genuinely dangling INTEGER var")
@@ -4160,6 +4168,8 @@ def cmd_selftest(args: argparse.Namespace, data_dir: Path) -> int:
             raise AssertionError("false positive: used_int is referenced in a constraint")
         if any(e["label"] == "used_bin" for e in dangling["B"]):
             raise AssertionError("false positive: used_bin is referenced in a constraint")
+        if list(_group_dangling(dangling["I"])) != [f"dangling_int from {site}"]:
+            raise AssertionError("creation site missing from the dangling group")
 
     for name, fn in [
         ("dataframe_roundtrip", _dataframe_roundtrip),

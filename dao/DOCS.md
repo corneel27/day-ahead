@@ -624,14 +624,13 @@ Daar zijn m.i.v. 2025.11.2 de volgende bijgekomen:
 Vanaf versie 2025.12.0 is daar bijgekomen:
 - boiler setting: heating allowed below
 
+Daarna is daar bijgekomen:
+- consumption weight
+
 
 Enkele voorbeelden (van het gebruik van flex setting): 
 1. tot nu toe was het boiler-setpoint en boiler hysterese een vast getal, als je daar een entiteit in HA van maakt dan kun je eens in de week of twee weken
-met een automation dit setpoint en de hysterese tijdelijk ophogen zodat een legionella door DAO wordt ingepland.
-2. Als je als strategy primair kiest voor "minimize consumption" komt het soms voor dat DAO geen oplossing vindt.
-Je krijgt dan een waarschuwing. Via je notification-instelling (zie daar) kun je die waarschuwing naar een HA input_text laten sturen. 
-Als je daar een automation aanhangt kun je je strategy omzetten naar "minimize cost" en via een rest-commando (zie daar)
-de berekening opnieuw uit laten voeren.<br>
+met een automation dit setpoint en de hysterese tijdelijk ophogen zodat een legionella door DAO wordt ingepland.<br>
 
 **Kortom**: als je het via HA wilt laten lopen heb je wat meer in te stellen en kun je er veel mee, maar het hoeft niet. 
 Het is allemaal optioneel.
@@ -685,6 +684,7 @@ Het is allemaal optioneel.
 |                           | show                          | boolean          | "False"                            |                                                    |
 | **strategy**              |                               | string           | "minimize cost"                    | "minimize cost" of "minimize consumption"          |
 | **max gap**               |                               | getal            | 0.005                              | tussen 0.00001 en 1.00000                          |
+| **consumption weight**    |                               | getal            | 10                                 | euro/kWh, tussen 0 en 100                          |
 | **notifications**         | notification entity           | string           | ""                                 |                                                    | 
 |                           | opstarten                     | boolean          | "False"                            | 
 |                           | berekening                    | boolean          | "False"                            |                                                    | 
@@ -805,7 +805,7 @@ Het is allemaal optioneel.
 |                           | entities machine consumption  | list of string   | []                                 |                                                    | 
 |                           | entities battery consumption  | list of string   | []                                 |                                                    | 
 |                           | entities battery production   | list of string   | []                                 |                                                    | 
-|                           | entity co2-intensity          | list of string   | []                                 |                                                    |
+|                           | co2_intensity_sensor          | list of string   | []                                 | One CO2 intensity sensor (g CO2/kWh)               |
 | **scheduler**             | active                        | boolean          | True                               | 
 |                           |                               | list             | {time, task}                       |                                                    | 
 
@@ -1130,6 +1130,9 @@ Als voorbeeld levert deze het volgende resultaat:
   ![img_3.png](./images/img_3.png)
   * minimize consumption<br>
     Deze strategie minimaliseert je levering (kWh) en streeft daarmee naar "nul op de meter" bij zo laag mogelijke kosten.
+    Eerst haalt DAO zo weinig mogelijk van het net. Kunnen batterij en zonnepanelen niet alles dekken, dan haalt DAO de rest in de goedkoopste uren.
+    Is er te veel energie, dan verkoopt DAO het overschot in de duurste uren.
+    Hoe streng dit gebeurt stel je in met **consumption weight** (zie daar).
 Onder dezelfde condities levert deze strategie een ander verbruikspatroon op:
   ![img_4.png](./images/img_4.png)
 
@@ -1140,6 +1143,25 @@ Als een berekening te lang duurt kun je deze waarde ophogen tot maximaal 1.0.
 **max gap** is een **flex setting** die je zowel direct in je instellingen kunt instellen, maar hij kan ook ingesteld worden met een entity in HA.  
 In dat geval geef je bij je setting geen getal op maar de naam van entity in HA.
 Bijvoorbeeld: ``"max gap" : "input_number.dao_max_gap",``
+
+### **consumption weight**
+Alleen van belang bij de strategie "minimize consumption". Default 10 (euro/kWh).<br>
+Het bedrag in euro dat je per kWh wilt opgeven om geen stroom van het net te halen.
+DAO haalt alleen extra stroom van het net als dat meer dan dit bedrag per kWh oplevert.
+Het is een weging voor de berekening, geen echte kosten: je ziet het niet terug in de kosten, de winst of het overzicht.
+
+| waarde | wat DAO doet |
+|---|---|
+| 10 (default) | Eerst zo min mogelijk van het net, ook als de batterij daarvoor onder het "optimal lower level" moet. Daarna zo goedkoop mogelijk. |
+| 1 | Haalt iets meer van het net als dat de straf voor een lege batterij of EV vermijdt. |
+| 0,05 – 0,5 | Gedeeltelijk. DAO handelt minder, maar haalt nog stroom van het net als dat goed betaalt. |
+| 0 | Gelijk aan "minimize cost". |
+
+Zonder salderen (tax refund uit) is teruglevering minder waard dan zelf verbruiken.
+Bij alleen zonnepanelen en batterij dekt DAO dan met een waarde van 0,2 tot 0,5 al bijna al het verbruik zelf; met een boiler, warmtepomp of EV is 1 nodig.<br>
+Een waarde buiten 0 - 100 wordt afgekapt; is de waarde geen getal (bijvoorbeeld een entity die "unavailable" is), dan rekent DAO met 10.<br>
+**consumption weight** is een **flex setting**: je kunt ook de naam van een entity in HA opgeven.
+Bijvoorbeeld: ``"consumption weight" : "input_number.dao_consumption_weight",``
 
 ### **notifications**
 
@@ -1588,7 +1610,7 @@ Als voorbeeld: zo heb ik deze lijst ingevuld:
     "entities machine consumption": [],
     "entities battery consumption": ["sensor.ess_grid_consumption"],
     "entities battery production": ["sensor.ess_grid_production"],
-    "entity co2-intensity": ["sensor.co2_intensity"]
+    "co2_intensity_sensor": "sensor.co2_intensity"
   },
 ```
 
@@ -1597,7 +1619,7 @@ Het programma beschikt over een mogelijkheid om je CO2-emissie te berekenen en t
 Deze mogelijkheid moet je zelf activeren in enkele stappen:
 1.  Activeer en configureer in Home Assistant de integratie: "Electricity Maps" (free tier, account).
 2. Als het goed is gegaan komen er in HA twee sensoren bij, maar het gaat om de sensor **CO2-intensity** (g CO2 eq/kWh). <br>
-Vul de naam van die sensor in bij report:<br> `"entity co2-intensity": ["sensor.co2_intensity"]` (zie hierboven).
+Vul de naam van die sensor in bij report:<br> `"co2_intensity_sensor": "sensor.co2_intensity"` (zie hierboven). De oudere vorm `"entity co2-intensity": ["sensor.co2_intensity"]` blijft ondersteund. Gebruik één sensor: meerdere intensiteitssensoren worden opgeteld en geven een onjuiste emissie.
 3. Herstart DAO via Instellingen/Add-ons/DAO
 4. Ga naar het dashboard van DAO en klik op Report.
 5. Je krijgt nu (naast grid en balans) een extra rapportage item: **CO2**

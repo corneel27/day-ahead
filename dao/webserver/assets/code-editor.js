@@ -16,6 +16,7 @@ import FindAndReplace from '@webcoder49/code-input/plugins/find-and-replace.mjs'
 import '@webcoder49/code-input/code-input.css'
 import '@webcoder49/code-input/plugins/prism-line-numbers.css'
 import '@webcoder49/code-input/plugins/find-and-replace.css'
+import './code-editor.scss'
 
 
 registerTemplate(

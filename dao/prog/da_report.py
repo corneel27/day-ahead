@@ -41,6 +41,12 @@ def calc_r2(serie_x: pd.Series, serie_y: pd.Series) -> float:
     return r2_score(serie_x, serie_y)
 
 
+def normalize_co2_sensors(value):
+    if isinstance(value, str):
+        return [value] if value else []
+    return value if isinstance(value, list) else []
+
+
 class Report(DaBase):
     periodes = {}
 
@@ -62,7 +68,9 @@ class Report(DaBase):
         self.battery_consumption_sensors = _r.entities_battery_consumption if _r else []
         self.solar_production_ac_sensors = _r.entities_solar_production_ac if _r else []
         _co2 = _r.co2_intensity_sensor if _r else []
-        self.co2_intensity_sensor = [_co2] if type(_co2) is str else _co2 if type(_co2) is list else []
+        self.co2_intensity_sensor = normalize_co2_sensors(_co2)
+        if len(self.co2_intensity_sensor) > 1:
+            logging.warning("Multiple CO2 intensity sensors are summed; configure one sensor to avoid incorrect emissions")
         self.ev_consumption_sensors = _r.entities_ev_consumption if _r else []
         self.wp_consumption_sensors = _r.entities_wp_consumption if _r else []
         self.boiler_consumption_sensors = _r.entities_boiler_consumption if _r else []
@@ -2009,17 +2017,16 @@ class Report(DaBase):
                         table="prognoses",
                     )
                     self.add_col_df(df_column, result, key)
-            elif calc_dict["series"][key]["source"] == "prices":
-                if key not in result.columns:
-                    df_prices = self.get_price_data(vanaf, tot)
-                    df_prices.reset_index(drop=True, inplace=True)
-                    result.reset_index(drop=True, inplace=True)
-                    # df_prices.rename(columns={'time': 'tijd'}, inplace=True)
-                    # df_prices["tijd"] = pd.to_datetime(df_prices["tijd"])
-                    # df_prices.index = df_prices["tijd"]
-                    result["da_cons"] = df_prices["da_cons"]
-                    result["da_prod"] = df_prices["da_prod"]
-                    result.index = result["tijd"]
+            elif calc_dict["series"][key]["source"] == "prices" and key not in result.columns:
+                df_prices = self.get_price_data(vanaf, tot)
+                df_prices.reset_index(drop=True, inplace=True)
+                result.reset_index(drop=True, inplace=True)
+                # df_prices.rename(columns={'time': 'tijd'}, inplace=True)
+                # df_prices["tijd"] = pd.to_datetime(df_prices["tijd"])
+                # df_prices.index = df_prices["tijd"]
+                result["da_cons"] = df_prices["da_cons"]
+                result["da_prod"] = df_prices["da_prod"]
+                result.index = result["tijd"]
         return result
 
     def get_grid_data(
@@ -3211,7 +3218,7 @@ class Report(DaBase):
             ]
             row = ["R²", "", r2_radiation, "", r2_dao, r2_ml]
             result.loc[result.shape[0]] = row
-            result.fillna("", inplace=True)
+            result = result.astype(object).fillna("")
 
         return result
 
@@ -3239,7 +3246,7 @@ class Report(DaBase):
         count = 0
         df = sensor_data.iloc[::-1]
         for row in df.itertuples():
-            if row.hp > 0:
+            if row.hp > 0.05:    # Standby usage of <50 W is not considered an indication that the pump is running
                 count += 1
             else:
                 break
@@ -3603,14 +3610,25 @@ class Report(DaBase):
             .cte("filtered_statistics")
         )
 
+        # HA stores energy statistics in the sensor's own unit; the report
+        # works in kWh.
+        unit_factor = case(
+            (statistics_meta.c.unit_of_measurement == "Wh", 0.001),
+            (statistics_meta.c.unit_of_measurement == "MWh", 1000.0),
+            else_=1.0,
+        )
+
         sensor_values_cte = (
             select(
                 intervals_cte.c.ts_start.label("ts"),
                 sensors_cte.c.code.label("code"),
                 sensors_cte.c.sensor.label("sensor"),
                 (
-                    func.max(filtered_statistics.c.sum)
-                    - func.min(filtered_statistics.c.sum)
+                    (
+                        func.max(filtered_statistics.c.sum)
+                        - func.min(filtered_statistics.c.sum)
+                    )
+                    * unit_factor
                 ).label("sensor_value"),
             )
             .select_from(
@@ -3635,6 +3653,7 @@ class Report(DaBase):
                 intervals_cte.c.ts_start,
                 sensors_cte.c.code,
                 sensors_cte.c.sensor,
+                statistics_meta.c.unit_of_measurement,
             )
             .cte("sensor_values")
         )

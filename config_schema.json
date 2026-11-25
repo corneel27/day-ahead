@@ -3202,8 +3202,8 @@
   "description": "Configuration schema for the Day Ahead Optimizer Home Assistant add-on. This schema defines all available configuration options including battery settings, solar panels, pricing, scheduler, graphics, and more.",
   "properties": {
     "config_version": {
-      "const": 0,
-      "default": 0,
+      "const": 2,
+      "default": 2,
       "title": "Config Version",
       "type": "integer"
     },
@@ -3252,13 +3252,48 @@
       "x-ui-group": "DAO",
       "x-ui-section": "Your home"
     },
+    "meteo_forecast_source": {
+      "default": "meteoserver",
+      "description": "where do you get the forecast meteodata from: 'meteoserver' (default) or 'openmeteo'",
+      "enum": [
+        "meteoserver",
+        "openmeteo"
+      ],
+      "title": "Meteo Forecast Source",
+      "type": "string",
+      "x-help": "For Meteoserver you need an API access key (fill in at 'meteoserver_key'), you have max 500 requests free each monthOpenmeteo is total free (non commercial) with practical no limitations",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Weather",
+      "x-validation-hint": "Use !secret for API keys"
+    },
+    "meteo_history_source": {
+      "default": "knmi",
+      "description": "where do you get the history meteodata from: 'knmi' (default) or 'openmeteo'",
+      "enum": [
+        "knmi",
+        "openmeteo"
+      ],
+      "title": "Meteo History Source",
+      "type": "string",
+      "x-help": "Both source are free (non commercial) , with no practical limits",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Weather",
+      "x-validation-hint": "Use !secret for API keys"
+    },
     "meteoserver-key": {
-      "$ref": "#/$defs/SecretStr",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SecretStr"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
       "description": "Meteoserver API key (can use !secret)",
       "x-help": "Meteoserver API access key. Get from Meteoserver.nl account. Use !secret for security. Required for weather forecasts.",
       "x-ui-group": "DAO",
       "x-ui-section": "Weather",
-      "x-validation-hint": "Use !secret for API keys",
       "title": "Meteoserver Key"
     },
     "meteoserver-model": {
@@ -3454,6 +3489,19 @@
       "x-validation-hint": "Must be > 0",
       "title": "Max Gap"
     },
+    "consumption weight": {
+      "$ref": "#/$defs/FlexFloat",
+      "default": 10.0,
+      "description": "Weight per kWh of grid consumption for strategy 'minimize consumption' (or HA entity ID returning the weight)",
+      "x-help": "Only used with strategy 'minimize consumption'. The amount in euro per kWh you are willing to give up to avoid consumption from the grid: the optimizer only takes extra energy from the grid when that gains more than this per kWh. The weight is for the optimizer only; it is not a cost and does not appear in costs, profit or reports. 10 (default): first as little grid consumption as possible, then the lowest cost. 1: takes a little more from the grid to avoid the penalty for a low battery or EV level. 0.05-0.5: partial, still trades when it pays well. 0: the same as 'minimize cost'. Valid range: 0-100.",
+      "x-order": 4,
+      "x-ui-group": "DAO",
+      "x-ui-section": "Optimization",
+      "x-ui-widget-filter": "input_number,number,sensor",
+      "x-unit": "euro/kWh",
+      "x-validation-hint": "0-100, or HA entity ID",
+      "title": "Consumption Weight"
+    },
     "notifications": {
       "$ref": "#/$defs/NotificationsConfig",
       "description": "Notification settings",
@@ -3592,11 +3640,24 @@
       "$ref": "#/$defs/SchedulerConfig",
       "description": "Task scheduler configuration",
       "title": "Scheduler"
+    },
+    "meteoserver-attempts": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": 2,
+      "description": "Number of meteoserver fetch attempts",
+      "title": "Meteoserver-Attempts",
+      "x-ui-group": "DAO",
+      "x-ui-section": "Weather"
     }
   },
-  "required": [
-    "meteoserver-key"
-  ],
   "title": "Day Ahead Optimizer Configuration",
   "type": "object",
   "$schema": "http://json-schema.org/draft-07/schema#"

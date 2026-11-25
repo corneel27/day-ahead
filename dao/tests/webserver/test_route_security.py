@@ -80,6 +80,48 @@ def client():
     return app.test_client()
 
 
+@pytest.mark.parametrize("path,subject", [("reports", "co2"), ("savings", "save_co2")])
+def test_v2_co2_choices_and_forecast_period(client, monkeypatch, path, subject):
+    monkeypatch.setattr(v2_routes, "co2_sensor_config", lambda: "sensor.co2")
+    generate = Mock(return_value=["report"])
+    monkeypatch.setattr(v2_routes, "reports_gen", generate)
+    monkeypatch.setattr(v2_routes, "vite_tags", lambda _: "")
+    response = client.get(f"/v2/{path}?subject={subject}&period=morgen")
+    assert response.status_code == 200
+    assert b'CO2' in response.data
+    assert b'value="morgen"' not in response.data
+    generate.assert_called_once_with(subject, "tabel", "vandaag")
+
+
+@pytest.mark.parametrize("path,subject", [("reports", "co2"), ("savings", "save_co2")])
+def test_v2_co2_unavailable_without_sensor(client, monkeypatch, path, subject):
+    monkeypatch.setattr(v2_routes, "co2_sensor_config", lambda: None)
+    assert client.get(f"/v2/{path}?subject={subject}").status_code == 404
+
+
+def test_v2_warns_when_multiple_co2_sensors_are_configured(client, monkeypatch):
+    monkeypatch.setattr(v2_routes, "co2_sensor_config", lambda: ["sensor.one", "sensor.two"])
+    monkeypatch.setattr(v2_routes, "reports_gen", Mock(return_value=["report"]))
+    monkeypatch.setattr(v2_routes, "vite_tags", lambda _: "")
+    response = client.get("/v2/reports?subject=co2")
+    assert b"Multiple CO2 intensity sensors are summed" in response.data
+
+
+@pytest.mark.parametrize("subject,method,options", [
+    ("co2", "calc_co2_emission", "co2_graph_options"),
+    ("save_co2", "calc_saving_co2", "saving_co2_graph_options"),
+])
+@pytest.mark.parametrize("view", ["tabel", "grafiek"])
+def test_v2_co2_dispatch(monkeypatch, subject, method, options, view):
+    report = Mock()
+    report.periodes = {"vandaag": {"tot": v2_routes.datetime.datetime.now(), "interval": "uur"}}
+    monkeypatch.setattr(v2_routes, "Report", Mock(return_value=report))
+    v2_routes.reports_gen(subject, view, "vandaag")
+    getattr(report, method).assert_called_once()
+    if view == "grafiek":
+        assert report.make_graph.call_args.args[2] is getattr(report, options)
+
+
 @pytest.mark.parametrize(("dim", "stepped"), [("kWh", False), ("euro/kWh", True)])
 def test_datasets_config_reflects_variable_table(monkeypatch, dim, stepped):
     engine = create_engine("sqlite:///:memory:")
