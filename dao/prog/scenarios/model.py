@@ -29,6 +29,10 @@ KNOWN_EXPECT_KEYS = {
     "no_cross_battery_charge_discharge",
     "heatpump_runs",
     "machine_runs_in_window",
+    "boiler_starts",
+    "boiler_heatpump_exclusive",
+    "log_contains",
+    "log_not_contains",
 }
 
 

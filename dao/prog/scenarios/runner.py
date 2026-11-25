@@ -279,7 +279,7 @@ def run_scenario(
         log_path = str(dest)
 
     rc = ResultContext(model=model, registry=registry, log_text=log_text,
-                       num_solutions=num_solutions)
+                       num_solutions=num_solutions, config=config)
     tier_a_checks = run_tier_a(rc)
 
     solved = next(c for c in tier_a_checks if c.name == "solved")
@@ -306,7 +306,7 @@ def run_scenario(
         grid=model_grid(start, scenario.fixed_hours, scenario.predicted_hours),
         row_hours=model_row_hours(scenario.fixed_hours, scenario.predicted_hours),
         objective=objective, max_gap=max_gap, reads=reads, requested_states=requested_states,
-        config=config, expanded_ev=expanded_ev, parsed_target=parsed_target, parsed_other=parsed_other,
+        config=config, log_text=log_text, expanded_ev=expanded_ev, parsed_target=parsed_target, parsed_other=parsed_other,
     )
     setup_checks = run_setup_checks(case_ctx)
     case_checks = run_case_checks(scenario.expect, case_ctx)
