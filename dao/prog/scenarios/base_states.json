@@ -24,7 +24,7 @@
   "sensor.boiler_gemeten": "45",
   "sensor.boiler_ingesteld": "50",
   "sensor.ess_battery_soc": "50",
-  "sensor.hysterese_hot_water": "2",
+  "sensor.hysterese_hot_water": "10",
   "sensor.wvwzzz_battery_level": "50",
   "switch.wvwzzzauz_charging": "off"
 }
