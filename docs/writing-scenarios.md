@@ -58,8 +58,11 @@ on the 15-minute grid, then the predicted hours on an hourly grid, as
 day_ahead.py solves them. `solar`, `baseload` and `temp` cover the whole
 horizon, fixed plus predicted hours. `extension-96h-predicted-dip` in
 `cases/extension.json` is the worked example. It also sets
-`boiler.boiler_present` to `false`, because the boiler is infeasible on
-synthetic horizons longer than about 36 hours.
+`boiler.boiler_present` to `false`. The single-start boiler model could heat
+the boiler only once per horizon, which is infeasible on horizons longer than
+about 36 hours. The multi-start model (PR #1082) removes that limit:
+`boiler-96h-multiple-starts` in `cases/boiler.json` solves the same 96-hour
+prices with the boiler on.
 
 ## 3. A worked example
 
@@ -81,7 +84,7 @@ build a new scenario.
 ```
 
 `scenario-run price-negative-window --log` passed. The per-interval dispatch
-(see the debugging tip in §8) showed a problem, though. The battery charged
+(see the debugging tip in §9) showed a problem, though. The battery charged
 and discharged in alternating 15-minute intervals through the window instead
 of climbing steadily. This is the DC-side simultaneity looseness described in
 [`testing.md`](testing.md) §3. Four straight hours of a flat, strongly
@@ -121,6 +124,13 @@ them off. They check:
 - every variable within its declared bounds
 - SoC within limits
 - at most one real EV charge stage per interval
+- no "Onverwachte fout" in the log: the post-solve HA output did not stop on
+  a caught exception
+- every boiler heating cycle starts at or below `heating_allowed_below`
+  (except in interval 0), runs at full power until its last interval and
+  ends at the setpoint (multi-start boiler model only)
+- the boiler trigger and the "ingepland vanaf" line in the log agree with
+  the boiler plan
 
 [`testing.md`](testing.md) §3 explains why they are separate from the Tier B
 case checks.
@@ -150,6 +160,10 @@ wrong, so the report gives it a line of its own:
 | `grid_export_during` | `{"start", "end", "min_kwh": N}` | `c_t` | total kWh exported to the grid in the window ≥ `min_kwh` |
 | `heatpump_runs` | `{"start", "end", "runs": bool}` (`runs` default `true`) | `p_hp` | heat pump's summed power in the window is `>1 W` iff `runs` |
 | `machine_runs_in_window` | `{"machine": "name", "start", "end", "runs": bool}` | `c_ma_u` | the named machine's consumption in the window is `>0` iff `runs` |
+| `boiler_starts` | `{"start", "end", "min": N, "max": N}`, all optional | `boiler_start` (or `boiler_st`) | number of boiler heating cycles that start in the window is in [`min`, `max`]. Without `start`/`end` the window is the whole horizon. No boiler plan counts as zero starts |
+| `boiler_heatpump_exclusive` | `bool` | `boiler_heat`, `c_hp` | no interval has the boiler heating and heat pump consumption above zero |
+| `log_contains` | `str` or list of `str` | Python log | every string is in the log |
+| `log_not_contains` | `str` or list of `str` | Python log | no string is in the log |
 | `scheduled` / `other_scheduled` | `bool` | parsed EV log | EV-specific, see `cases/ev.json` |
 | `reason_contains` | `str` | parsed EV log | substring of day_ahead.py's own Dutch reasoning |
 | `partial_at_least` | `int` | parsed EV log | EV-specific |
@@ -268,7 +282,26 @@ heat pump scenario then raises `SnapshotMiss: entity 'X' is not present`, the
 cause is the same. Add the entity to `base_states.json` with a neutral value,
 as the other 28 were added.
 
-## 8. Debugging a scenario that does not do what you expect
+## 8. Boiler scenarios
+
+The boiler is on in every scenario unless the scenario sets
+`boiler.boiler_present` to `false`. `options_example.json` and
+`base_states.json` give a 180 L boiler with COP 2.9 and 1.5 kW, cooling at
+0.4 K/h, heating allowed below 44 °C, setpoint 50 °C, hysteresis 10 K, and an
+actual temperature of 45 °C. On the 15-minute grid it heats at about
+17.7 K/h, so a full cycle from 40 to 50 °C takes about 35 minutes. From 45 °C
+it may start at 02:30 (44 °C) and must start before 12:30 (40 °C).
+
+Set the temperatures through `states` (`sensor.boiler_gemeten`,
+`sensor.boiler_ingesteld`, `sensor.hysterese_hot_water`) and the rest
+through `config_patch` (`boiler.cooling_rate.value`,
+`boiler.heating_allowed_below.value`). The optional entities
+`entity_instant_start` and `entity_enabled` are not configured in
+`options_example.json`. Configure them with `config_patch` and give the new
+entity a value in `states`, as `boiler-instant-start` and
+`boiler-disabled-by-entity` in `cases/boiler.json` do.
+
+## 9. Debugging a scenario that does not do what you expect
 
 - `scenario-show <id>` confirms the resolved inputs before you spend solver
   time.
@@ -287,7 +320,7 @@ as the other 28 were added.
   usual cause is a typo, or an entity that is not wired to the asset you
   think it configures.
 
-## 9. Adding a case file
+## 10. Adding a case file
 
 The suite picks up any `dao/prog/scenarios/cases/*.json` file automatically.
 No registration list exists. Follow the shape of the existing files: a

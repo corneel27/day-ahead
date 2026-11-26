@@ -48,11 +48,14 @@ class CheckResult:
 class ResultContext:
     """What the invariants see after a solve."""
 
-    def __init__(self, *, model, registry, log_text: str, num_solutions: int):
+    def __init__(self, *, model, registry, log_text: str, num_solutions: int,
+                 config: dict | None = None):
         self.model = model
         self.registry = registry
         self.log_text = log_text
         self.num_solutions = num_solutions
+        # the sanitised config the scenario solved with; None in unit tests
+        self.config = config or {}
         self._mv = None
         if model is not None and registry:
             from .modelview import ModelView
@@ -288,6 +291,120 @@ class PlannedMachinesReported(Invariant):
         return self._ok()
 
 
+UNEXPECTED_ERROR_LINE = "Onverwachte fout"
+BOILER_TRIGGER_LINE = "Boiler opwarmen zou zijn geactiveerd"
+BOILER_PLANNED_LINE = "Boiler opwarmen ingepland vanaf"
+
+
+class NoUnexpectedError(Invariant):
+    """day_ahead.py wraps the whole post-solve HA output (boiler, grid,
+    battery, EV, machines, heat pump) in one try/except that logs
+    "Onverwachte fout" and carries on. A solve can then look fine while
+    nothing after the failing line reaches HA. Any such line is a bug."""
+
+    name = "no_unexpected_error"
+
+    def check(self, rc):
+        bad = [line.strip() for line in rc.log_text.splitlines() if UNEXPECTED_ERROR_LINE in line]
+        if bad:
+            return self._fail("; ".join(bad[:3]))
+        return self._ok()
+
+
+def boiler_containers(mv) -> tuple[str | None, str | None]:
+    """(start, heat) container names of the boiler model in this solve.
+    The multi-start model (PR #1082) names them boiler_start/boiler_heat;
+    the single-start model before it named them boiler_st/boiler_on."""
+    if mv is None:
+        return None, None
+    if mv.has("boiler_start"):
+        return "boiler_start", "boiler_heat"
+    if mv.has("boiler_st"):
+        return "boiler_st", "boiler_on"
+    return None, None
+
+
+def boiler_start_intervals(mv) -> list[int]:
+    start, _heat = boiler_containers(mv)
+    if start is None:
+        return []
+    return sorted(u for (u,), v in mv.items(start) if v is not None and v > 0.5)
+
+
+class BoilerCycleConsistent(Invariant):
+    """Every heating cycle of the multi-start boiler model follows the
+    physical rules day_ahead.py means to encode:
+
+    - a start after interval 0 happens at or below heating_allowed_below
+      (interval 0 is exempt: instant start may force it there);
+    - a heating interval that is not the last one of its cycle runs at full
+      power (the real boiler cannot modulate);
+    - the last interval of a cycle (boiler_finish) ends at the setpoint,
+      the upper bound of boiler_temp.
+
+    Only runs on the multi-start model (boiler_finish present)."""
+
+    name = "boiler_cycle_consistent"
+
+    def check(self, rc):
+        mv = rc.mv
+        if mv is None or not mv.has("boiler_finish"):
+            return self._ok("no multi-start boiler in this model")
+        tol = 1e-3
+        bad = []
+        temp_ub = mv.var("boiler_temp", 0).ub
+        limit = None
+        hab = (rc.config.get("boiler") or {}).get("heating_allowed_below")
+        if isinstance(hab, dict) and isinstance(hab.get("value"), (int, float)):
+            limit = min(float(hab["value"]), temp_ub)
+        for (u,), started in mv.items("boiler_start"):
+            if started > 0.5 and u > 0 and limit is not None:
+                t = mv.value("boiler_temp", u)
+                if t > limit + tol:
+                    bad.append(f"start at u{u} with temp {t:.2f} > heating limit {limit}")
+        for (u,), heat in mv.items("boiler_heat"):
+            if heat <= 0.5:
+                continue
+            finish = mv.value("boiler_finish", u) > 0.5
+            c_b = mv.value("c_b", u)
+            if finish:
+                t_end = mv.value("boiler_temp", u + 1)
+                if abs(t_end - temp_ub) > tol:
+                    bad.append(f"cycle finishes at u{u} with temp {t_end:.2f}, setpoint {temp_ub}")
+            else:
+                full = mv.var("c_b", u).ub
+                if c_b < full - tol:
+                    bad.append(f"u{u} heats at {c_b:.3f} kWh, not full power {full:.3f}")
+        if bad:
+            return self._fail("; ".join(bad[:6]))
+        return self._ok()
+
+
+class BoilerTriggerReported(Invariant):
+    """The post-solve output agrees with the boiler plan. day_ahead.py
+    triggers the boiler in HA exactly when c_b[0] > 1e-4 (in a debug run it
+    logs BOILER_TRIGGER_LINE instead), and it logs BOILER_PLANNED_LINE when
+    the plan has a start. A plan the output does not report never reaches HA."""
+
+    name = "boiler_trigger_reported"
+
+    def check(self, rc):
+        mv = rc.mv
+        start, _heat = boiler_containers(mv)
+        if start is None:
+            return self._ok("no boiler plan in this model")
+        bad = []
+        heats_now = mv.value("c_b", 0) > 1e-4
+        triggered = BOILER_TRIGGER_LINE in rc.log_text
+        if heats_now != triggered:
+            bad.append(f"c_b[0] > 0 is {heats_now} but trigger line logged is {triggered}")
+        if boiler_start_intervals(mv) and BOILER_PLANNED_LINE not in rc.log_text:
+            bad.append(f"plan has a start but {BOILER_PLANNED_LINE!r} is not in the log")
+        if bad:
+            return self._fail("; ".join(bad))
+        return self._ok()
+
+
 TIER_A_INVARIANTS: list[Invariant] = [
     Solved(),
     NoSimultaneousChargeDischarge(),
@@ -297,6 +414,9 @@ TIER_A_INVARIANTS: list[Invariant] = [
     EvSingleRealStagePerInterval(),
     EvChargeNonNegative(),
     PlannedMachinesReported(),
+    NoUnexpectedError(),
+    BoilerCycleConsistent(),
+    BoilerTriggerReported(),
 ]
 
 
@@ -433,6 +553,7 @@ class CaseContext:
     reads: set[str]
     requested_states: dict[str, Any]
     config: dict[str, Any] = field(default_factory=dict)
+    log_text: str = ""  # the solve's Python log, for log_contains/log_not_contains
     expanded_ev: Any | None = None  # ev.ExpandedEv
     parsed_target: Any | None = None  # parsing.ParsedEvRun
     parsed_other: Any | None = None  # parsing.ParsedEvRun
@@ -665,6 +786,72 @@ def _check_machine_runs_in_window(value: dict, ctx: CaseContext) -> CheckResult:
         f"{value['start']}-{value['end']}: {ran}, expected {value.get('runs', True)}"
     )
     return CheckResult("machine_runs_in_window", ok, detail)
+
+
+@case_check("boiler_starts")
+def _check_boiler_starts(value: dict, ctx: CaseContext) -> CheckResult:
+    """Number of boiler heating cycles that start in the window lies in
+    [min, max]. Either bound may be left out. Without start/end the window
+    is the whole horizon, also on a horizon that does not start at 00:00.
+    A model without a boiler plan (boiler absent or disabled) counts as
+    zero starts."""
+    starts = boiler_start_intervals(ctx.mv)
+    if "start" in value:
+        window = _window_range(ctx, value)
+        starts = [u for u in starts if u in window]
+        where = f"{value['start']}-{value['end']}"
+    else:
+        where = "the whole horizon"
+    lo = value.get("min", 0)
+    hi = value.get("max")
+    ok = len(starts) >= lo and (hi is None or len(starts) <= hi)
+    times = ", ".join(ctx.grid[u].strftime("%d %H:%M") for u in starts) or "none"
+    detail = "" if ok else (
+        f"{len(starts)} start(s) in {where} ({times}), expected min={lo} max={hi}"
+    )
+    return CheckResult("boiler_starts", ok, detail)
+
+
+@case_check("boiler_heatpump_exclusive")
+def _check_boiler_heatpump_exclusive(value: bool, ctx: CaseContext) -> CheckResult:
+    """With boiler_heated_by_heatpump the heat pump heats either the boiler
+    or the house in an interval, never both: no interval has the boiler
+    heating and heat pump consumption (c_hp) above zero."""
+    mv = ctx.mv
+    _start, heat = boiler_containers(mv)
+    if heat is None or not mv.has("c_hp"):
+        return CheckResult("boiler_heatpump_exclusive", False, "no boiler plan or no heat pump in this model")
+    both = [
+        u for (u,), h in mv.items(heat)
+        if h > 0.5 and mv.value("c_hp", u) > 1e-4
+    ]
+    ok = (not both) == bool(value)
+    detail = "" if ok else (
+        f"boiler and heat pump both run at "
+        f"{', '.join(ctx.grid[u].strftime('%d %H:%M') for u in both[:6]) or 'no interval'}"
+    )
+    return CheckResult("boiler_heatpump_exclusive", ok, detail)
+
+
+def _as_list(value: Any) -> list[str]:
+    return [value] if isinstance(value, str) else list(value)
+
+
+@case_check("log_contains")
+def _check_log_contains(value: str | list[str], ctx: CaseContext) -> CheckResult:
+    missing = [s for s in _as_list(value) if s not in ctx.log_text]
+    return CheckResult("log_contains", not missing, f"not in log: {missing}" if missing else "")
+
+
+@case_check("log_not_contains")
+def _check_log_not_contains(value: str | list[str], ctx: CaseContext) -> CheckResult:
+    found = [
+        line.strip()
+        for s in _as_list(value)
+        for line in ctx.log_text.splitlines()
+        if s in line
+    ]
+    return CheckResult("log_not_contains", not found, f"found in log: {found[:3]}" if found else "")
 
 
 @case_check("objective_within_baseline")
