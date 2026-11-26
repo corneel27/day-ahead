@@ -26,7 +26,7 @@ from utils import (
     interpolate,
 )
 
-from dao.prog.config.models.devices.heating import cop_temperature_factor
+from dao.prog.config.models.base import cop_temperature_factor
 from dao.prog.da_base import DaBase
 from dao.prog.da_report import Report
 from dao.prog.ev_schedule import format_ev_charge_schedule
@@ -1492,6 +1492,21 @@ class DaCalc(DaBase):
             boiler_cop = self.boiler_options.cop.resolve(self.ha_getter)
             logging.info(f"Boiler cop : {boiler_cop:.3f}")
 
+            # COP factor per interval from the forecast outdoor temperature
+            # (1.0 without a cop_temperature_curve, or when the forecast is missing)
+            boiler_cop_curve = self.boiler_options.cop_temperature_curve
+            boiler_cop_factor = [
+                1.0
+                if t is None or math.isnan(t)
+                else cop_temperature_factor(boiler_cop_curve, t)
+                for t in temp_out
+            ]
+            if boiler_cop_curve:
+                logging.info(
+                    f"Boiler cop-factor buitentemperatuur: {min(boiler_cop_factor):.2f} - "
+                    f"{max(boiler_cop_factor):.2f}"
+                )
+
             # elektrisch vermogen in kW
             boiler_power = float(self.boiler_options.elec_power) / 1000
             logging.info(f"Boiler vermogen : {boiler_power:.3f} kW")
@@ -1501,7 +1516,8 @@ class DaCalc(DaBase):
             # maximale elektrische energie per volledig verwarmingsinterval (kWh/interval)
             boiler_max_cons = []
             for u in range(U):
-                boiler_heating_rate.append(boiler_power * boiler_cop * hour_fraction[u]/boiler_heat_cap)
+                boiler_heating_rate.append(boiler_power * boiler_cop * boiler_cop_factor[u]
+                                           * hour_fraction[u]/boiler_heat_cap)
                 boiler_max_cons.append(boiler_power * hour_fraction[u])
 
             # boiler temperatuur
@@ -1626,12 +1642,12 @@ class DaCalc(DaBase):
                 # boiler_temp[u+1] =
                 #   boiler_temp[u]
                 #   - boiler_cooling_rate[u]
-                #   + c_b[u] * boiler_cop / boiler_heat_cap
+                #   + c_b[u] * boiler_cop * boiler_cop_factor[u]/ boiler_heat_cap
                 model += (
                         boiler_temp[u + 1]
                         == boiler_temp[u]
                         - boiler_cooling[u]
-                        + c_b[u] * boiler_cop / boiler_heat_cap
+                        + c_b[u] * boiler_cop * boiler_cop_factor[u] / boiler_heat_cap
                 )
 
             # ALS boiler_finish=1, MOET TEMPERATUUR boiler_setpoint ZIJN

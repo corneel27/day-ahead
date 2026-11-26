@@ -852,6 +852,7 @@ The system models boiler as a thermal battery:
 | `entity boiler enabled` | [EntityId](#entityid) (optional) | No | `null` | HA entity for boiler enabled status |
 | `entity instant start` | [EntityId](#entityid) (optional) | No | `null` | HA entity for instant start |
 | `cop` | [FlexFloat](#flexfloat) | No | `3.0` | Coefficient of Performance (Unit: `ratio`) _Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump_ |
+| `cop_temperature_curve` | list[[CopTemperaturePoint](#coptemperaturepoint)] | No | `[]` | COP factor per outdoor temperature _Sorted by temperature (ascending), factors > 0_ |
 | `cooling rate` | [FlexFloat](#flexfloat) | Yes | — | Cooling rate in degrees per hour (Unit: `°C/h`) _Must be >= 0, typically 0.5-2.0°C/h_ |
 | `volume` | number | No | `200.0` | Water volume in liters (Unit: `L`) _Must be > 0, typically 100-300L_ |
 | `heating allowed below` | [FlexFloat](#flexfloat) | Yes | — | Temperature below which heating is allowed (Unit: `°C`) _Should be >= setpoint_ |
@@ -891,6 +892,10 @@ Optional: Home Assistant entity to trigger immediate boiler heating. Overrides o
 **`cop`**
 
 Coefficient of Performance if using heat pump water heater. For resistive heating element, use 1.0. For heat pump water heater, typically 2.5-4.0.
+
+**`cop_temperature_curve`**
+
+Optional: how the COP changes with the outdoor temperature. Each point gives a factor on all stage COPs at an outdoor temperature; between points the factor is interpolated linearly, outside them the nearest point's factor is used. The stage COPs are then the COPs at the temperature where the factor is 1.0 (e.g. 7 °C). For every interval the factor at the forecast temperature (meteo) is used, so the heat pump is planned in the warmer hours when the higher COP outweighs the price. Empty: the stage COPs are used for every temperature.
 
 **`cooling rate`**
 

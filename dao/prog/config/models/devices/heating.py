@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ..base import EntityId, FlexFloat
+from ..base import CopTemperaturePoint, EntityId, FlexFloat
 
 
 class HeatingStage(BaseModel):
@@ -43,50 +43,6 @@ class HeatingStage(BaseModel):
             "x-ui-section": "General",
         },
     )
-
-
-class CopTemperaturePoint(BaseModel):
-    """Point of the COP temperature curve: a COP factor at an outdoor temperature."""
-
-    temperature: float = Field(
-        description="Outdoor temperature in °C",
-        json_schema_extra={
-            "x-help": "Outdoor temperature in °C at which the factor applies.",
-            "x-unit": "°C",
-            "x-ui-section": "General",
-        },
-    )
-    factor: float = Field(
-        gt=0,
-        description="COP factor at this outdoor temperature",
-        json_schema_extra={
-            "x-help": "Factor applied to every stage COP at this outdoor temperature. "
-            "1.0 at the temperature the stage COPs are given for (e.g. 7 °C, the A7 rating point).",
-            "x-unit": "factor",
-            "x-ui-section": "General",
-            "x-validation-hint": "Must be > 0",
-        },
-    )
-
-    model_config = ConfigDict(populate_by_name=True, loc_by_alias=False)
-
-
-def cop_temperature_factor(
-    curve: list["CopTemperaturePoint"], temperature: float
-) -> float:
-    """COP factor at an outdoor temperature: linear between the curve points,
-    the nearest end point's factor outside them, 1.0 without a curve."""
-    if not curve:
-        return 1.0
-    if temperature <= curve[0].temperature:
-        return curve[0].factor
-    for lo, hi in zip(curve, curve[1:], strict=False):
-        if temperature <= hi.temperature:
-            fraction = (temperature - lo.temperature) / (
-                hi.temperature - lo.temperature
-            )
-            return lo.factor + fraction * (hi.factor - lo.factor)
-    return curve[-1].factor
 
 
 class HeatingDisabled(BaseModel):

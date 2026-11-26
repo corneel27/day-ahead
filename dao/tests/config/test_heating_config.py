@@ -7,11 +7,11 @@ temperature curve.
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from dao.prog.config.models.base import cop_temperature_factor
 from dao.prog.config.models.devices.heating import (
     HeatingConfig,
     HeatingDisabled,
     HeatingEnabled,
-    cop_temperature_factor,
 )
 
 STAGES = [{"max_power": 1000, "cop": 4.0}]
