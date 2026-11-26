@@ -330,7 +330,7 @@ def navigation(kind):
     return render_template("v2/chart-log-navigation.html", kind=kind, **kwargs)
 
 
-def get_solar_items_with_ml():
+def get_solar_items():
     loader = ConfigurationLoader(Path(app_datapath + "options.json"))
     config = loader.load_and_validate()
     if config is None:
@@ -345,11 +345,15 @@ def get_solar_items_with_ml():
         ),
     ]
 
-    return {
-        solar_option.name or "default": solar_option
-        for solar_option in solar_options
-        if solar_option.ml_prediction
-    }
+    result = {}
+    for solar_option in solar_options:
+        base_key = key = solar_option.name or "default"
+        count = 2
+        while key in result:
+            key = f"{base_key} ({count})"
+            count += 1
+        result[key] = solar_option
+    return result
 
 
 @v2.route("/")
@@ -659,7 +663,7 @@ def savings():
 
 @v2.route("/solar")
 def solar():
-    solar_items = get_solar_items_with_ml()
+    solar_items = get_solar_items()
 
     if len(solar_items) == 0:
         return render_template("v2/solar-not-found.html")
