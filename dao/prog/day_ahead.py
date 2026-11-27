@@ -2414,6 +2414,7 @@ class DaCalc(DaBase):
         hp_on = [
             model.add_var(var_type=BINARY) for _ in range(U)
         ]  # If on the pump will run in that hour
+        heat_needed = 0
         self.hp_present = (
             self.heating_options.heater_present if self.heating_options else False
         )
@@ -2481,9 +2482,9 @@ class DaCalc(DaBase):
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
             if heat_needed <= 0:
                 logging.info("Geen warmte nodig: warmtepomp wordt niet ingepland")
-                self.hp_enabled = False
+#                self.hp_enabled = False
 
-        if not self.hp_enabled:
+        if not self.hp_enabled or heat_needed <= 0:
             for u in range(U):
                 model += c_hp[u] == 0
                 model += hp_on[u] == 0
@@ -2888,6 +2889,7 @@ class DaCalc(DaBase):
             elif run_hours < min_run_length and self.hp_heat_demand in ["eco", "max"]:
                 first_block_len = max(1, min_run_length - math.floor(run_hours))
                 first_block_start = 0
+                logging.info("Warmtepomp draait korter dan minimum run length: nu inplannen")
             else:  # run_hours >= min_run_length
                 first_block_len = min_run_length
                 first_block_start = None
@@ -4650,7 +4652,7 @@ class DaCalc(DaBase):
             ##################################################
             # heatpump
             ##################################################
-            if self.hp_present: # and self.hp_enabled:  Also switch when hp_enabled has been disabled when required heat has been generated
+            if self.hp_present and self.hp_enabled:
                 # als aan/uit entity er is altijd schakelen
                 entity_hp_switch = self.heating_options.entity_hp_switch
                 if entity_hp_switch is None:
