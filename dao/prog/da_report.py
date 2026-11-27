@@ -3277,8 +3277,6 @@ class Report(DaBase):
             ),
             endpoints AS (
                 SELECT quarter_ts FROM quarters
-                UNION
-                SELECT :now_ts
             )
             SELECT
                 q.quarter_ts,
@@ -3299,7 +3297,6 @@ class Report(DaBase):
         """)
 
         now = datetime.datetime.now()
-        now_ts = int(now.timestamp())
         end_ts = (now_ts // 900) * 900
         start_ts = end_ts - 18000 - 900
 
@@ -3311,7 +3308,6 @@ class Report(DaBase):
                     "sensor": entity,
                     "start_ts": start_ts,
                     "end_ts": end_ts,
-                    "now_ts": now_ts,
                 }
             )
 
