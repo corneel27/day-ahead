@@ -2439,6 +2439,7 @@ class DaCalc(DaBase):
             degree_days_today = self.meteo.calc_graaddagen(
                 date=calc_day, weighted=True, base_temp=base_temp
             )
+            degree_days_today = 18.0
             logging.info(f"Gewogen graaddagen vandaag: {degree_days_today:.1f} K.day")
             if U > self.steps_day:
                 degree_days_tomorrow = self.meteo.calc_graaddagen(
@@ -2446,6 +2447,7 @@ class DaCalc(DaBase):
                     weighted=True,
                     base_temp=base_temp,
                 )
+                degree_days_tomorrow = 18.0
                 logging.info(
                     f"Gewogen graaddagen morgen: {degree_days_tomorrow:.1f} K.day"
                 )
