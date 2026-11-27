@@ -2414,6 +2414,7 @@ class DaCalc(DaBase):
         hp_on = [
             model.add_var(var_type=BINARY) for _ in range(U)
         ]  # If on the pump will run in that hour
+        heat_demand = 0
         self.hp_present = (
             self.heating_options.heater_present if self.heating_options else False
         )
