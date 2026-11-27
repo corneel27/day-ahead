@@ -26,7 +26,7 @@ from utils import (
     interpolate,
 )
 
-from dao.prog.config.models.devices.heating import cop_temperature_factor
+from dao.prog.config.models.base import cop_temperature_factor
 from dao.prog.da_base import DaBase
 from dao.prog.da_report import Report
 from dao.prog.ev_schedule import format_ev_charge_schedule
@@ -275,7 +275,7 @@ class DaCalc(DaBase):
             dt.datetime.fromtimestamp(start_hour), end=None, interval=self.interval,
             extension=0
         )
-        if horizon_extension > 0:
+        if len(fixed_price_data) > 10 and horizon_extension > 0:
             start_prediction_dt = fixed_price_data["time"].iloc[-1] + dt.timedelta(seconds=self.interval_s)
             start_prediction_dt = start_prediction_dt.to_pydatetime()
             start_prediction_ts = start_prediction_dt.timestamp()
@@ -1371,17 +1371,11 @@ class DaCalc(DaBase):
         #####################################
         #             boiler                #
         #####################################
-        # aantal opwarm-intervallen
-        est_needed_intv = [0 for _ in range(U)]
-        # boiler is aan het verwarmen
-        boiler_on = [model.add_var(var_type=BINARY) for _ in range(U)]
-        # boiler begint met verwarmen
-        boiler_st = [model.add_var(var_type=BINARY) for _ in range(U)]
+        boiler_heated_by_heatpump = False
+
         self.boiler_present = (
             self.boiler_options.boiler_present if self.boiler_options else False
         )
-        boiler_start = None
-        boiler_heated_by_heatpump = False
         if self.boiler_present:
             entity_boiler_enabled = self.boiler_options.entity_enabled
             if entity_boiler_enabled is None:
@@ -1394,9 +1388,9 @@ class DaCalc(DaBase):
             self.boiler_enabled = False
 
         if not self.boiler_present or not self.boiler_enabled:
-            # default values
+            # default values, boiler wordt niet geoptimaliseerd
             boiler_instant_start = False
-            boiler_setpoint = 50
+            boiler_max_temp = 50
             boiler_hysterese = 10
             boiler_ondergrens = 40
             spec_heat_boiler = 200 * 4.2 + 100 * 0.5  # kJ/K
@@ -1407,14 +1401,15 @@ class DaCalc(DaBase):
             ]
             # consumption boiler
             c_b = [model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for _ in range(U)]
-            model += xsum(boiler_on[j] for j in range(U)) == 0
-            model += xsum(boiler_st[j] for j in range(U)) == 0
             logging.info(
                 "Boiler niet aanwezig of staat uit, boiler wordt niet ingepland"
             )
-            boiler_start_index = None
-            boiler_end_index = None
+            boiler_heated_by_heatpump = False
+            boiler_end_value = model.add_var(var_type=CONTINUOUS, lb=0, ub=0)
+            model += boiler_end_value == 0
+
         else:
+            #  boiler wordt geoptimaliseerd
             entity_boiler_instant_start = self.boiler_options.entity_instant_start
             if entity_boiler_instant_start is None:
                 boiler_instant_start = False
@@ -1425,363 +1420,265 @@ class DaCalc(DaBase):
             logging.info(
                 f"Boiler direct opwarmen staat {'aan' if boiler_instant_start else 'uit'}"
             )
-            # 50 huidige boilertemperatuur ophalen uit ha
+
+            # huidige boilertemperatuur [°C] ophalen uit ha
             boiler_act_temp = float(
                 self.get_state(self.boiler_options.entity_actual_temp).state
             )
             logging.info(f"Boiler actuele temperatuur {boiler_act_temp} °C")
-            boiler_setpoint = float(
+
+            # boiler_max_temp: max temperatuur boiler
+            org_boiler_max_temp = float(
                 self.get_state(self.boiler_options.entity_setpoint).state
             )
-            if boiler_act_temp > boiler_setpoint + 1:
+            if boiler_act_temp > org_boiler_max_temp + 1:
                 logging.warning(
-                    f"Je setpoint ({boiler_setpoint}) is lager de actuele "
+                    f"Je setpoint ({org_boiler_max_temp}) is lager de actuele "
                     f"temperatuur ({boiler_act_temp}). Het verdient aanbeveling je "
                     f"setpoint hoger in te stellen"
                 )
-            boiler_setpoint = max(boiler_setpoint, boiler_act_temp)
-            logging.info(f"Boiler setpoint {boiler_setpoint} °C")
+            boiler_max_temp = max(org_boiler_max_temp, boiler_act_temp)
+            logging.info(f"Boiler setpoint {boiler_max_temp} °C")
+
             boiler_hysterese = float(
                 self.get_state(self.boiler_options.entity_hysterese).state
             )
-            # 0.5 K/uur afkoeling per uur, omrekenen naar afkoeling per interval
             logging.info(f"Boiler hysterese {boiler_hysterese} K")
+            # boiler_min_temp: minimale boiler temperatuur
+            boiler_min_temp = org_boiler_max_temp - boiler_hysterese
 
+            # cooling_rate: afkoeling boiler K/uur
             cooling_rate = self.boiler_options.cooling_rate.resolve(
                 self.ha_getter
             )  # FlexFloat
             logging.info(f"Boiler cooling rate {cooling_rate} K/uur")
-            boiler_cooling = [] # K/interval
+            # boiler_cooling in K/interval
+            boiler_cooling = []
             for u in range(U):
                 boiler_cooling.append(cooling_rate * hour_fraction[u])
 
-            # 45 °C grens daaronder kan worden verwarmd
-            boiler_bovengrens = self.boiler_options.heating_allowed_below.resolve(
+            # boiler_bovengrens (FlexFloat °C) grens daaronder mag worden verwarmd
+            boiler_stook_grens = self.boiler_options.heating_allowed_below.resolve(
                 self.ha_getter
-            )  # FlexFloat
-            logging.info(f"Boiler heating allowed below {boiler_bovengrens} °C")
-
+            )
+            logging.info(f"Boiler stookgrens {boiler_stook_grens} °C")
             # maximeren op setpoint
-            boiler_bovengrens = min(boiler_bovengrens, boiler_setpoint)
+            boiler_stook_grens = min(boiler_stook_grens, boiler_max_temp)
             # 37 °C als boiler onder ondergrens komt moet er worden verwarmd
-            boiler_ondergrens = boiler_setpoint - boiler_hysterese
-            if boiler_bovengrens <= boiler_ondergrens:
+            if boiler_stook_grens <= boiler_min_temp:
                 logging.warning(f"Het programma heeft geen speelruimte tussen "
-                                f"heating allowed below {boiler_bovengrens} en de boiler ondergrens"
-                                f" {boiler_ondergrens}"
-                                f"(= setpoint {boiler_setpoint} - hysterese {boiler_hysterese}")
-                boiler_bovengrens = boiler_ondergrens + 1
+                                f"heating allowed below {boiler_stook_grens} en de boiler ondergrens"
+                                f" {boiler_min_temp}"
+                                f"(= setpoint {boiler_max_temp} - hysterese {boiler_hysterese}")
+                boiler_stook_grens = boiler_min_temp + 1
                 logging.info(f"De waarde voor heating_allowed_below is verhoogd naar "
-                             f"{boiler_bovengrens}")
-            # volume in  liter
-            vol = self.boiler_options.volume
-            # spec heat in kJ/K = vol in liter * 4,2 kJ/k.liter + 100 kg boiler * 0,5 kJ/k.kg
-            spec_heat_boiler = 1.1 * (vol * 4.2 + 100 * 0.5)  # kJ/K
-            # cop flexfloat
-            cop_boiler = self.boiler_options.cop.resolve(self.ha_getter)
-            # kWh elektriciteit / K
-            # spec_elec_boiler = spec_heat_boiler / 3600 * cop_boiler
-            # elektrisch vermogen in W
-            power_boiler = float(  # W
-                self.boiler_options.elec_power
-            )
+                             f"{boiler_stook_grens}")
+
+            # wordt boiler opgewarmd door verwarming heatpump
             boiler_heated_by_heatpump = self.boiler_options.boiler_heated_by_heatpump
-            # delta t in een step
-            # heat rate = power * cop * sec.p.interval /spec vermogen in K/step
-            cooling = 0
-            for u in range(U):
-                cooling += boiler_cooling[u]
-            boiler_end_temp = max(
-                boiler_ondergrens, boiler_act_temp - cooling
-            )
-            boiler_plan = True
-            est_boiler_temp = [boiler_act_temp]
-            for u in range(U)[1:]:
-                est_boiler_temp.append(est_boiler_temp[u-1] - boiler_cooling[u])
-            # interval-index waarop boiler kan worden verwarmd
-            if boiler_instant_start or (boiler_act_temp <= boiler_ondergrens):
-                boiler_start_index = 0
-                boiler_start = 0
-                boiler_end_index = 1
-            else:
-                boiler_start_index = 0
-                b_temp = boiler_act_temp
-                while b_temp > boiler_bovengrens:
-                    b_temp -= boiler_cooling[boiler_start_index]
-                    boiler_start_index += 1
-                    if boiler_start_index >= U:
-                        boiler_plan = False
-                        break
+            logging.info(f"Boiler wordt {'wel' if boiler_heated_by_heatpump else 'niet' } "
+                         f"opgewarmd door de warmtepomp")
 
-                # laatste interval-index voordat boiler door ondergrens zakt
-                # (41-40)/0.4=2.5
-                # boiler_end_temp = boiler_act_temp - U * boiler_cooling
-                boiler_end_index = boiler_start_index
+            # volume in  liter
+            volume = self.boiler_options.volume
 
-                while boiler_end_index < U and b_temp > boiler_ondergrens:
-                    b_temp -= boiler_cooling[boiler_end_index]
-                    boiler_end_index += 1
-                    if boiler_end_index >= U:
-                        # The lower limit is beyond the horizon; allow starts
-                        # within it and let the heating duration narrow the window.
-                        boiler_end_index = U - 1
-                        break
+            # spec heat in kJ/K = 1.1 x (volume in liter * 4,2 kJ/k.liter + 100 kg boiler * 0,5 kJ/k.kg)
+            boiler_spec_heat = 1.1 * (volume * 4.2 + 100 * 0.5)  # kJ/K
+            # boiler_heat_cap warmtecapaciteit in kWh/K
+            boiler_heat_cap = boiler_spec_heat/3600
+            logging.info(f"Boiler warmtecapaciteit : {boiler_heat_cap:.3f} kWh/K")
 
-            if (boiler_plan
-                and not _boiler_has_start(
-                    boiler_start_index, boiler_end_index, est_boiler_temp,
-                    boiler_setpoint, spec_heat_boiler, cop_boiler, power_boiler,
-                    hour_fraction,
+            # cop flexfloat
+            boiler_cop = self.boiler_options.cop.resolve(self.ha_getter)
+            logging.info(f"Boiler cop : {boiler_cop:.3f}")
+
+            # COP factor per interval from the forecast outdoor temperature
+            # (1.0 without a cop_temperature_curve, or when the forecast is missing)
+            boiler_cop_curve = self.boiler_options.cop_temperature_curve
+            boiler_cop_factor = [
+                1.0
+                if t is None or math.isnan(t)
+                else cop_temperature_factor(boiler_cop_curve, t)
+                for t in temp_out
+            ]
+            if boiler_cop_curve:
+                logging.info(
+                    f"Boiler cop-factor buitentemperatuur: {min(boiler_cop_factor):.2f} - "
+                    f"{max(boiler_cop_factor):.2f}"
                 )
-            ):
-                # The later constraints require a start in the half-open window.
-                # Match the estimate loop's horizon cutoff before building them.
-                logging.warning("Geen geschikte start voor boiler binnen de planningshorizon")
-                boiler_plan = False
 
+            # elektrisch vermogen in kW
+            boiler_power = float(self.boiler_options.elec_power) / 1000
+            logging.info(f"Boiler vermogen : {boiler_power:.3f} kW")
+
+            # temperatuurstijging per interval met boiler_power (K/interval)
+            boiler_heating_rate = []
+            # maximale elektrische energie per volledig verwarmingsinterval (kWh/interval)
+            boiler_max_cons = []
+            for u in range(U):
+                boiler_heating_rate.append(boiler_power * boiler_cop * boiler_cop_factor[u]
+                                           * hour_fraction[u]/boiler_heat_cap)
+                boiler_max_cons.append(boiler_power * hour_fraction[u])
+
+            # boiler temperatuur
             boiler_temp = [
                 model.add_var(
+                    lb=min(boiler_min_temp, boiler_act_temp) if u <= 1 else boiler_min_temp,
+                    ub=boiler_max_temp,
                     var_type=CONTINUOUS,
-                    lb=min(boiler_act_temp, boiler_setpoint - boiler_hysterese - 30),
-                    ub=boiler_setpoint + 10,
+                    name=f"boiler_temp_{u}"
                 )
-                for _ in range(U + 1)
-            ]  # end temp boiler
+                for u in range(U + 1)
+            ]
+            model += boiler_temp[0] == boiler_act_temp
 
-            if not boiler_plan:
-                # geen boiler opwarming in deze periode
-                logging.info(
-                    f"Boiler wordt niet ingepland, omdat de verwachte "
-                    f"eindtemperatuur {boiler_end_temp} °C hoger is dan de "
-                    f"opwarmgrens {boiler_bovengrens} °C."
+            # 1 = nieuwe verwarmingscyclus begint aan het begin van interval u
+            boiler_start = [
+                model.add_var(
+                    var_type=BINARY,
+                    name=f"start_{u}"
                 )
-                c_b = [
-                    model.add_var(var_type=CONTINUOUS, lb=0, ub=0) for _ in range(U)
-                ]  # consumption boiler
-                model += xsum(boiler_on[j] for j in range(U)) == 0
-                model += xsum(boiler_st[j] for j in range(U)) == 0
-                logging.debug("Boiler: er  wordt geen opwarming inpland")
-                boiler_end_temp = est_boiler_temp[U-1]
-                logging.debug(
-                    f"Boiler eind temperatuur zonder opwarmen: {boiler_end_temp:.2f}"
+                for u in range(U)
+            ]
+
+            # boiler_heat 1 = boiler verwarmt gedurende (een deel van) interval u
+            boiler_heat = [
+                model.add_var(
+                    var_type=BINARY,
+                    name=f"boiler_heat_{u}"
                 )
-                model += boiler_temp[0] == boiler_act_temp
-                for u in range(U):
-                    # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
-                    model += boiler_temp[u + 1] == boiler_temp[u] - boiler_cooling[u]
-            else:
-                logging.info(
-                    f"Boiler opwarmen wordt ingepland tussen: "
-                    f"{tijd[boiler_start_index].strftime('%Y-%m-%d %H:%M')} en "
-                    f"{tijd[min(boiler_end_index, U - 1)].strftime('%Y-%m-%d %H:%M')}"
+                for u in range(U)
+            ]
+
+            # boiler_finish[u]
+            # 1 = de boiler bereikt boiler_setpoint gedurende uur u
+            # Dit is dus het laatste uur van een verwarmingscyclus.
+            boiler_finish = [
+                model.add_var(
+                    var_type=BINARY,
+                    name=f"boiler_finish_{u}"
                 )
+                for u in range(U)
+            ]
 
-                est_needed_heat = [0.0 for _ in range(U)]
-                est_needed_elec = [0.0 for _ in range(U)]
-                est_needed_elec_st = []
-                # cb_hr_run = []
-                est_elec_cost = [0.0 for _ in range(U)]
-                est_boiler_endtemp = [0.0 for _ in range(U)]
-                est_boiler_endvalue = [0.0 for _ in range(U)]
-                est_netto_cost = [0.0 for _ in range(U)]
-                # needed_time = [0 for _ in range(U)]
-                # needed_heat = sp * (setpoint - act_temp - 4 - cooling*plan_periode)/3600 in kWh
-
-                # consumption in one interval = kWh per uur of per 15min
-                cons_interval = []
-                for u in range(U):
-                    cons_interval.append(power_boiler * hour_fraction[u] / 1000)
-                # tempverlies door menging bij starten opwarmen in K
-                # mix_los = 1.2
-                logging.info(
-                    f"Boiler verbruik in 1 {self.interval_name}: {cons_interval[1]} kWh"
+            # boiler_partial[u]
+            # Elektrische energie in interval u als dit het laatste,
+            # gedeeltelijke verwarmingsuur is.
+            # 0 <= boiler_partial <= boiler_max_cons[u]
+            boiler_partial = [
+                model.add_var(
+                    lb=0,
+                    ub=boiler_max_cons[u],
+                    var_type=CONTINUOUS,
+                    name=f"boiler_partial_{u}"
                 )
-                boiler_netto_cost = None
-                for u in range(U):
-                    # benodigde warmte voor opwarmen vanaf interval u in kWh
-                    est_needed_heat[u] = max(
-                        0.0,
-                        float(
-                            spec_heat_boiler
-                            * (boiler_setpoint - est_boiler_temp[u])
-                            / 3600
-                        ),
-                    )
-                    # opstart elektra in kWh
-                    start_needed_elec = 0.1
-                    # benogde elektra bij opwarmen vanaf interval u in kWh
-                    est_needed_elec[u] = (
-                        start_needed_elec + est_needed_heat[u] / cop_boiler
-                    )
-                    # benodigde aantallen intervallen
-                    num_intervals = _boiler_heating_intervals(
-                        est_boiler_temp[u], boiler_setpoint, spec_heat_boiler,
-                        cop_boiler, power_boiler, hour_fraction[max(u, 1)],
-                    )
-                    # verdelen van benodigde elektra over de intervallen
-                    est_needed_intv[u] = num_intervals
-                    est_needed_elec_st.append([])
-                    # cb_hr_run.append([])
-                    # for _ in range(U):
-                    #     cb_hr_run[u].append(0.0)
-                    used = 0.0
-                    for j in range(num_intervals + 1):
-                        use = min(
-                            max(0, est_needed_elec[u] - used),
-                            cons_interval[min(u + j, U - 1)],
-                        )
-                        est_elec_cost[u] += use * pl[min(u + j, U - 1)]
-                        est_needed_elec_st[u].append(use)
-                        # if u + j < U:
-                        #    cb_hr_run[u][u + j] = use
-                        used += use
-                        if used >= est_needed_elec[u]:
-                            break
-                    end_temp = boiler_setpoint
-                    for j in range(U)[u + est_needed_intv[u]:]:
-                        end_temp -= boiler_cooling[j]
-                    est_boiler_endtemp[u] = end_temp
-                    est_boiler_endvalue[u] = (
-                        (est_boiler_endtemp[u] - boiler_act_temp)  # boiler_ondergrens)
-                        * (spec_heat_boiler / (3600 * cop_boiler))
-                        * p_avg
-                    )
-                    est_netto_cost[u] = est_elec_cost[u] - est_boiler_endvalue[u]
-                    if u + num_intervals >= U:
-                        boiler_end_index = min(boiler_end_index, u)
-                        break
-                    if (
-                        (u >= boiler_start_index)
-                        and (u <= boiler_end_index)
-                        and (
-                            (boiler_netto_cost is None)
-                            or (est_netto_cost[u] < boiler_netto_cost)
-                        )
-                    ):
-                        boiler_netto_cost = est_netto_cost[u]
-                        boiler_start = u
+                for u in range(U)
+            ]
 
-                # if self.debug:
-                #     df_interval = pd.DataFrame(cb_hr_run)
-                #     logging.debug(f"Interval boiler:\n{df_interval.to_string()}\n")
-
-                if self.log_level == logging.INFO:
-                    df_boiler = pd.DataFrame(
-                        {
-                            "tijd": tijd,
-                            "act_temp": est_boiler_temp,
-                            "heat": est_needed_heat,
-                            "elec": est_needed_elec,
-                            "interval": est_needed_intv,
-                            "cost": est_elec_cost,
-                            "end_temp": est_boiler_endtemp,
-                            "end_value": est_boiler_endvalue,
-                            "netto_cost": est_netto_cost,
-                        }
-                    )
-                    logging.info(f"Prognose boiler:\n{df_boiler.to_string()}\n")
-
-                # c_b = consumption boiler in kWh per interval
-                c_b = [
-                    model.add_var(var_type=CONTINUOUS, lb=0, ub=max(cons_interval))
-                    for _ in range(U)
-                ]
-                model += xsum(boiler_st[u] for u in range(U)) == 1
-
-                for u in range(U)[0:boiler_start_index]:
-                    model += c_b[u] == 0
-                    model += boiler_on[u] == 0
-                    model += boiler_st[u] == 0
-
-                for u in range(U)[boiler_end_index + 1 :]:
-                    logging.debug(f"u {u}, {uur[u]}")
-                    model += boiler_st[u] == 0
-                    if u > boiler_end_index + est_needed_intv[boiler_end_index] - 1:
-                        model += boiler_on[u] == 0
-                        model += c_b[u] == 0
-                model += (
-                    xsum(
-                        boiler_st[u]
-                        for u in range(U)[boiler_start_index:boiler_end_index]
-                    )
-                    == 1
+            # c_b[u]
+            # Totale elektrische energie die de boiler in interval u gebruikt.
+            # Als het een volledig verwarmingsinterval is: c_b[u] = boiler_max_cons[u]
+            # Als het laatste verwarmingsuur is: c_b[u] < boiler_max_cons[u]
+            # Als er niet wordt verwarmd: c_b[u] == 0
+            c_b = [
+                model.add_var(
+                    lb=0,
+                    ub=boiler_max_cons[u],
+                    var_type=CONTINUOUS,
+                    name=f"c_b_{u}"
                 )
-                for u in range(U)[
-                    boiler_start_index : boiler_end_index
-                    + est_needed_intv[boiler_end_index]
-                ]:
-                    model += c_b[u] == xsum(
-                        boiler_st[j] * est_needed_elec_st[j][u - j]
-                        for j in range(U)[max(0, u - est_needed_intv[u] + 1) : u + 1]
-                        if u - j < len(est_needed_elec_st[j])
-                    )
-                    """
-                    logging.debug(f"uur {u}: {uur[u]} est_needed_intv[u]:{est_needed_intv[u]}")
-                    for j in range(U)[max(0, u - est_needed_intv[u]+1): u + 1]:
-                        logging.debug(f"len(est_needed_elec_st[j]): {len(est_needed_elec_st[j])}")
-                        if est_needed_intv[u]>0 and u - j < len(est_needed_elec_st[j]):
-                            logging.debug(f"j: {j}, est_needed_elec_st[j][u - j]: "
-                                  f"{est_needed_elec_st[j][u - j]}")
-                    """
-                    model += boiler_on[u] == xsum(
-                        boiler_st[j]
-                        for j in range(U)[
-                            max(boiler_start_index, u - est_needed_intv[u] + 1) : u + 1
-                        ]
-                        if u - j < len(est_needed_elec_st[j])
-                    )
+                for u in range(U)
+            ]
 
-                """
-                    j_vanaf = u - est_needed_intv[u]
-                    j_tot = min(u + 1, len(cb_hr_run))
-                    logging.debug(u, j_vanaf, j_tot)
-                    model += c_b[u] == xsum(
-                        boiler_st[j] * cb_hr_run[j][u]
-                        for j in range(U)[j_vanaf: j_tot]
-                    )
-                    model += boiler_on[u] == 0 #xsum(
-                        # boiler_st[j]
-                        # for j in range(U)[u - est_needed_intv[u]: u + 1]
-                        # for j in range(U)[
-                        #    max(boiler_start_index, u - est_needed_intv[u] + 1): u + 1]
-                        # if u - j < len(est_needed_elec_st[j])
-                    # )
+            # instant start
+            if boiler_instant_start:
+                model += boiler_start[0] == 1
 
-            
-                for u in range(U)[
-                    boiler_start_index : min(
-                        boiler_end_index, U - est_needed_intv[U - 1]
-                    )
-                    + 1
-                ]:
-                    model += boiler_st[u] * est_needed_intv[u] <= xsum(
-                        boiler_on[u + j] for j in range(est_needed_intv[u])
-                    )
+            # LOGICA VAN DE OPWARMINGSCYCLUS
+            for u in range(U):
+                # Een boiler_start betekent dat de boiler dit interval verwarmt
+                model += boiler_heat[u] >= boiler_start[u]
 
-                for u in range(U)[
-                    boiler_start_index : boiler_end_index
-                    + est_needed_intv[boiler_end_index-1]-1
-                ]:
-                    u_str = f"{u} {uur[u]}: "
-                    for u1 in range(U)[u - est_needed_intv[u] + 1 : u + 1]:
-                        if (u1 + est_needed_intv[u1] - 1) >= u >= u1:
-                            u_str += f"{u1}, "
-                    logging.info(u_str)
-                    model += boiler_on[u] == xsum(
-                        boiler_st[u1] * ((u1 + est_needed_intv[u1] - 1) >= u >= u1)
-                        for u1 in range(U)[u - est_needed_intv[u] + 1 : u+1]
-                    )
-                """
-                model += boiler_temp[0] == boiler_act_temp
-                for u in range(U):
-                    # opwarming in K = kWh opwarming * 3600 = kJ / spec heat boiler - 3
+                if u == 0:
+                    # In het eerste interval kan alleen een start verwarming activeren
+                    model += boiler_heat[u] <= boiler_start[u]
+
+                else:
+                    # Een nieuwe cyclus kan niet starten terwijl de vorige nog loopt
+                    model += boiler_start[u] <= 1 - boiler_heat[u - 1]
+
+                    # Een onafgemaakte cyclus moet doorgaan
                     model += (
+                            boiler_heat[u]
+                            >= boiler_heat[u - 1] - boiler_finish[u - 1]
+                    )
+
+                    # Verwarmen mag alleen bij een nieuwe start
+                    # of als voortzetting van een onafgemaakte cyclus
+                    model += (
+                            boiler_heat[u]
+                            <= boiler_start[u] + boiler_heat[u - 1] - boiler_finish[u - 1]
+                    )
+
+                # boiler_finish kan alleen als de boiler aan het verwarmen is
+                model += boiler_finish[u] <= boiler_heat[u]
+
+                # partial is alleen mogelijk in het laatste
+                # verwarmingsuur.
+                model += boiler_partial[u] <= boiler_max_cons[u] * boiler_finish[u]
+
+                # normaal verwarmingsuur: boiler_heat=1, boiler_finish=0 -> c_b=boiler_max_cons
+                # laatste verwarmingsuur: boiler_heat=1, boiler_finish=1 -> c_b=boiler_partial
+                # niet verwarmen: boiler_heat=0 -> c_b=0
+                model += (
+                        c_b[u]
+                        == boiler_max_cons[u] * (boiler_heat[u] - boiler_finish[u])
+                        + boiler_partial[u]
+                )
+
+            # TEMPERATUUR / ENERGIEBALANS
+            for u in range(U):
+                # Elektrische energie c_b[u] wordt met COP omgezet in warmte.
+                # boiler_temp[u+1] =
+                #   boiler_temp[u]
+                #   - boiler_cooling_rate[u]
+                #   + c_b[u] * boiler_cop * boiler_cop_factor[u]/ boiler_heat_cap
+                model += (
                         boiler_temp[u + 1]
                         == boiler_temp[u]
-                        # - mix_los * boiler_st[u]
                         - boiler_cooling[u]
-                        + c_b[u] * cop_boiler * 3600 / spec_heat_boiler
+                        + c_b[u] * boiler_cop * boiler_cop_factor[u] / boiler_heat_cap
+                )
+
+            # ALS boiler_finish=1, MOET TEMPERATUUR boiler_setpoint ZIJN
+            # Omdat T tussen boiler_min_temp en boiler_max_temp ligt,
+            # is boiler_max_temp - boiler_min_temp voldoende als Big-M.
+            M = boiler_max_temp - boiler_min_temp
+            for u in range(U):
+                model += (
+                        boiler_temp[u + 1]
+                        >= boiler_max_temp - M * (1 - boiler_finish[u])
+                )
+                model += (
+                        boiler_temp[u + 1]
+                        <= boiler_max_temp + M * (1 - boiler_finish[u])
+                )
+
+            # alleen opwarmen starten onder de stookgrens of bij instant_start
+            for u in range(U):
+                if not boiler_instant_start or u > 0:
+                    model += (
+                            boiler_temp[u] <= boiler_stook_grens + M * (1 - boiler_start[u])
                     )
+
+            # boiler_end_value
+            # gewaardeerd tegen gemiddelde elektriciteitsprijs.
+            boiler_end_value = (
+                    (boiler_temp[U] - boiler_temp[0])
+                    * boiler_heat_cap
+                    / boiler_cop
+                    * p_avg
+            )
 
         ################################################
         #             electric vehicles
@@ -2511,16 +2408,6 @@ class DaCalc(DaBase):
             )  # Alleen waarde tussen 1 en 5 uur mogelijk
             logging.info(f"Minimale runlengte {min_run_length} uur")
 
-            # een of meer intervallen minder als boiler via wp gaat
-            if (
-                boiler_heated_by_heatpump
-                and boiler_start is not None
-                and boiler_start < U
-            ):
-                boiler_int = est_needed_intv[boiler_start] + 1
-            else:
-                boiler_int = 0
-
             # geproduceerde warmte kWh per uur
             h_hp = [
                 model.add_var(var_type=CONTINUOUS, lb=0, ub=10000) for _ in range(U)
@@ -2528,7 +2415,8 @@ class DaCalc(DaBase):
 
             if self.hp_adjustment == "on/off":
                 hp_hours = 0
-                interval_avail = U - boiler_int - 1
+                # interval_avail = U - boiler_int - 1
+                interval_avail = U - 1
                 hours_avail = math.floor(interval_avail * self.interval_s / 3600)
                 logging.info(f"Beschikbaar zijn: {hours_avail} uur")
                 if heat_needed > 0:
@@ -2777,7 +2665,7 @@ class DaCalc(DaBase):
                     # som van alle weegfactoren == 1
                     if boiler_heated_by_heatpump:
                         model += (
-                            xsum(hp_s_w[u][s] for s in range(S)) + boiler_on[u] == 1
+                            xsum(hp_s_w[u][s] for s in range(S)) + boiler_heat[u] == 1
                         )
                     else:
                         model += xsum(hp_s_w[u][s] for s in range(S)) == 1
@@ -2814,7 +2702,8 @@ class DaCalc(DaBase):
                 # van dat interval (extensie-intervallen tellen voor een heel uur)
                 nom_max_power = hp_stages[-1]["max_power"] * hp_stages[-1]["cop"] / 1000
                 nom_min_power = hp_stages[1]["max_power"] * hp_stages[1]["cop"] / 1000
-                avail = range(U - boiler_int)
+                # avail = range(U - boiler_int)
+                avail = range(U)
                 hours_prod = sum(hour_fraction[u] for u in avail)
                 max_heat_prod = sum(
                     nom_max_power * cop_factor[u] * hour_fraction[u] for u in avail
@@ -2835,7 +2724,8 @@ class DaCalc(DaBase):
                 logging.info(
                     f"Minimaal warmteproducerend vermogen: {min_heat_power:.2f} kW"
                 )
-                hours_avail = (U - boiler_int) * self.interval_s / 3600
+                # hours_avail = (U - boiler_int) * self.interval_s / 3600
+                hours_avail = U * self.interval_s / 3600
                 logging.info(f"Aantal beschikbare uren: {hours_avail:.2f}")
                 logging.info(
                     f"Maximaal te produceren hoeveelheid warmte: {max_heat_prod:.1f} kWh"
@@ -3030,7 +2920,7 @@ class DaCalc(DaBase):
             # constrant 7: ieder interval/uur of boiler of wp
             for u in range(U):
                 if boiler_heated_by_heatpump:
-                    model += hp_on[u] + boiler_on[u] <= 1
+                    model += hp_on[u] + boiler_heat[u] <= 1
 
         ########################################################################
         # apparaten /machines
@@ -3518,9 +3408,7 @@ class DaCalc(DaBase):
                 for b in range(B)
             )
             # waarde energie boiler
-            - (boiler_temp[U] - boiler_temp[0])
-            * (spec_heat_boiler / (3600 * cop_boiler))
-            * p_avg
+            - boiler_end_value
         )
 
         #####################################################
@@ -3676,13 +3564,54 @@ class DaCalc(DaBase):
                 old_cost_da += netto * pt[u]
                 org_l.append(0)
                 org_t.append(netto/hour_fraction[u])
-        if self.boiler_present:
-            boiler_at_23 = (boiler_temp[U].x - (boiler_setpoint - boiler_hysterese)) * (
-                spec_heat_boiler / (3600 * cop_boiler)
-            )
-            logging.info(f"Waarde boiler om 23 uur: {boiler_at_23:<0.2f} kWh")
-        import numpy as np
 
+        # resultaten boiler
+        if self.boiler_present and self.boiler_enabled:
+            logging.info("Resultaten boiler:")
+            logging.info(f"Begin temperatuur    : {boiler_temp[0].x:.2f} °C")
+            logging.info(f"Eind temperatuur     : {boiler_temp[U].x:.2f} °C")
+
+            boiler_total_energy = sum(c_b[u].x for u in range(U))
+            boiler_total_cost = sum(
+                pl[u] * c_b[u].x
+                for u in range(U)
+            )
+
+            logging.info(f"Elektriciteit        : {boiler_total_energy:.3f} kWh")
+            logging.info(f"Elektriciteitskosten : {boiler_total_cost:.3f} euro")
+            logging.info(f"Waarde eindenergie   : {boiler_end_value.x:.3f} euro")
+            logging.info(f"Netto kosten         : {boiler_total_cost - boiler_end_value.x:.3f} euro")
+
+            logging.info(
+                " uur | dag tijd | prijs | start | heat | finish | "
+                "energie | kosten   | temp"
+            )
+            logging.info(
+                "-----+----------+-------+-------+------+--------+"
+                "---------+------"
+            )
+
+            for u in range(U):
+                logging.info(
+                    f"{u:4d} | "
+                    f"{tijd[u].strftime('%d %H:%M')} | "
+                    f"{pl[u]:5.3f} | "
+                    f"{boiler_start[u].x:5.0f} | "
+                    f"{boiler_heat[u].x:4.0f} | "
+                    f"{boiler_finish[u].x:6.0f} | "
+                    f"{c_b[u].x:7.3f} | "
+                    f"{c_b[u].x * pl[u]:7.3f} | "
+                    f"{boiler_temp[u].x:5.2f}"
+                )
+            logging.info(
+                f"{U:4d} |          |       |       |      |        | "
+                f"{boiler_total_energy:7.3f} | "
+                f"{boiler_total_cost:7.3f} | "
+                f"{boiler_temp[U].x:5.2f}"
+            )
+
+        # resultaten warmtepomp
+        import numpy as np
         if self.hp_present and self.hp_enabled:
             logging.info("Inzet warmtepomp")
             if blocks_num > 0:
@@ -4030,11 +3959,7 @@ class DaCalc(DaBase):
         for e in range(EV):
             total_switch_cost += switch_cost[e].x
             total_low_soc_cost += low_soc_penalty[e].x
-        boiler_storage = (
-            (boiler_temp[0].x - boiler_temp[U].x)
-            * (spec_heat_boiler / (3600 * cop_boiler))
-            * p_avg
-        )
+
         total_cost = (
             cost_consumption
             + profit_production
@@ -4043,7 +3968,7 @@ class DaCalc(DaBase):
             + total_switch_cost
             + total_low_soc_cost
             + battery_storage
-            + boiler_storage
+            + boiler_end_value.x
         )
 
         logging.info(
@@ -4055,7 +3980,7 @@ class DaCalc(DaBase):
             f"EV switch costs    {total_switch_cost: 7.2f}\n"
             f"EV low soc costs   {total_low_soc_cost: 7.2f}\n"
             f"Battery storage    {battery_storage: 7.2f}\n"
-            f"Boiler storage     {boiler_storage: 7.2f}\n"
+            f"Boiler storage     {boiler_end_value.x: 7.2f}\n"
             f"Profit production  {profit_production: 7.2f}\n"
             f"Total              {total_cost: 7.2f}\n"
             f"Cost after optimize            {cost.x: 7.2f}\n"
@@ -4072,7 +3997,7 @@ class DaCalc(DaBase):
 
         """
         set helpers output home assistant
-        boiler c_b[0].x >0 trigger boiler
+        boiler c_b[0].x > 0 trigger boiler
         ev     c_ev[0].x > 0 start laden auto, ==0 stop laden auto
         battery multiplus feedin from grid = accu_in[0].x - accu_out[0].x
         """
@@ -4080,18 +4005,8 @@ class DaCalc(DaBase):
         #############################################
         # boiler
         ############################################
-        # debug logging boiler results
-        logging.debug("\nBOILER")
-        logging.debug("nr  uur st on  cons   temp")
-        for u in range(U):
-            logging.debug(
-                f"{u:.0f} {uur[u]}  {boiler_st[u].x:.0f}  {boiler_on[u].x:.0f}  {c_b[u].x:.2f}  "
-                f"{boiler_temp[u].x:.2f}"
-            )
-        logging.debug("\n")
-
         try:
-            if self.boiler_present:
+            if self.boiler_present and self.boiler_enabled:
                 # 1e-4 kWh: een continue 0 kan als rekenruis (bv. 1e-16) terugkomen
                 if float(c_b[0].x) > 1e-4:
                     if self.debug:
@@ -4120,24 +4035,28 @@ class DaCalc(DaBase):
                 boiler_st_index = -1
                 for u in range(U):
                     # binair: HiGHS geeft bv. 0.9999999999999999, niet exact 1
-                    if boiler_st[u].x > 0.5:
+                    if boiler_start[u].x > 0.5:
                         boiler_st_index = u
                         break
                 if boiler_st_index >= 0:
+                    j = boiler_st_index
+                    while j < U and (boiler_finish[j].x)< 0.5:
+                        j+=1
+                    num_int = j - boiler_st_index +1
                     boiler_start_opwarmen = tijd[boiler_st_index]
                     logging.info(
                         f"Boiler opwarmen ingepland vanaf: {boiler_start_opwarmen} "
-                        f"met {est_needed_intv[boiler_st_index]} interval(len)"
+                        f"met {num_int} interval(len)"
                     )
 
-                # waarde energie boiler
-                boiler_waarde_el = (boiler_temp[U].x - boiler_ondergrens) * (
-                    spec_heat_boiler / (3600 * cop_boiler)
+                # toe- afname waarde energie boiler kWh - euro
+                boiler_opslag_el = (boiler_temp[U].x - boiler_temp[0].x) * (
+                    boiler_spec_heat / (3600 * boiler_cop)
                 )
-                boiler_waarde_fin = boiler_waarde_el * p_avg
+                boiler_opslag_fin = boiler_opslag_el * p_avg
                 logging.info(
                     f"Boiler temperatuur {boiler_temp[U].x:.1f} °C, "
-                    f" waardering: {boiler_waarde_el:.3f} kWh = {boiler_waarde_fin:.2f} euro"
+                    f" waardering: {boiler_opslag_el:.3f} kWh = {boiler_opslag_fin:.2f} euro"
                 )
             ###########################################
             # grid

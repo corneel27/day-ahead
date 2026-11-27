@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ..base import EntityId, FlexFloat
+from ..base import CopTemperaturePoint, EntityId, FlexFloat
 
 
 class BoilerDisabled(BaseModel):
@@ -105,6 +105,21 @@ class BoilerEnabled(BaseModel):
             "x-unit": "ratio",
             "x-ui-section": "Physical Properties",
             "x-validation-hint": "Must be > 0, use 1.0 for resistive, 2.5-4.0 for heat pump",
+        },
+    )
+    cop_temperature_curve: list[CopTemperaturePoint] = Field(
+        default=[],
+        description="COP factor per outdoor temperature",
+        json_schema_extra={
+            "x-help": "Optional: how the COP changes with the outdoor temperature. "
+            "Each point gives a factor on all stage COPs at an outdoor temperature; "
+            "between points the factor is interpolated linearly, outside them the nearest point's factor is used. "
+            "The stage COPs are then the COPs at the temperature where the factor is 1.0 (e.g. 7 °C). "
+            "For every interval the factor at the forecast temperature (meteo) is used, "
+            "so the heat pump is planned in the warmer hours when the higher COP outweighs the price. "
+            "Empty: the stage COPs are used for every temperature.",
+            "x-ui-section": "Power Stages",
+            "x-validation-hint": "Sorted by temperature (ascending), factors > 0",
         },
     )
     cooling_rate: FlexFloat = Field(

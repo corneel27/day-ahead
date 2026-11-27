@@ -1794,8 +1794,15 @@ SHAPES: dict[str, tuple[tuple[str, ...], str, str]] = {
     "cycle_cost": (("b",), "€", "accumulated battery cycling cost"),
     "penalty_cost": (("b",), "€", "accumulated low-SoC penalty"),
     # boiler (single, not indexed by asset)
+    # boiler_on/boiler_st: single-start model; boiler_heat/boiler_start/
+    # boiler_finish/boiler_partial: multi-start model (PR #1082)
     "boiler_on": (("u",), "bool", "boiler heating this interval"),
     "boiler_st": (("u",), "bool", "boiler heating starts this interval"),
+    "boiler_heat": (("u",), "bool", "boiler heating this interval"),
+    "boiler_start": (("u",), "bool", "boiler heating cycle starts this interval"),
+    "boiler_finish": (("u",), "bool", "boiler reaches its setpoint this interval"),
+    "boiler_partial": (("u",), "kWh", "boiler consumption in a cycle's last interval"),
+    "boiler_end_value": ((), "€", "value of the boiler's stored heat at horizon end"),
     "boiler_temp": (("u_boundary",), "°C", "boiler temperature"),
     "c_b": (("u",), "kWh", "boiler consumption"),
     # ev — note stage_* is [e][ecs][u] (stage before interval), while every
@@ -1896,6 +1903,11 @@ FAMILY: dict[str, str] = {
     "penalty_cost": "battery",
     "boiler_on": "boiler",
     "boiler_st": "boiler",
+    "boiler_heat": "boiler",
+    "boiler_start": "boiler",
+    "boiler_finish": "boiler",
+    "boiler_partial": "boiler",
+    "boiler_end_value": "boiler",
     "boiler_temp": "boiler",
     "c_b": "boiler",
     "stage_consumption": "ev",

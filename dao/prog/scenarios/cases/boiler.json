@@ -1,0 +1,291 @@
+[
+  {
+    "id": "boiler-cheap-valley",
+    "description": "Boiler at 45 C cools to the 44 C heating limit at 02:30 and to the 40 C floor at 12:30. Prices dip from 06:00 to 08:00, inside that window, so the single heating cycle lands in the dip",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.1, 0.1, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {
+        "start": "06:00",
+        "end": "08:00",
+        "min": 1,
+        "max": 1
+      }
+    }
+  },
+  {
+    "id": "boiler-must-start-before-floor",
+    "description": "Boiler at 42 C reaches the 40 C floor around 05:00. The cheap hours are 14:00-16:00, too late: the boiler must heat before 05:00. A second cycle can only start once it has cooled back to the 44 C heating limit, which is after 15:00",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.1, 0.1, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+    },
+    "states": {
+      "sensor.boiler_gemeten": "42"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {
+        "start": "00:00",
+        "end": "05:00",
+        "min": 1,
+        "max": 1
+      }
+    }
+  },
+  {
+    "id": "boiler-no-heating-needed",
+    "description": "Boiler at its 50 C setpoint with slow cooling (0.2 K/h) stays above the 44 C heating limit all day, so no heating cycle starts",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "states": {
+      "sensor.boiler_gemeten": "50"
+    },
+    "config_patch": {
+      "boiler.cooling_rate.value": 0.2
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {"max": 0}
+    }
+  },
+  {
+    "id": "boiler-fast-cooling-multiple-starts",
+    "description": "Cooling 2 K/h: the boiler drops 10 K from setpoint to floor in 5 h, so one day needs at least four heating cycles. Tests the multi-start model of PR #1082",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "config_patch": {
+      "boiler.cooling_rate.value": 2.0
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {"min": 4}
+    }
+  },
+  {
+    "id": "boiler-96h-multiple-starts",
+    "description": "96 h horizon (34 h day-ahead + 62 h predicted prices, the extension-96h-predicted-dip prices) with the boiler on. At 0.4 K/h a cycle lasts about 25 h, so the horizon needs at least three heating cycles. The single-start model was infeasible here",
+    "start": "2026-10-07 14:00",
+    "prices": {
+      "cons": [0.24, 0.26, 0.29, 0.33, 0.36, 0.37, 0.34, 0.29, 0.25, 0.23, 0.22, 0.21, 0.21, 0.2, 0.21, 0.23, 0.27, 0.31, 0.3, 0.27, 0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.29, 0.33, 0.36, 0.37, 0.34, 0.29, 0.25, 0.23],
+      "predicted": {
+        "cons": [0.22, 0.21, 0.21, 0.2, 0.21, 0.23, 0.27, 0.31, 0.3, 0.27, 0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.29, 0.33, 0.36, 0.37, 0.34, 0.29, 0.25, 0.23, 0.22, 0.21, 0.21, 0.2, 0.21, 0.23, 0.27, 0.31, 0.3, 0.27, 0.08, -0.02, -0.06, -0.05, -0.03, 0.06, 0.29, 0.33, 0.48, 0.52, 0.5, 0.41, 0.25, 0.23, 0.22, 0.21, 0.21, 0.2, 0.21, 0.23, 0.27, 0.31, 0.3, 0.27, 0.25, 0.24, 0.23, 0.23]
+      }
+    },
+    "states": {
+      "sensor.ess_battery_soc": "50"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {"min": 3}
+    }
+  },
+  {
+    "id": "boiler-below-floor",
+    "description": "Boiler at 38 C, below the 40 C floor (setpoint 50 - hysteresis 10), for example after a long shower. The boiler must start heating at once",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "states": {
+      "sensor.boiler_gemeten": "38"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {
+        "start": "00:00",
+        "end": "00:15",
+        "min": 1
+      }
+    }
+  },
+  {
+    "id": "boiler-no-room-below-heating-limit",
+    "description": "Setpoint 60 C, hysteresis 5 K: the floor (55 C) is above the configured heating limit (44 C). day_ahead.py should raise the heating limit to floor + 1 (56 C) and plan a cycle before the boiler, at 58 C, cools to 55 C at 07:30",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "states": {
+      "sensor.boiler_gemeten": "58",
+      "sensor.boiler_ingesteld": "60",
+      "sensor.hysterese_hot_water": "5"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {
+        "start": "05:00",
+        "end": "07:30",
+        "min": 1
+      },
+      "log_contains": "heating allowed below"
+    }
+  },
+  {
+    "id": "boiler-above-setpoint",
+    "description": "Boiler at 55 C with a 50 C setpoint: day_ahead.py warns and uses 55 C as the target. At 0.4 K/h it stays above the 44 C heating limit, so no cycle starts",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "states": {
+      "sensor.boiler_gemeten": "55"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {"max": 0},
+      "log_contains": "is lager de actuele temperatuur"
+    }
+  },
+  {
+    "id": "boiler-instant-start",
+    "description": "Instant start on, boiler at 48 C (above the 44 C heating limit): the boiler starts heating in the first interval anyway and the trigger reaches HA",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "states": {
+      "sensor.boiler_gemeten": "48",
+      "input_boolean.boiler_direct_opwarmen": "on"
+    },
+    "config_patch": {
+      "boiler.entity_instant_start": "input_boolean.boiler_direct_opwarmen"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {
+        "start": "00:00",
+        "end": "00:15",
+        "min": 1
+      },
+      "log_contains": [
+        "Boiler direct opwarmen staat aan",
+        "Boiler opwarmen zou zijn geactiveerd"
+      ]
+    }
+  },
+  {
+    "id": "boiler-instant-start-at-setpoint",
+    "description": "Instant start on while the boiler is already at its 50 C setpoint: the forced first-interval cycle is only a top-up of the cooling loss, and the solve must not fail on it",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "states": {
+      "sensor.boiler_gemeten": "50",
+      "input_boolean.boiler_direct_opwarmen": "on"
+    },
+    "config_patch": {
+      "boiler.entity_instant_start": "input_boolean.boiler_direct_opwarmen"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {
+        "start": "00:00",
+        "end": "00:15",
+        "min": 1
+      },
+      "log_contains": "Boiler direct opwarmen staat aan"
+    }
+  },
+  {
+    "id": "boiler-instant-start-off",
+    "description": "Instant start entity configured but off, boiler at 48 C: no cycle starts in the first hour (the boiler is above the 44 C heating limit)",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "states": {
+      "sensor.boiler_gemeten": "48",
+      "input_boolean.boiler_direct_opwarmen": "off"
+    },
+    "config_patch": {
+      "boiler.entity_instant_start": "input_boolean.boiler_direct_opwarmen"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {
+        "start": "00:00",
+        "end": "01:00",
+        "max": 0
+      },
+      "log_contains": "Boiler direct opwarmen staat uit"
+    }
+  },
+  {
+    "id": "boiler-disabled-by-entity",
+    "description": "Boiler present but its enabled entity is off: the boiler is not planned, and the post-solve HA output (grid, battery, EV, machines) still runs to the end",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "states": {
+      "input_boolean.boiler_aan": "off"
+    },
+    "config_patch": {
+      "boiler.entity_enabled": "input_boolean.boiler_aan"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {"max": 0},
+      "log_contains": [
+        "Boiler niet aanwezig of staat uit",
+        "Grid set point"
+      ],
+      "log_not_contains": "Onverwachte fout"
+    }
+  },
+  {
+    "id": "boiler-heatpump-power-exclusive",
+    "description": "Boiler heated by the power-mode heat pump on a cold -5 C day: in every interval the heat pump heats either the boiler or the house, never both, and both demands are still met",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "temp": [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0],
+    "states": {
+      "binary_sensor.heatpump_heating": "on"
+    },
+    "config_patch": {
+      "boiler.boiler_heated_by_heatpump": true
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {"min": 1},
+      "heatpump_runs": {
+        "start": "00:00",
+        "end": "00:00",
+        "runs": true
+      },
+      "boiler_heatpump_exclusive": true
+    }
+  },
+  {
+    "id": "boiler-heatpump-onoff-exclusive",
+    "description": "Same as boiler-heatpump-power-exclusive with an on/off heat pump: hp_on + boiler_heat <= 1 in every interval",
+    "start": "2026-01-14 00:00",
+    "prices": {
+      "cons": [0.25, 0.24, 0.23, 0.23, 0.24, 0.26, 0.28, 0.3, 0.29, 0.27, 0.25, 0.24, 0.23, 0.22, 0.23, 0.25, 0.28, 0.31, 0.33, 0.31, 0.28, 0.26, 0.25, 0.24]
+    },
+    "temp": [-5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0, -5.0],
+    "states": {
+      "binary_sensor.heatpump_heating": "on"
+    },
+    "config_patch": {
+      "boiler.boiler_heated_by_heatpump": true,
+      "heating.adjustment": "on/off"
+    },
+    "expect": {
+      "solved": true,
+      "boiler_starts": {"min": 1},
+      "boiler_heatpump_exclusive": true
+    }
+  }
+]

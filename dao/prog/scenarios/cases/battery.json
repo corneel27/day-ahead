@@ -4,15 +4,46 @@
     "description": "Flat prices all day, no PV - nothing to arbitrage, the battery stays put",
     "start": "2026-01-14 00:00",
     "prices": {
-      "cons": [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22,
-               0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
+      "cons": [
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22,
+        0.22
+      ]
     },
-    "states": { "sensor.ess_battery_soc": "50" },
+    "states": {
+      "sensor.ess_battery_soc": "50"
+    },
     "expect": {
       "solved": true,
       "objective_within_baseline": true,
-      "battery_flat_during": { "start": "00:00", "end": "00:00", "max_kwh": 0.5 }
-    }
+      "battery_flat_during": {
+        "start": "00:00",
+        "end": "00:00",
+        "max_kwh": 0.5
+      }
+    },
+    "config_patch": {"boiler.boiler_present": false}
   },
   {
     "id": "battery-small-capacity-charges",
@@ -24,7 +55,10 @@
                0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22]
     },
     "states": { "sensor.ess_battery_soc": "30" },
-    "config_patch": { "battery[0].capacity": 6.0 },
+    "config_patch": {
+      "battery[0].capacity": 6.0,
+      "boiler.boiler_present": false
+    },
     "expect": {
       "solved": true,
       "objective_within_baseline": true,
