@@ -3326,7 +3326,7 @@ class Report(DaBase):
             if pd.isna(total) or previous_total is None:
                 heat_produced = 0
             else:
-                heat_produced = int(float(total) > previous_total)
+                heat_produced = int(float(total) != previous_total)
 
             consecutive = consecutive + 1 if heat_produced else 0
 
