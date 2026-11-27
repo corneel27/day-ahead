@@ -2890,7 +2890,7 @@ class DaCalc(DaBase):
             elif run_hours < min_run_length and self.hp_heat_demand in ["eco", "max"]:
                 first_block_len = max(1, min_run_length - math.floor(run_hours))
                 first_block_start = 0
-                logging.info("Warmtepomp draait korter dan minimum run length: nu inplannen")
+                logging.debug("Warmtepomp draait korter dan minimum run length: nu inplannen")
             else:  # run_hours >= min_run_length
                 first_block_len = min_run_length
                 first_block_start = None
