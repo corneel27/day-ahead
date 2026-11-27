@@ -2482,14 +2482,13 @@ class DaCalc(DaBase):
             logging.info(f"Nog benodigde warmte: {heat_needed:.1f} kWh")
             if heat_needed <= 0:
                 logging.info("Geen warmte nodig: warmtepomp wordt niet ingepland")
-#                self.hp_enabled = False
 
         if not self.hp_enabled or heat_needed <= 0:
             for u in range(U):
                 model += c_hp[u] == 0
                 model += hp_on[u] == 0
         else:
-            # self.hp_enabled == True
+            # self.hp_enabled == True and heat_needed > 0
             logging.info(f"Regeling warmtepomp: {self.hp_adjustment}")
 
             # heat demand: off, eco, max
@@ -2532,7 +2531,7 @@ class DaCalc(DaBase):
                 interval_avail = U - boiler_int - 1
                 hours_avail = math.floor(interval_avail * self.interval_s / 3600)
                 logging.info(f"Beschikbaar zijn: {hours_avail} uur")
-                if heat_needed > 0:
+            #    if heat_needed > 0:
                     logging.info("On/off warmtepomp wordt ingepland")
                     avg_temp_today = self.meteo.get_avg_temperature(calc_day)
                     logging.info(
@@ -2715,12 +2714,14 @@ class DaCalc(DaBase):
                     # constraint 6 : -> consumption
                     for u in range(U):
                         model += c_hp[u] == hp_power * hp_on[u] * hour_fraction[u]
+                """
                 else:
                     logging.info(
                         "Geen warmtebehoefte - warmtepomp wordt niet ingepland"
                     )
                     model += c_hp[0] == 0
                     model += hp_on[0] == 0
+                """
                 model += xsum(h_hp[u] for u in range(U)) >= heat_needed
                 # tot hier hp_adjustment == on/off
             else:
