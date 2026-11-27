@@ -1470,9 +1470,9 @@ class DaCalc(DaBase):
                                 f"heating allowed below {boiler_stook_grens} en de boiler ondergrens"
                                 f" {boiler_min_temp}"
                                 f"(= setpoint {boiler_max_temp} - hysterese {boiler_hysterese}")
-                boiler_max_temp = boiler_stook_grens + 1
+                boiler_stook_grens = boiler_min_temp + 1
                 logging.info(f"De waarde voor heating_allowed_below is verhoogd naar "
-                             f"{boiler_max_temp}")
+                             f"{boiler_stook_grens}")
 
             # wordt boiler opgewarmd door verwarming heatpump
             boiler_heated_by_heatpump = self.boiler_options.boiler_heated_by_heatpump
@@ -1523,7 +1523,7 @@ class DaCalc(DaBase):
             # boiler temperatuur
             boiler_temp = [
                 model.add_var(
-                    lb=boiler_min_temp,
+                    lb=min(boiler_min_temp, boiler_act_temp) if u <= 1 else boiler_min_temp,
                     ub=boiler_max_temp,
                     var_type=CONTINUOUS,
                     name=f"boiler_temp_{u}"
@@ -4006,7 +4006,7 @@ class DaCalc(DaBase):
         # boiler
         ############################################
         try:
-            if self.boiler_present:
+            if self.boiler_present and self.boiler_enabled:
                 # 1e-4 kWh: een continue 0 kan als rekenruis (bv. 1e-16) terugkomen
                 if float(c_b[0].x) > 1e-4:
                     if self.debug:
