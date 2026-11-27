@@ -3297,7 +3297,7 @@ class Report(DaBase):
         """)
 
         now = datetime.datetime.now()
-        end_ts = (now_ts // 900) * 900
+        end_ts = (int(now.timestamp()) // 900) * 900
         start_ts = end_ts - 18000 - 900
 
         with self.db_ha.engine.connect() as connection:
