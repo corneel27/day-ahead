@@ -3685,7 +3685,7 @@ class DaCalc(DaBase):
             logging.info(f"Waarde boiler om 23 uur: {boiler_at_23:<0.2f} kWh")
         import numpy as np
 
-        if self.hp_present and self.hp_enabled:
+        if self.hp_present and self.hp_enabled and heat_needed > 0:
             logging.info("Inzet warmtepomp")
             if blocks_num > 0:
                 logging.info("Blokken:")
