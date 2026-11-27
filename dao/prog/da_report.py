@@ -3223,6 +3223,7 @@ class Report(DaBase):
 
         return result
 
+    """
     def get_heatpump_run_hours(self, entity):
         if entity is None or not self.wp_consumption_sensors:
             return -1
@@ -3252,8 +3253,9 @@ class Report(DaBase):
             else:
                 break
         return count
+    """
 
-    def get_heatpump_run_quarters(self, entity):        
+    def get_heatpump_run_hours(self, entity):        
         if entity is None:
             return -1
             
@@ -3277,8 +3279,6 @@ class Report(DaBase):
             ),
             endpoints AS (
                 SELECT quarter_ts FROM quarters
-                UNION
-                SELECT :now_ts
             )
             SELECT
                 q.quarter_ts,
@@ -3299,8 +3299,7 @@ class Report(DaBase):
         """)
 
         now = datetime.datetime.now()
-        now_ts = int(now.timestamp())
-        end_ts = (now_ts // 900) * 900
+        end_ts = (int(now.timestamp()) // 900) * 900
         start_ts = end_ts - 18000 - 900
 
         with self.db_ha.engine.connect() as connection:
@@ -3311,7 +3310,6 @@ class Report(DaBase):
                     "sensor": entity,
                     "start_ts": start_ts,
                     "end_ts": end_ts,
-                    "now_ts": now_ts,
                 }
             )
 
@@ -3330,7 +3328,7 @@ class Report(DaBase):
             if pd.isna(total) or previous_total is None:
                 heat_produced = 0
             else:
-                heat_produced = int(float(total) > previous_total)
+                heat_produced = int(float(total) != previous_total)
 
             consecutive = consecutive + 1 if heat_produced else 0
 
