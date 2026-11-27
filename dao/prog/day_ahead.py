@@ -217,7 +217,7 @@ class DaCalc(DaBase):
         self.hp_present = False
         self.hp_enabled = False
         self.hp_adjustment = None
-        self.hp_heat_demand = "eco"
+        self.hp_ = "eco"
         self.boiler_present = False
         self.boiler_enabled = False
         self.grid_max_power = self.config.grid.max_power
@@ -2414,7 +2414,7 @@ class DaCalc(DaBase):
         hp_on = [
             model.add_var(var_type=BINARY) for _ in range(U)
         ]  # If on the pump will run in that hour
-        heat_demand = 0
+        heat_needed = 0
         self.hp_present = (
             self.heating_options.heater_present if self.heating_options else False
         )
