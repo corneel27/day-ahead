@@ -1351,8 +1351,8 @@ strategie "nul op de meter", zal het programma vaker van deze mogelijkheid gebru
 ontladen (+) of geladen (-). Deze waarde (in W) wordt na de berekening opgeslagen in deze entiteit
 * entity from pv (input_number, optioneel): idem het dc-vermogen dat via mppt of anderszins door 
 pv wordt geleverd (alleen +)
-* entity from ac (input_number, optioneel): idem het dc-vermogen dat de inverter ontvangt (+) of
-teruglevert (-) aan het net.
+* entity from ac (input_number, optioneel): het berekende gemiddelde vermogen in W tussen de omvormer en de DC-bus.
+Een positieve waarde loopt van de omvormer naar de DC-bus. Een negatieve waarde loopt van de DC-bus naar de omvormer en kan zowel batterijvermogen als DC-zonnevermogen bevatten.
 * entity calculated soc (input_number, optioneel): de berekende waarde van de SoC (in %) 
 aan het einde van het lopende uur 
  

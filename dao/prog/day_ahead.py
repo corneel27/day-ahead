@@ -4541,6 +4541,7 @@ class DaCalc(DaBase):
                         "entity set power feedin",
                         self.battery_options[b],
                         netto_vermogen_bat,
+                        limit_to_range=True,
                     )
                     self.set_entity_option(
                         "entity set operating mode", self.battery_options[b], new_state
@@ -4557,17 +4558,28 @@ class DaCalc(DaBase):
                             datetime=stop_str,
                         )
                     self.set_entity_value(
-                        "entity from battery", self.battery_options[b], from_battery
+                        "entity from battery",
+                        self.battery_options[b],
+                        from_battery,
+                        limit_to_range=True,
                     )
                     logging.info(f"Vermogen uit batterij: {from_battery}W")
                     self.set_entity_value(
-                        "entity from pv", self.battery_options[b], from_pv
+                        "entity from pv",
+                        self.battery_options[b],
+                        from_pv,
+                        limit_to_range=True,
                     )
                     logging.info(f"Vermogen dat binnenkomt van pv: {from_pv}W")
                     self.set_entity_value(
-                        "entity from ac", self.battery_options[b], from_ac
+                        "entity from ac",
+                        self.battery_options[b],
+                        from_ac,
+                        limit_to_range=True,
                     )
-                    logging.info(f"Vermogen dat binnenkomt van ac: {from_ac}W")
+                    logging.info(
+                        f"Berekend DC-vermogen van (+) of naar (-) de omvormer: {from_ac} W"
+                    )
                     self.set_entity_value(
                         "entity calculated soc", self.battery_options[b], calculated_soc
                     )

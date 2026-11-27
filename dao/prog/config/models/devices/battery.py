@@ -386,9 +386,13 @@ class BatteryConfig(BaseModel):
     entity_from_ac: EntityId | None = Field(
         default=None,
         alias="entity from ac",
-        description="HA entity for power from AC",
+        description="HA entity for inverter power on the DC side",
         json_schema_extra={
-            "x-help": "Optional: Home Assistant entity to save the calculated average grid power in watts. For battery systems that want to stear the power in/out.",
+            "x-help": (
+                "Optional: Home Assistant entity for the planned average power in watts "
+                "between the inverter and the DC bus. Positive means inverter to DC bus. "
+                "Negative means DC bus to inverter and can include both battery and DC solar power."
+            ),
             "x-unit": "W",
             "x-ui-section": "Power Configuration",
             "x-ui-widget-filter": "sensor",

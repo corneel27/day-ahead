@@ -144,7 +144,7 @@ Configure your home battery storage system for optimal energy management and cos
 | `entity stop inverter` | [EntityId](#entityid) (optional) | No | `null` | HA entity to stop inverter |
 | `entity from battery` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from battery (Unit: `W`) |
 | `entity from pv` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from PV (Unit: `W`) |
-| `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for power from AC (Unit: `W`) |
+| `entity from ac` | [EntityId](#entityid) (optional) | No | `null` | HA entity for inverter power on the DC side (Unit: `W`) |
 | `entity calculated soc` | [EntityId](#entityid) (optional) | No | `null` | HA entity for saving calculated SOC (Unit: `%`) |
 | `entity battery next action` | [EntityId](#entityid) (optional) | No | `null` | HA entity for the timestamp of this battery's next planned action |
 | `solar` | list[[SolarConfig](#solarconfig)] | No | `null` | DC-coupled solar panels attached to this battery |
@@ -262,7 +262,7 @@ Optional: Home Assistant entity to save the average calculated DC-coupled solar 
 
 **`entity from ac`**
 
-Optional: Home Assistant entity to save the calculated average grid power in watts. For battery systems that want to stear the power in/out.
+Optional: Home Assistant entity for the planned average power in watts between the inverter and the DC bus. Positive means inverter to DC bus. Negative means DC bus to inverter and can include both battery and DC solar power.
 
 **`entity calculated soc`**
 

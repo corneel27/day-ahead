@@ -499,10 +499,40 @@ class DaBase(hass.Hass):
             val = getattr(options, key, None)
         return val if val is not None else default
 
-    def set_entity_value(self, entity_key: str, options, value: int | float | str):
+    def set_entity_value(
+        self,
+        entity_key: str,
+        options,
+        value: int | float | str,
+        *,
+        limit_to_range: bool = False,
+    ):
         entity_id = self._get_option(entity_key, options)
-        if entity_id is not None:
-            self.set_value(entity_id, value)
+        if entity_id is None:
+            return
+
+        if (
+            limit_to_range
+            and isinstance(value, (int, float))
+            and entity_id.startswith(("number.", "input_number."))
+        ):
+            attributes = self.get_state(entity_id).attributes
+            minimum = attributes.get("min")
+            maximum = attributes.get("max")
+            requested = value
+            if isinstance(minimum, (int, float)):
+                value = max(value, minimum)
+            if isinstance(maximum, (int, float)):
+                value = min(value, maximum)
+            if value != requested:
+                logging.warning(
+                    "Waarde voor %s begrensd van %s naar %s",
+                    entity_id,
+                    requested,
+                    value,
+                )
+
+        self.set_value(entity_id, value)
 
     def set_entity_option(self, entity_key: str, options, value: int | float | str):
         entity_id = self._get_option(entity_key, options)

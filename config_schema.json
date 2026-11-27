@@ -377,8 +377,8 @@
             }
           ],
           "default": null,
-          "description": "HA entity for power from AC",
-          "x-help": "Optional: Home Assistant entity to save the calculated average grid power in watts. For battery systems that want to stear the power in/out.",
+          "description": "HA entity for inverter power on the DC side",
+          "x-help": "Optional: Home Assistant entity for the planned average power in watts between the inverter and the DC bus. Positive means inverter to DC bus. Negative means DC bus to inverter and can include both battery and DC solar power.",
           "x-ui-section": "Power Configuration",
           "x-ui-widget-filter": "sensor",
           "x-unit": "W",
