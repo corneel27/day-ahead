@@ -23,6 +23,7 @@ from sqlalchemy import (
     func,
     literal,
     select,
+    text,
     union,
     values,
 )
@@ -3242,6 +3243,7 @@ class Report(DaBase):
 
         return result
 
+    """
     def get_heatpump_run_hours(self, entity):
         if entity is None or not self.wp_consumption_sensors:
             return -1
@@ -3271,6 +3273,105 @@ class Report(DaBase):
             else:
                 break
         return count
+    """
+
+    def get_heatpump_run_hours(self, entity):        
+        if entity is None:
+            return -1
+            
+        sql = text("""
+            WITH RECURSIVE
+            bounds AS (
+                SELECT
+                    :start_ts AS start_ts,
+                    :end_ts AS end_ts
+            ),
+            quarters AS (
+                SELECT start_ts AS quarter_ts
+                FROM bounds
+
+                UNION ALL
+
+                SELECT q.quarter_ts + 900
+                FROM quarters q
+                CROSS JOIN bounds b
+                WHERE q.quarter_ts + 900 <= b.end_ts
+            ),
+            endpoints AS (
+                SELECT quarter_ts FROM quarters
+            )
+            SELECT
+                q.quarter_ts,
+                b.end_ts,
+                (
+                    SELECT CAST(s.state AS FLOAT)
+                    FROM states s
+                    JOIN states_meta m ON m.metadata_id = s.metadata_id
+                    WHERE m.entity_id = :sensor
+                      AND s.last_updated_ts < q.quarter_ts
+                      AND s.state NOT IN ('unknown', 'unavailable', '')
+                    ORDER BY s.last_updated_ts DESC
+                    LIMIT 1
+                ) AS total
+            FROM endpoints q
+            CROSS JOIN bounds b
+            ORDER BY q.quarter_ts
+        """)
+
+        now = datetime.datetime.now()
+        end_ts = (int(now.timestamp()) // 900) * 900
+        start_ts = end_ts - 18000 - 900
+
+        with self.db_ha.engine.connect() as connection:
+            df_raw = pd.read_sql_query(
+                sql,
+                connection,
+                params={
+                    "sensor": entity,
+                    "start_ts": start_ts,
+                    "end_ts": end_ts,
+                }
+            )
+
+        if df_raw.empty:
+            return -2
+        end_ts = int(df_raw["end_ts"].iloc[0])
+        previous_total = None
+        consecutive = 0
+
+        results = []
+
+        for row in df_raw.itertuples(index=False):
+            quarter_ts = int(row.quarter_ts)
+            total = row.total
+
+            if pd.isna(total) or previous_total is None:
+                heat_produced = 0
+            else:
+                heat_produced = int(float(total) != previous_total)
+
+            consecutive = consecutive + 1 if heat_produced else 0
+
+            if quarter_ts > end_ts - 18000:
+                results.append({
+                    "tijd": datetime.datetime.fromtimestamp(
+                                quarter_ts
+                            ).strftime("%Y-%m-%d %H:%M:%S"),
+                    "heat_produced": heat_produced,
+                    "consecutive_quarters": consecutive
+                })
+
+            previous_total = None if pd.isna(total) else float(total)
+
+        df_result = pd.DataFrame(results)
+        logging.debug(f"Heat production by quarter:\n{df_result}")
+        
+        if df_result.empty:
+            return -2
+        else:
+            nr_quarters = int(df_result.iloc[-1]["consecutive_quarters"])
+            logging.debug(f"Heat pump running for: {nr_quarters} quarters")
+            return nr_quarters/4
 
     def get_soc_data(
             self, field: str, start: datetime.datetime, end: datetime.datetime
