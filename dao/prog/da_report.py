@@ -3223,6 +3223,7 @@ class Report(DaBase):
 
         return result
 
+    """
     def get_heatpump_run_hours(self, entity):
         if entity is None or not self.wp_consumption_sensors:
             return -1
@@ -3252,8 +3253,9 @@ class Report(DaBase):
             else:
                 break
         return count
+    """
 
-    def get_heatpump_run_quarters(self, entity):        
+    def get_heatpump_run_hours(self, entity):        
         if entity is None:
             return -1
             
