@@ -217,7 +217,7 @@ class DaCalc(DaBase):
         self.hp_present = False
         self.hp_enabled = False
         self.hp_adjustment = None
-        self.hp_ = "eco"
+        self.hp_heat_demand = "eco"
         self.boiler_present = False
         self.boiler_enabled = False
         self.grid_max_power = self.config.grid.max_power
